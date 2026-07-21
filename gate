@@ -1025,6 +1025,10 @@ def cmd_serve(a):
                     return self.send_file(os.path.join(here, "ui.html"), "text/html; charset=utf-8")
                 if u.path == "/judge.js":
                     return self.send_file(os.path.join(here, "judge.js"), "text/javascript")
+                if u.path == "/codemirror.js":
+                    return self.send_file(os.path.join(here, "codemirror.js"), "text/javascript")
+                if u.path == "/codemirror.css":
+                    return self.send_file(os.path.join(here, "codemirror.css"), "text/css")
                 if u.path == "/files":
                     base = os.path.dirname(os.path.abspath(FACTS))
                     body = json.dumps([os.path.relpath(p, base) for p in world_files()]).encode()
