@@ -82,8 +82,7 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
   <div id="bar">
     <span class="seg" id="view-seg"><button class="on" data-m="full">Full</button><button data-m="bare">Bare</button><button data-m="table">Table</button></span>
     <b id="fname">world.swift</b>
-    <span id="gitstate" title="a write lands in your working copy; git carries the history"></span>
-    <button id="write" disabled title="write the editor buffer into the working-copy file (this is not a commit — git carries the history)">Write file</button>
+    <span id="gitstate" title="edits go straight to the working-copy file; git is the only state — commit or discard with git"></span>
   </div>
   <div id="surface">
     <div id="editor-host"></div>
@@ -128,8 +127,7 @@ const cm = CodeMirror(document.getElementById("editor-host"), {
     viewportMargin: Infinity, dragDrop: false,
 });
 const editor = { get value() { return cm.getValue(); }, set value(n) { cm.setValue(n); } };
-const writeBtn = document.getElementById("write");
-let clean = "", files = [], active = "";
+let files = [], active = "";
 let badFiles = new Set(), siblingNames = new Set(), layoutDecls = new Map(), declFile = new Map();
 let lastParsed = null, lastRefusals = [], widgets = [], tableSort = null;
 
@@ -228,7 +226,6 @@ async function render() {
         };
         v.appendChild(row);
     }
-    writeBtn.disabled = editor.value === clean;
     if (mode === "table") buildTables();
     if (mode === "bare") document.getElementById("bare").innerHTML = bareForm(lastParsed);
 }
@@ -430,17 +427,20 @@ function setMode(m) {
 }
 document.querySelectorAll("#view-seg button").forEach(b => b.onclick = () => setMode(b.dataset.m));
 
+// No buffer of our own: an edit goes straight to the working-copy file, and
+// git is the only state (commit or discard with git). A programmatic load
+// (setValue) judges without writing; a real edit writes, then judges.
 let timer = null;
-cm.on("change", () => { clearTimeout(timer); timer = setTimeout(render, 150); });
-
-// Write file: the editor buffer → the working-copy file. Not a commit, not a
-// stage — gate keeps no state of its own; git carries the history.
-writeBtn.onclick = async () => {
-    const r = await fetch("/world?f=" + encodeURIComponent(active), { method: "PUT", body: editor.value });
-    if (!r.ok) { writeBtn.textContent = "write failed: " + r.status; return; }
-    writeBtn.textContent = "Written"; setTimeout(() => { writeBtn.textContent = "Write file"; }, 1200);
-    clean = editor.value; render(); refreshGit();
-};
+cm.on("change", (_, change) => {
+    clearTimeout(timer);
+    const userEdit = change.origin && change.origin !== "setValue";
+    timer = setTimeout(() => tick(userEdit), userEdit ? 400 : 150);
+});
+async function tick(write) {
+    if (write) await fetch("/world?f=" + encodeURIComponent(active), { method: "PUT", body: editor.value });
+    await render();
+    if (write) refreshGit();
+}
 
 async function siblings() {
     siblingNames = new Set(); layoutDecls = new Map(); declFile = new Map();
@@ -456,7 +456,7 @@ async function loadFile(name) {
     document.getElementById("fname").textContent = name;
     buildRail();
     const t = await (await fetch("/world?f=" + encodeURIComponent(name))).text();
-    editor.value = t; clean = t;
+    editor.value = t;   // setValue: judged, not written
     await siblings();
     render();
     refreshGit();

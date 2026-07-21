@@ -12,9 +12,10 @@ The working prototype, end to end:
   over the declared layout with a per-file verdict dot; the verdict
   docked at the bottom, Xcode-style; cross-file judgement over unsaved
   text, addresses refined to the subject line.
-- Honest state: "Write file" (not Save) writes the working copy; a
-  git-state indicator shows committed / uncommitted — gate keeps no
-  state, git carries the history.
+- No state of our own: an edit in the bench goes straight to the
+  working-copy file (auto-write), and git is the only state — a
+  git-state indicator shows committed / uncommitted, and you commit or
+  discard with git. There is no hidden "unsaved buffer".
 
 - The world: single-source canon (`world.swift`), declared multi-file
   layout (`world.manifest.swift`) with two-way guards, cross-file
