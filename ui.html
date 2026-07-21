@@ -8,7 +8,15 @@
 <style>
 :root{--ok:#248A3D;--bad:#C4453B;--action:#007AFF;--line:#d2d2d7;--mist:#f5f5f7;--ink:#1d1d1f;color-scheme:light}
 body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);background:#fff;display:flex;height:100vh}
-#left{flex:0 0 52%;display:flex;flex-direction:column;border-right:1px solid var(--line);min-width:0}
+#rail{flex:0 0 176px;display:none;flex-direction:column;border-right:1px solid var(--line);overflow:auto;min-width:0}
+#rail h3{font:600 10.5px/1 -apple-system,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#8e8e93;margin:0;padding:1em 1.1em .6em}
+.file{display:flex;align-items:center;gap:.5em;padding:.32em 1.1em;cursor:pointer;font:13px/1.4 ui-monospace,Menlo,monospace;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.file:hover{background:var(--mist)}
+.file.on{background:var(--mist);font-weight:600}
+.file .dot{flex:0 0 6px;width:6px;height:6px;border-radius:50%;background:transparent}
+.file.bad{color:var(--bad)}
+.file.bad .dot{background:var(--bad)}
+#left{flex:0 0 46%;display:flex;flex-direction:column;border-right:1px solid var(--line);min-width:0}
 #bar{display:flex;gap:.6em;align-items:center;padding:.5em .8em;border-bottom:1px solid var(--line)}
 #bar b{font-weight:600}
 #save{margin-left:auto;border:none;background:color-mix(in srgb,var(--action) 12%,transparent);color:var(--action);padding:.35em .9em;border-radius:6px;font:inherit;cursor:pointer}
@@ -45,8 +53,9 @@ tr.bad td{color:var(--bad)}
 h2{font-size:1em;margin:1em 0 .2em}
 #meta{color:#6e6e73;font-size:.85em}
 </style>
+<div id="rail"><h3>files</h3><div id="filelist"></div></div>
 <div id="left">
-  <div id="bar"><select id="file" style="display:none;font:inherit"></select><b id="fname">world.swift</b><span id="view"><button class="v on" data-v="full">Full</button><button class="v" data-v="bare">Bare</button></span><span id="meta"></span><button id="save" disabled>Save</button></div>
+  <div id="bar"><b id="fname">world.swift</b><span id="view"><button class="v on" data-v="full">Full</button><button class="v" data-v="bare">Bare</button></span><span id="meta"></span><button id="save" disabled>Save</button></div>
   <div id="editor-host"></div>
   <pre id="bare"></pre>
 </div>
@@ -98,12 +107,25 @@ const editor = {   // the playground's shim: every reader stays honest
     set value(next) { cm.setValue(next); },
 };
 const saveBtn = document.getElementById("save");
-const fileSel = document.getElementById("file");
 let clean = "";
 let files = [];
 let active = "";
+let badFiles = new Set();      // files the judge names a refusal in — the rail's dot
 let siblingNames = new Set();  // declarations of the OTHER layout files
+let layoutDecls = new Map();   // declarations across the WHOLE layout, for the tables
 let widgets = [];
+
+function buildRail() {
+    const list = document.getElementById("filelist");
+    list.innerHTML = "";
+    for (const f of files) {
+        const row = document.createElement("div");
+        row.className = "file" + (f === active ? " on" : "") + (badFiles.has(f) ? " bad" : "");
+        row.innerHTML = '<span class="dot"></span>' + f;
+        row.onclick = () => loadFile(f);
+        list.appendChild(row);
+    }
+}
 
 function namesOf(parsed) {
     const out = new Set();
@@ -179,6 +201,8 @@ async function render() {
         : '<span class="chip ok">holds: every claim checked</span>';
     clearFlags();
     applyFlags(r.refusals);
+    badFiles = new Set(r.refusals.map(x => x.file || active).filter(Boolean));
+    buildRail();
     const cards = document.getElementById("cards");
     cards.innerHTML = "";
     const badLines = new Set();
@@ -196,7 +220,8 @@ async function render() {
         };
         cards.appendChild(c);
     }
-    const decls = r.parsed.declarations;
+    // tables draw from the whole layout (people may live in another file)
+    const decls = layoutDecls.size ? layoutDecls : r.parsed.declarations;
     const axes = ["Rank", "Home", "Site", "Given", "Family", "Born"];
     let ph = "<table><tr><th>id</th>" + axes.map(a => "<th>" + a.toLowerCase() + "</th>").join("") + "</tr>";
     for (const [name, d] of decls) {
@@ -207,7 +232,7 @@ async function render() {
     document.getElementById("people").innerHTML = ph + "</table>";
     let gh = "<table><tr><th>who</th><th>doc</th></tr>";
     for (const [, d] of decls) for (const e of (d.entries || [])) {
-        if (e.head !== "VerifiedView") continue;
+        if (e.head !== "VerifiedView" || !e.arguments || e.arguments.length < 2) continue;
         gh += "<tr" + (near(badLines, e.line, 4) ? ' class="bad"' : "") + "><td>" +
               e.arguments[0] + "</td><td>" + e.arguments[1] + "</td></tr>";
     }
@@ -273,20 +298,23 @@ saveBtn.onclick = async () => {
 };
 
 async function siblings() {
-    // declared names of the OTHER files: the wave must not mark a name that
-    // stands one file away in the declared layout
+    // the declared layout, read whole: sibling names keep the wave honest, and
+    // the tables draw from every file, not just the active one
     siblingNames = new Set();
+    layoutDecls = new Map();
     for (const f of files) {
-        if (f === active) continue;
-        const t = await (await fetch("/world?f=" + encodeURIComponent(f))).text();
-        namesOf(judge(f, t).parsed).forEach(n => siblingNames.add(n));
+        const t = f === active ? editor.value
+            : await (await fetch("/world?f=" + encodeURIComponent(f))).text();
+        const parsed = judge(f, t).parsed;
+        if (f !== active) namesOf(parsed).forEach(n => siblingNames.add(n));
+        for (const [name, d] of parsed.declarations) if (!layoutDecls.has(name)) layoutDecls.set(name, d);
     }
 }
 
 async function loadFile(name) {
     active = name;
     document.getElementById("fname").textContent = name;
-    fileSel.value = name;
+    buildRail();
     const t = await (await fetch("/world?f=" + encodeURIComponent(name))).text();
     editor.value = t; clean = t;
     await siblings();
@@ -296,10 +324,11 @@ async function loadFile(name) {
 (async () => {
     files = await (await fetch("/files")).json().catch(() => []);
     if (files.length > 1) {
-        fileSel.style.display = "";
-        fileSel.innerHTML = files.map(f => `<option>${f}</option>`).join("");
-        fileSel.onchange = () => loadFile(fileSel.value);
+        // the rail is the declared layout: File atoms of the manifest, the
+        // same list the judge runs over
+        document.getElementById("rail").style.display = "flex";
         document.getElementById("fname").style.display = "none";
+        buildRail();
     }
     await loadFile(files[0] || "world.swift");
 })();
