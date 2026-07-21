@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-# «Старая система клиента»: скрипт, который у него уже есть.
-# Правило 1: view только в своём департаменте.
-# Правило 2: не больше одного гранта на человека.
-# exit 0 = чисто; exit 1 = нарушения, по одному в строке stdout.
+# "The client's old system": the script he already has.
+# Rule 1: view only within one's own department.
+# Rule 2: at most one grant per person.
+# exit 0 = clean; exit 1 = violations, one per stdout line.
 import csv, sys
 
 people = {p["id"]: p for p in csv.DictReader(open(sys.argv[1]))}

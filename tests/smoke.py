@@ -68,7 +68,7 @@ def main():
     c, r = run("check", "administer", "X", "Y", cwd=repo)
     S.append(("check administer honest error without corpus", "GATE_CORPUS" in json.dumps(r)))
 
-    # раскладка — факт мира: манифест дробит, суд идёт по списку, стражи держат оба направления
+    # the layout is a fact of the world: the manifest splits, judgement runs the list, guards hold both directions
     split = os.path.join(tmp, "split")
     os.makedirs(split)
     shutil.copy(os.path.join(repo, "world.swift"), os.path.join(split, "world.swift"))

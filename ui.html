@@ -26,7 +26,7 @@ h2{font-size:1em;margin:1em 0 .2em}
 #meta{color:#6e6e73;font-size:.85em}
 </style>
 <div id="left">
-  <div id="bar"><b>world.swift</b><span id="meta"></span><button id="save" disabled>Save</button></div>
+  <div id="bar"><select id="file" style="display:none;font:inherit"></select><b id="fname">world.swift</b><span id="meta"></span><button id="save" disabled>Save</button></div>
   <textarea id="editor" spellcheck="false"></textarea>
 </div>
 <div id="right">
@@ -39,7 +39,10 @@ h2{font-size:1em;margin:1em 0 .2em}
 <script>
 const editor = document.getElementById("editor");
 const saveBtn = document.getElementById("save");
+const fileSel = document.getElementById("file");
 let clean = "";
+let files = [];           // the declared layout: the UI obeys it
+let active = "";
 
 function lineStart(text, line) {
     let i = 0;
@@ -47,9 +50,24 @@ function lineStart(text, line) {
     return i;
 }
 
-function render() {
+async function render() {
     const text = editor.value;
-    const r = judge("world.swift", text);
+    let r;
+    if (files.length > 1) {
+        // cross-file judgement: the server judges the whole declared list
+        // with the active file replaced by the editor's unsaved text
+        r = await (await fetch("/verdict?f=" + encodeURIComponent(active), { method: "POST", body: text })).json();
+        r.declarations = "list of " + files.length; r.premises = "cross-file";
+        r.milliseconds = r.judge_ms || 0;
+        r.refusals = r.refusals.map(x => {
+            const [f, line] = x.address.split(":");
+            return { file: f, line: parseInt(line), premise: x.claim };
+        });
+        r.parsed = judge(active, text).parsed;   // tables still read locally
+    } else {
+        r = judge(active || "world.swift", text);
+        r.refusals = r.refusals.map(x => ({ file: active, line: x.line, premise: x.premise }));
+    }
     document.getElementById("meta").textContent =
         r.declarations + " declarations · " + r.premises + " premises · " + r.milliseconds.toFixed(1) + " ms";
     const v = document.getElementById("verdict");
@@ -63,8 +81,10 @@ function render() {
         badLines.add(ref.line);
         const c = document.createElement("div");
         c.className = "card";
-        c.innerHTML = "<code>world.swift : " + ref.line + "</code> · " + ref.premise;
-        c.onclick = () => {
+        c.innerHTML = "<code>" + (ref.file || active) + " : " + ref.line + "</code> · " + ref.premise;
+        c.onclick = async () => {
+            const target = ref.file && files.includes(ref.file) ? ref.file : active;
+            if (target !== active) await loadFile(target);   // a foreign file's refusal opens that file
             const i = lineStart(editor.value, ref.line);
             editor.focus(); editor.setSelectionRange(i, editor.value.indexOf("\n", i));
             const lh = 19; editor.scrollTop = Math.max(0, (ref.line - 6) * lh);
@@ -100,12 +120,29 @@ let timer = null;
 editor.addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(render, 150); });
 
 saveBtn.onclick = async () => {
-    const r = await fetch("/world", { method: "PUT", body: editor.value });
+    const r = await fetch("/world?f=" + encodeURIComponent(active), { method: "PUT", body: editor.value });
     if (!r.ok) { saveBtn.textContent = "save failed: " + r.status; return; }
     saveBtn.textContent = "Saved";
     setTimeout(() => { saveBtn.textContent = "Save"; }, 1200);
     clean = editor.value; render();
 };
 
-fetch("/world").then(r => r.text()).then(t => { editor.value = t; clean = t; render(); });
+async function loadFile(name) {
+    active = name;
+    document.getElementById("fname").textContent = name;
+    fileSel.value = name;
+    const t = await (await fetch("/world?f=" + encodeURIComponent(name))).text();
+    editor.value = t; clean = t; render();
+}
+
+(async () => {
+    files = await (await fetch("/files")).json().catch(() => []);
+    if (files.length > 1) {
+        fileSel.style.display = "";
+        fileSel.innerHTML = files.map(f => `<option>${f}</option>`).join("");
+        fileSel.onchange = () => loadFile(fileSel.value);
+        document.getElementById("fname").style.display = "none";
+    }
+    await loadFile(files[0] || "world.swift");
+})();
 </script>

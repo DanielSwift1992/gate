@@ -15,9 +15,9 @@ your repo.
                                  # a stale roleRef and a cross-namespace binding are named
                                  # by their k8s source in milliseconds
 
-Порядок чтения документов: docs/PRODUCT.md (граница и форма продукта),
-docs/THEORY.md (карта теорем субстрата), docs/SCENARIOS.md (персоны и
-сценарии), docs/FORMS.md (каталог форм правил).
+Internal working notes live in private/ (untracked; see .gitignore) —
+spec, theory map, scenarios, the rule-form catalogue. Client-facing
+documentation will be written separately.
 
 The judge binary (bin/gate-judge) is built from the public theory corpus:
 bin/build-judge.sh [pin]. Tests: python3 tests/smoke.py (16 checks).

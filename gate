@@ -12,8 +12,8 @@ ROOT = os.environ.get("GATE_CORPUS")
 
 
 def read_manifest(d):
-    # раскладка хранения — факт мира: world.manifest.swift объявляет файлы
-    # File-атомами (typeName-литерал = путь). Мы подчиняемся объявленному.
+    # the layout is a fact of the world: world.manifest.swift declares files
+    # as File atoms (typeName literal = path). We obey what is declared.
     mp = os.path.join(d, "world.manifest.swift")
     if not os.path.exists(mp):
         return None
@@ -23,11 +23,11 @@ def read_manifest(d):
 
 
 def discover_world():
-    # мир находится как .git — подъёмом по дереву. КАНОН: world.swift —
-    # ЕДИНСТВЕННЫЙ источник (читабелен всем: git diff, человек, судья,
-    # компилятор); tables/ — только вход для первой печати (bootstrap),
-    # никогда не перекрывают мир. Манифест, если объявлен, добавляет файлы
-    # раскладки — суд идёт по объявленному списку.
+    # the world is found the way .git is: walking up the tree. THE CANON:
+    # world.swift is the SINGLE source (readable by everything: git diff, a
+    # human, the judge, the compiler); tables/ are an input for the first
+    # print only (bootstrap) and never override the world. A manifest, if
+    # declared, adds layout files — judgement runs over the declared list.
     d = os.getcwd()
     while True:
         w = os.path.join(d, "world.swift")
@@ -53,7 +53,7 @@ else:
 
 
 def world_files():
-    # список судимых файлов: главный мир + объявленная манифестом раскладка
+    # the judged file list: the main world plus the manifest-declared layout
     files = [FACTS] if FACTS and os.path.exists(FACTS) else []
     if MANIFEST:
         files += [p for p in MANIFEST["files"] if p not in files]
@@ -61,8 +61,8 @@ def world_files():
 
 
 def manifest_guards():
-    # стражи раскладки, оба направления (жанр плейграундного манифеста):
-    # объявленный файл существует; соседний *.swift объявлен (нет теней)
+    # layout guards, both directions (the playground manifest's genre):
+    # a declared file exists; a neighbouring *.swift is declared (no shadows)
     if not MANIFEST:
         return []
     bad = []
@@ -79,9 +79,9 @@ def manifest_guards():
 
 
 def ensure_world():
-    # bootstrap только: мира ещё нет, а вход-таблицы есть — напечатать РАЗ.
-    # Дальше мир — источник; таблицы его никогда не перекрывают (no second
-    # truth): хочешь влить новые CSV — явный `gate import`.
+    # bootstrap only: no world yet but input tables present — print ONCE.
+    # From then on the world is the source; tables never override it (no
+    # second truth): to pull fresh CSVs in, run an explicit `gate import`.
     if TABLES and not os.path.exists(FACTS):
         cmd_import([os.path.join(TABLES, "people.csv"), os.path.join(TABLES, "grants.csv"), "-o", FACTS])
         return True
@@ -93,8 +93,8 @@ if not os.path.exists(JUDGE):
 
 
 def refine_addresses(text, refusals, fname):
-    # судья вешает отказ на строку предыдущего дренажа — уточняем адрес строкой,
-    # где стоит субъект отказа (первое имя из claim), в окне вокруг адреса
+    # the judge pins a refusal to the previous drain's line — refine the
+    # address to the line holding the refusal's subject, in a window nearby
     file_lines = text.split("\n")
     for ref in refusals:
         n = int(ref["address"].split(":")[1])
@@ -137,7 +137,7 @@ def must_sub(text, pattern, repl, what, count=1):
 
 def with_temp(text):
     d = tempfile.mkdtemp(prefix="gate-")
-    # проба носит имя реального мира: адреса в ответах читаются как родные
+    # the probe carries the real world's filename: addresses read as native
     p = os.path.join(d, os.path.basename(FACTS))
     with open(p, "w") as f:
         f.write(text)
@@ -145,7 +145,7 @@ def with_temp(text):
 
 
 def last_entry_insert(text, head, args, indent):
-    # вставка новой записи после ПОСЛЕДНЕЙ записи той же формы (и тех же аргументов-осей, если заданы)
+    # insert a new entry after the LAST entry of the same form (and same axis arguments, when given)
     pat = head + r"<\s*(\w+),\s*(\w+)\s*>\.self;"
     hits = [m for m in re.finditer(pat, text)]
     if args.get("second"):
@@ -161,7 +161,7 @@ def last_entry_insert(text, head, args, indent):
 
 
 def cmd_ask(a):
-    # ask view WHO DOC — «встанет ли запись view?»: пробная запись + суд, ничего не меняется
+    # ask view WHO DOC — would this view entry stand? a probe entry + judgement, nothing changes
     who, doc = a[0], a[1]
     text = open(FACTS).read()
     probe = last_entry_insert(
@@ -201,9 +201,9 @@ def cmd_ask_build(kind, a):
 
 
 def transfer_text(text, who, dept):
-    # механика перевода: Home в ростере + командная запись (оба — факты);
-    # view-гранты НЕ трогаем: перевесить или отозвать доступ — решение
-    # намерения, его оставляем человеку (ответ подскажет grant/revoke)
+    # the mechanics of a transfer: Home in the roster + the team entry (both
+    # facts); view grants are NOT touched: re-pointing or revoking access is
+    # a decision of intent, left to the human (the reply hints grant/revoke)
     text = must_sub(
         text,
         rf"(public enum {who}: Employee, Person \{{[^}}]*?public typealias Home = )\w+",
@@ -247,7 +247,7 @@ def hire_text(text, f):
     m = rosters[-1]
     text = text[: m.end()] + block + text[m.end() :]
     slices = [m for m in re.finditer(r"(Emp\w+\.self;)(?=\s*\n\s*\})", text)]
-    if slices:  # корпусный мир несёт Company-список; импортированный — нет, и судье он не нужен
+    if slices:  # the corpus world carries a Company list; an imported one does not, and the judge needs none
         s = slices[0]
         text = text[: s.end()] + f" {f['id']}.self;" + text[s.end() :]
     text = last_entry_insert(text, "VerifiedView", {"first": f["id"], "args_second": f["home"] + "Share"}, 12)
@@ -259,7 +259,7 @@ def hire_text(text, f):
 
 def cmd_change(a):
     # change transfer WHO DEPT [--apply] · change hire ID RANK HOME GIVEN FAMILY BORN SITE [--apply]
-    # Правится ЕДИНСТВЕННЫЙ источник — мир; дифф остаётся git-диффом Swift.
+    # The SINGLE source — the world — is edited; the diff stays a Swift git diff.
     apply_it = "--apply" in a
     a = [x for x in a if x != "--apply"]
     text = open(FACTS).read()
@@ -291,14 +291,14 @@ def cmd_change(a):
 
 
 def cmd_import(a):
-    # import people.csv grants.csv -o world.swift — механический перевод фактов
-    # клиента в слой фактов мира. Колонки CSV = оси мира; адреса отказов
-    # транслируются обратно в строки CSV клиента.
+    # import people.csv grants.csv -o world.swift — a mechanical translation
+    # of the client's facts into the world's facts layer. CSV columns = the
+    # world's axes; refusal addresses translate back to the client's CSV lines.
     import csv
 
     people_csv, grants_csv = a[0], a[1]
     out_path = a[a.index("-o") + 1] if "-o" in a else "world.swift"
-    lines = []  # (текст, источник|None)
+    lines = []  # (text, source|None)
 
     def emit(chunk, src=None):
         for ln in chunk.split("\n"):
@@ -309,7 +309,7 @@ def cmd_import(a):
     people = list(csv.DictReader(open(people_csv)))
     grants = list(csv.DictReader(open(grants_csv)))
 
-    # пул атомов: уникальные имена/фамилии/годы из данных, кольца Next по кругу
+    # the atom pools: distinct given/family/year values from the data, Next rings closed in a circle
     def ring(names, conf, extra=None):
         names = list(dict.fromkeys(names))
         for i, n in enumerate(names):
@@ -353,8 +353,8 @@ def cmd_import(a):
         f.write("\n".join(t for t, _ in lines) + "\n")
     r = judge(out_path)
     for ref in r["refusals"]:
-        # судья вешает отказ на строку предыдущего дренажа — уточняем строкой,
-        # где стоит субъект отказа (первое имя из claim), в окне вокруг адреса
+        # the judge pins a refusal to the previous drain's line — refine to
+        # the line holding the refusal's subject, in a window around the address
         n = int(ref["address"].split(":")[1])
         src = lines[n - 1][1] if n - 1 < len(lines) else None
         m = re.search(r"requires (\w+)\.", ref["claim"]) or re.match(r"(\w+)\.", ref["claim"])
@@ -376,9 +376,9 @@ def cmd_import(a):
 
 
 def cmd_export(a):
-    # export world.swift -o people.csv grants.csv — мир печатает таблицы обратно.
-    # Round-trip: import → export → diff с исходником пуст ⇒ перевод фактов
-    # доказан механически, переводчику доверять не нужно.
+    # export world.swift -o people.csv grants.csv — the world prints the
+    # tables back. Round-trip: import → export → empty diff vs the originals
+    # ⇒ the fact translation is proven mechanically, no trust in the translator.
     world = a[0]
     people_out, grants_out = a[a.index("-o") + 1], a[a.index("-o") + 2]
     text = open(world).read()
@@ -409,7 +409,7 @@ def cmd_export(a):
 
 
 def seeds(people, grants):
-    # каталог посевов: по одному нарушению на форму правила, из самих данных
+    # the seed catalogue: one violation per rule form, drawn from the data itself
     p0 = people[0]
     other_home = next(p["home"] for p in people if p["home"] != p0["home"])
     yield "cross-view", people, grants + [{"who": p0["id"], "doc": other_home + "Share"}]
@@ -422,9 +422,9 @@ def seeds(people, grants):
 
 
 def cmd_verify(a):
-    # verify people.csv grants.csv --against CMD — дифференциальная сверка правил:
-    # посевы из каталога судятся миром и старой системой клиента; расхождение
-    # вердиктов = адрес непереведённого правила (или правило, которого у клиента нет).
+    # verify people.csv grants.csv --against CMD — differential rule check:
+    # catalogue seeds are judged by the world AND the client's old checker; a
+    # verdict split = the address of an untranslated rule (or one the client lacks).
     import csv
 
     people_csv, grants_csv = a[0], a[1]
@@ -433,8 +433,8 @@ def cmd_verify(a):
     grants = list(csv.DictReader(open(grants_csv)))
     d = tempfile.mkdtemp(prefix="gate-verify-")
 
-    # шаг 0: база обязана быть чистой у ОБЕИХ сторон — иначе фоновые нарушения
-    # маскируют посевы и «covered» ничего не значит
+    # step 0: the base must be clean on BOTH sides — background violations
+    # would mask the seeds and "covered" would mean nothing
     base_world = cmd_import([people_csv, grants_csv, "-o", os.path.join(d, "base.swift")])
     base_legacy = (
         subprocess.run(against.split() + [people_csv, grants_csv], capture_output=True, text=True)
@@ -470,7 +470,7 @@ def cmd_verify(a):
             }[(w, l)]
             legacy_says = legacy.stdout.strip().splitlines()[:2]
         else:
-            # --self: посевы против одного мира — какие правила вообще держат
+            # --self: seeds against the world alone — which rules hold at all
             l, legacy_says = "n/a", []
             verdict = "held by the world" if w == "refused" else "NO GATE HOLDS THIS SEED"
         rows.append({
@@ -578,10 +578,10 @@ jobs:
 
 
 def cmd_guard(a):
-    # guard [merge] — политика действий САМОГО репозитория теми же гейтами:
-    # git-объект (автор HEAD) → атом мира (identities.csv) → запись-проба
-    # существующей формы (VerifiedAtRank) → суд. Правила — в таблицах мира,
-    # CI/hook — только транспорт вердикта.
+    # guard [merge] — the repository's OWN action policy by the same gates:
+    # a git object (the HEAD author) → a world atom (identities.csv) → a probe
+    # entry of an existing form (VerifiedAtRank) → judgement. Rules live in
+    # the world's tables; CI and hooks only transport the verdict.
     import csv
 
     action = a[0] if a else "merge"
@@ -607,10 +607,10 @@ def cmd_guard(a):
 
 
 def cmd_library(a):
-    # library [-o lib.json] | library diff a.json b.json — кристалл домена:
-    # формы (головы записей + гейты), оси, покрытие посевами. Формы без
-    # фактов: библиотека шарима, данные клиента — никогда (SAT5: у домена
-    # один канонический кристалл; два мира — подмножества его).
+    # library [-o lib.json] | library diff a.json b.json — the domain crystal:
+    # forms (entry heads + gates), axes, seed coverage. Forms carry no facts:
+    # a library is shareable, client data never is (SAT5: a domain has one
+    # canonical crystal; two worlds are subsets of it).
     if a and a[0] == "diff":
         la, lb = json.load(open(a[1])), json.load(open(a[2]))
         A, B = set(la["forms"]), set(lb["forms"])
@@ -626,7 +626,7 @@ def cmd_library(a):
     heads = sorted(set(re.findall(r"(\w+)<\s*\w+,\s*\w+\s*>\.self;", text)))
     axes = sorted(set(re.findall(r"public typealias (\w+) = ", text)))
     lib = {"forms": heads, "axes": axes}
-    if TABLES:  # покрытие: какие посевы каталога мир держит (verify --self)
+    if TABLES:  # coverage: which catalogue seeds the world holds (verify --self)
         v = cmd_verify([os.path.join(TABLES, "people.csv"), os.path.join(TABLES, "grants.csv")])
         if "seeds" in v:
             lib["coverage"] = {s["seed"]: ("held" if s["world"] == "refused" else "no gate") for s in v["seeds"]}
@@ -639,10 +639,10 @@ def cmd_library(a):
 
 
 def cmd_guard_deps(a):
-    # guard deps [manifest lock] — почва git: манифест ↔ lockfile.
-    # Адаптер печатает мир: лок объявляет атомы «пакет@версия», требование
-    # манифеста ССЫЛАЕТСЯ на атом своего пина осью — рассогласование =
-    # «resolves to nothing» с адресом. Ни одной новой формы.
+    # guard deps [manifest lock] — git's own soil: manifest ↔ lockfile.
+    # The adapter prints a world: the lock declares "package@version" atoms,
+    # a manifest requirement REFERENCES its pin's atom through an axis — a
+    # drift "resolves to nothing" with an address. Not one new form.
     manifest_p = a[0] if a else "package.json"
     lock_p = a[1] if len(a) > 1 else "package-lock.json"
     manifest = json.load(open(manifest_p))
@@ -693,9 +693,9 @@ def cmd_guard_deps(a):
 
 
 def cmd_survey(a):
-    # survey [N] — t0-жест: read-only карта репозитория БЕЗ перевода.
-    # Незаписанные связи из собственной истории (co-change — точная
-    # статистика), идентичность, объекты-кандидаты, покрытие ткани.
+    # survey [N] — the t0 gesture: a read-only map of the repo with NO
+    # translation. Unwritten links from its own history (co-change — exact
+    # statistics), identity, object candidates, fabric coverage.
     import itertools, collections
 
     n = int(a[0]) if a else 500
@@ -830,8 +830,8 @@ def cmd_stdlib(a):
 
 
 def stdlib_guards():
-    # материализованная копия с шапкой stdlib обязана совпадать с прошивкой:
-    # разошлась — либо re-materialize, либо сними шапку (файл станет твоим)
+    # a materialized copy still carrying the stdlib header must match the
+    # binary's: drifted — re-materialize, or drop the header to own the file
     if not FACTS:
         return []
     d = os.path.dirname(os.path.abspath(FACTS))
@@ -895,8 +895,9 @@ def sanitize(s):
 
 def cmd_import_rbac(a):
     # import rbac rbac.json [-o world.swift] — kubectl get roles,clusterroles,
-    # rolebindings -A -o json | вход. Три судимых исхода на binding: ok /
-    # роль в чужом namespace (отказ равенства с именами) / роли нет (dangling).
+    # rolebindings -A -o json | is the input. Three judged outcomes per
+    # binding: ok / the Role lives in a foreign namespace (an equality refusal
+    # with both names) / no such Role anywhere (dangling).
     src = a[0]
     out_path = a[a.index("-o") + 1] if "-o" in a else "rbac-world.swift"
     items = json.load(open(src)).get("items", [])
@@ -1001,7 +1002,7 @@ def cmd_init(a):
     if os.path.exists(hook):
         os.chmod(hook, 0o755)
     hooks_note = None
-    if os.path.isdir(os.path.join(root, ".git")):  # бесшовно: хук включается сам
+    if os.path.isdir(os.path.join(root, ".git")):  # seamless: the hook wires itself
         subprocess.run(["git", "config", "core.hooksPath", ".githooks"], cwd=root, capture_output=True)
         hooks_note = "pre-commit hook wired (core.hooksPath = .githooks)"
     return {"command": "init", "root": root, "created": made, "hooks": hooks_note}
@@ -1017,8 +1018,8 @@ def world_rows(text):
 
 
 def cmd_report(a):
-    # report [-o report.html] — печатаемая страница аудита: таблицы мира + вердикт.
-    # Без сервера: один самодостаточный html, можно приложить к аудиту письмом.
+    # report [-o report.html] — the printable audit page: the world's tables
+    # + the verdict. No server: one self-contained html, mailable to an audit.
     out_path = a[a.index("-o") + 1] if "-o" in a else "report.html"
     text = open(FACTS).read()
     people, grants = world_rows(text)
@@ -1059,9 +1060,9 @@ th{{background:#f5f5f7}}.ok{{color:#248a3d}}.bad li{{color:#c4453b;margin:.3em 0
 
 
 def cmd_serve(a):
-    # serve [port] — локальная read-only JSON-поверхность для IDE/хуков/редакторов:
+    # serve [port] — the local read-only JSON surface for IDEs/hooks/editors:
     #   GET /status · /check/view?who=&doc= · /diff/transfer?who=&to=
-    # Изменяющих маршрутов нет сознательно: apply — только руками или CLI.
+    # No mutating routes, deliberately: apply happens by hand or via the CLI.
     from http.server import BaseHTTPRequestHandler, HTTPServer
     from urllib.parse import urlparse, parse_qs
 
@@ -1086,9 +1087,18 @@ def cmd_serve(a):
                 if u.path in ("/", "/ui"):
                     return self.send_file(os.path.join(here, "ui.html"), "text/html; charset=utf-8")
                 if u.path == "/judge.js":
-                    return self.send_file(os.path.join(playground, "judge.js"), "text/javascript")
+                    return self.send_file(os.path.join(here, "judge.js"), "text/javascript")
+                if u.path == "/files":
+                    base = os.path.dirname(os.path.abspath(FACTS))
+                    body = json.dumps([os.path.relpath(p, base) for p in world_files()]).encode()
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(body)
+                    return
                 if u.path == "/world":
-                    return self.send_file(FACTS, "text/plain; charset=utf-8")
+                    # the UI obeys the declared layout: ?f= names a file FROM the list
+                    return self.send_file(self.pick(q), "text/plain; charset=utf-8")
                 if u.path == "/status":
                     out = dispatch("status", [])
                 elif u.path == "/check/view":
@@ -1105,15 +1115,53 @@ def cmd_serve(a):
             self.end_headers()
             self.wfile.write(body)
 
+        def pick(self, q):
+            # only files the manifest declares are servable or writable
+            base = os.path.dirname(os.path.abspath(FACTS))
+            allowed = {os.path.relpath(p, base): p for p in world_files()}
+            return allowed.get(q.get("f", ""), FACTS)
+
         def do_PUT(self):
-            # единственная пишущая ручка: сам файл мира — он и есть источник
-            # (plumbing открыт, суд неизбежен)
-            if urlparse(self.path).path != "/world":
+            # the single writing handle: world files — they ARE the source
+            # (plumbing stays open, judgement stays inevitable)
+            u = urlparse(self.path)
+            q = {k: v[0] for k, v in parse_qs(u.query).items()}
+            if u.path != "/world":
                 self.send_response(404); self.end_headers(); return
             n = int(self.headers.get("Content-Length", 0))
-            with open(FACTS, "wb") as f:
+            with open(self.pick(q), "wb") as f:
                 f.write(self.rfile.read(n))
             self.send_response(200); self.end_headers()
+
+        def do_POST(self):
+            # /verdict?f=rel — judge the WHOLE declared list with the active
+            # file replaced by the editor's unsaved text (cross-file, server-side)
+            u = urlparse(self.path)
+            q = {k: v[0] for k, v in parse_qs(u.query).items()}
+            if u.path != "/verdict":
+                self.send_response(404); self.end_headers(); return
+            n = int(self.headers.get("Content-Length", 0))
+            text = self.rfile.read(n).decode()
+            base = os.path.dirname(os.path.abspath(FACTS))
+            active = self.pick(q)
+            d = tempfile.mkdtemp(prefix="gate-bench-")
+            paths = []
+            for p in world_files():
+                tp = os.path.join(d, os.path.relpath(p, base).replace(os.sep, "__"))
+                with open(tp, "w") as f:
+                    f.write(text if p == active else open(p).read())
+                paths.append(tp)
+            raw = subprocess.run([JUDGE, "judge", *paths], capture_output=True, text=True).stdout
+            refusals = [{"address": m.group(1).replace("__", "/"), "claim": m.group(2).strip()}
+                        for m in re.finditer(r"^\s+(\S+\.swift:\d+)\s+(.+)$", raw, re.M)]
+            times = re.findall(r"([\d.]+) ms", raw)
+            body = json.dumps({"verdict": "holds" if not refusals else "refused",
+                               "refusals": refusals,
+                               "judge_ms": float(times[-1]) if times else None}).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(body)
 
         def log_message(self, *args):
             pass
@@ -1171,8 +1219,8 @@ def dispatch(cmd, rest):
         files = world_files()
         if not files:
             raise SystemExit(json.dumps({"error": "no world found: run `gate init`, or cd into a repo with tables/ or world.swift"}))
-        # что не сходится сейчас: суд по объявленному списку файлов + стражи
-        # раскладки + метрики мира (считаются, не помнятся)
+        # what disagrees right now: judgement over the declared file list +
+        # layout guards + world metrics (counted, never remembered)
         t0 = time.time()
         raw = subprocess.run([JUDGE, "judge", *files], capture_output=True, text=True).stdout
         wall_ms = round((time.time() - t0) * 1000, 1)
@@ -1208,7 +1256,7 @@ def is_red(out):
 
 
 def humanize(out):
-    # человеку — строки, машине — --json (как porcelain у git)
+    # humans get lines, machines get --json (git's porcelain pattern)
     lines = []
     cmd = out.get("command", "")
     if "verdict" in out:
