@@ -18,6 +18,8 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .file.on{background:var(--mist);font-weight:600}
 .file .dot{flex:0 0 6px;width:6px;height:6px;border-radius:50%;background:transparent}
 .file.bad{color:var(--bad)}.file.bad .dot{background:var(--bad)}
+.file .mine{margin-left:auto;font:9.5px/1.4 -apple-system,sans-serif;color:var(--muted);background:var(--mist);border-radius:8px;padding:0 .45em;flex:none}
+.file.on .mine{background:var(--paper)}
 .split{flex:0 0 5px;cursor:col-resize;background:transparent;transition:background .1s}
 .split:hover,.split.dragging{background:color-mix(in srgb,var(--action) 45%,transparent)}
 .line-flash{background:color-mix(in srgb,var(--action) 22%,transparent)}
@@ -148,7 +150,7 @@ const cm = CodeMirror(document.getElementById("editor-host"), {
     viewportMargin: Infinity, dragDrop: false,
 });
 const editor = { get value() { return cm.getValue(); }, set value(n) { cm.setValue(n); } };
-let files = [], active = "";
+let files = [], active = "", personalFile = null;
 let badFiles = new Set(), siblingNames = new Set(), layoutDecls = new Map(), declFile = new Map();
 let lastParsed = null, lastRefusals = [], widgets = [], tableSort = null;
 
@@ -159,7 +161,10 @@ function buildRail() {
     for (const f of files) {
         const row = document.createElement("div");
         row.className = "file" + (f === active ? " on" : "") + (badFiles.has(f) ? " bad" : "");
-        row.innerHTML = '<span class="dot"></span>' + f;
+        // your personal world stands apart: it is in your own git, and the
+        // shared repository does not have it
+        row.innerHTML = '<span class="dot"></span>' + f + (f === personalFile
+            ? '<span class="mine" title="your personal world: your own git (~/.gate/me), never in the shared repository">mine</span>' : "");
         row.onclick = () => loadFile(f);
         list.appendChild(row);
     }
@@ -169,12 +174,30 @@ function buildRail() {
 // clone — no server state, no hosting; whoever can read the repo sees it.
 // Observed, never judged (open/closed is reachability, not a verdict). ──
 let journalCommits = [], authorFilter = null, journalLimit = 60, journalScope = "world";
+let journalMe = "", myJournalKey = "";
 async function buildJournal() {
     try {
         const j = await (await fetch("/log?n=" + journalLimit + "&scope=" + journalScope)).json();
-        journalCommits = j.commits || []; journalWorld = j.world_files || [];
+        journalCommits = j.commits || []; journalWorld = j.world_files || []; journalMe = j.me || "";
     } catch { journalCommits = []; }
     renderJournal();
+}
+
+// ── the dashboard is a declaration: MyJournal in your personal world says what
+// the journal shows. Edit it in the bench and the journal follows — one truth,
+// judged like everything else (a name that does not exist is refused by line).
+function applyMyJournal() {
+    // while you are editing the personal file, the live parse is the truth;
+    // otherwise the layout's copy, read when the file was loaded
+    const d = (active === personalFile && lastParsed ? lastParsed.declarations : layoutDecls).get("MyJournal");
+    const scope = d && d.aliases.get("Scope") && d.aliases.get("Scope").target === "AllRepo" ? "all" : "world";
+    const author = d && d.aliases.get("Author") && d.aliases.get("Author").target === "Me" ? "me" : null;
+    const key = scope + "/" + author;
+    if (key === myJournalKey) return;
+    myJournalKey = key;
+    journalScope = scope;
+    authorFilter = author === "me" ? (journalMe || null) : null;
+    buildJournal();
 }
 function renderJournal() {
     const host = document.getElementById("journal");
@@ -316,6 +339,7 @@ async function render() {
     }
     if (mode === "table") buildTables();
     if (mode === "bare") document.getElementById("bare").innerHTML = bareForm(lastParsed);
+    applyMyJournal();   // the journal follows the declaration, as you edit it
 }
 
 // the honest state: has the working-copy file drifted from git, or is it committed
@@ -607,7 +631,8 @@ function makeSplit(el, panel, min, max) {
 makeSplit(document.getElementById("split-rail"), document.getElementById("rail"), 120, 360);
 
 (async () => {
-    files = await (await fetch("/files")).json().catch(() => []);
+    const fl = await (await fetch("/files")).json().catch(() => ({ files: [] }));
+    files = fl.files || []; personalFile = fl.personal || null;
     // the rail carries files AND the journal, so it shows for any clone
     document.getElementById("rail").style.display = "flex";
     document.getElementById("split-rail").style.display = "block";

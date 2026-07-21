@@ -93,8 +93,9 @@ PERSONAL_TEMPLATE = """\
 //
 // Two things live here.
 //
-// 1. What the bench shows you. These are read as declarations, so a name that
-//    does not exist is refused by line, like any other claim.
+// 1. What the bench shows you. The journal reads these declarations: change
+//    Scope to AllRepo and the journal shows the whole repository, not just
+//    the world's own history.
 public enum WorldFiles {}
 public enum AllRepo {}
 public enum Anyone {}
@@ -887,8 +888,10 @@ def repo_journal(n=200, scope="world"):
                 cur["touches_world"] = True
     if cur:
         commits.append(cur)
+    me = subprocess.run(["git", "config", "user.email"], cwd=base,
+                        capture_output=True, text=True).stdout.strip()
     return {"command": "log", "default_branch": default, "scope": scope, "limit": n,
-            "world_files": sorted(world), "commits": commits}
+            "me": me, "world_files": sorted(world), "commits": commits}
 
 
 def cmd_survey(a):

@@ -167,6 +167,47 @@ def main():
               feat_c and feat_c["closed"] is False and feat_c["touches_world"] is True
               and feat_c["person"] == "Emp9002"))
 
+    # ── the personal world: your own git, never the shared repo ──
+    me = os.path.join(tmp, "me")
+    env = dict(os.environ, GATE_ME=me)
+
+    def runme(*args, cwd=None):
+        r = subprocess.run([sys.executable, GATE, *args, "--json"], capture_output=True,
+                           text=True, cwd=cwd, env=env)
+        try:
+            return r.returncode, json.loads(r.stdout)
+        except Exception:
+            return r.returncode, {"raw": r.stdout[:200]}
+
+    c, r = runme("my", cwd=jrepo)
+    mypath = r.get("personal", "")
+    S.append(("personal world: created in its own git, holds",
+              r.get("verdict") == "holds" and mypath.startswith(me)
+              and os.path.isdir(os.path.join(me, ".git"))))
+    S.append(("personal world: the shared repo has no trace of it",
+              subprocess.run(["git", "status", "--porcelain"], cwd=jrepo,
+                             capture_output=True, text=True).stdout.strip() == ""))
+    with open(mypath, "a") as f:  # a claim about facts other people own
+        f.write("\npublic typealias IStillRead = VerifiedView<Emp9001, FinanceShare>\n")
+    c, r = runme("my", cwd=jrepo)
+    S.append(("personal claim holds while the shared world agrees", r["verdict"] == "holds"))
+    t = open(os.path.join(jrepo, "gate.swift")).read().replace(
+        "public enum Emp9001: Employee, Person {\n    public typealias Rank = Lead\n    public typealias Home = Finance",
+        "public enum Emp9001: Employee, Person {\n    public typealias Rank = Lead\n    public typealias Home = Engineering", 1)
+    open(os.path.join(jrepo, "gate.swift"), "w").write(t)
+    c, rmine = runme("my", cwd=jrepo)
+    c, rshared = runme("status", cwd=jrepo)
+    S.append(("someone else's change refuses MY claim, by line in MY file",
+              rmine["verdict"] == "refused"
+              and any(x["address"].startswith("my.swift:") for x in rmine["refusals"])))
+    S.append(("and their CI sees the shared world alone: no personal file in it",
+              not any("my.swift" in x["address"] for x in rshared.get("refusals", []))))
+    # the multi-file addressing: no ghost addresses in files that never claim it
+    ghosts = [x for x in rmine["refusals"]
+              if x["address"].startswith("grants.swift:")
+              and "VerifiedInDepartment" in x["claim"]]
+    S.append(("no ghost address: grants.swift is not blamed for a claim it never makes", not ghosts))
+
     for name, ok in S:
         print(("PASS" if ok else "FAIL"), name)
     print("ALL GREEN" if all(ok for _, ok in S) else "RED")
