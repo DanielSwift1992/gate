@@ -6,6 +6,9 @@
      layout); the verdict docked at the bottom, Xcode-style; cross-file
      judgement over unsaved text. -->
 <meta charset="utf-8"><title>gate · world bench</title>
+<!-- zero egress, enforced by the browser as well as by the code: the bench may
+     talk to its own loopback server and to nothing else. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
 <link rel="stylesheet" href="/codemirror.css">
 <style>
 :root{--ok:#248A3D;--bad:#C4453B;--action:#007AFF;--line:#d2d2d7;--mist:#f5f5f7;--paper:#fff;--ink:#1d1d1f;--muted:#8e8e93;--localtype:#0B4F79;--knownname:#3900A0;color-scheme:light}

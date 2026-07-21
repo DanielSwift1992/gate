@@ -111,6 +111,43 @@ wrappers.
   `materialize` lands the file in your repo, where it becomes yours.
   Hidden is not secret.
 
+## Security posture
+
+gate makes no outbound connection, at any time, for any reason: no
+telemetry, no update check, no licence ping. That is a contract, not a
+default — and it is what lets an engineer install it the way they install
+`ripgrep`. Verify it yourself, in about a minute:
+
+```sh
+# 1. air-gap it: turn off the network and run the whole battery
+python3 tests/smoke.py                      # all green, offline
+
+# 2. read the source for outbound primitives — the battery greps for these
+grep -nE "urllib\.request|socket\.socket|http\.client|requests\.(get|post)" gate
+grep -nE "XMLHttpRequest|new WebSocket|fetch\(['\"]https?:" ui.html judge.js
+
+# 3. the server listens on the loopback, and nowhere else
+grep -n 'HTTPServer((' gate                 # 127.0.0.1
+lsof -iTCP -sTCP:LISTEN -P | grep 4744      # while `gate serve` runs
+
+# 4. the judge binary links nothing that speaks a network
+otool -L bin/gate-judge                     # ldd on Linux
+
+# 5. build the judge yourself and compare: it comes from a public corpus
+bin/build-judge.sh <pin>
+```
+
+The bench also declares a Content-Security-Policy with `connect-src
+'self'`, so the browser refuses any external request even if one were ever
+written. Everything above is a check in the battery, so it stays true.
+
+There is no server, no account, no telemetry endpoint, and no data of yours
+anywhere but your own repository. What gate reads is your working copy and
+`git`; what it writes is your working copy. The CLI is one file of standard
+library Python and the bench is one file of HTML — small enough that reading
+them is a reasonable afternoon, which is the point: a tool that checks by
+reading should be checkable by reading.
+
 ## Layout and ownership
 
 - `gate.swift` is the source. Declare a multi-file layout in
@@ -133,7 +170,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 35 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 40 end-to-end checks, the definition of green
 ```
 
 ## Status

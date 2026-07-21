@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # The regression battery: every verb, end to end, in a throwaway repo.
 # Run: python3 tests/smoke.py
-import json, os, shutil, subprocess, sys, tempfile
+import json, os, re, shutil, subprocess, sys, tempfile
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GATE = os.path.join(HERE, "gate")
@@ -230,6 +230,26 @@ public enum MyWatch: AccessLedger {{
               if x["address"].startswith("grants.swift:")
               and "VerifiedInDepartment" in x["claim"]]
     S.append(("no ghost address: grants.swift is not blamed for a claim it never makes", not ghosts))
+
+    # ── zero egress: a claim about ourselves, kept by a gate on our own source.
+    # An enterprise review runs this same grep; it must never come back dirty,
+    # because one outbound call ends the "an engineer may just install it" path.
+    forbidden = [r"urllib\.request", r"^\s*import socket\b", r"socket\.socket",
+                 r"http\.client", r"requests\.(get|post|put)", r"XMLHttpRequest",
+                 r"new WebSocket", r"""fetch\(\s*['"`]https?:""",
+                 r"""(?:src|href)\s*=\s*['"]https?:"""]
+    hits = []
+    for f in ("gate", "ui.html", "judge.js"):
+        text = open(os.path.join(HERE, f), encoding="utf-8", errors="replace").read()
+        for pat in forbidden:
+            for m in re.finditer(pat, text, re.M):
+                hits.append(f + ": " + m.group(0))
+    S.append(("zero egress: no outbound primitive in the runtime sources", not hits))
+    src = open(GATE, encoding="utf-8").read()
+    S.append(("the bench binds to the loopback alone", 'HTTPServer(("127.0.0.1"' in src))
+    ui = open(os.path.join(HERE, "ui.html"), encoding="utf-8").read()
+    S.append(("the page declares a policy that blocks any external request",
+              "Content-Security-Policy" in ui and "connect-src 'self'" in ui))
 
     for name, ok in S:
         print(("PASS" if ok else "FAIL"), name)
