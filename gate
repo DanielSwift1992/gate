@@ -111,9 +111,20 @@ public enum MyJournal {
 //    judge names the line — to you, in your bench. They never see this file,
 //    and they cannot break it silently.
 //
-//    Uncomment and name real people and documents from the world on the left:
+//    A claim is an entry in a ledger of your own, the same form the shared
+//    world uses. Uncomment it and name real people and documents from the
+//    world on the left. (A typealias is not a claim: it names a type, and
+//    the judge has nothing to check.)
 //
-//    public typealias IStillRead = VerifiedView<Emp9001, FinanceShare>
+//    public enum MyWatch: AccessLedger {
+//        @StructureBuilder
+//        public static var body: some Structure {
+//                VerifiedView<
+//                    Emp9001,
+//                    FinanceShare
+//                >.self;
+//        }
+//    }
 """
 
 
@@ -209,24 +220,31 @@ def refine_addresses(text, refusals, fname):
 
 def locate_claim(text, claim):
     # the line where this text actually makes this claim, or None. An entry
-    # spans lines, so the form stands on one line and its subject just below.
-    head = re.match(r"`?(\w+)`?", claim)
-    if not head:
+    # spans lines — the form, then its parties — so read one entry at a time,
+    # from the form to the line that closes it, and require every party the
+    # claim names to be inside THAT entry: two entries about one person are
+    # two different claims.
+    names = re.findall(r"\b[A-Z]\w*", claim)
+    if not names:
         return None
-    head = head.group(1)
-    m = (re.search(r"requires `?(\w+)`?\.", claim)
-         or re.search(r"`?(\w+)`?(?:\.\w+)? resolves to nothing", claim)
-         or re.match(r"`?(\w+)`?\.", claim))
-    subject = m.group(1) if m else None
+    form = names[0]
+    parties = re.findall(r"\b([A-Z]\w*)\.\w+", claim)
     lines = text.split("\n")
     for i, ln in enumerate(lines):
-        if not re.search(rf"\b{re.escape(head)}\b", ln):
+        if not re.search(rf"\b{re.escape(form)}\b", ln):
             continue
-        if not subject:
-            return i + 1
-        for k in range(i, min(len(lines), i + 6)):
-            if re.search(rf"\b{re.escape(subject)}\b", lines[k]):
-                return k + 1
+        end = i
+        while end < min(len(lines), i + 10) and ">" not in lines[end]:
+            end += 1
+        entry = lines[i:end + 1]
+        joined = "\n".join(entry)
+        if not all(re.search(rf"\b{re.escape(p)}\b", joined) for p in parties):
+            continue
+        want = parties[0] if parties else form
+        for k, line in enumerate(entry):
+            if re.search(rf"\b{re.escape(want)}\b", line):
+                return i + k + 1
+        return i + 1
     return None
 
 

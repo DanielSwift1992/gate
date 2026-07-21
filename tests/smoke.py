@@ -187,8 +187,31 @@ def main():
     S.append(("personal world: the shared repo has no trace of it",
               subprocess.run(["git", "status", "--porcelain"], cwd=jrepo,
                              capture_output=True, text=True).stdout.strip() == ""))
-    with open(mypath, "a") as f:  # a claim about facts other people own
-        f.write("\npublic typealias IStillRead = VerifiedView<Emp9001, FinanceShare>\n")
+    # a claim the SHARED world does not make anywhere: only my own file can be
+    # refused for it, so a pass here cannot come from the world's own entries
+    def myclaim(who, doc):
+        base = open(mypath).read().split("\npublic enum MyWatch")[0]
+        with open(mypath, "w") as f:
+            f.write(base + f"""
+public enum MyWatch: AccessLedger {{
+    @StructureBuilder
+    public static var body: some Structure {{
+            VerifiedView<
+                {who},
+                {doc}
+            >.self;
+    }}
+}}
+""")
+
+    myclaim("Emp9002", "EngineeringShare")   # Emp9002 lives in Finance: illegal
+    c, r = runme("my", cwd=jrepo)
+    S.append(("a personal claim is really judged: an illegal one is refused in MY file",
+              r["verdict"] == "refused"
+              and any(x["address"].startswith("my.swift:") for x in r["refusals"])))
+    S.append(("and no other file is blamed for a claim only mine makes",
+              all(x["address"].startswith("my.swift:") for x in r["refusals"])))
+    myclaim("Emp9001", "FinanceShare")       # legal
     c, r = runme("my", cwd=jrepo)
     S.append(("personal claim holds while the shared world agrees", r["verdict"] == "holds"))
     t = open(os.path.join(jrepo, "gate.swift")).read().replace(
