@@ -85,6 +85,13 @@ def main():
     c, r = run("status", cwd=split)
     S.append(("manifest: shadow file named", c == 1 and any("shadow" in x["claim"] for x in r["refusals"])))
 
+    # self-hosted shelf: the product's own stdlib files are judged by its own judge
+    import glob as _glob
+    for sf in sorted(_glob.glob(os.path.join(HERE, "stdlib", "*.swift"))):
+        raw = subprocess.run([os.path.join(HERE, "bin", "gate-judge"), "judge", "where", sf],
+                             capture_output=True, text=True).stdout
+        S.append((f"self-judged: {os.path.basename(sf)}", "holds" in raw and "✗" not in raw))
+
     # stdlib: hidden is not secret — shelf, materialize, drift guard, ownership
     c, r = run("stdlib")
     S.append(("stdlib shelf lists modules", len(r.get("modules", {})) == 2))

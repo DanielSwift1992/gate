@@ -753,60 +753,20 @@ def cmd_survey(a):
 
 MATERIALIZED_MARK = "// gate stdlib"
 
-GIT_ATOMS = """// gate stdlib git-atoms v1 — the git world itself, as declarations.
-// The substrate's own objects become atoms: judged records reference them.
-// Enforcement stays with git and the platform; these are the names.
+def load_stdlib():
+    # the shelf's single source: stdlib/*.swift next to the CLI. Readable,
+    # editable, judged by our own judge in our own battery (self-hosted);
+    # baking them into the one release binary is the Swift packaging step.
+    d = os.path.join(os.path.dirname(os.path.abspath(__file__)), "stdlib")
+    out = {}
+    if os.path.isdir(d):
+        for f in sorted(os.listdir(d)):
+            if f.endswith(".swift"):
+                out[f[:-6]] = open(os.path.join(d, f)).read()
+    return out
 
-/// A person behind an email: tables/identities.csv maps email -> person.
-public protocol Identity {}
 
-/// A zone a recognizer may search. An atom is declared OUTSIDE scopes;
-/// occurrences are looked for ONLY in declared scopes (no line — no search).
-public protocol Scope {}
-public enum CommitMessage: Scope {}
-public enum CommitAuthor: Scope {}
-public enum BranchName: Scope {}
-public enum FilePath: Scope {}
-
-/// The repository's own objects, as places records may reference.
-public protocol GitPlace {}
-public enum TheBranch: GitPlace {}
-public enum TheFile: GitPlace {}
-public enum TheCommit: GitPlace {}
-"""
-
-GENRE_GRANTS = """// gate stdlib genre-grants v1 — the domain genre, one page
-// (exemplar: theory corpus Sources/Examples/Grants.swift @ 0fd0b38).
-// Realms are declared atoms (the fourth is one line, not a schema change);
-// a verb set is a protocol class, containment is conformance; one gate
-// carries two tiers: the compiler holds the key's class, the judge holds
-// the posting equality.
-
-public protocol Reads {}
-public protocol Writes: Reads {}
-public protocol Administers: Writes {}
-public enum ReaderKey: Reads {}
-public enum WriterKey: Writes {}
-public enum WardenKey: Administers {}
-
-public protocol Realm {}
-public protocol Keeper {
-    associatedtype Post: Realm
-    associatedtype Key
-}
-public protocol Room {
-    associatedtype Place: Realm
-}
-public protocol Entered {}
-public enum Enter<
-    Who: Keeper,
-    Into: Room
-> {}
-extension Enter: Entered
-where Who.Key: Writes, Who.Post == Into.Place {}
-"""
-
-STDLIB = {"git-atoms": GIT_ATOMS, "genre-grants": GENRE_GRANTS}
+STDLIB = load_stdlib()
 
 
 def cmd_stdlib(a):
@@ -845,36 +805,13 @@ def stdlib_guards():
     return bad
 
 
-RBAC_GENRE = """// printed by gate import rbac — the K8s access world in the domain genre
+RBAC_GENRE_HEADER = """// printed by gate import rbac — the K8s access world in the domain genre
 // (the exemplar: theory corpus Sources/Examples/Grants.swift @ 0fd0b38).
 // Realms are namespaces plus the cluster scope. A role is a room stating its
 // realm; a binding is a keeper stating its post; the gate's equality is the
 // K8s invariant itself: a RoleBinding and its Role live in one namespace.
-// Tier one (Who.Key: Writes) is the compiler's; this file is judged by the
-// agnostic where-judge (canon v2), which holds the posting equalities.
+// The genre below is the stdlib module genre-grants, printed from the shelf.
 
-public protocol Reads {}
-public protocol Writes: Reads {}
-public protocol Administers: Writes {}
-public enum ReaderKey: Reads {}
-public enum WriterKey: Writes {}
-public enum WardenKey: Administers {}
-
-public protocol Realm {}
-public protocol Keeper {
-    associatedtype Post: Realm
-    associatedtype Key
-}
-public protocol Room {
-    associatedtype Place: Realm
-}
-public protocol Entered {}
-public enum Enter<
-    Who: Keeper,
-    Into: Room
-> {}
-extension Enter: Entered
-where Who.Key: Writes, Who.Post == Into.Place {}
 """
 
 READS, WRITES = {"get", "list", "watch"}, {"create", "update", "patch", "delete", "deletecollection"}
@@ -914,7 +851,7 @@ def cmd_import_rbac(a):
         elif kind == "RoleBinding":
             bindings.append(it)
             namespaces.add(ns)
-    lines = [RBAC_GENRE]
+    lines = [RBAC_GENRE_HEADER + STDLIB["genre-grants"]]
     srcmap = {}
     for ns in sorted(namespaces):
         lines.append(f"public enum Ns_{sanitize(ns)}: Realm {{}}")

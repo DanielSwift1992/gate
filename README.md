@@ -15,9 +15,13 @@ your repo.
                                  # a stale roleRef and a cross-namespace binding are named
                                  # by their k8s source in milliseconds
 
-Internal working notes live in private/ (untracked; see .gitignore) —
-spec, theory map, scenarios, the rule-form catalogue. Client-facing
-documentation will be written separately.
+The shelf's definitions are real Swift files in stdlib/ — readable,
+editable, and judged by the product's own judge in its own battery
+(self-hosted; the gates we define are public as files, and their diffs
+are our PRs under our own laws). Baking them into the single release
+binary is the Swift packaging step. Internal working notes live in
+private/ (untracked; see .gitignore); client-facing documentation will
+be written separately.
 
 The judge binary (bin/gate-judge) is built from the public theory corpus:
 bin/build-judge.sh [pin]. Tests: python3 tests/smoke.py (16 checks).
