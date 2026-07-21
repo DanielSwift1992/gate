@@ -4,6 +4,25 @@
 
 The working prototype, end to end:
 
+- A personal world (`gate my`, and the bench on first run): yours, in your
+  own git at `~/.gate/me`, one per repository, never in the shared repo —
+  colleagues and CI do not have it. It holds what your bench shows you
+  (`MyJournal` is a declaration, so editing it changes the journal) and
+  claims you want to keep true, judged against the shared world: when
+  somebody changes a fact you depend on, the judge names the line in your
+  file. Privacy is the repository boundary, not a policy.
+- Policy is a fact: an identity ties an email to a person and `MergePolicy`
+  states what merging demands, both declared in the world instead of read
+  from unjudged CSVs. An identity that names nobody is refused by line.
+- Zero egress, checked rather than asserted: the battery greps the runtime
+  sources for outbound primitives, confirms the loopback-only bind, and
+  confirms the bench's Content-Security-Policy. The README says how to
+  verify all of it without trusting us.
+- A commit reads as the facts it changed (`Emp9000 · Rank: Manager → Lead`),
+  not as a diff wrapped in git plumbing.
+- A refusal belongs to the file that makes the claim: given several files
+  the judge repeats each refusal once per file, and files that never make
+  the claim are no longer blamed at lines they may not have.
 - The journal view (`gate log`, and the bench rail): the repository's own
   history projected — commit, author, open/closed, and the world files a
   commit touches. A pure function of the clone: no server state, no
