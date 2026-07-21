@@ -306,9 +306,11 @@ def cmd_import(a):
         for ln in chunk.split("\n"):
             lines.append((ln, src))
 
-    emit("// the facts world — this file is the single source, read and edited here")
-    emit("// directly; git carries the history. Seeded once by gate import from:")
-    emit(f"//   {os.path.basename(people_csv)}, {os.path.basename(grants_csv)}")
+    emit("// the facts world — the source you read and edit, not a generated")
+    emit("// artifact. The tables only seeded it once (below); the world, not the")
+    emit("// tables, is the truth. A world.manifest.swift may split it across")
+    emit("// several files, all judged together. git carries the history.")
+    emit(f"// seeded by gate import from: {os.path.basename(people_csv)}, {os.path.basename(grants_csv)}")
     people = list(csv.DictReader(open(people_csv)))
     grants = list(csv.DictReader(open(grants_csv)))
 
