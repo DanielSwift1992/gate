@@ -32,8 +32,8 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .badge{flex:none;font:9.5px/1.4 -apple-system,sans-serif;padding:0 .5em;border-radius:8px}
 .badge.closed{background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok)}
 .badge.open{background:color-mix(in srgb,var(--action) 15%,transparent);color:var(--action)}
-#filter-note{padding:.3em 1.1em;font:11px -apple-system,sans-serif;color:var(--action);cursor:pointer}
-#filter-note:hover{text-decoration:underline}
+#filter-note,#load-more{padding:.3em 1.1em;font:11px -apple-system,sans-serif;color:var(--action);cursor:pointer}
+#filter-note:hover,#load-more:hover{text-decoration:underline}
 #diff-overlay{display:none;position:fixed;inset:0;background:color-mix(in srgb,var(--ink) 32%,transparent);z-index:20;align-items:center;justify-content:center}
 #diff-box{background:var(--paper);border-radius:10px;width:min(860px,88vw);max-height:82vh;overflow:auto;box-shadow:0 10px 40px color-mix(in srgb,var(--ink) 30%,transparent);position:relative}
 #diff-close{position:sticky;top:0;float:right;margin:.6em;padding:.15em .6em;background:var(--mist);border-radius:5px;font:11px -apple-system,sans-serif;color:var(--muted);cursor:pointer}
@@ -168,10 +168,10 @@ function buildRail() {
 // ── the journal VIEW: git's own history, projected. A pure function of the
 // clone — no server state, no hosting; whoever can read the repo sees it.
 // Observed, never judged (open/closed is reachability, not a verdict). ──
-let journalCommits = [], authorFilter = null;
+let journalCommits = [], authorFilter = null, journalLimit = 60, journalScope = "world";
 async function buildJournal() {
     try {
-        const j = await (await fetch("/log?n=200")).json();
+        const j = await (await fetch("/log?n=" + journalLimit + "&scope=" + journalScope)).json();
         journalCommits = j.commits || []; journalWorld = j.world_files || [];
     } catch { journalCommits = []; }
     renderJournal();
@@ -179,6 +179,8 @@ async function buildJournal() {
 function renderJournal() {
     const host = document.getElementById("journal");
     host.innerHTML = "";
+    document.querySelector("#journal-head .obs").textContent =
+        (journalScope === "world" ? "the world's history · " : "the repository · ") + "observed, not judged";
     if (authorFilter) {
         const note = document.createElement("div");
         note.id = "filter-note";
@@ -191,8 +193,13 @@ function renderJournal() {
         const row = document.createElement("div");
         row.className = "commit" + (c.touches_world ? " touches" : "");
         const when = (c.when || "").slice(0, 10);
+        // the badge says reachability, and its title says exactly that — a
+        // squash-merged branch reads open until the branch is deleted
+        const title = c.closed
+            ? "reachable from the default branch"
+            : "on a branch, not in the default branch (a squash-merged branch reads open until the branch is deleted)";
         const badge = c.closed === null ? ""
-            : '<span class="badge ' + (c.closed ? "closed" : "open") + '">' + (c.closed ? "closed" : "open") + "</span>";
+            : '<span class="badge ' + (c.closed ? "closed" : "open") + '" title="' + title + '">' + (c.closed ? "closed" : "open") + "</span>";
         row.innerHTML = '<div class="subj">' + esc(c.subject) + "</div><div class=\"meta\">" + badge +
             '<span class="who" data-email="' + esc(c.email) + '">' + esc(c.person || c.email) + "</span> · " + when + "</div>";
         row.querySelector(".who").onclick = (e) => {
@@ -203,6 +210,13 @@ function renderJournal() {
         host.appendChild(row);
     }
     if (!shown.length) host.innerHTML += '<div style="padding:.4em 1.1em;color:var(--muted);font-size:11px">no commits</div>';
+    // more may be there: the server was asked for exactly this many
+    if (journalCommits.length >= journalLimit) {
+        const more = document.createElement("div");
+        more.id = "load-more"; more.textContent = "load more";
+        more.onclick = () => { journalLimit += 100; buildJournal(); };
+        host.appendChild(more);
+    }
 }
 async function showDiff(c) {
     const f = c.files.find(x => (journalWorld || []).includes(x)) || "";

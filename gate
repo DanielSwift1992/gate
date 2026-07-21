@@ -698,10 +698,14 @@ def cmd_guard_deps(a):
     return out
 
 
-def repo_journal(n=200):
+def repo_journal(n=200, scope="world"):
     # the journal VIEW — git's own history projected, no translation needed:
     # every clone already carries it (append-only, I3). Observed, NOT judged:
     # a commit is closed iff reachable from the default branch, open otherwise.
+    #
+    # scope="world" (the default) is the history OF THE WORLD FILES: a client's
+    # repository carries code too, and this bench is a workbench for the world.
+    # git does the filtering itself, by pathspec. scope="all" is the repository.
     import csv as _csv
 
     base = os.path.dirname(os.path.abspath(FACTS)) if FACTS else "."
@@ -721,9 +725,10 @@ def repo_journal(n=200):
     if idcsv and os.path.exists(idcsv):
         identities = {r["email"]: r["id"] for r in _csv.DictReader(open(idcsv))}
     world = set(os.path.relpath(p, base) for p in world_files()) if FACTS else set()
-    fmt = subprocess.run(
-        ["git", "log", "--all", f"-{n}", "--format=%x01%H%x1f%ae%x1f%aI%x1f%s", "--name-only"],
-        cwd=base, capture_output=True, text=True).stdout
+    args = ["git", "log", "--all", f"-{n}", "--format=%x01%H%x1f%ae%x1f%aI%x1f%s", "--name-only"]
+    if scope == "world" and world:
+        args += ["--", *sorted(world)]
+    fmt = subprocess.run(args, cwd=base, capture_output=True, text=True).stdout
     commits, cur = [], None
     for line in fmt.splitlines():
         if line.startswith("\x01"):
@@ -740,7 +745,8 @@ def repo_journal(n=200):
                 cur["touches_world"] = True
     if cur:
         commits.append(cur)
-    return {"command": "log", "default_branch": default, "world_files": sorted(world), "commits": commits}
+    return {"command": "log", "default_branch": default, "scope": scope, "limit": n,
+            "world_files": sorted(world), "commits": commits}
 
 
 def cmd_survey(a):
@@ -1108,7 +1114,7 @@ def cmd_serve(a):
                     self.wfile.write(body)
                     return
                 if u.path == "/log":
-                    out = repo_journal(int(q.get("n", 200)))
+                    out = repo_journal(int(q.get("n", 200)), q.get("scope", "world"))
                 elif u.path == "/show":
                     # a commit's diff over one world file, plain text (observed)
                     base = os.path.dirname(os.path.abspath(FACTS)) if FACTS else "."
@@ -1281,7 +1287,10 @@ def dispatch(cmd, rest):
     if cmd == "survey":
         return cmd_survey(rest)
     if cmd == "log":
-        return repo_journal(int(rest[0]) if rest else 200)
+        # gate log [N] — the world's history; gate log all [N] — the repository's
+        scope = "all" if rest and rest[0] in ("all", "--all") else "world"
+        nums = [x for x in rest if x.isdigit()]
+        return repo_journal(int(nums[0]) if nums else 200, scope)
     if cmd == "stdlib":
         return cmd_stdlib(rest)
     raise SystemExit(USAGE)
@@ -1335,7 +1344,8 @@ def humanize(out):
         lines.append(f"export: {out['people']} people, {out['grants']} grants → {', '.join(out['wrote'])}")
     elif cmd == "log":
         d = out.get("default_branch") or "?"
-        lines.append(f"log: {len(out['commits'])} commits · observed, not judged · closed = reachable from {d}")
+        what = "the world's history" if out.get("scope") == "world" else "the repository"
+        lines.append(f"log: {len(out['commits'])} commits · {what} · observed, not judged · closed = reachable from {d}")
         for c in out["commits"]:
             st = "?" if c["closed"] is None else ("closed" if c["closed"] else "open")
             who = c["person"] or c["email"]

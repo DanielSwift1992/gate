@@ -144,7 +144,20 @@ def main():
     gc("dev@corp", "demote a manager (pending on a branch)")
     subprocess.run(["git", "checkout", "-q", "main"], cwd=jrepo)
 
+    # a code file nobody's world declares: the world's history must not carry it
+    with open(os.path.join(jrepo, "app.py"), "w") as f:
+        f.write("print('unrelated code')\n")
+    subprocess.run(["git", "add", "-A"], cwd=jrepo)
+    gc("boss@corp", "unrelated code commit")
+
     c, r = run("log", cwd=jrepo)
+    S.append(("journal defaults to the world's history, not the whole repo",
+              r.get("scope") == "world"
+              and not any(x["subject"] == "unrelated code commit" for x in r["commits"])))
+    c, ra = run("log", "all", cwd=jrepo)
+    S.append(("journal all: the repository's own commits appear",
+              ra.get("scope") == "all"
+              and any(x["subject"] == "unrelated code commit" for x in ra["commits"])))
     commits = r.get("commits", [])
     main_c = next((x for x in commits if x["email"] == "boss@corp"), None)
     feat_c = next((x for x in commits if x["email"] == "dev@corp"), None)
