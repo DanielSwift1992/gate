@@ -30,7 +30,8 @@ def main():
 
     sub = os.path.join(repo, "tables")
     c, r = run("status", cwd=sub)
-    S.append(("status via discovery, subdir", c == 0 and r.get("verdict") == "holds"))
+    S.append(("status bootstraps the world once, subdir", c == 0 and r.get("verdict") == "holds"
+              and os.path.exists(os.path.join(repo, "world.swift"))))
     c, r = run("check", "view", "Emp9001", "FinanceShare", cwd=repo)
     S.append(("check legal exit 0", c == 0 and r["verdict"] == "holds"))
     c, r = run("check", "view", "Emp9001", "EngineeringShare", cwd=repo)
@@ -38,7 +39,13 @@ def main():
     c, r = run("diff", "transfer", "Emp9001", "Engineering", cwd=repo)
     S.append(("diff transfer names leftovers", r["verdict"] == "refused" and r["dry_run"]))
     c, r = run("apply", "revoke", "Emp9002", "FinanceShare", cwd=repo)
-    S.append(("apply revoke writes on holds", r.get("applied") is True))
+    S.append(("apply revoke edits the world", r.get("applied") is True))
+    with open(os.path.join(repo, "tables", "grants.csv"), "a") as f:
+        f.write("Emp9000,FinanceShare\n")  # a later CSV edit must NOT overwrite the world
+    c, r = run("status", cwd=repo)
+    world_text = open(os.path.join(repo, "world.swift")).read()
+    S.append(("no second truth: CSV edit does not reprint the world",
+              r.get("verdict") == "holds" and world_text.count("Emp9002,") == 3))
     c, r = run("apply", "grant", "Emp9002", "FinanceShare", cwd=repo)
     S.append(("apply grant back", r.get("applied") is True))
     c, r = run("import", "tables/people.csv", "tables/grants.csv", "-o", "world.swift", cwd=repo)

@@ -12,16 +12,17 @@ ROOT = os.environ.get("GATE_CORPUS")
 
 
 def discover_world():
-    # мир находится как .git — подъёмом по дереву: tables/ = источник
-    # (world.swift — артефакт), иначе world.swift = источник
+    # мир находится как .git — подъёмом по дереву. КАНОН: world.swift —
+    # ЕДИНСТВЕННЫЙ источник (читабелен всем: git diff, человек, судья,
+    # компилятор); tables/ — только вход для первой печати (bootstrap),
+    # никогда не перекрывают мир.
     d = os.getcwd()
     while True:
-        t = os.path.join(d, "tables")
-        if os.path.exists(os.path.join(t, "people.csv")) and os.path.exists(os.path.join(t, "grants.csv")):
-            return os.path.join(d, "world.swift"), t
         w = os.path.join(d, "world.swift")
-        if os.path.exists(w):
-            return w, None
+        t = os.path.join(d, "tables")
+        has_tables = os.path.exists(os.path.join(t, "people.csv")) and os.path.exists(os.path.join(t, "grants.csv"))
+        if os.path.exists(w) or has_tables:
+            return w, (t if has_tables else None)
         parent = os.path.dirname(d)
         if parent == d:
             return None, None
@@ -39,14 +40,13 @@ else:
 
 
 def ensure_world():
-    # tables-режим: мир — build-артефакт; пересобирается молча при устаревании
-    if not TABLES:
-        return False
-    p, g = os.path.join(TABLES, "people.csv"), os.path.join(TABLES, "grants.csv")
-    stale = not os.path.exists(FACTS) or os.path.getmtime(FACTS) < max(os.path.getmtime(p), os.path.getmtime(g))
-    if stale:
-        cmd_import([p, g, "-o", FACTS])
-    return stale
+    # bootstrap только: мира ещё нет, а вход-таблицы есть — напечатать РАЗ.
+    # Дальше мир — источник; таблицы его никогда не перекрывают (no second
+    # truth): хочешь влить новые CSV — явный `gate import`.
+    if TABLES and not os.path.exists(FACTS):
+        cmd_import([os.path.join(TABLES, "people.csv"), os.path.join(TABLES, "grants.csv"), "-o", FACTS])
+        return True
+    return False
 _PACKAGED = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bin", "gate-judge")
 JUDGE = os.environ.get("GATE_JUDGE") or _PACKAGED
 if not os.path.exists(JUDGE):
@@ -218,72 +218,9 @@ def hire_text(text, f):
     return text
 
 
-def table_change(a):
-    # tables-режим: apply правит ИСТОЧНИК (CSV в git), мир перепечатывается.
-    # У gate нет своего save: изменение = дифф рабочей копии, историю ведёт git.
-    import csv
-
-    apply_it = "--apply" in a
-    a = [x for x in a if x != "--apply"]
-    pp, gp = os.path.join(TABLES, "people.csv"), os.path.join(TABLES, "grants.csv")
-    people = list(csv.DictReader(open(pp)))
-    grants = list(csv.DictReader(open(gp)))
-    changed = []
-    if a[0] == "grant":
-        who, doc = a[1], a[2]
-        grants = grants + [{"who": who, "doc": doc}]
-        changed = ["tables/grants.csv"]
-        label = {"command": "change grant", "who": who, "doc": doc}
-    elif a[0] == "revoke":
-        who, doc = a[1], a[2]
-        hits = [g for g in grants if g["who"] == who and g["doc"] == doc]
-        if len(hits) != 1:
-            raise SystemExit(json.dumps({"error": f"revoke: grant {who}->{doc} found x{len(hits)}, want 1"}))
-        grants = [g for g in grants if g is not hits[0]]
-        changed = ["tables/grants.csv"]
-        label = {"command": "change revoke", "who": who, "doc": doc}
-    elif a[0] == "transfer":
-        who, dept = a[1], a[2]
-        hits = [p for p in people if p["id"] == who]
-        if len(hits) != 1:
-            raise SystemExit(json.dumps({"error": f"transfer: person {who} found x{len(hits)}, want 1"}))
-        hits[0]["home"] = dept
-        changed = ["tables/people.csv"]
-        label = {"command": "change transfer", "who": who, "to": dept,
-                 "note": "the team entry follows home when the world is printed; view grants are intent — resolve leftovers with grant/revoke"}
-    elif a[0] == "hire":
-        f = dict(zip(["id", "rank", "home", "given", "family", "born", "site"], a[1:8]))
-        people = people + [{**f, "sex": "Male"}]
-        changed = ["tables/people.csv"]
-        label = {"command": "change hire", **f}
-    else:
-        raise SystemExit(json.dumps({"error": f"unknown change {a[0]}"}))
-
-    def write_csv(path, rows, cols):
-        with open(path, "w") as fo:
-            fo.write(",".join(cols) + "\n")
-            fo.writelines(",".join(r.get(c, "") for c in cols) + "\n" for r in rows)
-
-    d = tempfile.mkdtemp(prefix="gate-change-")
-    tpp, tgp = os.path.join(d, "people.csv"), os.path.join(d, "grants.csv")
-    write_csv(tpp, people, ["id", "rank", "home", "given", "family", "born", "site", "sex"])
-    write_csv(tgp, grants, ["who", "doc"])
-    r = cmd_import([tpp, tgp, "-o", os.path.join(d, "world.swift")])
-    verdict = {k: r[k] for k in ("verdict", "refusals", "judge_ms", "wall_ms")}
-    applied = False
-    if apply_it and r["verdict"] == "holds":
-        write_csv(pp, people, ["id", "rank", "home", "given", "family", "born", "site", "sex"])
-        write_csv(gp, grants, ["who", "doc"])
-        cmd_import([pp, gp, "-o", FACTS])  # артефакт перепечатан из источника
-        applied = True
-    return {**label, **verdict, "dry_run": not apply_it, "applied": applied,
-            "source_files": changed, "save": "none of ours: the diff is in your working copy, git carries the history"}
-
-
 def cmd_change(a):
     # change transfer WHO DEPT [--apply] · change hire ID RANK HOME GIVEN FAMILY BORN SITE [--apply]
-    if TABLES:
-        return table_change(a)
+    # Правится ЕДИНСТВЕННЫЙ источник — мир; дифф остаётся git-диффом Swift.
     apply_it = "--apply" in a
     a = [x for x in a if x != "--apply"]
     text = open(FACTS).read()
@@ -516,24 +453,29 @@ INIT_FILES = {
     "tables/guard.csv": "action,requires_rank\nmerge,Manager\n",
     "README.md": """# Your world
 
-Facts live in `tables/*.csv` — your own files, in your own repo.
-The porcelain is git-shaped:
+THE CANON: `world.swift` is the single source — readable by everything
+(git diff, a human, the judge, the compiler). Tables are INPUTS: drop a
+CSV once, `gate import` prints the world, and from then on the world is
+what you edit (directly, or through the verbs). A table is a VIEW —
+`gate export` prints it back whenever asked; it is never stored as truth.
 
-    gate import tables/people.csv tables/grants.csv -o world.swift
-    gate status                                  # what disagrees right now
-    gate check view WHO DOC                      # may X read Y? (ms)
-    gate diff  transfer WHO DEPT                 # what would break (nothing changes)
-    gate apply transfer WHO DEPT                 # applies only on holds
-    gate export world.swift -o p.csv g.csv       # diff vs your originals must be empty
-    gate verify tables/people.csv tables/grants.csv --against "<your old checker>"
+    gate import tables/people.csv tables/grants.csv -o world.swift   # once
+    gate status                             # what disagrees right now
+    gate check view WHO DOC                 # may X read Y? (ms)
+    gate diff  transfer WHO DEPT            # what would break (nothing changes)
+    gate apply transfer WHO DEPT            # edits the world, only on holds
+    gate export world.swift -o p.csv g.csv  # the table, printed on demand
 
-A refusal names the line of YOUR file and exits non-zero (CI-ready).
+Every change — facts and rules alike — is a working-copy edit of the
+world; git carries the history: commit (the hook judges) → PR → required
+check. `git diff` is always a Swift diff. A refusal names the line and
+exits non-zero (CI-ready).
 To let your AI assistant do the translation, point it at AGENT.md.
 `.githooks/pre-commit` guards every commit: `git config core.hooksPath .githooks`
 """,
     ".githooks/pre-commit": """#!/bin/sh
-# the world must hold before it is committed
-gate import tables/people.csv tables/grants.csv -o world.swift
+# the world must hold before it is committed (it is judged, never reprinted)
+gate status
 """,
     "AGENT.md": """# Instruction for the translating agent
 
@@ -586,8 +528,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       # put the released `gate` binary on PATH (release artifact, one file)
-      - run: gate import tables/people.csv tables/grants.csv -o world.swift
-      # a refusal exits red and names the line of your own csv
+      - run: gate status
+      # the world is the source; a refusal exits red and names the line
       - run: gate guard merge
       # repo policy by the same gates: the HEAD author, mapped through
       # tables/identities.csv, must hold the rank stated in tables/guard.csv.
@@ -1025,18 +967,10 @@ def cmd_serve(a):
             self.wfile.write(body)
 
         def do_PUT(self):
-            # единственная пишущая ручка: сам файл мира (plumbing открыт, суд неизбежен).
-            # В tables-режиме мир — печатный артефакт: писать в него = save мимо
-            # источника, следующая печать молча перезатёрла бы правку — отказ.
+            # единственная пишущая ручка: сам файл мира — он и есть источник
+            # (plumbing открыт, суд неизбежен)
             if urlparse(self.path).path != "/world":
                 self.send_response(404); self.end_headers(); return
-            if TABLES:
-                body = json.dumps({"error": "tables are the source here; edit tables/*.csv or use gate apply — the world file is printed, a direct save would be silently overwritten"}).encode()
-                self.send_response(409)
-                self.send_header("Content-Type", "application/json")
-                self.end_headers()
-                self.wfile.write(body)
-                return
             n = int(self.headers.get("Content-Length", 0))
             with open(FACTS, "wb") as f:
                 f.write(self.rfile.read(n))
