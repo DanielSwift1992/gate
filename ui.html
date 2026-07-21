@@ -312,10 +312,25 @@ function buildTables() {
         h.style.cursor = "pointer"; h.onclick = () => jumpTo(L.owner);
         host.append(h);
         const table = document.createElement("table");
+        const sig = "ledger:" + L.owner + ":" + L.head;
+        const mark = (k) => tableSort && tableSort.sig === sig && tableSort.key === k
+            ? ' <span class="dir">' + (tableSort.dir > 0 ? "↓" : "↑") + "</span>" : "";
         const head = document.createElement("tr");
-        for (let c = 0; c < L.cols; c++) { const th = document.createElement("th"); th.textContent = c === 0 ? "who" : c === 1 ? "what" : "arg " + (c + 1); head.append(th); }
+        for (let c = 0; c < L.cols; c++) {
+            const th = document.createElement("th");
+            th.innerHTML = (c === 0 ? "who" : c === 1 ? "what" : "arg " + (c + 1)) + mark(c);
+            th.onclick = () => {
+                const dir = tableSort && tableSort.sig === sig && tableSort.key === c ? -tableSort.dir : 1;
+                tableSort = { sig, key: c, dir }; buildTables();
+            };
+            head.append(th);
+        }
         table.append(head);
-        for (const e of L.rows) {
+        let entries = L.rows;
+        if (tableSort && tableSort.sig === sig)
+            entries = [...entries].sort((a, b) =>
+                tableSort.dir * (a.args[tableSort.key] ?? "").localeCompare(b.args[tableSort.key] ?? "", undefined, { numeric: true }));
+        for (const e of entries) {
             const tr = document.createElement("tr");
             e.args.forEach((a, c) => {
                 const td = document.createElement("td");
