@@ -1,0 +1,7 @@
+id,rank,home,given,family,born,site,sex
+Emp9000,Manager,Finance,Edsger,Dijkstra,Y1925,OnSite,Male
+Emp9001,Lead,Finance,Barbara,Dijkstra,Y1925,Remote,Female
+Emp9002,IndividualContributor,Finance,John,Dijkstra,Y1925,OnSite,Male
+Emp9003,Manager,Engineering,Margaret,Knuth,Y1937,Hybrid,Female
+Emp9004,Lead,Engineering,Donald,Knuth,Y1937,OnSite,Male
+Emp9005,IndividualContributor,Engineering,Dennis,Knuth,Y1937,Remote,Male

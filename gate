@@ -1,0 +1,986 @@
+#!/usr/bin/env python3
+# gate — a static layer of logical integrity over git: the world of facts
+# lives in the client's own repository, the judge answers in milliseconds,
+# a refusal names the line. Spec: docs/PRODUCT.md. Human output by default,
+# --json for machines. Dry-run by default: apply writes only on holds.
+
+import json, os, re, subprocess, sys, tempfile, time
+
+# GATE_CORPUS: optional checkout of the theory corpus — needed only for the
+# compiler-path verbs (check administer|delete, apply into the corpus world).
+ROOT = os.environ.get("GATE_CORPUS")
+
+
+def discover_world():
+    # мир находится как .git — подъёмом по дереву: tables/ = источник
+    # (world.swift — артефакт), иначе world.swift = источник
+    d = os.getcwd()
+    while True:
+        t = os.path.join(d, "tables")
+        if os.path.exists(os.path.join(t, "people.csv")) and os.path.exists(os.path.join(t, "grants.csv")):
+            return os.path.join(d, "world.swift"), t
+        w = os.path.join(d, "world.swift")
+        if os.path.exists(w):
+            return w, None
+        parent = os.path.dirname(d)
+        if parent == d:
+            return None, None
+        d = parent
+
+
+_env_facts = os.environ.get("GATE_FACTS")
+if _env_facts:
+    FACTS, TABLES = _env_facts, None
+else:
+    FACTS, TABLES = discover_world()
+    if FACTS is None and ROOT:  # corpus checkout as a last resort
+        FACTS = os.path.join(ROOT, "Sources", "Organization", "System", "GeneratedTeam.swift")
+        TABLES = None
+
+
+def ensure_world():
+    # tables-режим: мир — build-артефакт; пересобирается молча при устаревании
+    if not TABLES:
+        return False
+    p, g = os.path.join(TABLES, "people.csv"), os.path.join(TABLES, "grants.csv")
+    stale = not os.path.exists(FACTS) or os.path.getmtime(FACTS) < max(os.path.getmtime(p), os.path.getmtime(g))
+    if stale:
+        cmd_import([p, g, "-o", FACTS])
+    return stale
+_PACKAGED = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bin", "gate-judge")
+JUDGE = os.environ.get("GATE_JUDGE") or _PACKAGED
+if not os.path.exists(JUDGE):
+    raise SystemExit("gate: no judge binary (bin/gate-judge missing; build it with bin/build-judge.sh or set GATE_JUDGE)")
+
+
+def refine_addresses(text, refusals, fname):
+    # судья вешает отказ на строку предыдущего дренажа — уточняем адрес строкой,
+    # где стоит субъект отказа (первое имя из claim), в окне вокруг адреса
+    file_lines = text.split("\n")
+    for ref in refusals:
+        n = int(ref["address"].split(":")[1])
+        m = re.search(r"requires (\w+)\.", ref["claim"]) or re.match(r"(\w+)\.", ref["claim"])
+        if not m:
+            continue
+        subject = m.group(1)
+        for k in range(max(0, n - 4), min(len(file_lines), n + 8)):
+            if re.search(rf"\b{subject}\b", file_lines[k]):
+                ref["address"] = f"{fname}:{k + 1}"
+                break
+    return refusals
+
+
+def judge(path):
+    t0 = time.time()
+    out = subprocess.run([JUDGE, "judge", path], capture_output=True, text=True).stdout
+    wall_ms = round((time.time() - t0) * 1000, 1)
+    refusals = [
+        {"address": m.group(1), "claim": m.group(2).strip()}
+        for m in re.finditer(r"^\s+(\S+\.swift:\d+)\s+(.+)$", out, re.M)
+    ]
+    refusals = refine_addresses(open(path).read(), refusals, os.path.basename(path))
+    holds = "THE JUDGE holds" in out
+    times = re.findall(r"([\d.]+) ms", out)
+    return {
+        "verdict": "holds" if holds else "refused",
+        "refusals": refusals,
+        "judge_ms": float(times[-1]) if times else None,
+        "wall_ms": wall_ms,
+    }
+
+
+def must_sub(text, pattern, repl, what, count=1):
+    found = len(re.findall(pattern, text, re.S))
+    if found != count:
+        raise SystemExit(json.dumps({"error": f"{what}: anchor x{found}, want {count}"}))
+    return re.sub(pattern, repl, text, count=count, flags=re.S)
+
+
+def with_temp(text):
+    d = tempfile.mkdtemp(prefix="gate-")
+    # проба носит имя реального мира: адреса в ответах читаются как родные
+    p = os.path.join(d, os.path.basename(FACTS))
+    with open(p, "w") as f:
+        f.write(text)
+    return p
+
+
+def last_entry_insert(text, head, args, indent):
+    # вставка новой записи после ПОСЛЕДНЕЙ записи той же формы (и тех же аргументов-осей, если заданы)
+    pat = head + r"<\s*(\w+),\s*(\w+)\s*>\.self;"
+    hits = [m for m in re.finditer(pat, text)]
+    if args.get("second"):
+        hits = [m for m in hits if m.group(2) == args["second"]]
+    if not hits:
+        raise SystemExit(json.dumps({"error": f"no {head} entries to anchor on"}))
+    m = hits[-1]
+    pad, inner = " " * indent, " " * (indent + 4)
+    entry = (
+        f"\n{pad}{head}<\n{inner}{args['first']},\n{inner}{args['args_second']}\n{pad}>.self;"
+    )
+    return text[: m.end()] + entry + text[m.end() :]
+
+
+def cmd_ask(a):
+    # ask view WHO DOC — «встанет ли запись view?»: пробная запись + суд, ничего не меняется
+    who, doc = a[0], a[1]
+    text = open(FACTS).read()
+    probe = last_entry_insert(
+        text, "VerifiedView", {"first": who, "args_second": doc}, indent=12
+    )
+    r = judge(with_temp(probe))
+    return {"command": "ask view", "who": who, "doc": doc, **r, "mutates": False}
+
+
+def cmd_ask_build(kind, a):
+    # check administer|delete WHO DOC — compiler gates (Granted/Authorized):
+    # a probe entry in CertifiedAccesses + swift build; seconds, the full arbiter
+    if not ROOT:
+        raise SystemExit(json.dumps({"error": "check " + kind + " needs GATE_CORPUS (a checkout of the theory corpus with Team.swift)"}))
+    who, doc = a[0], a[1]
+    team = os.path.join(ROOT, "Sources", "Organization", "System", "Team.swift")
+    text = open(team).read()
+    anchor = "        Granted<Delete<Alice, FinanceVault>>.self         // only the owner, and only at manager rank, deletes"
+    assert text.count(anchor) == 1
+    gate_name = kind.capitalize()
+    probe = text.replace(anchor, anchor + f"\n        Granted<{gate_name}<{who}, {doc}>>.self // gate probe")
+    open(team, "w").write(probe)
+    t0 = time.time()
+    out = subprocess.run(["swift", "build"], cwd=ROOT, capture_output=True, text=True)
+    secs = round(time.time() - t0, 2)
+    subprocess.run(["git", "checkout", "--", team], cwd=ROOT, capture_output=True)
+    reasons = sorted(set(re.findall(r"error: (.+)$", out.stdout + out.stderr, re.M)))
+    return {
+        "command": f"ask {kind}",
+        "who": who,
+        "doc": doc,
+        "verdict": "holds" if out.returncode == 0 else "refused",
+        "compiler_says": reasons[:3],
+        "build_s": secs,
+        "mutates": False,
+    }
+
+
+def transfer_text(text, who, dept):
+    # механика перевода: Home в ростере + командная запись (оба — факты);
+    # view-гранты НЕ трогаем: перевесить или отозвать доступ — решение
+    # намерения, его оставляем человеку (ответ подскажет grant/revoke)
+    text = must_sub(
+        text,
+        rf"(public enum {who}: Employee, Person \{{[^}}]*?public typealias Home = )\w+",
+        rf"\g<1>{dept}",
+        f"roster entry of {who}",
+    )
+    text = re.sub(
+        rf"(VerifiedInDepartment<\s*{who},\s*)\w+",
+        rf"\g<1>{dept}",
+        text,
+    )
+    return text
+
+
+def grant_text(text, who, doc):
+    return last_entry_insert(text, "VerifiedView", {"first": who, "args_second": doc}, 12)
+
+
+def revoke_text(text, who, doc):
+    pat = rf"\n\s*VerifiedView<\s*{who},\s*{doc}\s*>\.self;"
+    found = len(re.findall(pat, text))
+    if found != 1:
+        raise SystemExit(json.dumps({"error": f"revoke: grant {who}->{doc} found x{found}, want 1"}))
+    return re.sub(pat, "", text, count=1)
+
+
+def hire_text(text, f):
+    block = (
+        f"\n\npublic enum {f['id']}: Employee, Person {{\n"
+        f"    public typealias Rank = {f['rank']}\n"
+        f"    public typealias Home = {f['home']}\n"
+        f"    public typealias Given = {f['given']}\n"
+        f"    public typealias Family = {f['family']}\n"
+        f"    public typealias Born = {f['born']}\n"
+        f"    public typealias Site = {f['site']}\n"
+        f"    public typealias Sex = Given.Sex\n}}"
+    )
+    rosters = [m for m in re.finditer(r"public enum \w+: Employee, Person \{.*?\n\}", text, re.S)]
+    if not rosters:
+        raise SystemExit(json.dumps({"error": "hire: no roster entries to anchor on"}))
+    m = rosters[-1]
+    text = text[: m.end()] + block + text[m.end() :]
+    slices = [m for m in re.finditer(r"(Emp\w+\.self;)(?=\s*\n\s*\})", text)]
+    if slices:  # корпусный мир несёт Company-список; импортированный — нет, и судье он не нужен
+        s = slices[0]
+        text = text[: s.end()] + f" {f['id']}.self;" + text[s.end() :]
+    text = last_entry_insert(text, "VerifiedView", {"first": f["id"], "args_second": f["home"] + "Share"}, 12)
+    text = last_entry_insert(text, "VerifiedInDepartment", {"first": f["id"], "args_second": f["home"], "second": f["home"]}, 8)
+    text = last_entry_insert(text, "VerifiedAtRank", {"first": f["id"], "args_second": f["rank"], "second": f["rank"]}, 8)
+    text = last_entry_insert(text, "VerifiedAtWorkplace", {"first": f["id"], "args_second": f["site"], "second": f["site"]}, 8)
+    return text
+
+
+def cmd_change(a):
+    # change transfer WHO DEPT [--apply] · change hire ID RANK HOME GIVEN FAMILY BORN SITE [--apply]
+    apply_it = "--apply" in a
+    a = [x for x in a if x != "--apply"]
+    text = open(FACTS).read()
+    if a[0] == "transfer":
+        who, dept = a[1], a[2]
+        new = transfer_text(text, who, dept)
+        label = {"command": "change transfer", "who": who, "to": dept,
+                 "note": "roster and team entry moved; view grants are intent — resolve leftovers with grant/revoke"}
+    elif a[0] == "grant":
+        who, doc = a[1], a[2]
+        new = grant_text(text, who, doc)
+        label = {"command": "change grant", "who": who, "doc": doc}
+    elif a[0] == "revoke":
+        who, doc = a[1], a[2]
+        new = revoke_text(text, who, doc)
+        label = {"command": "change revoke", "who": who, "doc": doc}
+    elif a[0] == "hire":
+        f = dict(zip(["id", "rank", "home", "given", "family", "born", "site"], a[1:8]))
+        new = hire_text(text, f)
+        label = {"command": "change hire", **f}
+    else:
+        raise SystemExit(json.dumps({"error": f"unknown change {a[0]}"}))
+    r = judge(with_temp(new))
+    applied = False
+    if apply_it and r["verdict"] == "holds":
+        open(FACTS, "w").write(new)
+        applied = True
+    return {**label, **r, "dry_run": not apply_it, "applied": applied}
+
+
+def cmd_import(a):
+    # import people.csv grants.csv -o world.swift — механический перевод фактов
+    # клиента в слой фактов мира. Колонки CSV = оси мира; адреса отказов
+    # транслируются обратно в строки CSV клиента.
+    import csv
+
+    people_csv, grants_csv = a[0], a[1]
+    out_path = a[a.index("-o") + 1] if "-o" in a else "world.swift"
+    lines = []  # (текст, источник|None)
+
+    def emit(chunk, src=None):
+        for ln in chunk.split("\n"):
+            lines.append((ln, src))
+
+    emit("// GENERATED by gate import — the facts layer, printed from the client's own tables.")
+    emit(f"// sources: {os.path.basename(people_csv)}, {os.path.basename(grants_csv)}")
+    people = list(csv.DictReader(open(people_csv)))
+    grants = list(csv.DictReader(open(grants_csv)))
+
+    # пул атомов: уникальные имена/фамилии/годы из данных, кольца Next по кругу
+    def ring(names, conf, extra=None):
+        names = list(dict.fromkeys(names))
+        for i, n in enumerate(names):
+            nxt = names[(i + 1) % len(names)]
+            body = f"    public typealias Next = {nxt}\n"
+            if extra:
+                body += f"    public typealias Sex = {extra[n]}\n"
+            emit(f"\npublic enum {n}: {conf} {{\n{body}}}")
+
+    sexes = {p["given"]: p.get("sex", "Male") for p in people}
+    ring([p["given"] for p in people], "GivenNameCycle", sexes)
+    ring([p["family"] for p in people], "FamilyNameCycle")
+    ring([p["born"] for p in people], "BirthYearCycle")
+    for i, p in enumerate(people):
+        src = f"{os.path.basename(people_csv)}:{i + 2}"
+        emit(
+            f"\npublic enum {p['id']}: Employee, Person {{\n"
+            f"    public typealias Rank = {p['rank']}\n"
+            f"    public typealias Home = {p['home']}\n"
+            f"    public typealias Given = {p['given']}\n"
+            f"    public typealias Family = {p['family']}\n"
+            f"    public typealias Born = {p['born']}\n"
+            f"    public typealias Site = {p['site']}\n"
+            f"    public typealias Sex = Given.Sex\n}}",
+            src,
+        )
+    emit("\npublic enum ImportedTeam: Team {\n    @StructureBuilder\n    public static var body: some Structure {")
+    for i, p in enumerate(people):
+        src = f"{os.path.basename(people_csv)}:{i + 2}"
+        emit(f"        VerifiedInDepartment<\n            {p['id']},\n            {p['home']}\n        >.self;", src)
+        emit(f"        VerifiedAtRank<\n            {p['id']},\n            {p['rank']}\n        >.self;", src)
+        emit(f"        VerifiedAtWorkplace<\n            {p['id']},\n            {p['site']}\n        >.self;", src)
+    emit("    }\n}")
+    emit("\npublic enum ImportedAccesses: AccessLedger {\n    @StructureBuilder\n    public static var body: some Structure {")
+    for i, g in enumerate(grants):
+        src = f"{os.path.basename(grants_csv)}:{i + 2}"
+        emit(f"            VerifiedView<\n                {g['who']},\n                {g['doc']}\n            >.self;", src)
+    emit("    }\n}")
+
+    with open(out_path, "w") as f:
+        f.write("\n".join(t for t, _ in lines) + "\n")
+    r = judge(out_path)
+    for ref in r["refusals"]:
+        # судья вешает отказ на строку предыдущего дренажа — уточняем строкой,
+        # где стоит субъект отказа (первое имя из claim), в окне вокруг адреса
+        n = int(ref["address"].split(":")[1])
+        src = lines[n - 1][1] if n - 1 < len(lines) else None
+        m = re.search(r"requires (\w+)\.", ref["claim"]) or re.match(r"(\w+)\.", ref["claim"])
+        if m:
+            subject = m.group(1)
+            for k in range(max(0, n - 4), min(len(lines), n + 8)):
+                if re.search(rf"\b{subject}\b", lines[k][0]) and lines[k][1]:
+                    src = lines[k][1]
+                    ref["address"] = f"{os.path.basename(out_path)}:{k + 1}"
+                    break
+        ref["source"] = src
+    return {
+        "command": "import",
+        "world": out_path,
+        "people": len(people),
+        "grants": len(grants),
+        **r,
+    }
+
+
+def cmd_export(a):
+    # export world.swift -o people.csv grants.csv — мир печатает таблицы обратно.
+    # Round-trip: import → export → diff с исходником пуст ⇒ перевод фактов
+    # доказан механически, переводчику доверять не нужно.
+    world = a[0]
+    people_out, grants_out = a[a.index("-o") + 1], a[a.index("-o") + 2]
+    text = open(world).read()
+    rows = []
+    for m in re.finditer(
+        r"public enum (\w+): Employee, Person \{(.*?)\n\}", text, re.S
+    ):
+        f = dict(re.findall(r"public typealias (\w+) = ([\w.]+)", m.group(2)))
+        sex_pool = dict(
+            re.findall(r"public enum (\w+): GivenNameCycle \{.*?Sex = (\w+)", text, re.S)
+        )
+        rows.append(
+            [m.group(1), f["Rank"], f["Home"], f["Given"], f["Family"], f["Born"], f["Site"], sex_pool.get(f["Given"], "")]
+        )
+    with open(people_out, "w") as f:
+        f.write("id,rank,home,given,family,born,site,sex\n")
+        f.writelines(",".join(r) + "\n" for r in rows)
+    grants = re.findall(r"VerifiedView<\s*(\w+),\s*(\w+)\s*>\.self;", text)
+    with open(grants_out, "w") as f:
+        f.write("who,doc\n")
+        f.writelines(f"{w},{d}\n" for w, d in grants)
+    return {
+        "command": "export",
+        "people": len(rows),
+        "grants": len(grants),
+        "wrote": [people_out, grants_out],
+    }
+
+
+def seeds(people, grants):
+    # каталог посевов: по одному нарушению на форму правила, из самих данных
+    p0 = people[0]
+    other_home = next(p["home"] for p in people if p["home"] != p0["home"])
+    yield "cross-view", people, grants + [{"who": p0["id"], "doc": other_home + "Share"}]
+    yield "duplicate-grant", people, grants + [dict(grants[0])]
+    yield "dangling-who", people, grants + [{"who": "Emp9999", "doc": p0["home"] + "Share"}]
+    yield "dangling-doc", people, grants + [{"who": p0["id"], "doc": "NoSuchShare"}]
+    moved = [dict(p) for p in people]
+    moved[0]["home"] = other_home
+    yield "stale-after-transfer", moved, grants
+
+
+def cmd_verify(a):
+    # verify people.csv grants.csv --against CMD — дифференциальная сверка правил:
+    # посевы из каталога судятся миром и старой системой клиента; расхождение
+    # вердиктов = адрес непереведённого правила (или правило, которого у клиента нет).
+    import csv
+
+    people_csv, grants_csv = a[0], a[1]
+    against = a[a.index("--against") + 1] if "--against" in a else None
+    people = list(csv.DictReader(open(people_csv)))
+    grants = list(csv.DictReader(open(grants_csv)))
+    d = tempfile.mkdtemp(prefix="gate-verify-")
+
+    # шаг 0: база обязана быть чистой у ОБЕИХ сторон — иначе фоновые нарушения
+    # маскируют посевы и «covered» ничего не значит
+    base_world = cmd_import([people_csv, grants_csv, "-o", os.path.join(d, "base.swift")])
+    base_legacy = (
+        subprocess.run(against.split() + [people_csv, grants_csv], capture_output=True, text=True)
+        if against
+        else None
+    )
+    if base_world["verdict"] != "holds" or (base_legacy and base_legacy.returncode != 0):
+        return {
+            "command": "verify",
+            "base": "dirty: fix these before seeding",
+            "world_says": [r["claim"] + " · " + str(r["source"]) for r in base_world["refusals"]],
+            "legacy_says": base_legacy.stdout.strip().splitlines() if base_legacy else [],
+        }
+    rows = []
+    for name, ps, gs in seeds(people, grants):
+        pp, gp = os.path.join(d, "people.csv"), os.path.join(d, "grants.csv")
+        with open(pp, "w") as f:
+            f.write("id,rank,home,given,family,born,site,sex\n")
+            f.writelines(",".join(p[k] for k in ["id", "rank", "home", "given", "family", "born", "site", "sex"]) + "\n" for p in ps)
+        with open(gp, "w") as f:
+            f.write("who,doc\n")
+            f.writelines(f"{g['who']},{g['doc']}\n" for g in gs)
+        world = cmd_import([pp, gp, "-o", os.path.join(d, "world.swift")])
+        w = world["verdict"]
+        if against:
+            legacy = subprocess.run(against.split() + [pp, gp], capture_output=True, text=True)
+            l = "refused" if legacy.returncode else "holds"
+            verdict = {
+                ("refused", "refused"): "covered: both refuse",
+                ("refused", "holds"): "WORLD STRICTER: the client's checker misses this",
+                ("holds", "refused"): "NOT TRANSLATED: the legacy rule has no gate in the world",
+                ("holds", "holds"): "weak seed: neither side refuses",
+            }[(w, l)]
+            legacy_says = legacy.stdout.strip().splitlines()[:2]
+        else:
+            # --self: посевы против одного мира — какие правила вообще держат
+            l, legacy_says = "n/a", []
+            verdict = "held by the world" if w == "refused" else "NO GATE HOLDS THIS SEED"
+        rows.append({
+            "seed": name,
+            "world": w,
+            "world_says": [r["claim"] for r in world["refusals"]][:2],
+            "legacy": l,
+            "legacy_says": legacy_says,
+            "reading": verdict,
+        })
+    holes = [r for r in rows if r["reading"].startswith(("NOT TRANSLATED", "NO GATE"))]
+    return {"command": "verify", "seeds": rows, "translation_holes": len(holes)}
+
+
+INIT_FILES = {
+    "tables/people.csv": "id,rank,home,given,family,born,site,sex\n",
+    "tables/grants.csv": "who,doc\n",
+    "tables/identities.csv": "email,id\n",
+    "tables/guard.csv": "action,requires_rank\nmerge,Manager\n",
+    "README.md": """# Your world
+
+Facts live in `tables/*.csv` — your own files, in your own repo.
+The porcelain is git-shaped:
+
+    gate import tables/people.csv tables/grants.csv -o world.swift
+    gate status                                  # what disagrees right now
+    gate check view WHO DOC                      # may X read Y? (ms)
+    gate diff  transfer WHO DEPT                 # what would break (nothing changes)
+    gate apply transfer WHO DEPT                 # applies only on holds
+    gate export world.swift -o p.csv g.csv       # diff vs your originals must be empty
+    gate verify tables/people.csv tables/grants.csv --against "<your old checker>"
+
+A refusal names the line of YOUR file and exits non-zero (CI-ready).
+To let your AI assistant do the translation, point it at AGENT.md.
+`.githooks/pre-commit` guards every commit: `git config core.hooksPath .githooks`
+""",
+    ".githooks/pre-commit": """#!/bin/sh
+# the world must hold before it is committed
+gate import tables/people.csv tables/grants.csv -o world.swift
+""",
+    "AGENT.md": """# Instruction for the translating agent
+
+You are translating the client's tables into a typed facts world.
+You do not need to be trusted: your output is verified mechanically.
+
+## The forms (all of them)
+
+- A record:  `public enum <Id>: Employee, Person { ... }` with one
+  `public typealias <Axis> = <Atom>` per column
+  (axes: Rank, Home, Given, Family, Born, Site, Sex = Given.Sex).
+- Pool atoms: every distinct given/family/born value is declared once:
+  `public enum <Name>: GivenNameCycle { Next = <next in ring>, Sex = <M/F> }`
+  (families: FamilyNameCycle, years: BirthYearCycle; Next closes a ring).
+- Team entries: `VerifiedInDepartment<Id, Home>` / `VerifiedAtRank<Id, Rank>` /
+  `VerifiedAtWorkplace<Id, Site>` inside a `Team` body.
+- Grants: `VerifiedView<Who, Doc>` inside an `AccessLedger` body.
+
+## The world's fixed vocabularies (do not invent alternatives)
+
+- Rank: IndividualContributor, Lead, Manager
+- Home: Finance, Engineering, Sales, People
+- Site: OnSite, Hybrid, Remote
+- Sex: Male, Female
+- Doc: FinanceShare, EngineeringShare, SalesShare, PeopleShare
+Map the client's own vocabulary onto these and record every decision in
+tables/MAPPING.md. Ids must be valid Swift identifiers and must not
+collide with pool atoms (prefix them if logins repeat given names).
+
+## The rules of the world
+
+- One fact, one line. A link between two facts is an equality in a type.
+- Every name must be declared: an unknown atom is a refusal, not a warning.
+- The base must be clean before you seed or extend.
+- Translate faithfully: a suspicious grant is translated as-is, never
+  fixed or dropped — judging it is the gate's job, not yours.
+
+## How your work is checked (so do not improvise)
+
+1. `gate export` prints the tables back: the diff against the client's
+   originals must be EMPTY, byte for byte.
+2. `gate verify --against <old checker>` seeds violations: every legacy
+   rule must refuse in the world too, or the hole is named to the client.
+""",
+    ".github/workflows/gate.yml": """name: gate
+on: [push, pull_request]
+jobs:
+  judge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # put the released `gate` binary on PATH (release artifact, one file)
+      - run: gate import tables/people.csv tables/grants.csv -o world.swift
+      # a refusal exits red and names the line of your own csv
+      - run: gate guard merge
+      # repo policy by the same gates: the HEAD author, mapped through
+      # tables/identities.csv, must hold the rank stated in tables/guard.csv.
+      # make this job a required check and the policy becomes law.
+""",
+}
+
+
+def cmd_guard(a):
+    # guard [merge] — политика действий САМОГО репозитория теми же гейтами:
+    # git-объект (автор HEAD) → атом мира (identities.csv) → запись-проба
+    # существующей формы (VerifiedAtRank) → суд. Правила — в таблицах мира,
+    # CI/hook — только транспорт вердикта.
+    import csv
+
+    action = a[0] if a else "merge"
+    if not TABLES:
+        raise SystemExit(json.dumps({"error": "guard needs a tables world (identities.csv, guard.csv)"}))
+    world_dir = os.path.dirname(TABLES) or "."
+    email = subprocess.run(
+        ["git", "log", "-1", "--format=%ae"], cwd=world_dir, capture_output=True, text=True
+    ).stdout.strip()
+    identities = {r["email"]: r["id"] for r in csv.DictReader(open(os.path.join(TABLES, "identities.csv")))}
+    rules = {r["action"]: r["requires_rank"] for r in csv.DictReader(open(os.path.join(TABLES, "guard.csv")))}
+    if action not in rules:
+        raise SystemExit(json.dumps({"error": f"guard: no rule for action '{action}' in guard.csv"}))
+    required = rules[action]
+    who = identities.get(email)
+    if not who:
+        return {"command": f"guard {action}", "author": email, "verdict": "refused",
+                "refusals": [{"address": "tables/identities.csv", "claim": f"author {email} is not mapped to any person: an unknown identity performs no guarded action"}]}
+    text = open(FACTS).read()
+    probe = last_entry_insert(text, "VerifiedAtRank", {"first": who, "args_second": required}, 8)
+    r = judge(with_temp(probe))
+    return {"command": f"guard {action}", "author": f"{email} = {who}", "requires": required, **r, "mutates": False}
+
+
+def cmd_library(a):
+    # library [-o lib.json] | library diff a.json b.json — кристалл домена:
+    # формы (головы записей + гейты), оси, покрытие посевами. Формы без
+    # фактов: библиотека шарима, данные клиента — никогда (SAT5: у домена
+    # один канонический кристалл; два мира — подмножества его).
+    if a and a[0] == "diff":
+        la, lb = json.load(open(a[1])), json.load(open(a[2]))
+        A, B = set(la["forms"]), set(lb["forms"])
+        return {
+            "command": "library diff",
+            "shared": sorted(A & B),
+            "only_first": sorted(A - B),
+            "only_second": sorted(B - A),
+            "note": "the union is safe by construction: one domain has one canonical crystal (SAT5); a difference is teachable form, never client data",
+        }
+    out_path = a[a.index("-o") + 1] if "-o" in a else None
+    text = open(FACTS).read()
+    heads = sorted(set(re.findall(r"(\w+)<\s*\w+,\s*\w+\s*>\.self;", text)))
+    axes = sorted(set(re.findall(r"public typealias (\w+) = ", text)))
+    lib = {"forms": heads, "axes": axes}
+    if TABLES:  # покрытие: какие посевы каталога мир держит (verify --self)
+        v = cmd_verify([os.path.join(TABLES, "people.csv"), os.path.join(TABLES, "grants.csv")])
+        if "seeds" in v:
+            lib["coverage"] = {s["seed"]: ("held" if s["world"] == "refused" else "no gate") for s in v["seeds"]}
+    result = {"command": "library", "facts": FACTS, **lib}
+    if out_path:
+        with open(out_path, "w") as f:
+            json.dump(lib, f, indent=2, sort_keys=True)
+        result["wrote"] = out_path
+    return result
+
+
+def cmd_guard_deps(a):
+    # guard deps [manifest lock] — почва git: манифест ↔ lockfile.
+    # Адаптер печатает мир: лок объявляет атомы «пакет@версия», требование
+    # манифеста ССЫЛАЕТСЯ на атом своего пина осью — рассогласование =
+    # «resolves to nothing» с адресом. Ни одной новой формы.
+    manifest_p = a[0] if a else "package.json"
+    lock_p = a[1] if len(a) > 1 else "package-lock.json"
+    manifest = json.load(open(manifest_p))
+    lock = json.load(open(lock_p))
+    deps = manifest.get("dependencies", {})
+    pins = {
+        name.replace("node_modules/", ""): info.get("version")
+        for name, info in lock.get("packages", {}).items()
+        if name.startswith("node_modules/")
+    }
+    atom = lambda n, v: (n + "_" + v).replace("-", "_").replace(".", "_").replace("@", "").replace("/", "_")
+    lines = ["// printed by gate guard deps: the lockfile declares the atoms,",
+             "// the manifest's requirements REFERENCE them — a drift fails to resolve.", ""]
+    srcmap = {}
+    for n, v in sorted(pins.items()):
+        lines.append(f"public enum {atom(n, v)}: Close {{}}")
+    lines.append("")
+    for n, want in sorted(deps.items()):
+        pinned = pins.get(n)
+        target = atom(n, want.lstrip("=v")) if want[0].isdigit() or want.startswith("=") else (atom(n, pinned) if pinned else atom(n, "unpinned"))
+        lines.append(f"public enum Req_{atom(n, '')[:-1]}: Close {{")
+        srcmap[len(lines)] = f"{os.path.basename(manifest_p)} · \"{n}\": \"{want}\""
+        lines.append(f"    public typealias Pin = {target}")
+        lines.append("}")
+    orphans = sorted(set(pins) - set(deps))
+    world = "\n".join(lines) + "\n"
+    d = tempfile.mkdtemp(prefix="gate-deps-")
+    p = os.path.join(d, "deps-world.swift")
+    open(p, "w").write(world)
+    r = judge(p)
+    for ref in r["refusals"]:
+        n = int(ref["address"].split(":")[1])
+        for k in range(max(0, n - 2), n + 2):
+            if k in srcmap:
+                ref["source"] = srcmap[k]
+    out = {"command": "guard deps", "requirements": len(deps), "pins": len(pins), **r}
+    if orphans:
+        out["orphan_pins"] = orphans
+        out["verdict"] = "refused"
+        out["refusals"] = out["refusals"] + [
+            {"address": os.path.basename(lock_p), "claim": f"pin {o}@{pins[o]} is required by nothing: a leftover after removal"}
+            for o in orphans
+        ]
+    out["note"] = ("SKETCH, not a product path: only orphan pins are detected; a missing pin "
+                   "currently yields a FALSE holds (the judge resolves no axis without a reading "
+                   "premise) — native ecosystem lockfile checkers already cover this class")
+    return out
+
+
+def cmd_survey(a):
+    # survey [N] — t0-жест: read-only карта репозитория БЕЗ перевода.
+    # Незаписанные связи из собственной истории (co-change — точная
+    # статистика), идентичность, объекты-кандидаты, покрытие ткани.
+    import itertools, collections
+
+    n = int(a[0]) if a else 500
+    fmt = subprocess.run(["git", "log", f"-{n}", "--format=%x40%ae %G?", "--name-only"],
+                         capture_output=True, text=True).stdout
+    commits, authors, signed, cur = [], collections.Counter(), 0, []
+    for line in fmt.splitlines():
+        if line.startswith("@"):
+            if cur:
+                commits.append(cur); cur = []
+            email, g = (line[1:].split() + ["N"])[:2]
+            authors[email] += 1
+            signed += 1 if g in ("G", "U", "X", "Y") else 0
+        elif line.strip():
+            cur.append(line.strip())
+    if cur:
+        commits.append(cur)
+    pair_n, file_n = collections.Counter(), collections.Counter()
+    for files in commits:
+        fs = list(set(files))
+        for f in fs:
+            file_n[f] += 1
+        for x, y in itertools.combinations(sorted(fs), 2):
+            pair_n[(x, y)] += 1
+    links = [
+        {"a": x, "b": y, "together": c, "confidence": round(c / min(file_n[x], file_n[y]), 2)}
+        for (x, y), c in pair_n.most_common(30)
+        if c >= 5
+    ][:10]
+    subjects = subprocess.run(["git", "log", f"-{n}", "--format=%s %b"], capture_output=True, text=True).stdout
+    keys = collections.Counter(re.findall(r"\b[A-Z][A-Z0-9]+-\d+\b", subjects))
+    world = None
+    if FACTS and os.path.exists(FACTS):
+        r = judge(FACTS)
+        world = {"facts": FACTS, "verdict": r["verdict"], "refusals": len(r["refusals"])}
+    return {
+        "command": "survey",
+        "commits": len(commits),
+        "unwritten_links": links,
+        "identity": {
+            "authors": len(authors),
+            "top": [f"{e} ({c})" for e, c in authors.most_common(5)],
+            "signed_commits": signed,
+        },
+        "object_candidates": {k: c for k, c in keys.most_common(10)},
+        "fabric": world or {"facts": None, "note": "no world yet: coverage 0% — the links above say where to start"},
+    }
+
+
+def cmd_init(a):
+    root = a[0] if a else "world"
+    made = []
+    for rel, content in INIT_FILES.items():
+        p = os.path.join(root, rel)
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        if not os.path.exists(p):
+            with open(p, "w") as f:
+                f.write(content)
+            made.append(rel)
+    hook = os.path.join(root, ".githooks", "pre-commit")
+    if os.path.exists(hook):
+        os.chmod(hook, 0o755)
+    hooks_note = None
+    if os.path.isdir(os.path.join(root, ".git")):  # бесшовно: хук включается сам
+        subprocess.run(["git", "config", "core.hooksPath", ".githooks"], cwd=root, capture_output=True)
+        hooks_note = "pre-commit hook wired (core.hooksPath = .githooks)"
+    return {"command": "init", "root": root, "created": made, "hooks": hooks_note}
+
+
+def world_rows(text):
+    people = []
+    for m in re.finditer(r"public enum (\w+): Employee, Person \{(.*?)\n\}", text, re.S):
+        f = dict(re.findall(r"public typealias (\w+) = ([\w.]+)", m.group(2)))
+        people.append({"id": m.group(1), **{k.lower(): v for k, v in f.items() if k != "Sex"}})
+    grants = [{"who": w, "doc": d} for w, d in re.findall(r"VerifiedView<\s*(\w+),\s*(\w+)\s*>\.self;", text)]
+    return people, grants
+
+
+def cmd_report(a):
+    # report [-o report.html] — печатаемая страница аудита: таблицы мира + вердикт.
+    # Без сервера: один самодостаточный html, можно приложить к аудиту письмом.
+    out_path = a[a.index("-o") + 1] if "-o" in a else "report.html"
+    text = open(FACTS).read()
+    people, grants = world_rows(text)
+    r = judge(FACTS)
+    bad_lines = {ref["claim"] for ref in r["refusals"]}
+
+    def table(rows, cols):
+        head = "".join(f"<th>{c}</th>" for c in cols)
+        body = "".join(
+            "<tr>" + "".join(f"<td>{row.get(c, '')}</td>" for c in cols) + "</tr>"
+            for row in rows
+        )
+        return f"<table><tr>{head}</tr>{body}</table>"
+
+    verdict_html = (
+        "<p class='ok'>holds: every claim checked</p>"
+        if r["verdict"] == "holds"
+        else "<ul class='bad'>"
+        + "".join(f"<li><code>{ref['address']}</code> · {ref['claim']}</li>" for ref in r["refusals"])
+        + "</ul>"
+    )
+    html = f"""<!-- printed by gate report; the table is read from the world, never stored -->
+<meta charset="utf-8"><title>gate report</title>
+<style>
+body{{font:14px/1.5 -apple-system,sans-serif;max-width:60em;margin:2em auto;padding:0 1em;color:#1d1d1f}}
+table{{border-collapse:collapse;margin:1em 0}}td,th{{border:1px solid #d2d2d7;padding:.3em .8em;text-align:left}}
+th{{background:#f5f5f7}}.ok{{color:#248a3d}}.bad li{{color:#c4453b;margin:.3em 0}}code{{background:#f5f5f7;padding:0 .3em}}
+</style>
+<h1>gate report</h1>
+<p>{len(people)} people · {len(grants)} grants · judged in {r['judge_ms']} ms</p>
+<h2>Verdict</h2>{verdict_html}
+<h2>People</h2>{table(people, ["id", "rank", "home", "site", "given", "family", "born"])}
+<h2>Grants</h2>{table(grants, ["who", "doc"])}
+"""
+    with open(out_path, "w") as f:
+        f.write(html)
+    return {"command": "report", "wrote": out_path, "people": len(people), "grants": len(grants), **{k: r[k] for k in ("verdict", "judge_ms")}, "refusals": r["refusals"]}
+
+
+def cmd_serve(a):
+    # serve [port] — локальная read-only JSON-поверхность для IDE/хуков/редакторов:
+    #   GET /status · /check/view?who=&doc= · /diff/transfer?who=&to=
+    # Изменяющих маршрутов нет сознательно: apply — только руками или CLI.
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+    from urllib.parse import urlparse, parse_qs
+
+    port = int(a[0]) if a else 4744
+
+    here = os.path.dirname(os.path.abspath(__file__))
+    playground = os.path.dirname(os.path.dirname(here))  # typed-playground root
+
+    class H(BaseHTTPRequestHandler):
+        def send_file(self, path, ctype):
+            with open(path, "rb") as f:
+                body = f.read()
+            self.send_response(200)
+            self.send_header("Content-Type", ctype)
+            self.end_headers()
+            self.wfile.write(body)
+
+        def do_GET(self):
+            u = urlparse(self.path)
+            q = {k: v[0] for k, v in parse_qs(u.query).items()}
+            try:
+                if u.path in ("/", "/ui"):
+                    return self.send_file(os.path.join(here, "ui.html"), "text/html; charset=utf-8")
+                if u.path == "/judge.js":
+                    return self.send_file(os.path.join(playground, "judge.js"), "text/javascript")
+                if u.path == "/world":
+                    return self.send_file(FACTS, "text/plain; charset=utf-8")
+                if u.path == "/status":
+                    out = dispatch("status", [])
+                elif u.path == "/check/view":
+                    out = cmd_ask([q["who"], q["doc"]])
+                elif u.path == "/diff/transfer":
+                    out = cmd_change(["transfer", q["who"], q["to"]])
+                else:
+                    self.send_response(404); self.end_headers(); return
+            except SystemExit as e:
+                out = {"error": str(e)}
+            body = json.dumps(out, ensure_ascii=False).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(body)
+
+        def do_PUT(self):
+            # единственная пишущая ручка: сам файл мира (plumbing открыт, суд неизбежен)
+            if urlparse(self.path).path != "/world":
+                self.send_response(404); self.end_headers(); return
+            n = int(self.headers.get("Content-Length", 0))
+            with open(FACTS, "wb") as f:
+                f.write(self.rfile.read(n))
+            self.send_response(200); self.end_headers()
+
+        def log_message(self, *args):
+            pass
+
+    print(json.dumps({"command": "serve", "url": f"http://127.0.0.1:{port}", "routes": ["/status", "/check/view?who=&doc=", "/diff/transfer?who=&to="], "mutating_routes": "none, by design"}))
+    sys.stdout.flush()
+    HTTPServer(("127.0.0.1", port), H).serve_forever()
+
+
+USAGE = """usage (the git-shaped porcelain):
+  gate init [dir]                     · gate status | fsck
+  gate check view WHO DOC             · gate check administer|delete WHO DOC
+  gate diff  transfer WHO DEPT        · gate diff  grant|revoke WHO DOC
+  gate diff  hire ID RANK HOME GIVEN FAMILY BORN SITE
+  gate apply transfer|grant|revoke|hire ...   (writes only on holds, like a commit)
+  gate import people.csv grants.csv [-o world.swift]
+  gate export world.swift -o people.csv grants.csv
+  gate verify people.csv grants.csv --against CMD
+  gate serve [port]                   (local read-only JSON surface)
+  gate report [-o report.html]        (printable audit page)
+  gate guard [merge]                  (repo policy by the same gates: HEAD author
+                                       via tables/identities.csv must hold the
+                                       rank stated in tables/guard.csv)
+  gate library [-o lib.json]          (the domain crystal: forms, axes, seed coverage)
+  gate library diff a.json b.json     (set operations between crystals; forms, never facts)
+  gate survey [N]                     (t0, read-only: unwritten links from your own
+                                       history, identity, object candidates, fabric)
+(ask = check, change = diff/apply: old names stay as aliases)"""
+
+
+def dispatch(cmd, rest):
+    if cmd in ("check", "ask", "diff", "apply", "change", "status", "fsck", "report"):
+        ensure_world()
+    if cmd in ("check", "ask") and rest[0] == "view":
+        return cmd_ask(rest[1:])
+    if cmd in ("check", "ask") and rest[0] in ("administer", "delete"):
+        return cmd_ask_build(rest[0], rest[1:])
+    if cmd == "diff":
+        return cmd_change([x for x in rest if x != "--apply"])
+    if cmd == "apply":
+        return cmd_change(rest + ["--apply"])
+    if cmd == "change":
+        return cmd_change(rest)
+    if cmd == "import":
+        return cmd_import(rest)
+    if cmd == "export":
+        return cmd_export(rest)
+    if cmd == "verify":
+        return cmd_verify(rest)
+    if cmd == "init":
+        return cmd_init(rest)
+    if cmd in ("status", "fsck"):
+        if not FACTS or not os.path.exists(FACTS):
+            raise SystemExit(json.dumps({"error": "no world found: run `gate init`, or cd into a repo with tables/ or world.swift"}))
+        # что не сходится сейчас: суд текущего мира + метрики мира (считаются, не помнятся)
+        out = {"command": "status", "facts": FACTS, **judge(FACTS), "mutates": False}
+        raw = subprocess.run([JUDGE, "judge", FACTS], capture_output=True, text=True).stdout
+        m = re.search(r"(\d+) declarations · (\d+) lookups · (\d+) premises", raw)
+        if m:
+            out["world"] = {"declarations": int(m.group(1)), "lookups": int(m.group(2)), "premises": int(m.group(3))}
+        return out
+    if cmd == "guard" and rest and rest[0] == "deps":
+        return cmd_guard_deps(rest[1:])
+    if cmd == "guard":
+        ensure_world()
+        return cmd_guard(rest)
+    if cmd == "library":
+        ensure_world()
+        return cmd_library(rest)
+    if cmd == "survey":
+        return cmd_survey(rest)
+    raise SystemExit(USAGE)
+
+
+def is_red(out):
+    return out.get("verdict") == "refused" or bool(out.get("translation_holes")) or out.get("base", "").startswith("dirty")
+
+
+def humanize(out):
+    # человеку — строки, машине — --json (как porcelain у git)
+    lines = []
+    cmd = out.get("command", "")
+    if "verdict" in out:
+        head = "holds" if out["verdict"] == "holds" else f"refused {len(out.get('refusals', []))}"
+        tail = []
+        if out.get("world"):
+            w = out["world"]
+            tail.append(f"{w['declarations']} declarations · {w['lookups']} lookups · {w['premises']} premises")
+        if out.get("judge_ms") is not None:
+            tail.append(f"{out['judge_ms']} ms")
+        if out.get("build_s") is not None:
+            tail.append(f"build {out['build_s']} s")
+        if cmd.startswith("change") and not out.get("dry_run", True):
+            tail.append("applied" if out.get("applied") else "NOT applied")
+        elif cmd.startswith("change"):
+            tail.append("dry-run")
+        lines.append(f"{cmd or 'verdict'}: {head}" + (" · " + " · ".join(tail) if tail else ""))
+        for r in out.get("refusals", []):
+            src = f"  ({r['source']})" if r.get("source") else ""
+            lines.append(f"  {r['address']} · {r['claim']}{src}")
+        for s in out.get("compiler_says", []):
+            lines.append(f"  compiler: {s}")
+        if out.get("note"):
+            lines.append(f"  note: {out['note']}")
+    elif "seeds" in out:
+        lines.append(f"verify: {out['translation_holes']} hole(s)")
+        for s in out["seeds"]:
+            lines.append(f"  {s['seed']:22} world={s['world']:8} legacy={s['legacy']:8} → {s['reading']}")
+    elif out.get("base", "").startswith("dirty"):
+        lines.append("verify: base dirty — fix these before seeding")
+        for w in out.get("world_says", []):
+            lines.append(f"  world:  {w}")
+        for l in out.get("legacy_says", []):
+            lines.append(f"  legacy: {l}")
+    elif cmd == "init":
+        lines.append(f"init: {out['root']}" + (f" · created {len(out['created'])} files" if out["created"] else " · already there"))
+        if out.get("hooks"):
+            lines.append(f"  {out['hooks']}")
+    elif cmd == "export":
+        lines.append(f"export: {out['people']} people, {out['grants']} grants → {', '.join(out['wrote'])}")
+    elif cmd == "survey":
+        lines.append(f"survey: {out['commits']} commits, read-only")
+        lines.append("  unwritten links (co-change from your own history):")
+        for l in out["unwritten_links"]:
+            lines.append(f"    {l['together']:3d}x {l['confidence']:4.0%}  {l['a']} <-> {l['b']}")
+        i = out["identity"]
+        lines.append(f"  identity: {i['authors']} author(s), {i['signed_commits']} signed commits")
+        for t in i["top"]:
+            lines.append(f"    {t}")
+        if out["object_candidates"]:
+            lines.append("  object candidates in commit messages: " + ", ".join(f"{k}({c})" for k, c in out["object_candidates"].items()))
+        f = out["fabric"]
+        lines.append(f"  fabric: {f.get('facts') or 'no world yet'} · " + (f"{f['verdict']}, {f['refusals']} refusal(s)" if f.get("verdict") else f.get("note", "")))
+    else:
+        return json.dumps(out, ensure_ascii=False, indent=2)
+    return "\n".join(lines)
+
+
+def main():
+    if len(sys.argv) < 2:
+        raise SystemExit(USAGE)
+    args = sys.argv[1:]
+    as_json = "--json" in args
+    args = [a for a in args if a != "--json"]
+    cmd, rest = args[0], args[1:]
+    if cmd == "serve":
+        return cmd_serve(rest)
+    if cmd == "report":
+        ensure_world()
+        out = cmd_report(rest)
+    else:
+        out = dispatch(cmd, rest)
+    print(json.dumps(out, ensure_ascii=False, indent=2) if as_json else humanize(out))
+    sys.exit(1 if is_red(out) else 0)
+
+
+if __name__ == "__main__":
+    main()

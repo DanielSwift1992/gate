@@ -1,0 +1,111 @@
+<!-- gate ui — the world bench: gitk-class, not a general IDE.
+     The editor judges on every keystroke with the SAME judge (judge.js is the
+     byte-parity port of Tools/Judge.swift); the tables are read, never stored. -->
+<meta charset="utf-8"><title>gate · world bench</title>
+<style>
+:root{--ok:#248A3D;--bad:#C4453B;--action:#007AFF;--line:#d2d2d7;--mist:#f5f5f7;--ink:#1d1d1f;color-scheme:light}
+body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);background:#fff;display:flex;height:100vh}
+#left{flex:0 0 52%;display:flex;flex-direction:column;border-right:1px solid var(--line)}
+#bar{display:flex;gap:.6em;align-items:center;padding:.5em .8em;border-bottom:1px solid var(--line)}
+#bar b{font-weight:600}
+#save{margin-left:auto;border:none;background:color-mix(in srgb,var(--action) 12%,transparent);color:var(--action);padding:.35em .9em;border-radius:6px;font:inherit;cursor:pointer}
+#save:disabled{opacity:.4;cursor:default}
+#editor{flex:1;border:none;outline:none;resize:none;font:12.5px/19px ui-monospace,Menlo,monospace;padding:.8em;white-space:pre;overflow:auto}
+#right{flex:1;overflow:auto;padding:1em 1.2em}
+#verdict{margin:.2em 0 1em}
+.chip{display:inline-block;padding:.25em .8em;border-radius:99px;font-weight:600}
+.chip.ok{background:color-mix(in srgb,var(--ok) 12%,transparent);color:var(--ok)}
+.chip.bad{background:var(--bad);color:#fff}
+.card{border:1px solid var(--bad);border-radius:8px;padding:.5em .8em;margin:.5em 0;cursor:pointer}
+.card code{color:var(--bad)}
+table{border-collapse:collapse;margin:.4em 0 1.2em}
+td,th{border:1px solid var(--line);padding:.25em .7em;text-align:left}
+th{background:var(--mist);font-weight:600}
+tr.bad td{color:var(--bad)}
+h2{font-size:1em;margin:1em 0 .2em}
+#meta{color:#6e6e73;font-size:.85em}
+</style>
+<div id="left">
+  <div id="bar"><b>world.swift</b><span id="meta"></span><button id="save" disabled>Save</button></div>
+  <textarea id="editor" spellcheck="false"></textarea>
+</div>
+<div id="right">
+  <div id="verdict"></div>
+  <div id="cards"></div>
+  <h2>People</h2><div id="people"></div>
+  <h2>Grants</h2><div id="grants"></div>
+</div>
+<script src="/judge.js"></script>
+<script>
+const editor = document.getElementById("editor");
+const saveBtn = document.getElementById("save");
+let clean = "";
+
+function lineStart(text, line) {
+    let i = 0;
+    for (let n = 1; n < line; n++) { i = text.indexOf("\n", i) + 1; if (!i) return 0; }
+    return i;
+}
+
+function render() {
+    const text = editor.value;
+    const r = judge("world.swift", text);
+    document.getElementById("meta").textContent =
+        r.declarations + " declarations · " + r.premises + " premises · " + r.milliseconds.toFixed(1) + " ms";
+    const v = document.getElementById("verdict");
+    v.innerHTML = r.refusals.length
+        ? '<span class="chip bad">refuses ' + r.refusals.length + '</span>'
+        : '<span class="chip ok">holds: every claim checked</span>';
+    const cards = document.getElementById("cards");
+    cards.innerHTML = "";
+    const badLines = new Set();
+    for (const ref of r.refusals) {
+        badLines.add(ref.line);
+        const c = document.createElement("div");
+        c.className = "card";
+        c.innerHTML = "<code>world.swift : " + ref.line + "</code> · " + ref.premise;
+        c.onclick = () => {
+            const i = lineStart(editor.value, ref.line);
+            editor.focus(); editor.setSelectionRange(i, editor.value.indexOf("\n", i));
+            const lh = 19; editor.scrollTop = Math.max(0, (ref.line - 6) * lh);
+        };
+        cards.appendChild(c);
+    }
+    // the tables are read off the judged declarations, never stored
+    const decls = r.parsed.declarations;
+    const axes = ["Rank", "Home", "Site", "Given", "Family", "Born"];
+    let ph = "<table><tr><th>id</th>" + axes.map(a => "<th>" + a.toLowerCase() + "</th>").join("") + "</tr>";
+    for (const [name, d] of decls) {
+        if (!d.conformances.includes("Employee")) continue;
+        ph += "<tr" + (badLinesNear(badLines, d.line, 9) ? ' class="bad"' : "") + "><td>" + name + "</td>" +
+              axes.map(a => "<td>" + ((d.aliases.get(a) || {}).target || "") + "</td>").join("") + "</tr>";
+    }
+    document.getElementById("people").innerHTML = ph + "</table>";
+    let gh = "<table><tr><th>who</th><th>doc</th></tr>";
+    for (const [, d] of decls) for (const e of (d.entries || [])) {
+        if (e.head !== "VerifiedView") continue;
+        gh += "<tr" + (badLinesNear(badLines, e.line, 4) ? ' class="bad"' : "") + "><td>" +
+              e.arguments[0] + "</td><td>" + e.arguments[1] + "</td></tr>";
+    }
+    document.getElementById("grants").innerHTML = gh + "</table>";
+    saveBtn.disabled = editor.value === clean;
+}
+
+function badLinesNear(badLines, line, span) {
+    for (const b of badLines) if (Math.abs(b - line) <= span) return true;
+    return false;
+}
+
+let timer = null;
+editor.addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(render, 150); });
+
+saveBtn.onclick = async () => {
+    const r = await fetch("/world", { method: "PUT", body: editor.value });
+    if (!r.ok) { saveBtn.textContent = "save failed: " + r.status; return; }
+    saveBtn.textContent = "Saved";
+    setTimeout(() => { saveBtn.textContent = "Save"; }, 1200);
+    clean = editor.value; render();
+};
+
+fetch("/world").then(r => r.text()).then(t => { editor.value = t; clean = t; render(); });
+</script>
