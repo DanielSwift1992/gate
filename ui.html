@@ -243,11 +243,15 @@ async function refreshGit() {
     } catch { el.className = ""; el.textContent = ""; }
 }
 
-// ── the Table surface: the world projected as relations (playground genre) ──
+// ── the Table surface: the ACTIVE file projected as relations, so all three
+// views (Full · Bare · Table) show the same file. Cross-file names still jump
+// (declFile) and the wave still respects siblings; only the projection is
+// per-file, matching the code. ──
+function activeDecls() { return lastParsed ? lastParsed.declarations : new Map(); }
 function tableGroups() {
     if (!lastParsed) return [];
     const buckets = new Map();
-    for (const d of layoutOrActive().values()) {
+    for (const d of activeDecls().values()) {
         if (d.aliases.size === 0) continue;
         const keys = [...d.aliases.keys()].sort();
         const sig = d.conformances.join("+") + " · " + keys.join(",");
@@ -265,7 +269,7 @@ function layoutOrActive() { return layoutDecls.size ? layoutDecls : (lastParsed 
 // VerifiedInDepartment …). Each becomes a table of the entry's arguments.
 function ledgerGroups() {
     const out = [];
-    for (const [name, d] of layoutOrActive()) {
+    for (const [name, d] of activeDecls()) {
         const entries = (d.entries || []).filter(e => e.args && e.args.length);
         if (entries.length < 2) continue;
         const byHead = new Map();
