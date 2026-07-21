@@ -21,6 +21,23 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .split{flex:0 0 5px;cursor:col-resize;background:transparent;transition:background .1s}
 .split:hover,.split.dragging{background:color-mix(in srgb,var(--action) 45%,transparent)}
 .line-flash{background:color-mix(in srgb,var(--action) 22%,transparent)}
+#journal-head .obs{display:block;font:500 9px/1.3 -apple-system,sans-serif;letter-spacing:.03em;text-transform:none;color:var(--muted);opacity:.75;margin-top:.2em}
+.commit{padding:.4em 1.1em;cursor:default;border-left:2px solid transparent}
+.commit:hover{background:var(--mist)}
+.commit.touches{cursor:pointer;border-left-color:color-mix(in srgb,var(--action) 55%,transparent)}
+.commit .subj{font:12.5px/1.35 -apple-system,sans-serif;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.commit .meta{display:flex;align-items:center;gap:.5em;margin-top:.2em;font:11px ui-monospace,Menlo,monospace;color:var(--muted)}
+.commit .who{cursor:pointer;color:var(--localtype)}
+.commit .who:hover{text-decoration:underline}
+.badge{flex:none;font:9.5px/1.4 -apple-system,sans-serif;padding:0 .5em;border-radius:8px}
+.badge.closed{background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok)}
+.badge.open{background:color-mix(in srgb,var(--action) 15%,transparent);color:var(--action)}
+#filter-note{padding:.3em 1.1em;font:11px -apple-system,sans-serif;color:var(--action);cursor:pointer}
+#filter-note:hover{text-decoration:underline}
+#diff-overlay{display:none;position:fixed;inset:0;background:color-mix(in srgb,var(--ink) 32%,transparent);z-index:20;align-items:center;justify-content:center}
+#diff-box{background:var(--paper);border-radius:10px;width:min(860px,88vw);max-height:82vh;overflow:auto;box-shadow:0 10px 40px color-mix(in srgb,var(--ink) 30%,transparent);position:relative}
+#diff-close{position:sticky;top:0;float:right;margin:.6em;padding:.15em .6em;background:var(--mist);border-radius:5px;font:11px -apple-system,sans-serif;color:var(--muted);cursor:pointer}
+#diff-text{margin:0;padding:1.2em 1.4em;font:11.5px/1.5 ui-monospace,Menlo,monospace;white-space:pre-wrap;word-break:break-word;color:var(--ink)}
 #main{flex:1;display:flex;flex-direction:column;min-width:0;border-left:1px solid var(--line)}
 #bar{display:flex;gap:.7em;align-items:center;padding:.45em .8em;border-bottom:1px solid var(--line);flex:none}
 #bar b{font-weight:600;font:13px ui-monospace,Menlo,monospace}
@@ -77,7 +94,10 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .refusal code{color:var(--bad);font:11.5px ui-monospace,Menlo,monospace;flex:none}
 .refusal span{color:var(--ink)}
 </style>
-<div id="rail"><h3>files</h3><div id="filelist"></div></div>
+<div id="rail"><h3>files</h3><div id="filelist"></div>
+  <h3 id="journal-head" title="git's own history, projected — not a gate verdict">journal <span class="obs">observed · not judged</span></h3>
+  <div id="journal"></div></div>
+<div id="diff-overlay"><div id="diff-box"><div id="diff-close">esc</div><pre id="diff-text"></pre></div></div>
 <div class="split" id="split-rail" style="display:none"></div>
 <div id="main">
   <div id="bar">
@@ -144,6 +164,61 @@ function buildRail() {
         list.appendChild(row);
     }
 }
+
+// ── the journal VIEW: git's own history, projected. A pure function of the
+// clone — no server state, no hosting; whoever can read the repo sees it.
+// Observed, never judged (open/closed is reachability, not a verdict). ──
+let journalCommits = [], authorFilter = null;
+async function buildJournal() {
+    try {
+        const j = await (await fetch("/log?n=200")).json();
+        journalCommits = j.commits || []; journalWorld = j.world_files || [];
+    } catch { journalCommits = []; }
+    renderJournal();
+}
+function renderJournal() {
+    const host = document.getElementById("journal");
+    host.innerHTML = "";
+    if (authorFilter) {
+        const note = document.createElement("div");
+        note.id = "filter-note";
+        note.textContent = "only " + authorFilter + " · clear";
+        note.onclick = () => { authorFilter = null; renderJournal(); };
+        host.appendChild(note);
+    }
+    const shown = journalCommits.filter(c => !authorFilter || c.email === authorFilter);
+    for (const c of shown) {
+        const row = document.createElement("div");
+        row.className = "commit" + (c.touches_world ? " touches" : "");
+        const when = (c.when || "").slice(0, 10);
+        const badge = c.closed === null ? ""
+            : '<span class="badge ' + (c.closed ? "closed" : "open") + '">' + (c.closed ? "closed" : "open") + "</span>";
+        row.innerHTML = '<div class="subj">' + esc(c.subject) + "</div><div class=\"meta\">" + badge +
+            '<span class="who" data-email="' + esc(c.email) + '">' + esc(c.person || c.email) + "</span> · " + when + "</div>";
+        row.querySelector(".who").onclick = (e) => {
+            e.stopPropagation();
+            authorFilter = c.email; renderJournal();
+        };
+        if (c.touches_world) row.onclick = () => showDiff(c);
+        host.appendChild(row);
+    }
+    if (!shown.length) host.innerHTML += '<div style="padding:.4em 1.1em;color:var(--muted);font-size:11px">no commits</div>';
+}
+async function showDiff(c) {
+    const f = c.files.find(x => (journalWorld || []).includes(x)) || "";
+    const text = await (await fetch("/show?hash=" + c.hash + "&f=" + encodeURIComponent(f))).text();
+    document.getElementById("diff-text").textContent = text;
+    document.getElementById("diff-overlay").style.display = "flex";
+}
+let journalWorld = [];
+document.getElementById("diff-close").onclick =
+document.getElementById("diff-overlay").onclick = (e) => {
+    if (e.target.id === "diff-overlay" || e.target.id === "diff-close")
+        document.getElementById("diff-overlay").style.display = "none";
+};
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") document.getElementById("diff-overlay").style.display = "none";
+});
 
 function namesOf(parsed) {
     const out = new Set();
@@ -519,12 +594,12 @@ makeSplit(document.getElementById("split-rail"), document.getElementById("rail")
 
 (async () => {
     files = await (await fetch("/files")).json().catch(() => []);
-    if (files.length > 1) {
-        document.getElementById("rail").style.display = "flex";
-        document.getElementById("split-rail").style.display = "block";
-        document.getElementById("fname").style.display = "none";
-        buildRail();
-    }
+    // the rail carries files AND the journal, so it shows for any clone
+    document.getElementById("rail").style.display = "flex";
+    document.getElementById("split-rail").style.display = "block";
+    document.getElementById("fname").style.display = "none";
+    buildRail();
+    buildJournal();
     await loadFile(files[0] || "gate.swift");
 })();
 </script>

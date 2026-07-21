@@ -121,6 +121,39 @@ def main():
     c, r = run("import", "rbac", cp, "-o", os.path.join(tmp, "rbac-clean-gate.swift"))
     S.append(("rbac: clean cluster holds + canon handshake", c == 0 and r["verdict"] == "holds" and r["canon_handshake"]))
 
+    # ── the journal view: git's own history, projected. Observed, not judged;
+    # open/closed is reachability from the default branch, person via identities.
+    jrepo = os.path.join(tmp, "journal")
+    os.makedirs(os.path.join(jrepo, "tables"))
+    subprocess.run(["git", "init", "-q", "-b", "main", jrepo])
+    shutil.copy(os.path.join(DEMO, "people.csv"), os.path.join(jrepo, "tables", "people.csv"))
+    shutil.copy(os.path.join(DEMO, "grants.csv"), os.path.join(jrepo, "tables", "grants.csv"))
+    run("status", cwd=jrepo)  # bootstrap gate.swift from the tables
+
+    def gc(email, msg, cwd=jrepo):
+        subprocess.run(["git", "-c", "commit.gpgsign=false", "-c", f"user.email={email}",
+                        "-c", "user.name=T", "commit", "-qam", msg], cwd=cwd)
+
+    subprocess.run(["git", "add", "-A"], cwd=jrepo)
+    gc("boss@corp", "seed the world on main")
+    with open(os.path.join(jrepo, "tables", "identities.csv"), "w") as f:
+        f.write("email,id\nboss@corp,Emp9001\ndev@corp,Emp9002\n")
+    subprocess.run(["git", "checkout", "-q", "-b", "feature"], cwd=jrepo)
+    t = open(os.path.join(jrepo, "gate.swift")).read().replace("Rank = Manager", "Rank = Lead", 1)
+    open(os.path.join(jrepo, "gate.swift"), "w").write(t)
+    gc("dev@corp", "demote a manager (pending on a branch)")
+    subprocess.run(["git", "checkout", "-q", "main"], cwd=jrepo)
+
+    c, r = run("log", cwd=jrepo)
+    commits = r.get("commits", [])
+    main_c = next((x for x in commits if x["email"] == "boss@corp"), None)
+    feat_c = next((x for x in commits if x["email"] == "dev@corp"), None)
+    S.append(("journal: default branch commit is closed",
+              main_c and main_c["closed"] is True and main_c["person"] == "Emp9001"))
+    S.append(("journal: unmerged branch commit is open + touches the world",
+              feat_c and feat_c["closed"] is False and feat_c["touches_world"] is True
+              and feat_c["person"] == "Emp9002"))
+
     for name, ok in S:
         print(("PASS" if ok else "FAIL"), name)
     print("ALL GREEN" if all(ok for _, ok in S) else "RED")

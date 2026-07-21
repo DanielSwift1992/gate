@@ -60,7 +60,7 @@ gate survey                            # read-only: unwritten links mined from
                                        # translation at all
 ```
 
-The porcelain is deliberately git-shaped: `init · status/fsck · check ·
+The porcelain is deliberately git-shaped: `init · status/fsck · log · check ·
 diff · apply · import/export · verify · guard · library · survey · serve ·
 report · stdlib`. A red verdict exits non-zero, so hooks and CI need no
 wrappers.
@@ -90,6 +90,12 @@ wrappers.
   every keystroke. It obeys your declared file layout and judges across
   files — an unsaved lie in one file is caught against a roster in
   another.
+- **A journal, from git itself.** `gate log` (and the bench rail) projects
+  the repository's own history — commit, author, open or closed — with no
+  translation at all: any clone already carries it. A view is a pure
+  function of the clone, so whoever can read the repo sees it; nothing is
+  hosted, nothing is stored. Observed, never judged: open/closed is
+  reachability from the default branch, not a verdict.
 - **A shelf that is source.** Built-in definitions (git atoms, domain
   genres) are real Swift files in `stdlib/`, judged by the product's own
   judge in its own battery. `gate stdlib show` prints any of them;
@@ -118,7 +124,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 25 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 27 end-to-end checks, the definition of green
 ```
 
 ## Status

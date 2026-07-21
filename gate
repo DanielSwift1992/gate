@@ -698,6 +698,51 @@ def cmd_guard_deps(a):
     return out
 
 
+def repo_journal(n=200):
+    # the journal VIEW — git's own history projected, no translation needed:
+    # every clone already carries it (append-only, I3). Observed, NOT judged:
+    # a commit is closed iff reachable from the default branch, open otherwise.
+    import csv as _csv
+
+    base = os.path.dirname(os.path.abspath(FACTS)) if FACTS else "."
+    default = None
+    for cand in ("origin/HEAD", "main", "master"):
+        r = subprocess.run(["git", "rev-parse", "--verify", "-q", cand],
+                           cwd=base, capture_output=True, text=True)
+        if r.returncode == 0:
+            default = cand
+            break
+    merged = set()
+    if default:
+        merged = set(subprocess.run(["git", "rev-list", default], cwd=base,
+                                    capture_output=True, text=True).stdout.split())
+    identities = {}
+    idcsv = os.path.join(TABLES, "identities.csv") if TABLES else None
+    if idcsv and os.path.exists(idcsv):
+        identities = {r["email"]: r["id"] for r in _csv.DictReader(open(idcsv))}
+    world = set(os.path.relpath(p, base) for p in world_files()) if FACTS else set()
+    fmt = subprocess.run(
+        ["git", "log", "--all", f"-{n}", "--format=%x01%H%x1f%ae%x1f%aI%x1f%s", "--name-only"],
+        cwd=base, capture_output=True, text=True).stdout
+    commits, cur = [], None
+    for line in fmt.splitlines():
+        if line.startswith("\x01"):
+            if cur:
+                commits.append(cur)
+            h, email, when, subject = (line[1:].split("\x1f") + ["", "", "", ""])[:4]
+            cur = {"hash": h, "short": h[:8], "email": email,
+                   "person": identities.get(email), "when": when,
+                   "subject": subject, "files": [], "touches_world": False,
+                   "closed": (h in merged) if merged else None}
+        elif line.strip() and cur is not None:
+            cur["files"].append(line.strip())
+            if line.strip() in world:
+                cur["touches_world"] = True
+    if cur:
+        commits.append(cur)
+    return {"command": "log", "default_branch": default, "world_files": sorted(world), "commits": commits}
+
+
 def cmd_survey(a):
     # survey [N] — the t0 gesture: a read-only map of the repo with NO
     # translation. Unwritten links from its own history (co-change — exact
@@ -1062,7 +1107,21 @@ def cmd_serve(a):
                     self.end_headers()
                     self.wfile.write(body)
                     return
-                if u.path == "/status":
+                if u.path == "/log":
+                    out = repo_journal(int(q.get("n", 200)))
+                elif u.path == "/show":
+                    # a commit's diff over one world file, plain text (observed)
+                    base = os.path.dirname(os.path.abspath(FACTS)) if FACTS else "."
+                    args = ["git", "show", "--format=%H%n%an <%ae>%n%aI%n%n%s%n", q.get("hash", "")]
+                    if q.get("f"):
+                        args += ["--", q["f"]]
+                    diff = subprocess.run(args, cwd=base, capture_output=True, text=True).stdout
+                    self.send_response(200)
+                    self.send_header("Content-Type", "text/plain; charset=utf-8")
+                    self.end_headers()
+                    self.wfile.write(diff.encode())
+                    return
+                elif u.path == "/status":
                     out = dispatch("status", [])
                 elif u.path == "/check/view":
                     out = cmd_ask([q["who"], q["doc"]])
@@ -1141,7 +1200,7 @@ def cmd_serve(a):
         def log_message(self, *args):
             pass
 
-    print(json.dumps({"command": "serve", "url": f"http://127.0.0.1:{port}", "routes": ["/status", "/check/view?who=&doc=", "/diff/transfer?who=&to="], "mutating_routes": "none, by design"}))
+    print(json.dumps({"command": "serve", "url": f"http://127.0.0.1:{port}", "routes": ["/status", "/log", "/show?hash=&f=", "/check/view?who=&doc=", "/diff/transfer?who=&to="], "mutating_routes": "none, by design"}))
     sys.stdout.flush()
     HTTPServer(("127.0.0.1", port), H).serve_forever()
 
@@ -1221,6 +1280,8 @@ def dispatch(cmd, rest):
         return cmd_library(rest)
     if cmd == "survey":
         return cmd_survey(rest)
+    if cmd == "log":
+        return repo_journal(int(rest[0]) if rest else 200)
     if cmd == "stdlib":
         return cmd_stdlib(rest)
     raise SystemExit(USAGE)
@@ -1272,6 +1333,14 @@ def humanize(out):
             lines.append(f"  {out['hooks']}")
     elif cmd == "export":
         lines.append(f"export: {out['people']} people, {out['grants']} grants → {', '.join(out['wrote'])}")
+    elif cmd == "log":
+        d = out.get("default_branch") or "?"
+        lines.append(f"log: {len(out['commits'])} commits · observed, not judged · closed = reachable from {d}")
+        for c in out["commits"]:
+            st = "?" if c["closed"] is None else ("closed" if c["closed"] else "open")
+            who = c["person"] or c["email"]
+            star = " *" if c["touches_world"] else ""
+            lines.append(f"  {c['short']} {st:6} {c['when'][:10]} {who:20} {c['subject']}{star}")
     elif cmd == "survey":
         lines.append(f"survey: {out['commits']} commits, read-only")
         lines.append("  unwritten links (co-change from your own history):")

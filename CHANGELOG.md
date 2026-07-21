@@ -4,6 +4,14 @@
 
 The working prototype, end to end:
 
+- The journal view (`gate log`, and the bench rail): the repository's own
+  history projected — commit, author, open/closed, and the world files a
+  commit touches. A pure function of the clone: no server state, no
+  hosting; whoever can read the repo sees it. Observed, never judged
+  (open/closed is reachability from the default branch). A commit that
+  touches a world file opens its diff in the bench; clicking an author
+  filters the journal. The world file takes the tool's name (`gate.swift`,
+  `gate.manifest.swift`), the Dockerfile pattern.
 - The workbench (`ui.html`, served by `gate serve`): CodeMirror editor
   with declared-name highlighting; three views in one row — Full, Bare
   (the bare form: no enum/typealias/braces, scope by indentation,
@@ -19,8 +27,8 @@ The working prototype, end to end:
   buffer until it holds again. git is the only state — commit or discard
   with git; there is no hidden "unsaved buffer".
 
-- The world: single-source canon (`world.swift`), declared multi-file
-  layout (`world.manifest.swift`) with two-way guards, cross-file
+- The world: the source lives in `gate.swift`, a declared multi-file
+  layout (`gate.manifest.swift`) with two-way guards, cross-file
   judgement.
 - Verbs (git-shaped porcelain): init, status/fsck, check, diff, apply
   (transfer/grant/revoke/hire), import/export with round-trip proof,
