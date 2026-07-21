@@ -1,0 +1,12 @@
+name: battery
+on: [push, pull_request]
+jobs:
+  green:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: swift-actions/setup-swift@v2
+      # the judge is rebuilt from the public theory corpus at the pin,
+      # so the battery never trusts a stale vendored binary
+      - run: bin/build-judge.sh 0fd0b38
+      - run: python3 tests/smoke.py
