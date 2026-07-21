@@ -36,10 +36,28 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .badge.open{background:color-mix(in srgb,var(--action) 15%,transparent);color:var(--action)}
 #filter-note,#load-more{padding:.3em 1.1em;font:11px -apple-system,sans-serif;color:var(--action);cursor:pointer}
 #filter-note:hover,#load-more:hover{text-decoration:underline}
-#diff-overlay{display:none;position:fixed;inset:0;background:color-mix(in srgb,var(--ink) 32%,transparent);z-index:20;align-items:center;justify-content:center}
-#diff-box{background:var(--paper);border-radius:10px;width:min(860px,88vw);max-height:82vh;overflow:auto;box-shadow:0 10px 40px color-mix(in srgb,var(--ink) 30%,transparent);position:relative}
-#diff-close{position:sticky;top:0;float:right;margin:.6em;padding:.15em .6em;background:var(--mist);border-radius:5px;font:11px -apple-system,sans-serif;color:var(--muted);cursor:pointer}
-#diff-text{margin:0;padding:1.2em 1.4em;font:11.5px/1.5 ui-monospace,Menlo,monospace;white-space:pre-wrap;word-break:break-word;color:var(--ink)}
+#diff-overlay{display:none;position:fixed;inset:0;background:color-mix(in srgb,var(--ink) 22%,transparent);z-index:20;align-items:center;justify-content:center}
+#diff-box{background:var(--paper);border-radius:12px;width:min(680px,88vw);max-height:78vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 12px 44px color-mix(in srgb,var(--ink) 26%,transparent)}
+.dhead{position:relative;padding:1em 1.2em .85em;border-bottom:1px solid var(--line);flex:none}
+.dsubj{font:600 14px/1.35 -apple-system,sans-serif;padding-right:2em}
+.dmeta{display:flex;align-items:center;gap:.5em;margin-top:.4em;font:11.5px -apple-system,sans-serif;color:var(--muted)}
+.dmeta code{font:11px ui-monospace,Menlo,monospace}
+#diff-close{position:absolute;top:.75em;right:.85em;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:6px;color:var(--muted);font-size:12px;cursor:pointer}
+#diff-close:hover{background:var(--mist);color:var(--ink)}
+.dbody{overflow:auto;padding:.5em 0 .9em}
+.dfile{padding:.7em 1.2em .35em;font:11px ui-monospace,Menlo,monospace;color:var(--muted)}
+.dfile .dnote{margin-left:.6em;font:11px -apple-system,sans-serif}
+.dmore{padding:.35em 1.2em;font:11px -apple-system,sans-serif;color:var(--muted)}
+.fact .sep{color:var(--muted)}
+.fact{display:flex;align-items:baseline;gap:.45em;flex-wrap:wrap;padding:.28em 1.2em;font:12.5px ui-monospace,Menlo,monospace}
+.fact .own{color:var(--localtype)}
+.fact .was{color:var(--bad);text-decoration:line-through;text-decoration-thickness:1px}
+.fact .arrow{color:var(--muted)}
+.fact .now{color:var(--ok)}
+.dline{padding:.2em 1.2em;font:12px/1.5 ui-monospace,Menlo,monospace;white-space:pre-wrap;word-break:break-word;color:var(--muted)}
+.dline .sg{display:inline-block;width:1.1em;opacity:.6}
+.dline.add{color:var(--ok);background:color-mix(in srgb,var(--ok) 7%,transparent)}
+.dline.del{color:var(--bad);background:color-mix(in srgb,var(--bad) 7%,transparent)}
 #main{flex:1;display:flex;flex-direction:column;min-width:0;border-left:1px solid var(--line)}
 #bar{display:flex;gap:.7em;align-items:center;padding:.45em .8em;border-bottom:1px solid var(--line);flex:none}
 #bar b{font-weight:600;font:13px ui-monospace,Menlo,monospace}
@@ -99,7 +117,7 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 <div id="rail"><h3>files</h3><div id="filelist"></div>
   <h3 id="journal-head" title="git's own history, projected — not a gate verdict">journal <span class="obs">observed · not judged</span></h3>
   <div id="journal"></div></div>
-<div id="diff-overlay"><div id="diff-box"><div id="diff-close">esc</div><pre id="diff-text"></pre></div></div>
+<div id="diff-overlay"><div id="diff-box"></div></div>
 <div class="split" id="split-rail" style="display:none"></div>
 <div id="main">
   <div id="bar">
@@ -241,21 +259,48 @@ function renderJournal() {
         host.appendChild(more);
     }
 }
+// what a commit did, read as facts: `Rank: Manager → Lead`, not a wall of
+// git plumbing. Lines that are not a fact change stay lines.
 async function showDiff(c) {
     const f = c.files.find(x => (journalWorld || []).includes(x)) || "";
-    const text = await (await fetch("/show?hash=" + c.hash + "&f=" + encodeURIComponent(f))).text();
-    document.getElementById("diff-text").textContent = text;
+    const d = await (await fetch("/show?hash=" + c.hash + "&f=" + encodeURIComponent(f))).json();
+    const badge = c.closed === null ? "" :
+        '<span class="badge ' + (c.closed ? "closed" : "open") + '">' + (c.closed ? "closed" : "open") + "</span>";
+    let body = "";
+    for (const file of d.files) {
+        if (!file.changes.length) continue;
+        // a file that was only added or only removed is not read line by line
+        const signs = new Set(file.changes.map(c => c.kind === "fact" ? "~" : c.sign));
+        const whole = file.changes.length > 24 && signs.size === 1 && !signs.has("~");
+        body += '<div class="dfile">' + esc(file.name)
+            + (whole ? '<span class="dnote">' + (signs.has("+") ? "written" : "removed") + ", "
+                + file.changes.length + " lines</span>" : "") + "</div>";
+        if (whole) continue;
+        const shown = file.changes.slice(0, 40);
+        for (const ch of shown) {
+            body += ch.kind === "fact"
+                ? '<div class="fact">' + (ch.owner ? '<span class="own">' + esc(ch.owner) + '</span><span class="sep">·</span>' : "")
+                    + '<span class="key">' + esc(ch.key) + '</span><span class="was">' + esc(ch.from)
+                    + '</span><span class="arrow">→</span><span class="now">' + esc(ch.to) + "</span></div>"
+                : '<div class="dline ' + (ch.sign === "+" ? "add" : "del") + '"><span class="sg">'
+                    + ch.sign + "</span>" + esc(ch.text) + "</div>";
+        }
+        if (file.changes.length > shown.length)
+            body += '<div class="dmore">' + (file.changes.length - shown.length) + " more lines</div>";
+    }
+    document.getElementById("diff-box").innerHTML =
+        '<div class="dhead"><div class="dsubj">' + esc(d.subject) + '</div>'
+        + '<div class="dmeta">' + badge + esc(c.person || d.author) + " · " + esc((d.date || "").slice(0, 10))
+        + ' · <code>' + esc(d.short) + "</code></div>"
+        + '<div id="diff-close" title="esc">✕</div></div>'
+        + '<div class="dbody">' + (body || '<div class="dline">no change in the world files</div>') + "</div>";
+    document.getElementById("diff-close").onclick = closeDiff;
     document.getElementById("diff-overlay").style.display = "flex";
 }
+function closeDiff() { document.getElementById("diff-overlay").style.display = "none"; }
 let journalWorld = [];
-document.getElementById("diff-close").onclick =
-document.getElementById("diff-overlay").onclick = (e) => {
-    if (e.target.id === "diff-overlay" || e.target.id === "diff-close")
-        document.getElementById("diff-overlay").style.display = "none";
-};
-document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") document.getElementById("diff-overlay").style.display = "none";
-});
+document.getElementById("diff-overlay").onclick = (e) => { if (e.target.id === "diff-overlay") closeDiff(); };
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDiff(); });
 
 function namesOf(parsed) {
     const out = new Set();

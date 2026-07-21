@@ -912,6 +912,61 @@ def repo_journal(n=200, scope="world"):
             "me": me, "world_files": sorted(world), "commits": commits}
 
 
+def commit_change(sha, path=None):
+    # what a commit did, read as FACTS where it can be: this is a world, and
+    # `Rank: Manager -> Lead` is what changed, not `-`/`+` around plumbing.
+    # Lines that are not a fact change stay lines; git's own noise (index,
+    # ---/+++, @@) is never shown, because nobody reads a world through it.
+    base = os.path.dirname(os.path.abspath(FACTS)) if FACTS else "."
+    fmt = subprocess.run(["git", "show", "--format=%H%x1f%an%x1f%ae%x1f%aI%x1f%s", "--no-color", sha]
+                         + (["--", path] if path else []),
+                         cwd=base, capture_output=True, text=True).stdout.split("\n")
+    head = (fmt[0].split("\x1f") + ["", "", "", "", ""])[:5]
+    files, cur, owner = [], None, None
+    for ln in fmt[1:]:
+        if ln.startswith("diff --git"):
+            cur = {"name": ln.split(" b/")[-1].strip(), "changes": []}
+            files.append(cur)
+            owner = None
+        elif cur is None or ln[:1] in ("", None) and not ln:
+            continue
+        elif ln.startswith(("index ", "--- ", "+++ ", "new file", "deleted file",
+                            "old mode", "new mode", "similarity", "rename ")):
+            continue
+        elif ln.startswith("@@"):
+            m = re.search(r"@@.*@@\s*(.*)$", ln)
+            d = re.search(r"(?:enum|protocol|struct)\s+(\w+)", m.group(1) if m else "")
+            owner = d.group(1) if d else None
+        elif ln[:1] in (" ", "-", "+"):
+            body = ln[1:]
+            d = re.search(r"(?:public\s+)?(?:enum|protocol|struct)\s+(\w+)", body)
+            if d:
+                owner = d.group(1)
+            if ln[0] == " ":
+                continue
+            cur["changes"].append({"kind": "line", "sign": ln[0], "text": body.rstrip(),
+                                   "owner": owner})
+    # pair a removal with the addition that restates the same fact
+    for f in files:
+        paired, i = [], 0
+        cs = f["changes"]
+        while i < len(cs):
+            a = cs[i]
+            b = cs[i + 1] if i + 1 < len(cs) else None
+            ma = re.match(r"\s*(?:public\s+)?typealias\s+(\w+)\s*=\s*(.+?)\s*$", a["text"])
+            mb = re.match(r"\s*(?:public\s+)?typealias\s+(\w+)\s*=\s*(.+?)\s*$", b["text"]) if b else None
+            if ma and mb and a["sign"] == "-" and b["sign"] == "+" and ma.group(1) == mb.group(1):
+                paired.append({"kind": "fact", "owner": a["owner"], "key": ma.group(1),
+                               "from": ma.group(2), "to": mb.group(2)})
+                i += 2
+                continue
+            paired.append(a)
+            i += 1
+        f["changes"] = paired
+    return {"hash": head[0], "short": head[0][:8], "author": head[1], "email": head[2],
+            "date": head[3], "subject": head[4], "files": files}
+
+
 def cmd_survey(a):
     # survey [N] — the t0 gesture: a read-only map of the repo with NO
     # translation. Unwritten links from its own history (co-change — exact
@@ -1282,17 +1337,7 @@ def cmd_serve(a):
                 if u.path == "/log":
                     out = repo_journal(int(q.get("n", 200)), q.get("scope", "world"))
                 elif u.path == "/show":
-                    # a commit's diff over one world file, plain text (observed)
-                    base = os.path.dirname(os.path.abspath(FACTS)) if FACTS else "."
-                    args = ["git", "show", "--format=%H%n%an <%ae>%n%aI%n%n%s%n", q.get("hash", "")]
-                    if q.get("f"):
-                        args += ["--", q["f"]]
-                    diff = subprocess.run(args, cwd=base, capture_output=True, text=True).stdout
-                    self.send_response(200)
-                    self.send_header("Content-Type", "text/plain; charset=utf-8")
-                    self.end_headers()
-                    self.wfile.write(diff.encode())
-                    return
+                    out = commit_change(q.get("hash", ""), q.get("f") or None)
                 elif u.path == "/status":
                     out = dispatch("status", [])
                 elif u.path == "/check/view":
