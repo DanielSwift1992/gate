@@ -427,9 +427,11 @@ function setMode(m) {
 }
 document.querySelectorAll("#view-seg button").forEach(b => b.onclick = () => setMode(b.dataset.m));
 
-// No buffer of our own: an edit goes straight to the working-copy file, and
-// git is the only state (commit or discard with git). A programmatic load
-// (setValue) judges without writing; a real edit writes, then judges.
+// No buffer of our own: an edit goes to the working-copy file, and git is the
+// only state. But ONLY a holding world is written — a refused (invalid) world
+// never reaches the file, so git reflects only worlds that hold. The invalid
+// state lives only in the editor buffer until it holds again. A programmatic
+// load (setValue) judges without writing.
 let timer = null;
 cm.on("change", (_, change) => {
     clearTimeout(timer);
@@ -437,9 +439,17 @@ cm.on("change", (_, change) => {
     timer = setTimeout(() => tick(userEdit), userEdit ? 400 : 150);
 });
 async function tick(write) {
-    if (write) await fetch("/world?f=" + encodeURIComponent(active), { method: "PUT", body: editor.value });
-    await render();
-    if (write) refreshGit();
+    await render();                         // judges the buffer first
+    const holds = lastRefusals.length === 0;
+    if (write && holds) {
+        await fetch("/world?f=" + encodeURIComponent(active), { method: "PUT", body: editor.value });
+        refreshGit();
+    } else if (write) {
+        // invalid: withhold the write, say so plainly
+        const el = document.getElementById("gitstate");
+        el.className = "modified";
+        el.innerHTML = '<span class="g"></span>refused · not written';
+    }
 }
 
 async function siblings() {

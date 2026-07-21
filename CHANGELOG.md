@@ -12,10 +12,12 @@ The working prototype, end to end:
   over the declared layout with a per-file verdict dot; the verdict
   docked at the bottom, Xcode-style; cross-file judgement over unsaved
   text, addresses refined to the subject line.
-- No state of our own: an edit in the bench goes straight to the
-  working-copy file (auto-write), and git is the only state — a
-  git-state indicator shows committed / uncommitted, and you commit or
-  discard with git. There is no hidden "unsaved buffer".
+- No state of our own, and only a holding world is written: an edit goes
+  to the working-copy file, but the file is written ONLY when the judge
+  holds — a refused (invalid) world never reaches the file, so git
+  reflects only worlds that hold. The invalid state lives in the editor
+  buffer until it holds again. git is the only state — commit or discard
+  with git; there is no hidden "unsaved buffer".
 
 - The world: single-source canon (`world.swift`), declared multi-file
   layout (`world.manifest.swift`) with two-way guards, cross-file
