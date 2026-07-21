@@ -1,100 +1,112 @@
-<!-- gate ui — the world bench, v1: the playground's editor shell moved in.
-     CodeMirror with the Xcode-light mode, declared-name highlighting (an
-     undeclared name gets the wave), gutter flags and under-line notes on
-     refusals, click-to-jump cards, the Full·Bare view pill, the declared
-     file layout, and the cross-file verdict over unsaved text. -->
+<!-- gate ui — the world bench, v2: the playground's shell, faithfully.
+     CodeMirror editor with declared-name highlighting; the Code · Table
+     surface switch (Table projects the world as sortable relations, click a
+     name to jump); Full · Bare (the same editor, ceremony collapsed from
+     view — full Swift, fully editable); a draggable file rail (the declared
+     layout); the verdict docked at the bottom, Xcode-style; cross-file
+     judgement over unsaved text. -->
 <meta charset="utf-8"><title>gate · world bench</title>
 <link rel="stylesheet" href="/codemirror.css">
 <style>
-:root{--ok:#248A3D;--bad:#C4453B;--action:#007AFF;--line:#d2d2d7;--mist:#f5f5f7;--ink:#1d1d1f;color-scheme:light}
-body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);background:#fff;display:flex;height:100vh}
-#rail{flex:0 0 176px;display:none;flex-direction:column;border-right:1px solid var(--line);overflow:auto;min-width:0}
-#rail h3{font:600 10.5px/1 -apple-system,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#8e8e93;margin:0;padding:1em 1.1em .6em}
+:root{--ok:#248A3D;--bad:#C4453B;--action:#007AFF;--line:#d2d2d7;--mist:#f5f5f7;--paper:#fff;--ink:#1d1d1f;--muted:#8e8e93;--localtype:#0B4F79;--knownname:#3900A0;color-scheme:light}
+*{box-sizing:border-box}
+body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);background:var(--paper);display:flex;height:100vh;overflow:hidden}
+#rail{flex:0 0 176px;display:none;flex-direction:column;overflow:auto;min-width:0}
+#rail h3{font:600 10.5px/1 -apple-system,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0;padding:1em 1.1em .6em}
 .file{display:flex;align-items:center;gap:.5em;padding:.32em 1.1em;cursor:pointer;font:13px/1.4 ui-monospace,Menlo,monospace;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .file:hover{background:var(--mist)}
 .file.on{background:var(--mist);font-weight:600}
 .file .dot{flex:0 0 6px;width:6px;height:6px;border-radius:50%;background:transparent}
-.file.bad{color:var(--bad)}
-.file.bad .dot{background:var(--bad)}
-#left{flex:0 0 46%;display:flex;flex-direction:column;border-right:1px solid var(--line);min-width:0}
-#bar{display:flex;gap:.6em;align-items:center;padding:.5em .8em;border-bottom:1px solid var(--line)}
-#bar b{font-weight:600}
+.file.bad{color:var(--bad)}.file.bad .dot{background:var(--bad)}
+.split{flex:0 0 5px;cursor:col-resize;background:transparent;transition:background .1s}
+.split:hover,.split.dragging{background:color-mix(in srgb,var(--action) 45%,transparent)}
+#main{flex:1;display:flex;flex-direction:column;min-width:0;border-left:1px solid var(--line)}
+#bar{display:flex;gap:.7em;align-items:center;padding:.45em .8em;border-bottom:1px solid var(--line);flex:none}
+#bar b{font-weight:600;font:13px ui-monospace,Menlo,monospace}
+.seg{display:inline-flex;background:var(--mist);border-radius:7px;padding:2px;gap:2px}
+.seg button{border:none;border-radius:5px;margin:0;background:transparent;color:var(--muted);font:12px -apple-system,sans-serif;padding:3px 12px;cursor:pointer}
+.seg button:hover{color:var(--ink)}
+.seg button.on{background:var(--paper);color:var(--ink);box-shadow:0 1px 2px color-mix(in srgb,var(--ink) 12%,transparent)}
 #save{margin-left:auto;border:none;background:color-mix(in srgb,var(--action) 12%,transparent);color:var(--action);padding:.35em .9em;border-radius:6px;font:inherit;cursor:pointer}
 #save:disabled{opacity:.4;cursor:default}
-#editor-host{flex:1;min-height:0}
+#surface{flex:1;position:relative;min-height:0}
+#editor-host{position:absolute;inset:0}
 .CodeMirror{height:100%;font:12.5px/19px ui-monospace,Menlo,monospace}
-.CodeMirror-linenumber{color:#8e8e93}
-.cm-keyword{color:#9B2393;font-weight:600}
-.cm-string{color:#C41A16}
-.cm-comment{color:#5D6C79}
-.cm-attribute{color:#947100}
-.cm-localtype{color:#0B4F79}
-.cm-knownname{color:#3900A0}
-.cm-badname{text-decoration:underline wavy var(--bad);text-underline-offset:3px}
-.cm-ghost{color:#a6a6ab}
+.CodeMirror-linenumber{color:var(--muted)}
+.cm-keyword{color:#9B2393;font-weight:600}.cm-string{color:#C41A16}.cm-comment{color:#5D6C79}
+.cm-attribute{color:#947100}.cm-localtype{color:var(--localtype)}.cm-knownname{color:var(--knownname)}
+.cm-badname{text-decoration:underline wavy var(--bad);text-underline-offset:3px}.cm-ghost{color:#a6a6ab}
 .line-flag-bad{background:color-mix(in srgb,var(--bad) 6%,transparent)}
 .gutter-flag-bad .CodeMirror-linenumber{color:var(--bad);font-weight:700}
 .flag-note{font:11px/1.5 -apple-system,sans-serif;color:var(--bad);background:color-mix(in srgb,var(--bad) 8%,transparent);padding:.1em .8em .1em 2.4em}
-#bare{flex:1;display:none;font:12.5px/19px ui-monospace,Menlo,monospace;padding:.8em;white-space:pre;overflow:auto;margin:0;color:#3a3a3c}
-#view .v{border:1px solid var(--line);background:#fff;font:inherit;padding:.15em .7em;cursor:pointer}
-#view .v.on{background:var(--mist);font-weight:600}
-#view .v:first-child{border-radius:6px 0 0 6px}#view .v:last-child{border-radius:0 6px 6px 0;border-left:none}
-#right{flex:1;overflow:auto;padding:1em 1.2em}
-#verdict{margin:.2em 0 1em}
-.chip{display:inline-block;padding:.25em .8em;border-radius:99px;font-weight:600}
+#table-host{position:absolute;inset:0;overflow:auto;background:var(--paper);padding:12px 16px 80px;font-size:12.5px;display:none}
+#table-host h3{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:18px 0 6px;font-weight:600}
+#table-host h3:first-child{margin-top:4px}
+#table-host table{border-collapse:collapse;width:100%}
+#table-host th{text-align:left;font-size:11px;color:var(--muted);font-weight:500;padding:3px 10px 3px 6px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--paper);cursor:pointer;user-select:none}
+#table-host th:hover{color:var(--ink)}#table-host th .dir{color:var(--action)}
+#table-host td{padding:3px 10px 3px 6px;border-bottom:1px solid var(--line);font-family:ui-monospace,Menlo,monospace;vertical-align:top}
+#table-host tr:hover td{background:color-mix(in srgb,var(--ink) 2%,transparent)}
+#table-host td.cell-name{color:var(--localtype);font-weight:600;cursor:pointer}
+#table-host td.cell-name:hover{text-decoration:underline}
+#table-host td.cell-value{color:var(--knownname)}
+#table-host td.cell-bad{background:color-mix(in srgb,var(--bad) 10%,transparent)}
+#table-host td.cell-bad::after{content:" ✗";color:var(--bad)}
+#verdict-panel{border-top:1px solid var(--line);background:var(--paper);flex:none;max-height:34vh;display:flex;flex-direction:column}
+#verdict-head{display:flex;align-items:center;gap:10px;padding:8px 16px 7px;flex:none}
+.chip{font-size:12px;font-weight:600;padding:3px 10px;border-radius:9px}
 .chip.ok{background:color-mix(in srgb,var(--ok) 12%,transparent);color:var(--ok)}
-.chip.bad{background:var(--bad);color:#fff}
-.card{border:1px solid var(--bad);border-radius:8px;padding:.5em .8em;margin:.5em 0;cursor:pointer}
-.card code{color:var(--bad)}
-table{border-collapse:collapse;margin:.4em 0 1.2em}
-td,th{border:1px solid var(--line);padding:.25em .7em;text-align:left}
-th{background:var(--mist);font-weight:600}
-tr.bad td{color:var(--bad)}
-h2{font-size:1em;margin:1em 0 .2em}
-#meta{color:#6e6e73;font-size:.85em}
+.chip.bad{background:var(--bad);color:var(--paper)}
+#status{font-size:12px;color:var(--muted)}#status b{color:var(--ink);font-weight:600}
+#verdicts{overflow:auto;padding:0 12px 8px}
+.refusal{display:flex;gap:10px;padding:5px 8px;border-radius:6px;cursor:pointer;font-size:12px;align-items:baseline}
+.refusal:hover{background:var(--mist)}
+.refusal code{color:var(--bad);font:11.5px ui-monospace,Menlo,monospace;flex:none}
+.refusal span{color:var(--ink)}
 </style>
 <div id="rail"><h3>files</h3><div id="filelist"></div></div>
-<div id="left">
-  <div id="bar"><b id="fname">world.swift</b><span id="view"><button class="v on" data-v="full">Full</button><button class="v" data-v="bare">Bare</button></span><span id="meta"></span><button id="save" disabled>Save</button></div>
-  <div id="editor-host"></div>
-  <pre id="bare"></pre>
-</div>
-<div id="right">
-  <div id="verdict"></div>
-  <div id="cards"></div>
-  <h2>People</h2><div id="people"></div>
-  <h2>Grants</h2><div id="grants"></div>
+<div class="split" id="split-rail" style="display:none"></div>
+<div id="main">
+  <div id="bar">
+    <span class="seg" id="surface-seg"><button class="on" data-s="code">Code</button><button data-s="table">Table</button></span>
+    <span class="seg" id="view-seg"><button class="on" data-v="full">Full</button><button data-v="bare">Bare</button></span>
+    <b id="fname">world.swift</b>
+    <button id="save" disabled>Save</button>
+  </div>
+  <div id="surface">
+    <div id="editor-host"></div>
+    <div id="table-host"></div>
+  </div>
+  <div id="verdict-panel">
+    <div id="verdict-head"><span id="chip"></span><span id="status"></span></div>
+    <div id="verdicts"></div>
+  </div>
 </div>
 <script src="/codemirror.js"></script>
 <script src="/judge.js"></script>
 <script>
-const keywordSet = new Set(["public", "enum", "protocol", "typealias", "extension",
-    "where", "static", "var", "some", "associatedtype", "import", "struct", "let", "func"]);
-let localNames = new Set();     // declared across ALL layout files
-let unresolved = new Set();     // names the JUDGE reports resolve to nothing — the wave is its voice, not a vocabulary
+const keywordSet = new Set(["public","enum","protocol","typealias","extension","where",
+    "static","var","some","associatedtype","import","struct","let","func"]);
+let localNames = new Set(), unresolved = new Set();
 
 CodeMirror.defineMode("gate-swift", () => ({
     token: (stream) => {
         if (stream.match("//")) { stream.skipToEnd(); return "comment"; }
-        if (stream.match('"')) {
-            while (!stream.eol()) { if (stream.next() === '"') break; }
-            return "string";
-        }
+        if (stream.match('"')) { while (!stream.eol()) { if (stream.next() === '"') break; } return "string"; }
         if (stream.match(/^@[A-Za-z]+/)) return "attribute";
         if (stream.match(/^[A-Za-z_][A-Za-z0-9_]*/)) {
             const word = stream.current();
             if (word === "self" || keywordSet.has(word)) return "keyword";
             if (/^[A-Z]/.test(word)) {
-                if (unresolved.has(word)) return "badname";   // only what the judge could not resolve
+                if (unresolved.has(word)) return "badname";
                 if (stream.string[stream.start - 1] === ".") return "knownname";
                 if (localNames.has(word)) return "localtype";
-                return "knownname";   // external/kit names are known, not broken
+                return "knownname";
             }
             return null;
         }
         if (stream.match(/^[<>,.]/)) return "ghost";
-        stream.next();
-        return null;
+        stream.next(); return null;
     },
 }));
 
@@ -102,19 +114,13 @@ const cm = CodeMirror(document.getElementById("editor-host"), {
     value: "", mode: "gate-swift", lineNumbers: true, indentUnit: 4,
     viewportMargin: Infinity, dragDrop: false,
 });
-const editor = {   // the playground's shim: every reader stays honest
-    get value() { return cm.getValue(); },
-    set value(next) { cm.setValue(next); },
-};
+const editor = { get value() { return cm.getValue(); }, set value(n) { cm.setValue(n); } };
 const saveBtn = document.getElementById("save");
-let clean = "";
-let files = [];
-let active = "";
-let badFiles = new Set();      // files the judge names a refusal in — the rail's dot
-let siblingNames = new Set();  // declarations of the OTHER layout files
-let layoutDecls = new Map();   // declarations across the WHOLE layout, for the tables
-let widgets = [];
+let clean = "", files = [], active = "";
+let badFiles = new Set(), siblingNames = new Set(), layoutDecls = new Map();
+let lastParsed = null, lastRefusals = [], widgets = [], tableSort = null;
 
+// ── the file rail: the declared layout, the same list the judge runs over ──
 function buildRail() {
     const list = document.getElementById("filelist");
     list.innerHTML = "";
@@ -140,14 +146,12 @@ function namesOf(parsed) {
 }
 
 function clearFlags() {
-    widgets.forEach(w => w.clear());
-    widgets = [];
+    widgets.forEach(w => w.clear()); widgets = [];
     for (let i = 0; i < cm.lineCount(); i++) {
         cm.removeLineClass(i, "background", "line-flag-bad");
         cm.removeLineClass(i, "gutter", "gutter-flag-bad");
     }
 }
-
 function applyFlags(refusals) {
     for (const ref of refusals) {
         if ((ref.file || active) !== active) continue;
@@ -156,8 +160,7 @@ function applyFlags(refusals) {
         cm.addLineClass(i, "background", "line-flag-bad");
         cm.addLineClass(i, "gutter", "gutter-flag-bad");
         const note = document.createElement("div");
-        note.className = "flag-note";
-        note.textContent = ref.premise;
+        note.className = "flag-note"; note.textContent = ref.premise;
         widgets.push(cm.addLineWidget(i, note));
     }
 }
@@ -165,126 +168,176 @@ function applyFlags(refusals) {
 let paintedKey = "";
 function repaintNames(parsed, refusals) {
     localNames = new Set([...namesOf(parsed), ...siblingNames]);
-    // the wave speaks the judge: a name waves iff a refusal says it resolves to nothing
     unresolved = new Set();
     for (const ref of (refusals || [])) {
         const m = ref.premise.match(/\b([A-Z]\w*)(?:\.\w+)? resolves to nothing|the name ([A-Z]\w*) resolves/);
         if (m) unresolved.add(m[1] || m[2]);
     }
     const key = [...localNames].sort().join(",") + "|" + [...unresolved].sort().join(",");
-    if (key !== paintedKey) { paintedKey = key; cm.setOption("mode", "gate-swift"); }
+    if (key !== paintedKey) { paintedKey = key; cm.setOption("mode", "gate-swift"); if (bareOn) collapseBare(); }
 }
 
 async function render() {
     const text = editor.value;
-    let r;
     const local = judge(active || "world.swift", text);
+    lastParsed = local.parsed;
+    let r;
     if (files.length > 1) {
         r = await (await fetch("/verdict?f=" + encodeURIComponent(active), { method: "POST", body: text })).json();
-        r.declarations = "list of " + files.length; r.premises = "cross-file";
-        r.milliseconds = r.judge_ms || 0;
-        r.refusals = r.refusals.map(x => {
-            const [f, line] = x.address.split(":");
-            return { file: f, line: parseInt(line), premise: x.claim };
-        });
-        r.parsed = local.parsed;
+        r.declarations = "list of " + files.length; r.premises = "cross-file"; r.milliseconds = r.judge_ms || 0;
+        r.refusals = r.refusals.map(x => { const [f, line] = x.address.split(":"); return { file: f, line: +line, premise: x.claim }; });
     } else {
-        r = local;
-        r.refusals = r.refusals.map(x => ({ file: active, line: x.line, premise: x.premise }));
+        r = local; r.refusals = r.refusals.map(x => ({ file: active, line: x.line, premise: x.premise }));
     }
+    lastRefusals = r.refusals;
     repaintNames(local.parsed, r.refusals);
-    document.getElementById("meta").textContent =
-        r.declarations + " declarations · " + r.premises + " premises · " + (+r.milliseconds).toFixed(1) + " ms";
-    const v = document.getElementById("verdict");
-    v.innerHTML = r.refusals.length
-        ? '<span class="chip bad">refuses ' + r.refusals.length + '</span>'
-        : '<span class="chip ok">holds: every claim checked</span>';
-    clearFlags();
-    applyFlags(r.refusals);
+    document.getElementById("status").innerHTML =
+        "<b>" + r.declarations + "</b> declarations · <b>" + r.premises + "</b> premises · " + (+r.milliseconds).toFixed(1) + " ms";
+    document.getElementById("chip").outerHTML = r.refusals.length
+        ? '<span class="chip bad" id="chip">refuses ' + r.refusals.length + '</span>'
+        : '<span class="chip ok" id="chip">holds</span>';
+    clearFlags(); applyFlags(r.refusals);
     badFiles = new Set(r.refusals.map(x => x.file || active).filter(Boolean));
     buildRail();
-    const cards = document.getElementById("cards");
-    cards.innerHTML = "";
-    const badLines = new Set();
+    // the verdict list, docked at the bottom (Xcode status)
+    const v = document.getElementById("verdicts");
+    v.innerHTML = "";
     for (const ref of r.refusals) {
-        if ((ref.file || active) === active) badLines.add(ref.line);
-        const c = document.createElement("div");
-        c.className = "card";
-        c.innerHTML = "<code>" + (ref.file || active) + " : " + ref.line + "</code> · " + ref.premise;
-        c.onclick = async () => {
+        const row = document.createElement("div");
+        row.className = "refusal";
+        row.innerHTML = "<code>" + (ref.file || active) + ":" + ref.line + "</code><span>" + ref.premise + "</span>";
+        row.onclick = async () => {
             const target = ref.file && files.includes(ref.file) ? ref.file : active;
             if (target !== active) await loadFile(target);
+            surface("code");
             cm.setCursor({ line: ref.line - 1, ch: 0 });
-            cm.scrollIntoView({ line: ref.line - 1, ch: 0 }, 120);
-            cm.focus();
+            cm.scrollIntoView({ line: ref.line - 1, ch: 0 }, 120); cm.focus();
         };
-        cards.appendChild(c);
+        v.appendChild(row);
     }
-    // tables draw from the whole layout (people may live in another file)
-    const decls = layoutDecls.size ? layoutDecls : r.parsed.declarations;
-    const axes = ["Rank", "Home", "Site", "Given", "Family", "Born"];
-    let ph = "<table><tr><th>id</th>" + axes.map(a => "<th>" + a.toLowerCase() + "</th>").join("") + "</tr>";
-    for (const [name, d] of decls) {
-        if (!d.conformances.includes("Employee")) continue;
-        ph += "<tr" + (near(badLines, d.line, 9) ? ' class="bad"' : "") + "><td>" + name + "</td>" +
-              axes.map(a => "<td>" + ((d.aliases.get(a) || {}).target || "") + "</td>").join("") + "</tr>";
-    }
-    document.getElementById("people").innerHTML = ph + "</table>";
-    let gh = "<table><tr><th>who</th><th>doc</th></tr>";
-    for (const [, d] of decls) for (const e of (d.entries || [])) {
-        if (e.head !== "VerifiedView" || !e.arguments || e.arguments.length < 2) continue;
-        gh += "<tr" + (near(badLines, e.line, 4) ? ' class="bad"' : "") + "><td>" +
-              e.arguments[0] + "</td><td>" + e.arguments[1] + "</td></tr>";
-    }
-    document.getElementById("grants").innerHTML = gh + "</table>";
     saveBtn.disabled = editor.value === clean;
-    if (bareEl.style.display === "block") bareEl.textContent = bareOf(editor.value);
+    if (tableOn) buildTables();
 }
 
-function near(badLines, line, span) {
-    for (const b of badLines) if (Math.abs(b - line) <= span) return true;
-    return false;
-}
-
-// bare Swift: the same language with the ceremony stripped — a VIEW over
-// the single source, never a second file (read-only projection, v0)
-function bareOf(text) {
-    const out = [];
-    for (let line of text.split("\n")) {
-        const t = line.trim();
-        if (t === "}" || t === "" || t.startsWith("@") || t.startsWith("static var body")
-            || t.startsWith("public static var body")) continue;
-        line = line.replace(/\bpublic /, "");
-        let m;
-        if ((m = line.match(/^enum (\w+): ([\w, ]+) \{\}?$/)))
-            out.push(m[1] + ": " + m[2]);
-        else if ((m = line.match(/^protocol (\w+)(: [\w, ]+)? \{\}?$/)))
-            out.push(m[1] + (m[2] || "") + " (protocol)");
-        else if ((m = line.match(/^\s*(associatedtype|typealias) (\w+)( = .*)?$/)))
-            out.push("  " + m[2] + (m[3] || ""));
-        else if ((m = line.match(/^\s*([A-Z]\w*(?:<[^;]*)?)\.self;?\s*$/)))
-            out.push("  " + m[1]);
-        else if ((m = line.match(/^extension (\w+): (\w+)$/)))
-            out.push(m[1] + ": " + m[2]);
-        else if (t.startsWith("where "))
-            out.push("  " + t);
-        else if (t.startsWith("//"))
-            out.push(t);
-        else if (t.length)
-            out.push(line);
+// ── the Table surface: the world projected as relations (playground genre) ──
+function tableGroups() {
+    if (!lastParsed) return [];
+    const buckets = new Map();
+    for (const d of layoutOrActive().values()) {
+        if (d.aliases.size === 0) continue;
+        const keys = [...d.aliases.keys()].sort();
+        const sig = d.conformances.join("+") + " · " + keys.join(",");
+        if (!buckets.has(sig)) buckets.set(sig, { conformances: d.conformances, keys, rows: [] });
+        buckets.get(sig).rows.push(d);
     }
-    return out.join("\n");
+    const groups = [...buckets.values()].filter(g => g.rows.length >= 2);
+    for (const g of groups) g.rows.sort((a, b) => a.line - b.line);
+    groups.sort((a, b) => a.rows[0].line - b.rows[0].line);
+    return groups;
+}
+function layoutOrActive() { return layoutDecls.size ? layoutDecls : (lastParsed ? lastParsed.declarations : new Map()); }
+
+function jumpTo(name) {
+    const d = layoutOrActive().get(name);
+    if (!d) return;
+    surface("code");
+    cm.setCursor({ line: d.line - 1, ch: 0 });
+    cm.scrollIntoView({ line: d.line - 1, ch: 0 }, 120); cm.focus();
 }
 
-const bareEl = document.getElementById("bare");
-document.querySelectorAll("#view .v").forEach(b => b.onclick = () => {
-    document.querySelectorAll("#view .v").forEach(x => x.classList.remove("on"));
-    b.classList.add("on");
-    const bare = b.dataset.v === "bare";
-    document.getElementById("editor-host").style.display = bare ? "none" : "";
-    bareEl.style.display = bare ? "block" : "none";
-    if (bare) bareEl.textContent = bareOf(editor.value);
-});
+function buildTables() {
+    const host = document.getElementById("table-host");
+    host.innerHTML = "";
+    const badLines = new Set(lastRefusals.map(r => r.line));
+    const groups = tableGroups();
+    if (!groups.length) { host.innerHTML = '<h3>no relations to project</h3>'; return; }
+    for (const group of groups) {
+        const h = document.createElement("h3");
+        h.textContent = group.conformances.join(", ") + " · " + group.rows.length + " rows";
+        h.style.cursor = "pointer";
+        h.onclick = () => jumpTo(group.rows[0].name);
+        host.append(h);
+        const table = document.createElement("table");
+        const sig = group.conformances.join("+") + group.keys.join(",");
+        const mark = (k) => tableSort && tableSort.sig === sig && tableSort.key === k
+            ? ' <span class="dir">' + (tableSort.dir > 0 ? "↓" : "↑") + "</span>" : "";
+        const head = document.createElement("tr");
+        for (const key of ["name", ...group.keys]) {
+            const th = document.createElement("th");
+            th.innerHTML = key + mark(key);
+            th.onclick = () => {
+                const dir = tableSort && tableSort.sig === sig && tableSort.key === key ? -tableSort.dir : 1;
+                tableSort = { sig, key, dir }; buildTables();
+            };
+            head.append(th);
+        }
+        table.append(head);
+        let rows = group.rows;
+        if (tableSort && tableSort.sig === sig) {
+            const val = (d) => tableSort.key === "name" ? d.name : (d.aliases.get(tableSort.key)?.target ?? "");
+            rows = [...rows].sort((a, b) => tableSort.dir * val(a).localeCompare(val(b), undefined, { numeric: true }));
+        }
+        for (const d of rows) {
+            const tr = document.createElement("tr");
+            const name = document.createElement("td");
+            name.className = "cell-name"; name.textContent = d.name;
+            name.title = "go to line " + d.line; name.onclick = () => jumpTo(d.name);
+            tr.append(name);
+            for (const key of group.keys) {
+                const td = document.createElement("td");
+                td.className = "cell-value";
+                td.textContent = d.aliases.get(key)?.target ?? "";
+                if (badLines.has(d.line)) td.classList.add("cell-bad");
+                tr.append(td);
+            }
+            table.append(tr);
+        }
+        host.append(table);
+    }
+}
+
+// ── surface switch (Code · Table) ──
+let tableOn = false;
+function surface(which) {
+    tableOn = which === "table";
+    document.getElementById("editor-host").style.display = tableOn ? "none" : "";
+    document.getElementById("table-host").style.display = tableOn ? "block" : "none";
+    document.getElementById("view-seg").style.visibility = tableOn ? "hidden" : "";
+    document.querySelectorAll("#surface-seg button").forEach(b => b.classList.toggle("on", (b.dataset.s === "table") === tableOn));
+    if (tableOn) buildTables(); else cm.refresh();
+}
+document.querySelectorAll("#surface-seg button").forEach(b => b.onclick = () => surface(b.dataset.s));
+
+// ── Full · Bare: the same editor, ceremony collapsed from view (full Swift,
+// fully editable — the buffer is unchanged, only the noise is hidden) ──
+let bareOn = false, bareMarks = [];
+function clearBare() { bareMarks.forEach(m => m.clear()); bareMarks = []; }
+function collapseBare() {
+    clearBare();
+    const hide = (from, to) => bareMarks.push(cm.markText(from, to, { collapsed: true, inclusiveLeft: false, inclusiveRight: false }));
+    for (let i = 0; i < cm.lineCount(); i++) {
+        const text = cm.getLine(i);
+        const t = text.trim();
+        // whole-line ceremony: the builder attribute and the body header
+        if (t === "@StructureBuilder" || /^public (static var body|@)/.test(t) || t === "static var body: some Structure {") {
+            hide({ line: i, ch: 0 }, { line: i + 1, ch: 0 });
+            continue;
+        }
+        // the "public " prefix
+        const p = text.indexOf("public ");
+        if (p >= 0 && text.slice(0, p).trim() === "") hide({ line: i, ch: p }, { line: i, ch: p + 7 });
+        // the ".self" tail of a body entry
+        const s = text.indexOf(".self");
+        if (s >= 0) hide({ line: i, ch: s }, { line: i, ch: s + 5 });
+    }
+}
+function setView(v) {
+    bareOn = v === "bare";
+    document.querySelectorAll("#view-seg button").forEach(b => b.classList.toggle("on", (b.dataset.v === "bare") === bareOn));
+    if (bareOn) collapseBare(); else clearBare();
+    cm.refresh();
+}
+document.querySelectorAll("#view-seg button").forEach(b => b.onclick = () => setView(b.dataset.v));
 
 let timer = null;
 cm.on("change", () => { clearTimeout(timer); timer = setTimeout(render, 150); });
@@ -292,25 +345,19 @@ cm.on("change", () => { clearTimeout(timer); timer = setTimeout(render, 150); })
 saveBtn.onclick = async () => {
     const r = await fetch("/world?f=" + encodeURIComponent(active), { method: "PUT", body: editor.value });
     if (!r.ok) { saveBtn.textContent = "save failed: " + r.status; return; }
-    saveBtn.textContent = "Saved";
-    setTimeout(() => { saveBtn.textContent = "Save"; }, 1200);
+    saveBtn.textContent = "Saved"; setTimeout(() => { saveBtn.textContent = "Save"; }, 1200);
     clean = editor.value; render();
 };
 
 async function siblings() {
-    // the declared layout, read whole: sibling names keep the wave honest, and
-    // the tables draw from every file, not just the active one
-    siblingNames = new Set();
-    layoutDecls = new Map();
+    siblingNames = new Set(); layoutDecls = new Map();
     for (const f of files) {
-        const t = f === active ? editor.value
-            : await (await fetch("/world?f=" + encodeURIComponent(f))).text();
+        const t = f === active ? editor.value : await (await fetch("/world?f=" + encodeURIComponent(f))).text();
         const parsed = judge(f, t).parsed;
         if (f !== active) namesOf(parsed).forEach(n => siblingNames.add(n));
         for (const [name, d] of parsed.declarations) if (!layoutDecls.has(name)) layoutDecls.set(name, d);
     }
 }
-
 async function loadFile(name) {
     active = name;
     document.getElementById("fname").textContent = name;
@@ -319,14 +366,36 @@ async function loadFile(name) {
     editor.value = t; clean = t;
     await siblings();
     render();
+    if (bareOn) collapseBare();
 }
+
+// ── the file rail is a panel you can drag, like the others ──
+function makeSplit(el, panel, min, max) {
+    let drag = null, frame = null;
+    el.addEventListener("pointerdown", (e) => {
+        drag = { fromX: e.clientX, fromW: panel.getBoundingClientRect().width };
+        el.classList.add("dragging"); try { el.setPointerCapture(e.pointerId); } catch {} e.preventDefault();
+    });
+    el.addEventListener("pointermove", (e) => {
+        if (!drag) return; drag.lastX = e.clientX;
+        if (frame) return;
+        frame = requestAnimationFrame(() => {
+            frame = null; if (!drag) return;
+            const w = Math.max(min, Math.min(max, drag.fromW + (drag.lastX - drag.fromX)));
+            panel.style.flex = "0 0 " + w + "px";
+        });
+    });
+    const done = () => { drag = null; el.classList.remove("dragging"); };
+    el.addEventListener("pointerup", done); el.addEventListener("pointercancel", done);
+    el.addEventListener("dblclick", () => { panel.style.flex = ""; });
+}
+makeSplit(document.getElementById("split-rail"), document.getElementById("rail"), 120, 360);
 
 (async () => {
     files = await (await fetch("/files")).json().catch(() => []);
     if (files.length > 1) {
-        // the rail is the declared layout: File atoms of the manifest, the
-        // same list the judge runs over
         document.getElementById("rail").style.display = "flex";
+        document.getElementById("split-rail").style.display = "block";
         document.getElementById("fname").style.display = "none";
         buildRail();
     }
