@@ -31,7 +31,7 @@ def main():
     sub = os.path.join(repo, "tables")
     c, r = run("status", cwd=sub)
     S.append(("status bootstraps the world once, subdir", c == 0 and r.get("verdict") == "holds"
-              and os.path.exists(os.path.join(repo, "world.swift"))))
+              and os.path.exists(os.path.join(repo, "gate.swift"))))
     c, r = run("check", "view", "Emp9001", "FinanceShare", cwd=repo)
     S.append(("check legal exit 0", c == 0 and r["verdict"] == "holds"))
     c, r = run("check", "view", "Emp9001", "EngineeringShare", cwd=repo)
@@ -43,14 +43,14 @@ def main():
     with open(os.path.join(repo, "tables", "grants.csv"), "a") as f:
         f.write("Emp9000,FinanceShare\n")  # a later CSV edit must NOT overwrite the world
     c, r = run("status", cwd=repo)
-    world_text = open(os.path.join(repo, "world.swift")).read()
+    world_text = open(os.path.join(repo, "gate.swift")).read()
     S.append(("no second truth: CSV edit does not reprint the world",
               r.get("verdict") == "holds" and world_text.count("Emp9002,") == 3))
     c, r = run("apply", "grant", "Emp9002", "FinanceShare", cwd=repo)
     S.append(("apply grant back", r.get("applied") is True))
-    c, r = run("import", "tables/people.csv", "tables/grants.csv", "-o", "world.swift", cwd=repo)
+    c, r = run("import", "tables/people.csv", "tables/grants.csv", "-o", "gate.swift", cwd=repo)
     S.append(("import clean", r["verdict"] == "holds"))
-    c, r = run("export", "world.swift", "-o", "pb.csv", "gb.csv", cwd=repo)
+    c, r = run("export", "gate.swift", "-o", "pb.csv", "gb.csv", cwd=repo)
     d1 = subprocess.run(["diff", "tables/people.csv", "pb.csv"], cwd=repo).returncode
     d2 = subprocess.run(["diff", "tables/grants.csv", "gb.csv"], cwd=repo).returncode
     S.append(("export round-trip empty diff", d1 == 0 and d2 == 0))
@@ -71,12 +71,12 @@ def main():
     # the layout is a fact of the world: the manifest splits, judgement runs the list, guards hold both directions
     split = os.path.join(tmp, "split")
     os.makedirs(split)
-    shutil.copy(os.path.join(repo, "world.swift"), os.path.join(split, "world.swift"))
-    w = open(os.path.join(split, "world.swift")).read()
+    shutil.copy(os.path.join(repo, "gate.swift"), os.path.join(split, "gate.swift"))
+    w = open(os.path.join(split, "gate.swift")).read()
     i = w.index("public enum ImportedAccesses")
     open(os.path.join(split, "grants.swift"), "w").write(w[i:])
-    open(os.path.join(split, "world.swift"), "w").write(w[:i])
-    open(os.path.join(split, "world.manifest.swift"), "w").write(
+    open(os.path.join(split, "gate.swift"), "w").write(w[:i])
+    open(os.path.join(split, "gate.manifest.swift"), "w").write(
         'public protocol WorldFile {}\npublic enum GrantsFile: WorldFile {}\n'
         'extension GrantsFile { public static var typeName: String { "grants.swift" } }\n')
     c, r = run("status", cwd=split)
@@ -97,7 +97,7 @@ def main():
     S.append(("stdlib shelf lists modules", len(r.get("modules", {})) == 2))
     lib = os.path.join(tmp, "lib")
     os.makedirs(lib)
-    shutil.copy(os.path.join(repo, "world.swift"), os.path.join(lib, "world.swift"))
+    shutil.copy(os.path.join(repo, "gate.swift"), os.path.join(lib, "gate.swift"))
     c, r = run("stdlib", "materialize", "genre-grants", cwd=lib)
     c, r = run("status", cwd=lib)
     S.append(("materialized untouched copy holds", r["verdict"] == "holds"))
@@ -110,7 +110,7 @@ def main():
     c, r = run("status", cwd=lib)
     S.append(("header removed = the file is owned", r["verdict"] == "holds"))
 
-    c, r = run("import", "rbac", os.path.join(DEMO, "rbac.json"), "-o", os.path.join(tmp, "rbac-world.swift"))
+    c, r = run("import", "rbac", os.path.join(DEMO, "rbac.json"), "-o", os.path.join(tmp, "rbac-gate.swift"))
     S.append(("rbac: two real breaks named by k8s source", c == 1 and len(r.get("refusals", [])) == 2
               and any("ghost-bind" in x["source"] for x in r["refusals"])
               and any("share one namespace" in x["claim"] for x in r["refusals"])))
@@ -118,7 +118,7 @@ def main():
     clean["items"] = [i for i in clean["items"] if i["metadata"].get("name") not in ("ghost-bind", "cross-bind")]
     cp = os.path.join(tmp, "rbac-clean.json")
     json.dump(clean, open(cp, "w"))
-    c, r = run("import", "rbac", cp, "-o", os.path.join(tmp, "rbac-clean-world.swift"))
+    c, r = run("import", "rbac", cp, "-o", os.path.join(tmp, "rbac-clean-gate.swift"))
     S.append(("rbac: clean cluster holds + canon handshake", c == 0 and r["verdict"] == "holds" and r["canon_handshake"]))
 
     for name, ok in S:

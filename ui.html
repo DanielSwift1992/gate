@@ -81,7 +81,7 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 <div id="main">
   <div id="bar">
     <span class="seg" id="view-seg"><button class="on" data-m="full">Full</button><button data-m="bare">Bare</button><button data-m="table">Table</button></span>
-    <b id="fname">world.swift</b>
+    <b id="fname">gate.swift</b>
     <span id="gitstate" title="edits go straight to the working-copy file; git is the only state — commit or discard with git"></span>
   </div>
   <div id="surface">
@@ -190,7 +190,7 @@ function repaintNames(parsed, refusals) {
 
 async function render() {
     const text = editor.value;
-    const local = judge(active || "world.swift", text);
+    const local = judge(active || "gate.swift", text);
     lastParsed = local.parsed;
     let r;
     if (files.length > 1) {
@@ -502,6 +502,6 @@ makeSplit(document.getElementById("split-rail"), document.getElementById("rail")
         document.getElementById("fname").style.display = "none";
         buildRail();
     }
-    await loadFile(files[0] || "world.swift");
+    await loadFile(files[0] || "gate.swift");
 })();
 </script>

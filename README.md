@@ -15,13 +15,13 @@ No server. No runtime. No new formats. Nothing leaves your repository.
 ```
 $ gate status
 status: refused 1 · 18 declarations · 84 premises · 1.1 ms
-  world.swift:212 · VerifiedView requires Emp9005.Home == FinanceShare.Home:
+  gate.swift:212 · VerifiedView requires Emp9005.Home == FinanceShare.Home:
                     Engineering against Finance
 ```
 
 ## How it works
 
-Your facts become one Swift file — `world.swift` — the **single source**,
+Your facts become one Swift file — `gate.swift` — the **single source**,
 readable by everything at once: `git diff`, a human, the judge, and the
 Swift compiler. There is no DSL: what you write is **bare Swift** — the
 same language with the ceremony stripped (write only the differences,
@@ -98,8 +98,8 @@ wrappers.
 
 ## Layout and ownership
 
-- `world.swift` is the source. Declare a multi-file layout in
-  `world.manifest.swift` and gate obeys it: judgement runs the declared
+- `gate.swift` is the source. Declare a multi-file layout in
+  `gate.manifest.swift` and gate obeys it: judgement runs the declared
   list, a ghost file and a shadow file are both named.
 - Tables are inputs and views, never truth: a later CSV edit cannot
   silently reprint the world.
