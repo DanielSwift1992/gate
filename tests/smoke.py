@@ -68,6 +68,23 @@ def main():
     c, r = run("check", "administer", "X", "Y", cwd=repo)
     S.append(("check administer honest error without corpus", "GATE_CORPUS" in json.dumps(r)))
 
+    # раскладка — факт мира: манифест дробит, суд идёт по списку, стражи держат оба направления
+    split = os.path.join(tmp, "split")
+    os.makedirs(split)
+    shutil.copy(os.path.join(repo, "world.swift"), os.path.join(split, "world.swift"))
+    w = open(os.path.join(split, "world.swift")).read()
+    i = w.index("public enum ImportedAccesses")
+    open(os.path.join(split, "grants.swift"), "w").write(w[i:])
+    open(os.path.join(split, "world.swift"), "w").write(w[:i])
+    open(os.path.join(split, "world.manifest.swift"), "w").write(
+        'public protocol WorldFile {}\npublic enum GrantsFile: WorldFile {}\n'
+        'extension GrantsFile { public static var typeName: String { "grants.swift" } }\n')
+    c, r = run("status", cwd=split)
+    S.append(("manifest: cross-file judgement holds", c == 0 and r["verdict"] == "holds"))
+    open(os.path.join(split, "stray.swift"), "w").write("// stray\n")
+    c, r = run("status", cwd=split)
+    S.append(("manifest: shadow file named", c == 1 and any("shadow" in x["claim"] for x in r["refusals"])))
+
     c, r = run("import", "rbac", os.path.join(DEMO, "rbac.json"), "-o", os.path.join(tmp, "rbac-world.swift"))
     S.append(("rbac: two real breaks named by k8s source", c == 1 and len(r.get("refusals", [])) == 2
               and any("ghost-bind" in x["source"] for x in r["refusals"])

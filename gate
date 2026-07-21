@@ -11,32 +11,71 @@ import json, os, re, subprocess, sys, tempfile, time
 ROOT = os.environ.get("GATE_CORPUS")
 
 
+def read_manifest(d):
+    # раскладка хранения — факт мира: world.manifest.swift объявляет файлы
+    # File-атомами (typeName-литерал = путь). Мы подчиняемся объявленному.
+    mp = os.path.join(d, "world.manifest.swift")
+    if not os.path.exists(mp):
+        return None
+    text = open(mp).read()
+    paths = re.findall(r'typeName:\s*String\s*\{\s*"([^"]+)"\s*\}', text)
+    return {"manifest": mp, "files": [os.path.join(d, p) for p in paths]}
+
+
 def discover_world():
     # мир находится как .git — подъёмом по дереву. КАНОН: world.swift —
     # ЕДИНСТВЕННЫЙ источник (читабелен всем: git diff, человек, судья,
     # компилятор); tables/ — только вход для первой печати (bootstrap),
-    # никогда не перекрывают мир.
+    # никогда не перекрывают мир. Манифест, если объявлен, добавляет файлы
+    # раскладки — суд идёт по объявленному списку.
     d = os.getcwd()
     while True:
         w = os.path.join(d, "world.swift")
         t = os.path.join(d, "tables")
         has_tables = os.path.exists(os.path.join(t, "people.csv")) and os.path.exists(os.path.join(t, "grants.csv"))
-        if os.path.exists(w) or has_tables:
-            return w, (t if has_tables else None)
+        m = read_manifest(d)
+        if os.path.exists(w) or has_tables or m:
+            return w, (t if has_tables else None), m
         parent = os.path.dirname(d)
         if parent == d:
-            return None, None
+            return None, None, None
         d = parent
 
 
 _env_facts = os.environ.get("GATE_FACTS")
 if _env_facts:
-    FACTS, TABLES = _env_facts, None
+    FACTS, TABLES, MANIFEST = _env_facts, None, None
 else:
-    FACTS, TABLES = discover_world()
+    FACTS, TABLES, MANIFEST = discover_world()
     if FACTS is None and ROOT:  # corpus checkout as a last resort
         FACTS = os.path.join(ROOT, "Sources", "Organization", "System", "GeneratedTeam.swift")
         TABLES = None
+
+
+def world_files():
+    # список судимых файлов: главный мир + объявленная манифестом раскладка
+    files = [FACTS] if FACTS and os.path.exists(FACTS) else []
+    if MANIFEST:
+        files += [p for p in MANIFEST["files"] if p not in files]
+    return files
+
+
+def manifest_guards():
+    # стражи раскладки, оба направления (жанр плейграундного манифеста):
+    # объявленный файл существует; соседний *.swift объявлен (нет теней)
+    if not MANIFEST:
+        return []
+    bad = []
+    for p in MANIFEST["files"]:
+        if not os.path.exists(p):
+            bad.append({"address": os.path.basename(MANIFEST["manifest"]), "claim": f"the manifest declares {os.path.relpath(p, os.path.dirname(MANIFEST['manifest']))}, and no such file exists"})
+    d = os.path.dirname(MANIFEST["manifest"])
+    declared = set(MANIFEST["files"]) | {MANIFEST["manifest"], os.path.join(d, "world.swift")}
+    for f in sorted(os.listdir(d)):
+        p = os.path.join(d, f)
+        if f.endswith(".swift") and p not in declared:
+            bad.append({"address": f, "claim": "a world file the manifest never declares: a shadow outside the judged list"})
+    return bad
 
 
 def ensure_world():
@@ -1029,11 +1068,21 @@ def dispatch(cmd, rest):
     if cmd == "init":
         return cmd_init(rest)
     if cmd in ("status", "fsck"):
-        if not FACTS or not os.path.exists(FACTS):
+        files = world_files()
+        if not files:
             raise SystemExit(json.dumps({"error": "no world found: run `gate init`, or cd into a repo with tables/ or world.swift"}))
-        # что не сходится сейчас: суд текущего мира + метрики мира (считаются, не помнятся)
-        out = {"command": "status", "facts": FACTS, **judge(FACTS), "mutates": False}
-        raw = subprocess.run([JUDGE, "judge", FACTS], capture_output=True, text=True).stdout
+        # что не сходится сейчас: суд по объявленному списку файлов + стражи
+        # раскладки + метрики мира (считаются, не помнятся)
+        t0 = time.time()
+        raw = subprocess.run([JUDGE, "judge", *files], capture_output=True, text=True).stdout
+        wall_ms = round((time.time() - t0) * 1000, 1)
+        refusals = [{"address": m.group(1), "claim": m.group(2).strip()}
+                    for m in re.finditer(r"^\s+(\S+\.swift:\d+)\s+(.+)$", raw, re.M)]
+        refusals += manifest_guards()
+        times = re.findall(r"([\d.]+) ms", raw)
+        out = {"command": "status", "facts": files if len(files) > 1 else FACTS,
+               "verdict": "holds" if not refusals else "refused", "refusals": refusals,
+               "judge_ms": float(times[-1]) if times else None, "wall_ms": wall_ms, "mutates": False}
         m = re.search(r"(\d+) declarations · (\d+) lookups · (\d+) premises", raw)
         if m:
             out["world"] = {"declarations": int(m.group(1)), "lookups": int(m.group(2)), "premises": int(m.group(3))}
@@ -1062,7 +1111,7 @@ def humanize(out):
     if "verdict" in out:
         head = "holds" if out["verdict"] == "holds" else f"refused {len(out.get('refusals', []))}"
         tail = []
-        if out.get("world"):
+        if isinstance(out.get("world"), dict):
             w = out["world"]
             tail.append(f"{w['declarations']} declarations · {w['lookups']} lookups · {w['premises']} premises")
         if out.get("judge_ms") is not None:
