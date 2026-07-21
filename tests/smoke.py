@@ -85,6 +85,24 @@ def main():
     c, r = run("status", cwd=split)
     S.append(("manifest: shadow file named", c == 1 and any("shadow" in x["claim"] for x in r["refusals"])))
 
+    # stdlib: hidden is not secret — shelf, materialize, drift guard, ownership
+    c, r = run("stdlib")
+    S.append(("stdlib shelf lists modules", len(r.get("modules", {})) == 2))
+    lib = os.path.join(tmp, "lib")
+    os.makedirs(lib)
+    shutil.copy(os.path.join(repo, "world.swift"), os.path.join(lib, "world.swift"))
+    c, r = run("stdlib", "materialize", "genre-grants", cwd=lib)
+    c, r = run("status", cwd=lib)
+    S.append(("materialized untouched copy holds", r["verdict"] == "holds"))
+    with open(os.path.join(lib, "genre-grants.swift"), "a") as f:
+        f.write("// edit\n")
+    c, r = run("status", cwd=lib)
+    S.append(("drifted stdlib copy named", r["verdict"] == "refused" and any("drifted" in x["claim"] for x in r["refusals"])))
+    t = open(os.path.join(lib, "genre-grants.swift")).read().replace("// gate stdlib", "// mine:", 1)
+    open(os.path.join(lib, "genre-grants.swift"), "w").write(t)
+    c, r = run("status", cwd=lib)
+    S.append(("header removed = the file is owned", r["verdict"] == "holds"))
+
     c, r = run("import", "rbac", os.path.join(DEMO, "rbac.json"), "-o", os.path.join(tmp, "rbac-world.swift"))
     S.append(("rbac: two real breaks named by k8s source", c == 1 and len(r.get("refusals", [])) == 2
               and any("ghost-bind" in x["source"] for x in r["refusals"])

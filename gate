@@ -745,6 +745,106 @@ def cmd_survey(a):
     }
 
 
+# ── the stdlib: definitions baked into the binary, fully extractable ──
+# Hidden is not secret (the git model: packed away, but cat-file shows all).
+# `gate stdlib` lists, `gate show <name>` prints, `gate materialize <name>`
+# lands the file in the repo — from then on it is the client's, versioned by
+# his git; editing it means removing the header (it becomes his file).
+
+MATERIALIZED_MARK = "// gate stdlib"
+
+GIT_ATOMS = """// gate stdlib git-atoms v1 — the git world itself, as declarations.
+// The substrate's own objects become atoms: judged records reference them.
+// Enforcement stays with git and the platform; these are the names.
+
+/// A person behind an email: tables/identities.csv maps email -> person.
+public protocol Identity {}
+
+/// A zone a recognizer may search. An atom is declared OUTSIDE scopes;
+/// occurrences are looked for ONLY in declared scopes (no line — no search).
+public protocol Scope {}
+public enum CommitMessage: Scope {}
+public enum CommitAuthor: Scope {}
+public enum BranchName: Scope {}
+public enum FilePath: Scope {}
+
+/// The repository's own objects, as places records may reference.
+public protocol GitPlace {}
+public enum TheBranch: GitPlace {}
+public enum TheFile: GitPlace {}
+public enum TheCommit: GitPlace {}
+"""
+
+GENRE_GRANTS = """// gate stdlib genre-grants v1 — the domain genre, one page
+// (exemplar: theory corpus Sources/Examples/Grants.swift @ 0fd0b38).
+// Realms are declared atoms (the fourth is one line, not a schema change);
+// a verb set is a protocol class, containment is conformance; one gate
+// carries two tiers: the compiler holds the key's class, the judge holds
+// the posting equality.
+
+public protocol Reads {}
+public protocol Writes: Reads {}
+public protocol Administers: Writes {}
+public enum ReaderKey: Reads {}
+public enum WriterKey: Writes {}
+public enum WardenKey: Administers {}
+
+public protocol Realm {}
+public protocol Keeper {
+    associatedtype Post: Realm
+    associatedtype Key
+}
+public protocol Room {
+    associatedtype Place: Realm
+}
+public protocol Entered {}
+public enum Enter<
+    Who: Keeper,
+    Into: Room
+> {}
+extension Enter: Entered
+where Who.Key: Writes, Who.Post == Into.Place {}
+"""
+
+STDLIB = {"git-atoms": GIT_ATOMS, "genre-grants": GENRE_GRANTS}
+
+
+def cmd_stdlib(a):
+    if a and a[0] == "show":
+        name = a[1]
+        if name not in STDLIB:
+            raise SystemExit(json.dumps({"error": f"no such stdlib module: {name} (gate stdlib lists them)"}))
+        print(STDLIB[name])
+        sys.exit(0)
+    if a and a[0] == "materialize":
+        name = a[1]
+        if name not in STDLIB:
+            raise SystemExit(json.dumps({"error": f"no such stdlib module: {name}"}))
+        path = f"{name}.swift"
+        with open(path, "w") as f:
+            f.write(STDLIB[name])
+        return {"command": "stdlib materialize", "wrote": path,
+                "note": "now yours to version and import; edit it = remove the stdlib header (drift of an unedited copy is guarded by status)"}
+    return {"command": "stdlib", "modules": {k: v.split("\n")[0].replace("// ", "") for k, v in STDLIB.items()},
+            "note": "hidden is not secret: show prints, materialize lands the file in your repo"}
+
+
+def stdlib_guards():
+    # материализованная копия с шапкой stdlib обязана совпадать с прошивкой:
+    # разошлась — либо re-materialize, либо сними шапку (файл станет твоим)
+    if not FACTS:
+        return []
+    d = os.path.dirname(os.path.abspath(FACTS))
+    bad = []
+    for name, body in STDLIB.items():
+        p = os.path.join(d, f"{name}.swift")
+        if os.path.exists(p):
+            text = open(p).read()
+            if text.startswith(MATERIALIZED_MARK) and text != body:
+                bad.append({"address": f"{name}.swift", "claim": "a materialized stdlib copy drifted from the binary's: re-materialize, or remove the header to own the file"})
+    return bad
+
+
 RBAC_GENRE = """// printed by gate import rbac — the K8s access world in the domain genre
 // (the exemplar: theory corpus Sources/Examples/Grants.swift @ 0fd0b38).
 // Realms are namespaces plus the cluster scope. A role is a room stating its
@@ -1079,6 +1179,7 @@ def dispatch(cmd, rest):
         refusals = [{"address": m.group(1), "claim": m.group(2).strip()}
                     for m in re.finditer(r"^\s+(\S+\.swift:\d+)\s+(.+)$", raw, re.M)]
         refusals += manifest_guards()
+        refusals += stdlib_guards()
         times = re.findall(r"([\d.]+) ms", raw)
         out = {"command": "status", "facts": files if len(files) > 1 else FACTS,
                "verdict": "holds" if not refusals else "refused", "refusals": refusals,
@@ -1097,6 +1198,8 @@ def dispatch(cmd, rest):
         return cmd_library(rest)
     if cmd == "survey":
         return cmd_survey(rest)
+    if cmd == "stdlib":
+        return cmd_stdlib(rest)
     raise SystemExit(USAGE)
 
 
