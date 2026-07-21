@@ -1040,6 +1040,22 @@ def cmd_serve(a):
                 if u.path == "/world":
                     # the UI obeys the declared layout: ?f= names a file FROM the list
                     return self.send_file(self.pick(q), "text/plain; charset=utf-8")
+                if u.path == "/gitstatus":
+                    # the honest state: a write lands in the working copy; git
+                    # carries the history. This says whether the file is
+                    # committed or has uncommitted changes — never our own save.
+                    base = os.path.dirname(os.path.abspath(FACTS))
+                    p = self.pick(q)
+                    st = subprocess.run(["git", "status", "--porcelain", "--", p], cwd=base, capture_output=True, text=True)
+                    tracked = subprocess.run(["git", "ls-files", "--error-unmatch", p], cwd=base, capture_output=True)
+                    state = ("untracked" if tracked.returncode else
+                             ("modified" if st.stdout.strip() else "committed"))
+                    body = json.dumps({"file": os.path.relpath(p, base), "git": state}).encode()
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(body)
+                    return
                 if u.path == "/status":
                     out = dispatch("status", [])
                 elif u.path == "/check/view":

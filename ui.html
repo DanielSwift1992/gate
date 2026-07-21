@@ -27,8 +27,12 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .seg button{border:none;border-radius:5px;margin:0;background:transparent;color:var(--muted);font:12px -apple-system,sans-serif;padding:3px 12px;cursor:pointer}
 .seg button:hover{color:var(--ink)}
 .seg button.on{background:var(--paper);color:var(--ink);box-shadow:0 1px 2px color-mix(in srgb,var(--ink) 12%,transparent)}
-#save{margin-left:auto;border:none;background:color-mix(in srgb,var(--action) 12%,transparent);color:var(--action);padding:.35em .9em;border-radius:6px;font:inherit;cursor:pointer}
-#save:disabled{opacity:.4;cursor:default}
+#gitstate{margin-left:auto;font:11.5px ui-monospace,Menlo,monospace;color:var(--muted);display:flex;align-items:center;gap:.4em}
+#gitstate .g{width:7px;height:7px;border-radius:50%;background:var(--muted)}
+#gitstate.modified{color:var(--law,#B25000)}#gitstate.modified .g{background:var(--law,#B25000)}
+#gitstate.committed{color:var(--ok)}#gitstate.committed .g{background:var(--ok)}
+#write{border:none;background:color-mix(in srgb,var(--action) 12%,transparent);color:var(--action);padding:.35em .9em;border-radius:6px;font:inherit;cursor:pointer}
+#write:disabled{opacity:.4;cursor:default}
 #surface{flex:1;position:relative;min-height:0}
 #editor-host{position:absolute;inset:0}
 .CodeMirror{height:100%;font:12.5px/19px ui-monospace,Menlo,monospace}
@@ -39,6 +43,14 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .line-flag-bad{background:color-mix(in srgb,var(--bad) 6%,transparent)}
 .gutter-flag-bad .CodeMirror-linenumber{color:var(--bad);font-weight:700}
 .flag-note{font:11px/1.5 -apple-system,sans-serif;color:var(--bad);background:color-mix(in srgb,var(--bad) 8%,transparent);padding:.1em .8em .1em 2.4em}
+#bare{position:absolute;inset:0;overflow:auto;background:var(--paper);margin:0;padding:12px 16px 80px;display:none;font:12.5px/19px ui-monospace,Menlo,monospace;color:var(--ink);white-space:pre}
+#bare .conf{color:var(--muted)}
+#bare .decl{color:var(--localtype);font-weight:600;cursor:pointer}
+#bare .jump{color:var(--localtype);cursor:pointer}
+#bare .decl:hover,#bare .jump:hover{text-decoration:underline}
+#bare .known{color:var(--knownname)}
+#bare .bad{text-decoration:underline wavy var(--bad);text-underline-offset:3px}
+#bare .row-bad{background:color-mix(in srgb,var(--bad) 6%,transparent)}
 #table-host{position:absolute;inset:0;overflow:auto;background:var(--paper);padding:12px 16px 80px;font-size:12.5px;display:none}
 #table-host h3{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:18px 0 6px;font-weight:600}
 #table-host h3:first-child{margin-top:4px}
@@ -68,13 +80,14 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 <div class="split" id="split-rail" style="display:none"></div>
 <div id="main">
   <div id="bar">
-    <span class="seg" id="surface-seg"><button class="on" data-s="code">Code</button><button data-s="table">Table</button></span>
-    <span class="seg" id="view-seg"><button class="on" data-v="full">Full</button><button data-v="bare">Bare</button></span>
+    <span class="seg" id="view-seg"><button class="on" data-m="full">Full</button><button data-m="bare">Bare</button><button data-m="table">Table</button></span>
     <b id="fname">world.swift</b>
-    <button id="save" disabled>Save</button>
+    <span id="gitstate" title="a write lands in your working copy; git carries the history"></span>
+    <button id="write" disabled title="write the editor buffer into the working-copy file (this is not a commit — git carries the history)">Write file</button>
   </div>
   <div id="surface">
     <div id="editor-host"></div>
+    <pre id="bare"></pre>
     <div id="table-host"></div>
   </div>
   <div id="verdict-panel">
@@ -115,7 +128,7 @@ const cm = CodeMirror(document.getElementById("editor-host"), {
     viewportMargin: Infinity, dragDrop: false,
 });
 const editor = { get value() { return cm.getValue(); }, set value(n) { cm.setValue(n); } };
-const saveBtn = document.getElementById("save");
+const writeBtn = document.getElementById("write");
 let clean = "", files = [], active = "";
 let badFiles = new Set(), siblingNames = new Set(), layoutDecls = new Map();
 let lastParsed = null, lastRefusals = [], widgets = [], tableSort = null;
@@ -174,7 +187,7 @@ function repaintNames(parsed, refusals) {
         if (m) unresolved.add(m[1] || m[2]);
     }
     const key = [...localNames].sort().join(",") + "|" + [...unresolved].sort().join(",");
-    if (key !== paintedKey) { paintedKey = key; cm.setOption("mode", "gate-swift"); if (bareOn) collapseBare(); }
+    if (key !== paintedKey) { paintedKey = key; cm.setOption("mode", "gate-swift"); }
 }
 
 async function render() {
@@ -209,14 +222,25 @@ async function render() {
         row.onclick = async () => {
             const target = ref.file && files.includes(ref.file) ? ref.file : active;
             if (target !== active) await loadFile(target);
-            surface("code");
+            setMode("full");
             cm.setCursor({ line: ref.line - 1, ch: 0 });
             cm.scrollIntoView({ line: ref.line - 1, ch: 0 }, 120); cm.focus();
         };
         v.appendChild(row);
     }
-    saveBtn.disabled = editor.value === clean;
-    if (tableOn) buildTables();
+    writeBtn.disabled = editor.value === clean;
+    if (mode === "table") buildTables();
+    if (mode === "bare") document.getElementById("bare").innerHTML = bareForm(lastParsed);
+}
+
+// the honest state: has the working-copy file drifted from git, or is it committed
+async function refreshGit() {
+    const el = document.getElementById("gitstate");
+    try {
+        const g = (await (await fetch("/gitstatus?f=" + encodeURIComponent(active))).json()).git;
+        el.className = g === "committed" ? "committed" : "modified";
+        el.innerHTML = '<span class="g"></span>' + (g === "committed" ? "committed" : g === "untracked" ? "untracked · git add" : "uncommitted · git commit");
+    } catch { el.className = ""; el.textContent = ""; }
 }
 
 // ── the Table surface: the world projected as relations (playground genre) ──
@@ -240,7 +264,7 @@ function layoutOrActive() { return layoutDecls.size ? layoutDecls : (lastParsed 
 function jumpTo(name) {
     const d = layoutOrActive().get(name);
     if (!d) return;
-    surface("code");
+    setMode("full");
     cm.setCursor({ line: d.line - 1, ch: 0 });
     cm.scrollIntoView({ line: d.line - 1, ch: 0 }, 120); cm.focus();
 }
@@ -296,57 +320,77 @@ function buildTables() {
     }
 }
 
-// ── surface switch (Code · Table) ──
-let tableOn = false;
-function surface(which) {
-    tableOn = which === "table";
-    document.getElementById("editor-host").style.display = tableOn ? "none" : "";
-    document.getElementById("table-host").style.display = tableOn ? "block" : "none";
-    document.getElementById("view-seg").style.visibility = tableOn ? "hidden" : "";
-    document.querySelectorAll("#surface-seg button").forEach(b => b.classList.toggle("on", (b.dataset.s === "table") === tableOn));
-    if (tableOn) buildTables(); else cm.refresh();
-}
-document.querySelectorAll("#surface-seg button").forEach(b => b.onclick = () => surface(b.dataset.s));
+// ── one row of views over the same file: Full · Bare · Table (· Canvas one
+// day). Not two switches of one state — three views of one truth. ──
+let mode = "full";
+const esc = (s) => s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
 
-// ── Full · Bare: the same editor, ceremony collapsed from view (full Swift,
-// fully editable — the buffer is unchanged, only the noise is hidden) ──
-let bareOn = false, bareMarks = [];
-function clearBare() { bareMarks.forEach(m => m.clear()); bareMarks = []; }
-function collapseBare() {
-    clearBare();
-    const hide = (from, to) => bareMarks.push(cm.markText(from, to, { collapsed: true, inclusiveLeft: false, inclusiveRight: false }));
-    for (let i = 0; i < cm.lineCount(); i++) {
-        const text = cm.getLine(i);
-        const t = text.trim();
-        // whole-line ceremony: the builder attribute and the body header
-        if (t === "@StructureBuilder" || /^public (static var body|@)/.test(t) || t === "static var body: some Structure {") {
-            hide({ line: i, ch: 0 }, { line: i + 1, ch: 0 });
-            continue;
+// Bare: the bare form — the facts with the language's ceremony gone. No enum,
+// no typealias, no public, no braces; scope is indentation, the way Python
+// scopes. Read-only, but a full view: highlighted, every name a link to its
+// declaration, an unresolved name waving the way the editor waves.
+function nameTokens(raw) {
+    // wrap each Capitalized identifier: a declared name jumps, an unresolved
+    // name waves, a word after a dot is an axis, the rest is a known name
+    return esc(raw).replace(/(\.?)\b([A-Z][A-Za-z0-9_]*)\b/g, (m, dot, name) => {
+        if (dot === ".") return dot + '<span class="known">' + name + "</span>";
+        if (unresolved.has(name)) return '<span class="known bad">' + name + "</span>";
+        if (layoutOrActive().has(name)) return '<span class="jump" data-jump="' + name + '">' + name + "</span>";
+        return '<span class="known">' + name + "</span>";
+    });
+}
+function bareForm(parsed) {
+    const badLines = new Set(lastRefusals.map(r => r.line));
+    const order = parsed.order || [...parsed.declarations.keys()];
+    const out = [];
+    const declSpan = (name, line, bad) =>
+        '<span class="decl' + (bad ? " bad" : "") + '" data-jump="' + name + '">' + esc(name) + "</span>";
+    for (const name of order) {
+        const d = parsed.declarations.get(name);
+        if (!d) continue;
+        const bad = badLines.has(d.line);
+        const conf = d.conformances.length ? '<span class="conf">: </span>' + nameTokens(d.conformances.join(", ")) : "";
+        out.push('<span class="' + (bad ? "row-bad" : "") + '">' + declSpan(name, d.line, bad) + conf + "</span>");
+        for (const [k, v] of d.aliases)
+            out.push("    " + esc(k) + " = " + nameTokens(v.target));
+        for (const e of (d.entries || [])) {
+            const args = e.arguments && e.arguments.length ? "<" + e.arguments.join(", ") + ">" : "";
+            out.push("    " + nameTokens(e.head + args));
         }
-        // the "public " prefix
-        const p = text.indexOf("public ");
-        if (p >= 0 && text.slice(0, p).trim() === "") hide({ line: i, ch: p }, { line: i, ch: p + 7 });
-        // the ".self" tail of a body entry
-        const s = text.indexOf(".self");
-        if (s >= 0) hide({ line: i, ch: s }, { line: i, ch: s + 5 });
+        if (d.aliases.size || (d.entries || []).length) out.push("");
     }
+    for (const [name, a] of (parsed.topAliases || new Map()))
+        out.push(declSpan(name, a.line, false) + " = " + nameTokens(a.target));
+    return out.join("\n");
 }
-function setView(v) {
-    bareOn = v === "bare";
-    document.querySelectorAll("#view-seg button").forEach(b => b.classList.toggle("on", (b.dataset.v === "bare") === bareOn));
-    if (bareOn) collapseBare(); else clearBare();
-    cm.refresh();
+// one delegated handler: a name in the bare view jumps to its declaration
+document.getElementById("bare").addEventListener("click", (e) => {
+    const t = e.target.closest("[data-jump]");
+    if (t) jumpTo(t.dataset.jump);
+});
+
+function setMode(m) {
+    mode = m;
+    document.getElementById("editor-host").style.display = m === "full" ? "" : "none";
+    document.getElementById("bare").style.display = m === "bare" ? "block" : "none";
+    document.getElementById("table-host").style.display = m === "table" ? "block" : "none";
+    document.querySelectorAll("#view-seg button").forEach(b => b.classList.toggle("on", b.dataset.m === m));
+    if (m === "bare" && lastParsed) document.getElementById("bare").innerHTML = bareForm(lastParsed);
+    if (m === "table") buildTables();
+    if (m === "full") cm.refresh();
 }
-document.querySelectorAll("#view-seg button").forEach(b => b.onclick = () => setView(b.dataset.v));
+document.querySelectorAll("#view-seg button").forEach(b => b.onclick = () => setMode(b.dataset.m));
 
 let timer = null;
 cm.on("change", () => { clearTimeout(timer); timer = setTimeout(render, 150); });
 
-saveBtn.onclick = async () => {
+// Write file: the editor buffer → the working-copy file. Not a commit, not a
+// stage — gate keeps no state of its own; git carries the history.
+writeBtn.onclick = async () => {
     const r = await fetch("/world?f=" + encodeURIComponent(active), { method: "PUT", body: editor.value });
-    if (!r.ok) { saveBtn.textContent = "save failed: " + r.status; return; }
-    saveBtn.textContent = "Saved"; setTimeout(() => { saveBtn.textContent = "Save"; }, 1200);
-    clean = editor.value; render();
+    if (!r.ok) { writeBtn.textContent = "write failed: " + r.status; return; }
+    writeBtn.textContent = "Written"; setTimeout(() => { writeBtn.textContent = "Write file"; }, 1200);
+    clean = editor.value; render(); refreshGit();
 };
 
 async function siblings() {
@@ -366,7 +410,7 @@ async function loadFile(name) {
     editor.value = t; clean = t;
     await siblings();
     render();
-    if (bareOn) collapseBare();
+    refreshGit();
 }
 
 // ── the file rail is a panel you can drag, like the others ──
