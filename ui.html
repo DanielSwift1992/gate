@@ -20,6 +20,7 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .file.bad{color:var(--bad)}.file.bad .dot{background:var(--bad)}
 .split{flex:0 0 5px;cursor:col-resize;background:transparent;transition:background .1s}
 .split:hover,.split.dragging{background:color-mix(in srgb,var(--action) 45%,transparent)}
+.line-flash{background:color-mix(in srgb,var(--action) 22%,transparent)}
 #main{flex:1;display:flex;flex-direction:column;min-width:0;border-left:1px solid var(--line)}
 #bar{display:flex;gap:.7em;align-items:center;padding:.45em .8em;border-bottom:1px solid var(--line);flex:none}
 #bar b{font-weight:600;font:13px ui-monospace,Menlo,monospace}
@@ -220,9 +221,7 @@ async function render() {
         row.onclick = async () => {
             const target = ref.file && files.includes(ref.file) ? ref.file : active;
             if (target !== active) await loadFile(target);
-            setMode("full");
-            cm.setCursor({ line: ref.line - 1, ch: 0 });
-            cm.scrollIntoView({ line: ref.line - 1, ch: 0 }, 120); cm.focus();
+            reveal(ref.line);
         };
         v.appendChild(row);
     }
@@ -280,14 +279,23 @@ function ledgerGroups() {
     return out;
 }
 
+// the landing is visible: the whole line selected, a brief flash, scrolled with margin
+function reveal(line) {
+    setMode("full");
+    const local = Math.max(0, Math.min(line - 1, cm.lineCount() - 1));
+    cm.focus();
+    cm.setSelection({ line: local, ch: 0 }, { line: local, ch: cm.getLine(local).length });
+    cm.scrollIntoView({ line: local, ch: 0 }, 120);
+    cm.addLineClass(local, "background", "line-flash");
+    setTimeout(() => cm.removeLineClass(local, "background", "line-flash"), 1200);
+}
+
 async function jumpTo(name) {
     const f = declFile.get(name);
     if (f && f !== active) await loadFile(f);   // a name in another file opens that file
     const d = layoutOrActive().get(name);
     if (!d) return;
-    setMode("full");
-    cm.setCursor({ line: d.line - 1, ch: 0 });
-    cm.scrollIntoView({ line: d.line - 1, ch: 0 }, 120); cm.focus();
+    reveal(d.line);
 }
 
 function buildTables() {
