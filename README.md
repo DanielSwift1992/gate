@@ -10,12 +10,16 @@ your repo.
     gate import ...      # your CSV tables -> the facts world
     gate status          # what disagrees right now (judged in ms)
     gate check / diff / apply / verify / guard / library / report / serve / ui
+    gate import rbac rbac.json   # floor 2: a K8s RBAC world in the domain genre
+                                 # (kubectl get roles,clusterroles,rolebindings -A -o json);
+                                 # a stale roleRef and a cross-namespace binding are named
+                                 # by their k8s source in milliseconds
 
 Порядок чтения документов: docs/PRODUCT.md (граница и форма продукта),
 docs/THEORY.md (карта теорем субстрата), docs/SCENARIOS.md (персоны и
 сценарии), docs/FORMS.md (каталог форм правил).
 
 The judge binary (bin/gate-judge) is built from the public theory corpus:
-bin/build-judge.sh [pin]. Tests: python3 tests/smoke.py (14 checks).
+bin/build-judge.sh [pin]. Tests: python3 tests/smoke.py (16 checks).
 
 Private working notes and the experimental record live outside this repo.

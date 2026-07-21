@@ -1,0 +1,113 @@
+{
+ "kind": "List",
+ "items": [
+  {
+   "kind": "Role",
+   "metadata": {
+    "namespace": "prod",
+    "name": "deployer"
+   },
+   "rules": [
+    {
+     "verbs": [
+      "create",
+      "update",
+      "patch"
+     ],
+     "resources": [
+      "deployments"
+     ]
+    }
+   ]
+  },
+  {
+   "kind": "Role",
+   "metadata": {
+    "namespace": "staging",
+    "name": "reader"
+   },
+   "rules": [
+    {
+     "verbs": [
+      "get",
+      "list"
+     ],
+     "resources": [
+      "pods"
+     ]
+    }
+   ]
+  },
+  {
+   "kind": "ClusterRole",
+   "metadata": {
+    "name": "ops-admin"
+   },
+   "rules": [
+    {
+     "verbs": [
+      "*"
+     ],
+     "resources": [
+      "*"
+     ]
+    }
+   ]
+  },
+  {
+   "kind": "RoleBinding",
+   "metadata": {
+    "namespace": "prod",
+    "name": "deploy-bind"
+   },
+   "roleRef": {
+    "kind": "Role",
+    "name": "deployer"
+   }
+  },
+  {
+   "kind": "RoleBinding",
+   "metadata": {
+    "namespace": "staging",
+    "name": "read-bind"
+   },
+   "roleRef": {
+    "kind": "Role",
+    "name": "reader"
+   }
+  },
+  {
+   "kind": "RoleBinding",
+   "metadata": {
+    "namespace": "prod",
+    "name": "ghost-bind"
+   },
+   "roleRef": {
+    "kind": "Role",
+    "name": "old-deployer"
+   }
+  },
+  {
+   "kind": "RoleBinding",
+   "metadata": {
+    "namespace": "ci",
+    "name": "cross-bind"
+   },
+   "roleRef": {
+    "kind": "Role",
+    "name": "deployer"
+   }
+  },
+  {
+   "kind": "RoleBinding",
+   "metadata": {
+    "namespace": "staging",
+    "name": "ops-bind"
+   },
+   "roleRef": {
+    "kind": "ClusterRole",
+    "name": "ops-admin"
+   }
+  }
+ ]
+}

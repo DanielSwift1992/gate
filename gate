@@ -700,6 +700,148 @@ def cmd_survey(a):
     }
 
 
+RBAC_GENRE = """// printed by gate import rbac — the K8s access world in the domain genre
+// (the exemplar: theory corpus Sources/Examples/Grants.swift @ 0fd0b38).
+// Realms are namespaces plus the cluster scope. A role is a room stating its
+// realm; a binding is a keeper stating its post; the gate's equality is the
+// K8s invariant itself: a RoleBinding and its Role live in one namespace.
+// Tier one (Who.Key: Writes) is the compiler's; this file is judged by the
+// agnostic where-judge (canon v2), which holds the posting equalities.
+
+public protocol Reads {}
+public protocol Writes: Reads {}
+public protocol Administers: Writes {}
+public enum ReaderKey: Reads {}
+public enum WriterKey: Writes {}
+public enum WardenKey: Administers {}
+
+public protocol Realm {}
+public protocol Keeper {
+    associatedtype Post: Realm
+    associatedtype Key
+}
+public protocol Room {
+    associatedtype Place: Realm
+}
+public protocol Entered {}
+public enum Enter<
+    Who: Keeper,
+    Into: Room
+> {}
+extension Enter: Entered
+where Who.Key: Writes, Who.Post == Into.Place {}
+"""
+
+READS, WRITES = {"get", "list", "watch"}, {"create", "update", "patch", "delete", "deletecollection"}
+
+
+def rbac_key(rules):
+    verbs = {v for r in rules or [] for v in r.get("verbs", [])}
+    if "*" in verbs or verbs & {"escalate", "bind", "impersonate"}:
+        return "WardenKey"
+    if verbs & WRITES:
+        return "WriterKey"
+    return "ReaderKey"
+
+
+def sanitize(s):
+    return re.sub(r"[^A-Za-z0-9]", "_", s)
+
+
+def cmd_import_rbac(a):
+    # import rbac rbac.json [-o world.swift] — kubectl get roles,clusterroles,
+    # rolebindings -A -o json | вход. Три судимых исхода на binding: ok /
+    # роль в чужом namespace (отказ равенства с именами) / роли нет (dangling).
+    src = a[0]
+    out_path = a[a.index("-o") + 1] if "-o" in a else "rbac-world.swift"
+    items = json.load(open(src)).get("items", [])
+    roles, cluster_roles, bindings = {}, {}, []
+    namespaces = set()
+    for it in items:
+        kind, meta = it.get("kind"), it.get("metadata", {})
+        ns, name = meta.get("namespace", ""), meta.get("name", "")
+        if kind == "Role":
+            roles[(ns, name)] = it
+            namespaces.add(ns)
+        elif kind == "ClusterRole":
+            cluster_roles[name] = it
+        elif kind == "RoleBinding":
+            bindings.append(it)
+            namespaces.add(ns)
+    lines = [RBAC_GENRE]
+    srcmap = {}
+    for ns in sorted(namespaces):
+        lines.append(f"public enum Ns_{sanitize(ns)}: Realm {{}}")
+    lines.append("public enum ClusterScope: Realm {}")
+    lines.append("")
+    for (ns, name) in sorted(roles):
+        lines.append(f"public enum Role_{sanitize(ns)}_{sanitize(name)}: Room {{")
+        lines.append(f"    public typealias Place = Ns_{sanitize(ns)}")
+        lines.append("}")
+    for name in sorted(cluster_roles):
+        lines.append(f"public enum CR_{sanitize(name)}: Room {{")
+        lines.append("    public typealias Place = ClusterScope")
+        lines.append("}")
+    lines.append("")
+    checked = 0
+    for b in bindings:
+        meta = b.get("metadata", {})
+        bns, bname = meta.get("namespace", ""), meta.get("name", "")
+        ref = b.get("roleRef", {})
+        rkind, rname = ref.get("kind"), ref.get("name", "")
+        keeper = f"B_{sanitize(bns)}_{sanitize(bname)}"
+        cert = f"Bind_{sanitize(bns)}_{sanitize(bname)}"
+        if rkind == "ClusterRole":
+            post, room = "ClusterScope", f"CR_{sanitize(rname)}"
+            key = rbac_key(cluster_roles.get(rname, {}).get("rules"))
+            what = f"rolebinding {bns}/{bname} -> clusterrole {rname}"
+        else:
+            post = f"Ns_{sanitize(bns)}"
+            key = rbac_key(roles.get((bns, rname), {}).get("rules"))
+            if (bns, rname) in roles:
+                room = f"Role_{sanitize(bns)}_{sanitize(rname)}"
+            else:
+                foreign = sorted(ns for (ns, n) in roles if n == rname)
+                room = f"Role_{sanitize(foreign[0])}_{sanitize(rname)}" if foreign else f"Role_{sanitize(bns)}_{sanitize(rname)}"
+            what = f"rolebinding {bns}/{bname} -> role {rname}"
+        lines.append(f"public enum {keeper}: Keeper {{")
+        lines.append(f"    public typealias Post = {post}")
+        lines.append(f"    public typealias Key = {key}")
+        lines.append("}")
+        lines.append(f"public typealias {cert} = Enter<{keeper}, {room}>")
+        srcmap[cert] = what
+        checked += 1
+    world = "\n".join(lines) + "\n"
+    with open(out_path, "w") as f:
+        f.write(world)
+    t0 = time.time()
+    outp = subprocess.run([JUDGE, "judge", "where", out_path], capture_output=True, text=True).stdout
+    ms = round((time.time() - t0) * 1000, 1)
+    refusals = []
+    for m in re.finditer(r"^✗ '(\w+)[^']*' requires the types '[^']*' \(aka '([^']+)'\) and '[^']*' \(aka '([^']+)'\) be equivalent", outp, re.M):
+        cert, left, right = m.groups()
+        if cert not in srcmap:
+            continue
+        dangling = re.match(r"(\w+)\.Place$", right)
+        claim = (f"roleRef names a Role that exists nowhere ({right} undeclared)"
+                 if dangling else f"the binding lives in {left}, its Role lives in {right}: a RoleBinding and its Role must share one namespace")
+        refusals.append({"certificate": cert, "source": srcmap[cert], "claim": claim})
+    canon = "canon v2" in outp
+    return {
+        "command": "import rbac",
+        "world": out_path,
+        "namespaces": len(namespaces),
+        "roles": len(roles),
+        "cluster_roles": len(cluster_roles),
+        "bindings_judged": checked,
+        "verdict": "refused" if refusals else "holds",
+        "refusals": refusals,
+        "judge_ms": ms,
+        "canon_handshake": canon,
+        "note": "tier one (verb class, Who.Key: Writes) is the compiler's: judged when the world is built as Swift; this run holds the posting equalities (agnostic where-judge)",
+    }
+
+
 def cmd_init(a):
     root = a[0] if a else "world"
     made = []
@@ -869,6 +1011,8 @@ def dispatch(cmd, rest):
         return cmd_change(rest + ["--apply"])
     if cmd == "change":
         return cmd_change(rest)
+    if cmd == "import" and rest and rest[0] == "rbac":
+        return cmd_import_rbac(rest[1:])
     if cmd == "import":
         return cmd_import(rest)
     if cmd == "export":

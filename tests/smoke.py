@@ -61,6 +61,17 @@ def main():
     c, r = run("check", "administer", "X", "Y", cwd=repo)
     S.append(("check administer honest error without corpus", "GATE_CORPUS" in json.dumps(r)))
 
+    c, r = run("import", "rbac", os.path.join(DEMO, "rbac.json"), "-o", os.path.join(tmp, "rbac-world.swift"))
+    S.append(("rbac: two real breaks named by k8s source", c == 1 and len(r.get("refusals", [])) == 2
+              and any("ghost-bind" in x["source"] for x in r["refusals"])
+              and any("share one namespace" in x["claim"] for x in r["refusals"])))
+    clean = json.load(open(os.path.join(DEMO, "rbac.json")))
+    clean["items"] = [i for i in clean["items"] if i["metadata"].get("name") not in ("ghost-bind", "cross-bind")]
+    cp = os.path.join(tmp, "rbac-clean.json")
+    json.dump(clean, open(cp, "w"))
+    c, r = run("import", "rbac", cp, "-o", os.path.join(tmp, "rbac-clean-world.swift"))
+    S.append(("rbac: clean cluster holds + canon handshake", c == 0 and r["verdict"] == "holds" and r["canon_handshake"]))
+
     for name, ok in S:
         print(("PASS" if ok else "FAIL"), name)
     print("ALL GREEN" if all(ok for _, ok in S) else "RED")
