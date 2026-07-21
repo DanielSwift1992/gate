@@ -231,6 +231,42 @@ public enum MyWatch: AccessLedger {{
               and "VerifiedInDepartment" in x["claim"]]
     S.append(("no ghost address: grants.swift is not blamed for a claim it never makes", not ghosts))
 
+    # ── who somebody is, and what merging demands, are facts of the world ──
+    grepo = os.path.join(tmp, "policy")
+    os.makedirs(os.path.join(grepo, "tables"))
+    subprocess.run(["git", "init", "-q", "-b", "main", grepo])
+    for f in ("people.csv", "grants.csv"):
+        shutil.copy(os.path.join(DEMO, f), os.path.join(grepo, "tables", f))
+    run("status", cwd=grepo)
+    with open(os.path.join(grepo, "gate.swift"), "a") as f:
+        f.write("""
+public enum MailBoss: Identity {
+    public typealias Person = Emp9001
+}
+extension MailBoss { public static var typeName: String { "boss@corp" } }
+
+public enum MergePolicy {
+    public typealias Requires = Manager
+}
+""")
+    subprocess.run(["git", "add", "-A"], cwd=grepo)
+    subprocess.run(["git", "-c", "commit.gpgsign=false", "-c", "user.email=boss@corp",
+                    "-c", "user.name=B", "commit", "-qm", "state the policy in the world"], cwd=grepo)
+    c, r = run("guard", "merge", cwd=grepo)
+    S.append(("guard reads identity and policy from the world, not a CSV",
+              r.get("policy_from") == "the world" and r.get("requires") == "Manager"
+              and r.get("author", "").endswith("Emp9001")))
+    S.append(("guard: a Lead may not merge when the policy demands a Manager",
+              c == 1 and r["verdict"] == "refused"))
+    t = open(os.path.join(grepo, "gate.swift")).read().replace(
+        "public typealias Person = Emp9001", "public typealias Person = Emp9999", 1)
+    open(os.path.join(grepo, "gate.swift"), "w").write(t)
+    c, r = run("guard", "merge", cwd=grepo)
+    S.append(("guard: an identity naming nobody is refused by line, not obeyed",
+              r["verdict"] == "refused"
+              and any("declares no such person" in x["claim"] and ":" in x["address"]
+                      for x in r["refusals"])))
+
     # ── zero egress: a claim about ourselves, kept by a gate on our own source.
     # An enterprise review runs this same grep; it must never come back dirty,
     # because one outbound call ends the "an engineer may just install it" path.

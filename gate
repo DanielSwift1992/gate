@@ -738,39 +738,81 @@ jobs:
       # the world is the source; a refusal exits red and names the line
       - run: gate guard merge
       # repo policy by the same gates: the HEAD author, mapped through
-      # tables/identities.csv, must hold the rank stated in tables/guard.csv.
+      # an identity declared in the world, must hold the rank the world states.
       # make this job a required check and the policy becomes law.
 """,
 }
 
 
+def read_policy():
+    # Who somebody is, and what an action demands, are FACTS — so they are
+    # declared in the world and travel through git like every other fact: one
+    # truth, a history, a pull request. The CSVs seeded them once, and are read
+    # only while a world has not stated them yet.
+    #   public enum MailBoss: Identity { public typealias Person = Emp9001 }
+    #   extension MailBoss { public static var typeName: String { "boss@corp" } }
+    #   public enum MergePolicy { public typealias Requires = Manager }
+    ids, rules, where = {}, {}, {}
+    for name, path in bench_files():
+        text = open(path).read()
+        for m in re.finditer(r"(?:public\s+)?enum\s+(\w+)\s*:[^{\n]*\bIdentity\b[^{\n]*\{(.*?)\n\}", text, re.S):
+            who = re.search(r"typealias\s+Person\s*=\s*(\w+)", m.group(2))
+            mail = re.search(rf"extension\s+{m.group(1)}\b.*?typeName.*?\"([^\"]+)\"", text, re.S)
+            if who and mail:
+                ids[mail.group(1)] = who.group(1)
+                where[mail.group(1)] = (name, text[:m.start()].count("\n") + 1)
+        for m in re.finditer(r"(?:public\s+)?enum\s+(\w+)Policy\s*\{(.*?)\n\}", text, re.S):
+            req = re.search(r"typealias\s+Requires\s*=\s*(\w+)", m.group(2))
+            if req:
+                rules[m.group(1).lower()] = req.group(1)
+                where["policy:" + m.group(1).lower()] = (name, text[:m.start()].count("\n") + 1)
+    return ids, rules, where
+
+
 def cmd_guard(a):
     # guard [merge] — the repository's OWN action policy by the same gates:
-    # a git object (the HEAD author) → a world atom (identities.csv) → a probe
-    # entry of an existing form (VerifiedAtRank) → judgement. Rules live in
-    # the world's tables; CI and hooks only transport the verdict.
+    # a git object (the HEAD author) → an identity declared in the world → a
+    # probe entry of an existing form (VerifiedAtRank) → judgement. CI and
+    # hooks only transport the verdict.
     import csv
 
     action = a[0] if a else "merge"
-    if not TABLES:
-        raise SystemExit(json.dumps({"error": "guard needs a tables world (identities.csv, guard.csv)"}))
-    world_dir = os.path.dirname(TABLES) or "."
+    if not FACTS or not os.path.exists(FACTS):
+        raise SystemExit(json.dumps({"error": "guard needs a world: run `gate init`, or cd into a repo with gate.swift"}))
+    world_dir = os.path.dirname(os.path.abspath(FACTS)) or "."
     email = subprocess.run(
         ["git", "log", "-1", "--format=%ae"], cwd=world_dir, capture_output=True, text=True
     ).stdout.strip()
-    identities = {r["email"]: r["id"] for r in csv.DictReader(open(os.path.join(TABLES, "identities.csv")))}
-    rules = {r["action"]: r["requires_rank"] for r in csv.DictReader(open(os.path.join(TABLES, "guard.csv")))}
+    identities, rules, where = read_policy()
+    stated_in = "the world"
+    if not identities and not rules and TABLES:   # a world that has not stated them yet
+        stated_in = "tables (a seed): declare them in the world to put them under review"
+        idp, gp = os.path.join(TABLES, "identities.csv"), os.path.join(TABLES, "guard.csv")
+        if os.path.exists(idp):
+            identities = {r["email"]: r["id"] for r in csv.DictReader(open(idp))}
+        if os.path.exists(gp):
+            rules = {r["action"]: r["requires_rank"] for r in csv.DictReader(open(gp))}
     if action not in rules:
-        raise SystemExit(json.dumps({"error": f"guard: no rule for action '{action}' in guard.csv"}))
+        raise SystemExit(json.dumps({"error": f"guard: no policy for '{action}': declare `public enum {action.capitalize()}Policy {{ public typealias Requires = <rank> }}` in the world"}))
     required = rules[action]
     who = identities.get(email)
     if not who:
-        return {"command": f"guard {action}", "author": email, "verdict": "refused",
-                "refusals": [{"address": "tables/identities.csv", "claim": f"author {email} is not mapped to any person: an unknown identity performs no guarded action"}]}
+        return {"command": f"guard {action}", "author": email, "policy_from": stated_in, "verdict": "refused",
+                "refusals": [{"address": os.path.basename(FACTS), "claim": f"author {email} is not mapped to any person: an unknown identity performs no guarded action"}]}
+    declared = set()
+    for _, p in bench_files():
+        declared |= set(re.findall(r"(?:public\s+)?enum\s+(\w+)\s*:", open(p).read()))
+    if who not in declared:   # a policy naming nobody is not a policy
+        f, ln = where.get(email, (os.path.basename(FACTS), 1))
+        return {"command": f"guard {action}", "author": f"{email} = {who}", "policy_from": stated_in,
+                "verdict": "refused",
+                "refusals": [{"address": f"{f}:{ln}",
+                              "claim": f"an identity names `{who}`, and the world declares no such person"}]}
     text = open(FACTS).read()
     probe = last_entry_insert(text, "VerifiedAtRank", {"first": who, "args_second": required}, 8)
     r = judge(with_temp(probe))
-    return {"command": f"guard {action}", "author": f"{email} = {who}", "requires": required, **r, "mutates": False}
+    return {"command": f"guard {action}", "author": f"{email} = {who}", "requires": required,
+            "policy_from": stated_in, **r, "mutates": False}
 
 
 def cmd_library(a):
