@@ -23,10 +23,14 @@ status: refused 1 · 18 declarations · 84 premises · 1.1 ms
 
 Your facts become one Swift file — `world.swift` — the **single source**,
 readable by everything at once: `git diff`, a human, the judge, and the
-Swift compiler. Rules are type constraints in the same text, so a record
+Swift compiler. There is no DSL: what you write is **bare Swift** — the
+same language with the ceremony stripped (write only the differences,
+printing restores the full form), and **full Swift** is always one view
+away, sitting right there in the file. Rules are type constraints in the same text, so a record
 that violates a rule is not flagged — it fails to exist. Two independent
-arbiters check every claim: a linear judge (milliseconds, on every
-keystroke) and the compiler (seconds, in CI). Git carries what it already
+arbiters check every claim: the judge — a second, compiler-grade arbiter
+that reads instead of building (milliseconds, on every keystroke) — and
+the Swift compiler itself (seconds, in CI). Git carries what it already
 carries best: history, authorship, review, rollback.
 
 You never migrate your systems. You translate one domain — the tables you
@@ -124,6 +128,6 @@ one tool). Not yet accepting external contributions; license to be
 determined before the first public release.
 
 Roadmap, next: single-binary Swift CLI (Linux/Windows included) · the
-bare-form diff view (`gate diff` shows the minimal Swift, `--full` the
-whole text) · apply routing over the declared layout · more domain
-genres.
+bare-Swift diff view (`gate diff` shows the stripped form, `--full` the
+whole text) · editable bare view in the bench · apply routing over the
+declared layout · more domain genres.

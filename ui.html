@@ -11,6 +11,10 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 #save{margin-left:auto;border:none;background:color-mix(in srgb,var(--action) 12%,transparent);color:var(--action);padding:.35em .9em;border-radius:6px;font:inherit;cursor:pointer}
 #save:disabled{opacity:.4;cursor:default}
 #editor{flex:1;border:none;outline:none;resize:none;font:12.5px/19px ui-monospace,Menlo,monospace;padding:.8em;white-space:pre;overflow:auto}
+#bare{flex:1;display:none;font:12.5px/19px ui-monospace,Menlo,monospace;padding:.8em;white-space:pre;overflow:auto;margin:0;color:#3a3a3c}
+#view .v{border:1px solid var(--line);background:#fff;font:inherit;padding:.15em .7em;cursor:pointer}
+#view .v.on{background:var(--mist);font-weight:600}
+#view .v:first-child{border-radius:6px 0 0 6px}#view .v:last-child{border-radius:0 6px 6px 0;border-left:none}
 #right{flex:1;overflow:auto;padding:1em 1.2em}
 #verdict{margin:.2em 0 1em}
 .chip{display:inline-block;padding:.25em .8em;border-radius:99px;font-weight:600}
@@ -26,8 +30,9 @@ h2{font-size:1em;margin:1em 0 .2em}
 #meta{color:#6e6e73;font-size:.85em}
 </style>
 <div id="left">
-  <div id="bar"><select id="file" style="display:none;font:inherit"></select><b id="fname">world.swift</b><span id="meta"></span><button id="save" disabled>Save</button></div>
+  <div id="bar"><select id="file" style="display:none;font:inherit"></select><b id="fname">world.swift</b><span id="view"><button class="v on" data-v="full">Full</button><button class="v" data-v="bare">Bare</button></span><span id="meta"></span><button id="save" disabled>Save</button></div>
   <textarea id="editor" spellcheck="false"></textarea>
+  <pre id="bare"></pre>
 </div>
 <div id="right">
   <div id="verdict"></div>
@@ -115,6 +120,46 @@ function badLinesNear(badLines, line, span) {
     for (const b of badLines) if (Math.abs(b - line) <= span) return true;
     return false;
 }
+
+// bare Swift: the same language with the ceremony stripped — a VIEW over
+// the single source, never a second file (read-only projection, v0)
+function bareOf(text) {
+    const out = [];
+    for (let line of text.split("\n")) {
+        const t = line.trim();
+        if (t === "}" || t === "" || t.startsWith("@") || t.startsWith("static var body")
+            || t.startsWith("public static var body")) continue;
+        line = line.replace(/\bpublic /, "");
+        let m;
+        if ((m = line.match(/^enum (\w+): ([\w, ]+) \{\}?$/)))
+            out.push(m[1] + ": " + m[2]);
+        else if ((m = line.match(/^protocol (\w+)(: [\w, ]+)? \{\}?$/)))
+            out.push(m[1] + (m[2] || "") + " (protocol)");
+        else if ((m = line.match(/^\s*(associatedtype|typealias) (\w+)( = .*)?$/)))
+            out.push("  " + m[2] + (m[3] || ""));
+        else if ((m = line.match(/^\s*([A-Z]\w*(?:<[^;]*)?)\.self;?\s*$/)))
+            out.push("  " + m[1]);
+        else if ((m = line.match(/^extension (\w+): (\w+)$/)))
+            out.push(m[1] + ": " + m[2]);
+        else if (t.startsWith("where "))
+            out.push("  " + t);
+        else if (t.startsWith("//"))
+            out.push(t);
+        else if (t.length)
+            out.push(line);
+    }
+    return out.join("\n");
+}
+
+const bareEl = document.getElementById("bare");
+document.querySelectorAll("#view .v").forEach(b => b.onclick = () => {
+    document.querySelectorAll("#view .v").forEach(x => x.classList.remove("on"));
+    b.classList.add("on");
+    const bare = b.dataset.v === "bare";
+    editor.style.display = bare ? "none" : "";
+    bareEl.style.display = bare ? "block" : "none";
+    if (bare) bareEl.textContent = bareOf(editor.value);
+});
 
 let timer = null;
 editor.addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(render, 150); });
