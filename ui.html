@@ -130,7 +130,7 @@ const cm = CodeMirror(document.getElementById("editor-host"), {
 const editor = { get value() { return cm.getValue(); }, set value(n) { cm.setValue(n); } };
 const writeBtn = document.getElementById("write");
 let clean = "", files = [], active = "";
-let badFiles = new Set(), siblingNames = new Set(), layoutDecls = new Map();
+let badFiles = new Set(), siblingNames = new Set(), layoutDecls = new Map(), declFile = new Map();
 let lastParsed = null, lastRefusals = [], widgets = [], tableSort = null;
 
 // ── the file rail: the declared layout, the same list the judge runs over ──
@@ -152,7 +152,7 @@ function namesOf(parsed) {
         out.add(name);
         for (const c of d.conformances) out.add(c);
         for (const [k] of d.aliases) out.add(k);
-        for (const e of (d.entries || [])) { out.add(e.head); (e.arguments || []).forEach(a => out.add(a)); }
+        for (const e of (d.entries || [])) { out.add(e.head); (e.args || []).forEach(a => out.add(a)); }
     }
     for (const [name] of (parsed.topAliases || new Map())) out.add(name);
     return out;
@@ -261,7 +261,27 @@ function tableGroups() {
 }
 function layoutOrActive() { return layoutDecls.size ? layoutDecls : (lastParsed ? lastParsed.declarations : new Map()); }
 
-function jumpTo(name) {
+// the ledgers: declarations whose body is a list of gate entries (VerifiedView,
+// VerifiedInDepartment …). Each becomes a table of the entry's arguments.
+function ledgerGroups() {
+    const out = [];
+    for (const [name, d] of layoutOrActive()) {
+        const entries = (d.entries || []).filter(e => e.args && e.args.length);
+        if (entries.length < 2) continue;
+        const byHead = new Map();
+        for (const e of entries) {
+            if (!byHead.has(e.head)) byHead.set(e.head, []);
+            byHead.get(e.head).push(e);
+        }
+        for (const [head, es] of byHead)
+            if (es.length >= 2) out.push({ owner: name, head, cols: es[0].args.length, rows: es });
+    }
+    return out;
+}
+
+async function jumpTo(name) {
+    const f = declFile.get(name);
+    if (f && f !== active) await loadFile(f);   // a name in another file opens that file
     const d = layoutOrActive().get(name);
     if (!d) return;
     setMode("full");
@@ -274,7 +294,32 @@ function buildTables() {
     host.innerHTML = "";
     const badLines = new Set(lastRefusals.map(r => r.line));
     const groups = tableGroups();
-    if (!groups.length) { host.innerHTML = '<h3>no relations to project</h3>'; return; }
+    const ledgers = ledgerGroups();
+    if (!groups.length && !ledgers.length) { host.innerHTML = '<h3>no relations to project</h3>'; return; }
+    // the ledgers first: who → what, one row per entry
+    for (const L of ledgers) {
+        const h = document.createElement("h3");
+        h.textContent = L.owner + " · " + L.head + " · " + L.rows.length + " entries";
+        h.style.cursor = "pointer"; h.onclick = () => jumpTo(L.owner);
+        host.append(h);
+        const table = document.createElement("table");
+        const head = document.createElement("tr");
+        for (let c = 0; c < L.cols; c++) { const th = document.createElement("th"); th.textContent = c === 0 ? "who" : c === 1 ? "what" : "arg " + (c + 1); head.append(th); }
+        table.append(head);
+        for (const e of L.rows) {
+            const tr = document.createElement("tr");
+            e.args.forEach((a, c) => {
+                const td = document.createElement("td");
+                td.className = c === 0 ? "cell-name" : "cell-value";
+                td.textContent = a;
+                if (badLines.has(e.line)) td.classList.add("cell-bad");
+                if (declFile.has(a)) { td.style.cursor = "pointer"; td.onclick = () => jumpTo(a); }
+                tr.append(td);
+            });
+            table.append(tr);
+        }
+        host.append(table);
+    }
     for (const group of groups) {
         const h = document.createElement("h3");
         h.textContent = group.conformances.join(", ") + " · " + group.rows.length + " rows";
@@ -354,7 +399,7 @@ function bareForm(parsed) {
         for (const [k, v] of d.aliases)
             out.push("    " + esc(k) + " = " + nameTokens(v.target));
         for (const e of (d.entries || [])) {
-            const args = e.arguments && e.arguments.length ? "<" + e.arguments.join(", ") + ">" : "";
+            const args = e.args && e.args.length ? "<" + e.args.join(", ") + ">" : "";
             out.push("    " + nameTokens(e.head + args));
         }
         if (d.aliases.size || (d.entries || []).length) out.push("");
@@ -394,12 +439,12 @@ writeBtn.onclick = async () => {
 };
 
 async function siblings() {
-    siblingNames = new Set(); layoutDecls = new Map();
+    siblingNames = new Set(); layoutDecls = new Map(); declFile = new Map();
     for (const f of files) {
         const t = f === active ? editor.value : await (await fetch("/world?f=" + encodeURIComponent(f))).text();
         const parsed = judge(f, t).parsed;
         if (f !== active) namesOf(parsed).forEach(n => siblingNames.add(n));
-        for (const [name, d] of parsed.declarations) if (!layoutDecls.has(name)) layoutDecls.set(name, d);
+        for (const [name, d] of parsed.declarations) if (!layoutDecls.has(name)) { layoutDecls.set(name, d); declFile.set(name, f); }
     }
 }
 async function loadFile(name) {

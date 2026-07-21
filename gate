@@ -98,7 +98,9 @@ def refine_addresses(text, refusals, fname):
     file_lines = text.split("\n")
     for ref in refusals:
         n = int(ref["address"].split(":")[1])
-        m = re.search(r"requires (\w+)\.", ref["claim"]) or re.match(r"(\w+)\.", ref["claim"])
+        m = (re.search(r"requires (\w+)\.", ref["claim"])
+             or re.search(r"(\w+)(?:\.\w+)? resolves to nothing", ref["claim"])
+             or re.match(r"(\w+)\.", ref["claim"]))
         if not m:
             continue
         subject = m.group(1)
@@ -1111,6 +1113,18 @@ def cmd_serve(a):
             raw = subprocess.run([JUDGE, "judge", *paths], capture_output=True, text=True).stdout
             refusals = [{"address": m.group(1).replace("__", "/"), "claim": m.group(2).strip()}
                         for m in re.finditer(r"^\s+(\S+\.swift:\d+)\s+(.+)$", raw, re.M)]
+            # refine each address to the line of its subject, per file (the same
+            # move the CLI makes — the judge pins to the previous drain's line)
+            by_file = {}
+            for ref in refusals:
+                fname = ref["address"].split(":")[0]
+                by_file.setdefault(fname, []).append(ref)
+            for fname, group in by_file.items():
+                src = text if fname == os.path.relpath(active, base) else None
+                if src is None:
+                    real = os.path.join(base, fname)
+                    src = open(real).read() if os.path.exists(real) else ""
+                refine_addresses(src, group, fname)
             times = re.findall(r"([\d.]+) ms", raw)
             body = json.dumps({"verdict": "holds" if not refusals else "refused",
                                "refusals": refusals,

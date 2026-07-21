@@ -4,6 +4,18 @@
 
 The working prototype, end to end:
 
+- The workbench (`ui.html`, served by `gate serve`): CodeMirror editor
+  with declared-name highlighting; three views in one row — Full, Bare
+  (the bare form: no enum/typealias/braces, scope by indentation,
+  read-only but highlighted with jump-to-declaration), Table (the world
+  projected as sortable relations and ledgers); a draggable file rail
+  over the declared layout with a per-file verdict dot; the verdict
+  docked at the bottom, Xcode-style; cross-file judgement over unsaved
+  text, addresses refined to the subject line.
+- Honest state: "Write file" (not Save) writes the working copy; a
+  git-state indicator shows committed / uncommitted — gate keeps no
+  state, git carries the history.
+
 - The world: single-source canon (`world.swift`), declared multi-file
   layout (`world.manifest.swift`) with two-way guards, cross-file
   judgement.
