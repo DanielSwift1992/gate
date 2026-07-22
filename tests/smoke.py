@@ -485,6 +485,9 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "associatedtype Home: Department" in genre))
     S.append(("and the bench offers by that, not by what it saw nearby",
               "function fillersFor(" in ui and "axesOfHost(host)[slot[1]]" in ui))
+    S.append(("deleting back into a word offers again, not only typing forward",
+              'change.origin === "+delete") offerCompletion()' in ui))
+
     S.append(("the cursor on a name describes it from the grammar, not a dictionary",
               "function describeName(" in ui and "function inspect(" in ui
               and "protoAxes[name]" in ui and "conformers)" in ui))

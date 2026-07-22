@@ -1022,9 +1022,10 @@ let timer = null;
 cm.on("change", (_, change) => {
     clearTimeout(timer);
     const userEdit = change.origin && change.origin !== "setValue";
-    // offer names while somebody types, and only then
-    const typed = change.origin === "+input" ? change.text.join("") : null;
-    if (typed !== null && /^[\w =.]+$/.test(typed)) offerCompletion();
+    // offer while somebody edits a word — typing it or deleting back into it:
+    // after a delete the hole is the same hole, and the grammar answers it
+    if (change.origin === "+input" && /^[\w =.]+$/.test(change.text.join(""))) offerCompletion();
+    else if (change.origin === "+delete") offerCompletion();
     else hideCompletion();
     timer = setTimeout(() => tick(userEdit), userEdit ? 400 : 150);
 });
