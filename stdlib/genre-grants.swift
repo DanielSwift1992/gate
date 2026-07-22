@@ -27,3 +27,15 @@ public enum Enter<
 > {}
 extension Enter: Entered
 where Who.Key: Writes, Who.Post == Into.Place {}
+
+// Ownership is entry at the warden's threshold: whoever may administer a place
+// owns what stands in it. One gated form, not another crystal — CODEOWNERS,
+// Kubernetes RBAC and an org's grants are the same question about the same
+// atoms: who may do what, where.
+public protocol Owned {}
+public enum Owns<
+    Who: Keeper,
+    What: Room
+> {}
+extension Owns: Owned
+where Who.Key: Administers, Who.Post == What.Place {}
