@@ -48,6 +48,15 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 #rail h3.fold .obs{flex:1 1 100%;padding-left:1.05em}
 #rail h3.fold.shut .obs{display:none}
 .foldable.shut{display:none}
+#keys-btn{border:none;background:transparent;color:var(--muted);font:12px -apple-system,sans-serif;width:20px;height:20px;border-radius:5px;cursor:pointer;padding:0}
+#keys-btn:hover{background:var(--mist);color:var(--ink)}
+#keys-panel{position:fixed;top:38px;right:14px;z-index:30;width:min(360px,86vw);background:var(--paper);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 28px color-mix(in srgb,var(--ink) 18%,transparent);padding:.9em 1em}
+#keys-panel h4{margin:0 0 .6em;font:600 12px/1 -apple-system,sans-serif}
+#keys-panel p{margin:.7em 0 0;font:11px/1.5 -apple-system,sans-serif;color:var(--muted)}
+.krow{display:flex;gap:.7em;align-items:baseline;padding:.22em 0;font:11.5px/1.45 -apple-system,sans-serif}
+.krow kbd{flex:0 0 5.6em;font:11px ui-monospace,Menlo,monospace;color:var(--ink);background:var(--mist);border-radius:4px;padding:.1em .4em;text-align:center}
+.krow span{color:var(--muted)}
+#say{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:31;background:var(--ink);color:var(--paper);font:12px -apple-system,sans-serif;padding:.5em 1em;border-radius:8px;box-shadow:0 6px 20px color-mix(in srgb,var(--ink) 30%,transparent)}
 #brand{padding:1.1em 1.1em .5em}
 #brand b{display:block;font:600 15px/1.2 -apple-system,sans-serif;letter-spacing:-.01em}
 #brand span{display:block;margin-top:.35em;font:11.5px/1.45 -apple-system,sans-serif;color:var(--muted)}
@@ -136,10 +145,13 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
   <h3 class="fold" id="journal-head" data-fold="journal"><i></i>journal <span class="obs"></span></h3>
   <div id="journal" class="foldable"></div></div>
 <div class="split" id="split-rail" style="display:none"></div>
+<div id="keys-panel" hidden></div>
+<div id="say" hidden></div>
 <div id="main">
   <div id="bar">
     <span class="seg" id="view-seg"><button class="on" data-m="full">Full</button><button data-m="bare">Bare</button><button data-m="table">Table</button></span>
     <b id="fname">gate.swift</b>
+    <button id="keys-btn" title="Keyboard shortcuts">?</button>
     <span id="gitstate" title="Edits go straight to the file on disk. gate keeps no state of its own: commit or discard with git."></span>
   </div>
   <div id="surface">
@@ -180,9 +192,46 @@ CodeMirror.defineMode("gate-swift", () => ({
     },
 }));
 
+// ── the keys people already know. Every one is bound twice, so the same
+// hand works on a Mac keyboard and on a PC one; the panel behind ? shows
+// whichever prefix this machine uses. ──
+const MAC = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+const MOD = MAC ? "\u2318" : "Ctrl";
+
+function toggleComment(cm) {
+    // Xcode's ⌘/ over the selected lines: comment them, or take it back
+    const from = cm.getCursor("from").line, to = cm.getCursor("to").line;
+    let lines = [];
+    for (let i = from; i <= to; i++) lines.push(cm.getLine(i));
+    const meaty = lines.filter(l => l.trim());
+    const commented = meaty.length && meaty.every(l => l.trim().startsWith("//"));
+    for (let i = from; i <= to; i++) {
+        const line = cm.getLine(i);
+        if (!line.trim()) continue;
+        const next = commented
+            ? line.replace(/^(\s*)\/\/ ?/, "$1")
+            : line.replace(/^(\s*)/, "$1// ");
+        cm.replaceRange(next, { line: i, ch: 0 }, { line: i, ch: line.length }, "+input");
+    }
+}
+
+function noSave(cm) {
+    // ⌘S is muscle memory, and here it has nothing to do: say so, and above
+    // all keep the browser from offering to save the page
+    say("There is nothing to save: the file is written whenever the judge holds.");
+}
+
 const cm = CodeMirror(document.getElementById("editor-host"), {
     value: "", mode: "gate-swift", lineNumbers: true, indentUnit: 4,
     viewportMargin: Infinity, dragDrop: false,
+    extraKeys: {
+        "Cmd-/": toggleComment, "Ctrl-/": toggleComment,
+        "Cmd-S": noSave, "Ctrl-S": noSave,
+        "Tab": (cm) => cm.somethingSelected() ? cm.indentSelection("add")
+                                              : cm.replaceSelection("    ", "end", "+input"),
+        "Shift-Tab": (cm) => cm.indentSelection("subtract"),
+        "Cmd-Enter": () => {}, "Ctrl-Enter": () => {},
+    },
 });
 const editor = { get value() { return cm.getValue(); }, set value(n) { cm.setValue(n); } };
 let files = [], active = "", personalFile = null;
@@ -322,7 +371,53 @@ function closeDiff() {
     for (const el of document.querySelectorAll(".commit.open")) el.classList.remove("open");
 }
 let journalWorld = [];
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDiff(); });
+// a one-line note, for the moments the tool has something to say back
+let sayTimer = null;
+function say(text) {
+    const el = document.getElementById("say");
+    el.textContent = text; el.hidden = false;
+    clearTimeout(sayTimer);
+    sayTimer = setTimeout(() => { el.hidden = true; }, 3200);
+}
+
+// ── the shortcuts, behind a quiet ?. Nothing here is new to learn: they are
+// the keys this editor already answers to, written down. ──
+const KEYS = [
+    [MOD + " /", "Comment the selected lines, or uncomment them"],
+    [MOD + " Z", "Undo · " + MOD + " \u21e7 Z redo"],
+    [MOD + " F", "Find in this file (the browser's own find: every line is on the page)"],
+    ["Tab", "Indent · \u21e7 Tab outdent"],
+    ["Alt-click a name", "Open the line that declares it"],
+    ["Esc", "Close an open commit"],
+    [MOD + " S", "Nothing: the file is written whenever the judge holds"],
+];
+{
+    // built on first use: everything it needs is defined by then
+    const panel = document.getElementById("keys-panel");
+    const btn = document.getElementById("keys-btn");
+    btn.onclick = (e) => {
+        e.stopPropagation();
+        if (!panel.dataset.built) {
+            panel.innerHTML = "<h4>Keys</h4>" + KEYS.map(([k, what]) =>
+                '<div class="krow"><kbd>' + esc(k) + "</kbd><span>" + esc(what) + "</span></div>").join("")
+                + "<p>Edits are judged as you type. Nothing else is bound, and nothing is remapped.</p>";
+            panel.dataset.built = "1";
+        }
+        panel.hidden = !panel.hidden;
+    };
+    document.addEventListener("click", (e) => {
+        if (!panel.hidden && !panel.contains(e.target) && e.target !== btn) panel.hidden = true;
+    });
+}
+
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") { closeDiff(); document.getElementById("keys-panel").hidden = true; }
+    // the browser must not offer to save the page when a hand reaches for it
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        say("There is nothing to save: the file is written whenever the judge holds.");
+    }
+});
 
 function namesOf(parsed) {
     const out = new Set();
