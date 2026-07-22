@@ -99,8 +99,7 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .CodeMirror-linenumber{color:var(--muted)}
 .cm-keyword{color:#9B2393;font-weight:600}.cm-string{color:#C41A16}.cm-comment{color:#5D6C79}
 .cm-attribute{color:#947100}.cm-localtype{color:var(--localtype)}.cm-knownname{color:var(--knownname)}
-.CodeMirror.jumpable .cm-localtype,.CodeMirror.jumpable .cm-knownname{text-decoration:underline;text-underline-offset:2px}
-.CodeMirror.jumpable .CodeMirror-line,.CodeMirror.jumpable .CodeMirror-lines{cursor:pointer}
+.CodeMirror.holding .cm-jumpable{text-decoration:underline;text-underline-offset:2px;cursor:pointer}
 .cm-badname{text-decoration:underline wavy var(--bad);text-underline-offset:3px}.cm-ghost{color:#a6a6ab}
 .line-flag-bad{background:color-mix(in srgb,var(--bad) 6%,transparent)}
 .gutter-flag-bad .CodeMirror-linenumber{color:var(--bad);font-weight:700}
@@ -182,6 +181,8 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 const keywordSet = new Set(["public","enum","protocol","typealias","extension","where",
     "static","var","some","associatedtype","import","struct","let","func"]);
 let localNames = new Set(), unresolved = new Set();
+let jumpable = new Set();      // names with a home: underlined, and clickable
+let vocabulary = {};           // name -> the shelf module that declares it
 
 CodeMirror.defineMode("gate-swift", () => ({
     token: (stream) => {
@@ -193,9 +194,10 @@ CodeMirror.defineMode("gate-swift", () => ({
             if (word === "self" || keywordSet.has(word)) return "keyword";
             if (/^[A-Z]/.test(word)) {
                 if (unresolved.has(word)) return "badname";
-                if (stream.string[stream.start - 1] === ".") return "knownname";
-                if (localNames.has(word)) return "localtype";
-                return "knownname";
+                const home = jumpable.has(word) ? " jumpable" : "";
+                if (stream.string[stream.start - 1] === ".") return "knownname" + home;
+                if (localNames.has(word)) return "localtype" + home;
+                return "knownname" + home;
             }
             return null;
         }
@@ -269,10 +271,10 @@ cm.getWrapperElement().addEventListener("mousedown", (e) => {
 });
 {
     const wrap = cm.getWrapperElement();
-    const hold = (e) => wrap.classList.toggle("jumpable", jumpKey(e));
+    const hold = (e) => wrap.classList.toggle("holding", jumpKey(e));
     document.addEventListener("keydown", hold);
     document.addEventListener("keyup", hold);
-    window.addEventListener("blur", () => wrap.classList.remove("jumpable"));
+    window.addEventListener("blur", () => wrap.classList.remove("holding"));
 }
 let files = [], active = "", personalFile = null, personalEmpty = false;
 let badFiles = new Set(), siblingNames = new Set(), layoutDecls = new Map(), declFile = new Map();
@@ -551,6 +553,7 @@ function applyFlags(refusals) {
 let paintedKey = "";
 function repaintNames(parsed, refusals) {
     localNames = new Set([...namesOf(parsed), ...siblingNames]);
+    jumpable = new Set([...layoutDecls.keys(), ...Object.keys(vocabulary)]);
     unresolved = new Set();
     for (const ref of (refusals || [])) {
         const m = ref.premise.match(/\b([A-Z]\w*)(?:\.\w+)? resolves to nothing|the name ([A-Z]\w*) resolves/);
@@ -686,8 +689,28 @@ async function jumpTo(name) {
     const f = declFile.get(name);
     if (f && f !== active) await loadFile(f);   // a name in another file opens that file
     const d = layoutOrActive().get(name);
-    if (!d) return;
-    reveal(d.line);
+    if (d) return reveal(d.line);
+    const mod = vocabulary[name];               // a name from a genre: open the genre
+    if (mod) return openShelf(mod, name);
+}
+
+// the shelf, read-only: where the names your world speaks are declared
+async function openShelf(mod, name) {
+    const text = await (await fetch("/shelf?m=" + encodeURIComponent(mod))).text();
+    active = "";                                 // not one of your files
+    document.getElementById("fname").textContent = mod + ".swift";
+    document.getElementById("fname").style.display = "";
+    setMode("full");
+    cm.setValue(text);
+    cm.setOption("readOnly", true);
+    buildRail();
+    say(mod + ".swift is on the shelf, not in your repository: read it here, or "
+        + "`gate stdlib materialize " + mod + "` to make it yours.");
+    if (name) {
+        const i = text.split("\n").findIndex(l => new RegExp("\\b" + name + "\\b").test(l)
+            && /^\s*(public\s+)?(enum|protocol|struct|typealias)/.test(l));
+        if (i >= 0) reveal(i + 1);
+    }
 }
 
 function buildTables() {
@@ -884,6 +907,7 @@ async function siblings() {
     }
 }
 async function loadFile(name) {
+    cm.setOption("readOnly", false);
     active = name;
     document.getElementById("fname").textContent = name;
     buildRail();
@@ -955,6 +979,7 @@ for (const head of document.querySelectorAll("h3.fold")) {
 }
 
 (async () => {
+    vocabulary = await (await fetch("/vocabulary")).json().catch(() => ({}));
     const fl = await (await fetch("/files")).json().catch(() => ({ files: [] }));
     files = fl.files || []; personalFile = fl.personal || null; personalEmpty = !!fl.personal_empty;
     // the rail carries files AND the journal, so it shows for any clone

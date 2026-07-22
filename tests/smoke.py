@@ -455,6 +455,20 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               r["verdict"] == "refused" and "address" in r.get("next", "")))
 
     ui = open(os.path.join(HERE, "ui.html"), encoding="utf-8").read()
+    # every name a printed world uses has a home: its own file, or the genre
+    printed = open(os.path.join(repo, "gate.swift")).read()
+    decl_here = set(re.findall(r"^\s*(?:public\s+)?(?:enum|protocol|struct|typealias)\s+(\w+)", printed, re.M))
+    shelf_names = set()
+    for f in os.listdir(os.path.join(HERE, "stdlib")):
+        if f.endswith(".swift"):
+            shelf_names |= set(re.findall(
+                r"^\s*(?:public\s+)?(?:enum|protocol|struct|typealias|associatedtype)\s+(\w+)",
+                open(os.path.join(HERE, "stdlib", f)).read(), re.M))
+    used = set(re.findall(r"\b[A-Z]\w*", "\n".join(l.split("//")[0] for l in printed.split("\n"))))
+    homeless = sorted(used - decl_here - shelf_names - {"StructureBuilder", "Structure", "String", "Self"})
+    S.append(("every name a printed world uses is declared somewhere it can be read",
+              not homeless))
+
     S.append(("the bench offers only names the world declares",
               "function completionPool()" in ui and "layoutDecls" in ui.split("function completionPool()")[1][:400]))
 

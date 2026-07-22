@@ -173,7 +173,10 @@ head. A refusal points at its address instead.
   judge in its own battery. An imported world names the genre it is written
   in, so the language is one command away: `gate stdlib show
   genre-organization`, and `materialize` lands it in your repo where it
-  becomes yours. Hidden is not secret.
+  becomes yours. In the bench, hold ⌘ and every name in the file underlines:
+  click one and it opens where it is declared, whether that is your own file
+  or the genre on the shelf. Nothing a printed world says is left without a
+  home, and a check keeps it that way. Hidden is not secret.
 
 ## Carrying gate in your repository
 
@@ -281,7 +284,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 98 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 99 end-to-end checks, the definition of green
 ```
 
 ## Status

@@ -43,6 +43,31 @@ public protocol Employee {
     associatedtype Site: Workplace
 }
 
+/// Who somebody is, apart from where they work. A name is not a string here:
+/// each one is an atom, and the atoms of a kind form a ring, so a roster can
+/// be walked and a generated one never runs out of names.
+public protocol Person {
+    associatedtype Given
+    associatedtype Family
+    associatedtype Born
+    associatedtype Sex
+}
+public protocol GivenNameCycle {
+    associatedtype Next
+    associatedtype Sex
+}
+public protocol FamilyNameCycle {
+    associatedtype Next
+}
+public protocol BirthYearCycle {
+    associatedtype Next
+}
+
+/// The two the roster records, as atoms like every other value here.
+public protocol Sexed {}
+public enum Male: Sexed {}
+public enum Female: Sexed {}
+
 /// The gates. A claim of one of these forms is what the judge reads: it holds
 /// when the two sides agree, and refuses with both names when they do not.
 ///
@@ -53,5 +78,25 @@ public protocol Employee {
 ///
 /// An access ledger is a list of such claims, and a team is a list of the
 /// people in it: one file, judged whole.
+public protocol Verified {}
+
+public enum VerifiedView<Who: Employee, What: Document> {}
+extension VerifiedView: Verified
+where Who.Home == What.Home {}
+
+public enum VerifiedInDepartment<Who: Employee, At: Department> {}
+extension VerifiedInDepartment: Verified
+where Who.Home == At {}
+
+public enum VerifiedAtRank<Who: Employee, At> {}
+extension VerifiedAtRank: Verified
+where Who.Rank == At {}
+
+public enum VerifiedAtWorkplace<Who: Employee, At: Workplace> {}
+extension VerifiedAtWorkplace: Verified
+where Who.Site == At {}
+
+/// A ledger is a list of claims; a team is a list of the people in it. One
+/// file, judged whole.
 public protocol AccessLedger {}
 public protocol Team {}

@@ -1857,6 +1857,8 @@ def cmd_serve(a):
     # THE CONTRACT (the bench depends on exactly this, and nothing else):
     #   GET  /  and /ui              the bench itself
     #   GET  /files                  {files: [name], personal: name|null}
+    #   GET  /vocabulary             {name: shelf module} — where a name is from
+    #   GET  /shelf?m=name           the text of one shelf module, to read
     #   GET  /world?f=name           the text of one file from that list
     #   GET  /gitstatus?f=name       {git: committed|modified|untracked}
     #   GET  /log?n=&scope=          the journal (scope: world|all) — observed
@@ -1904,6 +1906,31 @@ def cmd_serve(a):
                     return self.send_file(os.path.join(here, "codemirror.js"), "text/javascript")
                 if u.path == "/codemirror.css":
                     return self.send_file(os.path.join(here, "codemirror.css"), "text/css")
+                if u.path == "/vocabulary":
+                    # every name the shelf declares, and the module it is in:
+                    # a name from a genre has a home too, and can be opened
+                    out = {}
+                    for mod, text in STDLIB.items():
+                        for m in re.finditer(r"^\s*(?:public\s+)?(?:enum|protocol|struct|typealias|associatedtype)\s+(\w+)", text, re.M):
+                            out.setdefault(m.group(1), mod)
+                    body = json.dumps(out).encode()
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Cache-Control", "no-store")
+                    self.end_headers()
+                    self.wfile.write(body)
+                    return
+                if u.path == "/shelf":
+                    mod = q.get("m", "")
+                    if mod not in STDLIB:
+                        return self.no_world()
+                    body = STDLIB[mod].encode()
+                    self.send_response(200)
+                    self.send_header("Content-Type", "text/plain; charset=utf-8")
+                    self.send_header("Cache-Control", "no-store")
+                    self.end_headers()
+                    self.wfile.write(body)
+                    return
                 if u.path == "/files":
                     named = bench_files()
                     names = [n for n, _ in named]
