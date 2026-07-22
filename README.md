@@ -149,15 +149,16 @@ head. A refusal points at its address instead.
   function of the clone, so whoever can read the repo sees it; nothing is
   hosted, nothing is stored. Observed, never judged: open/closed is
   reachability from the default branch, not a verdict.
-- **A world of your own.** `gate my` (and the bench, on first run) makes a
-  personal world in *your* git — `~/.gate/me`, one per repository — never in
-  the shared repo, so colleagues and CI do not have it and there is nothing
-  to review or ignore. Two things live there: what your bench shows you, and
-  claims you want to keep true. A claim is judged against the *shared* world,
-  so when somebody changes a fact you depend on, the judge names the line in
-  your file — and their pipeline stays about the shared world alone. Privacy
-  is the repository boundary, not a policy; sharing is moving a declaration
-  into the shared world and committing it.
+- **A world of your own, if you want one.** Everybody's bench has one more
+  file, `my.swift`, and until somebody writes in it there is nothing: it
+  reads as a comment saying what it is for, and it is stored nowhere. Write
+  a claim you want to keep true and it becomes a file in *your* git
+  (`~/.gate/me`, one per repository), judged together with the shared world
+  and never in it: when somebody changes a fact your claim depends on, the
+  judge names the line in your file, and their pipeline stays about the
+  shared world alone. Clear it and it is gone again. Privacy is the
+  repository boundary, not a policy; sharing is moving a declaration into
+  the shared world and committing it.
 - **A shelf of genres, and a genre is the unit.** A domain has one
   vocabulary — the forms and axes a world of that kind is written in — and
   it ships as a real Swift file in `stdlib/`, judged by the product's own
@@ -272,7 +273,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 91 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 97 end-to-end checks, the definition of green
 ```
 
 ## Status

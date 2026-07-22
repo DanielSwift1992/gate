@@ -136,9 +136,14 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .chip.ok{background:color-mix(in srgb,var(--ok) 12%,transparent);color:var(--ok)}
 .chip.bad{background:var(--bad);color:var(--paper)}
 #status{font-size:12px;color:var(--muted)}#status b{color:var(--ink);font-weight:600}
-#verdicts{overflow:auto;padding:0 12px 8px}
-.refusal{display:flex;gap:10px;padding:5px 8px;border-radius:6px;cursor:pointer;font-size:12px;align-items:baseline}
-.refusal:hover{background:var(--mist)}
+#verdicts{overflow:auto;padding:2px 12px 10px;display:flex;flex-direction:column;gap:4px}
+/* each refusal is a row you can aim at: it has an edge, a surface, and it
+   answers to the pointer, because clicking it goes to the line */
+.refusal{display:flex;gap:10px;padding:7px 10px;border:1px solid color-mix(in srgb,var(--bad) 22%,transparent);
+  border-left:3px solid var(--bad);border-radius:7px;background:color-mix(in srgb,var(--bad) 5%,transparent);
+  cursor:pointer;font-size:12px;align-items:baseline}
+.refusal:hover{background:color-mix(in srgb,var(--bad) 11%,transparent)}
+.refusal:active{background:color-mix(in srgb,var(--bad) 16%,transparent)}
 .refusal code{color:var(--bad);font:11.5px ui-monospace,Menlo,monospace;flex:none}
 .refusal span{color:var(--ink)}
 </style>
@@ -258,7 +263,7 @@ cm.getWrapperElement().addEventListener("mousedown", (e) => {
     document.addEventListener("keyup", hold);
     window.addEventListener("blur", () => wrap.classList.remove("jumpable"));
 }
-let files = [], active = "", personalFile = null;
+let files = [], active = "", personalFile = null, personalEmpty = false;
 let badFiles = new Set(), siblingNames = new Set(), layoutDecls = new Map(), declFile = new Map();
 let lastParsed = null, lastRefusals = [], widgets = [], tableSort = null;
 
@@ -878,7 +883,7 @@ for (const head of document.querySelectorAll("h3.fold")) {
 
 (async () => {
     const fl = await (await fetch("/files")).json().catch(() => ({ files: [] }));
-    files = fl.files || []; personalFile = fl.personal || null;
+    files = fl.files || []; personalFile = fl.personal || null; personalEmpty = !!fl.personal_empty;
     // the rail carries files AND the journal, so it shows for any clone
     // the line says what is true HERE: with a world, the judge is at work;
     // without one, only the history is being read
@@ -888,7 +893,7 @@ for (const head of document.querySelectorAll("h3.fold")) {
     document.getElementById("rail").style.display = "flex";
     document.getElementById("split-rail").style.display = "block";
     document.getElementById("fname").style.display = "none";
-    buildRail();
+buildRail();
     await buildJournal();
     if (!files.length) return showEmpty();   // no world here yet
     await loadFile(files[0] || "gate.swift");

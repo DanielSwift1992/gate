@@ -234,16 +234,23 @@ def main():
 
     c, r = runme("my", cwd=jrepo)
     mypath = r.get("personal", "")
-    S.append(("personal world: created in its own git, holds",
-              r.get("verdict") == "holds" and mypath.startswith(me)
-              and os.path.isdir(os.path.join(me, ".git"))))
+    S.append(("nobody is given a personal world they did not ask for",
+              r.get("empty") is True and mypath.startswith(me) and not os.path.exists(mypath)))
     S.append(("personal world: the shared repo has no trace of it",
               subprocess.run(["git", "status", "--porcelain"], cwd=jrepo,
                              capture_output=True, text=True).stdout.strip() == ""))
+    # the comment it starts with is not writing: changed nothing, stored nothing
+    import urllib.request as _u
+    def put(port, name, text):
+        req = _u.Request(f"http://127.0.0.1:{port}/world?f={name}", data=text.encode(), method="PUT")
+        _u.urlopen(req).read()
+
     # a claim the SHARED world does not make anywhere: only my own file can be
     # refused for it, so a pass here cannot come from the world's own entries
     def myclaim(who, doc):
-        base = open(mypath).read().split("\npublic enum MyWatch")[0]
+        os.makedirs(os.path.dirname(mypath), exist_ok=True)
+        base = (open(mypath).read().split("\npublic enum MyWatch")[0]
+                if os.path.exists(mypath) else "")
         with open(mypath, "w") as f:
             f.write(base + f"""
 public enum MyWatch: AccessLedger {{
@@ -256,6 +263,15 @@ public enum MyWatch: AccessLedger {{
     }}
 }}
 """)
+
+    src_gate = open(GATE, encoding="utf-8").read()
+    tpl = src_gate.split('PERSONAL_TEMPLATE = """')[1].split('"""')[0]
+    S.append(("the world you have not written reads as a comment that says what it is",
+              tpl.lstrip("\\\n ").startswith("// Yours.") and "shared repository" in tpl
+              and "not stored" in tpl))
+    S.append(("and text still equal to that comment is not kept",
+              'text.strip() == PERSONAL_TEMPLATE.strip()' in src_gate
+              and "os.remove(p)" in src_gate))
 
     myclaim("Emp9002", "EngineeringShare")   # Emp9002 lives in Finance: illegal
     c, r = runme("my", cwd=jrepo)
@@ -341,6 +357,7 @@ public enum MergePolicy {
         "public typealias Person = Emp9999", "public typealias Person = Emp9001", 1)
     open(pol, "w").write(t)
     c, gme = runme("my", cwd=grepo)   # creates the personal world for grepo
+    os.makedirs(os.path.dirname(gme["personal"]), exist_ok=True)
     with open(gme["personal"], "a") as f:
         f.write("""
 public enum MailBossMine: Identity {
@@ -436,6 +453,12 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     c, r = run("status", cwd=lad)
     S.append(("a refused world is pointed at the address, not at the ladder",
               r["verdict"] == "refused" and "address" in r.get("next", "")))
+
+    # the bench may not say holds where a hook would refuse: the guards run on
+    # the unsaved text as well, not only in the CLI
+    S.append(("the bench runs the same guards the CLI does",
+              "duplicate_guards_over(sources)" in open(GATE, encoding="utf-8").read()
+              and "entry_guards_over(sources)" in open(GATE, encoding="utf-8").read()))
 
     # ── the two judges say the same words ──
     # The bench judges a single-file world in the browser, with the ported
@@ -536,6 +559,36 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     c, r = run("status", cwd=two)
     S.append(("a name declared in two files of one layout is refused too",
               any("declared twice" in x["claim"] for x in r["refusals"])))
+
+    # ── an entry whose form was commented out ──
+    # The judge says holds, correctly: there is no claim there any more. What
+    # it cannot say is that a claim you HAD is gone and the file is no longer
+    # Swift. Verified against the reference binary itself, which also holds.
+    cut = os.path.join(tmp, "cutentry")
+    os.makedirs(cut)
+    w = open(os.path.join(repo, "gate.swift")).read()
+    open(os.path.join(cut, "gate.swift"), "w").write(w + """
+public enum MyWatch: AccessLedger {
+    @StructureBuilder
+    public static var body: some Structure {
+            // VerifiedView<
+                Emp9001,
+                FinanceShare
+            >.self;
+    }
+}
+""")
+    raw = subprocess.run([os.path.join(HERE, "bin", "gate-judge"), "judge",
+                          os.path.join(cut, "gate.swift")], capture_output=True, text=True).stdout
+    S.append(("the reference judge holds on a commented-out form, as it should",
+              "holds" in raw))
+    c, r = run("status", cwd=cut)
+    orphan = [x for x in r["refusals"] if "nothing opens" in x["claim"]]
+    S.append(("and the guard says what the judge cannot: the claim is gone",
+              c == 1 and len(orphan) == 1 and orphan[0]["address"].startswith("gate.swift:")))
+    c, r = run("status", cwd=repo)
+    S.append(("a whole entry is not mistaken for a broken one",
+              not [x for x in r.get("refusals", []) if "nothing opens" in x["claim"]]))
 
     # ── findings: what is true of a repository, in sentences ──
     # The one producer behind the terminal, an audit page and the text of an

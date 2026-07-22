@@ -88,45 +88,12 @@ def manifest_guards():
 # the shared world alone. Privacy is the repository boundary, not a policy.
 
 PERSONAL_TEMPLATE = """\
-// Your personal world. It lives in your own git (~/.gate/me), never in the
-// shared repository: your colleagues' clones and CI do not have it, and the
-// bench judges it together with the shared world on every keystroke.
-//
-// Two things live here.
-//
-// 1. What the bench shows you. The journal reads these declarations: change
-//    Scope to AllRepo and the journal shows the whole repository, not just
-//    the world's own history.
-public enum WorldFiles {}
-public enum AllRepo {}
-public enum Anyone {}
-public enum Me {}
-
-public enum MyJournal {
-    public typealias Scope = WorldFiles
-    public typealias Author = Anyone
-}
-
-// 2. What you want to keep true. A claim written here is judged against the
-//    SHARED world: when somebody changes a fact your claim depends on, the
-//    judge names the line — to you, in your bench. They never see this file,
-//    and they cannot break it silently.
-//
-//    A claim is an entry in a ledger of your own, the same form the shared
-//    world uses. Uncomment it and name real people and documents from the
-//    world on the left. (A typealias is not a claim: it names a type, and
-//    the judge has nothing to check.)
-//
-//    public enum MyWatch: AccessLedger {
-//        @StructureBuilder
-//        public static var body: some Structure {
-//                VerifiedView<
-//                    Emp9001,
-//                    FinanceShare
-//                >.self;
-//        }
-//    }
+// Yours. It is judged together with the files beside it, and it is never in the
+// shared repository: your colleagues and CI do not have it. Write a claim you
+// want to keep true, and the judge names the line when somebody else's change
+// breaks it. Left as it is, it is not stored anywhere.
 """
+
 
 
 def personal_root():
@@ -151,24 +118,36 @@ def repo_key():
     return re.sub(r"[^A-Za-z0-9._-]", "_", os.path.basename(top)) + "-" + hashlib.sha1(top.encode()).hexdigest()[:8]
 
 
-def personal_file(create=False):
-    if not FACTS:
+def personal_path():
+    # where your own world would be, whether or not you have written in it
+    return (os.path.join(personal_root(), "worlds", repo_key(), "my.swift")
+            if FACTS else None)
+
+
+def personal_file():
+    # the file, only when it exists: an empty personal world is no file at all.
+    # Nothing is created for somebody who has not asked for anything.
+    p = personal_path()
+    return p if p and os.path.exists(p) else None
+
+
+def write_personal(text):
+    # writing is what brings it into being, and emptying it takes it away.
+    # Text still equal to the comment it started with means nobody wrote
+    # anything, so there is nothing to keep.
+    p = personal_path()
+    if not p:
+        return None
+    if not text.strip() or text.strip() == PERSONAL_TEMPLATE.strip():
+        if os.path.exists(p):
+            os.remove(p)
         return None
     root = personal_root()
-    p = os.path.join(root, "worlds", repo_key(), "my.swift")
-    if os.path.exists(p):
-        return p
-    if not create:
-        return None
     os.makedirs(os.path.dirname(p), exist_ok=True)
     if not os.path.isdir(os.path.join(root, ".git")):
         subprocess.run(["git", "init", "-q", root], capture_output=True)
     with open(p, "w") as f:
-        f.write(PERSONAL_TEMPLATE)
-    subprocess.run(["git", "add", "-A"], cwd=root, capture_output=True)
-    subprocess.run(["git", "-c", "user.email=you@localhost", "-c", "user.name=you",
-                    "-c", "commit.gpgsign=false", "commit", "-qm", f"personal world for {repo_key()}"],
-                   cwd=root, capture_output=True)
+        f.write(text)
     return p
 
 
@@ -182,11 +161,16 @@ def bench_files():
         return []
     base = os.path.dirname(os.path.abspath(FACTS))
     out = [(os.path.relpath(p, base), p) for p in world_files()]
-    pf = personal_file()
-    if pf:
+    pf = personal_path()
+    if pf:   # the slot is always offered; the file may not exist yet
         name = "my.swift" if not any(n == "my.swift" for n, _ in out) else "personal-my.swift"
         out.append((name, pf))
     return out
+
+
+def judged_paths():
+    # what the bench actually hands the judge: files that exist
+    return [p for _, p in bench_files() if os.path.exists(p)]
 
 
 def ensure_world():
@@ -1273,6 +1257,10 @@ def stdlib_guards():
     return bad
 
 
+def disk_sources():
+    return [(n, open(p).read()) for n, p in bench_files() if os.path.exists(p)]
+
+
 def duplicate_guards():
     # One name, one declaration. Two declarations of a name are two truths
     # about it, which is the thing this tool exists to make impossible — and
@@ -1281,10 +1269,14 @@ def duplicate_guards():
     # fast tier saying at a keystroke what the compiler would say at a build.
     # Only names at the top of a file: a typealias INSIDE a declaration is an
     # axis, and every person in a roster states the same ones.
+    return duplicate_guards_over(disk_sources())
+
+
+def duplicate_guards_over(sources):
     seen, bad = {}, []
-    for name, path in bench_files():
+    for name, text in sources:
         depth = 0
-        for i, line in enumerate(open(path).read().split("\n"), 1):
+        for i, line in enumerate(text.split("\n"), 1):
             code = line.split("//")[0]
             m = re.match(r"\s*(?:public\s+)?(enum|protocol|struct|typealias)\s+(\w+)", code)
             if m and depth == 0:
@@ -1297,6 +1289,44 @@ def duplicate_guards():
                 else:
                     seen[who] = here
             depth += code.count("{") - code.count("}")
+    return bad
+
+
+def entry_guards():
+    # An entry is a form and its arguments: `VerifiedView<\n A,\n B\n>.self;`.
+    # Comment out the head and the rest stays behind — arguments and a closing
+    # `>.self;` that belong to nothing. The judge is right that there is no
+    # claim there any more, and says holds; what it cannot say is that a claim
+    # you had is now gone, and that the file is no longer Swift. This does.
+    return entry_guards_over(disk_sources())
+
+
+def entry_guards_over(sources):
+    bad = []
+    for name, text in sources:
+        lines = text.split("\n")
+        in_body, depth, chunk, head_line = False, 0, [], None
+        for i, raw in enumerate(lines, 1):
+            code = raw.split("//")[0]
+            if not in_body:
+                if re.search(r"var\s+body\s*:\s*some\s+Structure\s*\{", code):
+                    in_body, depth, chunk, head_line = True, 1, [], None
+                continue
+            depth += code.count("{") - code.count("}")
+            if depth <= 0:
+                in_body = False
+                continue
+            if re.search(r"\b[A-Z]\w*\s*<", code):
+                head_line = i
+            if ">.self;" in code or re.match(r"\s*>\s*\.self\s*;", code):
+                if head_line is None and any(c.strip() for c in chunk):
+                    bad.append({"address": f"{name}:{i}",
+                                "claim": "an entry closes here that nothing opens: its form is "
+                                         "commented out or missing, so the claim it made is gone "
+                                         "and what is left is not Swift"})
+                chunk, head_line = [], None
+            else:
+                chunk.append(code)
     return bad
 
 
@@ -1814,8 +1844,7 @@ def cmd_serve(a):
 
     nums = [x for x in a if x.isdigit()]
     port = int(nums[0]) if nums else 4744
-    if FACTS:
-        personal_file(create=True)  # first run: your own world, in your own git
+
     open_it = "--no-open" not in a
 
     here = os.path.dirname(os.path.abspath(__file__))
@@ -1846,10 +1875,12 @@ def cmd_serve(a):
                 if u.path == "/codemirror.css":
                     return self.send_file(os.path.join(here, "codemirror.css"), "text/css")
                 if u.path == "/files":
-                    names = [n for n, _ in bench_files()]
-                    pf = personal_file()
+                    named = bench_files()
+                    names = [n for n, _ in named]
+                    pf = personal_path()
                     body = json.dumps({"files": names,
-                                       "personal": names[-1] if pf else None}).encode()
+                                       "personal": names[-1] if pf else None,
+                                       "personal_empty": bool(pf) and not os.path.exists(pf)}).encode()
                     self.send_response(200)
                     self.send_header("Content-Type", "application/json")
                     self.send_header("Cache-Control", "no-store")
@@ -1861,6 +1892,13 @@ def cmd_serve(a):
                     p = self.pick(q)
                     if not p:
                         return self.no_world()
+                    if not os.path.exists(p):   # yours, and nobody has written in it
+                        self.send_response(200)
+                        self.send_header("Content-Type", "text/plain; charset=utf-8")
+                        self.send_header("Cache-Control", "no-store")
+                        self.end_headers()
+                        self.wfile.write(PERSONAL_TEMPLATE.encode())
+                        return
                     return self.send_file(p, "text/plain; charset=utf-8")
                 if u.path == "/gitstatus" and not FACTS:
                     return self.no_world()
@@ -1920,8 +1958,13 @@ def cmd_serve(a):
             if u.path != "/world":
                 self.send_response(404); self.end_headers(); return
             n = int(self.headers.get("Content-Length", 0))
-            with open(self.pick(q), "wb") as f:
-                f.write(self.rfile.read(n))
+            text = self.rfile.read(n).decode()
+            p = self.pick(q)
+            if p == personal_path():
+                write_personal(text)     # empty means gone, not an empty file
+            else:
+                with open(p, "wb") as f:
+                    f.write(text.encode())
             self.send_response(200); self.end_headers()
 
         def do_POST(self):
@@ -1938,6 +1981,8 @@ def cmd_serve(a):
             d = tempfile.mkdtemp(prefix="gate-bench-")
             paths = []
             for name, p in bench_files():
+                if p != active and not os.path.exists(p):
+                    continue                      # a personal world nobody wrote
                 tp = os.path.join(d, name.replace(os.sep, "__"))
                 with open(tp, "w") as f:
                     f.write(text if p == active else open(p).read())
@@ -1953,7 +1998,7 @@ def cmd_serve(a):
                 by_file.setdefault(fname, []).append(ref)
             byname = dict(bench_files())
             sources = [(n, text if p == active else (open(p).read() if os.path.exists(p) else ""))
-                       for n, p in bench_files()]
+                       for n, p in bench_files() if p == active or os.path.exists(p)]
             if len(sources) > 1:
                 refusals = attribute_refusals(refusals, sources)
             else:
@@ -1961,6 +2006,11 @@ def cmd_serve(a):
                     real = byname.get(fname, os.path.join(base, fname))
                     src = text if real == active else (open(real).read() if os.path.exists(real) else "")
                     refine_addresses(src, group, fname)
+            # the same guards the CLI runs, over the text in the editor: the
+            # bench may not say holds where a hook would refuse
+            refusals += duplicate_guards_over(sources)
+            refusals += entry_guards_over(sources)
+            refusals += manifest_guards() + policy_guards() + stdlib_guards() + vendored_guards()
             times = re.findall(r"([\d.]+) ms", raw)
             body = json.dumps({"verdict": "holds" if not refusals else "refused",
                                "refusals": refusals,
@@ -2058,6 +2108,7 @@ def dispatch(cmd, rest):
         refusals += stdlib_guards()
         refusals += vendored_guards()
         refusals += duplicate_guards()
+        refusals += entry_guards()
         times = re.findall(r"([\d.]+) ms", raw)
         out = {"command": "status", "facts": files if len(files) > 1 else FACTS,
                "verdict": "holds" if not refusals else "refused", "refusals": refusals,
@@ -2082,14 +2133,20 @@ def dispatch(cmd, rest):
     if cmd == "my":
         # my — your personal world: where it is, and its verdict WITH the shared
         # world (the claims you keep, judged against facts other people own)
-        p = personal_file(create=True)
+        p = personal_path()
         if not p:
             raise SystemExit(json.dumps({"error": "no world here: cd into a repo with gate.swift"}))
-        named = bench_files()
+        if not os.path.exists(p):
+            return {"command": "my", "personal": p, "repo_key": repo_key(), "empty": True,
+                    "verdict": "holds", "refusals": [], "shared_repo_untouched": True,
+                    "next": "nobody has written in your world, so it is not stored anywhere. "
+                            "Open the bench and write a claim in my.swift: it is judged with the "
+                            "shared world and stays out of it. Clear it again and it is gone."}
+        named = [(n, q) for n, q in bench_files() if os.path.exists(q)]
         raw = subprocess.run([JUDGE, "judge", *[q for _, q in named]], capture_output=True, text=True).stdout
         refusals = [{"address": m.group(1), "claim": m.group(2).strip()}
                     for m in re.finditer(r"^\s+(\S+\.swift:\d+)\s+(.+)$", raw, re.M)]
-        refusals = attribute_refusals(refusals, [(n, open(p).read()) for n, p in named])
+        refusals = attribute_refusals(refusals, [(n, open(q).read()) for n, q in named])
         return {"command": "my", "personal": p, "repo_key": repo_key(),
                 "shared_repo_untouched": True,
                 "verdict": "holds" if not refusals else "refused", "refusals": refusals}
