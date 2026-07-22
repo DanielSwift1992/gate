@@ -27,9 +27,9 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .split:hover,.split.dragging{background:color-mix(in srgb,var(--action) 45%,transparent)}
 .line-flash{background:color-mix(in srgb,var(--action) 22%,transparent)}
 #journal-head .obs{display:block;font:500 9px/1.3 -apple-system,sans-serif;letter-spacing:.03em;text-transform:none;color:var(--muted);opacity:.75;margin-top:.2em}
-.commit{padding:.4em 1.1em;cursor:default;border-left:2px solid transparent}
+.commit{padding:.4em 1.1em;cursor:default}
 .commit:hover{background:var(--mist)}
-.commit.touches{cursor:pointer;border-left-color:color-mix(in srgb,var(--action) 55%,transparent)}
+.commit.touches{cursor:pointer}
 .commit .subj{display:flex;gap:.4em;align-items:baseline;font:12.5px/1.35 -apple-system,sans-serif;color:var(--ink);white-space:nowrap;overflow:hidden}
 .commit .subj{text-overflow:ellipsis}
 .commit .meta{display:flex;align-items:center;gap:.5em;margin-top:.2em;font:11px ui-monospace,Menlo,monospace;color:var(--muted)}
@@ -66,13 +66,13 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 #brand{padding:1.1em 1.1em .5em}
 #brand b{display:block;font:600 15px/1.2 -apple-system,sans-serif;letter-spacing:-.01em}
 #brand span{display:block;margin-top:.35em;font:11.5px/1.45 -apple-system,sans-serif;color:var(--muted)}
-/* an open commit is the header of what it opened: it keeps the surface and
-   the boundary is drawn, so the row you click to close it can be aimed at */
-.commit.open{background:var(--mist);border-bottom:1px solid var(--line)}
+/* an open commit and what it opened are one block, told apart by surface
+   alone: a caret says which way it goes, and nothing is drawn around it */
+.commit.open{background:var(--mist)}
 .commit.open .caret{transform:rotate(90deg)}
-.commit .caret{flex:none;width:8px;color:var(--muted);transition:transform .12s;font-style:normal}
+.commit .caret{flex:none;width:8px;color:var(--muted);transition:transform .12s;font-style:normal;opacity:.6}
 .commit .caret::before{content:"\203A"}
-.cdiff{padding:.35em 0 .55em;background:var(--paper);border-left:2px solid color-mix(in srgb,var(--action) 55%,transparent);border-bottom:1px solid var(--line)}
+.cdiff{padding:.15em 0 .7em;background:var(--mist)}
 .dwait{padding:.3em 1.1em;font:11px -apple-system,sans-serif;color:var(--muted)}
 .dfile{padding:.4em 1.1em .25em;font:10.5px ui-monospace,Menlo,monospace;color:var(--muted)}
 .dfile .dnote{margin-left:.5em;font:10.5px -apple-system,sans-serif}
