@@ -3,7 +3,7 @@
 gate is MIT licensed (see LICENSE). Everything it carries is too:
 
 - **bin/gate-judge** — built from the verification-is-identification corpus
-  (MIT, © Daniil Strizov), pinned by commit and reproducible with
+  (MIT, © Daniil Strizhov), pinned by commit and reproducible with
   `bin/build-judge.sh <pin>`. `.gate/README.md` states its sha256 when the
   tool is vendored, and `gate status` refuses a judge that is not the one
   stated.
