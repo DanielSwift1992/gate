@@ -183,6 +183,25 @@ library Python and the bench is one file of HTML — small enough that reading
 them is a reasonable afternoon, which is the point: a tool that checks by
 reading should be checkable by reading.
 
+## Where it plugs in
+
+gate adds no process of its own. It sits inside the four you already have:
+
+- **Commit** — `gate init` wires a pre-commit hook, so a lie cannot be
+  committed. It names the git setting it changed and how to undo it.
+- **CI** — a red verdict exits non-zero, so no wrapper is needed:
+
+  ```yaml
+  - run: ./gatew status          # or: gate status
+  ```
+
+- **Review** — put `gate.swift` and `gate.policy.swift` in `CODEOWNERS`,
+  and changing a fact or who may merge requires the review your host
+  already enforces. No bot, no token, no permissions of ours.
+- **Editor** — refusals are `file:line · claim`, the shape editors already
+  parse, so a VS Code problem matcher underlines them with no extension of
+  ours to install.
+
 ## Layout and ownership
 
 - `gate.swift` is the source. Declare a multi-file layout in
