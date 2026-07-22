@@ -40,12 +40,22 @@ the verbs below.
 ## Quick start
 
 ```sh
+gate demo && cd gate-demo        # a world of people and grants, in one command
+gate serve                       # the bench opens: break a fact, watch the judge
+```
+
+Or start from your own rows:
+
+```sh
 git init myworld && cd myworld
 gate init .                      # skeleton; the pre-commit hook wires itself
 cp ~/exports/people.csv tables/  # your own data, any source
 cp ~/exports/grants.csv tables/
 gate status                      # first print + first verdict, in ms
 ```
+
+`gate serve` in a repository that has no world yet still opens: the journal
+reads the repository itself, with nothing to translate.
 
 From then on:
 
@@ -62,7 +72,7 @@ gate survey                            # read-only: unwritten links mined from
 
 The porcelain is deliberately git-shaped: `init · status/fsck · log · check ·
 diff · apply · import/export · verify · guard · library · survey · serve ·
-report · stdlib · my · --version`. A red verdict exits non-zero, so hooks and
+report · stdlib · my · demo · --version`. A red verdict exits non-zero, so hooks and
 CI need no wrappers.
 
 Every command ends with the one step that comes next, chosen by what your
@@ -182,7 +192,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 58 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 62 end-to-end checks, the definition of green
 ```
 
 ## Status

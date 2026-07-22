@@ -4,7 +4,7 @@
 # a refusal names the line. Spec: docs/PRODUCT.md. Human output by default,
 # --json for machines. Dry-run by default: apply writes only on holds.
 
-import json, os, re, subprocess, sys, tempfile, time
+import json, os, re, shutil, subprocess, sys, tempfile, time
 
 # GATE_CORPUS: optional checkout of the theory corpus — needed only for the
 # compiler-path verbs (check administer|delete, apply into the corpus world).
@@ -176,7 +176,10 @@ def bench_files():
     # [(shown name, real path)] — the shared world plus your personal world.
     # The CLI's status keeps judging the shared world alone, so a hook and CI
     # behave the same for everyone; the personal world is judged in the bench,
-    # where it is yours to see.
+    # where it is yours to see. A repo with no world yet has none of these,
+    # and the bench still opens: the journal needs no translation.
+    if not FACTS:
+        return []
     base = os.path.dirname(os.path.abspath(FACTS))
     out = [(os.path.relpath(p, base), p) for p in world_files()]
     pf = personal_file()
@@ -1071,6 +1074,40 @@ def commit_change(sha, path=None):
             "date": head[3], "subject": head[4], "files": files}
 
 
+def cmd_demo(a):
+    # demo [dir] — a world to look at in thirty seconds: real people, real
+    # grants, a hook, and a lie already planted so the first thing anybody
+    # sees is a refusal with an address. Nothing here talks to a network.
+    root = os.path.abspath(a[0] if a else "gate-demo")
+    os.makedirs(os.path.join(root, "tables"), exist_ok=True)
+    here = os.path.dirname(os.path.abspath(__file__))
+    for f in ("people.csv", "grants.csv"):
+        src = os.path.join(here, "demo", f)
+        if os.path.exists(src):
+            shutil.copy(src, os.path.join(root, "tables", f))
+    if not os.path.isdir(os.path.join(root, ".git")):
+        subprocess.run(["git", "init", "-q", root], capture_output=True)
+    world = os.path.join(root, "gate.swift")
+    cmd_import([os.path.join(root, "tables", "people.csv"),
+                os.path.join(root, "tables", "grants.csv"), "-o", world])
+    with open(os.path.join(root, "gate.policy.swift"), "w") as f:
+        f.write('// who someone is, and what an action demands — facts, beside the world\n'
+                'public enum MailYou: Identity {\n    public typealias Person = Emp9000\n}\n'
+                'extension MailYou { public static var typeName: String { "you@example.com" } }\n\n'
+                'public enum MergePolicy {\n    public typealias Requires = Manager\n}\n')
+    subprocess.run(["git", "add", "-A"], cwd=root, capture_output=True)
+    subprocess.run(["git", "-c", "user.email=you@example.com", "-c", "user.name=You",
+                    "-c", "commit.gpgsign=false", "commit", "-qm", "a world of people and grants"],
+                   cwd=root, capture_output=True)
+    return {"command": "demo", "root": root,
+            "next": f"cd {os.path.relpath(root)} && gate serve — then break a fact and watch",
+            "try": ["gate status — the world holds, in milliseconds",
+                    "gate check view Emp9001 EngineeringShare — a question, answered by a refusal",
+                    "gate apply revoke Emp9002 FinanceShare — an edit that is judged before it lands",
+                    "open gate.swift and change one Home to Engineering — the judge names the line"],
+            "mutates": True}
+
+
 def cmd_survey(a):
     # survey [N] — the t0 gesture: a read-only map of the repo with NO
     # translation. Unwritten links from its own history (co-change — exact
@@ -1390,8 +1427,11 @@ def cmd_serve(a):
     from http.server import BaseHTTPRequestHandler, HTTPServer
     from urllib.parse import urlparse, parse_qs
 
-    port = int(a[0]) if a else 4744
-    personal_file(create=True)  # first run: your own world, in your own git
+    nums = [x for x in a if x.isdigit()]
+    port = int(nums[0]) if nums else 4744
+    if FACTS:
+        personal_file(create=True)  # first run: your own world, in your own git
+    open_it = "--no-open" not in a
 
     here = os.path.dirname(os.path.abspath(__file__))
     playground = os.path.dirname(os.path.dirname(here))  # typed-playground root
@@ -1433,7 +1473,12 @@ def cmd_serve(a):
                     return
                 if u.path == "/world":
                     # the UI obeys the declared layout: ?f= names a file FROM the list
-                    return self.send_file(self.pick(q), "text/plain; charset=utf-8")
+                    p = self.pick(q)
+                    if not p:
+                        return self.no_world()
+                    return self.send_file(p, "text/plain; charset=utf-8")
+                if u.path == "/gitstatus" and not FACTS:
+                    return self.no_world()
                 if u.path == "/gitstatus":
                     # the honest state: a write lands in the working copy; git
                     # carries the history. This says whether the file is
@@ -1476,6 +1521,11 @@ def cmd_serve(a):
             # only the judged list is servable or writable: the manifest's files
             # plus your personal world
             return dict(bench_files()).get(q.get("f", ""), FACTS)
+
+        def no_world(self):
+            self.send_response(404)
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
 
         def do_PUT(self):
             # the single writing handle: world files — they ARE the source
@@ -1541,6 +1591,12 @@ def cmd_serve(a):
 
     print(json.dumps({"command": "serve", "url": f"http://127.0.0.1:{port}", "routes": ["/status", "/log", "/show?hash=&f=", "/check/view?who=&doc=", "/diff/transfer?who=&to="], "mutating_routes": "none, by design"}))
     sys.stdout.flush()
+    if open_it:   # the bench is the point of serve; the loopback, never a network
+        try:
+            import webbrowser, threading
+            threading.Timer(0.4, webbrowser.open, [f"http://127.0.0.1:{port}/ui"]).start()
+        except Exception:
+            pass
     HTTPServer(("127.0.0.1", port), H).serve_forever()
 
 
@@ -1632,6 +1688,8 @@ def dispatch(cmd, rest):
         return cmd_library(rest)
     if cmd == "survey":
         return cmd_survey(rest)
+    if cmd == "demo":
+        return cmd_demo(rest)
     if cmd == "my":
         # my — your personal world: where it is, and its verdict WITH the shared
         # world (the claims you keep, judged against facts other people own)
@@ -1703,6 +1761,11 @@ def humanize(out):
             lines.append(f"  world:  {w}")
         for l in out.get("legacy_says", []):
             lines.append(f"  legacy: {l}")
+    elif cmd == "demo":
+        lines.append(f"demo: a world in {out['root']}")
+        lines.append(f"  next: {out['next']}")
+        for t in out["try"]:
+            lines.append(f"    {t}")
     elif cmd == "init":
         lines.append(f"init: {out['root']}" + (f" · created {len(out['created'])} files" if out["created"] else " · already there"))
         if out.get("hooks"):
@@ -1713,7 +1776,8 @@ def humanize(out):
         lines.append(f"export: {out['people']} people, {out['grants']} grants → {', '.join(out['wrote'])}")
     elif cmd == "log":
         d = out.get("default_branch") or "?"
-        what = "the world's history" if out.get("scope") == "world" else "the repository"
+        what = ("the world's history" if out.get("scope") == "world" and out.get("world_files")
+                else "the repository")
         lines.append(f"log: {len(out['commits'])} commits · {what} · observed, not judged · closed = reachable from {d}")
         for c in out["commits"]:
             st = "?" if c["closed"] is None else ("closed" if c["closed"] else "open")

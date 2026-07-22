@@ -295,6 +295,24 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     S.append(("a personal world cannot bend the team gate",
               r.get("author", "").endswith("Emp9001") and r["verdict"] == "refused"))
 
+    # ── the first thirty seconds: a demo world, and a bench that opens with none ──
+    d = os.path.join(tmp, "demoworld")
+    c, r = run("demo", d)
+    S.append(("demo builds a world that holds, with a policy and a history",
+              os.path.exists(os.path.join(d, "gate.swift"))
+              and os.path.exists(os.path.join(d, "gate.policy.swift"))))
+    c, r = run("status", cwd=d)
+    S.append(("the demo world holds on the first look", c == 0 and r["verdict"] == "holds"))
+    c, r = run("check", "view", "Emp9001", "EngineeringShare", cwd=d)
+    S.append(("and the invitation in it is real: the refusal names both",
+              c == 1 and r["refusals"]))
+    empty = os.path.join(tmp, "noworld")
+    os.makedirs(empty)
+    subprocess.run(["git", "init", "-q", "-b", "main", empty])
+    c, r = run("log", cwd=empty)
+    S.append(("a repo with no world still has a journal, and says so honestly",
+              r.get("scope") == "world" and r.get("world_files") == []))
+
     # ── the ladder is the navigation: one next step, never the whole list ──
     lad = os.path.join(tmp, "ladder")
     os.makedirs(os.path.join(lad, "tables"))
