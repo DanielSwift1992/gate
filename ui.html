@@ -95,6 +95,8 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .CodeMirror-linenumber{color:var(--muted)}
 .cm-keyword{color:#9B2393;font-weight:600}.cm-string{color:#C41A16}.cm-comment{color:#5D6C79}
 .cm-attribute{color:#947100}.cm-localtype{color:var(--localtype)}.cm-knownname{color:var(--knownname)}
+.CodeMirror.jumpable .cm-localtype,.CodeMirror.jumpable .cm-knownname{text-decoration:underline;text-underline-offset:2px}
+.CodeMirror.jumpable .CodeMirror-line,.CodeMirror.jumpable .CodeMirror-lines{cursor:pointer}
 .cm-badname{text-decoration:underline wavy var(--bad);text-underline-offset:3px}.cm-ghost{color:#a6a6ab}
 .line-flag-bad{background:color-mix(in srgb,var(--bad) 6%,transparent)}
 .gutter-flag-bad .CodeMirror-linenumber{color:var(--bad);font-weight:700}
@@ -235,16 +237,27 @@ const cm = CodeMirror(document.getElementById("editor-host"), {
 });
 const editor = { get value() { return cm.getValue(); }, set value(n) { cm.setValue(n); } };
 
-// alt-click a name to open the line that declares it, wherever it lives
+// ⌘-click (Ctrl on a PC) opens the line that declares a name: the binding
+// every editor uses for this. Alt is left alone — CodeMirror wants it for
+// rectangular selection, which is why it turned the pointer into a crosshair.
+// While the key is down, names underline and the pointer says they can be
+// clicked, so the affordance is visible before the click.
+const jumpKey = (e) => (MAC ? e.metaKey : e.ctrlKey);
 cm.getWrapperElement().addEventListener("mousedown", (e) => {
-    if (!e.altKey) return;
-    const pos = cm.coordsChar({ left: e.clientX, top: e.clientY });
-    const tok = cm.getTokenAt(pos, true);
+    if (!jumpKey(e)) return;
+    const tok = cm.getTokenAt(cm.coordsChar({ left: e.clientX, top: e.clientY }), true);
     const name = (tok.string || "").trim();
     if (!/^[A-Z]\w*$/.test(name)) return;
     e.preventDefault();
     jumpTo(name);
 });
+{
+    const wrap = cm.getWrapperElement();
+    const hold = (e) => wrap.classList.toggle("jumpable", jumpKey(e));
+    document.addEventListener("keydown", hold);
+    document.addEventListener("keyup", hold);
+    window.addEventListener("blur", () => wrap.classList.remove("jumpable"));
+}
 let files = [], active = "", personalFile = null;
 let badFiles = new Set(), siblingNames = new Set(), layoutDecls = new Map(), declFile = new Map();
 let lastParsed = null, lastRefusals = [], widgets = [], tableSort = null;
@@ -400,7 +413,7 @@ const KEYS = [
     [MOD + " Z", "Undo · " + MOD + " \u21e7 Z redo"],
     [MOD + " F", "Find in this file: every line is on the page, so the browser's own find works"],
     ["Tab", "Indent · \u21e7 Tab outdent"],
-    ["Alt-click", "Open the line that declares the name under the cursor"],
+    [MOD + " click", "Open the line that declares the name you click"],
 ];
 {
     // built on first use: everything it needs is defined by then
