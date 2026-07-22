@@ -1,0 +1,6 @@
+# Who owns what here. Two defects are planted on purpose: see the README.
+*                     @core-team
+/docs/                @docs-team
+/src/parser.py        @alice
+/src/renderer.py      @bob @alice
+/legacy/oldmodule.py  @carol

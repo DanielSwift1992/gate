@@ -115,10 +115,14 @@ head. A refusal points at its address instead.
   breaking commit found automatically), a merge guard (textually clean,
   semantically broken merges get named), and a free audit journal
   (`git log` over grants, signed commits as signed grants).
-- **Domain worlds.** `gate import rbac` reads `kubectl get
-  roles,clusterroles,rolebindings -A -o json` and judges the Kubernetes
-  namespace invariant itself: a stale roleRef and a cross-namespace
-  binding are named by their k8s source in milliseconds.
+- **One question, three doorways.** Grants, Kubernetes RBAC and CODEOWNERS
+  are the same question — who may do what, where — so they share one
+  crystal and differ only in the importer. `gate import rbac` judges the
+  namespace invariant (a stale roleRef and a cross-namespace binding, named
+  by their k8s source). `gate import codeowners` judges the thing CODEOWNERS
+  itself cannot say: state who may own which zone, and a rule reaching
+  outside it is refused at the line of your own CODEOWNERS, while a pattern
+  no file matches is named beside it.
 - **A workbench, not an IDE.** `gate serve` + `/ui` opens a local bench:
   the world on the left, verdict and live tables on the right, judged on
   every keystroke. It obeys your declared file layout and judges across
@@ -252,7 +256,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 73 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 79 end-to-end checks, the definition of green
 ```
 
 ## Status

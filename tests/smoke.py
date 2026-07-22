@@ -131,6 +131,49 @@ def main():
     c, r = run("import", "rbac", cp, "-o", os.path.join(tmp, "rbac-clean-gate.swift"))
     S.append(("rbac: clean cluster holds + canon handshake", c == 0 and r["verdict"] == "holds" and r["canon_handshake"]))
 
+    # ── ownership: a repository's own CODEOWNERS, judged ──
+    # What CODEOWNERS cannot say is who may own what; with that stated, a rule
+    # reaching outside its owner's zone is refused by the line it sits on.
+    co = os.path.join(tmp, "co")
+    os.makedirs(os.path.join(co, "src"))
+    os.makedirs(os.path.join(co, "docs"))
+    for p in ("src/parser.py", "src/renderer.py", "docs/guide.md"):
+        open(os.path.join(co, p), "w").write("x\n")
+    c, r = run("import", "codeowners", os.path.join(DEMO, "CODEOWNERS"),
+               "--tree", co, "--policy", os.path.join(DEMO, "owners.csv"),
+               "-o", os.path.join(tmp, "co-gate.swift"))
+    judged = [x for x in r["refusals"] if "share one zone" in x["claim"]]
+    ghosts = [x for x in r["refusals"] if "ghost path" in x["claim"]]
+    S.append(("codeowners: a rule outside its owner's zone is refused, by their line",
+              c == 1 and judged and all("CODEOWNERS:" in x["source"] for x in judged)))
+    S.append(("codeowners: a pattern the tree has no file for is named",
+              len(ghosts) == 1 and ghosts[0]["address"].startswith("CODEOWNERS:")))
+    # and the refusal is about the disagreement, not a constant: state that
+    # alice keeps src, and the very same CODEOWNERS holds
+    alt = os.path.join(tmp, "owners-alt.csv")
+    open(alt, "w").write(open(os.path.join(DEMO, "owners.csv")).read()
+                         .replace("alice,docs", "alice,src"))
+    c, r = run("import", "codeowners", os.path.join(DEMO, "CODEOWNERS"),
+               "--policy", alt, "-o", os.path.join(tmp, "co-alt.swift"))
+    S.append(("codeowners: restate the zone and the same file holds",
+              not [x for x in r["refusals"] if "share one zone" in x["claim"]]))
+    # without a policy every rule is its own authority: say so, do not pretend
+    c, r = run("import", "codeowners", os.path.join(DEMO, "CODEOWNERS"),
+               "-o", os.path.join(tmp, "co-bare.swift"))
+    S.append(("codeowners without a policy claims no judgement it did not make",
+              not [x for x in r["refusals"] if "share one zone" in x["claim"]]
+              and "trivially" in r["note"]))
+    # the same crystal carries it: the world is written in genre-grants
+    world = open(os.path.join(tmp, "co-gate.swift")).read()
+    S.append(("ownership rides the access crystal, not a genre of its own",
+              "Owns<" in world and "public protocol Keeper" in world))
+    # a human running an importer gets lines, not a traceback
+    plain = subprocess.run([sys.executable, GATE, "import", "rbac",
+                            os.path.join(DEMO, "rbac.json"), "-o", os.path.join(tmp, "r2.swift")],
+                           capture_output=True, text=True)
+    S.append(("an importer speaks to a human without --json",
+              "Traceback" not in plain.stderr and "refused" in plain.stdout))
+
     # ── the journal view: git's own history, projected. Observed, not judged;
     # open/closed is reachability from the default branch, person via identities.
     jrepo = os.path.join(tmp, "journal")

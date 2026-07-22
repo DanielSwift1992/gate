@@ -1416,6 +1416,129 @@ def cmd_import_rbac(a):
     }
 
 
+CODEOWNERS_HEADER = """// printed by gate import codeowners — who owns what in this repository,
+// written in the access crystal (`gate stdlib show genre-grants`). A zone is
+// a top of the tree, a room is a pattern, and an owner keeps a zone: owning
+// is entry at the warden's threshold, judged like any other claim.
+//
+"""
+
+
+def codeowners_zone(pattern):
+    # the zone a pattern belongs to: its first real segment, or the root
+    p = pattern.strip().lstrip("/")
+    if not p or p.startswith("*"):
+        return "Root"
+    return sanitize(p.split("/")[0]) or "Root"
+
+
+def read_codeowners(path):
+    # every rule, with the line it stands on: an address in THEIR file
+    rules = []
+    for n, raw in enumerate(open(path), 1):
+        line = raw.split("#")[0].strip()
+        if not line:
+            continue
+        parts = line.split()
+        owners = [p for p in parts[1:] if p.startswith("@") or "@" in p]
+        if owners:
+            rules.append({"line": n, "pattern": parts[0], "owners": owners})
+    return rules
+
+
+def cmd_import_codeowners(a):
+    # import codeowners CODEOWNERS [--tree DIR] [-o out.swift] — a repository's
+    # own ownership, as a judged world. What CODEOWNERS cannot say, this can:
+    # an owner nobody declares is refused, and a pattern matching no file in
+    # the tree is named by the line it sits on.
+    src = a[0]
+    out_path = a[a.index("-o") + 1] if "-o" in a else "codeowners-gate.swift"
+    tree = a[a.index("--tree") + 1] if "--tree" in a else None
+    # WHO MAY OWN WHAT is the thing CODEOWNERS cannot say: without it, every
+    # rule is its own authority and the gate has nothing to hold. A policy —
+    # owner,zone — makes each rule a claim against a stated zone, and a rule
+    # reaching outside it is refused by the line it sits on.
+    import csv as _csv
+    policy = {}
+    if "--policy" in a:
+        for row in _csv.DictReader(open(a[a.index("--policy") + 1])):
+            policy.setdefault(row["owner"].lstrip("@"), row["zone"])
+    rules = read_codeowners(src)
+    zones = sorted({codeowners_zone(r["pattern"]) for r in rules})
+    lines = [CODEOWNERS_HEADER + STDLIB["genre-grants"], ""]
+    for z in sorted(set(zones) | {sanitize(v) for v in policy.values()}):
+        lines.append(f"public enum Zone_{z}: Realm {{}}")
+    lines.append("")
+    keepers, srcmap = {}, {}
+    for i, r in enumerate(rules):
+        zone = codeowners_zone(r["pattern"])
+        room = f"Path_{i}_{sanitize(r['pattern'])[:40]}"
+        lines.append(f"public enum {room}: Room {{")
+        lines.append(f"    public typealias Place = Zone_{zone}")
+        lines.append("}")
+        for owner in r["owners"]:
+            plain = owner.lstrip("@")
+            kept = policy.get(plain)          # the zone this owner may keep
+            keeper = (f"Owner_{sanitize(plain)}" if kept
+                      else f"Owner_{sanitize(plain)}_in_{zone}")
+            if keeper not in keepers:
+                keepers[keeper] = (owner, kept or zone)
+                lines.append(f"public enum {keeper}: Keeper {{")
+                lines.append(f"    public typealias Post = Zone_{sanitize(kept) if kept else zone}")
+                lines.append("    public typealias Key = WardenKey")
+                lines.append("}")
+            cert = f"Owns_{i}_{sanitize(owner.lstrip('@'))}"
+            lines.append(f"public typealias {cert} = Owns<{keeper}, {room}>")
+            srcmap[cert] = f"{os.path.basename(src)}:{r['line']} · {r['pattern']} {owner}"
+    world = "\n".join(lines) + "\n"
+    with open(out_path, "w") as f:
+        f.write(world)
+    t0 = time.time()
+    outp = subprocess.run([JUDGE, "judge", "where", out_path], capture_output=True, text=True).stdout
+    ms = round((time.time() - t0) * 1000, 1)
+    refusals = []
+    for m in re.finditer(r"^✗ '(\w+)[^']*' requires the types '[^']*' \(aka '([^']+)'\) and '[^']*' \(aka '([^']+)'\) be equivalent", outp, re.M):
+        cert, left, right = m.groups()
+        if cert in srcmap:
+            refusals.append({"certificate": cert, "source": srcmap[cert],
+                             "claim": f"the owner keeps {left}, the path lives in {right}: an owner and the path they own must share one zone"})
+    # a pattern matching no file in the tree: CODEOWNERS says it, the tree does not
+    ghosts = []
+    if tree:
+        import fnmatch
+        paths = []
+        for root, dirs, files in os.walk(tree):
+            dirs[:] = [d for d in dirs if d != ".git"]
+            for f in files:
+                paths.append(os.path.relpath(os.path.join(root, f), tree))
+        for r in rules:
+            pat = r["pattern"].strip("/")
+            hit = any(fnmatch.fnmatch(p, pat) or fnmatch.fnmatch(p, pat + "/*")
+                      or p.startswith(pat + "/") or fnmatch.fnmatch(os.path.basename(p), pat)
+                      for p in paths)
+            if not hit:
+                ghosts.append({"address": f"{os.path.basename(src)}:{r['line']}",
+                               "claim": f"a ghost path: CODEOWNERS names `{r['pattern']}`, and the tree has no such file"})
+    return {
+        "command": "import codeowners",
+        "world": out_path,
+        "zones": len(zones),
+        "paths": len(rules),
+        "owners": len(keepers),
+        "policy": (f"{len(policy)} owners have a stated zone" if policy else None),
+        "verdict": "refused" if (refusals or ghosts) else "holds",
+        "refusals": refusals + ghosts,
+        "judge_ms": ms,
+        "canon_handshake": "canon v2" in outp,
+        "note": ("ownership is the warden's threshold: the compiler holds the key's class "
+                 "when the world is built as Swift, and this run holds the zone equalities"
+                 if policy else
+                 "no ownership policy given (--policy owner,zone): every rule is its own "
+                 "authority, so the equalities hold trivially. The ghost paths above are "
+                 "read from the tree, not judged."),
+    }
+
+
 def cmd_init(a):
     vendor = "--vendor" in a
     a = [x for x in a if x != "--vendor"]
@@ -1743,6 +1866,8 @@ def dispatch(cmd, rest):
         return cmd_change(rest + ["--apply"])
     if cmd == "change":
         return cmd_change(rest)
+    if cmd == "import" and rest and rest[0] == "codeowners":
+        return cmd_import_codeowners(rest[1:])
     if cmd == "import" and rest and rest[0] == "rbac":
         return cmd_import_rbac(rest[1:])
     if cmd == "import":
@@ -1854,7 +1979,10 @@ def humanize(out):
         lines.append(f"{cmd or 'verdict'}: {head}" + (" · " + " · ".join(tail) if tail else ""))
         for r in out.get("refusals", []):
             src = f"  ({r['source']})" if r.get("source") else ""
-            lines.append(f"  {r['address']} · {r['claim']}{src}")
+            # an address, or the certificate that carries one: an importer names
+            # the claim, the source line names where it came from
+            where = r.get("address") or r.get("certificate") or "?"
+            lines.append(f"  {where} · {r['claim']}{src}")
         for s in out.get("compiler_says", []):
             lines.append(f"  compiler: {s}")
         if out.get("note"):
