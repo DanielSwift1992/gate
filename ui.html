@@ -190,8 +190,7 @@ const keywordSet = new Set(["public","enum","protocol","typealias","extension","
 let localNames = new Set(), unresolved = new Set();
 let jumpable = new Set();      // names with a home: underlined, and clickable
 let vocabulary = {};           // name -> the shelf module that declares it
-let conformers = {}, axisOf = {}, protoAxes = {};   // what conforms to what,
-                                    // what an axis takes, and what each kind has
+let conformers = {}, axisOf = {}, protoAxes = {}, gates = {};
 
 CodeMirror.defineMode("gate-swift", () => ({
     token: (stream) => {
@@ -434,17 +433,31 @@ let journalWorld = [];
 let compItems = [], compChosen = 0, compFrom = null;
 const compEl = document.getElementById("completion");
 
-// what declaration the cursor stands in, and what it conforms to
-function hostAt(lineNo) {
-    for (let i = lineNo; i >= 0; i--) {
-        const m = /^\s*(?:public\s+)?enum\s+(\w+)\s*:\s*([\w,\s]+?)\s*\{/.exec(cm.getLine(i) || "");
-        if (m) return { name: m[1], conformances: m[2].split(",").map(x => x.trim()).filter(Boolean) };
-        if (/^\}/.test(cm.getLine(i) || "")) return null;
+// ── WHERE THE CURSOR IS, IN THE GRAMMAR ──
+// A world has four places, and each one allows a different thing. Everything
+// the bench offers comes from this one reading; nothing is a special case
+// added because somebody noticed it missing.
+//
+//   top level          a declaration may begin, and after `:` its protocols
+//   inside one         the axes it owes, and the values each of them takes
+//   inside a body      the gates that may be claimed, and their arguments
+//   after a dot        the axes of whatever stands to the left
+function placeAt(cur) {
+    let host = null, inBody = false, depth = 0;
+    for (let i = cur.line; i >= 0; i--) {
+        const code = (cm.getLine(i) || "").split("//")[0];
+        if (i < cur.line) depth += (code.match(/\}/g) || []).length - (code.match(/\{/g) || []).length;
+        if (/var\s+body\s*:\s*some\s+Structure\s*\{/.test(code) && depth <= 0) inBody = true;
+        const m = /^\s*(?:public\s+)?enum\s+(\w+)\s*:\s*([\w,\s]+?)\s*\{/.exec(code);
+        if (m && depth <= 0) {
+            host = { name: m[1], conformances: m[2].split(",").map(x => x.trim()).filter(Boolean) };
+            break;
+        }
+        if (/^\}/.test(code) && i < cur.line) break;     // a closed declaration above
     }
-    return null;
+    return { host, inBody };
 }
 
-// the axes this declaration owes, and of what kind, from what it conforms to
 function axesOfHost(host) {
     const out = {};
     for (const proto of (host ? host.conformances : []))
@@ -452,41 +465,91 @@ function axesOfHost(host) {
     return out;
 }
 
-// EVERY way to fill a hole of a given kind: an atom of that kind, or a path
-// through an axis this declaration already has whose own axis is of that kind
-// — which is how `Sex = Given.Sex` comes to be the answer.
-function fillersFor(kind, host) {
+// every way to reach a kind: an atom of it, a declaration of it, or a path
+// through an axis this record already has — `Sex = Given.Sex`
+function fillersFor(kind, host, slotName) {
     if (!kind) return null;
-    const out = [];
-    for (const n of (conformers[kind] || [])) out.push(n);
+    const out = [...(conformers[kind] || [])];
     for (const [name, d] of layoutDecls)
         if ((d.conformances || []).includes(kind)) out.push(name);
-    const mine = axesOfHost(host);
-    for (const [axis, axisKind] of Object.entries(mine))
+    for (const [axis, axisKind] of Object.entries(axesOfHost(host))) {
+        if (axis === slotName) continue;         // a slot cannot be filled by itself
         for (const [inner, innerKind] of Object.entries(protoAxes[axisKind] || {}))
             if (innerKind === kind) out.push(axis + "." + inner);
+    }
     return out.length ? [...new Set(out)] : null;
 }
 
-// after a dot: the axes of whatever stands to the left, narrowed to the kind
-// the slot takes when we know it
 function afterDot(before, host, wanted) {
     const m = /(\w+)\.(\w*)$/.exec(before);
     if (!m) return null;
-    const mine = axesOfHost(host);
-    const kind = mine[m[1]] || axisOf[m[1]];
-    const inner = protoAxes[kind] || {};
-    const out = Object.entries(inner)
-        .filter(([, k]) => !wanted || k === wanted)
-        .map(([a]) => a);
-    return out.length ? { items: out, from: m[2].length } : null;
+    const kind = axesOfHost(host)[m[1]] || axisOf[m[1]];
+    const out = Object.entries(protoAxes[kind] || {})
+        .filter(([, k]) => !wanted || k === wanted).map(([a]) => a);
+    return out.length ? { items: out, back: m[2].length } : null;
 }
 
-function slotKind(line, upto, host) {
-    const m = /typealias\s+(\w+)\s*=\s*[\w.]*$/.exec(line.slice(0, upto));
-    if (!m) return null;
-    const mine = axesOfHost(host);
-    return mine[m[1]] || axisOf[m[1]] || null;
+// WHAT MAY BE WRITTEN HERE — the whole of it, in one place
+function allowedAt(cur) {
+    const line = cm.getLine(cur.line) || "";
+    const before = line.slice(0, cur.ch);
+    const { host, inBody } = placeAt(cur);
+
+    // an axis slot: `typealias Sex = `
+    const slot = /typealias\s+(\w+)\s*=\s*[\w.]*$/.exec(before);
+    const wanted = slot ? (axesOfHost(host)[slot[1]] || axisOf[slot[1]] || null) : null;
+
+    const dotted = afterDot(before, host, wanted);
+    if (dotted) return { items: dotted.items, back: dotted.back,
+                         kind: wanted ? "this axis takes " + wanted : "what stands here", closed: true };
+
+    if (slot) {
+        const f = fillersFor(wanted, host, slot[1]);
+        return f ? { items: f, kind: "this axis takes " + wanted, closed: true } : null;
+    }
+
+    // the head of a declaration: `public enum Emp9007: `
+    const head = /^\s*(?:public\s+)?enum\s+\w+\s*:\s*([\w,\s]*)$/.exec(before);
+    if (head) {
+        const already = new Set(head[1].split(",").map(x => x.trim()).filter(Boolean));
+        const protos = Object.keys(protoAxes).filter(p => !already.has(p));
+        return protos.length ? { items: protos, kind: "what this record is", closed: true } : null;
+    }
+
+    // inside a body: the gates that may be claimed here
+    if (inBody && /^\s*\w*$/.test(before)) {
+        const forms = Object.keys(gates);
+        return forms.length ? { items: forms, kind: "a claim this body may hold", closed: true } : null;
+    }
+    // an argument of a gate: `VerifiedView<\n  Emp9001,\n  ` — the kind is stated
+    if (inBody) {
+        for (let i = cur.line; i >= 0 && i > cur.line - 6; i--) {
+            const m = /(\w+)\s*<\s*$/.exec((cm.getLine(i) || "").split("//")[0]);
+            if (m && gates[m[1]]) {
+                const kinds = gates[m[1]];
+                const nth = cur.line - i - 1;
+                const k = kinds[Math.min(nth, kinds.length - 1)];
+                const f = fillersFor(k, host);
+                return f ? { items: f, kind: "this argument takes " + k, closed: true } : null;
+            }
+        }
+    }
+
+    // inside a declaration, at the start of a line: the axes it still owes
+    if (host && !inBody && /^\s*(?:p(?:u(?:b(?:l(?:i(?:c)?)?)?)?)?)?$/.test(before)) {
+        const stated = new Set();
+        for (let i = cur.line - 1; i >= 0; i--) {
+            const code = (cm.getLine(i) || "").split("//")[0];
+            const t = /typealias\s+(\w+)/.exec(code);
+            if (t) stated.add(t[1]);
+            if (/enum\s+\w+\s*:/.test(code)) break;
+        }
+        const owed = Object.keys(axesOfHost(host)).filter(a => !stated.has(a));
+        if (owed.length)
+            return { items: owed.map(a => "public typealias " + a + " = "),
+                     kind: "axes this record still owes", closed: false };
+    }
+    return null;
 }
 
 function completionPool() {
@@ -507,7 +570,7 @@ function hideCompletion() { compEl.hidden = true; compItems = []; compFrom = nul
 function drawCompletion() {
     compEl.innerHTML = compItems.map((n, i) =>
         '<div class="crow' + (i === compChosen ? " on" : "") + '" data-i="' + i + '">' + esc(n) + "</div>").join("")
-        + (compEl.dataset.kind ? '<div class="cnote">what this axis takes: ' + esc(compEl.dataset.kind) + "</div>" : "");
+        + (compEl.dataset.kind ? '<div class="cnote">' + esc(compEl.dataset.kind) + "</div>" : "");
     const co = cm.cursorCoords(compFrom, "page");
     compEl.style.left = co.left + "px";
     compEl.style.top = (co.bottom + 2) + "px";
@@ -527,41 +590,30 @@ function offerCompletion() {
     const cur = cm.getCursor();
     const line = cm.getLine(cur.line) || "";
     const before = line.slice(0, cur.ch);
-    const host = hostAt(cur.line);
-    const kind = slotKind(line, cur.ch, host);
-
-    // a hole whose form we know: after a dot, the axes of what stands there
-    const dotted = afterDot(before, host, kind);
-    if (dotted) {
-        compItems = dotted.items.slice(0, 8);
-        compChosen = 0;
-        compFrom = { line: cur.line, ch: cur.ch - dotted.from };
-        compEl.dataset.kind = kind || "";
-        return drawCompletion();
-    }
-
+    const here = allowedAt(cur);
     const m = /([A-Za-z_]\w*)$/.exec(before);
-    const only = fillersFor(kind, host);
-    if (!m) {
-        if (!only || !/=\s*$/.test(before)) return hideCompletion();
-        compItems = only.slice(0, 8);
-        compChosen = 0;
-        compFrom = { line: cur.line, ch: cur.ch };
-        compEl.dataset.kind = kind || "";
-        return drawCompletion();
+    const word = m ? m[1] : "";
+
+    let items, back = word.length;
+    if (here) {
+        if (here.back !== undefined) back = here.back;
+        const low = word.toLowerCase();
+        items = word ? here.items.filter(n => n.toLowerCase().includes(low) && n !== word) : here.items;
+    } else {
+        if (word.length < 2) return hideCompletion();
+        const low = word.toLowerCase();
+        items = completionPool().filter(n => n !== word && n.toLowerCase().includes(low));
     }
-    if (m[1].length < 2 && !only) return hideCompletion();
-    const word = m[1], low = word.toLowerCase();
-    const pool = (only || completionPool()).filter(n => n !== word && n.toLowerCase().includes(low));
-    pool.sort((a, b) => {
+    items.sort((a, b) => {
+        const low = word.toLowerCase();
         const pa = a.toLowerCase().startsWith(low), pb = b.toLowerCase().startsWith(low);
         return pa === pb ? a.localeCompare(b) : (pa ? -1 : 1);
     });
-    compItems = pool.slice(0, 8);
+    compItems = items.slice(0, 8);
     compChosen = 0;
     if (!compItems.length) return hideCompletion();
-    compFrom = { line: cur.line, ch: cur.ch - word.length };
-    compEl.dataset.kind = only ? (kind || "") : "";
+    compFrom = { line: cur.line, ch: cur.ch - back };
+    compEl.dataset.kind = here && here.kind ? here.kind : "";
     drawCompletion();
 }
 
@@ -1076,7 +1128,7 @@ for (const head of document.querySelectorAll("h3.fold")) {
     {
         const v = await (await fetch("/vocabulary")).json().catch(() => ({}));
         vocabulary = v.names || {}; conformers = v.conformers || {};
-        axisOf = v.axes || {}; protoAxes = v.protoAxes || {};
+        axisOf = v.axes || {}; protoAxes = v.protoAxes || {}; gates = v.gates || {};
     }
     const fl = await (await fetch("/files")).json().catch(() => ({ files: [] }));
     files = fl.files || []; personalFile = fl.personal || null; personalEmpty = !!fl.personal_empty;

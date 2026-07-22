@@ -484,7 +484,13 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               "associatedtype Sex: Sexed" in genre and "associatedtype Rank: Ranked" in genre
               and "associatedtype Home: Department" in genre))
     S.append(("and the bench offers by that, not by what it saw nearby",
-              "function fillersFor(" in ui and "function slotKind(" in ui))
+              "function fillersFor(" in ui and "axesOfHost(host)[slot[1]]" in ui))
+    S.append(("one reading of the grammar drives every offer, not a case per place",
+              "function allowedAt(" in ui and "function placeAt(" in ui))
+    S.append(("a record is offered the axes it still owes",
+              "still owes" in ui and "public typealias " in ui))
+    S.append(("a declaration head is offered protocols, a body its gates",
+              "what this record is" in ui and "a claim this body may hold" in ui))
     S.append(("an axis reached through another axis is an answer too",
               "axis + \".\" + inner" in ui))
     S.append(("and a name followed by a dot offers what stands after it",

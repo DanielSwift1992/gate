@@ -1943,7 +1943,7 @@ def cmd_serve(a):
                     # atom conforms to, and what every axis will accept. The
                     # last one is why an offer can be right rather than merely
                     # a list of words seen nearby.
-                    names, conformers, axes, proto_axes = {}, {}, {}, {}
+                    names, conformers, axes, proto_axes, gates = {}, {}, {}, {}, {}
                     for mod, text in STDLIB.items():
                         for m in re.finditer(r"^\s*(?:public\s+)?(?:enum|protocol|struct|typealias|associatedtype)\s+(\w+)", text, re.M):
                             names.setdefault(m.group(1), mod)
@@ -1952,6 +1952,12 @@ def cmd_serve(a):
                                 conformers.setdefault(proto, []).append(m.group(1))
                         for m in re.finditer(r"^\s*associatedtype\s+(\w+)\s*:\s*(\w+)", text, re.M):
                             axes.setdefault(m.group(1), m.group(2))
+                        # the gates: a form and what each of its parameters takes,
+                        # so a body can be offered the entries it may hold
+                        for m in re.finditer(r"^\s*(?:public\s+)?enum\s+(\w+)\s*<([^>]*)>", text, re.M):
+                            kinds = [x.split(":")[1].strip() if ":" in x else None
+                                     for x in m.group(2).split(",") if x.strip()]
+                            gates[m.group(1)] = kinds
                         # which axes each protocol has, and of what kind: this is
                         # what makes `Given.Sex` an answer and not a guess
                         for m in re.finditer(r"^\s*(?:public\s+)?protocol\s+(\w+)[^{]*\{(.*?)\n\}", text, re.S | re.M):
@@ -1959,7 +1965,7 @@ def cmd_serve(a):
                             if own:
                                 proto_axes.setdefault(m.group(1), {}).update(own)
                     body = json.dumps({"names": names, "conformers": conformers, "axes": axes,
-                                       "protoAxes": proto_axes}).encode()
+                                       "protoAxes": proto_axes, "gates": gates}).encode()
                     self.send_response(200)
                     self.send_header("Content-Type", "application/json")
                     self.send_header("Cache-Control", "no-store")
