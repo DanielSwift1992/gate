@@ -54,7 +54,7 @@ gate check view Emp0042 FinanceShare   # may X read Y?  answered in ms
 gate diff  transfer Emp0042 Sales      # what would break (changes nothing)
 gate apply transfer Emp0042 Sales      # edits the world; writes only on holds
 gate guard merge                       # repo policy: the HEAD author must hold
-                                       # the rank the world states for merging
+                                       # the rank gate.policy.swift states
 gate survey                            # read-only: unwritten links mined from
                                        # your own git history — before any
                                        # translation at all
@@ -155,10 +155,13 @@ reading should be checkable by reading.
   list, a ghost file and a shadow file are both named.
 - Tables are inputs and views, never truth: a later CSV edit cannot
   silently reprint the world.
-- Policy is a fact, so it lives in the world too: an identity ties an email
-  to a person, and `MergePolicy` states the rank merging demands. Both go
-  through review and carry a history, and an identity that names nobody is
-  refused by line rather than obeyed. The CSVs only seed them.
+- Policy is a fact, so it lives beside the world in `gate.policy.swift`: an
+  identity ties an email to a person, and `MergePolicy` states the rank
+  merging demands. Both go through review and carry a history, and `status`
+  guards the file — an identity that names nobody is refused by line rather
+  than obeyed. The CSVs only seed them. (The file sits beside the judged
+  list, like the manifest: the reference judge does not read its extension
+  form yet, so the guard keeps it.)
 - Every change — facts and rules alike — is a working-copy edit; history,
   review and rollback belong to git. gate keeps no state of its own.
 
@@ -174,7 +177,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 43 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 47 end-to-end checks, the definition of green
 ```
 
 ## Status

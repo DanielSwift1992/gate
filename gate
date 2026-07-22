@@ -71,7 +71,8 @@ def manifest_guards():
         if not os.path.exists(p):
             bad.append({"address": os.path.basename(MANIFEST["manifest"]), "claim": f"the manifest declares {os.path.relpath(p, os.path.dirname(MANIFEST['manifest']))}, and no such file exists"})
     d = os.path.dirname(MANIFEST["manifest"])
-    declared = set(MANIFEST["files"]) | {MANIFEST["manifest"], os.path.join(d, "gate.swift")}
+    declared = set(MANIFEST["files"]) | {MANIFEST["manifest"], os.path.join(d, "gate.swift"),
+                                         os.path.join(d, "gate.policy.swift")}  # meta, like the manifest itself
     for f in sorted(os.listdir(d)):
         p = os.path.join(d, f)
         if f.endswith(".swift") and p not in declared:
@@ -744,16 +745,31 @@ jobs:
 }
 
 
+def policy_path():
+    # the policy file sits BESIDE the world, the way the manifest does
+    if not FACTS:
+        return None
+    p = os.path.join(os.path.dirname(os.path.abspath(FACTS)), "gate.policy.swift")
+    return p if os.path.exists(p) else None
+
+
 def read_policy():
-    # Who somebody is, and what an action demands, are FACTS — so they are
-    # declared in the world and travel through git like every other fact: one
+    # Who somebody is, and what an action demands, are FACTS — declared in
+    # gate.policy.swift and travelling through git like every other fact: one
     # truth, a history, a pull request. The CSVs seeded them once, and are read
-    # only while a world has not stated them yet.
+    # only while no policy file states them yet.
     #   public enum MailBoss: Identity { public typealias Person = Emp9001 }
     #   extension MailBoss { public static var typeName: String { "boss@corp" } }
     #   public enum MergePolicy { public typealias Requires = Manager }
+    # The file stays out of the judged list — the reference judge does not read
+    # a typeName extension inside a world (a recorded gap) — so status guards
+    # it instead: an identity naming nobody is refused by line there.
+    # The SHARED repo only, never the personal world: guard is a team gate, and
+    # its verdict must be the same on this machine and on CI, where no personal
+    # world exists. A personal file rebinding an email must change nothing.
     ids, rules, where = {}, {}, {}
-    for name, path in bench_files():
+    pp = policy_path()
+    for name, path in ([(os.path.basename(pp), pp)] if pp else []):
         text = open(path).read()
         for m in re.finditer(r"(?:public\s+)?enum\s+(\w+)\s*:[^{\n]*\bIdentity\b[^{\n]*\{(.*?)\n\}", text, re.S):
             who = re.search(r"typealias\s+Person\s*=\s*(\w+)", m.group(2))
@@ -767,6 +783,31 @@ def read_policy():
                 rules[m.group(1).lower()] = req.group(1)
                 where["policy:" + m.group(1).lower()] = (name, text[:m.start()].count("\n") + 1)
     return ids, rules, where
+
+
+def policy_guards():
+    # the policy file is not in the judged list (the judge does not read its
+    # extension form), so status guards it: every Person an identity names
+    # must be declared by the world, and every Requires must be a real name.
+    pp = policy_path()
+    if not pp:
+        return []
+    ids, rules, where = read_policy()
+    declared = set()
+    for p in world_files():
+        declared |= set(re.findall(r"(?:public\s+)?enum\s+(\w+)\s*:", open(p).read()))
+    bad = []
+    for mail, who in ids.items():
+        if who not in declared:
+            f, ln = where.get(mail, (os.path.basename(pp), 1))
+            bad.append({"address": f"{f}:{ln}",
+                        "claim": f"an identity names `{who}`, and the world declares no such person"})
+    for action, rank in rules.items():
+        if not re.match(r"^[A-Z]\w*$", rank):
+            f, ln = where.get("policy:" + action, (os.path.basename(pp), 1))
+            bad.append({"address": f"{f}:{ln}",
+                        "claim": f"the {action} policy requires `{rank}`, which is not a name"})
+    return bad
 
 
 def cmd_guard(a):
@@ -784,7 +825,7 @@ def cmd_guard(a):
         ["git", "log", "-1", "--format=%ae"], cwd=world_dir, capture_output=True, text=True
     ).stdout.strip()
     identities, rules, where = read_policy()
-    stated_in = "the world"
+    stated_in = "gate.policy.swift"
     if not identities and not rules and TABLES:   # a world that has not stated them yet
         stated_in = "tables (a seed): declare them in the world to put them under review"
         idp, gp = os.path.join(TABLES, "identities.csv"), os.path.join(TABLES, "guard.csv")
@@ -793,14 +834,14 @@ def cmd_guard(a):
         if os.path.exists(gp):
             rules = {r["action"]: r["requires_rank"] for r in csv.DictReader(open(gp))}
     if action not in rules:
-        raise SystemExit(json.dumps({"error": f"guard: no policy for '{action}': declare `public enum {action.capitalize()}Policy {{ public typealias Requires = <rank> }}` in the world"}))
+        raise SystemExit(json.dumps({"error": f"guard: no policy for '{action}': declare `public enum {action.capitalize()}Policy {{ public typealias Requires = <rank> }}` in gate.policy.swift"}))
     required = rules[action]
     who = identities.get(email)
     if not who:
         return {"command": f"guard {action}", "author": email, "policy_from": stated_in, "verdict": "refused",
                 "refusals": [{"address": os.path.basename(FACTS), "claim": f"author {email} is not mapped to any person: an unknown identity performs no guarded action"}]}
     declared = set()
-    for _, p in bench_files():
+    for p in world_files():   # the shared world alone, the same as the policy
         declared |= set(re.findall(r"(?:public\s+)?enum\s+(\w+)\s*:", open(p).read()))
     if who not in declared:   # a policy naming nobody is not a policy
         f, ln = where.get(email, (os.path.basename(FACTS), 1))
@@ -1525,6 +1566,7 @@ def dispatch(cmd, rest):
         if len(files) > 1:  # one claim, one file: the one that makes it
             refusals = attribute_refusals(refusals, [(os.path.basename(p), open(p).read()) for p in files])
         refusals += manifest_guards()
+        refusals += policy_guards()
         refusals += stdlib_guards()
         times = re.findall(r"([\d.]+) ms", raw)
         out = {"command": "status", "facts": files if len(files) > 1 else FACTS,

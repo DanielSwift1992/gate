@@ -81,6 +81,9 @@ def main():
         'extension GrantsFile { public static var typeName: String { "grants.swift" } }\n')
     c, r = run("status", cwd=split)
     S.append(("manifest: cross-file judgement holds", c == 0 and r["verdict"] == "holds"))
+    open(os.path.join(split, "gate.policy.swift"), "w").write("// policy beside a manifest world\n")
+    c, r = run("status", cwd=split)
+    S.append(("manifest: the policy file is meta, not a shadow", c == 0 and r["verdict"] == "holds"))
     open(os.path.join(split, "stray.swift"), "w").write("// stray\n")
     c, r = run("status", cwd=split)
     S.append(("manifest: shadow file named", c == 1 and any("shadow" in x["claim"] for x in r["refusals"])))
@@ -238,8 +241,8 @@ public enum MyWatch: AccessLedger {{
     for f in ("people.csv", "grants.csv"):
         shutil.copy(os.path.join(DEMO, f), os.path.join(grepo, "tables", f))
     run("status", cwd=grepo)
-    with open(os.path.join(grepo, "gate.swift"), "a") as f:
-        f.write("""
+    with open(os.path.join(grepo, "gate.policy.swift"), "w") as f:
+        f.write("""// who someone is, and what an action demands — facts, beside the world
 public enum MailBoss: Identity {
     public typealias Person = Emp9001
 }
@@ -252,20 +255,45 @@ public enum MergePolicy {
     subprocess.run(["git", "add", "-A"], cwd=grepo)
     subprocess.run(["git", "-c", "commit.gpgsign=false", "-c", "user.email=boss@corp",
                     "-c", "user.name=B", "commit", "-qm", "state the policy in the world"], cwd=grepo)
+    c, r = run("status", cwd=grepo)
+    S.append(("the world still holds with the policy file beside it", r["verdict"] == "holds"))
     c, r = run("guard", "merge", cwd=grepo)
-    S.append(("guard reads identity and policy from the world, not a CSV",
-              r.get("policy_from") == "the world" and r.get("requires") == "Manager"
+    S.append(("guard reads identity and policy from the policy file, not a CSV",
+              r.get("policy_from") == "gate.policy.swift" and r.get("requires") == "Manager"
               and r.get("author", "").endswith("Emp9001")))
     S.append(("guard: a Lead may not merge when the policy demands a Manager",
               c == 1 and r["verdict"] == "refused"))
-    t = open(os.path.join(grepo, "gate.swift")).read().replace(
+    pol = os.path.join(grepo, "gate.policy.swift")
+    t = open(pol).read().replace(
         "public typealias Person = Emp9001", "public typealias Person = Emp9999", 1)
-    open(os.path.join(grepo, "gate.swift"), "w").write(t)
+    open(pol, "w").write(t)
     c, r = run("guard", "merge", cwd=grepo)
     S.append(("guard: an identity naming nobody is refused by line, not obeyed",
               r["verdict"] == "refused"
               and any("declares no such person" in x["claim"] and ":" in x["address"]
                       for x in r["refusals"])))
+    c, r = run("status", cwd=grepo)
+    S.append(("status guards the policy file: the ghost person is named there too",
+              r["verdict"] == "refused"
+              and any("declares no such person" in x["claim"]
+                      and x["address"].startswith("gate.policy.swift:") for x in r["refusals"])))
+
+    # guard is a team gate: a personal world must not bend it. Rebind the
+    # boss's email to a Manager in MY file — the verdict must not move.
+    t = open(pol).read().replace(
+        "public typealias Person = Emp9999", "public typealias Person = Emp9001", 1)
+    open(pol, "w").write(t)
+    c, gme = runme("my", cwd=grepo)   # creates the personal world for grepo
+    with open(gme["personal"], "a") as f:
+        f.write("""
+public enum MailBossMine: Identity {
+    public typealias Person = Emp9000
+}
+extension MailBossMine { public static var typeName: String { "boss@corp" } }
+""")
+    c, r = runme("guard", "merge", cwd=grepo)
+    S.append(("a personal world cannot bend the team gate",
+              r.get("author", "").endswith("Emp9001") and r["verdict"] == "refused"))
 
     # ── zero egress: a claim about ourselves, kept by a gate on our own source.
     # An enterprise review runs this same grep; it must never come back dirty,

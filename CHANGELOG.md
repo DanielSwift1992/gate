@@ -12,8 +12,11 @@ The working prototype, end to end:
   somebody changes a fact you depend on, the judge names the line in your
   file. Privacy is the repository boundary, not a policy.
 - Policy is a fact: an identity ties an email to a person and `MergePolicy`
-  states what merging demands, both declared in the world instead of read
-  from unjudged CSVs. An identity that names nobody is refused by line.
+  states what merging demands, both declared in `gate.policy.swift` beside
+  the world instead of read from unjudged CSVs, and guarded by `status`: an
+  identity that names nobody is refused by line. (Beside, not inside: the
+  reference judge does not read the extension form within a world — a
+  recorded gap — so the guard keeps the file, the way the manifest is kept.)
 - Zero egress, checked rather than asserted: the battery greps the runtime
   sources for outbound primitives, confirms the loopback-only bind, and
   confirms the bench's Content-Security-Policy. The README says how to
