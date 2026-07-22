@@ -1269,6 +1269,31 @@ def stdlib_guards():
     return bad
 
 
+def vendored_guards():
+    # .gate/ is a materialized shelf like any other: the judge it carries must
+    # be the judge it says it carries. An edited copy of the tool is a second
+    # truth about what judged this repository — named, not tolerated.
+    if not FACTS:
+        return []
+    d = os.path.dirname(os.path.abspath(FACTS))
+    readme = os.path.join(d, ".gate", "README.md")
+    binp = os.path.join(d, ".gate", "bin", "gate-judge")
+    if not (os.path.exists(readme) and os.path.exists(binp)):
+        return []
+    stated = re.search(r"judge sha256: ([0-9a-f]{64})", open(readme).read())
+    if not stated:
+        return []
+    import hashlib
+    with open(binp, "rb") as f:
+        actual = hashlib.sha256(f.read()).hexdigest()
+    if actual == stated.group(1):
+        return []
+    return [{"address": ".gate/README.md",
+             "claim": "the carried judge is not the judge this repository states: "
+                      f"sha256 {actual[:12]} against {stated.group(1)[:12]} — "
+                      "re-run `gate init . --vendor`, or state the one you mean"}]
+
+
 RBAC_GENRE_HEADER = """// printed by gate import rbac — the K8s access world in the domain genre
 // (the exemplar: theory corpus Sources/Examples/Grants.swift @ 0fd0b38).
 // Realms are namespaces plus the cluster scope. A role is a room stating its
@@ -1733,6 +1758,7 @@ def dispatch(cmd, rest):
         refusals += manifest_guards()
         refusals += policy_guards()
         refusals += stdlib_guards()
+        refusals += vendored_guards()
         times = re.findall(r"([\d.]+) ms", raw)
         out = {"command": "status", "facts": files if len(files) > 1 else FACTS,
                "verdict": "holds" if not refusals else "refused", "refusals": refusals,

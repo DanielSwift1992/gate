@@ -323,6 +323,15 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               shim.returncode == 1
               and json.loads(shim.stdout or "{}")["refusals"][0]["address"].startswith("gate.swift:")))
 
+    jp = os.path.join(ven, ".gate", "bin", "gate-judge")
+    with open(jp, "wb") as f:
+        f.write(b"not the judge this repository states")
+    c, r = run("status", cwd=ven)
+    S.append(("a swapped judge in .gate/ is named, not trusted",
+              r["verdict"] == "refused"
+              and any("carried judge" in x["claim"] for x in r["refusals"])))
+    shutil.copy(os.path.join(HERE, "bin", "gate-judge"), jp)
+
     # ── the first thirty seconds: a demo world, and a bench that opens with none ──
     d = os.path.join(tmp, "demoworld")
     c, r = run("demo", d)
