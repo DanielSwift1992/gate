@@ -105,6 +105,14 @@ head. A refusal points at its address instead.
 
 ## What you get
 
+- **The inside of a body is total too.** The judge refuses anything outside
+  its grammar at the top of a file, an unknown form inside a body, and an
+  argument that resolves to nothing. One thing it cannot refuse is an entry
+  that never closes: it swallows what follows and drops those claims without
+  a word. So every line inside a body must belong to a whole entry — a form,
+  its arguments, and the `>.self;` that ends it — and a line that does not is
+  named. Comment out one bracket and six claims stop being checked; that now
+  says so instead of holding.
 - **One name, one declaration.** Two declarations of a name are two truths
   about it, and only one can be read: the fast tier says so at a keystroke,
   naming both lines, which is what the compiler would say at a build.
@@ -273,7 +281,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 97 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 98 end-to-end checks, the definition of green
 ```
 
 ## Status

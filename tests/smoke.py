@@ -454,6 +454,10 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     S.append(("a refused world is pointed at the address, not at the ladder",
               r["verdict"] == "refused" and "address" in r.get("next", "")))
 
+    ui = open(os.path.join(HERE, "ui.html"), encoding="utf-8").read()
+    S.append(("the bench offers only names the world declares",
+              "function completionPool()" in ui and "layoutDecls" in ui.split("function completionPool()")[1][:400]))
+
     # the bench may not say holds where a hook would refuse: the guards run on
     # the unsaved text as well, not only in the CLI
     S.append(("the bench runs the same guards the CLI does",

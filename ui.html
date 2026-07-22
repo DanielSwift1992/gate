@@ -56,6 +56,10 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .krow{display:flex;gap:.7em;align-items:baseline;padding:.22em 0;font:11.5px/1.45 -apple-system,sans-serif}
 .krow kbd{flex:0 0 5.6em;font:11px ui-monospace,Menlo,monospace;color:var(--ink);background:var(--mist);border-radius:4px;padding:.1em .4em;text-align:center}
 .krow span{color:var(--muted)}
+#completion{position:absolute;z-index:32;background:var(--paper);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 22px color-mix(in srgb,var(--ink) 16%,transparent);padding:3px;min-width:11em;max-height:15em;overflow:auto}
+.crow{padding:.22em .6em;border-radius:5px;font:12px ui-monospace,Menlo,monospace;color:var(--ink);cursor:pointer;white-space:nowrap}
+.crow.on{background:color-mix(in srgb,var(--action) 14%,transparent);color:var(--action)}
+.crow:hover{background:var(--mist)}
 #say{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:31;background:var(--ink);color:var(--paper);font:12px -apple-system,sans-serif;padding:.5em 1em;border-radius:8px;box-shadow:0 6px 20px color-mix(in srgb,var(--ink) 30%,transparent)}
 #brand{padding:1.1em 1.1em .5em}
 #brand b{display:block;font:600 15px/1.2 -apple-system,sans-serif;letter-spacing:-.01em}
@@ -154,6 +158,7 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 <div class="split" id="split-rail" style="display:none"></div>
 <div id="keys-panel" hidden></div>
 <div id="say" hidden></div>
+<div id="completion" hidden></div>
 <div id="main">
   <div id="bar">
     <span class="seg" id="view-seg"><button class="on" data-m="full">Full</button><button data-m="bare">Bare</button><button data-m="table">Table</button></span>
@@ -238,6 +243,12 @@ const cm = CodeMirror(document.getElementById("editor-host"), {
                                               : cm.replaceSelection("    ", "end", "+input"),
         "Shift-Tab": (cm) => cm.indentSelection("subtract"),
         "Cmd-Enter": () => {}, "Ctrl-Enter": () => {},
+        "Down": (cm) => { if (compEl.hidden) return CodeMirror.Pass;
+                          compChosen = (compChosen + 1) % compItems.length; drawCompletion(); },
+        "Up": (cm) => { if (compEl.hidden) return CodeMirror.Pass;
+                        compChosen = (compChosen - 1 + compItems.length) % compItems.length; drawCompletion(); },
+        "Enter": (cm) => { if (compEl.hidden) return CodeMirror.Pass; acceptCompletion(); },
+        "Esc": (cm) => { if (compEl.hidden) return CodeMirror.Pass; hideCompletion(); },
     },
 });
 const editor = { get value() { return cm.getValue(); }, set value(n) { cm.setValue(n); } };
@@ -402,6 +413,63 @@ function closeDiff() {
     for (const el of document.querySelectorAll(".commit.open")) el.classList.remove("open");
 }
 let journalWorld = [];
+// ── completion: the names this world allows, offered while you type. The
+// pool is not a dictionary of ours — it is what the files themselves declare,
+// so what it offers is what the judge will accept. ──
+let compItems = [], compChosen = 0, compFrom = null;
+const compEl = document.getElementById("completion");
+
+function completionPool() {
+    const out = new Set();
+    for (const [name, d] of layoutDecls) {
+        out.add(name);
+        for (const c of d.conformances) out.add(c);
+        for (const [k] of d.aliases) out.add(k);
+        for (const e of (d.entries || [])) { out.add(e.head); (e.args || []).forEach(a => out.add(a)); }
+    }
+    for (const n of siblingNames) out.add(n);
+    if (lastParsed) for (const n of namesOf(lastParsed)) out.add(n);
+    return [...out];
+}
+
+function hideCompletion() { compEl.hidden = true; compItems = []; compFrom = null; }
+
+function drawCompletion() {
+    compEl.innerHTML = compItems.map((n, i) =>
+        '<div class="crow' + (i === compChosen ? " on" : "") + '" data-i="' + i + '">' + esc(n) + "</div>").join("");
+    const co = cm.cursorCoords(compFrom, "page");
+    compEl.style.left = co.left + "px";
+    compEl.style.top = (co.bottom + 2) + "px";
+    compEl.hidden = false;
+    for (const row of compEl.querySelectorAll(".crow"))
+        row.onmousedown = (e) => { e.preventDefault(); acceptCompletion(+row.dataset.i); };
+}
+
+function acceptCompletion(i) {
+    const name = compItems[i === undefined ? compChosen : i];
+    if (!name || !compFrom) return hideCompletion();
+    cm.replaceRange(name, compFrom, cm.getCursor(), "+input");
+    hideCompletion();
+}
+
+function offerCompletion() {
+    const cur = cm.getCursor();
+    const line = cm.getLine(cur.line) || "";
+    const m = /([A-Za-z_]\w*)$/.exec(line.slice(0, cur.ch));
+    if (!m || m[1].length < 2) return hideCompletion();
+    const word = m[1], low = word.toLowerCase();
+    const pool = completionPool().filter(n => n !== word && n.toLowerCase().includes(low));
+    pool.sort((a, b) => {
+        const pa = a.toLowerCase().startsWith(low), pb = b.toLowerCase().startsWith(low);
+        return pa === pb ? a.localeCompare(b) : (pa ? -1 : 1);
+    });
+    compItems = pool.slice(0, 8);
+    compChosen = 0;
+    if (!compItems.length) return hideCompletion();
+    compFrom = { line: cur.line, ch: cur.ch - word.length };
+    drawCompletion();
+}
+
 // a one-line note, for the moments the tool has something to say back
 let sayTimer = null;
 function say(text) {
@@ -783,8 +851,13 @@ let timer = null;
 cm.on("change", (_, change) => {
     clearTimeout(timer);
     const userEdit = change.origin && change.origin !== "setValue";
+    // offer names while somebody types, and only then
+    if (change.origin === "+input" && change.text.join("").match(/^\w+$/)) offerCompletion();
+    else hideCompletion();
     timer = setTimeout(() => tick(userEdit), userEdit ? 400 : 150);
 });
+cm.on("blur", () => setTimeout(hideCompletion, 120));
+cm.on("cursorActivity", () => { if (!compEl.hidden && !compFrom) hideCompletion(); });
 async function tick(write) {
     await render();                         // judges the buffer first
     const holds = lastRefusals.length === 0;

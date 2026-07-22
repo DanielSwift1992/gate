@@ -1293,11 +1293,19 @@ def duplicate_guards_over(sources):
 
 
 def entry_guards():
-    # An entry is a form and its arguments: `VerifiedView<\n A,\n B\n>.self;`.
-    # Comment out the head and the rest stays behind — arguments and a closing
-    # `>.self;` that belong to nothing. The judge is right that there is no
-    # claim there any more, and says holds; what it cannot say is that a claim
-    # you had is now gone, and that the file is no longer Swift. This does.
+    # THE BODY IS TOTAL, the way the top of a file is.
+    #
+    # The judge refuses anything at the top of a file that is not in its
+    # grammar ("outside the fragment"), and inside a body it refuses an
+    # unknown form and an argument that resolves to nothing. One thing it
+    # does not refuse: an entry that never closes. It swallows the entries
+    # after it and drops the run without a word — comment out one `>.self;`
+    # and six claims stop being checked while the verdict still holds.
+    #
+    # So every line inside a body must belong to a whole entry: a form, its
+    # arguments, and the `>.self;` that ends it. Anything else is named by
+    # its line, which is what "no line may be written that is not allowed"
+    # means once it is applied to the inside of a body as well.
     return entry_guards_over(disk_sources())
 
 
@@ -1305,28 +1313,50 @@ def entry_guards_over(sources):
     bad = []
     for name, text in sources:
         lines = text.split("\n")
-        in_body, depth, chunk, head_line = False, 0, [], None
+        in_body, depth, open_at, saw_arg = False, 0, None, False
         for i, raw in enumerate(lines, 1):
             code = raw.split("//")[0]
             if not in_body:
                 if re.search(r"var\s+body\s*:\s*some\s+Structure\s*\{", code):
-                    in_body, depth, chunk, head_line = True, 1, [], None
+                    in_body, depth, open_at, saw_arg = True, 1, None, False
                 continue
             depth += code.count("{") - code.count("}")
-            if depth <= 0:
+            if depth <= 0:                      # the body ends here
+                if open_at:
+                    bad.append({"address": f"{name}:{open_at}",
+                                "claim": "an entry opens here and never closes: everything after it "
+                                         "stops being read as a claim, and the judge says nothing"})
                 in_body = False
                 continue
-            if re.search(r"\b[A-Z]\w*\s*<", code):
-                head_line = i
-            if ">.self;" in code or re.match(r"\s*>\s*\.self\s*;", code):
-                if head_line is None and any(c.strip() for c in chunk):
+            bare = code.strip()
+            if not bare:
+                continue
+            closes = ">.self;" in bare or re.match(r"^>\s*\.self\s*;$", bare)
+            opens = re.match(r"^[A-Z]\w*\s*<", bare)
+            if opens:
+                if open_at:
+                    bad.append({"address": f"{name}:{open_at}",
+                                "claim": "an entry opens here and never closes: the next one begins "
+                                         "before it ends, so neither is read as a claim"})
+                open_at, saw_arg = i, False
+                if closes:                       # a whole entry on one line
+                    open_at = None
+                continue
+            if closes:
+                if open_at is None:
                     bad.append({"address": f"{name}:{i}",
                                 "claim": "an entry closes here that nothing opens: its form is "
                                          "commented out or missing, so the claim it made is gone "
                                          "and what is left is not Swift"})
-                chunk, head_line = [], None
+                open_at, saw_arg = None, False
+                continue
+            if open_at is None:                  # neither a form, nor an argument of one
+                bad.append({"address": f"{name}:{i}",
+                            "claim": f"`{bare[:40]}` stands inside a body and belongs to no entry: "
+                                     "a body holds claims, and every claim is a form, its arguments "
+                                     "and the `>.self;` that ends it"})
             else:
-                chunk.append(code)
+                saw_arg = True
     return bad
 
 
