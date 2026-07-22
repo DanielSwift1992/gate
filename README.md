@@ -3,12 +3,16 @@
 **Git gave your code an integrity guarantee. gate gives the same guarantee
 to your facts.**
 
-Access grants, org rosters, configuration, RBAC bindings — the facts your
-company runs on live as copies across systems, drift silently, and get
-audited by hand. gate turns them into a single typed world inside your own
-git repository, where an inconsistency is impossible to express: the judge
-re-reads every claim in milliseconds and a refusal names the exact line of
-your own file.
+Who may read what, who owns which directory, who reports to whom: the facts
+your company runs on are written down in five places — a spreadsheet, a
+wiki page, CODEOWNERS, an IAM console, somebody's memory — and every copy
+drifts from the others quietly. Nothing checks them against each other, so
+the drift is found by an audit, or by an incident.
+
+gate makes one of those copies the source and judges it. The facts become a
+typed world in your own git repository, where an inconsistency is
+impossible to express: the judge re-reads every claim in milliseconds, and
+a refusal names the exact line of your own file.
 
 No server. No runtime. No new formats. Nothing leaves your repository.
 
