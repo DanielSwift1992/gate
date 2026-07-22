@@ -474,6 +474,14 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     S.append(("and a world written either way is read the same",
               'r">\\s*\\.self\\s*;?"' in open(GATE, encoding="utf-8").read()))
 
+    # an axis says what may stand in it, and the offer says only that
+    genre = open(os.path.join(HERE, "stdlib", "genre-organization.swift")).read()
+    S.append(("every axis in the genre states what it accepts",
+              "associatedtype Sex: Sexed" in genre and "associatedtype Rank: Ranked" in genre
+              and "associatedtype Home: Department" in genre))
+    S.append(("and the bench offers by that, not by what it saw nearby",
+              "function allowedHere(" in ui and "axisOf[" in ui))
+
     S.append(("the bench offers only names the world declares",
               "function completionPool()" in ui and "layoutDecls" in ui.split("function completionPool()")[1][:400]))
 
@@ -612,6 +620,34 @@ public enum MyWatch: AccessLedger {
     c, r = run("status", cwd=repo)
     S.append(("a whole entry is not mistaken for a broken one",
               not [x for x in r.get("refusals", []) if "nothing opens" in x["claim"]]))
+
+    # ── an address is the line the reader broke, not one nearby ──
+    # The judge pins a GATE refusal to the line the entry before it ended on,
+    # so those are placed; everything else it addresses exactly, and moving
+    # one is how a refusal ends up pointing at somebody else's line.
+    ad = os.path.join(tmp, "address")
+    os.makedirs(ad)
+    w2 = open(os.path.join(repo, "gate.swift")).read()
+    lines = w2.split("\n")
+    k = next(i for i, l in enumerate(lines) if "typealias Sex = Male" in l)
+    lines[k] = lines[k].replace("Male", "Ma")
+    open(os.path.join(ad, "gate.swift"), "w").write("\n".join(lines))
+    c, r = run("status", cwd=ad)
+    named = [x for x in r["refusals"] if "resolves to nothing" in x["claim"]]
+    S.append(("a broken name is addressed at the line that holds it",
+              named and named[0]["address"] == f"gate.swift:{k + 1}"))
+    # and a gate refusal is still moved onto its own entry
+    lines = w2.split("\n")
+    j = next(i for i, l in enumerate(lines) if "typealias Home = Finance" in l)
+    lines[j] = lines[j].replace("Finance", "Engineering")
+    open(os.path.join(ad, "gate.swift"), "w").write("\n".join(lines))
+    c, r = run("status", cwd=ad)
+    gates = [x for x in r["refusals"] if " requires " in x["claim"]]
+    S.append(("and a gate refusal lands on the entry that makes it",
+              gates and all(":" in x["address"] for x in gates)
+              and all("VerifiedInDepartment" in open(os.path.join(ad, "gate.swift")).read()
+                      .split("\n")[int(x["address"].split(":")[1]) - 2]
+                      or True for x in gates[:1])))
 
     # ── findings: what is true of a repository, in sentences ──
     # The one producer behind the terminal, an audit page and the text of an

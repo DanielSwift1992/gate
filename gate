@@ -250,12 +250,31 @@ def attribute_refusals(refusals, sources):
             order.append(r["claim"])
     out = []
     for claim in order:
+        orig = first[claim]["address"]
+        ofile, _, oline = orig.partition(":")
+        oline = int(oline) if oline.isdigit() else None
+        # Only a GATE claim needs placing. The judge pins one to the line the
+        # entry before it ended on, and repeats it once per file it was given.
+        # Everything else — a name that resolves to nothing, an unknown gate —
+        # it addresses exactly, in the one file that says it, and moving that
+        # is how a refusal ends up pointing at somebody else's line.
+        if " requires " not in claim:
+            out.append(first[claim])
+            continue
         placed = False
         for name, text in sources:
             line = locate_claim(text, claim)
-            if line:
-                out.append({"address": f"{name}:{line}", "claim": claim})
-                placed = True
+            if not line:
+                continue
+            if name == ofile and oline:
+                # the judge named THIS file, so its own line stands. An entry
+                # spans several lines and the judge pins the refusal to the one
+                # the entry before it ended on, so a match a few lines away is
+                # a refinement; a match far away is our locator losing the
+                # thread, and then the judge is the one to believe.
+                line = line if abs(line - oline) <= 8 else oline
+            out.append({"address": f"{name}:{line}", "claim": claim})
+            placed = True
         if not placed:
             out.append(first[claim])   # unlocatable: keep the judge's own word
     return out
@@ -1857,7 +1876,7 @@ def cmd_serve(a):
     # THE CONTRACT (the bench depends on exactly this, and nothing else):
     #   GET  /  and /ui              the bench itself
     #   GET  /files                  {files: [name], personal: name|null}
-    #   GET  /vocabulary             {name: shelf module} — where a name is from
+    #   GET  /vocabulary             what the shelf declares: {names, conformers, axes}
     #   GET  /shelf?m=name           the text of one shelf module, to read
     #   GET  /world?f=name           the text of one file from that list
     #   GET  /gitstatus?f=name       {git: committed|modified|untracked}
@@ -1907,13 +1926,20 @@ def cmd_serve(a):
                 if u.path == "/codemirror.css":
                     return self.send_file(os.path.join(here, "codemirror.css"), "text/css")
                 if u.path == "/vocabulary":
-                    # every name the shelf declares, and the module it is in:
-                    # a name from a genre has a home too, and can be opened
-                    out = {}
+                    # what the shelf declares: where each name lives, what each
+                    # atom conforms to, and what every axis will accept. The
+                    # last one is why an offer can be right rather than merely
+                    # a list of words seen nearby.
+                    names, conformers, axes = {}, {}, {}
                     for mod, text in STDLIB.items():
                         for m in re.finditer(r"^\s*(?:public\s+)?(?:enum|protocol|struct|typealias|associatedtype)\s+(\w+)", text, re.M):
-                            out.setdefault(m.group(1), mod)
-                    body = json.dumps(out).encode()
+                            names.setdefault(m.group(1), mod)
+                        for m in re.finditer(r"^\s*(?:public\s+)?enum\s+(\w+)\s*:\s*([\w,\s]+?)\s*\{", text, re.M):
+                            for proto in [x.strip() for x in m.group(2).split(",") if x.strip()]:
+                                conformers.setdefault(proto, []).append(m.group(1))
+                        for m in re.finditer(r"^\s*associatedtype\s+(\w+)\s*:\s*(\w+)", text, re.M):
+                            axes.setdefault(m.group(1), m.group(2))
+                    body = json.dumps({"names": names, "conformers": conformers, "axes": axes}).encode()
                     self.send_response(200)
                     self.send_header("Content-Type", "application/json")
                     self.send_header("Cache-Control", "no-store")

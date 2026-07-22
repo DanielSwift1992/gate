@@ -30,7 +30,8 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .commit{padding:.4em 1.1em;cursor:default;border-left:2px solid transparent}
 .commit:hover{background:var(--mist)}
 .commit.touches{cursor:pointer;border-left-color:color-mix(in srgb,var(--action) 55%,transparent)}
-.commit .subj{font:12.5px/1.35 -apple-system,sans-serif;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.commit .subj{display:flex;gap:.4em;align-items:baseline;font:12.5px/1.35 -apple-system,sans-serif;color:var(--ink);white-space:nowrap;overflow:hidden}
+.commit .subj{text-overflow:ellipsis}
 .commit .meta{display:flex;align-items:center;gap:.5em;margin-top:.2em;font:11px ui-monospace,Menlo,monospace;color:var(--muted)}
 .commit .who{cursor:pointer;color:var(--localtype)}
 .commit .who:hover{text-decoration:underline}
@@ -60,12 +61,18 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .crow{padding:.22em .6em;border-radius:5px;font:12px ui-monospace,Menlo,monospace;color:var(--ink);cursor:pointer;white-space:nowrap}
 .crow.on{background:color-mix(in srgb,var(--action) 14%,transparent);color:var(--action)}
 .crow:hover{background:var(--mist)}
+.cnote{padding:.3em .6em .1em;font:10.5px -apple-system,sans-serif;color:var(--muted);border-top:1px solid var(--line);margin-top:3px}
 #say{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:31;background:var(--ink);color:var(--paper);font:12px -apple-system,sans-serif;padding:.5em 1em;border-radius:8px;box-shadow:0 6px 20px color-mix(in srgb,var(--ink) 30%,transparent)}
 #brand{padding:1.1em 1.1em .5em}
 #brand b{display:block;font:600 15px/1.2 -apple-system,sans-serif;letter-spacing:-.01em}
 #brand span{display:block;margin-top:.35em;font:11.5px/1.45 -apple-system,sans-serif;color:var(--muted)}
-.commit.open{background:var(--mist)}
-.cdiff{padding:.2em 0 .5em;background:var(--mist);border-left:2px solid color-mix(in srgb,var(--action) 55%,transparent)}
+/* an open commit is the header of what it opened: it keeps the surface and
+   the boundary is drawn, so the row you click to close it can be aimed at */
+.commit.open{background:var(--mist);border-bottom:1px solid var(--line)}
+.commit.open .caret{transform:rotate(90deg)}
+.commit .caret{flex:none;width:8px;color:var(--muted);transition:transform .12s;font-style:normal}
+.commit .caret::before{content:"\203A"}
+.cdiff{padding:.35em 0 .55em;background:var(--paper);border-left:2px solid color-mix(in srgb,var(--action) 55%,transparent);border-bottom:1px solid var(--line)}
 .dwait{padding:.3em 1.1em;font:11px -apple-system,sans-serif;color:var(--muted)}
 .dfile{padding:.4em 1.1em .25em;font:10.5px ui-monospace,Menlo,monospace;color:var(--muted)}
 .dfile .dnote{margin-left:.5em;font:10.5px -apple-system,sans-serif}
@@ -183,6 +190,7 @@ const keywordSet = new Set(["public","enum","protocol","typealias","extension","
 let localNames = new Set(), unresolved = new Set();
 let jumpable = new Set();      // names with a home: underlined, and clickable
 let vocabulary = {};           // name -> the shelf module that declares it
+let conformers = {}, axisOf = {};   // what conforms to what, and what an axis takes
 
 CodeMirror.defineMode("gate-swift", () => ({
     token: (stream) => {
@@ -355,7 +363,8 @@ function renderJournal() {
             : "On a branch, and not yet in the default branch. A branch merged by squashing reads as open until it is deleted.";
         const badge = c.closed === null ? ""
             : '<span class="badge ' + (c.closed ? "closed" : "open") + '" title="' + title + '">' + (c.closed ? "closed" : "open") + "</span>";
-        row.innerHTML = '<div class="subj">' + esc(c.subject) + "</div><div class=\"meta\">" + badge +
+        row.innerHTML = '<div class="subj">' + (c.touches_world ? '<i class="caret"></i>' : "")
+            + esc(c.subject) + "</div><div class=\"meta\">" + badge +
             '<span class="who" data-email="' + esc(c.email) + '">' + esc(c.person || c.email) + "</span> · " + when + "</div>";
         row.querySelector(".who").onclick = (e) => {
             e.stopPropagation();
@@ -424,12 +433,27 @@ let journalWorld = [];
 let compItems = [], compChosen = 0, compFrom = null;
 const compEl = document.getElementById("completion");
 
+function allowedHere(line, upto) {
+    // `public typealias Sex = ` — the axis names what may stand in it, and the
+    // genre says which atoms are of that kind. Offering anything else would be
+    // offering something the judge is going to refuse.
+    const m = /typealias\s+(\w+)\s*=\s*\w*$/.exec(line.slice(0, upto));
+    if (!m) return null;
+    const kind = axisOf[m[1]];
+    if (!kind) return null;
+    const world = [];
+    for (const [name, d] of layoutDecls)
+        if ((d.conformances || []).includes(kind)) world.push(name);
+    const all = [...(conformers[kind] || []), ...world];
+    return all.length ? all : null;
+}
+
 function completionPool() {
     const out = new Set();
     for (const [name, d] of layoutDecls) {
         out.add(name);
         for (const c of d.conformances) out.add(c);
-        for (const [k] of d.aliases) out.add(k);
+        for (const [k, v] of d.aliases) { out.add(k); if (v && v.target) out.add(v.target); }
         for (const e of (d.entries || [])) { out.add(e.head); (e.args || []).forEach(a => out.add(a)); }
     }
     for (const n of siblingNames) out.add(n);
@@ -441,7 +465,8 @@ function hideCompletion() { compEl.hidden = true; compItems = []; compFrom = nul
 
 function drawCompletion() {
     compEl.innerHTML = compItems.map((n, i) =>
-        '<div class="crow' + (i === compChosen ? " on" : "") + '" data-i="' + i + '">' + esc(n) + "</div>").join("");
+        '<div class="crow' + (i === compChosen ? " on" : "") + '" data-i="' + i + '">' + esc(n) + "</div>").join("")
+        + (compEl.dataset.kind ? '<div class="cnote">what this axis takes: ' + esc(compEl.dataset.kind) + "</div>" : "");
     const co = cm.cursorCoords(compFrom, "page");
     compEl.style.left = co.left + "px";
     compEl.style.top = (co.bottom + 2) + "px";
@@ -460,16 +485,29 @@ function acceptCompletion(i) {
 function offerCompletion() {
     const cur = cm.getCursor();
     const line = cm.getLine(cur.line) || "";
-    const m = /([A-Za-z_]\w*)$/.exec(line.slice(0, cur.ch));
-    if (!m || m[1].length < 2) return hideCompletion();
+    const before = line.slice(0, cur.ch);
+    const m = /([A-Za-z_]\w*)$/.exec(before);
+    const only = allowedHere(line, cur.ch);
+    // a slot standing empty is a question already answered: show what fits,
+    // without waiting for somebody to guess the first letters
+    if (!m) {
+        if (!only || !/=\s*$/.test(before)) return hideCompletion();
+        compItems = only.slice(0, 8);
+        compChosen = 0;
+        compFrom = { line: cur.line, ch: cur.ch };
+        compEl.dataset.kind = axisOf[/typealias\s+(\w+)\s*=/.exec(line)[1]] || "";
+        return drawCompletion();
+    }
+    if (m[1].length < 2 && !only) return hideCompletion();
     const word = m[1], low = word.toLowerCase();
-    const pool = completionPool().filter(n => n !== word && n.toLowerCase().includes(low));
+    const pool = (only || completionPool()).filter(n => n !== word && n.toLowerCase().includes(low));
     pool.sort((a, b) => {
         const pa = a.toLowerCase().startsWith(low), pb = b.toLowerCase().startsWith(low);
         return pa === pb ? a.localeCompare(b) : (pa ? -1 : 1);
     });
     compItems = pool.slice(0, 8);
     compChosen = 0;
+    compEl.dataset.kind = only ? (axisOf[/typealias\s+(\w+)\s*=/.exec(line)[1]] || "") : "";
     if (!compItems.length) return hideCompletion();
     compFrom = { line: cur.line, ch: cur.ch - word.length };
     drawCompletion();
@@ -878,7 +916,8 @@ cm.on("change", (_, change) => {
     clearTimeout(timer);
     const userEdit = change.origin && change.origin !== "setValue";
     // offer names while somebody types, and only then
-    if (change.origin === "+input" && change.text.join("").match(/^\w+$/)) offerCompletion();
+    const typed = change.origin === "+input" ? change.text.join("") : null;
+    if (typed !== null && /^[\w =]+$/.test(typed)) offerCompletion();
     else hideCompletion();
     timer = setTimeout(() => tick(userEdit), userEdit ? 400 : 150);
 });
@@ -982,7 +1021,10 @@ for (const head of document.querySelectorAll("h3.fold")) {
 }
 
 (async () => {
-    vocabulary = await (await fetch("/vocabulary")).json().catch(() => ({}));
+    {
+        const v = await (await fetch("/vocabulary")).json().catch(() => ({}));
+        vocabulary = v.names || {}; conformers = v.conformers || {}; axisOf = v.axes || {};
+    }
     const fl = await (await fetch("/files")).json().catch(() => ({ files: [] }));
     files = fl.files || []; personalFile = fl.personal || null; personalEmpty = !!fl.personal_empty;
     // the rail carries files AND the journal, so it shows for any clone

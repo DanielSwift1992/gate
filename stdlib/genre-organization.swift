@@ -14,10 +14,10 @@ public enum Sales: Department {}
 public enum People: Department {}
 
 /// What somebody is trusted with. The ladder is stated, never inferred.
-public protocol Rank {}
-public enum IndividualContributor: Rank {}
-public enum Lead: Rank {}
-public enum Manager: Rank {}
+public protocol Ranked {}
+public enum IndividualContributor: Ranked {}
+public enum Lead: Ranked {}
+public enum Manager: Ranked {}
 
 /// Where the work happens.
 public protocol Workplace {}
@@ -39,7 +39,7 @@ public enum PeopleShare: Document { public typealias Home = People }
 /// carried as their own cycles, so a roster stays a roster.
 public protocol Employee {
     associatedtype Home: Department
-    associatedtype Rank
+    associatedtype Rank: Ranked
     associatedtype Site: Workplace
 }
 
@@ -47,20 +47,20 @@ public protocol Employee {
 /// each one is an atom, and the atoms of a kind form a ring, so a roster can
 /// be walked and a generated one never runs out of names.
 public protocol Person {
-    associatedtype Given
-    associatedtype Family
-    associatedtype Born
-    associatedtype Sex
+    associatedtype Given: GivenNameCycle
+    associatedtype Family: FamilyNameCycle
+    associatedtype Born: BirthYearCycle
+    associatedtype Sex: Sexed
 }
 public protocol GivenNameCycle {
-    associatedtype Next
-    associatedtype Sex
+    associatedtype Next: GivenNameCycle
+    associatedtype Sex: Sexed
 }
 public protocol FamilyNameCycle {
-    associatedtype Next
+    associatedtype Next: FamilyNameCycle
 }
 public protocol BirthYearCycle {
-    associatedtype Next
+    associatedtype Next: BirthYearCycle
 }
 
 /// The two the roster records, as atoms like every other value here.
@@ -88,7 +88,7 @@ public enum VerifiedInDepartment<Who: Employee, At: Department> {}
 extension VerifiedInDepartment: Verified
 where Who.Home == At {}
 
-public enum VerifiedAtRank<Who: Employee, At> {}
+public enum VerifiedAtRank<Who: Employee, At: Ranked> {}
 extension VerifiedAtRank: Verified
 where Who.Rank == At {}
 
