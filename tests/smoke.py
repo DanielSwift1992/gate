@@ -362,6 +362,9 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               r.get("vendored") and os.path.exists(os.path.join(ven, "gatew"))
               and os.path.exists(os.path.join(ven, ".gate", "bin", "gate-judge"))
               and len(r["vendored"].get("judge_sha256", "")) == 64))
+    S.append(("and the terms travel with it: a vendored copy carries its licence",
+              os.path.exists(os.path.join(ven, ".gate", "LICENSE"))
+              and os.path.exists(os.path.join(ven, ".gate", "NOTICE.md"))))
     subprocess.run(["git", "add", "-A"], cwd=ven)
     subprocess.run(["git", "-c", "commit.gpgsign=false", "-c", "user.email=a@b", "-c",
                     "user.name=A", "commit", "-qm", "world and tool", "--no-verify"], cwd=ven)
@@ -577,6 +580,10 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     missing = sorted(f for f in listed if not os.path.exists(os.path.join(HERE, f))
                      and not os.path.exists(os.path.join(HERE, "tests", f)))
     S.append(("every file the README names is a file that exists", not missing))
+
+    S.append(("the licence the README claims is the licence in the tree",
+              "MIT licensed" in readme
+              and open(os.path.join(HERE, "LICENSE"), encoding="utf-8").read().startswith("MIT License")))
 
     claimed_n = re.search(r"the battery — (\d+) end-to-end checks", readme)
     S.append(("the README counts these checks correctly",

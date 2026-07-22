@@ -259,6 +259,7 @@ gate adds no process of its own. It sits inside the four you already have:
 ## Repository
 
 ```
+LICENSE         MIT · NOTICE.md says what travels with gate
 gate            the CLI (python prototype; the judge does the judging)
 bin/gate-judge  the judge, one static binary (built from the public
                 theory corpus: bin/build-judge.sh [pin])
@@ -268,16 +269,17 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 86 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 88 end-to-end checks, the definition of green
 ```
 
 ## Status
 
-Working prototype under active development. The judge is a native binary
-with a versioned verdict contract (canon v2); the CLI is python and will
-be rewritten in Swift to ship as a single static binary (the way git is
-one tool). Not yet accepting external contributions; license to be
-determined before the first public release.
+Working prototype under active development, MIT licensed — see LICENSE,
+and NOTICE.md for what it carries and under what terms. Free, and nothing
+in it is paid. The judge is a native binary with a versioned verdict
+contract (canon v2); the CLI is python and will be rewritten in Swift to
+ship as a single static binary (the way git is one tool). Problems with a
+verdict are the ones we most want to hear about: see SECURITY.md.
 
 Roadmap, next: single-binary Swift CLI (Linux/Windows included) · the
 bare-Swift diff view (`gate diff` shows the stripped form, `--full` the

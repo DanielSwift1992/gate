@@ -1088,7 +1088,8 @@ def cmd_vendor(root):
     os.makedirs(os.path.join(dst, "bin"), exist_ok=True)
     import hashlib
     carried = []
-    for rel in ("gate", "judge.js", "ui.html", "codemirror.js", "codemirror.css"):
+    for rel in ("gate", "judge.js", "ui.html", "codemirror.js", "codemirror.css",
+                "LICENSE", "NOTICE.md"):
         src = os.path.join(here, rel)
         if os.path.exists(src):
             shutil.copy(src, os.path.join(dst, rel))
@@ -1120,7 +1121,8 @@ def cmd_vendor(root):
                 "with.\n\n"
                 f"judge sha256: {digest}\n\n"
                 "The judge is built from a public corpus and is reproducible:\n"
-                "`bin/build-judge.sh <pin>` prints a binary with this hash.\n")
+                "`bin/build-judge.sh <pin>` prints a binary with this hash.\n\n"
+                "MIT licensed: LICENSE and NOTICE.md are here beside it.\n")
     return {"carried": carried, "judge_sha256": digest, "shim": "./gatew"}
 
 
