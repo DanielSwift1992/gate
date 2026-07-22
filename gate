@@ -1474,7 +1474,7 @@ th{{background:#f5f5f7}}.ok{{color:#248a3d}}.bad li{{color:#c4453b;margin:.3em 0
 def cmd_serve(a):
     # serve [port] [--no-open] — the bench, and the local JSON surface it reads.
     # THE CONTRACT (the bench depends on exactly this, and nothing else):
-    #   GET  /ui                     the bench itself
+    #   GET  /  and /ui              the bench itself
     #   GET  /files                  {files: [name], personal: name|null}
     #   GET  /world?f=name           the text of one file from that list
     #   GET  /gitstatus?f=name       {git: committed|modified|untracked}

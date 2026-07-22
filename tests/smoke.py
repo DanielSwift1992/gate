@@ -436,6 +436,44 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     S.append(("the page declares a policy that blocks any external request",
               "Content-Security-Policy" in ui and "connect-src 'self'" in ui))
 
+    # ── the claims about ourselves are judged too ──
+    # A tool that sells judgement over memory may not keep its own claims by
+    # memory. The README's count of these checks, the verbs it lists, the files
+    # it names and the routes the bench is promised are all compared with what
+    # the code actually does. This runs LAST, so the count includes everything.
+    readme = open(os.path.join(HERE, "README.md"), encoding="utf-8").read()
+    src = open(GATE, encoding="utf-8").read()
+
+    verbs = set(re.findall(r'cmd\s*==\s*"([a-z-]+)"', src))
+    for grp in re.findall(r'cmd\s+in\s+\(([^)]*)\)', src):
+        verbs |= set(re.findall(r'"([a-z-]+)"', grp))
+    for grp in re.findall(r'args\[0\]\s+in\s+\(([^)]*)\)', src):   # --version, before dispatch
+        verbs |= set(x.lstrip("-") for x in re.findall(r'"([a-z-]+)"', grp))
+    porcelain = re.search(r"The porcelain is deliberately git-shaped: `([^`]+)`", readme, re.S)
+    claimed_verbs = {v.lstrip("-") for v in
+                     (re.findall(r"[a-z-]{2,}", porcelain.group(1)) if porcelain else [])}
+    ghost_verbs = sorted(v for v in claimed_verbs if v not in verbs)
+    S.append(("every verb the README lists is a verb the code has", not ghost_verbs))
+
+    routes = set(re.findall(r'u\.path\s*[!=]=\s*"(/[a-z/]*)"', src))   # == and != both route
+    for grp in re.findall(r'u\.path\s+in\s+\(([^)]*)\)', src):
+        routes |= set(re.findall(r'"(/[a-z/]*)"', grp))
+    contract = set()
+    for line in re.findall(r"^\s+#\s+(?:GET|POST|PUT)\s+(.+)$", src, re.M):
+        contract |= set(re.findall(r"(/[a-z/]*)", line.split("  ")[0] + " " + line))
+    S.append(("the bench's promised routes are the routes the server answers",
+              contract == routes))
+
+    listed = set(re.findall(r"^(\S+\.(?:py|js|html|css|sh|md))",
+                            readme.split("## Repository")[-1], re.M)) if "## Repository" in readme else set()
+    missing = sorted(f for f in listed if not os.path.exists(os.path.join(HERE, f))
+                     and not os.path.exists(os.path.join(HERE, "tests", f)))
+    S.append(("every file the README names is a file that exists", not missing))
+
+    claimed_n = re.search(r"the battery — (\d+) end-to-end checks", readme)
+    S.append(("the README counts these checks correctly",
+              bool(claimed_n) and int(claimed_n.group(1)) == len(S) + 1))
+
     for name, ok in S:
         print(("PASS" if ok else "FAIL"), name)
     print("ALL GREEN" if all(ok for _, ok in S) else "RED")
