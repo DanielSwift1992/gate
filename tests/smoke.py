@@ -295,6 +295,49 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     S.append(("a personal world cannot bend the team gate",
               r.get("author", "").endswith("Emp9001") and r["verdict"] == "refused"))
 
+    # ── the two judges say the same words ──
+    # The bench judges a single-file world in the browser, with the ported
+    # judge; a hook and CI judge it with the binary. If those two ever drift,
+    # the bench shows green where the pipeline shows red — the one failure a
+    # checker may not have. So they are compared verbatim, not by count.
+    par = os.path.join(tmp, "parity")
+    os.makedirs(par)
+    shutil.copy(os.path.join(repo, "gate.swift"), os.path.join(par, "w.swift"))
+    base_world = open(os.path.join(par, "w.swift")).read()
+    probe = os.path.join(par, "probe.js")
+    open(probe, "w").write(
+        'const {judge} = require(%r); const fs = require("fs");\n'
+        'const f = process.argv[2];\n'
+        'const r = judge(f.split("/").pop(), fs.readFileSync(f, "utf8"));\n'
+        'console.log(JSON.stringify((r.refusals||[]).map(x => x.premise)));\n'
+        % os.path.join(HERE, "judge.js"))
+
+    def two_judges(world_text):
+        p = os.path.join(par, "w.swift")
+        open(p, "w").write(world_text)
+        raw = subprocess.run([os.path.join(HERE, "bin", "gate-judge"), "judge", p],
+                             capture_output=True, text=True).stdout
+        binary = sorted(m.group(1).strip()
+                        for m in re.finditer(r"^\s+\S+\.swift:\d+\s+(.+)$", raw, re.M))
+        out = subprocess.run(["node", probe, p], capture_output=True, text=True).stdout
+        try:
+            ported = sorted(json.loads(out))
+        except Exception:
+            ported = ["<port did not run: " + out[:60] + ">"]
+        return binary, ported
+
+    cases = {
+        "a clean world": base_world,
+        "a person moved out of their department":
+            base_world.replace("public typealias Home = Finance",
+                               "public typealias Home = Engineering", 1),
+        "a misspelled gate form": base_world.replace("VerifiedView<", "VerifedView<", 1),
+        "an argument nothing declares": base_world.replace("FinanceShare\n", "NoSuchDoc\n", 1),
+    }
+    for label, world in cases.items():
+        b, p = two_judges(world)
+        S.append((f"both judges say the same words: {label}", b == p and (b or label == "a clean world")))
+
     # ── zero egress: a claim about ourselves, kept by a gate on our own source.
     # An enterprise review runs this same grep; it must never come back dirty,
     # because one outbound call ends the "an engineer may just install it" path.
