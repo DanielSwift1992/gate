@@ -969,6 +969,9 @@ def repo_journal(n=200, scope="world"):
     if idcsv and os.path.exists(idcsv):
         identities = {r["email"]: r["id"] for r in _csv.DictReader(open(idcsv))}
     world = set(os.path.relpath(p, base) for p in world_files()) if FACTS else set()
+    pp = policy_path()
+    if pp:   # the policy is a fact beside the world: its history belongs here
+        world.add(os.path.relpath(pp, base))
     args = ["git", "log", "--all", f"-{n}", "--format=%x01%H%x1f%ae%x1f%aI%x1f%s", "--name-only"]
     if scope == "world" and world:
         args += ["--", *sorted(world)]
