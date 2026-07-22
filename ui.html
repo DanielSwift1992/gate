@@ -234,6 +234,17 @@ const cm = CodeMirror(document.getElementById("editor-host"), {
     },
 });
 const editor = { get value() { return cm.getValue(); }, set value(n) { cm.setValue(n); } };
+
+// alt-click a name to open the line that declares it, wherever it lives
+cm.getWrapperElement().addEventListener("mousedown", (e) => {
+    if (!e.altKey) return;
+    const pos = cm.coordsChar({ left: e.clientX, top: e.clientY });
+    const tok = cm.getTokenAt(pos, true);
+    const name = (tok.string || "").trim();
+    if (!/^[A-Z]\w*$/.test(name)) return;
+    e.preventDefault();
+    jumpTo(name);
+});
 let files = [], active = "", personalFile = null;
 let badFiles = new Set(), siblingNames = new Set(), layoutDecls = new Map(), declFile = new Map();
 let lastParsed = null, lastRefusals = [], widgets = [], tableSort = null;
@@ -332,10 +343,12 @@ function renderJournal() {
 // git plumbing. It opens UNDER the commit, in the rail — nothing is covered
 // and nothing dims, because a diff is something you glance at.
 async function toggleDiff(c, row) {
-    const open = row.nextElementSibling && row.nextElementSibling.classList.contains("cdiff");
-    for (const el of document.querySelectorAll(".cdiff")) el.remove();
-    for (const el of document.querySelectorAll(".commit.open")) el.classList.remove("open");
-    if (open) return;
+    // each commit opens and closes on its own: several can stand open at once,
+    // and which of them is worth reading together is nobody's business but yours
+    const next = row.nextElementSibling;
+    if (next && next.classList.contains("cdiff")) {
+        next.remove(); row.classList.remove("open"); return;
+    }
     row.classList.add("open");
     const box = document.createElement("div");
     box.className = "cdiff";
@@ -385,11 +398,9 @@ function say(text) {
 const KEYS = [
     [MOD + " /", "Comment the selected lines, or uncomment them"],
     [MOD + " Z", "Undo · " + MOD + " \u21e7 Z redo"],
-    [MOD + " F", "Find in this file (the browser's own find: every line is on the page)"],
+    [MOD + " F", "Find in this file: every line is on the page, so the browser's own find works"],
     ["Tab", "Indent · \u21e7 Tab outdent"],
-    ["Alt-click a name", "Open the line that declares it"],
-    ["Esc", "Close an open commit"],
-    [MOD + " S", "Nothing: the file is written whenever the judge holds"],
+    ["Alt-click", "Open the line that declares the name under the cursor"],
 ];
 {
     // built on first use: everything it needs is defined by then
@@ -400,7 +411,7 @@ const KEYS = [
         if (!panel.dataset.built) {
             panel.innerHTML = "<h4>Keys</h4>" + KEYS.map(([k, what]) =>
                 '<div class="krow"><kbd>' + esc(k) + "</kbd><span>" + esc(what) + "</span></div>").join("")
-                + "<p>Edits are judged as you type. Nothing else is bound, and nothing is remapped.</p>";
+                + "<p>Edits are judged as you type. Nothing else is bound, and the editor's own keys are left alone.</p>";
             panel.dataset.built = "1";
         }
         panel.hidden = !panel.hidden;
