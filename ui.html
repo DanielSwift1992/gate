@@ -14,7 +14,7 @@
 :root{--ok:#248A3D;--bad:#C4453B;--action:#007AFF;--line:#d2d2d7;--mist:#f5f5f7;--paper:#fff;--ink:#1d1d1f;--muted:#8e8e93;--localtype:#0B4F79;--knownname:#3900A0;color-scheme:light}
 *{box-sizing:border-box}
 body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);background:var(--paper);display:flex;height:100vh;overflow:hidden}
-#rail{flex:0 0 176px;display:none;flex-direction:column;overflow:auto;min-width:0}
+#rail{flex:0 0 250px;display:none;flex-direction:column;overflow:auto;min-width:0}
 #rail h3{font:600 10.5px/1 -apple-system,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0;padding:1em 1.1em .6em}
 .file{display:flex;align-items:center;gap:.5em;padding:.32em 1.1em;cursor:pointer;font:13px/1.4 ui-monospace,Menlo,monospace;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .file:hover{background:var(--mist)}
@@ -37,27 +37,25 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .badge{flex:none;font:9.5px/1.4 -apple-system,sans-serif;padding:0 .5em;border-radius:8px}
 .badge.closed{background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok)}
 .badge.open{background:color-mix(in srgb,var(--action) 15%,transparent);color:var(--action)}
+#next{margin-left:auto;font:11.5px -apple-system,sans-serif;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52%}
 #filter-note,#load-more{padding:.3em 1.1em;font:11px -apple-system,sans-serif;color:var(--action);cursor:pointer}
 #filter-note:hover,#load-more:hover{text-decoration:underline}
-#diff-overlay{display:none;position:fixed;inset:0;background:color-mix(in srgb,var(--ink) 22%,transparent);z-index:20;align-items:center;justify-content:center}
-#diff-box{background:var(--paper);border-radius:12px;width:min(680px,88vw);max-height:78vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 12px 44px color-mix(in srgb,var(--ink) 26%,transparent)}
-.dhead{position:relative;padding:1em 1.2em .85em;border-bottom:1px solid var(--line);flex:none}
-.dsubj{font:600 14px/1.35 -apple-system,sans-serif;padding-right:2em}
-.dmeta{display:flex;align-items:center;gap:.5em;margin-top:.4em;font:11.5px -apple-system,sans-serif;color:var(--muted)}
-.dmeta code{font:11px ui-monospace,Menlo,monospace}
-#diff-close{position:absolute;top:.75em;right:.85em;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:6px;color:var(--muted);font-size:12px;cursor:pointer}
-#diff-close:hover{background:var(--mist);color:var(--ink)}
-.dbody{overflow:auto;padding:.5em 0 .9em}
-.dfile{padding:.7em 1.2em .35em;font:11px ui-monospace,Menlo,monospace;color:var(--muted)}
-.dfile .dnote{margin-left:.6em;font:11px -apple-system,sans-serif}
-.dmore{padding:.35em 1.2em;font:11px -apple-system,sans-serif;color:var(--muted)}
+#brand{padding:1.1em 1.1em .5em}
+#brand b{display:block;font:600 15px/1.2 -apple-system,sans-serif;letter-spacing:-.01em}
+#brand span{display:block;margin-top:.35em;font:11.5px/1.45 -apple-system,sans-serif;color:var(--muted)}
+.commit.open{background:var(--mist)}
+.cdiff{padding:.2em 0 .5em;background:var(--mist);border-left:2px solid color-mix(in srgb,var(--action) 55%,transparent)}
+.dwait{padding:.3em 1.1em;font:11px -apple-system,sans-serif;color:var(--muted)}
+.dfile{padding:.4em 1.1em .25em;font:10.5px ui-monospace,Menlo,monospace;color:var(--muted)}
+.dfile .dnote{margin-left:.5em;font:10.5px -apple-system,sans-serif}
+.dmore{padding:.25em 1.1em;font:10.5px -apple-system,sans-serif;color:var(--muted)}
+.fact{display:flex;align-items:baseline;gap:.35em;flex-wrap:wrap;padding:.2em 1.1em;font:11.5px ui-monospace,Menlo,monospace}
+.dline{padding:.15em 1.1em;font:11px/1.45 ui-monospace,Menlo,monospace;white-space:pre-wrap;word-break:break-word;color:var(--muted)}
 .fact .sep{color:var(--muted)}
-.fact{display:flex;align-items:baseline;gap:.45em;flex-wrap:wrap;padding:.28em 1.2em;font:12.5px ui-monospace,Menlo,monospace}
 .fact .own{color:var(--localtype)}
 .fact .was{color:var(--bad);text-decoration:line-through;text-decoration-thickness:1px}
 .fact .arrow{color:var(--muted)}
 .fact .now{color:var(--ok)}
-.dline{padding:.2em 1.2em;font:12px/1.5 ui-monospace,Menlo,monospace;white-space:pre-wrap;word-break:break-word;color:var(--muted)}
 .dline .sg{display:inline-block;width:1.1em;opacity:.6}
 .dline.add{color:var(--ok);background:color-mix(in srgb,var(--ok) 7%,transparent)}
 .dline.del{color:var(--bad);background:color-mix(in srgb,var(--bad) 7%,transparent)}
@@ -123,10 +121,10 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .refusal code{color:var(--bad);font:11.5px ui-monospace,Menlo,monospace;flex:none}
 .refusal span{color:var(--ink)}
 </style>
-<div id="rail"><h3>files</h3><div id="filelist"></div>
-  <h3 id="journal-head" title="git's own history, projected — not a gate verdict">journal <span class="obs">observed · not judged</span></h3>
+<div id="rail"><div id="brand"><b>gate</b><span id="brandline"></span></div>
+  <h3>files</h3><div id="filelist"></div>
+  <h3 id="journal-head">journal <span class="obs"></span></h3>
   <div id="journal"></div></div>
-<div id="diff-overlay"><div id="diff-box"></div></div>
 <div class="split" id="split-rail" style="display:none"></div>
 <div id="main">
   <div id="bar">
@@ -140,7 +138,7 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
     <div id="table-host"></div>
   </div>
   <div id="verdict-panel">
-    <div id="verdict-head"><span id="chip"></span><span id="status"></span></div>
+    <div id="verdict-head"><span id="chip"></span><span id="status"></span><span id="next"></span></div>
     <div id="verdicts"></div>
   </div>
 </div>
@@ -229,9 +227,11 @@ function applyMyJournal() {
 function renderJournal() {
     const host = document.getElementById("journal");
     host.innerHTML = "";
-    // no world here means no world's history: say the repository instead
-    const label = journalScope === "world" && journalWorld.length ? "the world's history · " : "the repository · ";
-    document.querySelector("#journal-head .obs").textContent = label + "observed, not judged";
+    // say it in a sentence: shorthand teaches nobody what it means
+    const what = journalScope === "world" && journalWorld.length
+        ? "The commits that changed these files." : "The commits in this repository.";
+    document.querySelector("#journal-head .obs").textContent =
+        what + " Read from git — the judge has not checked any of this.";
     if (authorFilter) {
         const note = document.createElement("div");
         note.id = "filter-note";
@@ -257,7 +257,7 @@ function renderJournal() {
             e.stopPropagation();
             authorFilter = c.email; renderJournal();
         };
-        if (c.touches_world) row.onclick = () => showDiff(c);
+        if (c.touches_world) row.onclick = () => toggleDiff(c, row);
         host.appendChild(row);
     }
     if (!shown.length) host.innerHTML += '<div style="padding:.4em 1.1em;color:var(--muted);font-size:11px">no commits</div>';
@@ -270,23 +270,30 @@ function renderJournal() {
     }
 }
 // what a commit did, read as facts: `Rank: Manager → Lead`, not a wall of
-// git plumbing. Lines that are not a fact change stay lines.
-async function showDiff(c) {
+// git plumbing. It opens UNDER the commit, in the rail — nothing is covered
+// and nothing dims, because a diff is something you glance at.
+async function toggleDiff(c, row) {
+    const open = row.nextElementSibling && row.nextElementSibling.classList.contains("cdiff");
+    for (const el of document.querySelectorAll(".cdiff")) el.remove();
+    for (const el of document.querySelectorAll(".commit.open")) el.classList.remove("open");
+    if (open) return;
+    row.classList.add("open");
+    const box = document.createElement("div");
+    box.className = "cdiff";
+    box.innerHTML = '<div class="dwait">reading…</div>';
+    row.after(box);
     const f = c.files.find(x => (journalWorld || []).includes(x)) || "";
     const d = await (await fetch("/show?hash=" + c.hash + "&f=" + encodeURIComponent(f))).json();
-    const badge = c.closed === null ? "" :
-        '<span class="badge ' + (c.closed ? "closed" : "open") + '">' + (c.closed ? "closed" : "open") + "</span>";
     let body = "";
     for (const file of d.files) {
         if (!file.changes.length) continue;
-        // a file that was only added or only removed is not read line by line
-        const signs = new Set(file.changes.map(c => c.kind === "fact" ? "~" : c.sign));
+        const signs = new Set(file.changes.map(x => x.kind === "fact" ? "~" : x.sign));
         const whole = file.changes.length > 24 && signs.size === 1 && !signs.has("~");
         body += '<div class="dfile">' + esc(file.name)
-            + (whole ? '<span class="dnote">' + (signs.has("+") ? "written" : "removed") + ", "
-                + file.changes.length + " lines</span>" : "") + "</div>";
+            + (whole ? '<span class="dnote">' + (signs.has("+") ? "written" : "removed")
+                + ", " + file.changes.length + " lines</span>" : "") + "</div>";
         if (whole) continue;
-        const shown = file.changes.slice(0, 40);
+        const shown = file.changes.slice(0, 20);
         for (const ch of shown) {
             body += ch.kind === "fact"
                 ? '<div class="fact">' + (ch.owner ? '<span class="own">' + esc(ch.owner) + '</span><span class="sep">·</span>' : "")
@@ -298,18 +305,13 @@ async function showDiff(c) {
         if (file.changes.length > shown.length)
             body += '<div class="dmore">' + (file.changes.length - shown.length) + " more lines</div>";
     }
-    document.getElementById("diff-box").innerHTML =
-        '<div class="dhead"><div class="dsubj">' + esc(d.subject) + '</div>'
-        + '<div class="dmeta">' + badge + esc(c.person || d.author) + " · " + esc((d.date || "").slice(0, 10))
-        + ' · <code>' + esc(d.short) + "</code></div>"
-        + '<div id="diff-close" title="esc">✕</div></div>'
-        + '<div class="dbody">' + (body || '<div class="dline">no change in the world files</div>') + "</div>";
-    document.getElementById("diff-close").onclick = closeDiff;
-    document.getElementById("diff-overlay").style.display = "flex";
+    box.innerHTML = body || '<div class="dmore">no change in these files</div>';
 }
-function closeDiff() { document.getElementById("diff-overlay").style.display = "none"; }
+function closeDiff() {
+    for (const el of document.querySelectorAll(".cdiff")) el.remove();
+    for (const el of document.querySelectorAll(".commit.open")) el.classList.remove("open");
+}
 let journalWorld = [];
-document.getElementById("diff-overlay").onclick = (e) => { if (e.target.id === "diff-overlay") closeDiff(); };
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDiff(); });
 
 function namesOf(parsed) {
@@ -376,6 +378,7 @@ async function render() {
         ? '<span class="chip bad" id="chip">refuses ' + r.refusals.length + '</span>'
         : '<span class="chip ok" id="chip">holds</span>';
     clearFlags(); applyFlags(r.refusals);
+    showNext();
     badFiles = new Set(r.refusals.map(x => x.file || active).filter(Boolean));
     buildRail();
     // the verdict list, docked at the bottom (Xcode status)
@@ -395,6 +398,19 @@ async function render() {
     if (mode === "table") buildTables();
     if (mode === "bare") document.getElementById("bare").innerHTML = bareForm(lastParsed);
     applyMyJournal();   // the journal follows the declaration, as you edit it
+}
+
+// the one step that comes next, chosen by what this repository already has —
+// the same sentence the CLI ends with, so the bench and the terminal agree
+let nextShown = "";
+async function showNext() {
+    try {
+        const st = await (await fetch("/status")).json();
+        const line = st.next || "";
+        if (line === nextShown) return;
+        nextShown = line;
+        document.getElementById("next").textContent = line ? "next: " + line : "";
+    } catch { }
 }
 
 // the honest state: has the working-copy file drifted from git, or is it committed
@@ -689,6 +705,11 @@ makeSplit(document.getElementById("split-rail"), document.getElementById("rail")
     const fl = await (await fetch("/files")).json().catch(() => ({ files: [] }));
     files = fl.files || []; personalFile = fl.personal || null;
     // the rail carries files AND the journal, so it shows for any clone
+    // the line says what is true HERE: with a world, the judge is at work;
+    // without one, only the history is being read
+    document.getElementById("brandline").textContent = files.length
+        ? "Every claim in these files is judged as you type. A lie cannot be saved."
+        : "Reading this repository's history. Nothing here is judged yet.";
     document.getElementById("rail").style.display = "flex";
     document.getElementById("split-rail").style.display = "block";
     document.getElementById("fname").style.display = "none";
