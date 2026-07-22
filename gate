@@ -477,6 +477,8 @@ def cmd_import(a):
     emit("// tables, is the truth. A gate.manifest.swift may split it across")
     emit("// several files, all judged together. git carries the history.")
     emit(f"// seeded by gate import from: {os.path.basename(people_csv)}, {os.path.basename(grants_csv)}")
+    emit("// the language it is written in: `gate stdlib show genre-organization`")
+    emit("// (`materialize` puts that file beside this one, where it becomes yours)")
     people = list(csv.DictReader(open(people_csv)))
     grants = list(csv.DictReader(open(grants_csv)))
 

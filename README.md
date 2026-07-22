@@ -120,11 +120,13 @@ head. A refusal points at its address instead.
   your file — and their pipeline stays about the shared world alone. Privacy
   is the repository boundary, not a policy; sharing is moving a declaration
   into the shared world and committing it.
-- **A shelf that is source.** Built-in definitions (git atoms, domain
-  genres) are real Swift files in `stdlib/`, judged by the product's own
-  judge in its own battery. `gate stdlib show` prints any of them;
-  `materialize` lands the file in your repo, where it becomes yours.
-  Hidden is not secret.
+- **A shelf of genres, and a genre is the unit.** A domain has one
+  vocabulary — the forms and axes a world of that kind is written in — and
+  it ships as a real Swift file in `stdlib/`, judged by the product's own
+  judge in its own battery. An imported world names the genre it is written
+  in, so the language is one command away: `gate stdlib show
+  genre-organization`, and `materialize` lands it in your repo where it
+  becomes yours. Hidden is not secret.
 
 ## Carrying gate in your repository
 
@@ -231,7 +233,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 70 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 72 end-to-end checks, the definition of green
 ```
 
 ## Status

@@ -50,6 +50,11 @@ def main():
     S.append(("apply grant back", r.get("applied") is True))
     c, r = run("import", "tables/people.csv", "tables/grants.csv", "-o", "gate.swift", cwd=repo)
     S.append(("import clean", r["verdict"] == "holds"))
+    printed = open(os.path.join(repo, "gate.swift")).read()
+    named = re.search(r"gate stdlib show (genre-[a-z]+)", printed)
+    S.append(("a world names the genre it is written in, and that genre is on the shelf",
+              bool(named) and os.path.exists(
+                  os.path.join(HERE, "stdlib", named.group(1) + ".swift"))))
     c, r = run("export", "gate.swift", "-o", "pb.csv", "gb.csv", cwd=repo)
     d1 = subprocess.run(["diff", "tables/people.csv", "pb.csv"], cwd=repo).returncode
     d2 = subprocess.run(["diff", "tables/grants.csv", "gb.csv"], cwd=repo).returncode
@@ -97,7 +102,9 @@ def main():
 
     # stdlib: hidden is not secret — shelf, materialize, drift guard, ownership
     c, r = run("stdlib")
-    S.append(("stdlib shelf lists modules", len(r.get("modules", {})) == 2))
+    shelf = set(r.get("modules", {}))
+    on_disk = {f[:-6] for f in os.listdir(os.path.join(HERE, "stdlib")) if f.endswith(".swift")}
+    S.append(("the shelf lists exactly the genres on it", shelf == on_disk and len(shelf) >= 3))
     lib = os.path.join(tmp, "lib")
     os.makedirs(lib)
     shutil.copy(os.path.join(repo, "gate.swift"), os.path.join(lib, "gate.swift"))
