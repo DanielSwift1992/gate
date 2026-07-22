@@ -119,10 +119,12 @@ head. A refusal points at its address instead.
 - **Refusals with addresses.** Never "validation failed" — always
   `file:line`, both names, and what must hold: the line you broke, not one
   near it. On imported data the address points into *your* CSV.
-- **Offers only what may stand there.** Every axis in a genre says what it
-  accepts, so an empty slot after `Sex =` offers Male and Female — not
-  Manager, and not a name that merely looks similar. What the bench suggests
-  is what the judge will accept.
+- **Offers every way to fill a hole, and only those.** Every axis in a genre
+  says what it accepts, so an empty slot after `Sex =` offers Male, Female
+  *and* `Given.Sex` — an atom of that kind, or a path through an axis this
+  record already has whose own axis is of that kind. Type a dot and it offers
+  what stands after it. Not Manager, and not a name that merely looks
+  similar: what the bench suggests is what the judge will accept.
 - **Millisecond judgement at any size.** 2 000 records judged in ~100 ms;
   the merge cycle benches at ~7 merges/s on one queue — thousands of times
   a CI-gated queue. Judgement is linear and local.
@@ -288,7 +290,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 105 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 110 end-to-end checks, the definition of green
 ```
 
 ## Status

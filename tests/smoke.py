@@ -266,9 +266,13 @@ public enum MyWatch: AccessLedger {{
 
     src_gate = open(GATE, encoding="utf-8").read()
     tpl = src_gate.split('PERSONAL_TEMPLATE = """')[1].split('"""')[0]
+    S.append(("the comment says the world is kept on this machine alone",
+              "THIS machine" in tpl and "goes nowhere else" in tpl))
     S.append(("the world you have not written reads as a comment that says what it is",
               tpl.lstrip("\\\n ").startswith("// Yours.") and "shared repository" in tpl
               and "not stored" in tpl))
+    S.append(("a state that holds is kept in that git, not left loose",
+              'commit", "-qm", "your world"' in src_gate))
     S.append(("and text still equal to that comment is not kept",
               'text.strip() == PERSONAL_TEMPLATE.strip()' in src_gate
               and "os.remove(p)" in src_gate))
@@ -480,7 +484,13 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               "associatedtype Sex: Sexed" in genre and "associatedtype Rank: Ranked" in genre
               and "associatedtype Home: Department" in genre))
     S.append(("and the bench offers by that, not by what it saw nearby",
-              "function allowedHere(" in ui and "axisOf[" in ui))
+              "function fillersFor(" in ui and "function slotKind(" in ui))
+    S.append(("an axis reached through another axis is an answer too",
+              "axis + \".\" + inner" in ui))
+    S.append(("and a name followed by a dot offers what stands after it",
+              "function afterDot(" in ui and "protoAxes[kind]" in ui))
+    S.append(("the shelf says which axes each kind has, so those answers exist",
+              '"protoAxes": proto_axes' in open(GATE, encoding="utf-8").read()))
 
     S.append(("the bench offers only names the world declares",
               "function completionPool()" in ui and "layoutDecls" in ui.split("function completionPool()")[1][:400]))

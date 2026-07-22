@@ -190,7 +190,8 @@ const keywordSet = new Set(["public","enum","protocol","typealias","extension","
 let localNames = new Set(), unresolved = new Set();
 let jumpable = new Set();      // names with a home: underlined, and clickable
 let vocabulary = {};           // name -> the shelf module that declares it
-let conformers = {}, axisOf = {};   // what conforms to what, and what an axis takes
+let conformers = {}, axisOf = {}, protoAxes = {};   // what conforms to what,
+                                    // what an axis takes, and what each kind has
 
 CodeMirror.defineMode("gate-swift", () => ({
     token: (stream) => {
@@ -433,19 +434,59 @@ let journalWorld = [];
 let compItems = [], compChosen = 0, compFrom = null;
 const compEl = document.getElementById("completion");
 
-function allowedHere(line, upto) {
-    // `public typealias Sex = ` — the axis names what may stand in it, and the
-    // genre says which atoms are of that kind. Offering anything else would be
-    // offering something the judge is going to refuse.
-    const m = /typealias\s+(\w+)\s*=\s*\w*$/.exec(line.slice(0, upto));
-    if (!m) return null;
-    const kind = axisOf[m[1]];
+// what declaration the cursor stands in, and what it conforms to
+function hostAt(lineNo) {
+    for (let i = lineNo; i >= 0; i--) {
+        const m = /^\s*(?:public\s+)?enum\s+(\w+)\s*:\s*([\w,\s]+?)\s*\{/.exec(cm.getLine(i) || "");
+        if (m) return { name: m[1], conformances: m[2].split(",").map(x => x.trim()).filter(Boolean) };
+        if (/^\}/.test(cm.getLine(i) || "")) return null;
+    }
+    return null;
+}
+
+// the axes this declaration owes, and of what kind, from what it conforms to
+function axesOfHost(host) {
+    const out = {};
+    for (const proto of (host ? host.conformances : []))
+        Object.assign(out, protoAxes[proto] || {});
+    return out;
+}
+
+// EVERY way to fill a hole of a given kind: an atom of that kind, or a path
+// through an axis this declaration already has whose own axis is of that kind
+// — which is how `Sex = Given.Sex` comes to be the answer.
+function fillersFor(kind, host) {
     if (!kind) return null;
-    const world = [];
+    const out = [];
+    for (const n of (conformers[kind] || [])) out.push(n);
     for (const [name, d] of layoutDecls)
-        if ((d.conformances || []).includes(kind)) world.push(name);
-    const all = [...(conformers[kind] || []), ...world];
-    return all.length ? all : null;
+        if ((d.conformances || []).includes(kind)) out.push(name);
+    const mine = axesOfHost(host);
+    for (const [axis, axisKind] of Object.entries(mine))
+        for (const [inner, innerKind] of Object.entries(protoAxes[axisKind] || {}))
+            if (innerKind === kind) out.push(axis + "." + inner);
+    return out.length ? [...new Set(out)] : null;
+}
+
+// after a dot: the axes of whatever stands to the left, narrowed to the kind
+// the slot takes when we know it
+function afterDot(before, host, wanted) {
+    const m = /(\w+)\.(\w*)$/.exec(before);
+    if (!m) return null;
+    const mine = axesOfHost(host);
+    const kind = mine[m[1]] || axisOf[m[1]];
+    const inner = protoAxes[kind] || {};
+    const out = Object.entries(inner)
+        .filter(([, k]) => !wanted || k === wanted)
+        .map(([a]) => a);
+    return out.length ? { items: out, from: m[2].length } : null;
+}
+
+function slotKind(line, upto, host) {
+    const m = /typealias\s+(\w+)\s*=\s*[\w.]*$/.exec(line.slice(0, upto));
+    if (!m) return null;
+    const mine = axesOfHost(host);
+    return mine[m[1]] || axisOf[m[1]] || null;
 }
 
 function completionPool() {
@@ -486,16 +527,27 @@ function offerCompletion() {
     const cur = cm.getCursor();
     const line = cm.getLine(cur.line) || "";
     const before = line.slice(0, cur.ch);
+    const host = hostAt(cur.line);
+    const kind = slotKind(line, cur.ch, host);
+
+    // a hole whose form we know: after a dot, the axes of what stands there
+    const dotted = afterDot(before, host, kind);
+    if (dotted) {
+        compItems = dotted.items.slice(0, 8);
+        compChosen = 0;
+        compFrom = { line: cur.line, ch: cur.ch - dotted.from };
+        compEl.dataset.kind = kind || "";
+        return drawCompletion();
+    }
+
     const m = /([A-Za-z_]\w*)$/.exec(before);
-    const only = allowedHere(line, cur.ch);
-    // a slot standing empty is a question already answered: show what fits,
-    // without waiting for somebody to guess the first letters
+    const only = fillersFor(kind, host);
     if (!m) {
         if (!only || !/=\s*$/.test(before)) return hideCompletion();
         compItems = only.slice(0, 8);
         compChosen = 0;
         compFrom = { line: cur.line, ch: cur.ch };
-        compEl.dataset.kind = axisOf[/typealias\s+(\w+)\s*=/.exec(line)[1]] || "";
+        compEl.dataset.kind = kind || "";
         return drawCompletion();
     }
     if (m[1].length < 2 && !only) return hideCompletion();
@@ -507,9 +559,9 @@ function offerCompletion() {
     });
     compItems = pool.slice(0, 8);
     compChosen = 0;
-    compEl.dataset.kind = only ? (axisOf[/typealias\s+(\w+)\s*=/.exec(line)[1]] || "") : "";
     if (!compItems.length) return hideCompletion();
     compFrom = { line: cur.line, ch: cur.ch - word.length };
+    compEl.dataset.kind = only ? (kind || "") : "";
     drawCompletion();
 }
 
@@ -917,7 +969,7 @@ cm.on("change", (_, change) => {
     const userEdit = change.origin && change.origin !== "setValue";
     // offer names while somebody types, and only then
     const typed = change.origin === "+input" ? change.text.join("") : null;
-    if (typed !== null && /^[\w =]+$/.test(typed)) offerCompletion();
+    if (typed !== null && /^[\w =.]+$/.test(typed)) offerCompletion();
     else hideCompletion();
     timer = setTimeout(() => tick(userEdit), userEdit ? 400 : 150);
 });
@@ -1023,7 +1075,8 @@ for (const head of document.querySelectorAll("h3.fold")) {
 (async () => {
     {
         const v = await (await fetch("/vocabulary")).json().catch(() => ({}));
-        vocabulary = v.names || {}; conformers = v.conformers || {}; axisOf = v.axes || {};
+        vocabulary = v.names || {}; conformers = v.conformers || {};
+        axisOf = v.axes || {}; protoAxes = v.protoAxes || {};
     }
     const fl = await (await fetch("/files")).json().catch(() => ({ files: [] }));
     files = fl.files || []; personalFile = fl.personal || null; personalEmpty = !!fl.personal_empty;
