@@ -469,6 +469,11 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     S.append(("every name a printed world uses is declared somewhere it can be read",
               not homeless))
 
+    S.append(("a printed world carries no semicolon where nothing is separated",
+              ">.self;" not in printed and ">.self" in printed))
+    S.append(("and a world written either way is read the same",
+              'r">\\s*\\.self\\s*;?"' in open(GATE, encoding="utf-8").read()))
+
     S.append(("the bench offers only names the world declares",
               "function completionPool()" in ui and "layoutDecls" in ui.split("function completionPool()")[1][:400]))
 

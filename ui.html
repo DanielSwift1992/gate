@@ -241,8 +241,11 @@ const cm = CodeMirror(document.getElementById("editor-host"), {
     extraKeys: {
         "Cmd-/": toggleComment, "Ctrl-/": toggleComment,
         "Cmd-S": noSave, "Ctrl-S": noSave,
-        "Tab": (cm) => cm.somethingSelected() ? cm.indentSelection("add")
-                                              : cm.replaceSelection("    ", "end", "+input"),
+        "Tab": (cm) => {
+            if (!compEl.hidden) return acceptCompletion();     // the offer, first
+            return cm.somethingSelected() ? cm.indentSelection("add")
+                                          : cm.replaceSelection("    ", "end", "+input");
+        },
         "Shift-Tab": (cm) => cm.indentSelection("subtract"),
         "Cmd-Enter": () => {}, "Ctrl-Enter": () => {},
         "Down": (cm) => { if (compEl.hidden) return CodeMirror.Pass;
@@ -487,7 +490,7 @@ const KEYS = [
     [MOD + " /", "Comment the selected lines, or uncomment them"],
     [MOD + " Z", "Undo · " + MOD + " \u21e7 Z redo"],
     [MOD + " F", "Find in this file: every line is on the page, so the browser's own find works"],
-    ["Tab", "Indent · \u21e7 Tab outdent"],
+    ["Tab", "Take the name being offered, or indent · \u21e7 Tab outdent"],
     [MOD + " click", "Open the line that declares the name you click"],
 ];
 {

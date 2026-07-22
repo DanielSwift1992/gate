@@ -298,7 +298,7 @@ def with_temp(text):
 
 def last_entry_insert(text, head, args, indent):
     # insert a new entry after the LAST entry of the same form (and same axis arguments, when given)
-    pat = head + r"<\s*(\w+),\s*(\w+)\s*>\.self;"
+    pat = head + r"<\s*(\w+),\s*(\w+)\s*>\.self;?"
     hits = [m for m in re.finditer(pat, text)]
     if args.get("second"):
         hits = [m for m in hits if m.group(2) == args["second"]]
@@ -307,7 +307,7 @@ def last_entry_insert(text, head, args, indent):
     m = hits[-1]
     pad, inner = " " * indent, " " * (indent + 4)
     entry = (
-        f"\n{pad}{head}<\n{inner}{args['first']},\n{inner}{args['args_second']}\n{pad}>.self;"
+        f"\n{pad}{head}<\n{inner}{args['first']},\n{inner}{args['args_second']}\n{pad}>.self"
     )
     return text[: m.end()] + entry + text[m.end() :]
 
@@ -375,7 +375,7 @@ def grant_text(text, who, doc):
 
 
 def revoke_text(text, who, doc):
-    pat = rf"\n\s*VerifiedView<\s*{who},\s*{doc}\s*>\.self;"
+    pat = rf"\n\s*VerifiedView<\s*{who},\s*{doc}\s*>\.self;?"
     found = len(re.findall(pat, text))
     if found != 1:
         raise SystemExit(json.dumps({"error": f"revoke: grant {who}->{doc} found x{found}, want 1"}))
@@ -398,7 +398,7 @@ def hire_text(text, f):
         raise SystemExit(json.dumps({"error": "hire: no roster entries to anchor on"}))
     m = rosters[-1]
     text = text[: m.end()] + block + text[m.end() :]
-    slices = [m for m in re.finditer(r"(Emp\w+\.self;)(?=\s*\n\s*\})", text)]
+    slices = [m for m in re.finditer(r"(Emp\w+\.self;?)(?=\s*\n\s*\})", text)]
     if slices:  # the corpus world carries a Company list; an imported one does not, and the judge needs none
         s = slices[0]
         text = text[: s.end()] + f" {f['id']}.self;" + text[s.end() :]
@@ -496,14 +496,14 @@ def cmd_import(a):
     emit("\npublic enum ImportedTeam: Team {\n    @StructureBuilder\n    public static var body: some Structure {")
     for i, p in enumerate(people):
         src = f"{os.path.basename(people_csv)}:{i + 2}"
-        emit(f"        VerifiedInDepartment<\n            {p['id']},\n            {p['home']}\n        >.self;", src)
-        emit(f"        VerifiedAtRank<\n            {p['id']},\n            {p['rank']}\n        >.self;", src)
-        emit(f"        VerifiedAtWorkplace<\n            {p['id']},\n            {p['site']}\n        >.self;", src)
+        emit(f"        VerifiedInDepartment<\n            {p['id']},\n            {p['home']}\n        >.self", src)
+        emit(f"        VerifiedAtRank<\n            {p['id']},\n            {p['rank']}\n        >.self", src)
+        emit(f"        VerifiedAtWorkplace<\n            {p['id']},\n            {p['site']}\n        >.self", src)
     emit("    }\n}")
     emit("\npublic enum ImportedAccesses: AccessLedger {\n    @StructureBuilder\n    public static var body: some Structure {")
     for i, g in enumerate(grants):
         src = f"{os.path.basename(grants_csv)}:{i + 2}"
-        emit(f"            VerifiedView<\n                {g['who']},\n                {g['doc']}\n            >.self;", src)
+        emit(f"            VerifiedView<\n                {g['who']},\n                {g['doc']}\n            >.self", src)
     emit("    }\n}")
 
     with open(out_path, "w") as f:
@@ -553,7 +553,7 @@ def cmd_export(a):
     with open(people_out, "w") as f:
         f.write("id,rank,home,given,family,born,site,sex\n")
         f.writelines(",".join(r) + "\n" for r in rows)
-    grants = re.findall(r"VerifiedView<\s*(\w+),\s*(\w+)\s*>\.self;", text)
+    grants = re.findall(r"VerifiedView<\s*(\w+),\s*(\w+)\s*>\.self;?", text)
     with open(grants_out, "w") as f:
         f.write("who,doc\n")
         f.writelines(f"{w},{d}\n" for w, d in grants)
@@ -880,7 +880,7 @@ def cmd_library(a):
         }
     out_path = a[a.index("-o") + 1] if "-o" in a else None
     text = open(FACTS).read()
-    heads = sorted(set(re.findall(r"(\w+)<\s*\w+,\s*\w+\s*>\.self;", text)))
+    heads = sorted(set(re.findall(r"(\w+)<\s*\w+,\s*\w+\s*>\.self;?", text)))
     axes = sorted(set(re.findall(r"public typealias (\w+) = ", text)))
     lib = {"forms": heads, "axes": axes}
     if TABLES:  # coverage: which catalogue seeds the world holds (verify --self)
@@ -1299,11 +1299,11 @@ def entry_guards():
     # grammar ("outside the fragment"), and inside a body it refuses an
     # unknown form and an argument that resolves to nothing. One thing it
     # does not refuse: an entry that never closes. It swallows the entries
-    # after it and drops the run without a word — comment out one `>.self;`
+    # after it and drops the run without a word — comment out one `>.self`
     # and six claims stop being checked while the verdict still holds.
     #
     # So every line inside a body must belong to a whole entry: a form, its
-    # arguments, and the `>.self;` that ends it. Anything else is named by
+    # arguments, and the `>.self` that ends it. Anything else is named by
     # its line, which is what "no line may be written that is not allowed"
     # means once it is applied to the inside of a body as well.
     return entry_guards_over(disk_sources())
@@ -1331,7 +1331,7 @@ def entry_guards_over(sources):
             bare = code.strip()
             if not bare:
                 continue
-            closes = ">.self;" in bare or re.match(r"^>\s*\.self\s*;$", bare)
+            closes = re.search(r">\s*\.self\s*;?", bare) is not None
             opens = re.match(r"^[A-Z]\w*\s*<", bare)
             if opens:
                 if open_at:
@@ -1354,7 +1354,7 @@ def entry_guards_over(sources):
                 bad.append({"address": f"{name}:{i}",
                             "claim": f"`{bare[:40]}` stands inside a body and belongs to no entry: "
                                      "a body holds claims, and every claim is a form, its arguments "
-                                     "and the `>.self;` that ends it"})
+                                     "and the `>.self` that ends it"})
             else:
                 saw_arg = True
     return bad
