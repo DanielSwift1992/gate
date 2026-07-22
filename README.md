@@ -19,6 +19,25 @@ status: refused 1 · 18 declarations · 84 premises · 1.1 ms
                     Engineering against Finance
 ```
 
+## What changes
+
+Every question below is one somebody answers today by searching — greping
+repositories, opening tickets, asking whoever remembers. Here each is a
+lookup, answered in milliseconds against the file itself:
+
+| The question | Today | Here |
+|---|---|---|
+| May this person read this document? | ask the owner, or read the ACLs by hand | `gate check view Emp0042 FinanceShare` |
+| What breaks if we move them to Sales? | find out after the move | `gate diff transfer Emp0042 Sales` |
+| Who may merge this, and since when? | convention, and memory | `gate guard merge` · `gate log` |
+| Which commit broke this rule? | bisect by hand, if anyone notices | `git bisect run gate status` |
+| Is anything inconsistent right now? | an audit, quarterly | `gate status`, on every keystroke |
+
+You pay once, per atom: translating N people and documents is the work.
+Every question after that is a composition of what you already translated,
+and compositions are free — which is the opposite of a reporting tool,
+where each new question is new work.
+
 ## How it works
 
 Your facts become one Swift file — `gate.swift` — the **single source**,
@@ -233,7 +252,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 72 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 73 end-to-end checks, the definition of green
 ```
 
 ## Status

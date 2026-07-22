@@ -1480,6 +1480,23 @@ def cmd_report(a):
         + "".join(f"<li><code>{ref['address']}</code> · {ref['claim']}</li>" for ref in r["refusals"])
         + "</ul>"
     )
+    # who may do what, and when that last changed: an audit asks for both, and
+    # git already answers the second — the policy's own history, from the journal
+    ids, rules, where = read_policy()
+    policy_html = ""
+    if ids or rules:
+        rows = ([{"what": f"{action} requires", "who": rank} for action, rank in sorted(rules.items())]
+                + [{"what": mail, "who": person} for mail, person in sorted(ids.items())])
+        j = repo_journal(50)
+        pf = os.path.basename(policy_path() or "")
+        changes = [c for c in j["commits"] if pf and pf in c["files"]]
+        hist = "".join(
+            f"<li><code>{c['short']}</code> {c['when'][:10]} · {c['person'] or c['email']} · {c['subject']}</li>"
+            for c in changes[:10])
+        policy_html = ("<h2>Policy</h2>" + table(rows, ["what", "who"])
+                       + ("<p>Last changed:</p><ul>" + hist + "</ul>" if hist
+                          else "<p>Stated, and unchanged in the last 50 commits.</p>"))
+
     html = f"""<!-- printed by gate report; the table is read from the world, never stored -->
 <meta charset="utf-8"><title>gate report</title>
 <style>
@@ -1492,6 +1509,7 @@ th{{background:#f5f5f7}}.ok{{color:#248a3d}}.bad li{{color:#c4453b;margin:.3em 0
 <h2>Verdict</h2>{verdict_html}
 <h2>People</h2>{table(people, ["id", "rank", "home", "site", "given", "family", "born"])}
 <h2>Grants</h2>{table(grants, ["who", "doc"])}
+{policy_html}
 """
     with open(out_path, "w") as f:
         f.write(html)

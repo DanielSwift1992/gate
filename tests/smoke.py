@@ -264,6 +264,11 @@ public enum MergePolicy {
                     "-c", "user.name=B", "commit", "-qm", "state the policy in the world"], cwd=grepo)
     c, r = run("status", cwd=grepo)
     S.append(("the world still holds with the policy file beside it", r["verdict"] == "holds"))
+    c, r = run("report", "-o", "audit.html", cwd=grepo)
+    page = open(os.path.join(grepo, "audit.html")).read()
+    S.append(("the audit page carries the policy and when it last changed",
+              "<h2>Policy</h2>" in page and "merge requires" in page
+              and ("Last changed" in page or "unchanged" in page)))
     c, r = run("guard", "merge", cwd=grepo)
     S.append(("guard reads identity and policy from the policy file, not a CSV",
               r.get("policy_from") == "gate.policy.swift" and r.get("requires") == "Manager"
