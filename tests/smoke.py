@@ -295,6 +295,34 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     S.append(("a personal world cannot bend the team gate",
               r.get("author", "").endswith("Emp9001") and r["verdict"] == "refused"))
 
+    # ── the tool travels with the repository: a clone has it, nothing installed ──
+    ven = os.path.join(tmp, "vendored")
+    os.makedirs(ven)
+    subprocess.run(["git", "init", "-q", "-b", "main", ven])
+    run("demo", ven)
+    c, r = run("init", ven, "--vendor")
+    S.append(("init --vendor carries the tool and its judge into the repo",
+              r.get("vendored") and os.path.exists(os.path.join(ven, "gatew"))
+              and os.path.exists(os.path.join(ven, ".gate", "bin", "gate-judge"))
+              and len(r["vendored"].get("judge_sha256", "")) == 64))
+    subprocess.run(["git", "add", "-A"], cwd=ven)
+    subprocess.run(["git", "-c", "commit.gpgsign=false", "-c", "user.email=a@b", "-c",
+                    "user.name=A", "commit", "-qm", "world and tool", "--no-verify"], cwd=ven)
+    clone = os.path.join(tmp, "clone")
+    subprocess.run(["git", "clone", "-q", ven, clone])
+    shim = subprocess.run([os.path.join(clone, "gatew"), "status", "--json"],
+                          cwd=clone, capture_output=True, text=True)
+    S.append(("a fresh clone judges with no installation at all",
+              json.loads(shim.stdout or "{}").get("verdict") == "holds"))
+    t = open(os.path.join(clone, "gate.swift")).read().replace(
+        "public typealias Home = Finance", "public typealias Home = Engineering", 1)
+    open(os.path.join(clone, "gate.swift"), "w").write(t)
+    shim = subprocess.run([os.path.join(clone, "gatew"), "status", "--json"],
+                          cwd=clone, capture_output=True, text=True)
+    S.append(("and it refuses a planted lie by line, exiting non-zero for CI",
+              shim.returncode == 1
+              and json.loads(shim.stdout or "{}")["refusals"][0]["address"].startswith("gate.swift:")))
+
     # ── the first thirty seconds: a demo world, and a bench that opens with none ──
     d = os.path.join(tmp, "demoworld")
     c, r = run("demo", d)

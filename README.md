@@ -126,6 +126,26 @@ head. A refusal points at its address instead.
   `materialize` lands the file in your repo, where it becomes yours.
   Hidden is not secret.
 
+## Carrying gate in your repository
+
+`gate init . --vendor` puts the tool itself into `.gate/` with a `./gatew`
+shim, the way a project carries `./gradlew`. Commit it, and everybody who
+pulls has gate — there is no installation step to ask anyone to take, and
+nothing is fetched from anywhere:
+
+```sh
+git clone your/repo && cd repo
+./gatew status          # judged, immediately
+```
+
+Three things follow. A security review reads it as what it is: code in
+their own repository, pinned by a commit, reviewed like any other change —
+not a script piped into a shell. The judge is pinned with it, so an old
+commit is judged by the judge it was written with, which is what makes
+`git bisect` over facts exact. And the binary is reproducible: `.gate/`
+carries its `sha256`, and `bin/build-judge.sh <pin>` rebuilds it from the
+public corpus for anyone who wants to check.
+
 ## Security posture
 
 gate makes no outbound connection, at any time, for any reason: no
@@ -192,7 +212,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 62 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 65 end-to-end checks, the definition of green
 ```
 
 ## Status

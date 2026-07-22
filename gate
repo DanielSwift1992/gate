@@ -1074,6 +1074,54 @@ def commit_change(sha, path=None):
             "date": head[3], "subject": head[4], "files": files}
 
 
+def cmd_vendor(root):
+    # init --vendor: the tool travels WITH the repository, the way ./gradlew
+    # does. One person commits .gate/, and everybody who pulls has it — no
+    # install step exists, no curl into a shell, and a security review reads
+    # it as what it is: code in their own repo, pinned by a commit. The judge
+    # is pinned too, so an old commit is judged by the judge it was written
+    # with, which is what makes `git bisect` over facts exact.
+    here = os.path.dirname(os.path.abspath(__file__))
+    dst = os.path.join(root, ".gate")
+    os.makedirs(os.path.join(dst, "bin"), exist_ok=True)
+    import hashlib
+    carried = []
+    for rel in ("gate", "judge.js", "ui.html", "codemirror.js", "codemirror.css"):
+        src = os.path.join(here, rel)
+        if os.path.exists(src):
+            shutil.copy(src, os.path.join(dst, rel))
+            carried.append(rel)
+    for rel in ("stdlib",):
+        src = os.path.join(here, rel)
+        if os.path.isdir(src):
+            shutil.copytree(src, os.path.join(dst, rel), dirs_exist_ok=True)
+            carried.append(rel + "/")
+    jsrc = os.path.join(here, "bin", "gate-judge")
+    digest = None
+    if os.path.exists(jsrc):
+        shutil.copy(jsrc, os.path.join(dst, "bin", "gate-judge"))
+        os.chmod(os.path.join(dst, "bin", "gate-judge"), 0o755)
+        with open(jsrc, "rb") as f:
+            digest = hashlib.sha256(f.read()).hexdigest()
+        carried.append("bin/gate-judge")
+    os.chmod(os.path.join(dst, "gate"), 0o755)
+    shim = os.path.join(root, "gatew")
+    with open(shim, "w") as f:
+        f.write('#!/bin/sh\n# gate, carried by this repository — no installation\n'
+                'exec python3 "$(dirname "$0")/.gate/gate" "$@"\n')
+    os.chmod(shim, 0o755)
+    with open(os.path.join(dst, "README.md"), "w") as f:
+        f.write("# gate, carried by this repository\n\n"
+                "Run `./gatew status` — nothing to install. This directory is the tool\n"
+                "itself, pinned by the commit that added it, so every clone judges with\n"
+                "the same judge and an old commit is judged by the judge it was written\n"
+                "with.\n\n"
+                f"judge sha256: {digest}\n\n"
+                "The judge is built from a public corpus and is reproducible:\n"
+                "`bin/build-judge.sh <pin>` prints a binary with this hash.\n")
+    return {"carried": carried, "judge_sha256": digest, "shim": "./gatew"}
+
+
 def cmd_demo(a):
     # demo [dir] — a world to look at in thirty seconds: real people, real
     # grants, a hook, and a lie already planted so the first thing anybody
@@ -1342,6 +1390,8 @@ def cmd_import_rbac(a):
 
 
 def cmd_init(a):
+    vendor = "--vendor" in a
+    a = [x for x in a if x != "--vendor"]
     root = a[0] if a else "world"
     made = []
     for rel, content in INIT_FILES.items():
@@ -1354,6 +1404,7 @@ def cmd_init(a):
     hook = os.path.join(root, ".githooks", "pre-commit")
     if os.path.exists(hook):
         os.chmod(hook, 0o755)
+    vendored = cmd_vendor(root) if vendor else None
     hooks_note, undo, prior = None, None, None
     if os.path.isdir(os.path.join(root, ".git")):  # seamless: the hook wires itself
         prior = subprocess.run(["git", "config", "--local", "core.hooksPath"], cwd=root,
@@ -1366,7 +1417,7 @@ def cmd_init(a):
         if prior:
             hooks_note += f" — it was {prior}"
     return {"command": "init", "root": root, "created": made, "hooks": hooks_note,
-            "undo_hooks": undo, "changed_git_config": bool(hooks_note)}
+            "undo_hooks": undo, "changed_git_config": bool(hooks_note), "vendored": vendored}
 
 
 def world_rows(text):
@@ -1772,6 +1823,12 @@ def humanize(out):
             lines.append(f"  {out['hooks']}")
         if out.get("undo_hooks"):
             lines.append(f"  to undo that one git setting: {out['undo_hooks']}")
+        if out.get("vendored"):
+            v = out["vendored"]
+            lines.append(f"  gate now travels with this repository: .gate/ + {v['shim']}")
+            lines.append("  commit it, and every clone has the tool — nothing to install")
+            if v.get("judge_sha256"):
+                lines.append(f"  judge sha256: {v['judge_sha256'][:16]}…")
     elif cmd == "export":
         lines.append(f"export: {out['people']} people, {out['grants']} grants → {', '.join(out['wrote'])}")
     elif cmd == "log":
