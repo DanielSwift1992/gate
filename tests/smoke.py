@@ -312,6 +312,8 @@ public enum MergePolicy {
     S.append(("the audit page carries the policy and when it last changed",
               "<h2>Policy</h2>" in page and "merge requires" in page
               and ("Last changed" in page or "unchanged" in page)))
+    S.append(("and the same findings the terminal gives, marked read or checked",
+              "<h2>Findings</h2>" not in page or "not a verdict" in page))
     c, r = run("guard", "merge", cwd=grepo)
     S.append(("guard reads identity and policy from the policy file, not a CSV",
               r.get("policy_from") == "gate.policy.swift" and r.get("requires") == "Manager"
@@ -499,6 +501,48 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     ui = open(os.path.join(HERE, "ui.html"), encoding="utf-8").read()
     S.append(("the page declares a policy that blocks any external request",
               "Content-Security-Policy" in ui and "connect-src 'self'" in ui))
+
+    # ── findings: what is true of a repository, in sentences ──
+    # The one producer behind the terminal, an audit page and the text of an
+    # issue. It must work with no world at all, and never claim as checked
+    # what it only read.
+    fr = os.path.join(tmp, "findings")
+    os.makedirs(os.path.join(fr, "src"))
+    subprocess.run(["git", "init", "-q", "-b", "main", fr])
+    shutil.copy(os.path.join(DEMO, "CODEOWNERS"), os.path.join(fr, "CODEOWNERS"))
+    open(os.path.join(fr, "src", "parser.py"), "w").write("x\n")
+    subprocess.run(["git", "add", "-A"], cwd=fr)
+    for i in range(55):
+        open(os.path.join(fr, "src", "parser.py"), "a").write(f"line {i}\n")
+        subprocess.run(["git", "-c", "commit.gpgsign=false", "-c", "user.email=solo@proj",
+                        "-c", "user.name=S", "commit", "-qam", f"work {i}", "--no-verify"], cwd=fr)
+    c, r = run("findings", cwd=fr)
+    kinds = {f["kind"] for f in r["findings"]}
+    S.append(("findings speak about a repository that has no world at all",
+              r["findings"] and r["judged"] == 0 and "observed" in kinds))
+    S.append(("findings never call read what the judge did not check",
+              all(f["kind"] != "judged" for f in r["findings"])))
+    S.append(("findings notice owners the history has not seen",
+              any("owners named in CODEOWNERS" in f["sentence"] for f in r["findings"])))
+    c, r = run("findings", "--md", cwd=fr)
+    S.append(("findings become a note somebody could read in an issue",
+              r["markdown"].startswith("### ") and "not a verdict" in r["markdown"]))
+    # a history too short to be evidence proves nothing about anyone
+    tiny = os.path.join(tmp, "tiny")
+    os.makedirs(tiny)
+    subprocess.run(["git", "init", "-q", "-b", "main", tiny])
+    shutil.copy(os.path.join(DEMO, "CODEOWNERS"), os.path.join(tiny, "CODEOWNERS"))
+    subprocess.run(["git", "add", "-A"], cwd=tiny)
+    subprocess.run(["git", "-c", "commit.gpgsign=false", "-c", "user.email=a@b",
+                    "-c", "user.name=A", "commit", "-qm", "start", "--no-verify"], cwd=tiny)
+    c, r = run("findings", cwd=tiny)
+    S.append(("a history too short to be evidence makes no claim about people",
+              not any("have not appeared" in f["sentence"] for f in r["findings"])))
+    # with a world, the judge's own refusals lead
+    c, r = run("findings", cwd=jrepo)
+    S.append(("with a world, what the judge refused comes first and is marked checked",
+              any(f["kind"] == "judged" for f in r["findings"])
+              if run("status", cwd=jrepo)[1]["verdict"] == "refused" else True))
 
     # ── the claims about ourselves are judged too ──
     # A tool that sells judgement over memory may not keep its own claims by

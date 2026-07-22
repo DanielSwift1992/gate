@@ -91,7 +91,7 @@ gate survey                            # read-only: unwritten links mined from
 
 The porcelain is deliberately git-shaped: `init · status/fsck · log · check ·
 diff · apply · import/export · verify · guard · library · survey · serve ·
-report · stdlib · my · demo · --version`. A red verdict exits non-zero, so hooks and
+report · stdlib · my · demo · findings · --version`. A red verdict exits non-zero, so hooks and
 CI need no wrappers.
 
 Every command ends with the one step that comes next, chosen by what your
@@ -128,6 +128,14 @@ head. A refusal points at its address instead.
   every keystroke. It obeys your declared file layout and judges across
   files — an unsaved lie in one file is caught against a roster in
   another.
+- **Findings, before anything is translated.** `gate findings` reads a
+  clone and says what is true of it in sentences: who changes the facts and
+  whether anything checked those edits, owners CODEOWNERS names that the
+  history has not seen for hundreds of commits, work that lives in one
+  person's head. What the judge checked is marked as checked; what was only
+  read from git says so. `--md` prints the same as a note. It needs no
+  world, no configuration and no network — which makes it the first useful
+  thing gate does in any repository.
 - **A journal, from git itself.** `gate log` (and the bench rail) projects
   the repository's own history — commit, author, open or closed — with no
   translation at all: any clone already carries it. A view is a pure
@@ -256,7 +264,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 79 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 86 end-to-end checks, the definition of green
 ```
 
 ## Status

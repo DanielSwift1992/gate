@@ -1539,6 +1539,120 @@ def cmd_import_codeowners(a):
     }
 
 
+def repo_findings(n=400):
+    # What is true of THIS repository, said in sentences a person can act on.
+    # This is the one producer behind `gate findings`, the survey, the audit
+    # page and the text of an issue: read the clone, name what is worth
+    # naming, and mark plainly which of it the judge checked and which was
+    # only read. Nothing here needs a translated world — a repository that
+    # has never heard of gate still has findings.
+    out = []
+    j = repo_journal(n)
+    commits = j["commits"]
+    base = os.path.dirname(os.path.abspath(FACTS)) if FACTS else "."
+
+    if not commits:
+        return out
+    authors = {}
+    for c in commits:
+        authors.setdefault(c["email"], []).append(c)
+
+    # what the world says, if there is one: refusals are findings of the first order
+    if FACTS and os.path.exists(FACTS):
+        r = dispatch("status", [])
+        for ref in r.get("refusals", []):
+            out.append({"kind": "judged", "subject": ref["address"],
+                        "sentence": f"{ref['address']} — {ref['claim']}",
+                        "evidence": "the judge, on this working copy"})
+
+    # who touches the facts, and whether anything checked those edits
+    world = set(j.get("world_files") or [])
+    if world:
+        touchers = {c["email"] for c in commits if c["touches_world"]}
+        edits = sum(1 for c in commits if c["touches_world"])
+        ci = os.path.isdir(os.path.join(base, ".github", "workflows"))
+        hooked = subprocess.run(["git", "config", "--get", "core.hooksPath"], cwd=base,
+                                capture_output=True, text=True).stdout.strip()
+        if edits and not (ci or hooked):
+            out.append({"kind": "observed", "subject": "unchecked edits",
+                        "sentence": f"{len(touchers)} people changed these facts across "
+                                    f"{edits} commits, and nothing checked those edits: "
+                                    "there is no hook and no workflow in this repository.",
+                        "evidence": f"git log over {', '.join(sorted(world))}"})
+        unnamed = sorted({c["email"] for c in commits if c["touches_world"] and not c["person"]})
+        if unnamed:
+            out.append({"kind": "observed", "subject": "unnamed authors",
+                        "sentence": f"{len(unnamed)} of the people who changed these facts are "
+                                    "not tied to anyone in the world: an email is not a person "
+                                    "until something says it is.",
+                        "evidence": ", ".join(unnamed[:4])})
+
+    # ownership, if this repository states any: a stale owner is worth a sentence
+    co = os.path.join(base, "CODEOWNERS")
+    for cand in (co, os.path.join(base, ".github", "CODEOWNERS"),
+                 os.path.join(base, "docs", "CODEOWNERS")):
+        if os.path.exists(cand):
+            rules = read_codeowners(cand)
+            owners = {o.lstrip("@") for r_ in rules for o in r_["owners"]}
+            seen = {c["email"].split("@")[0] for c in commits} | {
+                (c["person"] or "").lower() for c in commits}
+            quiet = sorted(o for o in owners if "/" not in o and o.lower() not in seen)
+            # a history too short to be evidence proves nothing about anyone
+            if quiet and len(commits) >= 50:
+                out.append({"kind": "observed", "subject": "quiet owners",
+                            "sentence": f"{len(quiet)} of the {len(owners)} owners named in "
+                                        f"CODEOWNERS have not appeared in the last "
+                                        f"{len(commits)} commits: ownership outlives people, "
+                                        "and nothing here notices.",
+                            "evidence": ", ".join("@" + q for q in quiet[:4])})
+            out.append({"kind": "offer", "subject": "CODEOWNERS",
+                        "sentence": f"CODEOWNERS states {len(rules)} rules over "
+                                    f"{len(owners)} owners, and no tool checks them. "
+                                    "`gate import codeowners` reads them as a world: a path "
+                                    "no file matches, or an owner outside their zone, is "
+                                    "named by the line it sits on.",
+                        "evidence": os.path.relpath(cand, base)})
+            break
+
+    # the shape of the work, from the history itself
+    top = sorted(authors.items(), key=lambda kv: -len(kv[1]))[:1]
+    if top and len(commits) >= 20:
+        who, cs = top[0]
+        share = round(100 * len(cs) / len(commits))
+        if share >= 50:
+            out.append({"kind": "observed", "subject": "concentration",
+                        "sentence": f"{share}% of the last {len(commits)} commits are one "
+                                    f"person's ({who}): what they know is not written down "
+                                    "anywhere this repository can check.",
+                        "evidence": f"{len(cs)} of {len(commits)} commits"})
+    return out
+
+
+def cmd_findings(a):
+    # findings [--md] [N] — what is true of this repository, in sentences.
+    nums = [x for x in a if x.isdigit()]
+    found = repo_findings(int(nums[0]) if nums else 400)
+    return {"command": "findings", "findings": found,
+            "judged": sum(1 for f in found if f["kind"] == "judged"),
+            "observed": sum(1 for f in found if f["kind"] != "judged"),
+            "markdown": findings_markdown(found) if "--md" in a else None,
+            "mutates": False}
+
+
+def findings_markdown(found):
+    # the same findings as a note somebody could read in an issue: what was
+    # checked, what was only read, and how to see it for yourself.
+    if not found:
+        return "Nothing to report: this repository states no facts gate can read yet.\n"
+    lines = ["### What this repository says about itself", ""]
+    for f in found:
+        mark = "**checked**" if f["kind"] == "judged" else ("**offer**" if f["kind"] == "offer" else "read")
+        lines.append(f"- {f['sentence']}  \n  <sub>{mark} · {f['evidence']}</sub>")
+    lines += ["", "Everything marked *read* comes from the git history and is not a verdict.",
+              "To see it yourself: `gate findings` in a clone — nothing leaves the machine.", ""]
+    return "\n".join(lines)
+
+
 def cmd_init(a):
     vendor = "--vendor" in a
     a = [x for x in a if x != "--vendor"]
@@ -1620,12 +1734,21 @@ def cmd_report(a):
                        + ("<p>Last changed:</p><ul>" + hist + "</ul>" if hist
                           else "<p>Stated, and unchanged in the last 50 commits.</p>"))
 
+    found = repo_findings(200)
+    findings_html = ""
+    if found:
+        items = "".join(
+            f"<li>{f['sentence']}<br><small>{'checked by the judge' if f['kind'] == 'judged' else 'read from git history, not a verdict'} · {f['evidence']}</small></li>"
+            for f in found)
+        findings_html = f"<h2>Findings</h2><ul class='findings'>{items}</ul>"
+
     html = f"""<!-- printed by gate report; the table is read from the world, never stored -->
 <meta charset="utf-8"><title>gate report</title>
 <style>
 body{{font:14px/1.5 -apple-system,sans-serif;max-width:60em;margin:2em auto;padding:0 1em;color:#1d1d1f}}
 table{{border-collapse:collapse;margin:1em 0}}td,th{{border:1px solid #d2d2d7;padding:.3em .8em;text-align:left}}
 th{{background:#f5f5f7}}.ok{{color:#248a3d}}.bad li{{color:#c4453b;margin:.3em 0}}code{{background:#f5f5f7;padding:0 .3em}}
+.findings li{{margin:.6em 0}}.findings small{{color:#8e8e93}}
 </style>
 <h1>gate report</h1>
 <p>{len(people)} people · {len(grants)} grants · judged in {r['judge_ms']} ms</p>
@@ -1633,6 +1756,7 @@ th{{background:#f5f5f7}}.ok{{color:#248a3d}}.bad li{{color:#c4453b;margin:.3em 0
 <h2>People</h2>{table(people, ["id", "rank", "home", "site", "given", "family", "born"])}
 <h2>Grants</h2>{table(grants, ["who", "doc"])}
 {policy_html}
+{findings_html}
 """
     with open(out_path, "w") as f:
         f.write(html)
@@ -1939,6 +2063,8 @@ def dispatch(cmd, rest):
         return {"command": "my", "personal": p, "repo_key": repo_key(),
                 "shared_repo_untouched": True,
                 "verdict": "holds" if not refusals else "refused", "refusals": refusals}
+    if cmd == "findings":
+        return cmd_findings(rest)
     if cmd == "log":
         # gate log [N] — the world's history; gate log all [N] — the repository's
         scope = "all" if rest and rest[0] in ("all", "--all") else "world"
@@ -2028,6 +2154,20 @@ def humanize(out):
             who = c["person"] or c["email"]
             star = " *" if c["touches_world"] else ""
             lines.append(f"  {c['short']} {st:6} {c['when'][:10]} {who:20} {c['subject']}{star}")
+    elif cmd == "findings":
+        f = out["findings"]
+        if not f:
+            lines.append("findings: nothing to report yet")
+        else:
+            lines.append(f"findings: {len(f)} · {out['judged']} checked by the judge, "
+                         f"{out['observed']} read from git")
+            for x in f:
+                tag = "checked" if x["kind"] == "judged" else ("offer  " if x["kind"] == "offer" else "read   ")
+                lines.append(f"  [{tag}] {x['sentence']}")
+                lines.append(f"           {x['evidence']}")
+        if out.get("markdown"):
+            lines.append("")
+            lines.append(out["markdown"])
     elif cmd == "survey":
         lines.append(f"survey: {out['commits']} commits, read-only")
         lines.append("  unwritten links (co-change from your own history):")
