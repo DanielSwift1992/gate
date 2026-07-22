@@ -119,6 +119,11 @@ head. A refusal points at its address instead.
 - **Refusals with addresses.** Never "validation failed" — always
   `file:line`, both names, and what must hold: the line you broke, not one
   near it. On imported data the address points into *your* CSV.
+- **The cursor on a name says what it is.** A thin line under the bar names
+  whatever the cursor rests on: a record and what it conforms to, a value and
+  its kind, an axis and what it takes, a gate and its arguments. Every word is
+  read from your world and its genre, so your own domain describes itself with
+  no dictionary of ours to write.
 - **Offers every way to fill a hole, and only those.** Every axis in a genre
   says what it accepts, so an empty slot after `Sex =` offers Male, Female
   *and* `Given.Sex` — an atom of that kind, or a path through an axis this
@@ -290,7 +295,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 113 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 115 end-to-end checks, the definition of green
 ```
 
 ## Status

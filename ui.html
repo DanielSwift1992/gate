@@ -62,6 +62,8 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .crow.on{background:color-mix(in srgb,var(--action) 14%,transparent);color:var(--action)}
 .crow:hover{background:var(--mist)}
 .cnote{padding:.3em .6em .1em;font:10.5px -apple-system,sans-serif;color:var(--muted);border-top:1px solid var(--line);margin-top:3px}
+#inspect{flex:none;min-height:0;height:0;overflow:hidden;padding:0 16px;border-bottom:1px solid transparent;font:11.5px/1.6 ui-monospace,Menlo,monospace;color:var(--muted);white-space:nowrap;text-overflow:ellipsis;transition:height .08s}
+#inspect.on{height:1.9em;border-bottom-color:var(--line)}
 #say{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:31;background:var(--ink);color:var(--paper);font:12px -apple-system,sans-serif;padding:.5em 1em;border-radius:8px;box-shadow:0 6px 20px color-mix(in srgb,var(--ink) 30%,transparent)}
 #brand{padding:1.1em 1.1em .5em}
 #brand b{display:block;font:600 15px/1.2 -apple-system,sans-serif;letter-spacing:-.01em}
@@ -172,6 +174,7 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
     <button id="keys-btn" title="Keyboard shortcuts">?</button>
     <span id="gitstate" title="Edits go straight to the file on disk. gate keeps no state of its own: commit or discard with git."></span>
   </div>
+  <div id="inspect" title="the cursor on a name says what it is"></div>
   <div id="surface">
     <div id="editor-host"></div>
     <pre id="bare"></pre>
@@ -1027,6 +1030,58 @@ cm.on("change", (_, change) => {
 });
 cm.on("blur", () => setTimeout(hideCompletion, 120));
 cm.on("cursorActivity", () => { if (!compEl.hidden && !compFrom) hideCompletion(); });
+
+// ── the cursor on a name says what it is: a declaration here and what it
+// conforms to, a value and its kind, an axis and what it takes, a gate and
+// its arguments. Every word of it is read from the world and the genre, so a
+// client's own domain describes itself with no dictionary of ours. ──
+function describeName(name) {
+    const d = layoutDecls.get(name);
+    if (d && d.conformances && d.conformances.length) {
+        const kinds = d.conformances.filter(c => protoAxes[c]);
+        const plain = d.conformances.filter(c => !protoAxes[c]);
+        if (gates[name]) return name + " · a gate: " + name + "&lt;" + gates[name].join(", ") + "&gt;";
+        return name + " · " + (plain.length ? "a " + plain.join(", ") + " " : "") + "record"
+            + (kinds.length ? ", of kind " + kinds.join(", ") : "");
+    }
+    if (d) return name + " · declared here";
+    if (gates[name]) return name + " · a gate: takes " + gates[name].join(", ");
+    for (const [kind, atoms] of Object.entries(conformers))
+        if (atoms.includes(name)) return name + " · a value of kind " + kind
+            + (vocabulary[name] ? " (from " + vocabulary[name] + ")" : "");
+    if (protoAxes[name]) return name + " · a kind, with " + Object.keys(protoAxes[name]).join(", ")
+        + (vocabulary[name] ? " (from " + vocabulary[name] + ")" : "");
+    if (vocabulary[name]) return name + " · declared in " + vocabulary[name];
+    return null;
+}
+
+function describeAxis(host, axis) {
+    const kind = host ? axesOfHost(host)[axis] : (axisOf[axis]);
+    if (!kind) return null;
+    return axis + " · an axis, takes " + kind;
+}
+
+let inspectFrame = 0;
+function scheduleInspect() {
+    if (inspectFrame) return;
+    inspectFrame = requestAnimationFrame(() => { inspectFrame = 0; inspect(); });
+}
+function inspect() {
+    const el = document.getElementById("inspect");
+    const cur = cm.getCursor();
+    const tok = cm.getTokenAt(cur, true);
+    const name = (tok.string || "").trim();
+    if (!/^[A-Z]\w*$/.test(name)) { el.textContent = ""; el.classList.remove("on"); return; }
+    const line = cm.getLine(cur.line) || "";
+    const isAxis = new RegExp("typealias\\s+" + name + "\\s*=").test(line)
+        || new RegExp("associatedtype\\s+" + name + "\\b").test(line);
+    const { host } = placeAt(cur);
+    const text = (isAxis && describeAxis(host, name)) || describeName(name);
+    if (!text) { el.textContent = ""; el.classList.remove("on"); return; }
+    el.innerHTML = text + (jumpable.has(name) ? " · " + (MAC ? "\u2318" : "Ctrl") + "-click opens it" : "");
+    el.classList.add("on");
+}
+cm.on("cursorActivity", scheduleInspect);
 async function tick(write) {
     await render();                         // judges the buffer first
     const holds = lastRefusals.length === 0;

@@ -485,6 +485,13 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "associatedtype Home: Department" in genre))
     S.append(("and the bench offers by that, not by what it saw nearby",
               "function fillersFor(" in ui and "axesOfHost(host)[slot[1]]" in ui))
+    S.append(("the cursor on a name describes it from the grammar, not a dictionary",
+              "function describeName(" in ui and "function inspect(" in ui
+              and "protoAxes[name]" in ui and "conformers)" in ui))
+    S.append(("and what it says is read from the world and the genre",
+              "vocabulary[name]" in ui and "gates[name]" in ui
+              and "a dictionary of ours" not in ui.split("function describeName")[0][-200:]))
+
     S.append(("one reading of the grammar drives every offer, not a case per place",
               "function allowedAt(" in ui and "function placeAt(" in ui))
     S.append(("a record is offered the axes it still owes",
