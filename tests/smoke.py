@@ -505,6 +505,38 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     S.append(("the page declares a policy that blocks any external request",
               "Content-Security-Policy" in ui and "connect-src 'self'" in ui))
 
+    # ── one name, one declaration ──
+    # Two declarations of a name are two truths about it. The judge keeps one
+    # and says nothing, so the guard says it: at a keystroke, what the compiler
+    # would say at a build.
+    dup = os.path.join(tmp, "dup")
+    os.makedirs(dup)
+    world = open(os.path.join(repo, "gate.swift")).read()
+    i = world.index("public enum Edsger:")
+    j = world.index("}", world.index("Sex =", i)) + 1
+    twin = world[i:j].replace("Next = Barbara", "Next = John").replace("Sex = Male", "Sex = Female")
+    open(os.path.join(dup, "gate.swift"), "w").write(world[:j] + "\n\n" + twin + "\n" + world[j:])
+    c, r = run("status", cwd=dup)
+    dupes = [x for x in r["refusals"] if "declared twice" in x["claim"]]
+    S.append(("a name declared twice is refused, with both lines",
+              c == 1 and len(dupes) == 1
+              and "Edsger" in dupes[0]["claim"] and "gate.swift:" in dupes[0]["address"]))
+    # an axis is not a declaration: every person states the same ones
+    c, r = run("status", cwd=repo)
+    S.append(("and the axes every record repeats are not mistaken for it",
+              not [x for x in r.get("refusals", []) if "declared twice" in x["claim"]]))
+    # across a declared layout it is easier to miss, and just as wrong
+    two = os.path.join(tmp, "dup2")
+    os.makedirs(two)
+    open(os.path.join(two, "gate.swift"), "w").write(world[:j] + "\n" + world[j:])
+    open(os.path.join(two, "extra.swift"), "w").write(twin + "\n")
+    open(os.path.join(two, "gate.manifest.swift"), "w").write(
+        'public protocol WorldFile {}\npublic enum ExtraFile: WorldFile {}\n'
+        'extension ExtraFile { public static var typeName: String { "extra.swift" } }\n')
+    c, r = run("status", cwd=two)
+    S.append(("a name declared in two files of one layout is refused too",
+              any("declared twice" in x["claim"] for x in r["refusals"])))
+
     # ── findings: what is true of a repository, in sentences ──
     # The one producer behind the terminal, an audit page and the text of an
     # issue. It must work with no world at all, and never claim as checked

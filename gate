@@ -1273,6 +1273,33 @@ def stdlib_guards():
     return bad
 
 
+def duplicate_guards():
+    # One name, one declaration. Two declarations of a name are two truths
+    # about it, which is the thing this tool exists to make impossible — and
+    # the judge does not catch them: it keeps one and says nothing. Swift
+    # refuses the same file outright ("invalid redeclaration"), so this is the
+    # fast tier saying at a keystroke what the compiler would say at a build.
+    # Only names at the top of a file: a typealias INSIDE a declaration is an
+    # axis, and every person in a roster states the same ones.
+    seen, bad = {}, []
+    for name, path in bench_files():
+        depth = 0
+        for i, line in enumerate(open(path).read().split("\n"), 1):
+            code = line.split("//")[0]
+            m = re.match(r"\s*(?:public\s+)?(enum|protocol|struct|typealias)\s+(\w+)", code)
+            if m and depth == 0:
+                who, here = m.group(2), f"{name}:{i}"
+                if who in seen:
+                    bad.append({"address": here,
+                                "claim": f"`{who}` is declared twice: once at {seen[who]} and again "
+                                         "here. One name, one declaration: two of them are two truths "
+                                         "about it, and only one can be read"})
+                else:
+                    seen[who] = here
+            depth += code.count("{") - code.count("}")
+    return bad
+
+
 def vendored_guards():
     # .gate/ is a materialized shelf like any other: the judge it carries must
     # be the judge it says it carries. An edited copy of the tool is a second
@@ -2030,6 +2057,7 @@ def dispatch(cmd, rest):
         refusals += policy_guards()
         refusals += stdlib_guards()
         refusals += vendored_guards()
+        refusals += duplicate_guards()
         times = re.findall(r"([\d.]+) ms", raw)
         out = {"command": "status", "facts": files if len(files) > 1 else FACTS,
                "verdict": "holds" if not refusals else "refused", "refusals": refusals,

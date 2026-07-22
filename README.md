@@ -105,6 +105,9 @@ head. A refusal points at its address instead.
 
 ## What you get
 
+- **One name, one declaration.** Two declarations of a name are two truths
+  about it, and only one can be read: the fast tier says so at a keystroke,
+  naming both lines, which is what the compiler would say at a build.
 - **Refusals with addresses.** Never "validation failed" — always
   `file:line`, both names, and what must hold. On imported data the
   address points into *your* CSV.
@@ -269,7 +272,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 88 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 91 end-to-end checks, the definition of green
 ```
 
 ## Status
