@@ -62,8 +62,13 @@ gate survey                            # read-only: unwritten links mined from
 
 The porcelain is deliberately git-shaped: `init · status/fsck · log · check ·
 diff · apply · import/export · verify · guard · library · survey · serve ·
-report · stdlib`. A red verdict exits non-zero, so hooks and CI need no
-wrappers.
+report · stdlib · my · --version`. A red verdict exits non-zero, so hooks and
+CI need no wrappers.
+
+Every command ends with the one step that comes next, chosen by what your
+repository already has — the journal before any translation, then the hook,
+then a policy, then CI — so nobody has to hold the whole ladder in their
+head. A refusal points at its address instead.
 
 ## What you get
 
@@ -177,7 +182,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 51 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 58 end-to-end checks, the definition of green
 ```
 
 ## Status

@@ -295,6 +295,33 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     S.append(("a personal world cannot bend the team gate",
               r.get("author", "").endswith("Emp9001") and r["verdict"] == "refused"))
 
+    # ── the ladder is the navigation: one next step, never the whole list ──
+    lad = os.path.join(tmp, "ladder")
+    os.makedirs(os.path.join(lad, "tables"))
+    subprocess.run(["git", "init", "-q", "-b", "main", lad])
+    c, r = run("status", cwd=lad)
+    S.append(("an empty repo is offered the journal, which needs no translation",
+              r.get("verdict") == "no world here" and "gate log" in r.get("next", "")))
+    for f in ("people.csv", "grants.csv"):
+        shutil.copy(os.path.join(DEMO, f), os.path.join(lad, "tables", f))
+    c, r = run("status", cwd=lad)
+    S.append(("a world without a hook is offered the hook", "hook" in r.get("next", "")))
+    subprocess.run(["git", "config", "core.hooksPath", ".githooks"], cwd=lad)
+    c, r = run("status", cwd=lad)
+    S.append(("a hooked world is offered a policy", "gate.policy.swift" in r.get("next", "")))
+    with open(os.path.join(lad, "gate.policy.swift"), "w") as f:
+        f.write('public enum MailMe: Identity { public typealias Person = Emp9000 }\n'
+                'extension MailMe { public static var typeName: String { "me@corp" } }\n'
+                'public enum MergePolicy { public typealias Requires = Manager }\n')
+    c, r = run("status", cwd=lad)
+    S.append(("a world with a policy is offered CI", "CI" in r.get("next", "")))
+    t = open(os.path.join(lad, "gate.swift")).read().replace(
+        "public typealias Home = Finance", "public typealias Home = Engineering", 1)
+    open(os.path.join(lad, "gate.swift"), "w").write(t)
+    c, r = run("status", cwd=lad)
+    S.append(("a refused world is pointed at the address, not at the ladder",
+              r["verdict"] == "refused" and "address" in r.get("next", "")))
+
     # ── the two judges say the same words ──
     # The bench judges a single-file world in the browser, with the ported
     # judge; a hook and CI judge it with the binary. If those two ever drift,
@@ -354,6 +381,11 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     S.append(("zero egress: no outbound primitive in the runtime sources", not hits))
     src = open(GATE, encoding="utf-8").read()
     S.append(("the bench binds to the loopback alone", 'HTTPServer(("127.0.0.1"' in src))
+    S.append(("nothing served is cacheable: an updated gate is never hidden",
+              src.count('"Cache-Control", "no-store"') >= 5))
+    c, r = run("--version")
+    S.append(("gate says its version, and the judge its bytes",
+              r.get("gate") and r.get("judge", "").startswith("sha256:")))
     ui = open(os.path.join(HERE, "ui.html"), encoding="utf-8").read()
     S.append(("the page declares a policy that blocks any external request",
               "Content-Security-Policy" in ui and "connect-src 'self'" in ui))

@@ -810,6 +810,24 @@ def policy_guards():
     return bad
 
 
+def next_rung(refused):
+    # ONE next step, chosen by what the repository already has: a reader is on
+    # a rung, and a product that lists the whole ladder teaches nothing.
+    if refused:
+        return "open the file at the address above, or run gate serve to fix it with the judge watching"
+    root = os.path.dirname(os.path.abspath(FACTS)) if FACTS else "."
+    hooked = subprocess.run(["git", "config", "--get", "core.hooksPath"], cwd=root,
+                            capture_output=True, text=True).stdout.strip()
+    if not hooked:
+        return "gate init . — wire the pre-commit hook, so a lie cannot be committed"
+    if not policy_path():
+        return "state who may merge: declare an Identity and a MergePolicy in gate.policy.swift"
+    ci = os.path.join(root, ".github", "workflows")
+    if not os.path.isdir(ci):
+        return "put `gate status` in CI: a red verdict already exits non-zero"
+    return "gate serve — the bench, with the journal and your own world beside it"
+
+
 def cmd_guard(a):
     # guard [merge] — the repository's OWN action policy by the same gates:
     # a git object (the HEAD author) → an identity declared in the world → a
@@ -1299,11 +1317,19 @@ def cmd_init(a):
     hook = os.path.join(root, ".githooks", "pre-commit")
     if os.path.exists(hook):
         os.chmod(hook, 0o755)
-    hooks_note = None
+    hooks_note, undo, prior = None, None, None
     if os.path.isdir(os.path.join(root, ".git")):  # seamless: the hook wires itself
+        prior = subprocess.run(["git", "config", "--local", "core.hooksPath"], cwd=root,
+                               capture_output=True, text=True).stdout.strip() or None
         subprocess.run(["git", "config", "core.hooksPath", ".githooks"], cwd=root, capture_output=True)
         hooks_note = "pre-commit hook wired (core.hooksPath = .githooks)"
-    return {"command": "init", "root": root, "created": made, "hooks": hooks_note}
+        # this is somebody else's repository: say what moved and how to put it back
+        undo = (f"git config core.hooksPath {prior}" if prior
+                else "git config --unset core.hooksPath")
+        if prior:
+            hooks_note += f" — it was {prior}"
+    return {"command": "init", "root": root, "created": made, "hooks": hooks_note,
+            "undo_hooks": undo, "changed_git_config": bool(hooks_note)}
 
 
 def world_rows(text):
@@ -1376,6 +1402,9 @@ def cmd_serve(a):
                 body = f.read()
             self.send_response(200)
             self.send_header("Content-Type", ctype)
+            # never cached: an updated gate must not be hidden behind a bench
+            # (or a judge) the browser kept from the last version
+            self.send_header("Cache-Control", "no-store")
             self.end_headers()
             self.wfile.write(body)
 
@@ -1398,6 +1427,7 @@ def cmd_serve(a):
                                        "personal": names[-1] if pf else None}).encode()
                     self.send_response(200)
                     self.send_header("Content-Type", "application/json")
+                    self.send_header("Cache-Control", "no-store")
                     self.end_headers()
                     self.wfile.write(body)
                     return
@@ -1417,6 +1447,7 @@ def cmd_serve(a):
                     body = json.dumps({"file": os.path.relpath(p, base), "git": state}).encode()
                     self.send_response(200)
                     self.send_header("Content-Type", "application/json")
+                    self.send_header("Cache-Control", "no-store")
                     self.end_headers()
                     self.wfile.write(body)
                     return
@@ -1437,6 +1468,7 @@ def cmd_serve(a):
             body = json.dumps(out, ensure_ascii=False).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
+            self.send_header("Cache-Control", "no-store")
             self.end_headers()
             self.wfile.write(body)
 
@@ -1500,6 +1532,7 @@ def cmd_serve(a):
                                "judge_ms": float(times[-1]) if times else None}).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
+            self.send_header("Cache-Control", "no-store")
             self.end_headers()
             self.wfile.write(body)
 
@@ -1558,7 +1591,16 @@ def dispatch(cmd, rest):
     if cmd in ("status", "fsck"):
         files = world_files()
         if not files:
-            raise SystemExit(json.dumps({"error": "no world found: run `gate init`, or cd into a repo with tables/ or gate.swift"}))
+            # no world here — but this IS a git repository, and the journal
+            # reads one of those with no translation at all. Offer the rung
+            # the reader is standing on, not the whole ladder.
+            inside = subprocess.run(["git", "rev-parse", "--is-inside-work-tree"],
+                                    capture_output=True, text=True).stdout.strip() == "true"
+            return {"command": "status", "verdict": "no world here", "refusals": [],
+                    "next": ("gate log — read this repository's own history, nothing to translate"
+                             if inside else "gate init . — start a world in this folder"),
+                    "then": "drop your CSVs into tables/ and run gate status again, or gate demo to see one",
+                    "mutates": False}
         # what disagrees right now: judgement over the declared file list +
         # layout guards + world metrics (counted, never remembered)
         t0 = time.time()
@@ -1578,6 +1620,7 @@ def dispatch(cmd, rest):
         m = re.search(r"(\d+) declarations · (\d+) lookups · (\d+) premises", raw)
         if m:
             out["world"] = {"declarations": int(m.group(1)), "lookups": int(m.group(2)), "premises": int(m.group(3))}
+        out["next"] = next_rung(bool(refusals))
         return out
     if cmd == "guard" and rest and rest[0] == "deps":
         return cmd_guard_deps(rest[1:])
@@ -1621,6 +1664,11 @@ def humanize(out):
     # humans get lines, machines get --json (git's porcelain pattern)
     lines = []
     cmd = out.get("command", "")
+    if out.get("verdict") == "no world here":
+        lines.append("status: no world here")
+        lines.append(f"  next: {out['next']}")
+        lines.append(f"  then: {out['then']}")
+        return "\n".join(lines)
     if "verdict" in out:
         head = "holds" if out["verdict"] == "holds" else f"refused {len(out.get('refusals', []))}"
         tail = []
@@ -1643,6 +1691,8 @@ def humanize(out):
             lines.append(f"  compiler: {s}")
         if out.get("note"):
             lines.append(f"  note: {out['note']}")
+        if out.get("next"):
+            lines.append(f"  next: {out['next']}")
     elif "seeds" in out:
         lines.append(f"verify: {out['translation_holes']} hole(s)")
         for s in out["seeds"]:
@@ -1657,6 +1707,8 @@ def humanize(out):
         lines.append(f"init: {out['root']}" + (f" · created {len(out['created'])} files" if out["created"] else " · already there"))
         if out.get("hooks"):
             lines.append(f"  {out['hooks']}")
+        if out.get("undo_hooks"):
+            lines.append(f"  to undo that one git setting: {out['undo_hooks']}")
     elif cmd == "export":
         lines.append(f"export: {out['people']} people, {out['grants']} grants → {', '.join(out['wrote'])}")
     elif cmd == "log":
@@ -1686,10 +1738,29 @@ def humanize(out):
     return "\n".join(lines)
 
 
+VERSION = "0.1.0"
+
+
+def judge_version():
+    # the judge has no version flag; its identity is its bytes, which is also
+    # what the README asks a reviewer to reproduce from the public corpus
+    import hashlib
+    try:
+        with open(JUDGE, "rb") as f:
+            return "sha256:" + hashlib.sha256(f.read()).hexdigest()[:12]
+    except OSError:
+        return "missing"
+
+
 def main():
     if len(sys.argv) < 2:
         raise SystemExit(USAGE)
     args = sys.argv[1:]
+    if args[0] in ("--version", "-v", "version"):
+        print(json.dumps({"command": "version", "gate": VERSION, "judge": judge_version(),
+                          "python": sys.version.split()[0]}) if "--json" in args
+              else f"gate {VERSION} · judge {judge_version()} (canon v2) · python {sys.version.split()[0]}")
+        return
     as_json = "--json" in args
     args = [a for a in args if a != "--json"]
     cmd, rest = args[0], args[1:]
