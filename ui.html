@@ -679,8 +679,10 @@ async function loadFile(name) {
     refreshGit();
 }
 
-// ── the file rail is a panel you can drag, like the others ──
-function makeSplit(el, panel, min, max) {
+// ── the file rail is a panel you can drag, like the others. The limit is the
+// window, not a number somebody picked: drag it wide to read the journal, drag
+// it away to read the code. Double-click returns it. ──
+function makeSplit(el, panel, min, maxOf) {
     let drag = null, frame = null;
     el.addEventListener("pointerdown", (e) => {
         drag = { fromX: e.clientX, fromW: panel.getBoundingClientRect().width };
@@ -691,6 +693,7 @@ function makeSplit(el, panel, min, max) {
         if (frame) return;
         frame = requestAnimationFrame(() => {
             frame = null; if (!drag) return;
+            const max = typeof maxOf === "function" ? maxOf() : maxOf;
             const w = Math.max(min, Math.min(max, drag.fromW + (drag.lastX - drag.fromX)));
             panel.style.flex = "0 0 " + w + "px";
         });
@@ -699,7 +702,8 @@ function makeSplit(el, panel, min, max) {
     el.addEventListener("pointerup", done); el.addEventListener("pointercancel", done);
     el.addEventListener("dblclick", () => { panel.style.flex = ""; });
 }
-makeSplit(document.getElementById("split-rail"), document.getElementById("rail"), 120, 360);
+makeSplit(document.getElementById("split-rail"), document.getElementById("rail"),
+          120, () => Math.max(360, window.innerWidth - 320));
 
 (async () => {
     const fl = await (await fetch("/files")).json().catch(() => ({ files: [] }));
