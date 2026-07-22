@@ -40,6 +40,14 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 #next{margin-left:auto;font:11.5px -apple-system,sans-serif;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52%}
 #filter-note,#load-more{padding:.3em 1.1em;font:11px -apple-system,sans-serif;color:var(--action);cursor:pointer}
 #filter-note:hover,#load-more:hover{text-decoration:underline}
+#rail h3.fold{cursor:pointer;display:flex;flex-wrap:wrap;align-items:flex-start;gap:.45em;user-select:none}
+#rail h3.fold:hover{color:var(--ink)}
+#rail h3.fold i{flex:none;width:8px;margin-top:.15em;font-style:normal;transition:transform .12s;line-height:1}
+#rail h3.fold i::before{content:"▾"}
+#rail h3.fold.shut i{transform:rotate(-90deg)}
+#rail h3.fold .obs{flex:1 1 100%;padding-left:1.05em}
+#rail h3.fold.shut .obs{display:none}
+.foldable.shut{display:none}
 #brand{padding:1.1em 1.1em .5em}
 #brand b{display:block;font:600 15px/1.2 -apple-system,sans-serif;letter-spacing:-.01em}
 #brand span{display:block;margin-top:.35em;font:11.5px/1.45 -apple-system,sans-serif;color:var(--muted)}
@@ -122,15 +130,15 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .refusal span{color:var(--ink)}
 </style>
 <div id="rail"><div id="brand"><b>gate</b><span id="brandline"></span></div>
-  <h3>files</h3><div id="filelist"></div>
-  <h3 id="journal-head">journal <span class="obs"></span></h3>
-  <div id="journal"></div></div>
+  <h3 class="fold" data-fold="files"><i></i>files</h3><div id="filelist" class="foldable"></div>
+  <h3 class="fold" id="journal-head" data-fold="journal"><i></i>journal <span class="obs"></span></h3>
+  <div id="journal" class="foldable"></div></div>
 <div class="split" id="split-rail" style="display:none"></div>
 <div id="main">
   <div id="bar">
     <span class="seg" id="view-seg"><button class="on" data-m="full">Full</button><button data-m="bare">Bare</button><button data-m="table">Table</button></span>
     <b id="fname">gate.swift</b>
-    <span id="gitstate" title="edits go straight to the working-copy file; git is the only state — commit or discard with git"></span>
+    <span id="gitstate" title="Edits go straight to the file on disk. gate keeps no state of its own: commit or discard with git."></span>
   </div>
   <div id="surface">
     <div id="editor-host"></div>
@@ -189,7 +197,7 @@ function buildRail() {
         // your personal world stands apart: it is in your own git, and the
         // shared repository does not have it
         row.innerHTML = '<span class="dot"></span>' + f + (f === personalFile
-            ? '<span class="mine" title="your personal world: your own git (~/.gate/me), never in the shared repository">mine</span>' : "");
+            ? '<span class="mine" title="Your personal world. It lives in your own git at ~/.gate/me and is never in the shared repository.">mine</span>' : "");
         row.onclick = () => loadFile(f);
         list.appendChild(row);
     }
@@ -231,11 +239,11 @@ function renderJournal() {
     const what = journalScope === "world" && journalWorld.length
         ? "The commits that changed these files." : "The commits in this repository.";
     document.querySelector("#journal-head .obs").textContent =
-        what + " Read from git — the judge has not checked any of this.";
+        what + " Read from git: the judge has not checked any of this.";
     if (authorFilter) {
         const note = document.createElement("div");
         note.id = "filter-note";
-        note.textContent = "only " + authorFilter + " · clear";
+        note.textContent = "showing only " + authorFilter + " · show everyone";
         note.onclick = () => { authorFilter = null; renderJournal(); };
         host.appendChild(note);
     }
@@ -247,8 +255,8 @@ function renderJournal() {
         // the badge says reachability, and its title says exactly that — a
         // squash-merged branch reads open until the branch is deleted
         const title = c.closed
-            ? "reachable from the default branch"
-            : "on a branch, not in the default branch (a squash-merged branch reads open until the branch is deleted)";
+            ? "In the default branch: this commit is part of the main line."
+            : "On a branch, and not yet in the default branch. A branch merged by squashing reads as open until it is deleted.";
         const badge = c.closed === null ? ""
             : '<span class="badge ' + (c.closed ? "closed" : "open") + '" title="' + title + '">' + (c.closed ? "closed" : "open") + "</span>";
         row.innerHTML = '<div class="subj">' + esc(c.subject) + "</div><div class=\"meta\">" + badge +
@@ -365,7 +373,7 @@ async function render() {
     let r;
     if (files.length > 1) {
         r = await (await fetch("/verdict?f=" + encodeURIComponent(active), { method: "POST", body: text })).json();
-        r.declarations = "list of " + files.length; r.premises = "cross-file"; r.milliseconds = r.judge_ms || 0;
+        r.declarations = files.length + " files"; r.premises = "judged together"; r.milliseconds = r.judge_ms || 0;
         r.refusals = r.refusals.map(x => { const [f, line] = x.address.split(":"); return { file: f, line: +line, premise: x.claim }; });
     } else {
         r = local; r.refusals = r.refusals.map(x => ({ file: active, line: x.line, premise: x.premise }));
@@ -373,10 +381,15 @@ async function render() {
     lastRefusals = r.refusals;
     repaintNames(local.parsed, r.refusals);
     document.getElementById("status").innerHTML =
-        "<b>" + r.declarations + "</b> declarations · <b>" + r.premises + "</b> premises · " + (+r.milliseconds).toFixed(1) + " ms";
+        (files.length > 1
+            ? "<b>" + r.declarations + "</b> " + r.premises
+            : "<b>" + r.declarations + "</b> declarations · <b>" + r.premises + "</b> claims checked")
+        + " · " + (+r.milliseconds).toFixed(1) + " ms";
     document.getElementById("chip").outerHTML = r.refusals.length
-        ? '<span class="chip bad" id="chip">refuses ' + r.refusals.length + '</span>'
-        : '<span class="chip ok" id="chip">holds</span>';
+        ? '<span class="chip bad" id="chip" title="' + r.refusals.length
+            + ' claims in these files disagree with the rest. Each one is listed below, with its line.">refuses '
+            + r.refusals.length + '</span>'
+        : '<span class="chip ok" id="chip" title="Every claim in these files agrees with every other one.">holds</span>';
     clearFlags(); applyFlags(r.refusals);
     showNext();
     badFiles = new Set(r.refusals.map(x => x.file || active).filter(Boolean));
@@ -419,7 +432,8 @@ async function refreshGit() {
     try {
         const g = (await (await fetch("/gitstatus?f=" + encodeURIComponent(active))).json()).git;
         el.className = g === "committed" ? "committed" : "modified";
-        el.innerHTML = '<span class="g"></span>' + (g === "committed" ? "committed" : g === "untracked" ? "untracked · git add" : "uncommitted · git commit");
+        el.innerHTML = '<span class="g"></span>' + (g === "committed" ? "committed"
+            : g === "untracked" ? "not in git yet" : "not committed yet");
     } catch { el.className = ""; el.textContent = ""; }
 }
 
@@ -655,7 +669,9 @@ async function tick(write) {
         // invalid: withhold the write, say so plainly
         const el = document.getElementById("gitstate");
         el.className = "modified";
-        el.innerHTML = '<span class="g"></span>refused · not written';
+        el.innerHTML = '<span class="g"></span>refused: nothing written';
+        el.title = "The judge refused this text, so it was not written to the file. "
+                 + "Your edit is here in the editor until it holds again.";
     }
 }
 
@@ -705,6 +721,40 @@ function makeSplit(el, panel, min, maxOf) {
 makeSplit(document.getElementById("split-rail"), document.getElementById("rail"),
           120, () => Math.max(360, window.innerWidth - 320));
 
+// ── the rail remembers how you left it: which sections are open, and how wide.
+// Nothing here is a fact about the world, so it lives in the browser, not in git.
+const LAYOUT = "gate.bench.layout";
+function layout() {
+    try { return JSON.parse(localStorage.getItem(LAYOUT) || "{}"); } catch { return {}; }
+}
+function saveLayout(patch) {
+    try { localStorage.setItem(LAYOUT, JSON.stringify({ ...layout(), ...patch })); } catch { }
+}
+function applyFold(name, shut) {
+    const head = document.querySelector('h3[data-fold="' + name + '"]');
+    const body = head.nextElementSibling;
+    head.classList.toggle("shut", shut);
+    body.classList.toggle("shut", shut);
+    head.title = shut ? "Show " + name : "Hide " + name;
+}
+for (const head of document.querySelectorAll("h3.fold")) {
+    const name = head.dataset.fold;
+    applyFold(name, !!layout()["shut_" + name]);
+    head.onclick = () => {
+        const shut = !head.classList.contains("shut");
+        applyFold(name, shut);
+        saveLayout({ ["shut_" + name]: shut });
+    };
+}
+{   // the width you dragged it to, next time as well
+    const rail = document.getElementById("rail"), w = layout().railWidth;
+    if (w) rail.style.flex = "0 0 " + w + "px";
+    const split = document.getElementById("split-rail");
+    split.addEventListener("pointerup", () =>
+        saveLayout({ railWidth: Math.round(rail.getBoundingClientRect().width) }));
+    split.addEventListener("dblclick", () => saveLayout({ railWidth: 0 }));
+}
+
 (async () => {
     const fl = await (await fetch("/files")).json().catch(() => ({ files: [] }));
     files = fl.files || []; personalFile = fl.personal || null;
@@ -740,8 +790,8 @@ function showEmpty() {
           + "A world is the place to start.";
     host.innerHTML =
         '<div class="empty"><h2>No world here yet</h2><p>' + lead + "</p>"
-        + '<div class="door"><code>gate demo</code><span>A world of people and grants, with a lie to plant. Thirty seconds.</span></div>'
-        + '<div class="door"><code>cp your.csv tables/ &amp;&amp; gate status</code><span>Your own rows become a world you can judge.</span></div>'
+        + '<div class="door"><code>gate demo</code><span>Run this in a terminal: it builds a world of people and grants, with a lie already in it. Thirty seconds.</span></div>'
+        + '<div class="door"><code>cp your.csv tables/ &amp;&amp; gate status</code><span>Drop a table you already export into tables/, and your own rows become a world the judge can read.</span></div>'
         + "</div>";
 }
 </script>

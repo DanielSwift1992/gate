@@ -824,13 +824,13 @@ def next_rung(refused):
     hooked = subprocess.run(["git", "config", "--get", "core.hooksPath"], cwd=root,
                             capture_output=True, text=True).stdout.strip()
     if not hooked:
-        return "gate init . — wire the pre-commit hook, so a lie cannot be committed"
+        return "run `gate init .` to wire the pre-commit hook, so a lie cannot be committed"
     if not policy_path():
         return "state who may merge: declare an Identity and a MergePolicy in gate.policy.swift"
     ci = os.path.join(root, ".github", "workflows")
     if not os.path.isdir(ci):
         return "put `gate status` in CI: a red verdict already exits non-zero"
-    return "gate serve — the bench, with the journal and your own world beside it"
+    return "run `gate serve` for the bench, with the journal and your own world beside it"
 
 
 def cmd_guard(a):
@@ -1152,7 +1152,7 @@ def cmd_demo(a):
                     "-c", "commit.gpgsign=false", "commit", "-qm", "a world of people and grants"],
                    cwd=root, capture_output=True)
     return {"command": "demo", "root": root,
-            "next": f"cd {os.path.relpath(root)} && gate serve — then break a fact and watch",
+            "next": f"cd {os.path.relpath(root)} && gate serve, then break a fact and watch",
             "try": ["gate status — the world holds, in milliseconds",
                     "gate check view Emp9001 EngineeringShare — a question, answered by a refusal",
                     "gate apply revoke Emp9002 FinanceShare — an edit that is judged before it lands",
@@ -2013,8 +2013,8 @@ def dispatch(cmd, rest):
             inside = subprocess.run(["git", "rev-parse", "--is-inside-work-tree"],
                                     capture_output=True, text=True).stdout.strip() == "true"
             return {"command": "status", "verdict": "no world here", "refusals": [],
-                    "next": ("gate log — read this repository's own history, nothing to translate"
-                             if inside else "gate init . — start a world in this folder"),
+                    "next": ("run `gate log` to read this repository's own history: nothing to translate"
+                             if inside else "run `gate init .` to start a world in this folder"),
                     "then": "drop your CSVs into tables/ and run gate status again, or gate demo to see one",
                     "mutates": False}
         # what disagrees right now: judgement over the declared file list +
