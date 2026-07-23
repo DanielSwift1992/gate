@@ -259,6 +259,10 @@ const cm = CodeMirror(document.getElementById("editor-host"), {
         },
         "Shift-Tab": (cm) => cm.indentSelection("subtract"),
         "Cmd-Enter": () => {}, "Ctrl-Enter": () => {},
+        "Cmd-Ctrl-Left": () => navGo(navBack, navForward),
+        "Cmd-Ctrl-Right": () => navGo(navForward, navBack),
+        "Alt-Left": () => MAC ? CodeMirror.Pass : navGo(navBack, navForward),
+        "Alt-Right": () => MAC ? CodeMirror.Pass : navGo(navForward, navBack),
         "Down": (cm) => { if (compEl.hidden) return CodeMirror.Pass;
                           compChosen = (compChosen + 1) % compItems.length; drawCompletion(); },
         "Up": (cm) => { if (compEl.hidden) return CodeMirror.Pass;
@@ -623,6 +627,7 @@ const KEYS = [
     [MOD + " F", "Find in this file: every line is on the page, so the browser's own find works"],
     ["Tab", "Take the name being offered, or indent · \u21e7 Tab outdent"],
     [MOD + " click", "Open the line that declares the name you click"],
+    [MAC ? "\u2303\u2318 \u2190 \u2192" : "Alt \u2190 \u2192", "Step back to where you jumped from, and forward again"],
 ];
 {
     // built on first use: everything it needs is defined by then
@@ -746,6 +751,7 @@ async function render() {
         row.className = "refusal";
         row.innerHTML = "<code>" + (ref.file || active) + ":" + ref.line + "</code><span>" + ref.premise + "</span>";
         row.onclick = async () => {
+            navFrom = navHere();
             const target = ref.file && files.includes(ref.file) ? ref.file : active;
             if (target !== active) await loadFile(target);
             reveal(ref.line);
@@ -822,7 +828,30 @@ function ledgerGroups() {
 }
 
 // the landing is visible: the whole line selected, a brief flash, scrolled with margin
+let navBack = [], navForward = [], navMuted = false, navFrom = null;
+function navHere() { return { file: active, pos: cm.getCursor() }; }
+function recordJump(from) {
+    // a real jump only: same spot is not history
+    if (navMuted) return;
+    if (from && (from.file !== active || Math.abs(from.pos.line - cm.getCursor().line) > 1)) {
+        navBack.push(from); navForward = [];
+    }
+}
+async function navGo(stackFrom, stackTo) {
+    if (!stackFrom.length) return;
+    stackTo.push(navHere());
+    const there = stackFrom.pop();
+    navMuted = true;
+    if (there.file && there.file !== active && files.includes(there.file)) await loadFile(there.file);
+    cm.setCursor(there.pos);
+    cm.scrollIntoView(there.pos, 120);
+    cm.focus();
+    navMuted = false;
+}
+
 function reveal(line) {
+    const from = navFrom || navHere();      // set before a file switch, if any
+    navFrom = null;
     setMode("full");
     const local = Math.max(0, Math.min(line - 1, cm.lineCount() - 1));
     cm.focus();
@@ -830,9 +859,11 @@ function reveal(line) {
     cm.scrollIntoView({ line: local, ch: 0 }, 120);
     cm.addLineClass(local, "background", "line-flash");
     setTimeout(() => cm.removeLineClass(local, "background", "line-flash"), 1200);
+    recordJump(from);
 }
 
 async function jumpTo(name) {
+    navFrom = navHere();
     const f = declFile.get(name);
     if (f && f !== active) await loadFile(f);   // a name in another file opens that file
     const d = layoutOrActive().get(name);

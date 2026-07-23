@@ -517,6 +517,10 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # the shelf is reference, read in the bench but never judged as the world:
     # a genre uses protocol/associatedtype, which the world's judge rejects, so
     # routing it through world-judgement would paint a wall of false refusals
+    S.append(("a jump can be walked back and forward, across files too",
+              "function navGo(" in ui and "navFrom = navHere()" in ui
+              and '"Cmd-Ctrl-Left"' in ui and '"Alt-Left"' in ui))
+
     S.append(("the bench shows the shelf as reference, not as the world",
               'viewingShelf = mod' in ui and 'chip" id="chip" style=' in ui
               and 'on the shelf, judged by' in ui and "if (viewingShelf)" in ui))
