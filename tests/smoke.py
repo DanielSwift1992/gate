@@ -100,6 +100,29 @@ def main():
                              capture_output=True, text=True).stdout
         S.append((f"self-judged: {os.path.basename(sf)}", "holds" in raw and "✗" not in raw))
 
+    # one reading of the grammar: the SAME parser that judges also carries the
+    # kind of every axis and gate parameter, so a bench can be offered exactly
+    # what the judge will accept without a second regex over the shelf. This is
+    # the bridge the vocabulary is built from — proven here on the judge's own
+    # parse, so the reader can be one.
+    kinds_probe = (
+        'const {judge}=require(%r);const fs=require("fs");'
+        'const g=judge("g.swift",fs.readFileSync(%r,"utf8")).parsed.declarations;'
+        'const pa={},ga={};for(const d of g.values()){'
+        'if(d.axisKinds&&Object.keys(d.axisKinds).length)pa[d.name]=d.axisKinds;'
+        'if(d.paramKinds&&d.paramKinds.length)ga[d.name]=d.paramKinds;}'
+        'console.log(JSON.stringify({pa,ga}));'
+        % (os.path.join(HERE, "judge.js"), os.path.join(HERE, "stdlib", "genre-organization.swift")))
+    kout = subprocess.run(["node", "-e", kinds_probe], capture_output=True, text=True).stdout
+    try:
+        kv = json.loads(kout or "{}")
+    except Exception:
+        kv = {}
+    S.append(("the judge's own parser carries every axis and gate kind, read once",
+              kv.get("pa", {}).get("Employee", {}).get("Home") == "Department"
+              and kv.get("pa", {}).get("Person", {}).get("Sex") == "Sexed"
+              and kv.get("ga", {}).get("VerifiedView") == ["Employee", "Document"]))
+
     # stdlib: hidden is not secret — shelf, materialize, drift guard, ownership
     c, r = run("stdlib")
     shelf = set(r.get("modules", {}))

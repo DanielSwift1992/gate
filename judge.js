@@ -273,14 +273,20 @@ function parse(file, text, declarations, order, refusals, extras) {
             const angle = head.indexOf("<");
             let nameEnd = head.indexOf(":");
             let restStart = nameEnd;
-            let params = [];
+            let params = [], paramKinds = [];
             if (angle >= 0 && (nameEnd < 0 || angle < nameEnd)) {
                 nameEnd = angle;
                 const span = angleSpan(head, angle);
                 restStart = head.indexOf(":", angle + span);
-                params = head.slice(angle + 1, angle + span - 1).split(",")
-                    .map((piece) => piece.split(":")[0].trim())
-                    .filter((piece) => piece !== "");
+                const pieces = head.slice(angle + 1, angle + span - 1).split(",")
+                    .map((piece) => piece.trim()).filter((piece) => piece !== "");
+                params = pieces.map((piece) => piece.split(":")[0].trim());
+                // additive: the kind each parameter takes, in order — the gate's
+                // signature, read once by the judge's own parser (see axisKinds).
+                paramKinds = pieces.map((piece) => {
+                    const c = piece.indexOf(":");
+                    return c >= 0 ? piece.slice(c + 1).trim() : null;
+                });
             }
             const name = (nameEnd >= 0 ? head.slice(0, nameEnd) : head).trim();
             let conformances = [];
@@ -297,7 +303,7 @@ function parse(file, text, declarations, order, refusals, extras) {
                 if (!selfClosed) stack.push(standing);
                 continue;
             }
-            const declaration = { name, qualified, parent, conformances, params,
+            const declaration = { name, qualified, parent, conformances, params, paramKinds,
                 line: number, aliases: new Map(), entries: [] };
             declarations.set(qualified, declaration);
             order.push(qualified);
@@ -329,7 +335,7 @@ function parse(file, text, declarations, order, refusals, extras) {
                 continue;
             }
             const declaration = { name, qualified: name, parent: null, conformances,
-                params: [], line: number, aliases: new Map(), entries: [], axes: [] };
+                params: [], line: number, aliases: new Map(), entries: [], axes: [], axisKinds: {} };
             declarations.set(name, declaration);
             order.push(name);
             if (!selfClosed) stack.push(declaration);
@@ -340,7 +346,15 @@ function parse(file, text, declarations, order, refusals, extras) {
         if (line.startsWith("associatedtype ")) {
             const owner = stack.length > 0 ? stack[stack.length - 1] : null;
             if (owner && owner.axes) {
-                owner.axes.push(line.replace("associatedtype ", "").split(":")[0].trim());
+                const stated = line.replace("associatedtype ", "");
+                const axis = stated.split(":")[0].trim();
+                owner.axes.push(axis);
+                // additive, for one reading of the grammar: the kind this axis
+                // takes. Judgement never looks here — the parse only carries it,
+                // so the bench reads `Employee.Home is a Department` from the very
+                // parser that judges, not a second regex over the shelf.
+                const colon = stated.indexOf(":");
+                if (colon >= 0 && owner.axisKinds) owner.axisKinds[axis] = stated.slice(colon + 1).trim();
             }
             continue;
         }
