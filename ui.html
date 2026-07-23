@@ -1358,7 +1358,12 @@ async function loadVocabulary() {
     const list = await (await fetch("/shelf")).json().catch(() => ({}));
     for (const mod of (list.modules || [])) {
         const text = await (await fetch("/shelf?m=" + encodeURIComponent(mod))).text();
-        for (const d of judge(mod + ".swift", text).parsed.declarations.values()) {
+        // reading the shelf, not judging a world: the extras parse (a truthy
+        // vocabulary turns it on) reads a genre's top-level certificates as
+        // vocabulary instead of refusing them the way the plain world judge
+        // must. The world judge stays plain — its parity is with the CLI.
+        const READ = { seeds: new Set(), generics: new Set() };
+        for (const d of judge(mod + ".swift", text, READ).parsed.declarations.values()) {
             if (!(d.name in vocabulary)) vocabulary[d.name] = mod;
             if (d.axes) {                                   // a protocol: the axes it owes, and of what kind
                 for (const [axis, kind] of Object.entries(d.axisKinds || {})) {

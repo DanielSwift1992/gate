@@ -295,7 +295,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 131 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 132 end-to-end checks, the definition of green
 ```
 
 ## Status

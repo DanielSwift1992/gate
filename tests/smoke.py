@@ -654,6 +654,15 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
                                "public typealias Home = Engineering", 1),
         "a misspelled gate form": base_world.replace("VerifiedView<", "VerifedView<", 1),
         "an argument nothing declares": base_world.replace("FinanceShare\n", "NoSuchDoc\n", 1),
+        # a world carrying a top-level typealias: the plain judge (status, the
+        # hook, CI) reads a world of facts, and a typealias standing outside
+        # every declaration is not one — BOTH judges refuse it, in the same
+        # words. This locks their AGREEMENT, not acceptance: were the bench's
+        # port ever made to always parse extras, it would ACCEPT this where the
+        # plain binary refuses, and the bench would go green while CI stays red.
+        # (Certificates are read in the `where` mode — the shelf, the palette —
+        # never in the plain world judge the bench must match.)
+        "a world with a top-level typealias": base_world + "\npublic typealias Handy = Emp9000\n",
     }
     for label, world in cases.items():
         b, p = two_judges(world)
