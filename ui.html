@@ -158,6 +158,10 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .refusal:active{background:color-mix(in srgb,var(--bad) 16%,transparent)}
 .refusal code{color:var(--bad);font:11.5px ui-monospace,Menlo,monospace;flex:none}
 .refusal span{color:var(--ink)}
+.pending-head{padding:8px 8px 3px;font:11px -apple-system,sans-serif;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.pending{display:flex;gap:10px;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;align-items:baseline;color:var(--muted)}
+.pending:hover{background:var(--mist)}
+.pending code{color:var(--law,#B25000);font:11.5px ui-monospace,Menlo,monospace;flex:none;opacity:.75}
 </style>
 <div id="rail"><div id="brand"><b>gate</b><span id="brandline"></span></div>
   <h3 class="fold" data-fold="files"><i></i>files</h3><div id="filelist" class="foldable"></div>
@@ -750,29 +754,47 @@ async function render() {
             ? "<b>" + r.declarations + "</b> " + r.premises
             : "<b>" + r.declarations + "</b> declarations · <b>" + r.premises + "</b> claims checked")
         + " · " + (+r.milliseconds).toFixed(1) + " ms";
-    document.getElementById("chip").outerHTML = r.refusals.length
-        ? '<span class="chip bad" id="chip" title="' + r.refusals.length
-            + ' claims in these files disagree with the rest. Each one is listed below, with its line.">refuses '
-            + r.refusals.length + '</span>'
+    const pending = r.refusals.filter(x => /states none/.test(x.premise));
+    const broken = r.refusals.filter(x => !/states none/.test(x.premise));
+    document.getElementById("chip").outerHTML = broken.length
+        ? '<span class="chip bad" id="chip" title="' + broken.length
+            + ' claims disagree with the rest. Each is listed below, with its line.">refuses '
+            + broken.length + '</span>'
+        : pending.length
+        ? '<span class="chip" id="chip" style="background:color-mix(in srgb,var(--law,#B25000) 15%,transparent);color:var(--law,#B25000)" title="'
+            + pending.length + ' slots are not filled in yet. Nothing disagrees; the record is just unfinished.">'
+            + pending.length + ' to fill</span>'
         : '<span class="chip ok" id="chip" title="Every claim in these files agrees with every other one.">holds</span>';
     clearFlags(); applyFlags(r.refusals);
     showNext();
     badFiles = new Set(r.refusals.map(x => x.file || active).filter(Boolean));
     buildRail();
-    // the verdict list, docked at the bottom (Xcode status)
+    // the verdict list, docked at the bottom (Xcode status): disagreements
+    // first, then the slots still to fill, calmer
     const v = document.getElementById("verdicts");
     v.innerHTML = "";
-    for (const ref of r.refusals) {
+    const rowFor = (ref, cls) => {
         const row = document.createElement("div");
-        row.className = "refusal";
-        row.innerHTML = "<code>" + (ref.file || active) + ":" + ref.line + "</code><span>" + ref.premise + "</span>";
+        row.className = cls;
+        // a "states none" claim reads plainly: which record owes which axis
+        const m = /requires (\w+): (\w+) states none/.exec(ref.premise);
+        const label = m ? m[2] + " · " + m[1] + " is not filled in yet" : ref.premise;
+        row.innerHTML = "<code>" + (ref.file || active) + ":" + ref.line + "</code><span>" + label + "</span>";
         row.onclick = async () => {
             navFrom = navHere();
             const target = ref.file && files.includes(ref.file) ? ref.file : active;
             if (target !== active) await loadFile(target);
             reveal(ref.line);
         };
-        v.appendChild(row);
+        return row;
+    };
+    for (const ref of broken) v.appendChild(rowFor(ref, "refusal"));
+    if (pending.length) {
+        const head = document.createElement("div");
+        head.className = "pending-head";
+        head.textContent = pending.length + (pending.length === 1 ? " slot" : " slots") + " to fill";
+        v.appendChild(head);
+        for (const ref of pending) v.appendChild(rowFor(ref, "pending"));
     }
     if (mode === "table") buildTables();
     if (mode === "bare") document.getElementById("bare").innerHTML = bareForm(lastParsed);

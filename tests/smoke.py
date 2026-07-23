@@ -521,6 +521,18 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               "here.scaffold" in ui and "compScaffold" in ui
               and 'startsWith("\\u25B8")' in ui and 'public typealias " + a + " = "' in ui))
 
+    # an unfilled axis is the judge saying "states none" (judge.js): a record
+    # not yet finished, not a claim in conflict. The bench reads that register —
+    # a wall of empty slots is "to fill", calm, never the red a lie earns.
+    S.append(("an empty slot is read, in the judge's own words, as one to fill",
+              "states none" in open(os.path.join(HERE, "judge.js"), encoding="utf-8").read()
+              and "/states none/.test(x.premise)" in ui
+              and "+ pending.length + ' to fill</span>'" in ui
+              and "is not filled in yet" in ui))
+    S.append(("and the chip reddens for disagreements alone, not for empty slots",
+              "outerHTML = broken.length" in ui
+              and "+ broken.length + '</span>'" in ui))
+
     S.append(("a jump can be walked back and forward, across files too",
               "function navGo(" in ui and "navFrom = navHere()" in ui
               and '"Cmd-Ctrl-Left"' in ui and '"Alt-Left"' in ui))
