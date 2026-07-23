@@ -367,6 +367,31 @@ function applyMyBench() {
     paintTheme();
 }
 
+// ── the bench is judged by its own rules. A value on a bench declaration
+// (MyBench, MyJournal) that the genre does not name is not silently ignored the
+// way a mistyped Scope once fell to a default — it is a guard line, addressed at
+// its own line. Guarded, not judged (the theme is not a fact of the world), and
+// read from the one source the completion reads: protoAxes and conformers of
+// the bench's own genre, so a stranger cannot be mistaken for a value. ──
+function benchGuards() {
+    const onMine = active === personalFile && lastParsed;
+    const decls = onMine ? lastParsed.declarations : layoutDecls;
+    const out = [];
+    for (const [name, d] of decls) {
+        for (const conf of d.conformances) {
+            if (vocabulary[conf] !== "bench-atoms") continue;   // only the bench's own genre, never the world's
+            for (const [axis, kind] of Object.entries(protoAxes[conf] || {})) {
+                const a = d.aliases.get(axis);
+                if (a && a.target && !(conformers[kind] || []).includes(a.target))
+                    out.push({ file: onMine ? personalFile : (declFile.get(name) || personalFile),
+                               line: a.line, decl: name, axis, value: a.target,
+                               allowed: (conformers[kind] || []).join(", ") });
+            }
+        }
+    }
+    return out;
+}
+
 // ── the dashboard is a declaration: MyJournal in your personal world says what
 // the journal shows. Edit it in the bench and the journal follows — one truth,
 // judged like everything else (a name that does not exist is refused by line).
@@ -831,6 +856,25 @@ async function render() {
         head.textContent = pending.length + (pending.length === 1 ? " slot" : " slots") + " to fill";
         v.appendChild(head);
         for (const ref of pending) v.appendChild(rowFor(ref, "pending"));
+    }
+    const guards = benchGuards();
+    if (guards.length) {
+        const head = document.createElement("div");
+        head.className = "pending-head";
+        head.textContent = "the bench genre";
+        v.appendChild(head);
+        for (const g of guards) {
+            const row = document.createElement("div");
+            row.className = "pending";   // guarded, not judged: addressed, calm, never the red a fact earns
+            row.innerHTML = "<code>" + g.file + ":" + g.line + "</code><span>" + esc(g.decl + "." + g.axis)
+                + " = " + esc(g.value) + " · the bench genre states " + esc(g.allowed) + "</span>";
+            row.onclick = async () => {
+                navFrom = navHere();
+                if (g.file !== active && files.includes(g.file)) await loadFile(g.file);
+                reveal(g.line);
+            };
+            v.appendChild(row);
+        }
     }
     if (mode === "table") buildTables();
     if (mode === "bare") document.getElementById("bare").innerHTML = bareForm(lastParsed);

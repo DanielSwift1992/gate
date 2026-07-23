@@ -563,6 +563,13 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "prefers-color-scheme: dark" in ui
               and 'setAttribute("data-theme"' in ui
               and "protocol Bench {" in bench_atoms and "enum Dark: BenchTheme" in bench_atoms))
+    # the bench is judged by its own rules: a value on MyBench/MyJournal the genre
+    # does not name is a guard line addressed at its own line (a mistyped Scope
+    # used to fall silently to a default), read from the same one source
+    S.append(("a bench value outside the genre is named on its line, not silenced",
+              "function benchGuards(" in ui
+              and 'vocabulary[conf] !== "bench-atoms"' in ui
+              and "the bench genre states" in ui))
 
     # the bench may not say holds where a hook would refuse: the guards run on
     # the unsaved text as well, not only in the CLI
