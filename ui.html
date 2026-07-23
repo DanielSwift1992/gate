@@ -21,32 +21,32 @@ document.documentElement.setAttribute("data-theme",
 :root{--ok:#248A3D;--bad:#C4453B;--action:#007AFF;--line:#d2d2d7;--mist:#f5f5f7;--paper:#fff;--ink:#1d1d1f;--muted:#8e8e93;--localtype:#0B4F79;--knownname:#3900A0;--law:#B25000;--cm-keyword:#9B2393;--cm-string:#C41A16;--cm-comment:#5D6C79;--cm-attribute:#947100;--cm-ghost:#a6a6ab;--select:#d7d4f0;color-scheme:light}
 :root[data-theme="dark"]{--ok:#32D74B;--bad:#FF6961;--action:#409CFF;--line:#3a3a3c;--mist:#2c2c2e;--paper:#1c1c1e;--ink:#f2f2f7;--muted:#98989f;--localtype:#7FB8E8;--knownname:#CBA6F7;--law:#FF9F0A;--cm-keyword:#E58BD6;--cm-string:#FF8A80;--cm-comment:#8A97A3;--cm-attribute:#E0C061;--cm-ghost:#5a5a5e;--select:#38385c;color-scheme:dark}
 *{box-sizing:border-box}
-body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);background:var(--paper);display:flex;height:100vh;overflow:hidden}
+body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);background:var(--paper);display:flex;height:100vh;overflow:hidden}
 #rail{flex:0 0 250px;display:none;flex-direction:column;overflow:auto;min-width:0}
-#rail h3{font:600 10.5px/1 -apple-system,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0;padding:1em 1.1em .6em}
+#rail h3{font:600 11px/1 -apple-system,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0;padding:1em 1.1em .6em}
 .file{display:flex;align-items:center;gap:.5em;padding:.32em 1.1em;cursor:pointer;font:13px/1.4 ui-monospace,Menlo,monospace;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .file:hover{background:var(--mist)}
 .file.on{background:var(--mist);font-weight:600}
 .file .dot{flex:0 0 6px;width:6px;height:6px;border-radius:50%;background:transparent}
 .file.bad{color:var(--bad)}.file.bad .dot{background:var(--bad)}
-.file .mine{margin-left:auto;font:9.5px/1.4 -apple-system,sans-serif;color:var(--muted);background:var(--mist);border-radius:8px;padding:0 .45em;flex:none}
+.file .mine{margin-left:auto;font:11px/1.4 -apple-system,sans-serif;color:var(--muted);background:var(--mist);border-radius:8px;padding:0 .45em;flex:none}
 .file.on .mine{background:var(--paper)}
 .split{flex:0 0 5px;cursor:col-resize;background:transparent;transition:background .1s}
 .split:hover,.split.dragging{background:color-mix(in srgb,var(--action) 45%,transparent)}
 .line-flash{background:color-mix(in srgb,var(--action) 22%,transparent)}
-#journal-head .obs{display:block;font:500 9px/1.3 -apple-system,sans-serif;letter-spacing:.03em;text-transform:none;color:var(--muted);opacity:.75;margin-top:.2em}
+#journal-head .obs{display:block;font:500 11px/1.3 -apple-system,sans-serif;letter-spacing:.03em;text-transform:none;color:var(--muted);opacity:.75;margin-top:.2em}
 .commit{padding:.4em 1.1em;cursor:default}
 .commit:hover{background:var(--mist)}
 .commit.touches{cursor:pointer}
 .commit .subj{display:flex;gap:.4em;align-items:baseline;font:12.5px/1.35 -apple-system,sans-serif;color:var(--ink);white-space:nowrap;overflow:hidden}
 .commit .subj{text-overflow:ellipsis}
-.commit .meta{display:flex;align-items:center;gap:.5em;margin-top:.2em;font:11px ui-monospace,Menlo,monospace;color:var(--muted)}
+.commit .meta{display:flex;align-items:center;gap:.5em;margin-top:.2em;font:11px ui-monospace,Menlo,monospace;color:var(--muted);font-variant-numeric:tabular-nums}
 .commit .who{cursor:pointer;color:var(--localtype)}
 .commit .who:hover{text-decoration:underline}
-.badge{flex:none;font:9.5px/1.4 -apple-system,sans-serif;padding:0 .5em;border-radius:8px}
+.badge{flex:none;font:11px/1.4 -apple-system,sans-serif;padding:0 .5em;border-radius:8px}
 .badge.closed{background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok)}
 .badge.open{background:color-mix(in srgb,var(--action) 15%,transparent);color:var(--action)}
-#next{margin-left:auto;font:11.5px -apple-system,sans-serif;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52%}
+#next{margin-left:auto;font:11px -apple-system,sans-serif;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52%}
 #filter-note,#load-more{padding:.3em 1.1em;font:11px -apple-system,sans-serif;color:var(--action);cursor:pointer}
 #filter-note:hover,#load-more:hover{text-decoration:underline}
 #rail h3.fold{cursor:pointer;display:flex;flex-wrap:wrap;align-items:flex-start;gap:.45em;user-select:none}
@@ -57,25 +57,25 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 #rail h3.fold .obs{flex:1 1 100%;padding-left:1.05em}
 #rail h3.fold.shut .obs{display:none}
 .foldable.shut{display:none}
-#keys-btn{border:none;background:transparent;color:var(--muted);font:12px -apple-system,sans-serif;width:20px;height:20px;border-radius:5px;cursor:pointer;padding:0}
+#keys-btn{border:none;background:transparent;color:var(--muted);font:13px -apple-system,sans-serif;width:20px;height:20px;border-radius:5px;cursor:pointer;padding:0}
 #keys-btn:hover{background:var(--mist);color:var(--ink)}
 #keys-panel{position:fixed;top:38px;right:14px;z-index:30;width:min(360px,86vw);background:var(--paper);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 28px color-mix(in srgb,var(--ink) 18%,transparent);padding:.9em 1em}
-#keys-panel h4{margin:0 0 .6em;font:600 12px/1 -apple-system,sans-serif}
+#keys-panel h4{margin:0 0 .6em;font:600 13px/1 -apple-system,sans-serif}
 #keys-panel p{margin:.7em 0 0;font:11px/1.5 -apple-system,sans-serif;color:var(--muted)}
-.krow{display:flex;gap:.7em;align-items:baseline;padding:.22em 0;font:11.5px/1.45 -apple-system,sans-serif}
-.krow kbd{flex:0 0 5.6em;font:11px ui-monospace,Menlo,monospace;color:var(--ink);background:var(--mist);border-radius:4px;padding:.1em .4em;text-align:center}
+.krow{display:flex;gap:.7em;align-items:baseline;padding:.22em 0;font:11px/1.45 -apple-system,sans-serif}
+.krow kbd{flex:0 0 5.6em;font:11px ui-monospace,Menlo,monospace;color:var(--ink);background:var(--mist);border-radius:5px;padding:.1em .4em;text-align:center}
 .krow span{color:var(--muted)}
 #completion{position:absolute;z-index:32;background:var(--paper);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 22px color-mix(in srgb,var(--ink) 16%,transparent);padding:3px;min-width:11em;max-height:15em;overflow:auto}
-.crow{padding:.22em .6em;border-radius:5px;font:12px ui-monospace,Menlo,monospace;color:var(--ink);cursor:pointer;white-space:nowrap}
+.crow{padding:.22em .6em;border-radius:5px;font:12.5px ui-monospace,Menlo,monospace;color:var(--ink);cursor:pointer;white-space:nowrap}
 .crow.on{background:color-mix(in srgb,var(--action) 14%,transparent);color:var(--action)}
 .crow:hover{background:var(--mist)}
-.cnote{padding:.3em .6em .1em;font:10.5px -apple-system,sans-serif;color:var(--muted);border-top:1px solid var(--line);margin-top:3px}
-#inspect{flex:none;padding:5px 16px 4px;border-bottom:1px solid var(--line);font:11.5px/1.4 ui-monospace,Menlo,monospace;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cnote{padding:.3em .6em .1em;font:11px -apple-system,sans-serif;color:var(--muted);border-top:1px solid var(--line);margin-top:3px}
+#inspect{flex:none;padding:5px 16px 4px;border-bottom:1px solid var(--line);font:11px/1.4 ui-monospace,Menlo,monospace;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #inspect:empty::before{content:"the cursor on a name says what it is";opacity:.5}
-#say{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:31;background:var(--ink);color:var(--paper);font:12px -apple-system,sans-serif;padding:.5em 1em;border-radius:8px;box-shadow:0 6px 20px color-mix(in srgb,var(--ink) 30%,transparent)}
+#say{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:31;background:var(--ink);color:var(--paper);font:13px -apple-system,sans-serif;padding:.5em 1em;border-radius:8px;box-shadow:0 6px 20px color-mix(in srgb,var(--ink) 30%,transparent)}
 #brand{padding:1.1em 1.1em .5em}
 #brand b{display:block;font:600 15px/1.2 -apple-system,sans-serif;letter-spacing:-.01em}
-#brand span{display:block;margin-top:.35em;font:11.5px/1.45 -apple-system,sans-serif;color:var(--muted)}
+#brand span{display:block;margin-top:.35em;font:11px/1.45 -apple-system,sans-serif;color:var(--muted)}
 /* an open commit and what it opened are one block, told apart by surface
    alone: a caret says which way it goes, and nothing is drawn around it */
 .commit.open{background:var(--mist)}
@@ -84,10 +84,10 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .commit .caret::before{content:"\203A"}
 .cdiff{padding:.15em 0 .7em;background:var(--mist)}
 .dwait{padding:.3em 1.1em;font:11px -apple-system,sans-serif;color:var(--muted)}
-.dfile{padding:.4em 1.1em .25em;font:10.5px ui-monospace,Menlo,monospace;color:var(--muted)}
-.dfile .dnote{margin-left:.5em;font:10.5px -apple-system,sans-serif}
-.dmore{padding:.25em 1.1em;font:10.5px -apple-system,sans-serif;color:var(--muted)}
-.fact{display:flex;align-items:baseline;gap:.35em;flex-wrap:wrap;padding:.2em 1.1em;font:11.5px ui-monospace,Menlo,monospace}
+.dfile{padding:.4em 1.1em .25em;font:11px ui-monospace,Menlo,monospace;color:var(--muted)}
+.dfile .dnote{margin-left:.5em;font:11px -apple-system,sans-serif}
+.dmore{padding:.25em 1.1em;font:11px -apple-system,sans-serif;color:var(--muted)}
+.fact{display:flex;align-items:baseline;gap:.35em;flex-wrap:wrap;padding:.2em 1.1em;font:11px ui-monospace,Menlo,monospace}
 .dline{padding:.15em 1.1em;font:11px/1.45 ui-monospace,Menlo,monospace;white-space:pre-wrap;word-break:break-word;color:var(--muted)}
 .fact .sep{color:var(--muted)}
 .fact .own{color:var(--localtype)}
@@ -100,18 +100,18 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 #main{flex:1;display:flex;flex-direction:column;min-width:0;border-left:1px solid var(--line)}
 #bar{display:flex;gap:.7em;align-items:center;padding:.45em .8em;border-bottom:1px solid var(--line);flex:none}
 #bar b{font-weight:600;font:13px ui-monospace,Menlo,monospace}
-.seg{display:inline-flex;background:var(--mist);border-radius:7px;padding:2px;gap:2px}
-.seg button{border:none;border-radius:5px;margin:0;background:transparent;color:var(--muted);font:12px -apple-system,sans-serif;padding:3px 12px;cursor:pointer}
+.seg{display:inline-flex;background:var(--mist);border-radius:8px;padding:2px;gap:2px}
+.seg button{border:none;border-radius:5px;margin:0;background:transparent;color:var(--muted);font:13px -apple-system,sans-serif;padding:3px 12px;cursor:pointer}
 .seg button:hover{color:var(--ink)}
 .seg button.on{background:var(--paper);color:var(--ink);box-shadow:0 1px 2px color-mix(in srgb,var(--ink) 12%,transparent)}
 .seg button:disabled{opacity:.3;cursor:default}
 .seg button:disabled:hover{color:var(--muted)}
 #nav-seg button{padding:3px 10px;font-size:15px;line-height:1}
-#gitstate{margin-left:auto;font:11.5px ui-monospace,Menlo,monospace;color:var(--muted);display:flex;align-items:center;gap:.4em}
+#gitstate{margin-left:auto;font:11px ui-monospace,Menlo,monospace;color:var(--muted);display:flex;align-items:center;gap:.4em}
 #gitstate .g{width:7px;height:7px;border-radius:50%;background:var(--muted)}
 #gitstate.modified{color:var(--law)}#gitstate.modified .g{background:var(--law)}
 #gitstate.committed{color:var(--ok)}#gitstate.committed .g{background:var(--ok)}
-#write{border:none;background:color-mix(in srgb,var(--action) 12%,transparent);color:var(--action);padding:.35em .9em;border-radius:6px;font:inherit;cursor:pointer}
+#write{border:none;background:color-mix(in srgb,var(--action) 12%,transparent);color:var(--action);padding:.35em .9em;border-radius:5px;font:inherit;cursor:pointer}
 #write:disabled{opacity:.4;cursor:default}
 #surface{flex:1;position:relative;min-height:0}
 #editor-host{position:absolute;inset:0}
@@ -137,9 +137,9 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 #bare .bad{text-decoration:underline wavy var(--bad);text-underline-offset:3px}
 #bare .row-bad{background:color-mix(in srgb,var(--bad) 6%,transparent)}
 .empty{max-width:34em;padding:3em 0 0 1.5em;color:var(--ink)}
-.empty h2{font:600 17px/1.3 -apple-system,sans-serif;margin:0 0 .5em}
-.empty p{font:13.5px/1.6 -apple-system,sans-serif;color:var(--muted);margin:0 0 1.6em}
-.door{display:flex;flex-direction:column;gap:.25em;padding:.8em 1em;margin-bottom:.7em;border:1px solid var(--line);border-radius:9px}
+.empty h2{font:600 15px/1.3 -apple-system,sans-serif;margin:0 0 .5em}
+.empty p{font:13px/1.6 -apple-system,sans-serif;color:var(--muted);margin:0 0 1.6em}
+.door{display:flex;flex-direction:column;gap:.25em;padding:.8em 1em;margin-bottom:.7em;border:1px solid var(--line);border-radius:8px}
 .door code{font:12.5px ui-monospace,Menlo,monospace;color:var(--action)}
 .door span{font:12.5px -apple-system,sans-serif;color:var(--muted)}
 #table-host{position:absolute;inset:0;overflow:auto;background:var(--paper);padding:12px 16px 80px;font-size:12.5px;display:none}
@@ -150,7 +150,7 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 #table-host th:hover{color:var(--ink)}#table-host th .dir{color:var(--action)}
 /* the size has to be said: a family ending in the generic `monospace` makes
    the browser fall back to its own fixed-width default instead of inheriting */
-#table-host td{padding:3px 10px 3px 6px;border-bottom:1px solid var(--line);font:12.5px/1.5 ui-monospace,Menlo,monospace;vertical-align:top}
+#table-host td{padding:3px 10px 3px 6px;border-bottom:1px solid var(--line);font:12.5px/1.5 ui-monospace,Menlo,monospace;vertical-align:top;font-variant-numeric:tabular-nums}
 #table-host tr:hover td{background:color-mix(in srgb,var(--ink) 2%,transparent)}
 #table-host td.cell-name{color:var(--localtype);font-weight:600;cursor:pointer}
 #table-host td.cell-name:hover{text-decoration:underline}
@@ -159,24 +159,24 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 #table-host td.cell-bad::after{content:" ✗";color:var(--bad)}
 #verdict-panel{border-top:1px solid var(--line);background:var(--paper);flex:none;max-height:34vh;display:flex;flex-direction:column}
 #verdict-head{display:flex;align-items:center;gap:10px;padding:8px 16px 7px;flex:none}
-.chip{font-size:12px;font-weight:600;padding:3px 10px;border-radius:9px}
+.chip{display:inline-block;min-width:4.6em;text-align:center;font-size:11px;font-weight:600;padding:3px 10px;border-radius:8px;font-variant-numeric:tabular-nums}
 .chip.ok{background:color-mix(in srgb,var(--ok) 12%,transparent);color:var(--ok)}
 .chip.bad{background:var(--bad);color:var(--paper)}
-#status{font-size:12px;color:var(--muted)}#status b{color:var(--ink);font-weight:600}
+#status{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}#status b{color:var(--ink);font-weight:600}
 #verdicts{overflow:auto;padding:2px 12px 10px;display:flex;flex-direction:column;gap:4px}
 /* each refusal is a row you can aim at: it has an edge, a surface, and it
    answers to the pointer, because clicking it goes to the line */
 .refusal{display:flex;gap:10px;padding:7px 10px;border:1px solid color-mix(in srgb,var(--bad) 22%,transparent);
-  border-left:3px solid var(--bad);border-radius:7px;background:color-mix(in srgb,var(--bad) 5%,transparent);
-  cursor:pointer;font-size:12px;align-items:baseline}
+  border-left:3px solid var(--bad);border-radius:8px;background:color-mix(in srgb,var(--bad) 5%,transparent);
+  cursor:pointer;font-size:12.5px;align-items:baseline}
 .refusal:hover{background:color-mix(in srgb,var(--bad) 11%,transparent)}
 .refusal:active{background:color-mix(in srgb,var(--bad) 16%,transparent)}
-.refusal code{color:var(--bad);font:11.5px ui-monospace,Menlo,monospace;flex:none}
+.refusal code{color:var(--bad);font:11px ui-monospace,Menlo,monospace;flex:none}
 .refusal span{color:var(--ink)}
 .pending-head{padding:8px 8px 3px;font:11px -apple-system,sans-serif;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
-.pending{display:flex;gap:10px;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;align-items:baseline;color:var(--muted)}
+.pending{display:flex;gap:10px;padding:6px 10px;border-radius:5px;cursor:pointer;font-size:12.5px;align-items:baseline;color:var(--muted)}
 .pending:hover{background:var(--mist)}
-.pending code{color:var(--law);font:11.5px ui-monospace,Menlo,monospace;flex:none;opacity:.75}
+.pending code{color:var(--law);font:11px ui-monospace,Menlo,monospace;flex:none;opacity:.75}
 </style>
 <div id="rail"><div id="brand"><b>gate</b><span id="brandline"></span></div>
   <h3 class="fold" data-fold="files"><i></i>files</h3><div id="filelist" class="foldable"></div>

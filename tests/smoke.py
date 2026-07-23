@@ -571,6 +571,17 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and 'vocabulary[conf] !== "bench-atoms"' in ui
               and "the bench genre states" in ui))
 
+    # the verdict holds still: the numbers on the status line are tabular so a
+    # changing millisecond does not make it breathe, the chip reserves its width
+    # so holds<->refuses N never shifts the row, and nothing animates on a change
+    # (motion is only ever the hand's — hover, a caret, a drag)
+    chip_rule = ui.split(".chip{", 1)[1].split("}", 1)[0] if ".chip{" in ui else ""
+    status_rule = ui.split("#status{", 1)[1].split("}", 1)[0] if "#status{" in ui else ""
+    S.append(("the verdict holds still: tabular numbers, a chip that reserves its width, no motion on a change",
+              "font-variant-numeric:tabular-nums" in ui
+              and "min-width" in chip_rule
+              and "transition" not in chip_rule and "transition" not in status_rule))
+
     # the bench may not say holds where a hook would refuse: the guards run on
     # the unsaved text as well, not only in the CLI
     S.append(("the bench runs the same guards the CLI does",
