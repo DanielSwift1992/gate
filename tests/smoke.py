@@ -514,6 +514,15 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     S.append(("the shelf says which axes each kind has, so those answers exist",
               '"protoAxes": proto_axes' in open(GATE, encoding="utf-8").read()))
 
+    # the shelf is reference, read in the bench but never judged as the world:
+    # a genre uses protocol/associatedtype, which the world's judge rejects, so
+    # routing it through world-judgement would paint a wall of false refusals
+    S.append(("the bench shows the shelf as reference, not as the world",
+              'viewingShelf = mod' in ui and 'chip" id="chip" style=' in ui
+              and 'on the shelf, judged by' in ui and "if (viewingShelf)" in ui))
+    S.append(("and returning to a world file resumes judgement",
+              'viewingShelf = null' in ui and 'cm.setOption("readOnly", false); viewingShelf = null' in ui))
+
     S.append(("the offer has one source: the grammar, with no pool to fall back to",
               "if (!here) return hideCompletion()" in ui and "function completionPool" not in ui))
 

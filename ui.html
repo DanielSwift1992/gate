@@ -290,7 +290,7 @@ cm.getWrapperElement().addEventListener("mousedown", (e) => {
     document.addEventListener("keyup", hold);
     window.addEventListener("blur", () => wrap.classList.remove("holding"));
 }
-let files = [], active = "", personalFile = null, personalEmpty = false;
+let files = [], active = "", personalFile = null, personalEmpty = false, viewingShelf = null;
 let badFiles = new Set(), siblingNames = new Set(), layoutDecls = new Map(), declFile = new Map();
 let lastParsed = null, lastRefusals = [], widgets = [], tableSort = null;
 
@@ -701,6 +701,19 @@ async function render() {
     const text = editor.value;
     const local = judge(active || "gate.swift", text);
     lastParsed = local.parsed;
+    if (viewingShelf) {
+        repaintNames(local.parsed, []);          // names highlight; nothing refuses
+        clearFlags();
+        badFiles = new Set(); buildRail();
+        document.getElementById("status").innerHTML =
+            "<b>" + viewingShelf + ".swift</b> · on the shelf, judged by <code>gate stdlib</code>";
+        document.getElementById("chip").outerHTML =
+            '<span class="chip" id="chip" style="background:var(--mist);color:var(--muted)">reference</span>';
+        document.getElementById("next").textContent = "";
+        document.getElementById("verdicts").innerHTML = "";
+        applyMyJournal();
+        return;
+    }
     let r;
     if (files.length > 1) {
         r = await (await fetch("/verdict?f=" + encodeURIComponent(active), { method: "POST", body: text })).json();
@@ -831,7 +844,7 @@ async function jumpTo(name) {
 // the shelf, read-only: where the names your world speaks are declared
 async function openShelf(mod, name) {
     const text = await (await fetch("/shelf?m=" + encodeURIComponent(mod))).text();
-    active = "";                                 // not one of your files
+    active = ""; viewingShelf = mod;             // reference, not one of your files
     document.getElementById("fname").textContent = mod + ".swift";
     document.getElementById("fname").style.display = "";
     setMode("full");
@@ -1094,7 +1107,7 @@ async function siblings() {
     }
 }
 async function loadFile(name) {
-    cm.setOption("readOnly", false);
+    cm.setOption("readOnly", false); viewingShelf = null;
     active = name;
     document.getElementById("fname").textContent = name;
     buildRail();
