@@ -536,6 +536,13 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     S.append(("a jump can be walked back and forward, across files too",
               "function navGo(" in ui and "navFrom = navHere()" in ui
               and '"Cmd-Ctrl-Left"' in ui and '"Alt-Left"' in ui))
+    # the view is part of the place: a jump out of Table walks back into Table,
+    # not into Full — navHere carries the mode, navGo restores it before the spot
+    S.append(("a jump remembers the view it left, and returns to it",
+              "{ file: active, mode, pos:" in ui and "setMode(there.mode" in ui))
+    S.append(("the bar's arrows walk the one jump history, not a second of their own",
+              'nav-back").onclick = () => navGo(navBack' in ui
+              and 'nav-fwd").onclick = () => navGo(navForward' in ui))
 
     S.append(("the bench shows the shelf as reference, not as the world",
               'viewingShelf = mod' in ui and 'chip" id="chip" style=' in ui

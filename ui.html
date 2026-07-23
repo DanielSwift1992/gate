@@ -96,6 +96,9 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .seg button{border:none;border-radius:5px;margin:0;background:transparent;color:var(--muted);font:12px -apple-system,sans-serif;padding:3px 12px;cursor:pointer}
 .seg button:hover{color:var(--ink)}
 .seg button.on{background:var(--paper);color:var(--ink);box-shadow:0 1px 2px color-mix(in srgb,var(--ink) 12%,transparent)}
+.seg button:disabled{opacity:.3;cursor:default}
+.seg button:disabled:hover{color:var(--muted)}
+#nav-seg button{padding:3px 10px;font-size:15px;line-height:1}
 #gitstate{margin-left:auto;font:11.5px ui-monospace,Menlo,monospace;color:var(--muted);display:flex;align-items:center;gap:.4em}
 #gitstate .g{width:7px;height:7px;border-radius:50%;background:var(--muted)}
 #gitstate.modified{color:var(--law,#B25000)}#gitstate.modified .g{background:var(--law,#B25000)}
@@ -173,6 +176,7 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 <div id="completion" hidden></div>
 <div id="main">
   <div id="bar">
+    <span class="seg" id="nav-seg"><button id="nav-back" disabled>&lsaquo;</button><button id="nav-fwd" disabled>&rsaquo;</button></span>
     <span class="seg" id="view-seg"><button class="on" data-m="full">Full</button><button data-m="bare">Bare</button><button data-m="table">Table</button></span>
     <b id="fname">gate.swift</b>
     <button id="keys-btn" title="Keyboard shortcuts">?</button>
@@ -313,7 +317,10 @@ function buildRail() {
         // shared repository does not have it
         row.innerHTML = '<span class="dot"></span>' + f + (f === personalFile
             ? '<span class="mine" title="Your personal world. It lives in your own git at ~/.gate/me and is never in the shared repository.">mine</span>' : "");
-        row.onclick = () => loadFile(f);
+        row.onclick = () => {
+            const from = navHere();       // opening a file from the rail is a jump too
+            loadFile(f); recordJump(from); // loadFile sets `active` before it awaits
+        };
         list.appendChild(row);
     }
 }
@@ -867,13 +874,20 @@ function ledgerGroups() {
 
 // the landing is visible: the whole line selected, a brief flash, scrolled with margin
 let navBack = [], navForward = [], navMuted = false, navFrom = null, compScaffold = null;
-function navHere() { return { file: active, pos: cm.getCursor() }; }
+// a place is a file, a view, and a spot in it — the view is part of where you were
+function navHere() { return { file: active, mode, pos: cm.getCursor() }; }
+function updateNavButtons() {
+    const b = document.getElementById("nav-back"), f = document.getElementById("nav-fwd");
+    if (b) b.disabled = !navBack.length;
+    if (f) f.disabled = !navForward.length;
+}
 function recordJump(from) {
     // a real jump only: same spot is not history
     if (navMuted) return;
     if (from && (from.file !== active || Math.abs(from.pos.line - cm.getCursor().line) > 1)) {
         navBack.push(from); navForward = [];
     }
+    updateNavButtons();
 }
 async function navGo(stackFrom, stackTo) {
     if (!stackFrom.length) return;
@@ -881,10 +895,11 @@ async function navGo(stackFrom, stackTo) {
     const there = stackFrom.pop();
     navMuted = true;
     if (there.file && there.file !== active && files.includes(there.file)) await loadFile(there.file);
+    setMode(there.mode || "full");          // restore the view before the spot in it
     cm.setCursor(there.pos);
-    cm.scrollIntoView(there.pos, 120);
-    cm.focus();
+    if (there.mode !== "bare" && there.mode !== "table") { cm.scrollIntoView(there.pos, 120); cm.focus(); }
     navMuted = false;
+    updateNavButtons();
 }
 
 function reveal(line) {
@@ -1080,6 +1095,16 @@ function setMode(m) {
     if (m === "full") cm.refresh();
 }
 document.querySelectorAll("#view-seg button").forEach(b => b.onclick = () => setMode(b.dataset.m));
+// the bar's arrows are the keyboard jump history made visible — the same navGo,
+// no second stack. Xcode wears Ctrl-Cmd-arrows; the browser and VS Code, Alt.
+document.getElementById("nav-back").onclick = () => navGo(navBack, navForward);
+document.getElementById("nav-fwd").onclick = () => navGo(navForward, navBack);
+{
+    const combo = MAC ? "⌃⌘" : "Alt+";
+    document.getElementById("nav-back").title = "Step back to where you jumped from  (" + combo + "←)";
+    document.getElementById("nav-fwd").title = "Step forward to where you jumped  (" + combo + "→)";
+}
+updateNavButtons();
 
 // No buffer of our own: an edit goes to the working-copy file, and git is the
 // only state. But ONLY a holding world is written — a refused (invalid) world
