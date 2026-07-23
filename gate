@@ -1896,8 +1896,7 @@ def cmd_serve(a):
     # THE CONTRACT (the bench depends on exactly this, and nothing else):
     #   GET  /  and /ui              the bench itself
     #   GET  /files                  {files: [name], personal: name|null}
-    #   GET  /vocabulary             what the shelf declares: names, conformers,
-    #                                axes, and the axes of each protocol
+    #   GET  /shelf                  {modules: [name]} — the genres on the shelf
     #   GET  /shelf?m=name           the text of one shelf module, to read
     #   GET  /world?f=name           the text of one file from that list
     #   GET  /gitstatus?f=name       {git: committed|modified|untracked}
@@ -1946,42 +1945,20 @@ def cmd_serve(a):
                     return self.send_file(os.path.join(here, "codemirror.js"), "text/javascript")
                 if u.path == "/codemirror.css":
                     return self.send_file(os.path.join(here, "codemirror.css"), "text/css")
-                if u.path == "/vocabulary":
-                    # what the shelf declares: where each name lives, what each
-                    # atom conforms to, and what every axis will accept. The
-                    # last one is why an offer can be right rather than merely
-                    # a list of words seen nearby.
-                    names, conformers, axes, proto_axes, gates = {}, {}, {}, {}, {}
-                    for mod, text in STDLIB.items():
-                        for m in re.finditer(r"^\s*(?:public\s+)?(?:enum|protocol|struct|typealias|associatedtype)\s+(\w+)", text, re.M):
-                            names.setdefault(m.group(1), mod)
-                        for m in re.finditer(r"^\s*(?:public\s+)?enum\s+(\w+)\s*:\s*([\w,\s]+?)\s*\{", text, re.M):
-                            for proto in [x.strip() for x in m.group(2).split(",") if x.strip()]:
-                                conformers.setdefault(proto, []).append(m.group(1))
-                        for m in re.finditer(r"^\s*associatedtype\s+(\w+)\s*:\s*(\w+)", text, re.M):
-                            axes.setdefault(m.group(1), m.group(2))
-                        # the gates: a form and what each of its parameters takes,
-                        # so a body can be offered the entries it may hold
-                        for m in re.finditer(r"^\s*(?:public\s+)?enum\s+(\w+)\s*<([^>]*)>", text, re.M):
-                            kinds = [x.split(":")[1].strip() if ":" in x else None
-                                     for x in m.group(2).split(",") if x.strip()]
-                            gates[m.group(1)] = kinds
-                        # which axes each protocol has, and of what kind: this is
-                        # what makes `Given.Sex` an answer and not a guess
-                        for m in re.finditer(r"^\s*(?:public\s+)?protocol\s+(\w+)[^{]*\{(.*?)\n\}", text, re.S | re.M):
-                            own = {a: k for a, k in re.findall(r"associatedtype\s+(\w+)\s*:\s*(\w+)", m.group(2))}
-                            if own:
-                                proto_axes.setdefault(m.group(1), {}).update(own)
-                    body = json.dumps({"names": names, "conformers": conformers, "axes": axes,
-                                       "protoAxes": proto_axes, "gates": gates}).encode()
-                    self.send_response(200)
-                    self.send_header("Content-Type", "application/json")
-                    self.send_header("Cache-Control", "no-store")
-                    self.end_headers()
-                    self.wfile.write(body)
-                    return
                 if u.path == "/shelf":
-                    mod = q.get("m", "")
+                    mod = q.get("m")
+                    if not mod:
+                        # the genres on the shelf. The bench reads each one with
+                        # the SAME judge that judges and builds its vocabulary
+                        # from that parse — the shelf has one reader, not a regex
+                        # here beside the judge over there.
+                        body = json.dumps({"modules": list(STDLIB)}).encode()
+                        self.send_response(200)
+                        self.send_header("Content-Type", "application/json")
+                        self.send_header("Cache-Control", "no-store")
+                        self.end_headers()
+                        self.wfile.write(body)
+                        return
                     if mod not in STDLIB:
                         return self.no_world()
                     body = STDLIB[mod].encode()

@@ -4,6 +4,11 @@
 // shows. The values live here, and a value from nowhere else is named on its
 // line the way any other claim is — the bench judged by its own rules.
 
+/// A theme the page can wear. Chosen by declaration, never by a button.
+public protocol BenchTheme {}
+public enum Light: BenchTheme {}
+public enum Dark: BenchTheme {}
+
 /// The bench itself. Your MyBench conforms to it to choose a theme:
 ///
 ///     public enum MyBench: Bench {
@@ -12,21 +17,6 @@
 public protocol Bench {
     associatedtype Theme: BenchTheme
 }
-
-/// The journal dashboard. Your MyJournal conforms to it to say what it shows:
-///
-///     public enum MyJournal: Journal {
-///         public typealias Scope = AllRepo
-///     }
-public protocol Journal {
-    associatedtype Scope: JournalScope
-    associatedtype Author: JournalAuthor
-}
-
-/// A theme the page can wear. Chosen by declaration, never by a button.
-public protocol BenchTheme {}
-public enum Light: BenchTheme {}
-public enum Dark: BenchTheme {}
 
 /// What the journal counts as its world: the files of this layout, or the
 /// whole repository.
@@ -38,3 +28,13 @@ public enum AllRepo: JournalScope {}
 public protocol JournalAuthor {}
 public enum Me: JournalAuthor {}
 public enum Anyone: JournalAuthor {}
+
+/// The journal dashboard. Your MyJournal conforms to it to say what it shows:
+///
+///     public enum MyJournal: Journal {
+///         public typealias Scope = AllRepo
+///     }
+public protocol Journal {
+    associatedtype Scope: JournalScope
+    associatedtype Author: JournalAuthor
+}

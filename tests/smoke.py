@@ -534,8 +534,13 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               "axis + \".\" + inner" in ui))
     S.append(("and a name followed by a dot offers what stands after it",
               "function afterDot(" in ui and "protoAxes[kind]" in ui))
-    S.append(("the shelf says which axes each kind has, so those answers exist",
-              '"protoAxes": proto_axes' in open(GATE, encoding="utf-8").read()))
+    # the shelf has ONE reader: the vocabulary is built in the bench from the
+    # judge's own parse (axisKinds/paramKinds), so the gate carries no second
+    # regex over the shelf and the bench never fetches a server-built vocabulary
+    S.append(("the shelf's vocabulary has one reader: the judge, not a second regex",
+              "proto_axes" not in open(GATE, encoding="utf-8").read()
+              and 'fetch("/vocabulary")' not in ui
+              and "function loadVocabulary(" in ui and "judge(mod" in ui))
 
     # the shelf is reference, read in the bench but never judged as the world:
     # a genre uses protocol/associatedtype, which the world's judge rejects, so

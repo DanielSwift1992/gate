@@ -1346,12 +1346,39 @@ for (const head of document.querySelectorAll("h3.fold")) {
     split.addEventListener("dblclick", () => saveLayout({ railWidth: 0 }));
 }
 
-(async () => {
-    {
-        const v = await (await fetch("/vocabulary")).json().catch(() => ({}));
-        vocabulary = v.names || {}; conformers = v.conformers || {};
-        axisOf = v.axes || {}; protoAxes = v.protoAxes || {}; gates = v.gates || {};
+// ── one reader: the bench builds its vocabulary from the SAME judge that judges
+// the world, run over the shelf's own text. What each name is, what it conforms
+// to, the axes each protocol owes with their kind, and the parameters each gate
+// takes are all read from that parse — no second regex on the server beside the
+// judge in the browser. Names use each declaration's own short name: a one-line
+// enum body leaves its opener on the parse stack, so a later gate is read as its
+// child, but the short name is the one the world speaks. ──
+async function loadVocabulary() {
+    vocabulary = {}; conformers = {}; axisOf = {}; protoAxes = {}; gates = {};
+    const list = await (await fetch("/shelf")).json().catch(() => ({}));
+    for (const mod of (list.modules || [])) {
+        const text = await (await fetch("/shelf?m=" + encodeURIComponent(mod))).text();
+        for (const d of judge(mod + ".swift", text).parsed.declarations.values()) {
+            if (!(d.name in vocabulary)) vocabulary[d.name] = mod;
+            if (d.axes) {                                   // a protocol: the axes it owes, and of what kind
+                for (const [axis, kind] of Object.entries(d.axisKinds || {})) {
+                    (protoAxes[d.name] || (protoAxes[d.name] = {}))[axis] = kind;
+                    if (!(axis in axisOf)) axisOf[axis] = kind;
+                }
+            } else if (d.params && d.params.length) {       // a gate: what each parameter takes, in order
+                gates[d.name] = d.paramKinds || [];
+            } else {                                        // a plain atom: what it stands in for
+                for (const conf of d.conformances) {
+                    const c = conf.trim();
+                    if (c) (conformers[c] || (conformers[c] = [])).push(d.name);
+                }
+            }
+        }
     }
+}
+
+(async () => {
+    await loadVocabulary();
     const fl = await (await fetch("/files")).json().catch(() => ({ files: [] }));
     files = fl.files || []; personalFile = fl.personal || null; personalEmpty = !!fl.personal_empty;
     // the rail carries files AND the journal, so it shows for any clone
