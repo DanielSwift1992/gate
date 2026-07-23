@@ -97,6 +97,14 @@ PERSONAL_TEMPLATE = """\
 // that holds is kept there. It goes nowhere else: no clone of the shared
 // repository will have it, and neither will your other computer, unless you
 // give that repository a remote of your own.
+//
+// The bench itself is configured here, by declaration and not by a toggle.
+// Uncomment the lines below to wear the dark theme — the page follows the
+// declaration at once, and your git remembers the day you chose it:
+//
+//     public enum MyBench: Bench {
+//         public typealias Theme = Dark
+//     }
 """
 
 

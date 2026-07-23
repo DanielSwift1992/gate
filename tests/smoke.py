@@ -553,6 +553,17 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     S.append(("the offer has one source: the grammar, with no pool to fall back to",
               "if (!here) return hideCompletion()" in ui and "function completionPool" not in ui))
 
+    # the bench wears its own theme by declaration, not a toggle: MyBench.Theme
+    # is read from the shelf genre (conformers of BenchTheme), with the OS
+    # preference as the default when nothing is declared
+    bench_atoms = open(os.path.join(HERE, "stdlib", "bench-atoms.swift"), encoding="utf-8").read()
+    S.append(("the theme is a declaration read from the genre, with the OS as default",
+              "function applyMyBench(" in ui
+              and 'conformers["BenchTheme"]' in ui
+              and "prefers-color-scheme: dark" in ui
+              and 'setAttribute("data-theme"' in ui
+              and "protocol Bench {" in bench_atoms and "enum Dark: BenchTheme" in bench_atoms))
+
     # the bench may not say holds where a hook would refuse: the guards run on
     # the unsaved text as well, not only in the CLI
     S.append(("the bench runs the same guards the CLI does",

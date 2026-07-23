@@ -10,8 +10,16 @@
      talk to its own loopback server and to nothing else. -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
 <link rel="stylesheet" href="/codemirror.css">
+<script>
+// The theme is a declaration, not a toggle. Before the world is read, follow the
+// operating system so a dark machine never flashes white; a MyBench in your
+// personal world refines it a moment later.
+document.documentElement.setAttribute("data-theme",
+    window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+</script>
 <style>
-:root{--ok:#248A3D;--bad:#C4453B;--action:#007AFF;--line:#d2d2d7;--mist:#f5f5f7;--paper:#fff;--ink:#1d1d1f;--muted:#8e8e93;--localtype:#0B4F79;--knownname:#3900A0;color-scheme:light}
+:root{--ok:#248A3D;--bad:#C4453B;--action:#007AFF;--line:#d2d2d7;--mist:#f5f5f7;--paper:#fff;--ink:#1d1d1f;--muted:#8e8e93;--localtype:#0B4F79;--knownname:#3900A0;--law:#B25000;--cm-keyword:#9B2393;--cm-string:#C41A16;--cm-comment:#5D6C79;--cm-attribute:#947100;--cm-ghost:#a6a6ab;--select:#d7d4f0;color-scheme:light}
+:root[data-theme="dark"]{--ok:#32D74B;--bad:#FF6961;--action:#409CFF;--line:#3a3a3c;--mist:#2c2c2e;--paper:#1c1c1e;--ink:#f2f2f7;--muted:#98989f;--localtype:#7FB8E8;--knownname:#CBA6F7;--law:#FF9F0A;--cm-keyword:#E58BD6;--cm-string:#FF8A80;--cm-comment:#8A97A3;--cm-attribute:#E0C061;--cm-ghost:#5a5a5e;--select:#38385c;color-scheme:dark}
 *{box-sizing:border-box}
 body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);background:var(--paper);display:flex;height:100vh;overflow:hidden}
 #rail{flex:0 0 250px;display:none;flex-direction:column;overflow:auto;min-width:0}
@@ -101,18 +109,22 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 #nav-seg button{padding:3px 10px;font-size:15px;line-height:1}
 #gitstate{margin-left:auto;font:11.5px ui-monospace,Menlo,monospace;color:var(--muted);display:flex;align-items:center;gap:.4em}
 #gitstate .g{width:7px;height:7px;border-radius:50%;background:var(--muted)}
-#gitstate.modified{color:var(--law,#B25000)}#gitstate.modified .g{background:var(--law,#B25000)}
+#gitstate.modified{color:var(--law)}#gitstate.modified .g{background:var(--law)}
 #gitstate.committed{color:var(--ok)}#gitstate.committed .g{background:var(--ok)}
 #write{border:none;background:color-mix(in srgb,var(--action) 12%,transparent);color:var(--action);padding:.35em .9em;border-radius:6px;font:inherit;cursor:pointer}
 #write:disabled{opacity:.4;cursor:default}
 #surface{flex:1;position:relative;min-height:0}
 #editor-host{position:absolute;inset:0}
-.CodeMirror{height:100%;font:12.5px/19px ui-monospace,Menlo,monospace}
+.CodeMirror{height:100%;font:12.5px/19px ui-monospace,Menlo,monospace;background:var(--paper);color:var(--ink)}
 .CodeMirror-linenumber{color:var(--muted)}
-.cm-keyword{color:#9B2393;font-weight:600}.cm-string{color:#C41A16}.cm-comment{color:#5D6C79}
-.cm-attribute{color:#947100}.cm-localtype{color:var(--localtype)}.cm-knownname{color:var(--knownname)}
+.CodeMirror-cursor{border-left-color:var(--ink)}
+.CodeMirror-gutters{background:var(--paper);border-right-color:var(--line)}
+.CodeMirror-selected,.CodeMirror-focused .CodeMirror-selected{background:var(--select)}
+.CodeMirror-line::selection,.CodeMirror-line>span::selection,.CodeMirror-line>span>span::selection{background:var(--select)}
+.cm-keyword{color:var(--cm-keyword);font-weight:600}.cm-string{color:var(--cm-string)}.cm-comment{color:var(--cm-comment)}
+.cm-attribute{color:var(--cm-attribute)}.cm-localtype{color:var(--localtype)}.cm-knownname{color:var(--knownname)}
 .CodeMirror.holding .cm-jumpable{text-decoration:underline;text-underline-offset:2px;cursor:pointer}
-.cm-badname{text-decoration:underline wavy var(--bad);text-underline-offset:3px}.cm-ghost{color:#a6a6ab}
+.cm-badname{text-decoration:underline wavy var(--bad);text-underline-offset:3px}.cm-ghost{color:var(--cm-ghost)}
 .line-flag-bad{background:color-mix(in srgb,var(--bad) 6%,transparent)}
 .gutter-flag-bad .CodeMirror-linenumber{color:var(--bad);font-weight:700}
 .flag-note{font:11px/1.5 -apple-system,sans-serif;color:var(--bad);background:color-mix(in srgb,var(--bad) 8%,transparent);padding:.1em .8em .1em 2.4em}
@@ -164,7 +176,7 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .pending-head{padding:8px 8px 3px;font:11px -apple-system,sans-serif;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
 .pending{display:flex;gap:10px;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;align-items:baseline;color:var(--muted)}
 .pending:hover{background:var(--mist)}
-.pending code{color:var(--law,#B25000);font:11.5px ui-monospace,Menlo,monospace;flex:none;opacity:.75}
+.pending code{color:var(--law);font:11.5px ui-monospace,Menlo,monospace;flex:none;opacity:.75}
 </style>
 <div id="rail"><div id="brand"><b>gate</b><span id="brandline"></span></div>
   <h3 class="fold" data-fold="files"><i></i>files</h3><div id="filelist" class="foldable"></div>
@@ -336,6 +348,23 @@ async function buildJournal() {
         journalCommits = j.commits || []; journalWorld = j.world_files || []; journalMe = j.me || "";
     } catch { journalCommits = []; }
     renderJournal();
+}
+
+// ── the theme is a declaration too. The default follows the operating system;
+// MyBench in your personal world overrides it, and the page repaints when either
+// changes. No toggle: a button that duplicates a declaration is forbidden. ──
+const darkMedia = window.matchMedia("(prefers-color-scheme: dark)");
+let declaredTheme = null;               // a theme the genre names, read from MyBench.Theme
+function effectiveTheme() { return declaredTheme || (darkMedia.matches ? "dark" : "light"); }
+function paintTheme() { document.documentElement.setAttribute("data-theme", effectiveTheme()); }
+darkMedia.addEventListener("change", paintTheme);   // the OS flips, and an undeclared bench follows
+function applyMyBench() {
+    const d = (active === personalFile && lastParsed ? lastParsed.declarations : layoutDecls).get("MyBench");
+    const a = d && d.aliases.get("Theme");
+    // only a value the bench genre names sets the theme; a stranger is the
+    // guard's to report, and until then the OS default stands
+    declaredTheme = a && (conformers["BenchTheme"] || []).includes(a.target) ? a.target.toLowerCase() : null;
+    paintTheme();
 }
 
 // ── the dashboard is a declaration: MyJournal in your personal world says what
@@ -743,7 +772,7 @@ async function render() {
             '<span class="chip" id="chip" style="background:var(--mist);color:var(--muted)">reference</span>';
         document.getElementById("next").textContent = "";
         document.getElementById("verdicts").innerHTML = "";
-        applyMyJournal();
+        applyMyJournal(); applyMyBench();
         return;
     }
     let r;
@@ -768,7 +797,7 @@ async function render() {
             + ' claims disagree with the rest. Each is listed below, with its line.">refuses '
             + broken.length + '</span>'
         : pending.length
-        ? '<span class="chip" id="chip" style="background:color-mix(in srgb,var(--law,#B25000) 15%,transparent);color:var(--law,#B25000)" title="'
+        ? '<span class="chip" id="chip" style="background:color-mix(in srgb,var(--law) 15%,transparent);color:var(--law)" title="'
             + pending.length + ' slots are not filled in yet. Nothing disagrees; the record is just unfinished.">'
             + pending.length + ' to fill</span>'
         : '<span class="chip ok" id="chip" title="Every claim in these files agrees with every other one.">holds</span>';
@@ -806,6 +835,7 @@ async function render() {
     if (mode === "table") buildTables();
     if (mode === "bare") document.getElementById("bare").innerHTML = bareForm(lastParsed);
     applyMyJournal();   // the journal follows the declaration, as you edit it
+    applyMyBench();     // and so does the theme
 }
 
 // the one step that comes next, chosen by what this repository already has —
