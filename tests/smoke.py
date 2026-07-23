@@ -514,8 +514,8 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     S.append(("the shelf says which axes each kind has, so those answers exist",
               '"protoAxes": proto_axes' in open(GATE, encoding="utf-8").read()))
 
-    S.append(("the bench offers only names the world declares",
-              "function completionPool()" in ui and "layoutDecls" in ui.split("function completionPool()")[1][:400]))
+    S.append(("the offer has one source: the grammar, with no pool to fall back to",
+              "if (!here) return hideCompletion()" in ui and "function completionPool" not in ui))
 
     # the bench may not say holds where a hook would refuse: the guards run on
     # the unsaved text as well, not only in the CLI

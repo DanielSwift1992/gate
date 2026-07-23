@@ -557,19 +557,6 @@ function allowedAt(cur) {
     return null;
 }
 
-function completionPool() {
-    const out = new Set();
-    for (const [name, d] of layoutDecls) {
-        out.add(name);
-        for (const c of d.conformances) out.add(c);
-        for (const [k, v] of d.aliases) { out.add(k); if (v && v.target) out.add(v.target); }
-        for (const e of (d.entries || [])) { out.add(e.head); (e.args || []).forEach(a => out.add(a)); }
-    }
-    for (const n of siblingNames) out.add(n);
-    if (lastParsed) for (const n of namesOf(lastParsed)) out.add(n);
-    return [...out];
-}
-
 function hideCompletion() { compEl.hidden = true; compItems = []; compFrom = null; }
 
 function drawCompletion(reposition) {
@@ -600,19 +587,12 @@ function offerCompletion() {
     const line = cm.getLine(cur.line) || "";
     const before = line.slice(0, cur.ch);
     const here = allowedAt(cur);
+    if (!here) return hideCompletion();     // no grammar here means no offer
     const m = /([A-Za-z_]\w*)$/.exec(before);
     const word = m ? m[1] : "";
-
-    let items, back = word.length;
-    if (here) {
-        if (here.back !== undefined) back = here.back;
-        const low = word.toLowerCase();
-        items = word ? here.items.filter(n => n.toLowerCase().includes(low) && n !== word) : here.items;
-    } else {
-        if (word.length < 2) return hideCompletion();
-        const low = word.toLowerCase();
-        items = completionPool().filter(n => n !== word && n.toLowerCase().includes(low));
-    }
+    const low = word.toLowerCase();
+    const back = here.back !== undefined ? here.back : word.length;
+    let items = word ? here.items.filter(n => n.toLowerCase().includes(low) && n !== word) : here.items;
     items.sort((a, b) => {
         const low = word.toLowerCase();
         const pa = a.toLowerCase().startsWith(low), pb = b.toLowerCase().startsWith(low);
