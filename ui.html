@@ -18,8 +18,49 @@ document.documentElement.setAttribute("data-theme",
     window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
 </script>
 <style>
-:root{--ok:#248A3D;--bad:#C4453B;--action:#007AFF;--line:#d2d2d7;--mist:#f5f5f7;--paper:#fff;--ink:#1d1d1f;--muted:#8e8e93;--localtype:#0B4F79;--knownname:#3900A0;--law:#B25000;--cm-keyword:#9B2393;--cm-string:#C41A16;--cm-comment:#5D6C79;--cm-attribute:#947100;--cm-ghost:#a6a6ab;--select:#d7d4f0;color-scheme:light}
-:root[data-theme="dark"]{--ok:#32D74B;--bad:#FF6961;--action:#409CFF;--line:#3a3a3c;--mist:#2c2c2e;--paper:#1c1c1e;--ink:#f2f2f7;--muted:#98989f;--localtype:#7FB8E8;--knownname:#CBA6F7;--law:#FF9F0A;--cm-keyword:#E58BD6;--cm-string:#FF8A80;--cm-comment:#8A97A3;--cm-attribute:#E0C061;--cm-ghost:#5a5a5e;--select:#38385c;color-scheme:dark}
+/* ── the palette, generated from the judged stdlib/bench-palette.swift: the hex
+   is the sRGB fallback, and color(xyz-d65 …) carries the SAME numbers the atom
+   states and its contrast certificates hold to. Lower a colour here and the
+   file's slack stops settling — the palette cannot drift from what was judged.
+   Do not hand-edit; regenerate from the atoms. ── */
+:root{color-scheme:light;
+  --ink: #1D1E21; --ink: color(xyz-d65 calc(1/100) calc(1/100) calc(2/100));
+  --paper: #FDFDFE; --paper: color(xyz-d65 calc(94/100) calc(98/100) calc(108/100));
+  --mist: #F3F4F6; --mist: color(xyz-d65 calc(86/100) calc(90/100) calc(100/100));
+  --line: #D5D8DC; --line: color(xyz-d65 calc(65/100) calc(68/100) calc(77/100));
+  --muted: #82878D; --muted: color(xyz-d65 calc(23/100) calc(24/100) calc(29/100));
+  --ok: #167D35; --ok: color(xyz-d65 calc(8/100) calc(15/100) calc(6/100));
+  --bad: #BD4238; --bad: color(xyz-d65 calc(24/100) calc(15/100) calc(5/100));
+  --action: #156ACF; --action: color(xyz-d65 calc(17/100) calc(15/100) calc(61/100));
+  --law: #AD5300; --law: color(xyz-d65 calc(20/100) calc(15/100) calc(2/100));
+  --localtype: #107782; --localtype: color(xyz-d65 calc(11/100) calc(15/100) calc(23/100));
+  --knownname: #8D48D3; --knownname: color(xyz-d65 calc(25/100) calc(15/100) calc(63/100));
+  --cm-keyword: #8A2BE2; --cm-keyword: color(xyz-d65 calc(25/100) calc(13/100) calc(73/100));
+  --cm-string: #C4453B; --cm-string: color(xyz-d65 calc(26/100) calc(16/100) calc(6/100));
+  --cm-comment: #5D6C79; --cm-comment: color(xyz-d65 calc(13/100) calc(14/100) calc(20/100));
+  --cm-attribute: #8A6D00; --cm-attribute: color(xyz-d65 calc(16/100) calc(16/100) calc(2/100));
+  --cm-ghost: #A6A6AB; --cm-ghost: color(xyz-d65 calc(37/100) calc(38/100) calc(44/100));
+  --select: #D7D4F0; --select: color(xyz-d65 calc(67/100) calc(68/100) calc(92/100));
+}
+:root[data-theme="dark"]{color-scheme:dark;
+  --ink: #F1F3F5; --ink: color(xyz-d65 calc(85/100) calc(89/100) calc(99/100));
+  --paper: #1B1C1F; --paper: color(xyz-d65 calc(1/100) calc(1/100) calc(1/100));
+  --mist: #2A2C30; --mist: color(xyz-d65 calc(2/100) calc(3/100) calc(3/100));
+  --line: #3B3E44; --line: color(xyz-d65 calc(5/100) calc(5/100) calc(6/100));
+  --muted: #9BA1A8; --muted: color(xyz-d65 calc(33/100) calc(35/100) calc(42/100));
+  --ok: #33E96A; --ok: color(xyz-d65 calc(33/100) calc(60/100) calc(24/100));
+  --bad: #F7BEBB; --bad: color(xyz-d65 calc(66/100) calc(60/100) calc(55/100));
+  --action: #B9CBFD; --action: color(xyz-d65 calc(59/100) calc(60/100) calc(101/100));
+  --law: #FBBEA9; --law: color(xyz-d65 calc(65/100) calc(60/100) calc(45/100));
+  --localtype: #28E0F3; --localtype: color(xyz-d65 calc(44/100) calc(60/100) calc(94/100));
+  --knownname: #D8C2FA; --knownname: color(xyz-d65 calc(65/100) calc(60/100) calc(99/100));
+  --cm-keyword: #E58BD6; --cm-keyword: color(xyz-d65 calc(54/100) calc(40/100) calc(68/100));
+  --cm-string: #FF8A80; --cm-string: color(xyz-d65 calc(54/100) calc(41/100) calc(25/100));
+  --cm-comment: #8A97A3; --cm-comment: color(xyz-d65 calc(28/100) calc(30/100) calc(39/100));
+  --cm-attribute: #E0C061; --cm-attribute: color(xyz-d65 calc(52/100) calc(54/100) calc(19/100));
+  --cm-ghost: #5A5A5E; --cm-ghost: color(xyz-d65 calc(10/100) calc(10/100) calc(12/100));
+  --select: #38385C; --select: color(xyz-d65 calc(5/100) calc(4/100) calc(11/100));
+}
 *{box-sizing:border-box}
 body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);background:var(--paper);display:flex;height:100vh;overflow:hidden}
 #rail{flex:0 0 250px;display:none;flex-direction:column;overflow:auto;min-width:0}

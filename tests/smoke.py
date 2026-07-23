@@ -599,6 +599,50 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and 'vocabulary[conf] !== "bench-atoms"' in ui
               and "the bench genre states" in ui))
 
+    # ── the palette is one source: the colour the bench RENDERS is the colour
+    # the judge HOLDS. Every var's color(xyz-d65 …) carries the very numbers the
+    # atom states and its contrast certificates hold to, and no colour lives
+    # outside the palette blocks. Decode the file's own ladder and compare —
+    # exactly, no tolerance. Lower a pair's contrast in the file and its
+    # self-judge goes red (above); change a number in the CSS and this goes red.
+    pal = open(os.path.join(HERE, "stdlib", "bench-palette.swift"), encoding="utf-8").read()
+    def _decode(e):
+        e = e.strip()
+        if e == "Never": return 0
+        if e == "Unit": return 1
+        if e[0] == "W": return int(e[1:])
+        inner = e[e.index("<") + 1:e.rindex(">")]
+        depth = 0
+        for i, c in enumerate(inner):
+            if c == "<": depth += 1
+            elif c == ">": depth -= 1
+            elif c == "," and depth == 0:
+                return _decode(inner[:i]) + _decode(inner[i + 1:])
+        return _decode(inner)
+    axes = {}
+    for m in re.finditer(r"public typealias (\w+?)(Lit|Dim)([XYZ]) = (.+)", pal):
+        axes[(m.group(1), m.group(2), m.group(3))] = _decode(m.group(4))
+    VAR2ATOM = {"--ink": "Ink", "--paper": "Paper", "--mist": "Mist", "--line": "Line",
+        "--muted": "Muted", "--ok": "Ok", "--bad": "Bad", "--action": "Action", "--law": "Law",
+        "--localtype": "LocalType", "--knownname": "KnownName", "--cm-keyword": "Keyword",
+        "--cm-string": "Literal", "--cm-comment": "Comment", "--cm-attribute": "Attribute",
+        "--cm-ghost": "Ghost", "--select": "Select"}
+    def _block(sel): return ui.split(sel, 1)[1].split("}", 1)[0] if sel in ui else ""
+    def _match(block, mode):
+        for var, atom in VAR2ATOM.items():
+            m = re.search(re.escape(var) + r": color\(xyz-d65 calc\((\d+)/100\) calc\((\d+)/100\) calc\((\d+)/100\)\)", block)
+            if not m: return False
+            if (int(m.group(1)), int(m.group(2)), int(m.group(3))) != (
+                    axes.get((atom, mode, "X")), axes.get((atom, mode, "Y")), axes.get((atom, mode, "Z"))):
+                return False
+        return True
+    stripped = re.sub(r':root(\[data-theme="dark"\])?\{.*?\n\}', "", ui, flags=re.S)
+    no_stray = not re.search(r"#[0-9a-fA-F]{3,6}\b", stripped) and "rgb(" not in stripped
+    S.append(("the palette the bench renders is the palette the judge holds: same numbers, no colour outside it",
+              _match(_block(":root{"), "Lit")
+              and _match(_block(':root[data-theme="dark"]{'), "Dim")
+              and no_stray))
+
     # the verdict holds still: the numbers on the status line are tabular so a
     # changing millisecond does not make it breathe, the chip reserves its width
     # so holds<->refuses N never shifts the row, and nothing animates on a change

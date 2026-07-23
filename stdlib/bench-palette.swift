@@ -1,13 +1,9 @@
 // gate stdlib bench-palette v1 — the palette as a judged world.
-// Colours are not constants borrowed from a device; they are levels of
-// light on a 0..100 scale, and every pair a reader meets carries a
-// certificate of its contrast. Numbers are spelled on THIS file's own
-// ladder from Unit (Twice doublings) — the built-in U-numerals stay
-// symbolic to the judge, so a world spells its own ladder. Lower a
-// background here and the slack stops settling: the judge names the pair,
-// in numbers. (Neutrals only in this first cut; semantics follow.)
+// Levels of light on a 0..100 scale; every pair a reader meets carries a
+// contrast certificate. Numbers on this file's own ladder from Unit — the
+// built-in U stay symbolic, so a world spells its own ladder. Lower a
+// contrast and the slack stops settling: the judge names the pair, in numbers.
 
-// the ladder: W2 = 2, W4 = 4, ... each a doubling of the last
 public typealias W2 = Twice<Unit>
 public typealias W4 = Twice<W2>
 public typealias W8 = Twice<W4>
@@ -18,15 +14,14 @@ public typealias W128 = Twice<W64>
 public typealias W256 = Twice<W128>
 public typealias W512 = Twice<W256>
 public typealias W1024 = Twice<W512>
+public typealias W2048 = Twice<W1024>
 
-// contrast on the 0..100 scale, cross-multiplied so it clears denominators:
-// 7:1  ->  Bright == 7*Dark + 30 + Slack      (AAA, primary text)
-// 3:1  ->  Bright == 3*Dark + 10 + Slack      (an honestly-stated secondary)
-// brighter -> Hi == Lo + 1 + Slack            (a strict step of the ladder)
-public typealias N7 = Plus<Unit, Plus<W2, W4>>
-public typealias N30 = Plus<W2, Plus<W4, Plus<W8, W16>>>
 public typealias N3 = Plus<Unit, W2>
+public typealias N7 = Plus<Unit, Plus<W2, W4>>
+public typealias N9 = Plus<Unit, W8>
 public typealias N10 = Plus<W2, W8>
+public typealias N30 = Plus<W2, Plus<W4, Plus<W8, W16>>>
+public typealias N35 = Plus<Unit, Plus<W2, W32>>
 
 public protocol ContrastHolds {}
 public enum Legible<Bright, Dark, Slack>: Close {}
@@ -35,24 +30,155 @@ where Bright == Plus<Times<N7, Dark>, Plus<N30, Slack>> {}
 public enum Readable<Bright, Dark, Slack>: Close {}
 extension Readable: ContrastHolds
 where Bright == Plus<Times<N3, Dark>, Plus<N10, Slack>> {}
+public enum ReadableAA<Bright, Dark, Slack>: Close {}
+extension ReadableAA: ContrastHolds
+where Twice<Bright> == Plus<Times<N9, Dark>, Plus<N35, Slack>> {}
 public protocol Ordered {}
 public enum Brighter<Hi, Lo, Slack>: Close {}
 extension Brighter: Ordered
 where Hi == Plus<Lo, Plus<Unit, Slack>> {}
+public enum Same<A, B>: Close {}
+extension Same: Ordered
+where A == B {}
 
-// the neutral ladder — one hue, chroma ~0, only lightness changes
-public typealias PaperY = Plus<W2, Plus<W32, W64>>
-public typealias MistY = Plus<Unit, Plus<W2, Plus<W4, Plus<W8, Plus<W16, W64>>>>>
-public typealias LineY = Plus<W4, W64>
-public typealias MutedY = Plus<W4, Plus<W8, W16>>
-public typealias InkY = Plus<Unit, W4>
+// ── the light theme the page wears ──
+public typealias InkLitX = Unit
+public typealias InkLitY = Unit
+public typealias InkLitZ = W2
+public typealias PaperLitX = Plus<W2, Plus<W4, Plus<W8, Plus<W16, W64>>>>
+public typealias PaperLitY = Plus<W2, Plus<W32, W64>>
+public typealias PaperLitZ = Plus<W4, Plus<W8, Plus<W32, W64>>>
+public typealias MistLitX = Plus<W2, Plus<W4, Plus<W16, W64>>>
+public typealias MistLitY = Plus<W2, Plus<W8, Plus<W16, W64>>>
+public typealias MistLitZ = Plus<W4, Plus<W32, W64>>
+public typealias LineLitX = Plus<Unit, W64>
+public typealias LineLitY = Plus<W4, W64>
+public typealias LineLitZ = Plus<Unit, Plus<W4, Plus<W8, W64>>>
+public typealias MutedLitX = Plus<Unit, Plus<W2, Plus<W4, W16>>>
+public typealias MutedLitY = Plus<W8, W16>
+public typealias MutedLitZ = Plus<Unit, Plus<W4, Plus<W8, W16>>>
+public typealias OkLitX = W8
+public typealias OkLitY = Plus<Unit, Plus<W2, Plus<W4, W8>>>
+public typealias OkLitZ = Plus<W2, W4>
+public typealias BadLitX = Plus<W8, W16>
+public typealias BadLitY = Plus<Unit, Plus<W2, Plus<W4, W8>>>
+public typealias BadLitZ = Plus<Unit, W4>
+public typealias ActionLitX = Plus<Unit, W16>
+public typealias ActionLitY = Plus<Unit, Plus<W2, Plus<W4, W8>>>
+public typealias ActionLitZ = Plus<Unit, Plus<W4, Plus<W8, Plus<W16, W32>>>>
+public typealias LawLitX = Plus<W4, W16>
+public typealias LawLitY = Plus<Unit, Plus<W2, Plus<W4, W8>>>
+public typealias LawLitZ = W2
+public typealias LocalTypeLitX = Plus<Unit, Plus<W2, W8>>
+public typealias LocalTypeLitY = Plus<Unit, Plus<W2, Plus<W4, W8>>>
+public typealias LocalTypeLitZ = Plus<Unit, Plus<W2, Plus<W4, W16>>>
+public typealias KnownNameLitX = Plus<Unit, Plus<W8, W16>>
+public typealias KnownNameLitY = Plus<Unit, Plus<W2, Plus<W4, W8>>>
+public typealias KnownNameLitZ = Plus<Unit, Plus<W2, Plus<W4, Plus<W8, Plus<W16, W32>>>>>
+public typealias KeywordLitX = Plus<Unit, Plus<W8, W16>>
+public typealias KeywordLitY = Plus<Unit, Plus<W4, W8>>
+public typealias KeywordLitZ = Plus<Unit, Plus<W8, W64>>
+public typealias LiteralLitX = Plus<W2, Plus<W8, W16>>
+public typealias LiteralLitY = W16
+public typealias LiteralLitZ = Plus<W2, W4>
+public typealias CommentLitX = Plus<Unit, Plus<W4, W8>>
+public typealias CommentLitY = Plus<W2, Plus<W4, W8>>
+public typealias CommentLitZ = Plus<W4, W16>
+public typealias AttributeLitX = W16
+public typealias AttributeLitY = W16
+public typealias AttributeLitZ = W2
+public typealias GhostLitX = Plus<Unit, Plus<W4, W32>>
+public typealias GhostLitY = Plus<W2, Plus<W4, W32>>
+public typealias GhostLitZ = Plus<W4, Plus<W8, W32>>
+public typealias SelectLitX = Plus<Unit, Plus<W2, W64>>
+public typealias SelectLitY = Plus<W4, W64>
+public typealias SelectLitZ = Plus<W4, Plus<W8, Plus<W16, W64>>>
 
-// the ladder is monotone, judged step by step (Paper > Mist > Line > Muted > Ink)
-public typealias PaperOverMist = Brighter<PaperY, MistY, W2>
-public typealias MistOverLine = Brighter<MistY, LineY, Plus<W2, Plus<W8, W16>>>
-public typealias LineOverMuted = Brighter<LineY, MutedY, Plus<Unit, Plus<W2, Plus<W4, W32>>>>
-public typealias MutedOverInk = Brighter<MutedY, InkY, Plus<W2, Plus<W4, W16>>>
+// ── the dark theme the dark canvas wears ──
+public typealias InkDimX = Plus<Unit, Plus<W4, Plus<W16, W64>>>
+public typealias InkDimY = Plus<Unit, Plus<W8, Plus<W16, W64>>>
+public typealias InkDimZ = Plus<Unit, Plus<W2, Plus<W32, W64>>>
+public typealias PaperDimX = Unit
+public typealias PaperDimY = Unit
+public typealias PaperDimZ = Unit
+public typealias MistDimX = W2
+public typealias MistDimY = Plus<Unit, W2>
+public typealias MistDimZ = Plus<Unit, W2>
+public typealias LineDimX = Plus<Unit, W4>
+public typealias LineDimY = Plus<Unit, W4>
+public typealias LineDimZ = Plus<W2, W4>
+public typealias MutedDimX = Plus<Unit, W32>
+public typealias MutedDimY = Plus<Unit, Plus<W2, W32>>
+public typealias MutedDimZ = Plus<W2, Plus<W8, W32>>
+public typealias OkDimX = Plus<Unit, W32>
+public typealias OkDimY = Plus<W4, Plus<W8, Plus<W16, W32>>>
+public typealias OkDimZ = Plus<W8, W16>
+public typealias BadDimX = Plus<W2, W64>
+public typealias BadDimY = Plus<W4, Plus<W8, Plus<W16, W32>>>
+public typealias BadDimZ = Plus<Unit, Plus<W2, Plus<W4, Plus<W16, W32>>>>
+public typealias ActionDimX = Plus<Unit, Plus<W2, Plus<W8, Plus<W16, W32>>>>
+public typealias ActionDimY = Plus<W4, Plus<W8, Plus<W16, W32>>>
+public typealias ActionDimZ = Plus<Unit, Plus<W4, Plus<W32, W64>>>
+public typealias LawDimX = Plus<Unit, W64>
+public typealias LawDimY = Plus<W4, Plus<W8, Plus<W16, W32>>>
+public typealias LawDimZ = Plus<Unit, Plus<W4, Plus<W8, W32>>>
+public typealias LocalTypeDimX = Plus<W4, Plus<W8, W32>>
+public typealias LocalTypeDimY = Plus<W4, Plus<W8, Plus<W16, W32>>>
+public typealias LocalTypeDimZ = Plus<W2, Plus<W4, Plus<W8, Plus<W16, W64>>>>
+public typealias KnownNameDimX = Plus<Unit, W64>
+public typealias KnownNameDimY = Plus<W4, Plus<W8, Plus<W16, W32>>>
+public typealias KnownNameDimZ = Plus<Unit, Plus<W2, Plus<W32, W64>>>
+public typealias KeywordDimX = Plus<W2, Plus<W4, Plus<W16, W32>>>
+public typealias KeywordDimY = Plus<W8, W32>
+public typealias KeywordDimZ = Plus<W4, W64>
+public typealias LiteralDimX = Plus<W2, Plus<W4, Plus<W16, W32>>>
+public typealias LiteralDimY = Plus<Unit, Plus<W8, W32>>
+public typealias LiteralDimZ = Plus<Unit, Plus<W8, W16>>
+public typealias CommentDimX = Plus<W4, Plus<W8, W16>>
+public typealias CommentDimY = Plus<W2, Plus<W4, Plus<W8, W16>>>
+public typealias CommentDimZ = Plus<Unit, Plus<W2, Plus<W4, W32>>>
+public typealias AttributeDimX = Plus<W4, Plus<W16, W32>>
+public typealias AttributeDimY = Plus<W2, Plus<W4, Plus<W16, W32>>>
+public typealias AttributeDimZ = Plus<Unit, Plus<W2, W16>>
+public typealias GhostDimX = Plus<W2, W8>
+public typealias GhostDimY = Plus<W2, W8>
+public typealias GhostDimZ = Plus<W4, W8>
+public typealias SelectDimX = Plus<Unit, W4>
+public typealias SelectDimY = W4
+public typealias SelectDimZ = Plus<Unit, Plus<W2, W8>>
 
-// the pairs a reader meets, each holding its bound with slack to spare
-public typealias InkOnPaper = Legible<PaperY, InkY, Plus<Unit, W32>>
-public typealias MutedOnPaper = Readable<PaperY, MutedY, W4>
+// ── the ladder is monotone, the pairs clear their bound, the semantic step is level ──
+public typealias PaperOverMist_lit = Brighter<PaperLitY, MistLitY, Plus<Unit, Plus<W2, W4>>>
+public typealias MistOverLine_lit = Brighter<MistLitY, LineLitY, Plus<Unit, Plus<W4, W16>>>
+public typealias LineOverMuted_lit = Brighter<LineLitY, MutedLitY, Plus<Unit, Plus<W2, Plus<W8, W32>>>>
+public typealias MutedOverInk_lit = Brighter<MutedLitY, InkLitY, Plus<W2, Plus<W4, W16>>>
+public typealias Paper_Ink_lit = Legible<PaperLitY, InkLitY, Plus<Unit, Plus<W4, Plus<W8, Plus<W16, W32>>>>>
+public typealias Paper_Muted_lit = Readable<PaperLitY, MutedLitY, W16>
+public typealias Paper_Ok_lit = ReadableAA<PaperLitY, OkLitY, Plus<W2, Plus<W8, W16>>>
+public typealias Paper_Bad_lit = ReadableAA<PaperLitY, BadLitY, Plus<W2, Plus<W8, W16>>>
+public typealias Paper_Action_lit = ReadableAA<PaperLitY, ActionLitY, Plus<W2, Plus<W8, W16>>>
+public typealias Paper_Law_lit = ReadableAA<PaperLitY, LawLitY, Plus<W2, Plus<W8, W16>>>
+public typealias Paper_LocalType_lit = ReadableAA<PaperLitY, LocalTypeLitY, Plus<W2, Plus<W8, W16>>>
+public typealias Paper_KnownName_lit = ReadableAA<PaperLitY, KnownNameLitY, Plus<W2, Plus<W8, W16>>>
+public typealias OkEqBad_lit = Same<OkLitY, BadLitY>
+public typealias BadEqAction_lit = Same<BadLitY, ActionLitY>
+public typealias ActionEqLaw_lit = Same<ActionLitY, LawLitY>
+public typealias LawEqLocalType_lit = Same<LawLitY, LocalTypeLitY>
+public typealias LocalTypeEqKnownName_lit = Same<LocalTypeLitY, KnownNameLitY>
+public typealias InkOverMuted_dim = Brighter<InkDimY, MutedDimY, Plus<Unit, Plus<W4, Plus<W16, W32>>>>
+public typealias MutedOverLine_dim = Brighter<MutedDimY, LineDimY, Plus<Unit, Plus<W4, Plus<W8, W16>>>>
+public typealias LineOverMist_dim = Brighter<LineDimY, MistDimY, Unit>
+public typealias MistOverPaper_dim = Brighter<MistDimY, PaperDimY, Unit>
+public typealias Ink_Paper_dim = Legible<InkDimY, PaperDimY, Plus<W4, Plus<W16, W32>>>
+public typealias Muted_Paper_dim = Readable<MutedDimY, PaperDimY, Plus<W2, Plus<W4, W16>>>
+public typealias Ok_Paper_dim = ReadableAA<OkDimY, PaperDimY, Plus<W4, Plus<W8, W64>>>
+public typealias Bad_Paper_dim = ReadableAA<BadDimY, PaperDimY, Plus<W4, Plus<W8, W64>>>
+public typealias Action_Paper_dim = ReadableAA<ActionDimY, PaperDimY, Plus<W4, Plus<W8, W64>>>
+public typealias Law_Paper_dim = ReadableAA<LawDimY, PaperDimY, Plus<W4, Plus<W8, W64>>>
+public typealias LocalType_Paper_dim = ReadableAA<LocalTypeDimY, PaperDimY, Plus<W4, Plus<W8, W64>>>
+public typealias KnownName_Paper_dim = ReadableAA<KnownNameDimY, PaperDimY, Plus<W4, Plus<W8, W64>>>
+public typealias OkEqBad_dim = Same<OkDimY, BadDimY>
+public typealias BadEqAction_dim = Same<BadDimY, ActionDimY>
+public typealias ActionEqLaw_dim = Same<ActionDimY, LawDimY>
+public typealias LawEqLocalType_dim = Same<LawDimY, LocalTypeDimY>
+public typealias LocalTypeEqKnownName_dim = Same<LocalTypeDimY, KnownNameDimY>
