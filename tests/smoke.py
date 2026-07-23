@@ -517,6 +517,10 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # the shelf is reference, read in the bench but never judged as the world:
     # a genre uses protocol/associatedtype, which the world's judge rejects, so
     # routing it through world-judgement would paint a wall of false refusals
+    S.append(("a record owing axes can be filled as a whole, not one at a time",
+              "here.scaffold" in ui and "compScaffold" in ui
+              and 'startsWith("\\u25B8")' in ui and 'public typealias " + a + " = "' in ui))
+
     S.append(("a jump can be walked back and forward, across files too",
               "function navGo(" in ui and "navFrom = navHere()" in ui
               and '"Cmd-Ctrl-Left"' in ui and '"Alt-Left"' in ui))

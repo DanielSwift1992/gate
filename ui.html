@@ -556,7 +556,7 @@ function allowedAt(cur) {
         const owed = Object.keys(axesOfHost(host)).filter(a => !stated.has(a));
         if (owed.length)
             return { items: owed.map(a => "public typealias " + a + " = "),
-                     kind: "axes this record still owes", closed: false };
+                     scaffold: owed, kind: "axes this record still owes", closed: false };
     }
     return null;
 }
@@ -582,6 +582,16 @@ function drawCompletion(reposition) {
 function acceptCompletion(i) {
     const name = compItems[i === undefined ? compChosen : i];
     if (!name || !compFrom) return hideCompletion();
+    if (compScaffold && name.startsWith("\u25B8")) {
+        const cur = cm.getCursor();
+        const indent = (cm.getLine(cur.line).match(/^\s*/) || [""])[0] || "    ";
+        const lines = compScaffold.map(a => indent + "public typealias " + a + " = ");
+        cm.replaceRange(lines.join("\n"), { line: cur.line, ch: 0 }, cur, "+input");
+        cm.setCursor({ line: cur.line, ch: lines[0].length });   // in the first slot
+        hideCompletion();
+        offerCompletion();                                       // now offer its value
+        return;
+    }
     cm.replaceRange(name, compFrom, cm.getCursor(), "+input");
     hideCompletion();
 }
@@ -598,10 +608,16 @@ function offerCompletion() {
     const back = here.back !== undefined ? here.back : word.length;
     let items = word ? here.items.filter(n => n.toLowerCase().includes(low) && n !== word) : here.items;
     items.sort((a, b) => {
-        const low = word.toLowerCase();
         const pa = a.toLowerCase().startsWith(low), pb = b.toLowerCase().startsWith(low);
         return pa === pb ? a.localeCompare(b) : (pa ? -1 : 1);
     });
+    // the whole record, offered first when a slot is fresh: fill every axis it
+    // owes at once, then land in the first. It is the same owed set, one grain up.
+    compScaffold = null;
+    if (here.scaffold && here.scaffold.length > 1 && word.length <= 1) {
+        compScaffold = here.scaffold;
+        items = ["\u25B8 fill in " + here.scaffold.join(", "), ...items];
+    }
     compItems = items.slice(0, 8);
     compChosen = 0;
     if (!compItems.length) return hideCompletion();
@@ -828,7 +844,7 @@ function ledgerGroups() {
 }
 
 // the landing is visible: the whole line selected, a brief flash, scrolled with margin
-let navBack = [], navForward = [], navMuted = false, navFrom = null;
+let navBack = [], navForward = [], navMuted = false, navFrom = null, compScaffold = null;
 function navHere() { return { file: active, pos: cm.getCursor() }; }
 function recordJump(from) {
     // a real jump only: same spot is not history
