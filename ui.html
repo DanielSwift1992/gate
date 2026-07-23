@@ -507,8 +507,10 @@ function allowedAt(cur) {
                          kind: wanted ? "this axis takes " + wanted : "what stands here", closed: true };
 
     if (slot) {
-        const f = fillersFor(wanted, host, slot[1]);
-        return f ? { items: f, kind: "this axis takes " + wanted, closed: true } : null;
+        // a slot is a closed question: only what its kind allows, and if the
+        // genre states no kind for it, nothing — never a name of another kind
+        const f = wanted ? fillersFor(wanted, host, slot[1]) : null;
+        return { items: f || [], kind: wanted ? "this axis takes " + wanted : "an axis", closed: true };
     }
 
     // the head of a declaration: `public enum Emp9007: `
@@ -570,13 +572,17 @@ function completionPool() {
 
 function hideCompletion() { compEl.hidden = true; compItems = []; compFrom = null; }
 
-function drawCompletion() {
+function drawCompletion(reposition) {
     compEl.innerHTML = compItems.map((n, i) =>
         '<div class="crow' + (i === compChosen ? " on" : "") + '" data-i="' + i + '">' + esc(n) + "</div>").join("")
         + (compEl.dataset.kind ? '<div class="cnote">' + esc(compEl.dataset.kind) + "</div>" : "");
-    const co = cm.cursorCoords(compFrom, "page");
-    compEl.style.left = co.left + "px";
-    compEl.style.top = (co.bottom + 2) + "px";
+    // anchored to the start of the word, set when the offer opens and held:
+    // arrowing through it or a verdict landing must not shift it a pixel
+    if (reposition || compEl.hidden) {
+        const co = cm.charCoords(compFrom, "page");
+        compEl.style.left = co.left + "px";
+        compEl.style.top = (co.bottom + 2) + "px";
+    }
     compEl.hidden = false;
     for (const row of compEl.querySelectorAll(".crow"))
         row.onmousedown = (e) => { e.preventDefault(); acceptCompletion(+row.dataset.i); };
@@ -617,7 +623,7 @@ function offerCompletion() {
     if (!compItems.length) return hideCompletion();
     compFrom = { line: cur.line, ch: cur.ch - back };
     compEl.dataset.kind = here && here.kind ? here.kind : "";
-    drawCompletion();
+    drawCompletion(true);
 }
 
 // a one-line note, for the moments the tool has something to say back

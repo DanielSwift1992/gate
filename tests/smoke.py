@@ -485,6 +485,12 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "associatedtype Home: Department" in genre))
     S.append(("and the bench offers by that, not by what it saw nearby",
               "function fillersFor(" in ui and "axesOfHost(host)[slot[1]]" in ui))
+    S.append(("a recognised slot never falls through to the general pool",
+              "a slot is a closed question" in ui and "closed: true }" in ui
+              and "return { items: f || []" in ui))
+    S.append(("the popup is pinned to the word, not moved by a changing verdict",
+              "reposition || compEl.hidden" in ui and "drawCompletion(true)" in ui))
+
     S.append(("deleting back into a word offers again, not only typing forward",
               'change.origin === "+delete") offerCompletion()' in ui))
 
