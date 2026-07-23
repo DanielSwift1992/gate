@@ -62,8 +62,8 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .crow.on{background:color-mix(in srgb,var(--action) 14%,transparent);color:var(--action)}
 .crow:hover{background:var(--mist)}
 .cnote{padding:.3em .6em .1em;font:10.5px -apple-system,sans-serif;color:var(--muted);border-top:1px solid var(--line);margin-top:3px}
-#inspect{display:none;flex:none;padding:5px 16px;border-top:1px solid var(--line);font:11.5px/1.5 ui-monospace,Menlo,monospace;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#inspect.on{display:block}
+#inspect{flex:none;padding:5px 16px 4px;border-bottom:1px solid var(--line);font:11.5px/1.4 ui-monospace,Menlo,monospace;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#inspect:empty::before{content:"the cursor on a name says what it is";opacity:.5}
 #say{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:31;background:var(--ink);color:var(--paper);font:12px -apple-system,sans-serif;padding:.5em 1em;border-radius:8px;box-shadow:0 6px 20px color-mix(in srgb,var(--ink) 30%,transparent)}
 #brand{padding:1.1em 1.1em .5em}
 #brand b{display:block;font:600 15px/1.2 -apple-system,sans-serif;letter-spacing:-.01em}
@@ -180,8 +180,8 @@ body{font:14px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
     <div id="table-host"></div>
   </div>
   <div id="verdict-panel">
-    <div id="verdict-head"><span id="chip"></span><span id="status"></span><span id="next"></span></div>
     <div id="inspect" title="the cursor on a name says what it is"></div>
+    <div id="verdict-head"><span id="chip"></span><span id="status"></span><span id="next"></span></div>
     <div id="verdicts"></div>
   </div>
 </div>
@@ -1058,15 +1058,14 @@ function inspect() {
     const cur = cm.getCursor();
     const tok = cm.getTokenAt(cur, true);
     const name = (tok.string || "").trim();
-    if (!/^[A-Z]\w*$/.test(name)) { el.textContent = ""; el.classList.remove("on"); return; }
+    if (!/^[A-Z]\w*$/.test(name)) { el.textContent = ""; return; }
     const line = cm.getLine(cur.line) || "";
     const isAxis = new RegExp("typealias\\s+" + name + "\\s*=").test(line)
         || new RegExp("associatedtype\\s+" + name + "\\b").test(line);
     const { host } = placeAt(cur);
     const text = (isAxis && describeAxis(host, name)) || describeName(name);
-    if (!text) { el.textContent = ""; el.classList.remove("on"); return; }
+    if (!text) { el.textContent = ""; return; }
     el.innerHTML = text + (jumpable.has(name) ? " · " + (MAC ? "\u2318" : "Ctrl") + "-click opens it" : "");
-    el.classList.add("on");
 }
 cm.on("cursorActivity", scheduleInspect);
 async function tick(write) {
