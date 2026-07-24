@@ -22,6 +22,8 @@ public typealias N9 = Plus<Unit, W8>
 public typealias N10 = Plus<W2, W8>
 public typealias N30 = Plus<W2, Plus<W4, Plus<W8, W16>>>
 public typealias N35 = Plus<Unit, Plus<W2, W32>>
+public typealias N25 = Plus<Unit, Plus<W8, W16>>
+public typealias N29 = Plus<Unit, Plus<W4, Plus<W8, W16>>>
 
 public protocol ContrastHolds {}
 public enum Legible<Bright, Dark, Slack>: Close {}
@@ -40,23 +42,30 @@ where Hi == Plus<Lo, Plus<Unit, Slack>> {}
 public enum Same<A, B>: Close {}
 extension Same: Ordered
 where A == B {}
+public protocol Achromatic {}
+public enum Grey<X, Y, Z, Slo, Shi, Xlo, Xhi>: Close {}
+extension Grey: Achromatic
+where Z == Plus<Y, Slo>,
+      Times<N29, Y> == Plus<Times<N25, Z>, Shi>,
+      Times<N10, X> == Plus<Times<N9, Y>, Xlo>,
+      Y == Plus<X, Xhi> {}
 
 // ── the light theme the page wears ──
 public typealias InkLitX = Unit
 public typealias InkLitY = Unit
-public typealias InkLitZ = W2
-public typealias PaperLitX = Plus<W2, Plus<W4, Plus<W8, Plus<W16, W64>>>>
+public typealias InkLitZ = Unit
+public typealias PaperLitX = Plus<Unit, Plus<W4, Plus<W8, Plus<W16, W64>>>>
 public typealias PaperLitY = Plus<W2, Plus<W32, W64>>
-public typealias PaperLitZ = Plus<W4, Plus<W8, Plus<W32, W64>>>
+public typealias PaperLitZ = Plus<Unit, Plus<W2, Plus<W8, Plus<W32, W64>>>>
 public typealias MistLitX = Plus<W2, Plus<W4, Plus<W16, W64>>>
 public typealias MistLitY = Plus<W2, Plus<W8, Plus<W16, W64>>>
-public typealias MistLitZ = Plus<W4, Plus<W32, W64>>
+public typealias MistLitZ = Plus<W2, Plus<W32, W64>>
 public typealias LineLitX = Plus<Unit, W64>
 public typealias LineLitY = Plus<W4, W64>
-public typealias LineLitZ = Plus<Unit, Plus<W4, Plus<W8, W64>>>
+public typealias LineLitZ = Plus<W2, Plus<W8, W64>>
 public typealias MutedLitX = Plus<Unit, Plus<W2, Plus<W4, W16>>>
 public typealias MutedLitY = Plus<W8, W16>
-public typealias MutedLitZ = Plus<Unit, Plus<W4, Plus<W8, W16>>>
+public typealias MutedLitZ = Plus<W2, Plus<W8, W16>>
 public typealias OkLitX = W8
 public typealias OkLitY = Plus<Unit, Plus<W2, Plus<W4, W8>>>
 public typealias OkLitZ = Plus<W2, W4>
@@ -75,9 +84,9 @@ public typealias LocalTypeLitZ = Plus<Unit, Plus<W2, Plus<W4, W16>>>
 public typealias KnownNameLitX = Plus<Unit, Plus<W8, W16>>
 public typealias KnownNameLitY = Plus<Unit, Plus<W2, Plus<W4, W8>>>
 public typealias KnownNameLitZ = Plus<Unit, Plus<W2, Plus<W4, Plus<W8, Plus<W16, W32>>>>>
-public typealias SeamLitX = Plus<Unit, Plus<W4, W32>>
+public typealias SeamLitX = Plus<W4, W32>
 public typealias SeamLitY = Plus<W2, Plus<W4, W32>>
-public typealias SeamLitZ = Plus<W4, Plus<W8, W32>>
+public typealias SeamLitZ = Plus<Unit, Plus<W8, W32>>
 public typealias SelectLitX = Plus<Unit, Plus<W2, W64>>
 public typealias SelectLitY = Plus<W4, W64>
 public typealias SelectLitZ = Plus<W4, Plus<W8, Plus<W16, W64>>>
@@ -85,19 +94,19 @@ public typealias SelectLitZ = Plus<W4, Plus<W8, Plus<W16, W64>>>
 // ── the dark theme the dark canvas wears ──
 public typealias InkDimX = Plus<Unit, Plus<W4, Plus<W16, W64>>>
 public typealias InkDimY = Plus<Unit, Plus<W8, Plus<W16, W64>>>
-public typealias InkDimZ = Plus<Unit, Plus<W2, Plus<W32, W64>>>
+public typealias InkDimZ = Plus<Unit, Plus<W32, W64>>
 public typealias PaperDimX = Unit
 public typealias PaperDimY = Unit
 public typealias PaperDimZ = Unit
-public typealias MistDimX = W2
+public typealias MistDimX = Plus<Unit, W2>
 public typealias MistDimY = Plus<Unit, W2>
 public typealias MistDimZ = Plus<Unit, W2>
 public typealias LineDimX = Plus<Unit, W4>
 public typealias LineDimY = Plus<Unit, W4>
-public typealias LineDimZ = Plus<W2, W4>
+public typealias LineDimZ = Plus<Unit, W4>
 public typealias MutedDimX = Plus<Unit, W32>
 public typealias MutedDimY = Plus<Unit, Plus<W2, W32>>
-public typealias MutedDimZ = Plus<W2, Plus<W8, W32>>
+public typealias MutedDimZ = Plus<W2, Plus<W4, W32>>
 public typealias OkDimX = Plus<Unit, W32>
 public typealias OkDimY = Plus<W4, Plus<W8, Plus<W16, W32>>>
 public typealias OkDimZ = Plus<W8, W16>
@@ -118,7 +127,7 @@ public typealias KnownNameDimY = Plus<W4, Plus<W8, Plus<W16, W32>>>
 public typealias KnownNameDimZ = Plus<Unit, Plus<W2, Plus<W32, W64>>>
 public typealias SeamDimX = Plus<W4, W16>
 public typealias SeamDimY = Plus<Unit, Plus<W4, W16>>
-public typealias SeamDimZ = Plus<Unit, Plus<W8, W16>>
+public typealias SeamDimZ = Plus<Unit, Plus<W2, Plus<W4, W16>>>
 public typealias SelectDimX = Plus<Unit, W4>
 public typealias SelectDimY = W4
 public typealias SelectDimZ = Plus<Unit, Plus<W2, W8>>
@@ -158,3 +167,19 @@ public typealias BadEqAction_dim = Same<BadDimY, ActionDimY>
 public typealias ActionEqLaw_dim = Same<ActionDimY, LawDimY>
 public typealias LawEqLocalType_dim = Same<LawDimY, LocalTypeDimY>
 public typealias LocalTypeEqKnownName_dim = Same<LocalTypeDimY, KnownNameDimY>
+
+// ── a neutral is neutral: X and Z bracket the D65 grey line, so the band
+// refuses a drift to blue (Z above the bound) or to brown (Z below Y, X
+// below 0.9*Y), and the single integer slot at Y=1..5 is the honest floor ──
+public typealias InkGrey_lit = Grey<InkLitX, InkLitY, InkLitZ, Never, W4, Unit, Never>
+public typealias PaperGrey_lit = Grey<PaperLitX, PaperLitY, PaperLitZ, Plus<Unit, W8>, Plus<Unit, Plus<W2, Plus<W4, Plus<W32, W128>>>>, Plus<W16, W32>, Plus<Unit, W4>>
+public typealias MistGrey_lit = Grey<MistLitX, MistLitY, MistLitZ, W8, Plus<W32, W128>, Plus<W2, Plus<W16, W32>>, W4>
+public typealias LineGrey_lit = Grey<LineLitX, LineLitY, LineLitZ, Plus<W2, W4>, Plus<W2, Plus<W8, Plus<W16, Plus<W32, W64>>>>, Plus<W2, Plus<W4, W32>>, Plus<Unit, W2>>
+public typealias MutedGrey_lit = Grey<MutedLitX, MutedLitY, MutedLitZ, W2, Plus<W2, Plus<W4, Plus<W8, W32>>>, Plus<W2, Plus<W4, W8>>, Unit>
+public typealias SeamGrey_lit = Grey<SeamLitX, SeamLitY, SeamLitZ, Plus<Unit, W2>, Plus<Unit, Plus<W4, Plus<W8, W64>>>, Plus<W2, W16>, W2>
+public typealias InkGrey_dim = Grey<InkDimX, InkDimY, InkDimZ, W8, Plus<W4, Plus<W8, Plus<W16, W128>>>, Plus<Unit, Plus<W16, W32>>, W4>
+public typealias PaperGrey_dim = Grey<PaperDimX, PaperDimY, PaperDimZ, Never, W4, Unit, Never>
+public typealias MistGrey_dim = Grey<MistDimX, MistDimY, MistDimZ, Never, Plus<W4, W8>, Plus<Unit, W2>, Never>
+public typealias LineGrey_dim = Grey<LineDimX, LineDimY, LineDimZ, Never, Plus<W4, W16>, Plus<Unit, W4>, Never>
+public typealias MutedGrey_dim = Grey<MutedDimX, MutedDimY, MutedDimZ, Plus<Unit, W2>, Plus<Unit, W64>, Plus<Unit, Plus<W2, Plus<W4, W8>>>, W2>
+public typealias SeamGrey_dim = Grey<SeamDimX, SeamDimY, SeamDimZ, W2, Plus<W2, W32>, Plus<Unit, Plus<W2, W8>>, Unit>
