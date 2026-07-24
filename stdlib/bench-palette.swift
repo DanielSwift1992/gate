@@ -1,9 +1,21 @@
 // gate stdlib bench-palette v1 — the palette as a judged world.
-// Levels of light on a 0..100 scale; every pair a reader meets carries a
-// contrast certificate. Numbers on this file's own ladder from Unit — the
-// built-in U stay symbolic, so a world spells its own ladder. Lower a
-// contrast and the slack stops settling: the judge names the pair, in numbers.
-
+// Levels of light on a 0..100 scale, spelled on this file's own ladder from
+// Unit — the built-in U stay symbolic, so a world spells its own ladder.
+//
+// JUDGED HERE: the ladder is monotone; text clears a contrast bound — ink and
+// the names at 4.5:1, the secondary registers (muted, and the seam the
+// ceremony is set in) at the 3:1 bound П1 declares; a neutral is neutral, its
+// X and Z bracketing the D65 grey line so a tint cannot creep back; every
+// semantic atom stands OFF that line, on the side it leans; and the verdict's
+// two poles stand on opposite sides of red-green. Lower any of it and the
+// slack stops settling: the judge names the pair, in numbers.
+//
+// NOT JUDGED, and said plainly rather than dressed as a result: the exact
+// angle of the teal, the violet, the blue and the warm yellow is chosen by
+// eye inside the box those rules leave, and perceptual equality of chroma
+// between them is not judged at all — XYZ is not perceptually uniform, and a
+// number that looked like a certificate without being one would be worse
+// than no number.
 public typealias W2 = Twice<Unit>
 public typealias W4 = Twice<W2>
 public typealias W8 = Twice<W4>
@@ -96,12 +108,12 @@ public typealias LocalTypeLitZ = Plus<Unit, Plus<W2, Plus<W4, W16>>>
 public typealias KnownNameLitX = Plus<Unit, Plus<W8, W16>>
 public typealias KnownNameLitY = Plus<Unit, Plus<W2, Plus<W4, W8>>>
 public typealias KnownNameLitZ = Plus<Unit, Plus<W2, Plus<W4, Plus<W8, Plus<W16, W32>>>>>
-public typealias SeamLitX = Plus<W4, W32>
-public typealias SeamLitY = Plus<W2, Plus<W4, W32>>
-public typealias SeamLitZ = Plus<Unit, Plus<W8, W32>>
-public typealias SelectLitX = Plus<Unit, Plus<W2, W64>>
+public typealias SeamLitX = Plus<W4, Plus<W8, W16>>
+public typealias SeamLitY = Plus<Unit, Plus<W4, Plus<W8, W16>>>
+public typealias SeamLitZ = W32
+public typealias SelectLitX = Plus<Unit, W64>
 public typealias SelectLitY = Plus<W4, W64>
-public typealias SelectLitZ = Plus<W4, Plus<W8, Plus<W16, W64>>>
+public typealias SelectLitZ = Plus<W2, Plus<W8, W64>>
 
 // ── the dark theme the dark canvas wears ──
 public typealias InkDimX = Plus<Unit, Plus<W4, Plus<W16, W64>>>
@@ -140,9 +152,9 @@ public typealias KnownNameDimZ = Plus<Unit, Plus<W2, Plus<W32, W64>>>
 public typealias SeamDimX = Plus<W4, W16>
 public typealias SeamDimY = Plus<Unit, Plus<W4, W16>>
 public typealias SeamDimZ = Plus<Unit, Plus<W2, Plus<W4, W16>>>
-public typealias SelectDimX = Plus<Unit, W4>
+public typealias SelectDimX = W4
 public typealias SelectDimY = W4
-public typealias SelectDimZ = Plus<Unit, Plus<W2, W8>>
+public typealias SelectDimZ = W4
 
 // ── the ladder is monotone, the pairs clear their bound, the semantic step is level ──
 public typealias PaperOverMist_lit = Brighter<PaperLitY, MistLitY, Plus<Unit, Plus<W2, W4>>>
@@ -188,7 +200,7 @@ public typealias PaperGrey_lit = Grey<PaperLitX, PaperLitY, PaperLitZ, Plus<Unit
 public typealias MistGrey_lit = Grey<MistLitX, MistLitY, MistLitZ, W8, Plus<W32, W128>, Plus<W2, Plus<W16, W32>>, W4>
 public typealias LineGrey_lit = Grey<LineLitX, LineLitY, LineLitZ, Plus<W2, W4>, Plus<W2, Plus<W8, Plus<W16, Plus<W32, W64>>>>, Plus<W2, Plus<W4, W32>>, Plus<Unit, W2>>
 public typealias MutedGrey_lit = Grey<MutedLitX, MutedLitY, MutedLitZ, W2, Plus<W2, Plus<W4, Plus<W8, W32>>>, Plus<W2, Plus<W4, W8>>, Unit>
-public typealias SeamGrey_lit = Grey<SeamLitX, SeamLitY, SeamLitZ, Plus<Unit, W2>, Plus<Unit, Plus<W4, Plus<W8, W64>>>, Plus<W2, W16>, W2>
+public typealias SeamGrey_lit = Grey<SeamLitX, SeamLitY, SeamLitZ, Plus<Unit, W2>, Plus<Unit, Plus<W8, W32>>, Plus<Unit, Plus<W2, W16>>, Unit>
 public typealias InkGrey_dim = Grey<InkDimX, InkDimY, InkDimZ, W8, Plus<W4, Plus<W8, Plus<W16, W128>>>, Plus<Unit, Plus<W16, W32>>, W4>
 public typealias PaperGrey_dim = Grey<PaperDimX, PaperDimY, PaperDimZ, Never, W4, Unit, Never>
 public typealias MistGrey_dim = Grey<MistDimX, MistDimY, MistDimZ, Never, Plus<W4, W8>, Plus<Unit, W2>, Never>
@@ -213,3 +225,15 @@ public typealias LocalTypeChroma_dim = TowardBlue<LocalTypeDimY, LocalTypeDimZ, 
 public typealias KnownNameChroma_dim = TowardBlue<KnownNameDimY, KnownNameDimZ, Plus<W2, Plus<W4, Plus<W8, Plus<W16, Plus<W64, Plus<W128, W512>>>>>>>
 public typealias VerdictPoles_lit = Opposed<OkLitX, OkLitY, BadLitX, BadLitY, Plus<W2, W4>, W8>
 public typealias VerdictPoles_dim = Opposed<OkDimX, OkDimY, BadDimX, BadDimY, Plus<W2, Plus<W8, W16>>, Plus<Unit, W4>>
+
+// ── the seam is read, so it clears the bound П1 declares for secondary
+// text, and stays quieter than speech; the selection is a surface, so it
+// stands on the grey line and is more present than a hover ──
+public typealias Paper_Seam_lit = Readable<PaperLitY, SeamLitY, Unit>
+public typealias Seam_Paper_dim = Readable<SeamDimY, PaperDimY, W8>
+public typealias SeamUnderMuted_lit = Brighter<SeamLitY, MutedLitY, W4>
+public typealias SeamUnderMuted_dim = Brighter<MutedDimY, SeamDimY, Plus<Unit, Plus<W4, W8>>>
+public typealias SelectOverMist_lit = Brighter<MistLitY, SelectLitY, Plus<Unit, Plus<W4, W16>>>
+public typealias SelectOverMist_dim = Brighter<SelectDimY, MistDimY, Never>
+public typealias SelectGrey_lit = Grey<SelectLitX, SelectLitY, SelectLitZ, Plus<W2, W4>, Plus<W2, Plus<W8, Plus<W16, Plus<W32, W64>>>>, Plus<W2, Plus<W4, W32>>, Plus<Unit, W2>>
+public typealias SelectGrey_dim = Grey<SelectDimX, SelectDimY, SelectDimZ, Never, W16, W4, Never>
