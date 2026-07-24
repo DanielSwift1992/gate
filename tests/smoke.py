@@ -641,6 +641,36 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and _match(_block(':root[data-theme="dark"]{'), "Dim")
               and no_stray))
 
+    # ── distances are one ladder too, and it starts at the reading line: --u is
+    # a tenth of it and every gap a WHOLE multiple, so a length is spelled the
+    # way a number is (Unit, W2, Plus…) and can be judged like one. A hand-tuned
+    # 12.5px beside it is the same drift a hand-picked #hex was.
+    style = "\n".join(re.findall(r"<style[^>]*>(.*?)</style>", ui, re.S))
+    SPACING = r"(padding[a-z-]*|margin[a-z-]*|gap|row-gap|column-gap)\s*:\s*([^;{}\n]+)"
+    off_ladder = [p + ":" + v.strip() for p, v in re.findall(SPACING, style)
+                  if re.search(r"(?<![\w.])\d*\.?\d+px", v)]
+    halved = [m for m in re.findall(r"var\(--u\)\s*\*\s*([\d.]+)", style) if "." in m]
+    S.append(("distances are one ladder: the reading line is the base, and every gap a whole step of it",
+              not off_ladder and not halved
+              and not re.search(r"var\(--u\)\s*/", style)
+              and "--u: calc(var(--textline) / 10)" in style
+              and style.count("var(--u)") >= 40))
+
+    # ── and a name means ONE kind. A property that is a colour on one line and
+    # a length on the next is not two values: the later wins and the earlier
+    # becomes nothing. A spacing --line met the palette's --line exactly once,
+    # and every gap on this page computed to zero while the battery stayed
+    # green — the guard the palette had, lengths did not.
+    kinds = {}
+    for name, val in re.findall(r"(--[a-z-]+)\s*:\s*([^;{}]+)", style):
+        v = val.strip()
+        kinds.setdefault(name, set()).add(
+            "colour" if v.startswith(("#", "color(", "rgb", "hsl")) else
+            "length" if re.match(r"^(calc\(|\d*\.?\d+(px|em|rem|%|vh|vw))", v) else "other")
+    two_minded = sorted(n for n, k in kinds.items() if len(k - {"other"}) > 1)
+    S.append(("a name means one kind: nothing is a colour on one line and a length on the next",
+              not two_minded))
+
     # the verdict holds still: the numbers on the status line are tabular so a
     # changing millisecond does not make it breathe, the chip reserves its width
     # so holds<->refuses N never shifts the row, and nothing animates on a change
