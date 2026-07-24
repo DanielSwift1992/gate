@@ -624,9 +624,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
         axes[(m.group(1), m.group(2), m.group(3))] = _decode(m.group(4))
     VAR2ATOM = {"--ink": "Ink", "--paper": "Paper", "--mist": "Mist", "--line": "Line",
         "--muted": "Muted", "--ok": "Ok", "--bad": "Bad", "--action": "Action", "--law": "Law",
-        "--localtype": "LocalType", "--knownname": "KnownName", "--cm-keyword": "Keyword",
-        "--cm-string": "Literal", "--cm-comment": "Comment", "--cm-attribute": "Attribute",
-        "--cm-ghost": "Ghost", "--select": "Select"}
+        "--localtype": "LocalType", "--knownname": "KnownName", "--seam": "Seam", "--select": "Select"}
     def _block(sel): return ui.split(sel, 1)[1].split("}", 1)[0] if sel in ui else ""
     def _match(block, mode):
         for var, atom in VAR2ATOM.items():
@@ -665,6 +663,21 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and len(reg_rules) == 4
               and all("display:" not in v and "padding:" not in v for v in reg_rules.values())
               and "fact factrow" in ui))
+    # ── the editor's tokens obey the same table. The vendored codemirror.css
+    # colours keyword/string/comment/attribute with constants of its own, and
+    # they win on specificity unless we answer at the same weight — so the
+    # override must be spelled `.cm-s-default .cm-*` or the borrowed colour comes
+    # back silently. Ceremony carries no meaning of the world: it is the seam,
+    # the colour of the brackets, at ordinary weight. A literal is a value; red
+    # belongs to the verdict alone.
+    toks = (ui.split(".cm-s-default .cm-keyword", 1)[1].split(".cm-localtype", 1)[0]
+            if ".cm-s-default .cm-keyword" in ui else "")
+    S.append(("the editor's tokens are the palette's own, and ceremony is a seam, not a shout",
+              all(sel in ui for sel in (".cm-s-default .cm-keyword", ".cm-s-default .cm-attribute",
+                                        ".cm-s-default .cm-string", ".cm-s-default .cm-comment"))
+              and "var(--seam)" in toks and "var(--knownname)" in toks and "var(--muted)" in toks
+              and "600" not in toks))
+
     # a refusal is pointed at by its EDGE — a left border and a light backing, two
     # markers and no more; the address is a fact like any other, and the red is
     # the verdict's alone (the chip, and the wave under a name resolving to nothing)

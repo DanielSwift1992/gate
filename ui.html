@@ -35,11 +35,7 @@ document.documentElement.setAttribute("data-theme",
   --law: #AD5300; --law: color(xyz-d65 calc(20/100) calc(15/100) calc(2/100));
   --localtype: #107782; --localtype: color(xyz-d65 calc(11/100) calc(15/100) calc(23/100));
   --knownname: #8D48D3; --knownname: color(xyz-d65 calc(25/100) calc(15/100) calc(63/100));
-  --cm-keyword: #8A2BE2; --cm-keyword: color(xyz-d65 calc(25/100) calc(13/100) calc(73/100));
-  --cm-string: #C4453B; --cm-string: color(xyz-d65 calc(26/100) calc(16/100) calc(6/100));
-  --cm-comment: #5D6C79; --cm-comment: color(xyz-d65 calc(13/100) calc(14/100) calc(20/100));
-  --cm-attribute: #8A6D00; --cm-attribute: color(xyz-d65 calc(16/100) calc(16/100) calc(2/100));
-  --cm-ghost: #A6A6AB; --cm-ghost: color(xyz-d65 calc(37/100) calc(38/100) calc(44/100));
+  --seam: #A6A6AB; --seam: color(xyz-d65 calc(37/100) calc(38/100) calc(44/100));
   --select: #D7D4F0; --select: color(xyz-d65 calc(67/100) calc(68/100) calc(92/100));
 }
 :root[data-theme="dark"]{color-scheme:dark;
@@ -54,11 +50,7 @@ document.documentElement.setAttribute("data-theme",
   --law: #FBBEA9; --law: color(xyz-d65 calc(65/100) calc(60/100) calc(45/100));
   --localtype: #28E0F3; --localtype: color(xyz-d65 calc(44/100) calc(60/100) calc(94/100));
   --knownname: #D8C2FA; --knownname: color(xyz-d65 calc(65/100) calc(60/100) calc(99/100));
-  --cm-keyword: #E58BD6; --cm-keyword: color(xyz-d65 calc(54/100) calc(40/100) calc(68/100));
-  --cm-string: #FF8A80; --cm-string: color(xyz-d65 calc(54/100) calc(41/100) calc(25/100));
-  --cm-comment: #8A97A3; --cm-comment: color(xyz-d65 calc(28/100) calc(30/100) calc(39/100));
-  --cm-attribute: #E0C061; --cm-attribute: color(xyz-d65 calc(52/100) calc(54/100) calc(19/100));
-  --cm-ghost: #5A5A5E; --cm-ghost: color(xyz-d65 calc(10/100) calc(10/100) calc(12/100));
+  --seam: #7A7E85; --seam: color(xyz-d65 calc(20/100) calc(21/100) calc(25/100));
   --select: #38385C; --select: color(xyz-d65 calc(5/100) calc(4/100) calc(11/100));
 }
 *{box-sizing:border-box}
@@ -174,10 +166,17 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .CodeMirror-gutters{background:var(--paper);border-right-color:var(--line)}
 .CodeMirror-selected,.CodeMirror-focused .CodeMirror-selected{background:var(--select)}
 .CodeMirror-line::selection,.CodeMirror-line>span::selection,.CodeMirror-line>span>span::selection{background:var(--select)}
-.cm-keyword{color:var(--cm-keyword);font-weight:600}.cm-string{color:var(--cm-string)}.cm-comment{color:var(--cm-comment)}
-.cm-attribute{color:var(--cm-attribute)}.cm-localtype{color:var(--localtype)}.cm-knownname{color:var(--knownname)}
+/* the editor's tokens speak the same table. Ceremony — public, enum, typealias,
+   extension, where, an @attribute, .self — carries no meaning of the world: it is
+   the SEAM, the colour of the brackets, at the weight of ordinary text. Full stops
+   shouting with form; the facts stand out, and the two views converge. A literal is
+   a value, never red: red is the verdict's alone. */
+.cm-s-default .cm-keyword,.cm-s-default .cm-attribute{color:var(--seam)}
+.cm-s-default .cm-string{color:var(--knownname)}
+.cm-s-default .cm-comment{color:var(--muted)}
+.cm-localtype{color:var(--localtype)}.cm-knownname{color:var(--knownname)}
 .CodeMirror.holding .cm-jumpable{text-decoration:underline;text-underline-offset:2px;cursor:pointer}
-.cm-badname{text-decoration:underline wavy var(--bad);text-underline-offset:3px}.cm-ghost{color:var(--cm-ghost)}
+.cm-badname{text-decoration:underline wavy var(--bad);text-underline-offset:3px}.cm-ghost{color:var(--seam)}
 .line-flag-bad{background:color-mix(in srgb,var(--bad) 6%,transparent)}
 .gutter-flag-bad .CodeMirror-linenumber{color:var(--bad);font-weight:700}
 .flag-note{font:11px/1.5 -apple-system,sans-serif;color:var(--bad);background:color-mix(in srgb,var(--bad) 8%,transparent);padding:.1em .8em .1em 2.4em}
