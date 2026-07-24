@@ -652,10 +652,19 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # ── material is a function of the wire: six registers declared ONCE, and an
     # element only names the one it belongs to. Font says what a thing is, ink
     # says whether it is judged; the verdict and the hand own their colours alone.
+    # and a register carries MATERIAL ALONE. The moment one carries layout too,
+    # every element that names it drags that layout in — a table cell named the
+    # fact register once and collapsed into a flex box. Layout belongs to the
+    # element's own co-class (the diff row is `fact factrow`).
+    reg_rules = {r: ui.split(r, 1)[1].split("}", 1)[0]
+                 for r in (".fact{", ".observed{", ".speech{", ".caption{") if r in ui}
     S.append(("the bench's material is a function of its wire: six registers, named by the element",
               all(r in ui for r in (".fact{", ".observed{", ".speech{", ".caption{", ".verdict{", ".gesture{"))
               and '<code class="fact">' in ui and "file fact" in ui
-              and "meta observed" in ui and "subj speech" in ui))
+              and "meta observed" in ui and "subj speech" in ui
+              and len(reg_rules) == 4
+              and all("display:" not in v and "padding:" not in v for v in reg_rules.values())
+              and "fact factrow" in ui))
     # a refusal is pointed at by its EDGE — a left border and a light backing, two
     # markers and no more; the address is a fact like any other, and the red is
     # the verdict's alone (the chip, and the wave under a name resolving to nothing)

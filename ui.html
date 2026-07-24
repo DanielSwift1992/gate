@@ -140,13 +140,13 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .dfile{padding:.4em 1.1em .25em;font:11px ui-monospace,Menlo,monospace;color:var(--muted)}
 .dfile .dnote{margin-left:.5em;font:11px -apple-system,sans-serif}
 .dmore{padding:.25em 1.1em;font:11px -apple-system,sans-serif;color:var(--muted)}
-.fact{display:flex;align-items:baseline;gap:.35em;flex-wrap:wrap;padding:.2em 1.1em;font:11px ui-monospace,Menlo,monospace}
+.factrow{display:flex;align-items:baseline;gap:.35em;flex-wrap:wrap;padding:.2em 1.1em}
 .dline{padding:.15em 1.1em;font:11px/1.45 ui-monospace,Menlo,monospace;white-space:pre-wrap;word-break:break-word;color:var(--muted)}
-.fact .sep{color:var(--muted)}
-.fact .own{color:var(--localtype)}
-.fact .was{color:var(--bad);text-decoration:line-through;text-decoration-thickness:1px}
-.fact .arrow{color:var(--muted)}
-.fact .now{color:var(--ok)}
+.factrow .sep{color:var(--muted)}
+.factrow .own{color:var(--localtype)}
+.factrow .was{color:var(--bad);text-decoration:line-through;text-decoration-thickness:1px}
+.factrow .arrow{color:var(--muted)}
+.factrow .now{color:var(--ok)}
 .dline .sg{display:inline-block;width:1.1em;opacity:.6}
 .dline.add{color:var(--ok);background:color-mix(in srgb,var(--ok) 7%,transparent)}
 .dline.del{color:var(--bad);background:color-mix(in srgb,var(--bad) 7%,transparent)}
@@ -538,7 +538,7 @@ async function toggleDiff(c, row) {
         const shown = file.changes.slice(0, 20);
         for (const ch of shown) {
             body += ch.kind === "fact"
-                ? '<div class="fact">' + (ch.owner ? '<span class="own">' + esc(ch.owner) + '</span><span class="sep">·</span>' : "")
+                ? '<div class="fact factrow">' + (ch.owner ? '<span class="own">' + esc(ch.owner) + '</span><span class="sep">·</span>' : "")
                     + '<span class="key">' + esc(ch.key) + '</span><span class="was">' + esc(ch.from)
                     + '</span><span class="arrow">→</span><span class="now">' + esc(ch.to) + "</span></div>"
                 : '<div class="dline ' + (ch.sign === "+" ? "add" : "del") + '"><span class="sg">'
