@@ -42,6 +42,18 @@ where Hi == Plus<Lo, Plus<Unit, Slack>> {}
 public enum Same<A, B>: Close {}
 extension Same: Ordered
 where A == B {}
+public protocol Chromatic {}
+public enum TowardBlue<Y, Z, Margin>: Close {}
+extension TowardBlue: Chromatic
+where Times<N25, Z> == Plus<Times<N29, Y>, Plus<Unit, Margin>> {}
+public enum TowardWarm<Y, Z, Margin>: Close {}
+extension TowardWarm: Chromatic
+where Y == Plus<Z, Plus<Unit, Margin>> {}
+public protocol Opposite {}
+public enum Opposed<AX, AY, BX, BY, Aslack, Bslack>: Close {}
+extension Opposed: Opposite
+where AY == Plus<AX, Plus<Unit, Aslack>>,
+      BX == Plus<BY, Plus<Unit, Bslack>> {}
 public protocol Achromatic {}
 public enum Grey<X, Y, Z, Slo, Shi, Xlo, Xhi>: Close {}
 extension Grey: Achromatic
@@ -183,3 +195,21 @@ public typealias MistGrey_dim = Grey<MistDimX, MistDimY, MistDimZ, Never, Plus<W
 public typealias LineGrey_dim = Grey<LineDimX, LineDimY, LineDimZ, Never, Plus<W4, W16>, Plus<Unit, W4>, Never>
 public typealias MutedGrey_dim = Grey<MutedDimX, MutedDimY, MutedDimZ, Plus<Unit, W2>, Plus<Unit, W64>, Plus<Unit, Plus<W2, Plus<W4, W8>>>, W2>
 public typealias SeamGrey_dim = Grey<SeamDimX, SeamDimY, SeamDimZ, W2, Plus<W2, W32>, Plus<Unit, Plus<W2, W8>>, Unit>
+
+// ── and colour is spent only where it means: every semantic atom stands OFF
+// the grey line, on the side it leans, while every neutral stands on it —
+// and the verdict's own two poles stand on opposite sides of red-green ──
+public typealias OkChroma_lit = TowardWarm<OkLitY, OkLitZ, W8>
+public typealias BadChroma_lit = TowardWarm<BadLitY, BadLitZ, Plus<Unit, W8>>
+public typealias ActionChroma_lit = TowardBlue<ActionLitY, ActionLitZ, Plus<Unit, Plus<W64, W1024>>>
+public typealias LawChroma_lit = TowardWarm<LawLitY, LawLitZ, Plus<W4, W8>>
+public typealias LocalTypeChroma_lit = TowardBlue<LocalTypeLitY, LocalTypeLitZ, Plus<Unit, Plus<W2, Plus<W8, W128>>>>
+public typealias KnownNameChroma_lit = TowardBlue<KnownNameLitY, KnownNameLitZ, Plus<Unit, Plus<W2, Plus<W16, Plus<W32, Plus<W64, W1024>>>>>>
+public typealias OkChroma_dim = TowardWarm<OkDimY, OkDimZ, Plus<Unit, Plus<W2, W32>>>
+public typealias BadChroma_dim = TowardWarm<BadDimY, BadDimZ, W4>
+public typealias ActionChroma_dim = TowardBlue<ActionDimY, ActionDimZ, Plus<W16, Plus<W256, W512>>>
+public typealias LawChroma_dim = TowardWarm<LawDimY, LawDimZ, Plus<W2, Plus<W4, W8>>>
+public typealias LocalTypeChroma_dim = TowardBlue<LocalTypeDimY, LocalTypeDimZ, Plus<Unit, Plus<W32, Plus<W64, W512>>>>
+public typealias KnownNameChroma_dim = TowardBlue<KnownNameDimY, KnownNameDimZ, Plus<W2, Plus<W4, Plus<W8, Plus<W16, Plus<W64, Plus<W128, W512>>>>>>>
+public typealias VerdictPoles_lit = Opposed<OkLitX, OkLitY, BadLitX, BadLitY, Plus<W2, W4>, W8>
+public typealias VerdictPoles_dim = Opposed<OkDimX, OkDimY, BadDimX, BadDimY, Plus<W2, Plus<W8, W16>>, Plus<Unit, W4>>
