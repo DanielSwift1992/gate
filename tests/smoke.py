@@ -649,6 +649,21 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # (motion is only ever the hand's — hover, a caret, a drag)
     chip_rule = ui.split(".chip{", 1)[1].split("}", 1)[0] if ".chip{" in ui else ""
     status_rule = ui.split("#status{", 1)[1].split("}", 1)[0] if "#status{" in ui else ""
+    # ── material is a function of the wire: six registers declared ONCE, and an
+    # element only names the one it belongs to. Font says what a thing is, ink
+    # says whether it is judged; the verdict and the hand own their colours alone.
+    S.append(("the bench's material is a function of its wire: six registers, named by the element",
+              all(r in ui for r in (".fact{", ".observed{", ".speech{", ".caption{", ".verdict{", ".gesture{"))
+              and '<code class="fact">' in ui and "file fact" in ui
+              and "meta observed" in ui and "subj speech" in ui))
+    # a refusal is pointed at by its EDGE — a left border and a light backing, two
+    # markers and no more; the address is a fact like any other, and the red is
+    # the verdict's alone (the chip, and the wave under a name resolving to nothing)
+    S.append(("a refusal is marked by its edge, and its address is a fact, not a verdict",
+              "border-left:3px solid var(--bad)" in ui
+              and ".refusal code{color:var(--bad)" not in ui
+              and "border:1px solid color-mix(in srgb,var(--bad) 22%" not in ui))
+
     S.append(("the verdict holds still: tabular numbers, a chip that reserves its width, no motion on a change",
               "font-variant-numeric:tabular-nums" in ui
               and "min-width" in chip_rule
