@@ -802,6 +802,22 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and ".cm-kindname{font-weight:600}" in ui
               and "var(--" not in style.split(".cm-kindname{", 1)[1].split("}", 1)[0]))
 
+    # ── what is removed is removed whole. A record, an axis it states, a claim it
+    # holds: each is one unit and one edit, found through the SAME bridge a value
+    # is found through, so nothing is ever half-cut. What the removal costs is not
+    # guessed at either — the judge reads the file again and names every reader by
+    # address, which is the only honest answer to "what did that break". And a
+    # cell is that same closed question in a column: its kind comes from the
+    # group's own signature, so a stranger is never among the choices.
+    S.append(("what is removed is removed whole, and a cell is the same closed question in a column",
+              'if (slot.kind === "record") {' in ui and 'if (slot.kind === "entry") {' in ui
+              and 'if (slot.kind === "axis") return wholeLines(line, line);' in ui
+              and "function removeUnit(slot) {" in ui
+              and ui.count('cm.replaceRange("", at.from, at.to') == 1      # one edit, one unit
+              and "const kind = axesOfHost(host)[key];" in ui              # the column's own kind
+              and "const items = fillersFor(kind, host, key);" in ui
+              and 'add.onclick = () => askName(group.conformances.join(", "));' in ui))
+
     # ── a kind is a name, and a body written on the same line is not part of it.
     # The shelf declares its documents in one line each, and the head's parser
     # carried the body along: the kind came out spelled `Document { public

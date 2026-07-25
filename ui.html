@@ -206,6 +206,8 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 #bare .slot.elsewhere{cursor:default;border-bottom-style:none}
 #bare .slot.hole{border-bottom-style:dashed;border-color:var(--law)}
 #bare .add{display:inline-block;cursor:pointer;color:var(--action)}
+#bare .cut{cursor:pointer;color:var(--muted);padding:0 var(--u);visibility:hidden}
+#bare span:hover > .cut,#bare .cut:hover{visibility:visible}
 #bare .namerow{display:flex;gap:var(--u);align-items:baseline;padding:calc(var(--u)*2) 0}
 #bare .namerow input{font:inherit;color:var(--ink);background:var(--mist);border:1px solid var(--line);border-radius:5px;padding:0 calc(var(--u)*2)}
 #bare .bad{text-decoration:underline wavy var(--bad);text-underline-offset:3px}
@@ -230,6 +232,10 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 #table-host td.cell-name:hover{text-decoration:underline}
 #table-host td.cell-value{color:var(--knownname)}
 #table-host td.cell-note{white-space:normal;max-width:22em}
+#table-host td.slot{cursor:pointer}
+#table-host td.slot:hover{background:var(--mist)}
+#table-host td.cut{cursor:pointer;color:var(--muted);text-align:right}
+#table-host .add{cursor:pointer;color:var(--action);padding:calc(var(--u)*2) 0}
 #table-host td.cell-bad{background:color-mix(in srgb,var(--bad) 10%,transparent)}
 #table-host td.cell-bad::after{content:" ✗";color:var(--bad)}
 #verdict-panel{border-top:1px solid var(--line);background:var(--paper);flex:none;max-height:34vh;display:flex;flex-direction:column}
@@ -1187,7 +1193,7 @@ function buildTables() {
         const notes = attachNotes(cm.getValue(), lastParsed);
         const hasNotes = group.rows.some(d => notes.has(d.name));
         const head = document.createElement("tr");
-        for (const key of ["name", ...group.keys, ...(hasNotes ? ["note"] : [])]) {
+        for (const key of ["name", ...group.keys, ...(hasNotes ? ["note"] : []), ""]) {
             const th = document.createElement("th"); th.className = "caption";
             th.innerHTML = key + mark(key);
             th.onclick = () => {
@@ -1213,8 +1219,30 @@ function buildTables() {
                 td.className = "fact cell-value";
                 td.textContent = d.aliases.get(key)?.target ?? "";
                 if (badLines.has(d.line)) td.classList.add("cell-bad");
+                // the same closed question the bare view asks, in a cell: the kind
+                // comes from the group's own signature, so a column offers exactly
+                // what may stand in it and a stranger is never among the choices
+                const a = d.aliases.get(key);
+                if (a) {
+                    td.classList.add("slot");
+                    td.onclick = () => {
+                        const host = (lastParsed && lastParsed.declarations.get(d.name)) || d;
+                        const kind = axesOfHost(host)[key];
+                        const items = fillersFor(kind, host, key);
+                        if (!items) return;
+                        compItems = items; compChosen = 0; compSlot = { kind: "alias", line: a.line, host: d.name, axis: key };
+                        compRect = td.getBoundingClientRect();
+                        compEl.dataset.kind = kind ? "a value of " + kind : "";
+                        drawCompletion(true);
+                    };
+                }
                 tr.append(td);
             }
+            const del = document.createElement("td");
+            del.className = "cut caption"; del.textContent = "\u00d7";
+            del.title = "remove this record";
+            del.onclick = () => removeUnit({ kind: "record", line: d.line, host: d.name });
+            tr.append(del);
             if (hasNotes) {
                 const td = document.createElement("td");
                 td.className = "observed cell-note";
@@ -1224,6 +1252,12 @@ function buildTables() {
             table.append(tr);
         }
         host.append(table);
+        // add row: the form is the group's own signature, so a new row is born
+        // wearing exactly the shape the rows beside it wear
+        const add = document.createElement("div");
+        add.className = "add caption"; add.textContent = "+ add row";
+        add.onclick = () => askName(group.conformances.join(", "));
+        host.append(add);
     }
 }
 
@@ -1263,6 +1297,28 @@ function locateSlot(slot) {
         if (!m) return null;                          // no whole value to replace
         const at = eq + 1 + m[1].length;
         return { from: { line, ch: at }, to: { line, ch: at + m[2].length } };
+    }
+    // whole units, so nothing is ever half-removed. The same bridge: a unit is a
+    // place in the text exactly the way a value is, and there is still one way to
+    // find it. What the removal breaks is not guessed at either — the judge reads
+    // the file again and names every reader by address, which is the honest answer.
+    const wholeLines = (a, b) => b + 1 <= cm.lineCount() - 1
+        ? { from: { line: a, ch: 0 }, to: { line: b + 1, ch: 0 } }
+        : { from: { line: Math.max(a - 1, 0), ch: a ? (cm.getLine(a - 1) || "").length : 0 },
+            to: { line: b, ch: (cm.getLine(b) || "").length } };
+    if (slot.kind === "axis") return wholeLines(line, line);
+    if (slot.kind === "record") {
+        let depth = 0;
+        for (let l = line; l < cm.lineCount(); l++) {
+            for (const c of (cm.getLine(l) || "")) { if (c === "{") depth++; else if (c === "}") depth--; }
+            if (depth <= 0) return wholeLines(line, l);
+        }
+        return null;
+    }
+    if (slot.kind === "entry") {
+        let l = line;
+        while (l < cm.lineCount() && !/\.self\s*;?\s*$/.test(cm.getLine(l) || "")) l++;
+        return l < cm.lineCount() ? wholeLines(line, l) : null;
     }
     if (slot.kind === "arg") {
         let seen = -1, depth = 0, open = false;
@@ -1425,6 +1481,15 @@ function claimStep(chosen) {
     render();
 }
 
+// removal is by whole units only: a record, an axis it states, a claim it holds.
+// One edit, one unit — and then the judge, not the bench, says what it cost.
+function removeUnit(slot) {
+    const at = locateSlot(slot);
+    if (!at) return;
+    cm.replaceRange("", at.from, at.to, "+input");
+    render();
+}
+
 function fillSlot(slot, value) {
     const at = locateSlot(slot);
     if (!at) return;
@@ -1500,11 +1565,17 @@ function bareForm(parsed, text) {
     for (const [name, d] of parsed.declarations) {
         const bad = badLines.has(d.line);
         const conf = d.conformances.length ? '<span class="conf">: </span>' + nameTokens(d.conformances.join(", ")) : "";
+        const cut = (slot, what) => {
+            const i = bareSlots.push(slot) - 1;
+            return '<span class="cut" data-cut="' + i + '" title="remove this ' + what + '">\u00d7</span>';
+        };
         const block = [...noteLines(name),
-            '<span class="' + (bad ? "row-bad" : "") + '">' + declSpan(name, d.line, bad) + conf + "</span>"];
+            '<span class="' + (bad ? "row-bad" : "") + '">' + declSpan(name, d.line, bad) + conf
+                + cut({ kind: "record", line: d.line, host: name }, "record") + "</span>"];
         for (const [k, v] of d.aliases)
             block.push("    " + esc(k) + " = "
-                + slotSpan({ kind: "alias", line: v.line, host: name, axis: k }, v.target));
+                + slotSpan({ kind: "alias", line: v.line, host: name, axis: k }, v.target)
+                + cut({ kind: "axis", line: v.line, host: name, axis: k }, "axis"));
         for (const [axis, kind] of holesOf(d)) {
             const i = bareSlots.push({ kind: "hole", line: d.line, host: name, axis, of: kind }) - 1;
             block.push('    ' + esc(axis) + ' = <span class="slot hole caption" data-slot="' + i
@@ -1513,7 +1584,8 @@ function bareForm(parsed, text) {
         for (const e of (d.entries || [])) {
             const args = (e.args || []).map((a, i) =>
                 slotSpan({ kind: "arg", line: e.line, host: name, head: e.head, index: i }, a));
-            block.push("    " + nameTokens(e.head) + (args.length ? "&lt;" + args.join(", ") + "&gt;" : ""));
+            block.push("    " + nameTokens(e.head) + (args.length ? "&lt;" + args.join(", ") + "&gt;" : "")
+                + cut({ kind: "entry", line: e.line, host: name }, "claim"));
         }
         if (d.aliases.size || (d.entries || []).length) block.push("");
         items.push({ line: d.line, block });
@@ -1550,6 +1622,8 @@ document.getElementById("bare").addEventListener("click", (e) => {
         drawCompletion(true);
         return;
     }
+    const cx = e.target.closest("[data-cut]");
+    if (cx) return removeUnit(bareSlots[+cx.dataset.cut]);
     const ar = e.target.closest("[data-add-record]");
     if (ar) return addRecordFlow(ar);
     const ac = e.target.closest("[data-add-claim]");
