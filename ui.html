@@ -202,6 +202,8 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 #bare .decl:hover,#bare .jump:hover{text-decoration:underline}
 #bare .known{color:var(--knownname)}
 #bare .note{display:block}
+#bare .slot{cursor:pointer;border-bottom:1px dashed var(--line)}
+#bare .slot.elsewhere{cursor:default;border-bottom-style:none}
 #bare .bad{text-decoration:underline wavy var(--bad);text-underline-offset:3px}
 #bare .row-bad{background:color-mix(in srgb,var(--bad) 6%,transparent)}
 .empty{max-width:34em;padding:calc(var(--u)*20) 0 0 calc(var(--u)*10);color:var(--ink)}
@@ -712,7 +714,10 @@ function allowedAt(cur) {
     return null;
 }
 
-function hideCompletion() { compEl.hidden = true; compItems = []; compFrom = null; }
+let compSlot = null, compRect = null;   // the offer may belong to a slot in Bare
+function hideCompletion() {
+    compEl.hidden = true; compItems = []; compFrom = null; compSlot = null; compRect = null;
+}
 
 function drawCompletion(reposition) {
     compEl.innerHTML = compItems.map((n, i) =>
@@ -721,7 +726,9 @@ function drawCompletion(reposition) {
     // anchored to the start of the word, set when the offer opens and held:
     // arrowing through it or a verdict landing must not shift it a pixel
     if (reposition || compEl.hidden) {
-        const co = cm.charCoords(compFrom, "page");
+        // the anchor is a parameter, not a second popup: the caret's coordinates
+        // in the editor, the slot's own box in Bare, one list either way
+        const co = compRect || cm.charCoords(compFrom, "page");
         compEl.style.left = co.left + "px";
         compEl.style.top = (co.bottom + 2) + "px";
     }
@@ -732,7 +739,9 @@ function drawCompletion(reposition) {
 
 function acceptCompletion(i) {
     const name = compItems[i === undefined ? compChosen : i];
-    if (!name || !compFrom) return hideCompletion();
+    if (!name) return hideCompletion();
+    if (compSlot) { const slot = compSlot; hideCompletion(); return fillSlot(slot, name); }
+    if (!compFrom) return hideCompletion();
     if (compScaffold && name.startsWith("\u25B8")) {
         const cur = cm.getCursor();
         const indent = (cm.getLine(cur.line).match(/^\s*/) || [""])[0] || "    ";
@@ -1228,6 +1237,54 @@ function nameTokens(raw) {
         return '<span class="known">' + name + "</span>";
     });
 }
+// ── THE ONE BRIDGE from a parsed fact to a place in the text. Everything the
+// bench writes goes through here, so a slot becomes a position exactly one way
+// and there is no second way to drift from. What it cannot place it refuses to
+// place: the slot stays read-only and says where to go instead, because a range
+// guessed at is a range overwritten. A target is never emptied on the way —
+// the value is replaced whole, so `typealias X = ` never exists in the buffer.
+let bareSlots = [];
+function locateSlot(slot) {
+    const line = slot.line - 1;                       // the parse counts from one
+    if (line < 0 || line >= cm.lineCount()) return null;
+    if (slot.kind === "alias") {
+        const text = cm.getLine(line), eq = text.indexOf("=");
+        if (eq < 0) return null;
+        const m = text.slice(eq + 1).match(/^(\s*)([A-Za-z_][\w.]*)/);
+        if (!m) return null;                          // no whole value to replace
+        const at = eq + 1 + m[1].length;
+        return { from: { line, ch: at }, to: { line, ch: at + m[2].length } };
+    }
+    if (slot.kind === "arg") {
+        let seen = -1, depth = 0, open = false;
+        for (let l = line; l < cm.lineCount() && l < line + 40; l++) {
+            const str = cm.getLine(l);
+            for (let i = 0; i < str.length;) {
+                const c = str[i];
+                if (c === "<") { depth++; open = true; i++; continue; }
+                if (c === ">") { depth--; if (open && depth <= 0) return null; i++; continue; }
+                if (open && depth > 0 && /[A-Za-z_]/.test(c)) {
+                    const w = str.slice(i).match(/^[A-Za-z_][\w.]*/)[0];
+                    if (++seen === slot.index)
+                        return { from: { line: l, ch: i }, to: { line: l, ch: i + w.length } };
+                    i += w.length; continue;
+                }
+                i++;
+            }
+        }
+    }
+    return null;
+}
+
+// a chosen value goes in whole, the judge reads the file again, and the view is
+// drawn from what it said — never from what we hoped it would say
+function fillSlot(slot, value) {
+    const at = locateSlot(slot);
+    if (!at) return;
+    cm.replaceRange(value, at.from, at.to, "+input");
+    render();
+}
+
 // ── A note belongs to a record, not to a line. Consecutive /// lines standing
 // directly above a declaration, with no blank line between, are what you wrote
 // about that record; anything else breaks the run. Read off the text by the
@@ -1280,6 +1337,14 @@ function bareForm(parsed, text) {
     const notes = attachNotes(src, parsed);
     const declSpan = (name, line, bad) =>
         '<span class="decl' + (bad ? " bad" : "") + '" data-jump="' + name + '">' + esc(name) + "</span>";
+    bareSlots = [];
+    const slotSpan = (slot, value) => {
+        const placeable = !!locateSlot(slot);
+        const i = bareSlots.push(slot) - 1;
+        return '<span class="slot' + (placeable ? "" : " elsewhere") + '" data-slot="' + i
+            + '" title="' + (placeable ? "choose a value" : "edit in Full") + '">'
+            + nameTokens(value) + "</span>";
+    };
     const noteLines = (name) => (notes.get(name) || [])
         .map(t => '<span class="note observed">' + esc(t) + "</span>");
     // one stream, in the order the document has it: a record with its note above
@@ -1290,10 +1355,13 @@ function bareForm(parsed, text) {
         const conf = d.conformances.length ? '<span class="conf">: </span>' + nameTokens(d.conformances.join(", ")) : "";
         const block = [...noteLines(name),
             '<span class="' + (bad ? "row-bad" : "") + '">' + declSpan(name, d.line, bad) + conf + "</span>"];
-        for (const [k, v] of d.aliases) block.push("    " + esc(k) + " = " + nameTokens(v.target));
+        for (const [k, v] of d.aliases)
+            block.push("    " + esc(k) + " = "
+                + slotSpan({ kind: "alias", line: v.line, host: name, axis: k }, v.target));
         for (const e of (d.entries || [])) {
-            const args = e.args && e.args.length ? "<" + e.args.join(", ") + ">" : "";
-            block.push("    " + nameTokens(e.head + args));
+            const args = (e.args || []).map((a, i) =>
+                slotSpan({ kind: "arg", line: e.line, host: name, head: e.head, index: i }, a));
+            block.push("    " + nameTokens(e.head) + (args.length ? "&lt;" + args.join(", ") + "&gt;" : ""));
         }
         if (d.aliases.size || (d.entries || []).length) block.push("");
         items.push({ line: d.line, block });
@@ -1307,8 +1375,34 @@ function bareForm(parsed, text) {
 }
 // one delegated handler: a name in the bare view jumps to its declaration
 document.getElementById("bare").addEventListener("click", (e) => {
+    // a slot is a closed question: the same offer the editor uses, anchored to
+    // the slot's own box, and it asks the grammar what may stand there
+    const sl = e.target.closest("[data-slot]");
+    if (sl) {
+        const slot = bareSlots[+sl.dataset.slot];
+        if (!slot || !locateSlot(slot)) return;          // read-only: edit in Full
+        const host = layoutOrActive().get(slot.host);
+        const kind = slot.kind === "alias"
+            ? axesOfHost(host)[slot.axis]
+            : ((gates[slot.head] || [])[slot.index]);
+        const items = fillersFor(kind, host, slot.axis);
+        if (!items) return;
+        compItems = items; compChosen = 0; compSlot = slot;
+        compRect = sl.getBoundingClientRect();
+        compEl.dataset.kind = kind ? "a value of " + kind : "";
+        drawCompletion(true);
+        return;
+    }
     const t = e.target.closest("[data-jump]");
     if (t) jumpTo(t.dataset.jump);
+});
+
+// undo belongs to the file, not to the view: in Bare the keystroke reaches the
+// same buffer the editor edits, and the view is drawn again from the judge
+document.addEventListener("keydown", (e) => {
+    if (mode !== "bare") return;
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") { e.preventDefault(); cm.undo(); render(); }
+    if (e.key === "Escape" && !compEl.hidden) { e.preventDefault(); hideCompletion(); }
 });
 
 function setMode(m) {

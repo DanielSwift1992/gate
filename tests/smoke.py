@@ -802,6 +802,49 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and ".cm-kindname{font-weight:600}" in ui
               and "var(--" not in style.split(".cm-kindname{", 1)[1].split("}", 1)[0]))
 
+    # ── a slot is a closed question, and the bench may only offer what the judge
+    # will take. The bridge is checked from both sides: every value the grammar
+    # offers for an axis is accepted, and a name of some OTHER kind is refused by
+    # the judge naming where it landed instead. The negative half is the point —
+    # an offer that is never refused proves nothing about what it filtered.
+    genre_txt = open(os.path.join(HERE, "stdlib", "genre-organization.swift"), encoding="utf-8").read()
+    slot_js = '''
+const { judge } = require(%r);
+const genre = %s;
+const world = (v) => genre + `
+public enum P1: Person {
+    public typealias Given = G1
+    public typealias Family = F1
+    public typealias Born = B1
+    public typealias Sex = ${v}
+}
+public enum G1: GivenNameCycle { public typealias Next = G1
+    public typealias Sex = Male }
+public enum F1: FamilyNameCycle { public typealias Next = F1 }
+public enum B1: BirthYearCycle { public typealias Next = B1 }
+`;
+const landsIn = (v) => (judge("w.swift", world(v)).refusals || [])
+    .some(r => /lands in/.test(r.premise) && /P1\\.Sex/.test(r.premise));
+console.log(JSON.stringify({
+    offered: ["Male", "Female"].map(landsIn),     // what the grammar offers: taken
+    foreign: ["Manager", "Finance"].map(landsIn), // a name of another kind: refused
+}));
+''' % (os.path.join(HERE, "judge.js"), json.dumps(genre_txt))
+    sj = os.path.join(tmp, "slotkinds.js")
+    open(sj, "w").write(slot_js)
+    sout = subprocess.run(["node", sj], capture_output=True, text=True).stdout
+    try:
+        sv = json.loads(sout or "{}")
+    except Exception:
+        sv = {}
+    S.append(("a slot offers only what the judge takes, and a name of another kind is refused by where it lands",
+              sv.get("offered") == [False, False] and sv.get("foreign") == [True, True]
+              # one offer, anchored by a parameter — the editor's caret or a slot's own box
+              and "const co = compRect || cm.charCoords(compFrom, \"page\");" in ui
+              and "const items = fillersFor(kind, host, slot.axis);" in ui
+              and "function fillSlot(slot, value)" in ui
+              and ui.count("function locateSlot(") == 1))
+
     # ── a note belongs to a record, not to a line. Consecutive /// standing
     # directly above a declaration are what you wrote about it; a blank line
     # between is not a gap in a note, it is the end of one, and what it cuts off
