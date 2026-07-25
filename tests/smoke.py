@@ -591,6 +591,20 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "prefers-color-scheme: dark" in ui
               and 'setAttribute("data-theme"' in ui
               and "protocol Bench {" in bench_atoms and "enum Dark: BenchTheme" in bench_atoms))
+    # ── and the first paint is the answer, not a guess. The declaration lives in
+    # the world, which is read a third of a second after the page appears; until
+    # then the operating system's preference is only a guess, and a guess that
+    # disagrees with the declaration is watched being corrected. So the machine
+    # remembers the DECLARATION and paints it at once — the memory is not a
+    # second truth: it holds only what the world declared, the world overwrites
+    # it on every read, and it is dropped when the world declares nothing.
+    head = ui.split("<style>", 1)[0]
+    S.append(("the first paint is the declaration this machine remembers, and the operating system only when there is none",
+              "gate.theme.declared" in head
+              and head.index("localStorage.getItem") < head.index("prefers-color-scheme")
+              and 'localStorage.setItem("gate.theme.declared", declaredTheme)' in ui
+              and 'localStorage.removeItem("gate.theme.declared")' in ui))
+
     # the bench is judged by its own rules: a value on MyBench/MyJournal the genre
     # does not name is a guard line addressed at its own line (a mistyped Scope
     # used to fall silently to a default), read from the same one source

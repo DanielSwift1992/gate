@@ -11,11 +11,21 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
 <link rel="stylesheet" href="/codemirror.css">
 <script>
-// The theme is a declaration, not a toggle. Before the world is read, follow the
-// operating system so a dark machine never flashes white; a MyBench in your
-// personal world refines it a moment later.
-document.documentElement.setAttribute("data-theme",
-    window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+// The theme is a declaration, not a toggle — and the declaration lives in the
+// world, which is read a third of a second after the first paint. Painting the
+// operating system's preference in the meantime is a guess, and a guess that
+// disagrees with the declaration is watched being corrected. So this machine
+// remembers what the world last DECLARED here and paints that at once; with no
+// memory yet the operating system still stands, so a dark machine never flashes
+// white. The memory is never a second truth about the world: it holds only a
+// declaration the world itself made, the world overwrites it on every read, and
+// it is dropped the moment the world stops declaring one.
+(function () {
+    var remembered = null;
+    try { remembered = localStorage.getItem("gate.theme.declared"); } catch (e) {}
+    document.documentElement.setAttribute("data-theme", remembered
+        || (window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"));
+})();
 </script>
 <style>
 /* ── the palette, generated from the judged stdlib/bench-palette.swift: the hex
@@ -414,7 +424,16 @@ async function buildJournal() {
 const darkMedia = window.matchMedia("(prefers-color-scheme: dark)");
 let declaredTheme = null;               // a theme the genre names, read from MyBench.Theme
 function effectiveTheme() { return declaredTheme || (darkMedia.matches ? "dark" : "light"); }
-function paintTheme() { document.documentElement.setAttribute("data-theme", effectiveTheme()); }
+function paintTheme() {
+    document.documentElement.setAttribute("data-theme", effectiveTheme());
+    // and this machine remembers the DECLARATION alone, so the next first paint
+    // is the answer and not a guess. Nothing declared, nothing remembered: an
+    // undeclared bench goes back to following the operating system at once.
+    try {
+        if (declaredTheme) localStorage.setItem("gate.theme.declared", declaredTheme);
+        else localStorage.removeItem("gate.theme.declared");
+    } catch (e) {}
+}
 darkMedia.addEventListener("change", paintTheme);   // the OS flips, and an undeclared bench follows
 function applyMyBench() {
     const d = (active === personalFile && lastParsed ? lastParsed.declarations : layoutDecls).get("MyBench");
