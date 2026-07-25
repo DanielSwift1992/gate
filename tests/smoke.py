@@ -656,6 +656,48 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "--u: calc(var(--textline) / 10)" in style
               and style.count("var(--u)") >= 40))
 
+    # ── and every step the page takes has a NAME in the judged world of
+    # distances: bench-metrics states what each gap is for and holds the law of
+    # proximity between them (a group stands off further than a row, a row than
+    # the parts inside it). A multiple the page uses that the shelf never named
+    # is a length nobody can defend — the same drift a hand-picked #hex was.
+    met = open(os.path.join(HERE, "stdlib", "bench-metrics.swift"), encoding="utf-8").read()
+    def _steps(text):
+        vals = {}
+        def ev(e):
+            e = e.strip()
+            if e == "Unit": return 1
+            if e == "Never": return 0
+            if e in vals: return vals[e]
+            if e.startswith("Twice<"): return 2 * ev(e[6:-1])
+            if e.startswith("Plus<"):
+                inner = e[5:-1]; d = 0
+                for i, c in enumerate(inner):
+                    if c == "<": d += 1
+                    elif c == ">": d -= 1
+                    elif c == "," and d == 0: return ev(inner[:i]) + ev(inner[i + 1:])
+            raise ValueError(e)
+        for m in re.finditer(r"public typealias (\w+) = (.+)", text):
+            try: vals[m.group(1)] = ev(m.group(2).split("//")[0])
+            except Exception: pass
+        return vals
+    steps = _steps(met)
+    named = {v for k, v in steps.items() if not re.fullmatch(r"W\d+", k)}
+    used = {int(x) for x in re.findall(r"var\(--u\)\s*\*\s*(\d+)", style)} | {1}
+    # The law bites on the PAGE, not only in the shelf: the ladder there is
+    # dense, so its order alone cannot catch a seam handed the wrong step. What
+    # can is this — the gap that opens a section must exceed the gap between the
+    # rows inside it, or kinship stops reading as nearness.
+    def _first_u(sel, prop):
+        blk = style.split(sel + "{", 1)[1].split("}", 1)[0] if (sel + "{") in style else ""
+        m = re.search(prop + r"\s*:\s*(?:calc\(var\(--u\)\*(\d+)\)|(var\(--u\)))", blk)
+        return None if not m else (int(m.group(1)) if m.group(1) else 1)
+    section, row = _first_u("#rail h3", "padding"), _first_u(".file", "padding")
+    S.append(("every gap the page takes is a step the world of distances names, and a section opens wider than its rows",
+              named and used and used <= named
+              and "Wider<Apart, Step, Unit>" in met
+              and section is not None and row is not None and section > row))
+
     # ── and a name means ONE kind. A property that is a colour on one line and
     # a length on the next is not two values: the later wins and the earlier
     # becomes nothing. A spacing --line met the palette's --line exactly once,
