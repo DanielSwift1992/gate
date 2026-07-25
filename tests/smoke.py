@@ -802,6 +802,33 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and ".cm-kindname{font-weight:600}" in ui
               and "var(--" not in style.split(".cm-kindname{", 1)[1].split("}", 1)[0]))
 
+    # ── and belonging is a shared edge. Every row on the rail — the brand, the
+    # section heads, a file, a commit, a diff line, a fact — begins at ONE step,
+    # so the eye reads a column and not a ragged stack. It was ragged: the edge
+    # was written `1.1em` everywhere and the rows set their text at 11, 12.5 and
+    # 13px, so one declaration painted 12.1, 13.75, 14.3 and 16.7 pixels. A step
+    # of the reading line cannot say a thing and mean four.
+    def _left_u(sel):
+        blk = style.split(sel + "{", 1)[1].split("}", 1)[0] if (sel + "{") in style else ""
+        m = re.search(r"padding-left\s*:\s*(?:calc\(var\(--u\)\*(\d+)\)|(var\(--u\)))", blk)
+        if not m:
+            m2 = re.search(r"padding\s*:\s*([^;}]+)", blk)
+            if not m2: return None
+            parts = re.findall(r"calc\(var\(--u\)\*\d+\)|var\(--u\)|\S+", m2.group(1).strip())
+            if not parts: return None
+            side = parts[3] if len(parts) >= 4 else (parts[1] if len(parts) >= 2 else parts[0])
+            m = re.search(r"(?:calc\(var\(--u\)\*(\d+)\)|(var\(--u\)))", side)
+            if not m: return None
+        return int(m.group(1)) if m.group(1) else 1
+    rail_rows = ["#brand", "#rail h3", ".file", ".commit", ".factrow", ".dline",
+                 ".dfile", ".dmore", ".dwait", "#filter-note,#load-more", "#rail h3.fold .obs"]
+    edges = {sel: _left_u(sel) for sel in rail_rows}
+    S.append(("belonging is a shared edge: every row on the rail begins at one step of the reading line",
+              all(v is not None for v in edges.values())
+              and len(set(edges.values())) == 1
+              and set(edges.values()) == {steps.get("Edge")}
+              and "public typealias IndentIsTwiceTheEdge = Same<Indent, Twice<Edge>>" in met))
+
     # ── the bench is a prism (С9). Two worlds that differ in ONE judged fact may
     # not paint the same: what the judge parts, the eye must not merge, and a
     # merge here is lost information, not a matter of taste. The pairs run on the

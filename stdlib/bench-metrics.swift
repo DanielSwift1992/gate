@@ -31,10 +31,27 @@ public typealias Edge = Plus<Unit, Plus<W2, W4>>       // the rail's shared edge
 public typealias Wide = W8                             // the widest seam of a view
 public typealias Line = Plus<W2, W8>                   // one reading line
 
-// ── air is measured in whole lines, and the indent in the steps it is made of ──
-public typealias Indent = Plus<Line, Step>             // a note hangs clear of its mark
+// ── air is measured in whole lines, and an indent belongs to a column ──
+public typealias Indent = Twice<Edge>                  // a note hangs one edge past the edge
 public typealias TwoLines = Twice<Line>
 public typealias Runway = Twice<TwoLines>
+
+// ── THE MAP OF SEAMS, read off the page and not assigned to it: which step does
+// which work, and where it stands. Every count below was measured, so a step
+// that stops being used shows up here as a zero, and one that spreads shows up
+// as a number that no longer matches its name.
+//   Tight     1u  ×17  inside one mark          (a caret, a badge's own room)
+//   Snug      2u  ×23  inside one row           (a row's own height)
+//   Near      3u  ×17  between parts of a thing (a name and its tag)
+//   Step      4u  ×12  between rows             (a header's foot)
+//   Room      5u  ×14  inside a panel           (a button, a cell)
+//   Apart     6u  ×9   between groups           (a section's head)
+//   Edge      7u  ×15  the rail's shared edge   (every row on the rail, one edge)
+//   Wide      8u  ×4   the widest seam of a view (the editor's own margin)
+//   Line     10u  ×3   one reading line of air
+//   Indent   14u  ×1   one edge past the edge   (a note hanging under its flag)
+//   TwoLines 20u  ×1   the air above an empty page
+//   Runway   40u  ×2   four lines, so the last line is not the last pixel
 
 public protocol Ordered {}
 public enum Wider<Hi, Lo, Slack>: Close {}
@@ -65,4 +82,6 @@ public typealias PartsStandOffFurtherThanMarks = Wider<Near, Tight, Unit>
 // ── the air is whole lines, and the indent is a sum of named steps ──
 public typealias AirIsTwoLines = Same<TwoLines, Plus<Line, Line>>
 public typealias RunwayIsFourLines = Same<Runway, Plus<TwoLines, TwoLines>>
-public typealias IndentIsLineAndStep = Same<Indent, Plus<Line, Step>>
+// belonging is a shared edge: the hanging note starts one edge past the rail's
+// own, so it reads as a second column of the same page rather than a loose inset
+public typealias IndentIsTwiceTheEdge = Same<Indent, Twice<Edge>>
