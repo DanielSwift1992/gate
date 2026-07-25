@@ -802,6 +802,68 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and ".cm-kindname{font-weight:600}" in ui
               and "var(--" not in style.split(".cm-kindname{", 1)[1].split("}", 1)[0]))
 
+    # ── the bench is a prism (С9). Two worlds that differ in ONE judged fact may
+    # not paint the same: what the judge parts, the eye must not merge, and a
+    # merge here is lost information, not a matter of taste. The pairs run on the
+    # REAL tokeniser — lifted out of the page and driven over a stream shim — so
+    # a rule that drifts in the page cannot pass here by being copied.
+    mode_src = 'CodeMirror.defineMode("gate-swift"' + \
+        ui.split('CodeMirror.defineMode("gate-swift"', 1)[1].split("}));", 1)[0] + "}));"
+    prism_js = r'''
+const CodeMirror = { defineMode: (n, f) => { CodeMirror._mode = f(); } };
+class Stream {
+    constructor(s) { this.string = s; this.pos = 0; this.start = 0; }
+    eol() { return this.pos >= this.string.length; }
+    next() { return this.string.charAt(this.pos++); }
+    current() { return this.string.slice(this.start, this.pos); }
+    skipToEnd() { this.pos = this.string.length; }
+    match(p) {
+        if (typeof p === "string") {
+            if (this.string.startsWith(p, this.pos)) { this.pos += p.length; return true; }
+            return null;
+        }
+        const m = this.string.slice(this.pos).match(p);
+        if (m && m.index === 0) { this.pos += m[0].length; return m; }
+        return null;
+    }
+}
+__MODE__
+function paint(text, world) {
+    keywordSet = new Set(["public", "enum", "typealias", "protocol", "extension"]);
+    localNames = new Set(world.declares || []);
+    unresolved = new Set(world.broken || []);
+    jumpable = new Set(world.jumpable || []);
+    conformers = world.kinds || {};
+    protoAxes = {};
+    const tok = CodeMirror._mode.token, st = new Stream(text), out = [];
+    while (!st.eol()) { st.start = st.pos; const c = tok(st); out.push([st.current(), c]); }
+    return out.filter(([t]) => /\S/.test(t));
+}
+const at = (text, world, word) => (paint(text, world).find(([t]) => t === word) || [, null])[1];
+// one judged fact apart, each pair on its own channel
+const pairs = [
+    ["a name the world declares against the same name only on the shelf",
+     at("public typealias Home = Finance", { declares: ["Finance"] }, "Finance"),
+     at("public typealias Home = Finance", { declares: [] }, "Finance")],
+    ["a kind anything may still answer to against a record that is itself",
+     at("public enum Emp: Employee", { kinds: { Employee: ["Emp"] } }, "Employee"),
+     at("public enum Emp: Employee", { kinds: {} }, "Employee")],
+    ["a name that resolves against one that resolves to nothing",
+     at("public typealias Sex = Male", {}, "Male"),
+     at("public typealias Sex = Male", { broken: ["Male"] }, "Male")],
+];
+console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
+'''.replace("__MODE__", mode_src)
+    pj = os.path.join(tmp, "prism.js")
+    open(pj, "w").write(prism_js)
+    pout = subprocess.run(["node", pj], capture_output=True, text=True).stdout
+    try:
+        parted = json.loads(pout or "[]")
+    except Exception:
+        parted = []
+    S.append(("the bench is a prism: worlds one judged fact apart never paint the same",
+              len(parted) == 3 and all(row[3] for row in parted)))
+
     # a refusal is pointed at by its EDGE — a left border and a light backing, two
     # markers and no more; the address is a fact like any other, and the red is
     # the verdict's alone (the chip, and the wave under a name resolving to nothing)
