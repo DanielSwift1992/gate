@@ -189,6 +189,7 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .cm-s-default .cm-string{color:var(--knownname)}
 .cm-s-default .cm-comment{color:var(--muted)}
 .cm-localtype{color:var(--localtype)}.cm-knownname{color:var(--knownname)}
+.cm-kindname{font-weight:600}
 .CodeMirror.holding .cm-jumpable{text-decoration:underline;text-underline-offset:2px;cursor:pointer}
 .cm-badname{text-decoration:underline wavy var(--bad);text-underline-offset:3px}.cm-ghost{color:var(--seam)}
 .line-flag-bad{background:color-mix(in srgb,var(--bad) 6%,transparent)}
@@ -292,11 +293,17 @@ CodeMirror.defineMode("gate-swift", () => ({
             const word = stream.current();
             if (word === "self" || keywordSet.has(word)) return "keyword";
             if (/^[A-Z]/.test(word)) {
-                if (unresolved.has(word)) return "badname";
+                if (unresolved.has(word)) return "badname";   // nothing survives: |S| = 0
                 const home = jumpable.has(word) ? " jumpable" : "";
-                if (stream.string[stream.start - 1] === ".") return "knownname" + home;
-                if (localNames.has(word)) return "localtype" + home;
-                return "knownname" + home;
+                // a kind is OPEN — many may still answer to it (|S| > 1); a record
+                // is closed, it is itself (|S| = 1). That is the judge's own
+                // quantity, so it is shown, and not with a hue of its own: the
+                // hue says where a name is from, the weight says whether it is
+                // still open. Two questions, two channels.
+                const open = (conformers[word] || protoAxes[word]) ? " kindname" : "";
+                if (stream.string[stream.start - 1] === ".") return "knownname" + home + open;
+                if (localNames.has(word)) return "localtype" + home + open;
+                return "knownname" + home + open;
             }
             return null;
         }
@@ -815,14 +822,14 @@ document.addEventListener("keydown", (e) => {
     }
 });
 
+// What this file DECLARES, which is not what it mentions. A record it writes is
+// its own; the kinds it conforms to, the axes it answers and the forms it uses
+// are all declared on the shelf, and colouring them as local said the world had
+// authored its own genre. The question (an axis) and the answer (a value) came
+// out one colour for that reason: both were "mentioned here".
 function namesOf(parsed) {
     const out = new Set();
-    for (const [name, d] of parsed.declarations) {
-        out.add(name);
-        for (const c of d.conformances) out.add(c);
-        for (const [k] of d.aliases) out.add(k);
-        for (const e of (d.entries || [])) { out.add(e.head); (e.args || []).forEach(a => out.add(a)); }
-    }
+    for (const [name] of parsed.declarations) out.add(name);
     for (const [name] of (parsed.topAliases || new Map())) out.add(name);
     return out;
 }

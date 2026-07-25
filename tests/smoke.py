@@ -785,6 +785,23 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and ".factrow .was{color:var(--muted)" in style
               and ".factrow .own{color:var(--localtype)}" in style))
 
+    # ── colour answers one question and weight another, because a reader has two.
+    # WHERE a name is from is a hue: teal for what this world DECLARES, violet for
+    # what the shelf does. Declares, not mentions — the kinds a record conforms to
+    # and the axes it answers are the genre's, and colouring them local said the
+    # world had authored its own genre, which also made a question (an axis) and
+    # an answer (a value) one colour. WHETHER a name is still open is the weight,
+    # and it is the judge's own quantity: a kind may still be answered by many
+    # (|S| > 1), a record is itself (|S| = 1), a name resolving to nothing has
+    # none (|S| = 0, the wave). Read from the genre's own conformers, never a
+    # list beside it, and never a second hue — the eye has no room for a sixth.
+    S.append(("a hue says where a name is from and the weight whether it is still open, each read from the one source",
+              "for (const [name] of parsed.declarations) out.add(name);" in ui
+              and "for (const c of d.conformances) out.add(c);" not in ui
+              and "(conformers[word] || protoAxes[word]) ? \" kindname\"" in ui
+              and ".cm-kindname{font-weight:600}" in ui
+              and "var(--" not in style.split(".cm-kindname{", 1)[1].split("}", 1)[0]))
+
     # a refusal is pointed at by its EDGE — a left border and a light backing, two
     # markers and no more; the address is a fact like any other, and the red is
     # the verdict's alone (the chip, and the wave under a name resolving to nothing)
