@@ -141,6 +141,14 @@ head. A refusal points at its address instead.
   breaking commit found automatically), a merge guard (textually clean,
   semantically broken merges get named), and a free audit journal
   (`git log` over grants, signed commits as signed grants).
+- **A citation may not outlive the thing it cites.** `gate import refs
+  tickets.json --code .` reads a tracker's own export and every place your code
+  names a ticket, and judges them as one world: a `TODO(PROJ-42)` whose ticket
+  was closed months ago is refused at the line that writes it, and one naming a
+  ticket the tracker has never heard of is refused too. Neither system reads the
+  other today, which is exactly why the two copies of "this is still open" drift
+  — the tracker does not read your repository, and your repository does not read
+  the tracker. Nothing leaves the machine: the export is a file you already have.
 - **One question, three doorways.** Grants, Kubernetes RBAC and CODEOWNERS
   are the same question — who may do what, where — so they share one
   crystal and differ only in the importer. `gate import rbac` judges the
@@ -318,7 +326,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 157 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 159 end-to-end checks, the definition of green
 ```
 
 ## Status

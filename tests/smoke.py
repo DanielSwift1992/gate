@@ -822,6 +822,31 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "#bare .add{display:inline-block;cursor:pointer;color:var(--muted)}" in style
               and "#table-host .add{cursor:pointer;color:var(--muted)" in style))
 
+    # ── a citation may not outlive the thing it cites. Code names a ticket, the
+    # ticket is closed, and the citation stays: neither system reads the other, so
+    # the two copies of "this is still open" pull apart quietly and a reader is
+    # told something that stopped being true months ago. Here they are one world.
+    # Both refusals fall out of the grammar rather than a rule written for them:
+    # a closed thing says which state was found against the one needed, and a
+    # thing the tracker never heard of cannot be read at all. The address is in
+    # the reader's OWN file, never in the generated one.
+    ref = os.path.join(tmp, "refs")
+    os.makedirs(os.path.join(ref, "code"), exist_ok=True)
+    open(os.path.join(ref, "tickets.json"), "w").write(json.dumps({"issues": [
+        {"key": "PROJ-41", "status": "In Progress"}, {"key": "PROJ-42", "status": "Done"}]}))
+    open(os.path.join(ref, "code", "scraper.py"), "w").write(
+        "def a():\n    # TODO(PROJ-41): still live\n    pass\n"
+        "def b():\n    # TODO(PROJ-42): the ticket is done, the note is not\n    pass\n"
+        "def c():\n    # FIXME(PROJ-99): nobody has heard of this one\n    pass\n")
+    c, r = run("import", "refs", os.path.join(ref, "tickets.json"),
+               "--code", os.path.join(ref, "code"), "-o", os.path.join(ref, "refs-gate.swift"))
+    said = {x["claim"] for x in r.get("refusals", [])}
+    S.append(("a citation may not outlive the thing it cites: closed work and work nobody tracks are both refused, by the line that cites them",
+              c == 1 and len(r.get("refusals", [])) == 2
+              and all(x["address"].startswith("scraper.py:") for x in r["refusals"])
+              and any("calls it closed" in s for s in said)
+              and any("no such thing" in s for s in said)))
+
     # ── one world, one stream. A list of files handed to `judge where` is not one
     # world read across files: the sides are judged apart, and the certificates of
     # one are never held against the machinery of the other. It fails GREEN, which

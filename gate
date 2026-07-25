@@ -1544,6 +1544,104 @@ def cmd_import_rbac(a):
     }
 
 
+REFS_HEADER = """// printed by gate import refs — the citations this code makes to a tracker,
+// written in the reference crystal (`gate stdlib show genre-reference`). A
+// tracked thing carries its state on an axis, a site is a place in your own
+// file, and a citation holds only while the thing it cites is open.
+//
+"""
+
+
+def read_tracker(path):
+    # a tracker export, in the shape every tracker can produce: a list of
+    # {key, status}. What counts as open is the tracker's word, not ours —
+    # anything it does not call done or closed is still open.
+    import json as _json
+    raw = _json.load(open(path, encoding="utf-8"))
+    items = raw.get("issues", raw) if isinstance(raw, dict) else raw
+    out = {}
+    for it in items:
+        key = str(it.get("key") or it.get("id") or "").strip()
+        if not key:
+            continue
+        st = str(it.get("status") or it.get("state") or "").strip().lower()
+        out[key] = "Closed" if st in ("done", "closed", "resolved", "completed") else "Open"
+    return out
+
+
+def read_citations(root):
+    # every place the code names a ticket: TODO(KEY), FIXME(KEY), or a bare
+    # mention in a comment. The address is the reader's own file and line.
+    hits = []
+    pat = re.compile(r"\b(?:TODO|FIXME|HACK|XXX)\s*[(\[:]?\s*([A-Z][A-Z0-9]+-\d+)")
+    for dirpath, dirs, files in os.walk(root):
+        dirs[:] = [d for d in dirs if d not in (".git", "node_modules", "__pycache__", ".venv")]
+        for f in files:
+            if os.path.splitext(f)[1] not in (".py", ".ts", ".js", ".rs", ".go", ".rb", ".java", ".swift", ".md"):
+                continue
+            p = os.path.join(dirpath, f)
+            try:
+                text = open(p, encoding="utf-8", errors="replace").read()
+            except OSError:
+                continue
+            for n, line in enumerate(text.split("\n"), 1):
+                for m in pat.finditer(line):
+                    hits.append({"file": os.path.relpath(p, root), "line": n, "key": m.group(1)})
+    return hits
+
+
+def cmd_import_refs(a):
+    # import refs <tracker.json> --code DIR [-o refs-gate.swift] — what the code
+    # says is still open, against what the tracker says. Neither system reads the
+    # other, so the two copies drift; here they are one world, and a citation of
+    # something closed is refused at the line of your own file.
+    src = a[0]
+    code = a[a.index("--code") + 1] if "--code" in a else "."
+    out_path = a[a.index("-o") + 1] if "-o" in a else "refs-gate.swift"
+    tracked = read_tracker(src)
+    cites = read_citations(code)
+    lines = [REFS_HEADER + STDLIB["genre-reference"], ""]
+    for key in sorted({c["key"] for c in cites} | set(tracked)):
+        state = tracked.get(key)
+        if state is None:
+            continue                      # cited but the tracker has never heard of it
+        lines.append(f"public enum {sanitize(key)}: Tracked {{")
+        lines.append(f"    public typealias State = {state}")
+        lines.append("}")
+    srcmap, seen = {}, set()
+    for i, c in enumerate(cites):
+        site = f"At_{sanitize(c['file'])}_L{c['line']}"
+        if site in seen:
+            continue
+        seen.add(site)
+        lines.append(f"public enum {site}: Site {{}}")
+        cert = f"Cite_{i}"
+        lines.append(f"public typealias {cert} = Cites<{site}, {sanitize(c['key'])}>")
+        srcmap[cert] = {"address": f"{c['file']}:{c['line']}", "key": c["key"]}
+    world = "\n".join(lines) + "\n"
+    with open(out_path, "w") as f:
+        f.write(world)
+    t0 = time.time()
+    outp = subprocess.run([JUDGE, "judge", "where", out_path], capture_output=True, text=True).stdout
+    ms = round((time.time() - t0) * 1000, 1)
+    refusals = []
+    for m in re.finditer(r"^✗ '(\w+)[^']*' requires the types '[^']*' \(aka '([^']+)'\)", outp, re.M):
+        cert, found = m.group(1), m.group(2)
+        if cert not in srcmap:
+            continue
+        where = srcmap[cert]
+        claim = (f"the code cites {where['key']}, and the tracker has no such thing"
+                 if found.endswith(".State")
+                 else f"the code cites {where['key']} as live work, and the tracker calls it {found.lower()}")
+        refusals.append({"address": where["address"], "claim": claim})
+    return {"command": "import refs", "wrote": out_path, "tracked": len(tracked),
+            "citations": len(cites), "ms": ms,
+            "verdict": "refused" if refusals else "holds", "refusals": refusals,
+            "next": ("open the address above: the citation outlived the thing it cites"
+                     if refusals else "wire it into CI: a citation cannot outlive its ticket again"),
+            "mutates": True}
+
+
 CODEOWNERS_HEADER = """// printed by gate import codeowners — who owns what in this repository,
 // written in the access crystal (`gate stdlib show genre-grants`). A zone is
 // a top of the tree, a room is a pattern, and an owner keeps a zone: owning
@@ -2165,6 +2263,8 @@ def dispatch(cmd, rest):
         return cmd_change(rest)
     if cmd == "import" and rest and rest[0] == "codeowners":
         return cmd_import_codeowners(rest[1:])
+    if cmd == "import" and rest and rest[0] == "refs":
+        return cmd_import_refs(rest[1:])
     if cmd == "import" and rest and rest[0] == "rbac":
         return cmd_import_rbac(rest[1:])
     if cmd == "import":
