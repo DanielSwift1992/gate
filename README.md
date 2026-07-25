@@ -154,6 +154,29 @@ head. A refusal points at its address instead.
   every keystroke. It obeys your declared file layout and judges across
   files — an unsaved lie in one file is caught against a roster in
   another.
+- **Three views of one file, and one way to answer.** Full is the Swift you
+  already have; Bare is the same text with the ceremony gone; Table projects
+  it as relations. They are not three editors — every value in every one of
+  them is the same closed question, asked from the grammar: click it and the
+  offer is what that axis accepts, an atom of the kind or a path through an
+  axis this record already has. What a record still owes is a row before it is
+  a line, and nothing is written until a whole line can be: pick a value and
+  the axis, the `=` and the value go in together. A new record is offered the
+  shapes the world has already lived, and the only free step is its name,
+  refused while it is taken. Removal is by whole units, and what it costs is
+  not our guess: the judge reads the file again and names every reader by
+  address. One bridge carries all of it from a parsed fact to a place in the
+  text, so a slot it cannot place says `edit in Full` instead of guessing.
+- **A comment is a note on a fact.** Consecutive `///` lines standing directly
+  above a declaration are what you wrote about that record, and they travel
+  with it: in Bare above the record, in Table as a column that exists only
+  where notes do. A blank line ends a note rather than spanning it, and the
+  comments that belong to nobody stay where the document put them.
+- **The theme is a declaration, not a toggle.** `MyBench` in your own world
+  states which theme the bench wears, so the choice is a fact in your git with
+  a date on it, not a setting somewhere. With nothing declared the operating
+  system decides. There is no switch: a button that duplicates a declaration
+  would be a second truth about it.
 - **Findings, before anything is translated.** `gate findings` reads a
   clone and says what is true of it in sentences: who changes the facts and
   whether anything checked those edits, owners CODEOWNERS names that the

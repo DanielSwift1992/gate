@@ -4,6 +4,41 @@
 
 The working prototype, end to end:
 
+- The bench is a closed input, not a text box. Bare and Table now answer the
+  same way Full does: every value is a slot, and a slot is a closed question
+  asked from the grammar — what an axis accepts, an atom of that kind or a path
+  through an axis the record already has. What a record still owes is drawn as
+  a row and stays a row until a whole line can be written, so `typealias X = `
+  never exists in the buffer for a keystroke. A record is born from a form
+  offering the shapes the world has actually lived, its name is the one free
+  step and is refused while it is taken, and a claim is added to a body that
+  already exists with every argument closed. Removal is by whole units, and the
+  judge — not the bench — names what it cost, by address. One bridge carries
+  every one of these from a parsed fact to a place in the text; a slot it cannot
+  place is read-only and says so.
+- A comment is a note on a fact. Consecutive `///` above a declaration belong to
+  that record and travel with it into Bare and into Table, where the note column
+  exists only where notes do. A blank line ends a note; comments that belong to
+  nobody keep the document's own order.
+- Colour answers one question and weight another. A hue says where a name is
+  from — what this world declares against what the shelf does — and the weight
+  says whether anything may still answer to it: a kind is open, a record is
+  itself. Both are read from the genre's own conformers, and the battery holds
+  the bench to parting what the judge parts: two worlds one judged fact apart
+  are never painted the same.
+- The palette and the metrics are judged worlds of their own. Every colour is a
+  contrast certificate on a ladder spelled from Unit; every neutral is held
+  within two percent of the achromatic line, so a tint cannot creep back; every
+  gap on the page is a whole step of the reading line, and the rail keeps one
+  edge. The journal gives back the colours that belong to the judge and to the
+  hand: red and green are the verdict's alone.
+- The first paint is the answer rather than a guess: the bench remembers the
+  theme the world declared on this machine, and the world overwrites it on every
+  read.
+- Fixed: a kind declared with its body on one line — `public enum FinanceShare:
+  Document { … }` — carried that body into its name, so the shelf knew four
+  documents and every offer for a document was empty.
+
 - A personal world (`gate my`, and the bench on first run): yours, in your
   own git at `~/.gate/me`, one per repository, never in the shared repo —
   colleagues and CI do not have it. It holds what your bench shows you
