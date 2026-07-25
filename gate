@@ -1597,7 +1597,14 @@ def cmd_import_refs(a):
     # something closed is refused at the line of your own file.
     src = a[0]
     code = a[a.index("--code") + 1] if "--code" in a else "."
-    out_path = a[a.index("-o") + 1] if "-o" in a else "refs-gate.swift"
+    # the world this prints is a CHECK, not a file to keep: dropped into a repo
+    # that declares its layout it would read as a shadow — a world file the
+    # manifest never names — and `status` would refuse it, which is a red the
+    # reader did not earn. So without -o it is written where nothing keeps it,
+    # judged, and removed. Ask for it by name and it stays.
+    keep = "-o" in a
+    out_path = (a[a.index("-o") + 1] if keep
+                else os.path.join(tempfile.mkdtemp(prefix="gate-refs-"), "refs-gate.swift"))
     tracked = read_tracker(src)
     cites = read_citations(code)
     lines = [REFS_HEADER + STDLIB["genre-reference"], ""]
@@ -1634,7 +1641,9 @@ def cmd_import_refs(a):
                  if found.endswith(".State")
                  else f"the code cites {where['key']} as live work, and the tracker calls it {found.lower()}")
         refusals.append({"address": where["address"], "claim": claim})
-    return {"command": "import refs", "wrote": out_path, "tracked": len(tracked),
+    if not keep:
+        shutil.rmtree(os.path.dirname(out_path), ignore_errors=True)
+    return {"command": "import refs", "wrote": out_path if keep else None, "tracked": len(tracked),
             "citations": len(cites), "ms": ms,
             "verdict": "refused" if refusals else "holds", "refusals": refusals,
             "next": ("open the address above: the citation outlived the thing it cites"

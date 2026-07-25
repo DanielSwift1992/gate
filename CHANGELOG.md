@@ -4,6 +4,15 @@
 
 The working prototype, end to end:
 
+- A citation may not outlive the thing it cites. `gate import refs` reads a
+  tracker's own export and every `TODO(KEY)` your code writes, and judges them as
+  one world: a note whose ticket was closed is refused at the line that writes
+  it, and one naming a ticket the tracker never heard of is refused too. Both
+  refusals fall out of the grammar rather than a rule written for them, and there
+  is deliberately no way to write "this citation is exempt". One line in the CI
+  you already run; the export may sit in another checkout, because nothing is
+  fetched, only read; and what it prints is the check, not a file to keep.
+
 - The bench is a closed input, not a text box. Bare and Table now answer the
   same way Full does: every value is a slot, and a slot is a closed question
   asked from the grammar — what an axis accepts, an atom of that kind or a path

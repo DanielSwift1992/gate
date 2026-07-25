@@ -847,6 +847,34 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and any("calls it closed" in s for s in said)
               and any("no such thing" in s for s in said)))
 
+    # ── and the check is the whole ceremony: one command in the CI the client
+    # already has. It exits non-zero on a stale citation and zero when the code
+    # and the tracker agree, so no wrapper is needed; the export may sit in
+    # another checkout entirely, because gate never fetches — what it judges is
+    # brought to it. And the world it prints is a CHECK, not a file to keep:
+    # left in a repo that declares its layout it would read as a shadow and earn
+    # the reader a red they did not deserve, so unless it is asked for by name it
+    # is judged where nothing keeps it.
+    ci = os.path.join(tmp, "ci")
+    os.makedirs(os.path.join(ci, "elsewhere"), exist_ok=True)
+    os.makedirs(os.path.join(ci, "repo", "src"), exist_ok=True)
+    open(os.path.join(ci, "elsewhere", "export.json"), "w").write(json.dumps(
+        {"issues": [{"key": "PROJ-7", "status": "Done"}]}))
+    open(os.path.join(ci, "repo", "src", "app.py"), "w").write(
+        "def go():\n    # TODO(PROJ-7): the ticket is done, the note is not\n    return 1\n")
+    drift = subprocess.run([sys.executable, GATE, "import", "refs",
+                            os.path.join(ci, "elsewhere", "export.json"), "--code", "."],
+                           capture_output=True, text=True, cwd=os.path.join(ci, "repo"))
+    open(os.path.join(ci, "elsewhere", "live.json"), "w").write(json.dumps(
+        {"issues": [{"key": "PROJ-7", "status": "In Progress"}]}))
+    clean = subprocess.run([sys.executable, GATE, "import", "refs",
+                            os.path.join(ci, "elsewhere", "live.json"), "--code", "."],
+                           capture_output=True, text=True, cwd=os.path.join(ci, "repo"))
+    S.append(("the check is one command with the other side wherever it lies, and it leaves nothing behind",
+              drift.returncode == 1 and clean.returncode == 0
+              and "src/app.py:2" in drift.stdout
+              and not os.path.exists(os.path.join(ci, "repo", "refs-gate.swift"))))
+
     # ── one world, one stream. A list of files handed to `judge where` is not one
     # world read across files: the sides are judged apart, and the certificates of
     # one are never held against the machinery of the other. It fails GREEN, which

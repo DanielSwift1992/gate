@@ -149,6 +149,17 @@ head. A refusal points at its address instead.
   other today, which is exactly why the two copies of "this is still open" drift
   — the tracker does not read your repository, and your repository does not read
   the tracker. Nothing leaves the machine: the export is a file you already have.
+  It is one line in the CI you already run — the export may sit in another
+  checkout entirely, because nothing is fetched, only read — and it exits
+  non-zero on a stale citation, so no wrapper is needed:
+
+  ```sh
+  gate import refs ../tracker-export.json --code .
+  ```
+
+  What it prints is the check, not a file to keep: unless you ask for it by name
+  with `-o`, it is judged where nothing keeps it and your repository is left as
+  it was.
 - **One question, three doorways.** Grants, Kubernetes RBAC and CODEOWNERS
   are the same question — who may do what, where — so they share one
   crystal and differ only in the importer. `gate import rbac` judges the
@@ -326,7 +337,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 159 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 160 end-to-end checks, the definition of green
 ```
 
 ## Status
