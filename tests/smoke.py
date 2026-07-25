@@ -822,6 +822,18 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "#bare .add{display:inline-block;cursor:pointer;color:var(--muted)}" in style
               and "#table-host .add{cursor:pointer;color:var(--muted)" in style))
 
+    # ── and a claim is written INSIDE the body it belongs to. A world prints
+    # `>.self` with no semicolon where nothing is separated, so a search that
+    # insisted on one found nothing, ran past the closing brace and wrote the
+    # claim outside every declaration — the judge said "outside the fragment" at
+    # the next keystroke, which is how it was found. The end of the body is now
+    # the bound of the search, not a pattern that may fail to match.
+    S.append(("a claim is written inside the body it belongs to, and the search for its place cannot leave it",
+              'const body = locateSlot({ kind: "record", line: d.line });' in ui
+              and "while (at < lastLine" in ui
+              and "/\\.self\\s*;?\\s*$/" in ui
+              and "if (at >= lastLine) at = Math.max(d.line - 1, lastLine - 1);" in ui))
+
     # ── a target of the hand has a floor, and the floor is one reading line (Р1).
     # Reaching costs time that grows with distance and falls with the target's
     # size, so the smallest thing a hand is asked to hit is the smallest thing it

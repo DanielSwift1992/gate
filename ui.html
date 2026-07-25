@@ -94,12 +94,17 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .split:hover,.split.dragging{background:color-mix(in srgb,var(--action) 45%,transparent)}
 .line-flash{background:color-mix(in srgb,var(--action) 22%,transparent)}
 #journal-head .obs{display:block;font-weight:500;letter-spacing:.03em;text-transform:none;opacity:.75;margin-top:var(--u)}
-.commit{padding:calc(var(--u)*3) calc(var(--u)*7);cursor:default}
+/* the row works WITH the space it is given: the subject takes what is there and
+   the meta sits beside it, dropping to its own line only when there is no room.
+   It used to stack always, so a wide rail left a long empty tail; and the subject
+   was cut with nothing to show for it, so a reader could not tell a title from a
+   title that had been shortened. */
+.commit{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;column-gap:calc(var(--u)*3);row-gap:var(--u);padding:calc(var(--u)*3) calc(var(--u)*7);cursor:default}
 .commit:hover{background:var(--mist)}
 .commit.touches{cursor:pointer}
-.commit .subj{display:flex;gap:calc(var(--u)*3);align-items:baseline;white-space:nowrap;overflow:hidden}
+.commit .subj{flex:1 1 auto;min-width:0;display:flex;gap:calc(var(--u)*3);align-items:baseline;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .commit .subj{text-overflow:ellipsis}
-.commit .meta{white-space:nowrap;display:flex;align-items:center;gap:calc(var(--u)*3);margin-top:var(--u);font-variant-numeric:tabular-nums}
+.commit .meta{flex:0 0 auto;white-space:nowrap;display:flex;align-items:center;gap:calc(var(--u)*3);font-variant-numeric:tabular-nums}
 .commit .who{cursor:pointer;color:var(--action)}
 .commit .who:hover{text-decoration:underline}
 .badge{flex:none;padding:0 calc(var(--u)*3);border-radius:8px}
@@ -128,8 +133,8 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .crow{padding:var(--u) calc(var(--u)*4);border-radius:5px;cursor:pointer;white-space:nowrap}
 .crow.on{background:color-mix(in srgb,var(--action) 14%,transparent);color:var(--action)}
 .crow:hover{background:var(--mist)}
-.cnote{padding:calc(var(--u)*2) calc(var(--u)*4) var(--u);border-top:1px solid var(--line);margin-top:calc(var(--u)*2)}
-#inspect{flex:none;padding:calc(var(--u)*3) calc(var(--u)*8) calc(var(--u)*2);border-bottom:1px solid var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cnote{padding:calc(var(--u)*2) calc(var(--u)*4) var(--u);border-top:0.5px solid var(--line);margin-top:calc(var(--u)*2)}
+#inspect{flex:none;padding:calc(var(--u)*3) calc(var(--u)*8) calc(var(--u)*2);border-bottom:0.5px solid var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #inspect:empty::before{content:"the cursor on a name says what it is";opacity:.5}
 #say{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:31;background:var(--ink);color:var(--paper);font:13px -apple-system,sans-serif;padding:calc(var(--u)*3) calc(var(--u)*7);border-radius:8px;box-shadow:0 6px 20px color-mix(in srgb,var(--ink) 30%,transparent)}
 #brand{padding:calc(var(--u)*7) calc(var(--u)*7) calc(var(--u)*3)}
@@ -141,7 +146,7 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .commit.open .caret{transform:rotate(90deg)}
 .commit .caret{flex:none;width:8px;color:var(--muted);transition:transform .12s;font-style:normal;opacity:.6}
 .commit .caret::before{content:"\203A"}
-.cdiff{padding:var(--u) 0 calc(var(--u)*5);background:var(--mist)}
+.cdiff{flex:0 0 100%;padding:var(--u) 0 calc(var(--u)*5);background:var(--mist)}
 .dwait{padding:calc(var(--u)*2) calc(var(--u)*7);font:11px -apple-system,sans-serif;color:var(--muted)}
 .dfile{padding:calc(var(--u)*2) calc(var(--u)*7) var(--u);font:11px ui-monospace,Menlo,monospace;color:var(--muted)}
 .dfile .dnote{margin-left:calc(var(--u)*3);font:11px -apple-system,sans-serif}
@@ -156,8 +161,8 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .dline .sg{display:inline-block;width:1.1em;opacity:.6}
 .dline.add{color:var(--ink)}
 .dline.del{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1px}
-#main{flex:1;display:flex;flex-direction:column;min-width:0;border-left:1px solid var(--line)}
-#bar{display:flex;gap:calc(var(--u)*5);align-items:center;padding:calc(var(--u)*3) calc(var(--u)*6);border-bottom:1px solid var(--line);flex:none}
+#main{flex:1;display:flex;flex-direction:column;min-width:0;border-left:0.5px solid var(--line)}
+#bar{display:flex;gap:calc(var(--u)*5);align-items:center;padding:calc(var(--u)*3) calc(var(--u)*6);border-bottom:0.5px solid var(--line);flex:none}
 #bar b{font-weight:600}
 .seg{display:inline-flex;background:var(--mist);border-radius:8px;padding:var(--u);gap:var(--u)}
 .seg button{border:none;border-radius:5px;margin:0;background:transparent;color:var(--muted);font:13px -apple-system,sans-serif;padding:calc(var(--u)*2) calc(var(--u)*6);cursor:pointer}
@@ -166,7 +171,7 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .seg button:disabled{opacity:.3;cursor:default}
 .seg button:disabled:hover{color:var(--muted)}
 #nav-seg button{padding:calc(var(--u)*2) calc(var(--u)*5);font-size:15px;line-height:1}
-#gitstate{margin-left:auto;display:flex;align-items:center;gap:calc(var(--u)*3)}
+#gitstate{font-family:ui-monospace,Menlo,monospace;margin-left:auto;display:flex;align-items:center;gap:calc(var(--u)*3)}
 #gitstate .g{width:7px;height:7px;border-radius:50%;background:var(--muted)}
 #gitstate.modified{color:var(--law)}#gitstate.modified .g{background:var(--law)}
 #gitstate.committed{color:var(--muted)}#gitstate.committed .g{background:var(--muted)}
@@ -175,6 +180,10 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 #surface{flex:1;position:relative;min-height:0}
 #editor-host{position:absolute;inset:0}
 .CodeMirror{height:100%;font:12.5px/19px ui-monospace,Menlo,monospace;background:var(--paper);color:var(--ink)}
+/* the code stands off from its index by a named step, not by the four pixels the
+   vendored sheet happens to give: the gutter is scaffolding and the text needs
+   air from it. Written at the vendor's own weight, or the vendor wins. */
+.CodeMirror pre.CodeMirror-line,.CodeMirror pre.CodeMirror-line-like{padding:0 calc(var(--u)*4)}
 .CodeMirror-linenumber{color:var(--seam)}
 .CodeMirror-cursor{border-left-color:var(--ink)}
 .CodeMirror-gutters{background:var(--paper);border-right-color:var(--line)}
@@ -245,7 +254,7 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 #table-host h3{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:calc(var(--u)*10) 0 calc(var(--u)*3);font-weight:600}
 #table-host h3:first-child{margin-top:calc(var(--u)*2)}
 #table-host table{border-collapse:collapse;width:100%}
-#table-host th{text-align:left;font-weight:500;padding:calc(var(--u)*2) calc(var(--u)*5) calc(var(--u)*2) calc(var(--u)*3);border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--paper);cursor:pointer;user-select:none}
+#table-host th{text-align:left;font-weight:500;padding:calc(var(--u)*2) calc(var(--u)*5) calc(var(--u)*2) calc(var(--u)*3);border-bottom:0.5px solid var(--line);position:sticky;top:0;background:var(--paper);cursor:pointer;user-select:none}
 #table-host th:hover{color:var(--ink)}#table-host th .dir{color:var(--ink)}
 /* the size has to be said: a family ending in the generic `monospace` makes
    the browser fall back to its own fixed-width default instead of inheriting */
@@ -262,12 +271,17 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 #table-host .add:hover{color:var(--ink)}
 #table-host td.cell-bad{background:color-mix(in srgb,var(--bad) 10%,transparent)}
 #table-host td.cell-bad::after{content:" ✗";color:var(--bad)}
-#verdict-panel{border-top:1px solid var(--line);background:var(--paper);flex:none;max-height:34vh;display:flex;flex-direction:column}
+#verdict-panel{border-top:0.5px solid var(--line);background:var(--paper);flex:none;max-height:34vh;display:flex;flex-direction:column}
 #verdict-head{display:flex;align-items:center;gap:calc(var(--u)*5);padding:calc(var(--u)*4) calc(var(--u)*8) calc(var(--u)*4);flex:none}
-.chip{display:inline-block;min-width:4.6em;text-align:center;font-size:11px;font-weight:600;padding:calc(var(--u)*2) calc(var(--u)*5);border-radius:8px;font-variant-numeric:tabular-nums}
+.chip{font-family:ui-monospace,Menlo,monospace;display:inline-block;min-width:4.6em;text-align:center;font-size:11px;font-weight:600;padding:calc(var(--u)*2) calc(var(--u)*5);border-radius:8px;font-variant-numeric:tabular-nums}
 .chip.ok{background:color-mix(in srgb,var(--ok) 12%,transparent);color:var(--ok)}
 .chip.bad{background:var(--bad);color:var(--paper)}
-#status{font-variant-numeric:tabular-nums}#status b{color:var(--ink);font-weight:600}
+/* the typeface says WHO is speaking. Monospace is the world and everything read
+   or measured from it — a file's name, a verdict, a count of files, a duration,
+   the state of the git it sits in. The system face is the bench speaking ABOUT
+   the world: its captions, its advice, its section names. A measurement set in
+   the bench's own voice reads as an opinion; it is a reading. */
+#status{font-family:ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums}#status b{color:var(--ink);font-weight:600}
 #verdicts{overflow:auto;padding:var(--u) calc(var(--u)*6) calc(var(--u)*5);display:flex;flex-direction:column;gap:calc(var(--u)*2)}
 /* each refusal is a row you can aim at: it has an edge, a surface, and it
    answers to the pointer, because clicking it goes to the line */
@@ -1494,11 +1508,19 @@ function claimStep(chosen) {
         return;
     }
     const d = (lastParsed && lastParsed.declarations.get(pending.host)) || layoutOrActive().get(pending.host);
+    // the end of the body is the brace that closes the head, and the search for a
+    // place to write may NEVER pass it: a world prints `>.self` with no semicolon
+    // where nothing is separated, so a scan that insisted on one ran off the end
+    // of the file and wrote the claim outside every declaration. The judge said
+    // so at once — "outside the fragment" — which is how this was found.
+    const body = locateSlot({ kind: "record", line: d.line });
+    const lastLine = body ? body.to.line - 1 : cm.lineCount() - 1;
     const entries = d.entries || [];
     let at = entries.length ? entries[entries.length - 1].line - 1 : d.line - 1;
-    while (at < cm.lineCount() && !/\.self\s*;/.test(cm.getLine(at) || "")) at++;
+    while (at < lastLine && !/\.self\s*;?\s*$/.test(cm.getLine(at) || "")) at++;
+    if (at >= lastLine) at = Math.max(d.line - 1, lastLine - 1);   // inside, always
     const lead = ((cm.getLine(at) || "").match(/^\s*/) || [""])[0] || "            ";
-    const text = "\n" + lead + pending.head + "<" + pending.args.join(", ") + ">.self;";
+    const text = "\n" + lead + pending.head + "<" + pending.args.join(", ") + ">.self";
     cm.replaceRange(text, { line: at, ch: (cm.getLine(at) || "").length },
         { line: at, ch: (cm.getLine(at) || "").length }, "+input");
     pending = null;
