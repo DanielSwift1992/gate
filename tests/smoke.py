@@ -802,6 +802,71 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and ".cm-kindname{font-weight:600}" in ui
               and "var(--" not in style.split(".cm-kindname{", 1)[1].split("}", 1)[0]))
 
+    # ── a kind is a name, and a body written on the same line is not part of it.
+    # The shelf declares its documents in one line each, and the head's parser
+    # carried the body along: the kind came out spelled `Document { public
+    # typealias Home = Finance }`, so the shelf knew four documents and every
+    # offer for a Document was empty. The bench cannot show what the vocabulary
+    # cannot name, and this is the reading both of them share.
+    kinds_js = ('const { judge } = require(%r); const fs = require("fs");\n'
+                'const p = judge("g.swift", fs.readFileSync(%r, "utf8")).parsed.declarations;\n'
+                'const all = [...p.values()].flatMap(d => d.conformances || []);\n'
+                'console.log(JSON.stringify({ glued: all.filter(c => /[{}]/.test(c)),\n'
+                '  documents: [...p.values()].filter(d => (d.conformances||[]).includes("Document")).map(d => d.name) }));'
+                % (os.path.join(HERE, "judge.js"),
+                   os.path.join(HERE, "stdlib", "genre-organization.swift")))
+    kj = os.path.join(tmp, "kinds.js")
+    open(kj, "w").write(kinds_js)
+    kout = subprocess.run(["node", kj], capture_output=True, text=True).stdout
+    try:
+        kk = json.loads(kout or "{}")
+    except Exception:
+        kk = {}
+    S.append(("a kind is a name and not a name with a body: what the shelf declares in one line is still offerable",
+              kk.get("glued") == [] and len(kk.get("documents") or []) >= 4))
+
+    # ── a record is born from a form, and every step of it is closed but one.
+    # The shapes are the ones the world has actually lived, most travelled first;
+    # a claim may only be a form whose arguments have STATED kinds, because one
+    # that takes bare numbers cannot be asked closed; and the single free step —
+    # the name — is checked as it is typed and never written unless it is free.
+    form_src = "\n".join(
+        "function " + n + ui.split("\nfunction " + n, 1)[1].split("\n}", 1)[0] + "\n}"
+        for n in ("livedCombos() {", "nameTaken(n) {"))
+    form_js = r'''
+const protoAxes = { Employee: { Rank: "Ranked" }, Person: { Sex: "Sexed" }, Lonely: { X: "Y" } };
+const conformers = { Sexed: ["Male"] };
+const vocabulary = { Employee: "genre", Male: "genre" };
+const layoutOrActive = () => new Map([
+    ["A", { conformances: ["Employee", "Person"] }],
+    ["B", { conformances: ["Employee", "Person"] }],
+    ["C", { conformances: ["Person"] }],
+]);
+__FORMS__
+const gates = { VerifiedView: ["Employee", "Document"], Same: [null, null], Bare: [] };
+const askable = Object.keys(gates).filter(g => (gates[g] || []).length && gates[g].every(Boolean));
+console.log(JSON.stringify({
+    combos: livedCombos(),
+    taken: ["A", "Employee", "lower", "Fresh"].map(n => nameTaken(n)),
+    askable,
+}));
+'''.replace("__FORMS__", form_src)
+    fj = os.path.join(tmp, "forms.js")
+    open(fj, "w").write(form_js)
+    fout = subprocess.run(["node", fj], capture_output=True, text=True).stdout
+    try:
+        fv = json.loads(fout or "{}")
+    except Exception:
+        fv = {}
+    taken = fv.get("taken") or [None, None, None, None]
+    S.append(("a record is born from a form: the shapes the world has lived come first, and only a free name is written",
+              fv.get("combos", [None])[0] == "Employee, Person"     # the most travelled shape leads
+              and "Lonely" in (fv.get("combos") or [])              # and a kind nobody wears is still offered
+              and taken[0] and taken[1] and taken[2] and taken[3] is None
+              and fv.get("askable") == ["VerifiedView"]             # a form with bare arguments is not asked
+              and 'gates[g].every(Boolean)' in ui
+              and 'if (!check()) return;' in ui))                   # the name is checked before it is written
+
     # ── a hole is not text yet. What a record still owes is drawn as a row and
     # nothing is written until a WHOLE line can be written: axis, `=` and value
     # go in together, in ONE edit, so the buffer never holds `typealias X = ` for

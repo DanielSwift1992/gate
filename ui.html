@@ -205,6 +205,9 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 #bare .slot{cursor:pointer;border-bottom:1px dashed var(--line)}
 #bare .slot.elsewhere{cursor:default;border-bottom-style:none}
 #bare .slot.hole{border-bottom-style:dashed;border-color:var(--law)}
+#bare .add{display:inline-block;cursor:pointer;color:var(--action)}
+#bare .namerow{display:flex;gap:var(--u);align-items:baseline;padding:calc(var(--u)*2) 0}
+#bare .namerow input{font:inherit;color:var(--ink);background:var(--mist);border:1px solid var(--line);border-radius:5px;padding:0 calc(var(--u)*2)}
 #bare .bad{text-decoration:underline wavy var(--bad);text-underline-offset:3px}
 #bare .row-bad{background:color-mix(in srgb,var(--bad) 6%,transparent)}
 .empty{max-width:34em;padding:calc(var(--u)*20) 0 0 calc(var(--u)*10);color:var(--ink)}
@@ -741,6 +744,8 @@ function drawCompletion(reposition) {
 function acceptCompletion(i) {
     const name = compItems[i === undefined ? compChosen : i];
     if (!name) return hideCompletion();
+    if (pending && pending.what === "record") { const c = name; hideCompletion(); pending = null; return askName(c); }
+    if (pending && pending.what === "claim") { hideCompletion(); return claimStep(name); }
     if (compSlot) {
         const slot = compSlot; hideCompletion();
         return slot.kind === "hole" ? fillHole(slot, name) : fillSlot(slot, name);
@@ -1318,6 +1323,108 @@ function fillHole(slot, value) {
     render();
 }
 
+// ── the combinations the world has actually lived, most travelled first, and
+// the genre's own kinds after them. A new record is offered the shapes its
+// neighbours already have before it is offered a shape nobody wears. ──
+function livedCombos() {
+    const seen = new Map();
+    for (const [, d] of layoutOrActive()) {
+        const c = (d.conformances || []).filter(x => protoAxes[x] || conformers[x]);
+        if (!c.length) continue;
+        const key = c.join(", ");
+        seen.set(key, (seen.get(key) || 0) + 1);
+    }
+    const lived = [...seen.entries()].sort((a, b) => b[1] - a[1]).map(([k]) => k);
+    const single = Object.keys(protoAxes).filter(p => !lived.includes(p));
+    return [...lived, ...single];
+}
+
+// A name is the one free birth in a closed world, so it is the one place the
+// bench cannot offer a list — but it can refuse: a name already declared, or one
+// the shelf owns, is not written at all. Nothing enters the file until it is
+// whole and free.
+function nameTaken(n) {
+    if (!/^[A-Z][A-Za-z0-9_]*$/.test(n)) return "a record's name begins with a capital";
+    if (layoutOrActive().has(n)) return "the world already declares " + n;
+    if (vocabulary[n]) return "the shelf already owns " + n;
+    return null;
+}
+
+let pending = null;      // the form being filled: conformances, then a name
+
+function addRecordFlow(anchorEl) {
+    compItems = livedCombos(); compChosen = 0; compSlot = null;
+    compRect = anchorEl.getBoundingClientRect();
+    compEl.dataset.kind = "what the record is";
+    pending = { what: "record" };
+    drawCompletion(true);
+}
+
+function askName(conformances) {
+    const host = document.getElementById("bare");
+    const row = document.createElement("div");
+    row.className = "namerow";
+    row.innerHTML = '<span class="caption">a name for this ' + esc(conformances) + ': </span>'
+        + '<input class="fact" spellcheck="false"><span class="why caption"></span>';
+    host.append(row);
+    const inp = row.querySelector("input"), why = row.querySelector(".why");
+    inp.focus();
+    const check = () => { const w = nameTaken(inp.value.trim()); why.textContent = inp.value ? (w || "free") : ""; return !w; };
+    inp.oninput = check;
+    inp.onkeydown = (e) => {
+        if (e.key === "Escape") { row.remove(); return; }
+        if (e.key !== "Enter") return;
+        if (!check()) return;                       // only a whole, free name is written
+        const name = inp.value.trim();
+        row.remove();
+        const last = cm.lineCount() - 1;
+        cm.replaceRange("\npublic enum " + name + ": " + conformances + " {}\n",
+            { line: last, ch: (cm.getLine(last) || "").length },
+            { line: last, ch: (cm.getLine(last) || "").length }, "+input");
+        render();                                   // and its holes appear, asked one by one
+    };
+}
+
+// a claim goes into a body that already exists: the form is closed, every
+// argument is closed, and the whole entry is written in one edit — v1 opens no
+// new bodies, it only adds to the ones the world already keeps
+function addClaimFlow(host, anchorEl) {
+    // only a form whose arguments have STATED kinds can be a closed question: a
+    // certificate on the shelf takes bare numbers, and the bench would have
+    // nothing to offer for them. What cannot be asked closed is not offered.
+    compItems = Object.keys(gates).filter(g => (gates[g] || []).length && gates[g].every(Boolean));
+    compChosen = 0; compSlot = null;
+    compRect = anchorEl.getBoundingClientRect();
+    compEl.dataset.kind = "a claim this body may hold";
+    // the form keeps its own anchor: accepting a step hides the offer and clears
+    // the caret's, and the next question must still open at the same place
+    pending = { what: "claim", host, args: [], rect: compRect };
+    drawCompletion(true);
+}
+
+function claimStep(chosen) {
+    if (!pending.head) pending.head = chosen; else pending.args.push(chosen);
+    const kinds = gates[pending.head] || [];
+    if (pending.args.length < kinds.length) {
+        const kind = kinds[pending.args.length];
+        const items = fillersFor(kind, null, null) || [];
+        compItems = items; compChosen = 0; compRect = pending.rect;
+        compEl.dataset.kind = "a " + kind;
+        drawCompletion(true);
+        return;
+    }
+    const d = (lastParsed && lastParsed.declarations.get(pending.host)) || layoutOrActive().get(pending.host);
+    const entries = d.entries || [];
+    let at = entries.length ? entries[entries.length - 1].line - 1 : d.line - 1;
+    while (at < cm.lineCount() && !/\.self\s*;/.test(cm.getLine(at) || "")) at++;
+    const lead = ((cm.getLine(at) || "").match(/^\s*/) || [""])[0] || "            ";
+    const text = "\n" + lead + pending.head + "<" + pending.args.join(", ") + ">.self;";
+    cm.replaceRange(text, { line: at, ch: (cm.getLine(at) || "").length },
+        { line: at, ch: (cm.getLine(at) || "").length }, "+input");
+    pending = null;
+    render();
+}
+
 function fillSlot(slot, value) {
     const at = locateSlot(slot);
     if (!at) return;
@@ -1413,10 +1520,14 @@ function bareForm(parsed, text) {
     }
     for (const [name, a] of (parsed.topAliases || new Map()))
         items.push({ line: a.line, block: [...noteLines(name), declSpan(name, a.line, false) + " = " + nameTokens(a.target)] });
+    for (const [name, d] of parsed.declarations)
+        if ((d.entries || []).length)
+            items.push({ line: d.line + 0.5, block: ['    <span class="add caption" data-add-claim="' + name + '">+ add claim</span>'] });
     for (const c of freeComments(src, notes, parsed))
         items.push({ line: c.line, block: ['<span class="note observed">' + esc(c.text) + "</span>"] });
     items.sort((a, b) => a.line - b.line);
-    return items.flatMap(i => i.block).join("\n");
+    return items.flatMap(i => i.block).join("\n")
+        + '\n<span class="add caption" data-add-record="1">+ add record</span>';
 }
 // one delegated handler: a name in the bare view jumps to its declaration
 document.getElementById("bare").addEventListener("click", (e) => {
@@ -1439,6 +1550,10 @@ document.getElementById("bare").addEventListener("click", (e) => {
         drawCompletion(true);
         return;
     }
+    const ar = e.target.closest("[data-add-record]");
+    if (ar) return addRecordFlow(ar);
+    const ac = e.target.closest("[data-add-claim]");
+    if (ac) return addClaimFlow(ac.dataset.addClaim, ac);
     const t = e.target.closest("[data-jump]");
     if (t) jumpTo(t.dataset.jump);
 });

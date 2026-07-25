@@ -267,7 +267,13 @@ function parse(file, text, declarations, order, refusals, extras) {
         if (line.startsWith("public enum ") || line.startsWith("enum ")) {
             const afterKeyword = line.replaceAll("public enum ", "").replaceAll("enum ", "");
             const selfClosed = /\{\s*\}$/.test(afterKeyword);
-            const head = afterKeyword.replace(/\s*\{\s*\}$/, "").replace(/\s*\{$/, "");
+            // a body written on the head's own line ends the head: without this the
+            // last conformance carries the body with it, and a kind spelled
+            // `Document { public typealias Home = Finance }` is a kind nobody can
+            // be offered — the shelf knew four documents and the bench saw none.
+            const headAll = afterKeyword.replace(/\s*\{\s*\}$/, "").replace(/\s*\{$/, "");
+            const brace = headAll.indexOf("{");
+            const head = (brace >= 0 ? headAll.slice(0, brace) : headAll).trim();
             // a generic declaration names itself before its angles: `Wrap<T: Counting>`
             // declares Wrap, and the colon that matters is the one past the brackets
             const angle = head.indexOf("<");
