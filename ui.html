@@ -213,9 +213,23 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
    scene has only two questions to spend a hue on: where a name is from, and
    what the verdict is. Blue stays outside the fabric, where it answers to the
    page rather than to the world's own text (Р2, Р3). */
+/* THE HAND'S TARGET IS A STEP OF THE LADDER (Р1). Reaching a target costs time
+   that grows with distance and falls with its size, so a target has a floor —
+   and the floor is not borrowed from a phone: it is ONE READING LINE, the base
+   every distance here is measured in. What you can read, you can hit. Vertical
+   padding grows the hit area of an inline mark without touching the rhythm of
+   the lines around it. Said plainly, not derived: this bench is driven by a
+   mouse, not a finger. */
+#bare .slot,#bare .add,.commit .who{padding-top:var(--u);padding-bottom:var(--u)}
+/* a name in Bare stands in a dense column, so its target is the line itself and
+   not a padding that would reach into the lines above and below: one more step
+   of hit area would overlap its neighbours and make the click ambiguous. The
+   floor is stated as the step, and the mark is given exactly that. */
+#bare .decl,#bare .jump{display:inline-block;min-height:calc(var(--u)*10)}
+#bare .cut{padding:calc(var(--u)*2) calc(var(--u)*3)}
 #bare .add{display:inline-block;cursor:pointer;color:var(--muted)}
 #bare .add:hover{color:var(--ink)}
-#bare .cut{cursor:pointer;color:var(--muted);padding:0 var(--u);visibility:hidden}
+#bare .cut{cursor:pointer;color:var(--muted);visibility:hidden}
 #bare span:hover > .cut,#bare .cut:hover{visibility:visible}
 #bare .namerow{display:flex;gap:var(--u);align-items:baseline;padding:calc(var(--u)*2) 0}
 #bare .namerow input{font:inherit;color:var(--ink);background:var(--mist);border:1px solid var(--line);border-radius:5px;padding:0 calc(var(--u)*2)}

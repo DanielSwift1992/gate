@@ -822,6 +822,37 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "#bare .add{display:inline-block;cursor:pointer;color:var(--muted)}" in style
               and "#table-host .add{cursor:pointer;color:var(--muted)" in style))
 
+    # ── a target of the hand has a floor, and the floor is one reading line (Р1).
+    # Reaching costs time that grows with distance and falls with the target's
+    # size, so the smallest thing a hand is asked to hit is the smallest thing it
+    # is asked to read — the base every distance here is already measured in. Not
+    # a number borrowed from a phone: this bench is driven by a mouse, and that is
+    # said rather than derived. Every rule in the fabric that offers the pointer
+    # must carry that floor, so a gesture added later cannot arrive without one.
+    bare_style = re.sub(r"/\*.*?\*/", " ", style, flags=re.S)   # a comment is not a selector
+    rules = [(sel.strip().replace("\n", " "), body)
+             for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", bare_style)]
+    floor_sel = next((s for s, b in rules
+                      if "padding-top:var(--u)" in b and "padding-bottom:var(--u)" in b), "")
+    floored = {p.strip() for p in floor_sel.split(",")}
+    handed = [part.strip() for s, b in rules if "cursor:pointer" in b
+              for part in s.split(",") if re.search(r"#bare|#table-host", part)]
+    def has_own_floor(sel):
+        # its own rule, or the plainer rule for the SAME element — a cell takes the
+        # padding of `td`, but a mark takes nothing from the panel it sits in: a
+        # container's padding is not a target's floor
+        kin = {sel}
+        last = sel.split()[-1]
+        if "." in last and not last.startswith("."):
+            kin.add(" ".join(sel.split()[:-1] + [last.split(".")[0]]).strip())
+        return any(("padding" in b or "min-height" in b)
+                   and any(part.strip() in kin for part in s.split(","))
+                   for s, b in rules)
+    floorless = [h for h in handed if h not in floored and not has_own_floor(h)]
+    S.append(("a target of the hand is at least one reading line, and no gesture arrives without that floor",
+              bool(handed) and not floorless and bool(floored)
+              and "#bare .cut{padding:calc(var(--u)*2) calc(var(--u)*3)}" in style))
+
     # ── and a line number is scaffolding, not speech: it stands outside the file's
     # own text, so it wears the seam and not the rung a comment wears. Both sat on
     # muted once, which painted an index and a sentence the same — a merge the
