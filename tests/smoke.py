@@ -802,6 +802,34 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and ".cm-kindname{font-weight:600}" in ui
               and "var(--" not in style.split(".cm-kindname{", 1)[1].split("}", 1)[0]))
 
+    # ── the chromatic budget of a scene (Р3). Telling categories apart by hue is
+    # expensive: every extra chromatic code in the field taxes the reading of all
+    # the others. The code fabric asks exactly two questions — where a name is
+    # from, and what the verdict is — so those are the only hues it may carry. A
+    # gesture in it is known by its form, its place and the cursor, the way a hand
+    # knows one before colour; blue answers to the page, outside the world's text.
+    fabric = [(sel.strip().replace("\n", " "), body)
+              for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", style)
+              if re.search(r"#bare|#table-host|\.cm-|\.CodeMirror", sel)]
+    allowed = {"--localtype", "--knownname", "--bad", "--ok"}
+    overspent = [s[:44] for s, b in fabric
+                 for v in re.findall(r"var\((--[a-z]+)\)", b)
+                 # --select is on the grey line now, judged by SelectGrey: a neutral
+                 # backing is not a hue and costs the scene nothing
+                 if v in {"--action", "--law"}]
+    S.append(("the code fabric spends a hue on its two questions and on nothing else",
+              not overspent
+              and "#bare .add{display:inline-block;cursor:pointer;color:var(--muted)}" in style
+              and "#table-host .add{cursor:pointer;color:var(--muted)" in style))
+
+    # ── and a line number is scaffolding, not speech: it stands outside the file's
+    # own text, so it wears the seam and not the rung a comment wears. Both sat on
+    # muted once, which painted an index and a sentence the same — a merge the
+    # reader parts and the scene did not (С9).
+    S.append(("a line number is scaffolding and wears the seam, not the rung a comment wears",
+              ".CodeMirror-linenumber{color:var(--seam)" in style
+              and ".cm-s-default .cm-comment{color:var(--muted)}" in style))
+
     # ── what is removed is removed whole. A record, an axis it states, a claim it
     # holds: each is one unit and one edit, found through the SAME bridge a value
     # is found through, so nothing is ever half-cut. What the removal costs is not

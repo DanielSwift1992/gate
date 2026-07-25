@@ -99,7 +99,7 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .commit.touches{cursor:pointer}
 .commit .subj{display:flex;gap:calc(var(--u)*3);align-items:baseline;white-space:nowrap;overflow:hidden}
 .commit .subj{text-overflow:ellipsis}
-.commit .meta{display:flex;align-items:center;gap:calc(var(--u)*3);margin-top:var(--u);font-variant-numeric:tabular-nums}
+.commit .meta{white-space:nowrap;display:flex;align-items:center;gap:calc(var(--u)*3);margin-top:var(--u);font-variant-numeric:tabular-nums}
 .commit .who{cursor:pointer;color:var(--action)}
 .commit .who:hover{text-decoration:underline}
 .badge{flex:none;padding:0 calc(var(--u)*3);border-radius:8px}
@@ -175,7 +175,7 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 #surface{flex:1;position:relative;min-height:0}
 #editor-host{position:absolute;inset:0}
 .CodeMirror{height:100%;font:12.5px/19px ui-monospace,Menlo,monospace;background:var(--paper);color:var(--ink)}
-.CodeMirror-linenumber{color:var(--muted)}
+.CodeMirror-linenumber{color:var(--seam)}
 .CodeMirror-cursor{border-left-color:var(--ink)}
 .CodeMirror-gutters{background:var(--paper);border-right-color:var(--line)}
 .CodeMirror-selected,.CodeMirror-focused .CodeMirror-selected{background:var(--select)}
@@ -204,8 +204,17 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 #bare .note{display:block}
 #bare .slot{cursor:pointer;border-bottom:1px dashed var(--line)}
 #bare .slot.elsewhere{cursor:default;border-bottom-style:none}
-#bare .slot.hole{border-bottom-style:dashed;border-color:var(--law)}
-#bare .add{display:inline-block;cursor:pointer;color:var(--action)}
+/* a hole already says it three ways — the word, the dashes, the quiet register —
+   so the amber it wore was a third hue answering a question the scene does not
+   ask (С9: unearned; Р3: taxed). What is owed is not a warning, it is a row. */
+#bare .slot.hole{border-bottom-style:dashed;border-color:var(--muted)}
+/* a gesture inside the code fabric is known by its form, its place and the
+   cursor — never by chroma. The hand reads all three before colour, and the
+   scene has only two questions to spend a hue on: where a name is from, and
+   what the verdict is. Blue stays outside the fabric, where it answers to the
+   page rather than to the world's own text (Р2, Р3). */
+#bare .add{display:inline-block;cursor:pointer;color:var(--muted)}
+#bare .add:hover{color:var(--ink)}
 #bare .cut{cursor:pointer;color:var(--muted);padding:0 var(--u);visibility:hidden}
 #bare span:hover > .cut,#bare .cut:hover{visibility:visible}
 #bare .namerow{display:flex;gap:var(--u);align-items:baseline;padding:calc(var(--u)*2) 0}
@@ -223,7 +232,7 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 #table-host h3:first-child{margin-top:calc(var(--u)*2)}
 #table-host table{border-collapse:collapse;width:100%}
 #table-host th{text-align:left;font-weight:500;padding:calc(var(--u)*2) calc(var(--u)*5) calc(var(--u)*2) calc(var(--u)*3);border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--paper);cursor:pointer;user-select:none}
-#table-host th:hover{color:var(--ink)}#table-host th .dir{color:var(--action)}
+#table-host th:hover{color:var(--ink)}#table-host th .dir{color:var(--ink)}
 /* the size has to be said: a family ending in the generic `monospace` makes
    the browser fall back to its own fixed-width default instead of inheriting */
 #table-host td{padding:calc(var(--u)*2) calc(var(--u)*5) calc(var(--u)*2) calc(var(--u)*3);border-bottom:1px solid var(--line);vertical-align:top;font-variant-numeric:tabular-nums}
@@ -235,7 +244,8 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 #table-host td.slot{cursor:pointer}
 #table-host td.slot:hover{background:var(--mist)}
 #table-host td.cut{cursor:pointer;color:var(--muted);text-align:right}
-#table-host .add{cursor:pointer;color:var(--action);padding:calc(var(--u)*2) 0}
+#table-host .add{cursor:pointer;color:var(--muted);padding:calc(var(--u)*2) 0}
+#table-host .add:hover{color:var(--ink)}
 #table-host td.cell-bad{background:color-mix(in srgb,var(--bad) 10%,transparent)}
 #table-host td.cell-bad::after{content:" ✗";color:var(--bad)}
 #verdict-panel{border-top:1px solid var(--line);background:var(--paper);flex:none;max-height:34vh;display:flex;flex-direction:column}
