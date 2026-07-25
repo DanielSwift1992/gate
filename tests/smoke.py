@@ -822,6 +822,39 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "#bare .add{display:inline-block;cursor:pointer;color:var(--muted)}" in style
               and "#table-host .add{cursor:pointer;color:var(--muted)" in style))
 
+    # ── one world, one stream. A list of files handed to `judge where` is not one
+    # world read across files: the sides are judged apart, and the certificates of
+    # one are never held against the machinery of the other. It fails GREEN, which
+    # is the one failure a checker may not have — so the pipes must never hand
+    # `where` more than a single path, and a world split across files is glued
+    # into one stream first. The second half of this check proves the rule is
+    # load-bearing rather than folklore: it plants a real break, judges the halves
+    # as a list and as one stream, and requires the list to be the blind one. If a
+    # future judge learns to read a list, this half fails and says the guard may
+    # retire — a rule that cannot say when it stopped being needed is a rule that
+    # outlives its reason.
+    gate_src = open(GATE, encoding="utf-8").read()
+    where_calls = re.findall(r"subprocess\.run\(\[JUDGE, \"judge\", \"where\",([^\]]*)\]", gate_src)
+    one_path = all("*" not in c for c in where_calls)
+    pal_text = open(os.path.join(HERE, "stdlib", "bench-palette.swift"), encoding="utf-8").read()
+    cut = pal_text.index("// ── the light theme")
+    machinery, values = pal_text[:cut], pal_text[cut:]
+    broken = re.sub(r"public typealias InkLitY = .+",
+                    "public typealias InkLitY = Plus<W256, Plus<W512, W128>>", values, count=1)
+    d = os.path.join(tmp, "stream")
+    os.makedirs(d, exist_ok=True)
+    open(os.path.join(d, "machinery.swift"), "w").write(machinery)
+    open(os.path.join(d, "values.swift"), "w").write(broken)
+    open(os.path.join(d, "glued.swift"), "w").write(machinery + broken)
+    def refusals_of(*paths):
+        r = subprocess.run([os.path.join(HERE, "bin", "gate-judge"), "judge", "where", *paths],
+                           capture_output=True, text=True).stdout
+        return r.count("✗")
+    glued_says = refusals_of(os.path.join(d, "glued.swift"))
+    listed_says = refusals_of(os.path.join(d, "machinery.swift"), os.path.join(d, "values.swift"))
+    S.append(("one world is one stream: a split handed over as a list is judged blind, so the pipes never hand one over",
+              one_path and bool(where_calls) and glued_says > 0 and listed_says == 0))
+
     # ── and a claim is written INSIDE the body it belongs to. A world prints
     # `>.self` with no semicolon where nothing is separated, so a search that
     # insisted on one found nothing, ran past the closing brace and wrote the
