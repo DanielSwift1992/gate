@@ -764,6 +764,27 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "var(--seam)" in toks and "var(--knownname)" in toks and "var(--muted)" in toks
               and "600" not in toks))
 
+    # ── the journal is READ, not judged, so it may not speak in the judge's own
+    # voice. Red and green are the verdict's whole property (С2: green and red
+    # outside a verdict forge one), and blue belongs to the hand. The journal
+    # said `was` in red and `now` in green, added lines green and deleted red,
+    # `closed` green and `open` blue — over a `+`/`-` sign and a strikethrough
+    # that already carried the distinction, so the colour was a second marker
+    # AND a borrowed wire. It speaks in the ladder now: present is ink, past is
+    # muted and struck, a state is its own word. What stays coloured is what
+    # earns it — a commit's author is clickable, so it wears the hand's blue,
+    # and a record's own name is a name of the world, so it keeps its teal.
+    journal_sels = ("#journal", ".commit", ".badge", ".subj", ".meta", ".cdiff",
+                    ".dfile", ".dline", ".dmore", ".dwait", ".factrow", ".obs", "#gitstate")
+    forged = [m.group(1).strip()[:40]
+              for m in re.finditer(r"([^{}]+)\{([^{}]*)\}", style)
+              if any(k in m.group(1) for k in journal_sels)
+              and re.search(r"var\(--(ok|bad)\)", m.group(2))]
+    S.append(("what is read speaks in the ladder: the journal never wears the verdict's own colours",
+              not forged
+              and ".factrow .was{color:var(--muted)" in style
+              and ".factrow .own{color:var(--localtype)}" in style))
+
     # a refusal is pointed at by its EDGE — a left border and a light backing, two
     # markers and no more; the address is a fact like any other, and the red is
     # the verdict's alone (the chip, and the wave under a name resolving to nothing)

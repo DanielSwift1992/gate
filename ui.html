@@ -100,11 +100,11 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .commit .subj{display:flex;gap:calc(var(--u)*3);align-items:baseline;white-space:nowrap;overflow:hidden}
 .commit .subj{text-overflow:ellipsis}
 .commit .meta{display:flex;align-items:center;gap:calc(var(--u)*3);margin-top:var(--u);font-variant-numeric:tabular-nums}
-.commit .who{cursor:pointer;color:var(--localtype)}
+.commit .who{cursor:pointer;color:var(--action)}
 .commit .who:hover{text-decoration:underline}
 .badge{flex:none;padding:0 calc(var(--u)*3);border-radius:8px}
-.badge.closed{background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok)}
-.badge.open{background:color-mix(in srgb,var(--action) 15%,transparent);color:var(--action)}
+.badge.closed{background:var(--mist);color:var(--muted)}
+.badge.open{background:var(--mist);color:var(--muted)}
 #next{margin-left:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52%}
 #filter-note,#load-more{padding:calc(var(--u)*2) calc(var(--u)*7);font:11px -apple-system,sans-serif;color:var(--action);cursor:pointer}
 #filter-note:hover,#load-more:hover{text-decoration:underline}
@@ -150,12 +150,12 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .dline{padding:var(--u) calc(var(--u)*7);font:11px/1.45 ui-monospace,Menlo,monospace;white-space:pre-wrap;word-break:break-word;color:var(--muted)}
 .factrow .sep{color:var(--muted)}
 .factrow .own{color:var(--localtype)}
-.factrow .was{color:var(--bad);text-decoration:line-through;text-decoration-thickness:1px}
+.factrow .was{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1px}
 .factrow .arrow{color:var(--muted)}
-.factrow .now{color:var(--ok)}
+.factrow .now{color:var(--ink)}
 .dline .sg{display:inline-block;width:1.1em;opacity:.6}
-.dline.add{color:var(--ok);background:color-mix(in srgb,var(--ok) 7%,transparent)}
-.dline.del{color:var(--bad);background:color-mix(in srgb,var(--bad) 7%,transparent)}
+.dline.add{color:var(--ink)}
+.dline.del{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1px}
 #main{flex:1;display:flex;flex-direction:column;min-width:0;border-left:1px solid var(--line)}
 #bar{display:flex;gap:calc(var(--u)*5);align-items:center;padding:calc(var(--u)*3) calc(var(--u)*6);border-bottom:1px solid var(--line);flex:none}
 #bar b{font-weight:600}
@@ -169,7 +169,7 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 #gitstate{margin-left:auto;display:flex;align-items:center;gap:calc(var(--u)*3)}
 #gitstate .g{width:7px;height:7px;border-radius:50%;background:var(--muted)}
 #gitstate.modified{color:var(--law)}#gitstate.modified .g{background:var(--law)}
-#gitstate.committed{color:var(--ok)}#gitstate.committed .g{background:var(--ok)}
+#gitstate.committed{color:var(--muted)}#gitstate.committed .g{background:var(--muted)}
 #write{border:none;background:color-mix(in srgb,var(--action) 12%,transparent);color:var(--action);padding:calc(var(--u)*2) calc(var(--u)*6);border-radius:5px;font:inherit;cursor:pointer}
 #write:disabled{opacity:.4;cursor:default}
 #surface{flex:1;position:relative;min-height:0}
