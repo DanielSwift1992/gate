@@ -204,6 +204,7 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 #bare .note{display:block}
 #bare .slot{cursor:pointer;border-bottom:1px dashed var(--line)}
 #bare .slot.elsewhere{cursor:default;border-bottom-style:none}
+#bare .slot.hole{border-bottom-style:dashed;border-color:var(--law)}
 #bare .bad{text-decoration:underline wavy var(--bad);text-underline-offset:3px}
 #bare .row-bad{background:color-mix(in srgb,var(--bad) 6%,transparent)}
 .empty{max-width:34em;padding:calc(var(--u)*20) 0 0 calc(var(--u)*10);color:var(--ink)}
@@ -740,7 +741,10 @@ function drawCompletion(reposition) {
 function acceptCompletion(i) {
     const name = compItems[i === undefined ? compChosen : i];
     if (!name) return hideCompletion();
-    if (compSlot) { const slot = compSlot; hideCompletion(); return fillSlot(slot, name); }
+    if (compSlot) {
+        const slot = compSlot; hideCompletion();
+        return slot.kind === "hole" ? fillHole(slot, name) : fillSlot(slot, name);
+    }
     if (!compFrom) return hideCompletion();
     if (compScaffold && name.startsWith("\u25B8")) {
         const cur = cm.getCursor();
@@ -1278,6 +1282,42 @@ function locateSlot(slot) {
 
 // a chosen value goes in whole, the judge reads the file again, and the view is
 // drawn from what it said — never from what we hoped it would say
+// what a record still owes: the axes its kinds ask for and it has not answered.
+// The same reading the offer uses, so the bench cannot show a hole the judge
+// does not see, nor miss one it does — the judge says it in words of its own
+// ("Person requires Site: Emp9000 states none").
+function holesOf(d) {
+    const stated = new Set(d.aliases.keys());
+    return Object.entries(axesOfHost(d)).filter(([a]) => !stated.has(a));
+}
+
+// a hole is not text yet: nothing is written until a whole line can be written.
+// The line goes in complete — axis, `=` and value together — so the buffer never
+// holds `typealias X = ` for even one keystroke (I2).
+function fillHole(slot, value) {
+    // the line numbers must come from the SAME reading the slot was drawn from.
+    // layoutDecls is a snapshot of every file and its lines go stale the moment
+    // the buffer changes; taking them from there once put a whole line outside
+    // the body, and the judge said so at the next keystroke.
+    const d = (lastParsed && lastParsed.declarations.get(slot.host)) || layoutOrActive().get(slot.host);
+    if (!d) return;
+    const lines = [...d.aliases.values()].map(v => v.line);
+    const anchor = (lines.length ? Math.max(...lines) : d.line) - 1;
+    const at = cm.getLine(anchor);
+    if (at === undefined) return;
+    const head = cm.getLine(d.line - 1) || "";
+    const lead = (head.match(/^\s*/) || [""])[0];
+    const body = lead + "    public typealias " + slot.axis + " = " + value;
+    if (!lines.length && /\{\s*\}\s*$/.test(head)) {          // an empty body opens up
+        const k = head.lastIndexOf("{");
+        cm.replaceRange("{\n" + body + "\n" + lead + "}",
+            { line: d.line - 1, ch: k }, { line: d.line - 1, ch: head.length }, "+input");
+    } else {
+        cm.replaceRange("\n" + body, { line: anchor, ch: at.length }, { line: anchor, ch: at.length }, "+input");
+    }
+    render();
+}
+
 function fillSlot(slot, value) {
     const at = locateSlot(slot);
     if (!at) return;
@@ -1358,6 +1398,11 @@ function bareForm(parsed, text) {
         for (const [k, v] of d.aliases)
             block.push("    " + esc(k) + " = "
                 + slotSpan({ kind: "alias", line: v.line, host: name, axis: k }, v.target));
+        for (const [axis, kind] of holesOf(d)) {
+            const i = bareSlots.push({ kind: "hole", line: d.line, host: name, axis, of: kind }) - 1;
+            block.push('    ' + esc(axis) + ' = <span class="slot hole caption" data-slot="' + i
+                + '" title="choose a value">to fill</span>');
+        }
         for (const e of (d.entries || [])) {
             const args = (e.args || []).map((a, i) =>
                 slotSpan({ kind: "arg", line: e.line, host: name, head: e.head, index: i }, a));
@@ -1380,10 +1425,11 @@ document.getElementById("bare").addEventListener("click", (e) => {
     const sl = e.target.closest("[data-slot]");
     if (sl) {
         const slot = bareSlots[+sl.dataset.slot];
-        if (!slot || !locateSlot(slot)) return;          // read-only: edit in Full
-        const host = layoutOrActive().get(slot.host);
-        const kind = slot.kind === "alias"
-            ? axesOfHost(host)[slot.axis]
+        if (!slot) return;
+        if (slot.kind !== "hole" && !locateSlot(slot)) return;   // read-only: edit in Full
+        const host = (lastParsed && lastParsed.declarations.get(slot.host)) || layoutOrActive().get(slot.host);
+        const kind = slot.kind === "alias" ? axesOfHost(host)[slot.axis]
+            : slot.kind === "hole" ? slot.of
             : ((gates[slot.head] || [])[slot.index]);
         const items = fillersFor(kind, host, slot.axis);
         if (!items) return;

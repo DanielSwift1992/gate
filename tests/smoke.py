@@ -802,6 +802,71 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and ".cm-kindname{font-weight:600}" in ui
               and "var(--" not in style.split(".cm-kindname{", 1)[1].split("}", 1)[0]))
 
+    # ── a hole is not text yet. What a record still owes is drawn as a row and
+    # nothing is written until a WHOLE line can be written: axis, `=` and value
+    # go in together, in ONE edit, so the buffer never holds `typealias X = ` for
+    # a single keystroke (I2 — a pending alias swallows the line below it). The
+    # line goes INSIDE the body: taking its position from a stale snapshot of
+    # every file once put it after the closing brace, and the judge said so.
+    hole_src = "function fillHole(slot, value) {" + \
+        ui.split("function fillHole(slot, value) {", 1)[1].split("\n}", 1)[0] + "\n}"
+    hole_js = r'''
+let edits = [];
+const doc = { lines: [
+    "public enum Emp: Employee {",
+    "    public typealias Rank = Manager",
+    "}",
+    "public enum Bare: Employee {}",
+] };
+const cm = {
+    lineCount: () => doc.lines.length,
+    getLine: (i) => doc.lines[i],
+    replaceRange: (text, from, to) => {
+        edits.push(text);
+        const s = doc.lines.join("\n").split("\n");
+        const flat = (p) => s.slice(0, p.line).join("\n").length + (p.line ? 1 : 0) + p.ch;
+        const whole = doc.lines.join("\n");
+        doc.lines = (whole.slice(0, flat(from)) + text + whole.slice(flat(to))).split("\n");
+    },
+};
+const lastParsed = { declarations: new Map([
+    ["Emp",  { line: 1, aliases: new Map([["Rank", { target: "Manager", line: 2 }]]), conformances: ["Employee"] }],
+    ["Bare", { line: 4, aliases: new Map(), conformances: ["Employee"] }],
+])};
+// the stale snapshot: the same records, line numbers from before the last edit.
+// Reading positions from here is the bug this half of the probe exists to catch.
+const layoutOrActive = () => new Map([
+    ["Emp",  { line: 1, aliases: new Map([["Rank", { target: "Manager", line: 3 }]]), conformances: ["Employee"] }],
+    ["Bare", { line: 4, aliases: new Map(), conformances: ["Employee"] }],
+]);
+const render = () => {};
+__HOLE__
+fillHole({ kind: "hole", host: "Emp", axis: "Site" }, "OnSite");
+const afterBody = doc.lines.slice(0, 4);
+edits = [];
+fillHole({ kind: "hole", host: "Bare", axis: "Site" }, "OnSite");
+console.log(JSON.stringify({
+    inside_body: afterBody,
+    empty_body_opened: doc.lines.slice(-3),
+    one_edit_each: edits.length === 1,
+}));
+'''.replace("__HOLE__", hole_src)
+    hj = os.path.join(tmp, "holes.js")
+    open(hj, "w").write(hole_js)
+    hout = subprocess.run(["node", hj], capture_output=True, text=True).stdout
+    try:
+        hv = json.loads(hout or "{}")
+    except Exception:
+        hv = {}
+    S.append(("a hole is filled by one whole line, written inside the body and never half-written",
+              hv.get("inside_body") == ["public enum Emp: Employee {",
+                                        "    public typealias Rank = Manager",
+                                        "    public typealias Site = OnSite",
+                                        "}"]
+              and hv.get("one_edit_each") is True
+              and "public typealias Site = OnSite" in "\n".join(hv.get("empty_body_opened") or [])
+              and "function holesOf(d)" in ui))
+
     # ── a slot is a closed question, and the bench may only offer what the judge
     # will take. The bridge is checked from both sides: every value the grammar
     # offers for an axis is accepted, and a name of some OTHER kind is refused by
