@@ -201,6 +201,7 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 #bare .jump{color:var(--localtype);cursor:pointer}
 #bare .decl:hover,#bare .jump:hover{text-decoration:underline}
 #bare .known{color:var(--knownname)}
+#bare .note{display:block}
 #bare .bad{text-decoration:underline wavy var(--bad);text-underline-offset:3px}
 #bare .row-bad{background:color-mix(in srgb,var(--bad) 6%,transparent)}
 .empty{max-width:34em;padding:calc(var(--u)*20) 0 0 calc(var(--u)*10);color:var(--ink)}
@@ -222,6 +223,7 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 #table-host td.cell-name{color:var(--localtype);font-weight:600;cursor:pointer}
 #table-host td.cell-name:hover{text-decoration:underline}
 #table-host td.cell-value{color:var(--knownname)}
+#table-host td.cell-note{white-space:normal;max-width:22em}
 #table-host td.cell-bad{background:color-mix(in srgb,var(--bad) 10%,transparent)}
 #table-host td.cell-bad::after{content:" ✗";color:var(--bad)}
 #verdict-panel{border-top:1px solid var(--line);background:var(--paper);flex:none;max-height:34vh;display:flex;flex-direction:column}
@@ -965,7 +967,7 @@ async function render() {
         }
     }
     if (mode === "table") buildTables();
-    if (mode === "bare") document.getElementById("bare").innerHTML = bareForm(lastParsed);
+    if (mode === "bare") document.getElementById("bare").innerHTML = bareForm(lastParsed, cm.getValue());
     applyMyJournal();   // the journal follows the declaration, as you edit it
     applyMyBench();     // and so does the theme
 }
@@ -1162,8 +1164,12 @@ function buildTables() {
         const sig = group.conformances.join("+") + group.keys.join(",");
         const mark = (k) => tableSort && tableSort.sig === sig && tableSort.key === k
             ? ' <span class="dir">' + (tableSort.dir > 0 ? "↓" : "↑") + "</span>" : "";
+        // the note column exists only where notes do: nothing to switch on, and
+        // nothing to explain — a group without a note has no column for one
+        const notes = attachNotes(cm.getValue(), lastParsed);
+        const hasNotes = group.rows.some(d => notes.has(d.name));
         const head = document.createElement("tr");
-        for (const key of ["name", ...group.keys]) {
+        for (const key of ["name", ...group.keys, ...(hasNotes ? ["note"] : [])]) {
             const th = document.createElement("th"); th.className = "caption";
             th.innerHTML = key + mark(key);
             th.onclick = () => {
@@ -1191,6 +1197,12 @@ function buildTables() {
                 if (badLines.has(d.line)) td.classList.add("cell-bad");
                 tr.append(td);
             }
+            if (hasNotes) {
+                const td = document.createElement("td");
+                td.className = "observed cell-note";
+                td.textContent = (notes.get(d.name) || []).join(" ");
+                tr.append(td);
+            }
             table.append(tr);
         }
         host.append(table);
@@ -1216,29 +1228,82 @@ function nameTokens(raw) {
         return '<span class="known">' + name + "</span>";
     });
 }
-function bareForm(parsed) {
+// ── A note belongs to a record, not to a line. Consecutive /// lines standing
+// directly above a declaration, with no blank line between, are what you wrote
+// about that record; anything else breaks the run. Read off the text by the
+// parse's OWN line numbers — the port's parse is not touched, so the judge's
+// reading of the file and the bench's stay one reading. A note is read and not
+// judged, so it wears the register that means exactly that. ──
+function attachNotes(text, parsed) {
+    const lines = text.split("\n"), notes = new Map();
+    const above = (line) => {
+        const out = [];
+        for (let i = line - 2; i >= 0; i--) {
+            const t = (lines[i] || "").trim();
+            if (!t.startsWith("///")) break;      // a blank line, or code, ends the run
+            out.unshift(t.slice(3).trim());
+        }
+        return out;
+    };
+    if (!parsed) return notes;
+    for (const [name, d] of parsed.declarations) {
+        const n = above(d.line); if (n.length) notes.set(name, n);
+    }
+    for (const [name, a] of (parsed.topAliases || new Map())) {
+        const n = above(a.line); if (n.length) notes.set(name, n);
+    }
+    return notes;
+}
+
+// the comments that belong to no record: they are the document's own, and Bare
+// keeps them where the document put them
+function freeComments(text, notes, parsed) {
+    const lines = text.split("\n"), taken = new Set(), out = [];
+    const claim = (line) => { for (let i = line - 2; i >= 0; i--) {
+        const t = (lines[i] || "").trim();
+        if (!t.startsWith("///")) break; taken.add(i);
+    } };
+    if (parsed) {
+        for (const [, d] of parsed.declarations) claim(d.line);
+        for (const [, a] of (parsed.topAliases || new Map())) claim(a.line);
+    }
+    lines.forEach((raw, i) => {
+        const t = raw.trim();
+        if (t.startsWith("//") && !taken.has(i)) out.push({ line: i + 1, text: t.replace(/^\/+/, "").trim() });
+    });
+    return out;
+}
+
+function bareForm(parsed, text) {
     const badLines = new Set(lastRefusals.map(r => r.line));
-    const order = parsed.order || [...parsed.declarations.keys()];
-    const out = [];
+    const src = text || "";
+    const notes = attachNotes(src, parsed);
     const declSpan = (name, line, bad) =>
         '<span class="decl' + (bad ? " bad" : "") + '" data-jump="' + name + '">' + esc(name) + "</span>";
-    for (const name of order) {
-        const d = parsed.declarations.get(name);
-        if (!d) continue;
+    const noteLines = (name) => (notes.get(name) || [])
+        .map(t => '<span class="note observed">' + esc(t) + "</span>");
+    // one stream, in the order the document has it: a record with its note above
+    // it, and the comments that belong to nobody where they were written
+    const items = [];
+    for (const [name, d] of parsed.declarations) {
         const bad = badLines.has(d.line);
         const conf = d.conformances.length ? '<span class="conf">: </span>' + nameTokens(d.conformances.join(", ")) : "";
-        out.push('<span class="' + (bad ? "row-bad" : "") + '">' + declSpan(name, d.line, bad) + conf + "</span>");
-        for (const [k, v] of d.aliases)
-            out.push("    " + esc(k) + " = " + nameTokens(v.target));
+        const block = [...noteLines(name),
+            '<span class="' + (bad ? "row-bad" : "") + '">' + declSpan(name, d.line, bad) + conf + "</span>"];
+        for (const [k, v] of d.aliases) block.push("    " + esc(k) + " = " + nameTokens(v.target));
         for (const e of (d.entries || [])) {
             const args = e.args && e.args.length ? "<" + e.args.join(", ") + ">" : "";
-            out.push("    " + nameTokens(e.head + args));
+            block.push("    " + nameTokens(e.head + args));
         }
-        if (d.aliases.size || (d.entries || []).length) out.push("");
+        if (d.aliases.size || (d.entries || []).length) block.push("");
+        items.push({ line: d.line, block });
     }
     for (const [name, a] of (parsed.topAliases || new Map()))
-        out.push(declSpan(name, a.line, false) + " = " + nameTokens(a.target));
-    return out.join("\n");
+        items.push({ line: a.line, block: [...noteLines(name), declSpan(name, a.line, false) + " = " + nameTokens(a.target)] });
+    for (const c of freeComments(src, notes, parsed))
+        items.push({ line: c.line, block: ['<span class="note observed">' + esc(c.text) + "</span>"] });
+    items.sort((a, b) => a.line - b.line);
+    return items.flatMap(i => i.block).join("\n");
 }
 // one delegated handler: a name in the bare view jumps to its declaration
 document.getElementById("bare").addEventListener("click", (e) => {
@@ -1252,7 +1317,7 @@ function setMode(m) {
     document.getElementById("bare").style.display = m === "bare" ? "block" : "none";
     document.getElementById("table-host").style.display = m === "table" ? "block" : "none";
     document.querySelectorAll("#view-seg button").forEach(b => b.classList.toggle("on", b.dataset.m === m));
-    if (m === "bare" && lastParsed) document.getElementById("bare").innerHTML = bareForm(lastParsed);
+    if (m === "bare" && lastParsed) document.getElementById("bare").innerHTML = bareForm(lastParsed, cm.getValue());
     if (m === "table") buildTables();
     if (m === "full") cm.refresh();
 }

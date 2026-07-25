@@ -802,6 +802,42 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and ".cm-kindname{font-weight:600}" in ui
               and "var(--" not in style.split(".cm-kindname{", 1)[1].split("}", 1)[0]))
 
+    # ── a note belongs to a record, not to a line. Consecutive /// standing
+    # directly above a declaration are what you wrote about it; a blank line
+    # between is not a gap in a note, it is the end of one, and what it cuts off
+    # belongs to the document instead. Read off the text by the parse's own line
+    # numbers, so the judge's reading of the file and the bench's stay one. The
+    # real function is lifted out of the page and run, never a copy of its rules.
+    notes_src = "function attachNotes(text, parsed) {" + \
+        ui.split("function attachNotes(text, parsed) {", 1)[1].split("\n}", 1)[0] + "\n}"
+    notes_js = notes_src + r'''
+const decls = new Map([["Kept", { line: 3 }], ["Cut", { line: 7 }]]);
+const text = [
+    "/// the note above the record",   // 1
+    "/// and its second line",         // 2
+    "public enum Kept: Employee {",    // 3  <- the parse reports this line
+    "}",                               // 4
+    "/// cut off by the blank line",   // 5
+    "",                                // 6  <- the blank ends the run
+    "public enum Cut: Employee {",     // 7
+].join("\n");
+const got = attachNotes(text, { declarations: decls, topAliases: new Map() });
+console.log(JSON.stringify({ kept: got.get("Kept") || null, cut: got.get("Cut") || null }));
+'''
+    nj = os.path.join(tmp, "notes.js")
+    open(nj, "w").write(notes_js)
+    nout = subprocess.run(["node", nj], capture_output=True, text=True).stdout
+    try:
+        nv = json.loads(nout or "{}")
+    except Exception:
+        nv = {}
+    S.append(("a note belongs to the record it stands above, and a blank line ends it rather than spanning it",
+              nv.get("kept") == ["the note above the record", "and its second line"]
+              and nv.get("cut") is None
+              and "bareForm(lastParsed, cm.getValue())" in ui
+              and 'const hasNotes = group.rows.some(d => notes.has(d.name));' in ui
+              and '...(hasNotes ? ["note"] : [])' in ui))
+
     # ── and belonging is a shared edge. Every row on the rail — the brand, the
     # section heads, a file, a commit, a diff line, a fact — begins at ONE step,
     # so the eye reads a column and not a ragged stack. It was ragged: the edge
