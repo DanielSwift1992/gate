@@ -628,7 +628,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     def _block(sel): return ui.split(sel, 1)[1].split("}", 1)[0] if sel in ui else ""
     def _match(block, mode):
         for var, atom in VAR2ATOM.items():
-            m = re.search(re.escape(var) + r": color\(xyz-d65 calc\((\d+)/100\) calc\((\d+)/100\) calc\((\d+)/100\)\)", block)
+            m = re.search(re.escape(var) + r": color\(xyz-d65 calc\((\d+)/1000\) calc\((\d+)/1000\) calc\((\d+)/1000\)\)", block)
             if not m: return False
             if (int(m.group(1)), int(m.group(2)), int(m.group(3))) != (
                     axes.get((atom, mode, "X")), axes.get((atom, mode, "Y")), axes.get((atom, mode, "Z"))):
