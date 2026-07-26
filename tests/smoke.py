@@ -917,6 +917,32 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and quiet.get("shape_unread") == 1
               and "judged 1 of the 3" in (quiet.get("note") or "")))
 
+    # ── and the name on the wire is not the name in the library. A contract's
+    # `log-slow-requests-time-ms` is `log_slow_requests_time_ms` in Python and
+    # `logSlowRequestsTimeMs` in a typed client, and reading only the wire
+    # spelling reported a field as UNCARRIED that the library carries in full —
+    # the worst sort of wrong, because an absence reads as news.
+    # Beside it the mirror case: a library may declare one name twice and mean
+    # two things — typesense writes `stopwords: string[]` for the set it sends
+    # and `stopwords?: string` for the set it names in a query — and taking
+    # whichever the walk reached first let the order of files on disk pick the
+    # verdict. Two shapes are not a mismatch, they are an unanswered question.
+    os.makedirs(os.path.join(con, "renamed"), exist_ok=True)
+    open(os.path.join(con, "spec-names.json"), "w").write(json.dumps({"paths": {"/cfg": {"post": {
+        "requestBody": {"content": {"application/json": {"schema": {"properties": {
+            "log-slow-requests-time-ms": {"type": "integer"},
+            "stopwords": {"type": "array"}}}}}}}}}}))
+    open(os.path.join(con, "renamed", "client.py"), "w").write(
+        "class Config:\n    log_slow_requests_time_ms: int\n")
+    open(os.path.join(con, "renamed", "types.ts"), "w").write(
+        "interface Send {\n  stopwords: string[];\n}\n"
+        "interface Query {\n  stopwords?: string;\n}\n")
+    _, named_ok = run("import", "contract", os.path.join(con, "spec-names.json"),
+                      "--client", os.path.join(con, "renamed"), "--name", "Renamed")
+    S.append(("a wire name is read through the library's own spelling, and a name said twice is not judged once",
+              named_ok.get("verdict") == "holds" and not named_ok.get("refusals")
+              and named_ok.get("judged") == 1 and named_ok.get("shape_split") == 1))
+
     # ── and the check is the whole ceremony: one command in the CI the client
     # already has. It exits non-zero on a stale citation and zero when the code
     # and the tracker agree, so no wrapper is needed; the export may sit in

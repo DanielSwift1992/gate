@@ -1593,6 +1593,17 @@ def snake_of(name):
     return re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
 
 
+def name_variants(name):
+    # a wire name is rarely the name a library writes: the contract's
+    # `log-slow-requests-time-ms` is `log_slow_requests_time_ms` in Python and
+    # `logSlowRequestsTimeMs` in a typed client. Reading only the wire spelling
+    # accused a library of not carrying a field it carries in full, which is the
+    # worst kind of wrong: it reads as news.
+    plain = name.replace("-", "_")
+    camel = re.sub(r"[-_](\w)", lambda m: m.group(1).upper(), name)
+    return {name, plain, snake_of(plain), camel}
+
+
 SHAPE_WORDS = [
     (r"\bbool(ean)?\b", "Flag"),
     (r"\b(u|i)\d+\b|\bf\d+\b|\bnumber\b|\bint(eger)?\b|\bfloat\b|\bdouble\b", "Count"),
@@ -1600,29 +1611,40 @@ SHAPE_WORDS = [
 ]
 
 
-def shape_seen(body, field):
-    # what SORT of thing the library says this field is. A client writes it
-    # plainly wherever it types a request — `waitFor?: number`, `pub wait_for:
-    # Option<u32>`, `wait_for: int` — so the type is read where the field is
-    # declared, never guessed from its name. Unreadable means unread: this
-    # returns nothing rather than a shape, because accusing a library of a
-    # mismatch on a type nobody could see is worse than staying silent.
-    for name in {field, snake_of(field)}:
-        m = re.search(r"\b" + re.escape(name) + r"\??\s*:\s*([^;,\n{]+)", body)
-        if not m:
-            continue
-        t = m.group(1).strip()
-        # containers first, ALWAYS: a map of strings is a map, and reading the
-        # word inside it as the whole shape accuses a library of a mismatch it
-        # does not have — `Record<string, string>` is nested, not text.
-        if re.search(r"\[\s*\]|\bVec<|\bArray<|\bList\[|\blist\[|\bSequence\[", t):
-            return "Many"
-        if re.search(r"\bDict\[|\bHashMap<|\bBTreeMap<|\bobject\b|\bRecord<|\bMap<|\{", t):
-            return "Nested"
-        for pat, shape in SHAPE_WORDS:
-            if re.search(pat, t):
-                return shape
+def shape_of_type(t):
+    # containers first, ALWAYS: a map of strings is a map, and reading the word
+    # inside it as the whole shape accuses a library of a mismatch it does not
+    # have — `Record<string, string>` is nested, not text.
+    if re.search(r"\[\s*\]|\bVec<|\bArray<|\bList\[|\blist\[|\bSequence\[", t):
+        return "Many"
+    if re.search(r"\bDict\[|\bHashMap<|\bBTreeMap<|\bobject\b|\bRecord<|\bMap<|\{", t):
+        return "Nested"
+    for pat, shape in SHAPE_WORDS:
+        if re.search(pat, t):
+            return shape
     return None
+
+
+def shapes_seen(body, field):
+    # every SORT this library gives the name, not the first one found. A client
+    # writes the type plainly wherever it types a request — `waitFor?: number`,
+    # `pub wait_for: Option<u32>`, `wait_for: int` — so it is read where the
+    # field is declared, never guessed from its name.
+    #
+    # ALL of them, because a name can be declared more than once and mean
+    # different things: typesense writes `stopwords: string[]` for the set it
+    # sends and `stopwords?: string` for the set it names in a query, and taking
+    # whichever came first let the order of files on disk decide the verdict.
+    # Two shapes are not a mismatch, they are an unanswered question — the same
+    # openness a contract shows when it writes `anyOf` — so the caller is handed
+    # the whole set and judges only when exactly one thing was said.
+    shapes = set()
+    for name in name_variants(field):
+        for m in re.finditer(r"\b" + re.escape(name) + r"\??\s*:\s*([^;,\n{]+)", body):
+            s = shape_of_type(m.group(1).strip())
+            if s:
+                shapes.add(s)
+    return shapes
 
 
 def read_carrier(root):
@@ -1662,9 +1684,8 @@ def cmd_import_contract(a):
     body, files = read_carrier(root)
     carried = {}
     for f in fields:
-        names = {f["field"], snake_of(f["field"])}
         carried[(f["route"], f["field"])] = any(
-            re.search(r"\b" + re.escape(n) + r"\b", body) for n in names)
+            re.search(r"\b" + re.escape(n) + r"\b", body) for n in name_variants(f["field"]))
     named = sum(1 for v in carried.values() if v)
     # A library that FORWARDS A BAG is not a library that lags: whatever you hand
     # it reaches the wire, so no field is missing — and none is offered, checked
@@ -1689,7 +1710,7 @@ def cmd_import_contract(a):
                 "mutates": False}
     lines = [CONTRACT_HEADER + STDLIB["genre-contract"], ""]
     lines.append(f"public enum {who}: Carrier {{}}")
-    srcmap, missing, open_shape, unread = {}, [], [], []
+    srcmap, missing, open_shape, unread, split = {}, [], [], [], []
     for i, f in enumerate(fields):
         if not carried[(f["route"], f["field"])]:
             missing.append(f)
@@ -1701,13 +1722,17 @@ def cmd_import_contract(a):
         # be read has not answered. Substituting the contract's own answer for the
         # silent one bought a green on 171 of 178 fields once, and that green
         # meant only that the door had agreed with itself.
-        as_shape = shape_seen(body, f["field"])
+        seen = shapes_seen(body, f["field"])
         if f["shape"] is None:
             open_shape.append(f)
             continue
-        if as_shape is None:
+        if not seen:
             unread.append(f)
             continue
+        if len(seen) > 1:
+            split.append(f)
+            continue
+        as_shape = seen.pop()
         rec = f"F_{sanitize(f['route'])}_{sanitize(f['field'])}"
         cert = f"Carry_{i}"
         lines.append(f"public enum {rec}: Declared {{")
@@ -1738,11 +1763,13 @@ def cmd_import_contract(a):
     # beside it: no reader should have to guess whether nothing broke or nothing
     # was asked.
     note = (f"judged {len(srcmap)} of the {len(fields)} fields the contract declares; "
-            f"{len(open_shape)} leave the shape open in the contract itself and "
-            f"{len(unread)} are carried with a type this reader could not make out")
+            f"{len(open_shape)} leave the shape open in the contract itself, "
+            f"{len(unread)} are carried with a type this reader could not make out, "
+            f"and {len(split)} are declared by this library in more than one shape")
     return {"command": "import contract", "carrier": who, "fields": len(fields),
             "carried": named, "judged": len(srcmap), "shape_open": len(open_shape),
-            "shape_unread": len(unread), "sources_read": files, "ms": ms,
+            "shape_unread": len(unread), "shape_split": len(split),
+            "sources_read": files, "ms": ms,
             "wrote": out_path if keep else None,
             "verdict": "refused" if refusals else "holds", "refusals": refusals,
             "note": note,
