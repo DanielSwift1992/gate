@@ -500,6 +500,37 @@ async function buildJournal() {
         journalCommits = j.commits || []; journalWorld = j.world_files || []; journalMe = j.me || "";
     } catch { journalCommits = []; }
     renderJournal();
+    morningLine();
+}
+
+// ── WHAT HAPPENED WHILE YOU WERE AWAY, in one line, once. A person opens this
+// in the morning not to study it but to learn whether the night was quiet, so
+// the first thing said is a state of affairs and not a table: the numbers are
+// there to justify the sentence, never to replace it. It is said once and goes.
+// A dashboard would ask to be read; this asks to be trusted, which is the whole
+// difference between a place you check and a place you keep.
+const SEEN = "gate.last.seen";
+let morningSaid = false;
+function morningLine() {
+    if (morningSaid) return;
+    morningSaid = true;
+    let before = null;
+    try { before = localStorage.getItem(SEEN); } catch (e) {}
+    try { localStorage.setItem(SEEN, new Date().toISOString()); } catch (e) {}
+    if (!before) return;                       // a first visit has no `since`
+    const fresh = journalCommits.filter(c => c.when > before && c.touches_world);
+    const chip = (document.getElementById("chip") || {}).textContent || "";
+    const holds = /holds/.test(chip);
+    if (!fresh.length) {
+        if (holds) say("nothing has touched these facts since you last looked, and they still hold");
+        return;
+    }
+    const who = new Set(fresh.map(c => c.person || c.email));
+    const many = fresh.length + (fresh.length === 1 ? " commit" : " commits");
+    const hands = who.size === 1 ? [...who][0] : who.size + " hands";
+    say(holds
+        ? many + " touched these facts since you last looked, by " + hands + " — and they hold"
+        : many + " touched these facts since you last looked, by " + hands);
 }
 
 // ── the theme is a declaration too. The default follows the operating system;

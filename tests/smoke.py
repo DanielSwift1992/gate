@@ -1857,6 +1857,40 @@ public enum MyWatch: AccessLedger {
     S.append(("the bench's promised routes are the routes the server answers",
               contract == routes))
 
+    # ── A REFUSAL SPEAKS ABOUT THE WORLD, NEVER ABOUT WHOEVER WROTE IT. It is
+    # already the canon of names; it is a wall now, because tone is exactly the
+    # thing that erodes one careless sentence at a time. `the tracker calls it
+    # closed` is a fact about a fact. `you forgot to` is a fact about a person,
+    # and a person who is told off by a machine stops opening it.
+    BLAME = re.compile(r"\byou (must|should|failed|forgot|cannot|need to)\b"
+                       r"|\byour (mistake|error|fault)\b"
+                       r"|\b(invalid|illegal|wrong)\b|\berror in\b", re.I)
+    said = [n.value for n in ast.walk(ast.parse(open(GATE).read()))
+            if isinstance(n, ast.Constant) and isinstance(n.value, str)]
+    S.append(("nothing the tool says is about the person who wrote it",
+              bool(said) and not [s for s in said if BLAME.search(s)]))
+
+    # ── WHAT HAPPENED WHILE YOU WERE AWAY, in one line, once. A person opens
+    # this in the morning not to study it but to learn whether the night was
+    # quiet, so the first thing said is a state of affairs and never a table: the
+    # numbers justify the sentence rather than replacing it. A dashboard asks to
+    # be read; this asks to be trusted, which is the difference between a place
+    # you check and a place you keep.
+    # It is said ONCE and goes, it says nothing at all on a first visit (there is
+    # no `since` yet to speak of), and it never repeats the verdict — the chip
+    # says the state, this says the change.
+    S.append(("the bench says what happened while you were away, in one line, and says nothing on a first visit",
+              "function morningLine()" in ui and 'const SEEN = "gate.last.seen"' in ui
+              and "if (!before) return;" in ui
+              # said once: the guard is set before anything else can call it again
+              and "if (morningSaid) return;" in ui
+              # a state of affairs, and the numbers behind it
+              and "nothing has touched these facts since you last looked" in ui
+              and "since you last looked, by \" + hands" in ui
+              # and it is spoken through the same quiet bar everything else uses,
+              # never as a panel of its own
+              and "say(holds" in ui))
+
     # ── and the page says when it is talking to a bench that predates it. The
     # server reads its page off the disk and answers out of memory, so a gate
     # updated while it runs leaves a new page speaking to an old process: every
