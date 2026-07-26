@@ -4,6 +4,16 @@
 
 The working prototype, end to end:
 
+- A client may not fall behind its contract unseen. `gate import contract` reads
+  an OpenAPI document and a client library and judges them as one world: the
+  shape is judged (carrying a number as text is refused with both shapes named)
+  and absence is named beside it, since a claim never made cannot be refused. Run
+  against a real project's three official clients it holds for the TypeScript
+  one, refuses the Rust one for a field the contract declares and the library
+  does not carry, and tells the Python one plainly that it forwards an untyped
+  bag — which lags on nothing and helps nobody. That third answer is the one a
+  hand search always gets wrong.
+
 - A citation may not outlive the thing it cites. `gate import refs` reads a
   tracker's own export and every `TODO(KEY)` your code writes, and judges them as
   one world: a note whose ticket was closed is refused at the line that writes

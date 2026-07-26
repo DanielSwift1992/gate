@@ -847,6 +847,48 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and any("calls it closed" in s for s in said)
               and any("no such thing" in s for s in said)))
 
+    # ── a client may not fall behind the contract unseen. Types make each side
+    # self-consistent and say nothing about the other, so a hand-written library
+    # can lag a contract for releases while its own checker stays happy; the only
+    # thing tying them today is a generator, one pipeline per language. Here the
+    # seam does it instead: the SHAPE is judged (carrying a number as text is
+    # refused, and the judge names both), and ABSENCE is named beside it, since a
+    # claim never made cannot be refused.
+    # The third case is the one a hand search always gets wrong and this must
+    # not: a library that FORWARDS AN UNTYPED BAG lags on nothing — whatever you
+    # hand it reaches the wire — so calling every field missing there would be
+    # the loudest wrong answer the door can give.
+    con = os.path.join(tmp, "contract")
+    for part in ("typed", "wrongshape", "bag"):
+        os.makedirs(os.path.join(con, part), exist_ok=True)
+    open(os.path.join(con, "spec.json"), "w").write(json.dumps({"paths": {"/scrape": {"post": {
+        "requestBody": {"content": {"application/json": {"schema": {"properties": {
+            "url": {"type": "string"}, "waitFor": {"type": "integer"},
+            "headers": {"type": "object"}, "actions": {"type": "array"}}}}}}}}}}))
+    open(os.path.join(con, "typed", "client.ts"), "w").write(
+        "interface Req {\n  url: string;\n  waitFor?: number;\n"
+        "  headers?: Record<string, string>;\n  actions?: object[];\n}\n")
+    open(os.path.join(con, "wrongshape", "client.ts"), "w").write(
+        "interface Req {\n  url: string;\n  waitFor?: string;\n"
+        "  headers?: Record<string, string>;\n  actions?: object[];\n}\n")
+    open(os.path.join(con, "bag", "client.py"), "w").write(
+        "def scrape(url: str, params: Dict[str, Any] = None):\n"
+        "    body = {'url': url}\n    body.update(params or {})\n    return body\n")
+    def contract_run(part, name):
+        return run("import", "contract", os.path.join(con, "spec.json"),
+                   "--client", os.path.join(con, part), "--name", name)
+    _, typed = contract_run("typed", "Typed")
+    _, wrong = contract_run("wrongshape", "Wrong")
+    _, bag = contract_run("bag", "Bag")
+    wrong_says = " ".join(x["claim"] for x in wrong.get("refusals", []))
+    S.append(("a client may not fall behind its contract unseen: a shape is judged, an absence is named, and a bag is neither",
+              typed.get("verdict") == "holds"
+              # a map of strings is a map: reading the word inside it as the whole
+              # shape would accuse a library of a mismatch it does not have
+              and not typed.get("refusals")
+              and "carries it as text" in wrong_says and "calls it count" in wrong_says
+              and bag.get("verdict") == "holds" and "untyped bag" in (bag.get("note") or "")))
+
     # ── and the check is the whole ceremony: one command in the CI the client
     # already has. It exits non-zero on a stale citation and zero when the code
     # and the tracker agree, so no wrapper is needed; the export may sit in

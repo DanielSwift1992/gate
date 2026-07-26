@@ -141,6 +141,17 @@ head. A refusal points at its address instead.
   breaking commit found automatically), a merge guard (textually clean,
   semantically broken merges get named), and a free audit journal
   (`git log` over grants, signed commits as signed grants).
+- **A client may not fall behind its contract unseen.** `gate import contract
+  openapi.json --client ./sdk` reads what the contract declares and what a
+  library actually carries, and judges them as one world: a field carried as the
+  wrong sort of thing is refused with both shapes named, and one the library does
+  not carry at all is named beside it. Types cannot do this — they make each side
+  self-consistent and say nothing about the other, which is why a hand-written
+  client lags a contract for releases while its own checker stays happy. The only
+  other thing that ties them is a generator, one pipeline per language; this
+  leaves the client hand-written. A library that forwards an untyped bag is told
+  so plainly rather than accused of lagging on every field: it lags on nothing,
+  and it helps nobody.
 - **A citation may not outlive the thing it cites.** `gate import refs
   tickets.json --code .` reads a tracker's own export and every place your code
   names a ticket, and judges them as one world: a `TODO(PROJ-42)` whose ticket
@@ -337,7 +348,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 160 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 162 end-to-end checks, the definition of green
 ```
 
 ## Status

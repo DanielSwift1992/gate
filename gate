@@ -1544,6 +1544,186 @@ def cmd_import_rbac(a):
     }
 
 
+CONTRACT_HEADER = """// printed by gate import contract — what an API contract declares against what
+// a client library carries, written in the contract crystal (`gate stdlib show
+// genre-contract`). A field is a record with a shape, a library is a carrier,
+// and carrying it as the wrong sort of thing is refused by name.
+//
+"""
+
+SHAPE_OF = {"string": "Text", "integer": "Count", "number": "Count",
+            "boolean": "Flag", "array": "Many", "object": "Nested"}
+
+
+def read_contract(path):
+    # an OpenAPI document, read for the one thing a client must agree with: the
+    # fields of a request body and the sort of thing each one is.
+    import json as _json
+    spec = _json.load(open(path, encoding="utf-8"))
+    def resolve(s):
+        if "$ref" in s:
+            return spec.get("components", {}).get("schemas", {}).get(s["$ref"].split("/")[-1], {})
+        return s
+    out = []
+    for route, ops in (spec.get("paths") or {}).items():
+        if not isinstance(ops, dict):
+            continue
+        for verb, op in ops.items():
+            if not isinstance(op, dict):
+                continue
+            body = (op.get("requestBody", {}).get("content", {})
+                      .get("application/json", {}).get("schema"))
+            if not body:
+                continue
+            for name, prop in sorted((resolve(body).get("properties") or {}).items()):
+                out.append({"route": route, "field": name,
+                            "shape": SHAPE_OF.get((prop or {}).get("type"), "Nested")})
+    return out
+
+
+def snake_of(name):
+    return re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
+
+
+SHAPE_WORDS = [
+    (r"\bbool(ean)?\b", "Flag"),
+    (r"\b(u|i)\d+\b|\bf\d+\b|\bnumber\b|\bint(eger)?\b|\bfloat\b|\bdouble\b", "Count"),
+    (r"\bstr(ing)?\b|\bString\b|&str", "Text"),
+]
+
+
+def shape_seen(body, field):
+    # what SORT of thing the library says this field is. A client writes it
+    # plainly wherever it types a request — `waitFor?: number`, `pub wait_for:
+    # Option<u32>`, `wait_for: int` — so the type is read where the field is
+    # declared, never guessed from its name. Unreadable means unread: this
+    # returns nothing rather than a shape, because accusing a library of a
+    # mismatch on a type nobody could see is worse than staying silent.
+    for name in {field, snake_of(field)}:
+        m = re.search(r"\b" + re.escape(name) + r"\??\s*:\s*([^;,\n{]+)", body)
+        if not m:
+            continue
+        t = m.group(1).strip()
+        # containers first, ALWAYS: a map of strings is a map, and reading the
+        # word inside it as the whole shape accuses a library of a mismatch it
+        # does not have — `Record<string, string>` is nested, not text.
+        if re.search(r"\[\s*\]|\bVec<|\bArray<|\bList\[|\blist\[|\bSequence\[", t):
+            return "Many"
+        if re.search(r"\bDict\[|\bHashMap<|\bBTreeMap<|\bobject\b|\bRecord<|\bMap<|\{", t):
+            return "Nested"
+        for pat, shape in SHAPE_WORDS:
+            if re.search(pat, t):
+                return shape
+    return None
+
+
+def read_carrier(root):
+    # what a client library names. ONLY its own sources: a field mentioned in a
+    # test or an example proves nothing about what the library exposes, and
+    # counting those was the first way a hand search gets this wrong.
+    text, files = [], 0
+    for dirpath, dirs, names in os.walk(root):
+        dirs[:] = [d for d in dirs
+                   if d not in (".git", "node_modules", "target", "dist", "build", ".venv")
+                   and "test" not in d.lower() and "example" not in d.lower()]
+        for f in names:
+            if os.path.splitext(f)[1] not in (".py", ".ts", ".js", ".rs", ".go", ".rb", ".java", ".kt"):
+                continue
+            if "test" in f.lower() or "example" in f.lower():
+                continue
+            try:
+                text.append(open(os.path.join(dirpath, f), encoding="utf-8", errors="replace").read())
+            except OSError:
+                continue
+            files += 1
+    return "\n".join(text), files
+
+
+def cmd_import_contract(a):
+    # import contract <spec.json> --client DIR [--name N] [-o out.swift] — what
+    # the contract declares against what a library carries. The shapes are
+    # judged; a field carried by nobody is named beside them, at the line of the
+    # contract that declares it.
+    src = a[0]
+    root = a[a.index("--client") + 1] if "--client" in a else "."
+    who = a[a.index("--name") + 1] if "--name" in a else sanitize(os.path.basename(os.path.abspath(root)))
+    keep = "-o" in a
+    out_path = (a[a.index("-o") + 1] if keep
+                else os.path.join(tempfile.mkdtemp(prefix="gate-contract-"), "contract-gate.swift"))
+    fields = read_contract(src)
+    body, files = read_carrier(root)
+    carried = {}
+    for f in fields:
+        names = {f["field"], snake_of(f["field"])}
+        carried[(f["route"], f["field"])] = any(
+            re.search(r"\b" + re.escape(n) + r"\b", body) for n in names)
+    named = sum(1 for v in carried.values() if v)
+    # A library that FORWARDS A BAG is not a library that lags: whatever you hand
+    # it reaches the wire, so no field is missing — and none is offered, checked
+    # or spelled for you either. Saying "eighteen fields are missing" of such a
+    # library is the loudest wrong answer this door can give, and it is exactly
+    # the mistake a hand search makes. Counting named fields does not catch it:
+    # a bag-forwarder still names one or two. The forwarding itself is the sign.
+    BAG = (r"Dict\[str,\s*Any\]|dict\[str,\s*Any\]|\*\*kwargs"
+           r"|\[key:\s*string\]:\s*any|Record<string,\s*any>"
+           r"|serde_json::Value|map\[string\]interface\{\}")
+    # BOTH signals, or the rule cuts the wrong way: a typed library may still use
+    # a loose value in one corner, and naming almost every field is proof enough
+    # that it carries the contract. A bag forwards AND names next to nothing.
+    if fields and re.search(BAG, body) and named * 3 < len(fields):
+        return {"command": "import contract", "carrier": who, "fields": len(fields),
+                "sources_read": files, "verdict": "holds", "refusals": [],
+                "note": (f"{who} forwards an untyped bag: of the {len(fields)} fields the contract "
+                         f"declares it names {named}, and the rest reach the wire unchecked. Nothing "
+                         "here can disagree — and nothing offers, spells or checks a field for "
+                         "whoever calls it, so a typo is delivered rather than refused"),
+                "next": "point --client at a library that types its request, or read this as the finding",
+                "mutates": False}
+    lines = [CONTRACT_HEADER + STDLIB["genre-contract"], ""]
+    lines.append(f"public enum {who}: Carrier {{}}")
+    srcmap, missing = {}, []
+    for i, f in enumerate(fields):
+        rec = f"F_{sanitize(f['route'])}_{sanitize(f['field'])}"
+        lines.append(f"public enum {rec}: Declared {{")
+        lines.append(f"    public typealias Of = {f['shape']}")
+        lines.append("}")
+        if carried[(f["route"], f["field"])]:
+            cert = f"Carry_{i}"
+            # the shape the LIBRARY says, not the one the contract says — else the
+            # certificate would agree with itself and judge nothing at all
+            as_shape = shape_seen(body, f["field"]) or f["shape"]
+            lines.append(f"public typealias {cert} = Carries<{who}, {rec}, {as_shape}>")
+            srcmap[cert] = f
+        else:
+            missing.append(f)
+    world = "\n".join(lines) + "\n"
+    with open(out_path, "w") as fh:
+        fh.write(world)
+    t0 = time.time()
+    outp = subprocess.run([JUDGE, "judge", "where", out_path], capture_output=True, text=True).stdout
+    ms = round((time.time() - t0) * 1000, 1)
+    refusals = []
+    for m in re.finditer(r"^✗ '(\w+)[^']*' requires the types '[^']*' \(aka '([^']+)'\) and '[^']*' \(aka '([^']+)'\)", outp, re.M):
+        cert, want, got = m.groups()
+        if cert in srcmap:
+            f = srcmap[cert]
+            refusals.append({"address": f"{os.path.basename(src)} · {f['route']} · {f['field']}",
+                             "claim": f"the contract calls it {want.lower()}, {who} carries it as {got.lower()}"})
+    # named beside the judged: a field this library does not carry at all
+    for f in missing:
+        refusals.append({"address": f"{os.path.basename(src)} · {f['route']} · {f['field']}",
+                         "claim": f"the contract declares it, {who} does not carry it"})
+    if not keep:
+        shutil.rmtree(os.path.dirname(out_path), ignore_errors=True)
+    return {"command": "import contract", "carrier": who, "fields": len(fields),
+            "carried": named, "sources_read": files, "ms": ms,
+            "wrote": out_path if keep else None,
+            "verdict": "refused" if refusals else "holds", "refusals": refusals,
+            "next": ("open the field above: the contract says it, this library does not"
+                     if refusals else "wire it into CI: this library cannot fall behind the contract unseen"),
+            "mutates": True}
+
+
 REFS_HEADER = """// printed by gate import refs — the citations this code makes to a tracker,
 // written in the reference crystal (`gate stdlib show genre-reference`). A
 // tracked thing carries its state on an axis, a site is a place in your own
@@ -2272,6 +2452,8 @@ def dispatch(cmd, rest):
         return cmd_change(rest)
     if cmd == "import" and rest and rest[0] == "codeowners":
         return cmd_import_codeowners(rest[1:])
+    if cmd == "import" and rest and rest[0] == "contract":
+        return cmd_import_contract(rest[1:])
     if cmd == "import" and rest and rest[0] == "refs":
         return cmd_import_refs(rest[1:])
     if cmd == "import" and rest and rest[0] == "rbac":
