@@ -149,10 +149,9 @@ reads the repository itself, with nothing to translate.
 
 **Full**, **Bare** and **Table** are three ways to look at one file. Beside the
 file list and the journal — the other two things that are about the repository
-rather than about a file — stands **seams**: the pairs this folder is party to,
-grouped by what they are waiting for. What came back stands first, its reason
-having closed. Where nothing is declared it says what a seam is and the two
-commands that make one.
+rather than about a file — **seams** appears when the folder has any: the pairs
+it is party to, one line each, with what came back standing first. The rail
+shows what a repository has, so a folder with no seam in it shows none.
 
 From then on:
 

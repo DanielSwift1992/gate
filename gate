@@ -1149,18 +1149,23 @@ def cmd_vendor(root):
     return {"carried": carried, "judge_sha256": digest, "shim": "./gatew"}
 
 
-SEAM_DEMO_SPEC = {"paths": {"/scrape": {"post": {
-    "parameters": [{"name": "waitFor", "in": "query", "schema": {"type": "integer"}}],
+# a domain everybody has: send a message. `/scrape` and `moderation` are somebody
+# else's vocabulary, and a demonstration that has to be decoded first is not one.
+SEAM_DEMO_SPEC = {"paths": {"/messages": {"post": {
+    "parameters": [{"name": "sendAt", "in": "query", "schema": {"type": "string"}}],
     "requestBody": {"content": {"application/json": {"schema": {"properties": {
-        "url": {"type": "string"}, "include": {"type": "array"},
-        "moderation": {"type": "string"}}}}}}}}}}
+        "to": {"type": "string"}, "body": {"type": "string"},
+        "attachments": {"type": "array"}}}}}}}}}}
 
-SEAM_DEMO_SDK = {"carrier": "SdkJS", "against": {"contract": "openapi.json", "revision": "a1b2c3d"},
-                 "carries": [{"route": "/scrape", "field": "url", "as": "Text"},
-                             {"route": "/scrape", "field": "waitFor", "as": "Text"},
-                             {"route": "/scrape", "field": "include", "as": "Many",
-                              "mine": "include_collections"},
-                             {"route": "/scrape", "field": "autodelete", "as": "Flag"}]}
+SEAM_DEMO_SDK = {"carrier": "MessagesJS",
+                 "against": {"contract": "openapi.json", "revision": "a1b2c3d"},
+                 "carries": [{"route": "/messages", "field": "to", "as": "Text"},
+                             {"route": "/messages", "field": "body", "as": "Text"},
+                             # the contract writes a time as a string; this library
+                             # types it as a number, which is the disagreement
+                             {"route": "/messages", "field": "sendAt", "as": "Count"},
+                             # and it carries one the contract never stated
+                             {"route": "/messages", "field": "replyTo", "as": "Text"}]}
 
 
 def cmd_demo_seam(a):
@@ -1175,7 +1180,7 @@ def cmd_demo_seam(a):
     os.makedirs(root, exist_ok=True)
     _json.dump(SEAM_DEMO_SPEC, open(os.path.join(root, "openapi.json"), "w"), indent=1)
     _json.dump(SEAM_DEMO_SDK, open(os.path.join(root, "sdk.declared.json"), "w"), indent=1)
-    _json.dump({"diverges": [{"route": "/scrape", "field": "waitFor", "because": "PROJ-42",
+    _json.dump({"diverges": [{"route": "/messages", "field": "sendAt", "because": "PROJ-42",
                               "declared_by": "sdk-team"}]},
                open(os.path.join(root, "known.json"), "w"), indent=1)
     _json.dump([{"key": "PROJ-42", "status": "In Progress"}],
@@ -1185,16 +1190,16 @@ def cmd_demo_seam(a):
     sdk = cmd_declare(["carrier", os.path.join(root, "sdk.declared.json"),
                        "-o", os.path.join(root, "sdk.swift")])
     att = cmd_attention([os.path.join(root, "api.swift"), os.path.join(root, "sdk.swift"),
-                         "--as", "SdkJS"])
+                         "--as", "MessagesJS"])
     rel = os.path.relpath(root)
     return {"command": "demo seam", "root": root,
             "declared": {"contract": api["declares"], "carrier": sdk["declares"]},
             "waiting_on_you": [x["address"] for x in att["waits_on_you"]],
             "you_wait_on": [x["address"] for x in att["you_wait_on"]],
             "parted": [x["address"] + " · " + x["why"] for x in att["parted"]],
-            "next": f"cd {rel} && gate attention api.swift sdk.swift --as SdkJS",
+            "next": f"cd {rel} && gate attention api.swift sdk.swift --as MessagesJS",
             "try": [f"gate seam api.swift sdk.swift — the court over the pair, in ms",
-                    f"gate attention api.swift sdk.swift --as SdkJS --known known.json "
+                    f"gate attention api.swift sdk.swift --as MessagesJS --known known.json "
                     "--tracker tickets.json — the same, with one divergence declared",
                     "edit tickets.json: mark PROJ-42 done, and watch the exception come back",
                     "gate declare contract openapi.json — the emitter, on your own spec"],

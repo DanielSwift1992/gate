@@ -234,9 +234,6 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 #seam-host{padding-bottom:calc(var(--u)*3)}
 .seam-pair{padding:calc(var(--u)*2) calc(var(--u)*7) 0}
 .badge.back{color:var(--law)}
-.seam-empty{padding:0 calc(var(--u)*7) calc(var(--u)*3);color:var(--muted)}
-.seam-empty p{margin:calc(var(--u)*2) 0}
-.seam-empty code{display:block;font-family:ui-monospace,Menlo,monospace;color:var(--ink);margin:var(--u) 0}
 .stale{color:var(--law)}
 #bare .note{display:block}
 #bare .slot{cursor:pointer;border-bottom:1px dashed var(--line)}
@@ -1808,29 +1805,21 @@ function setMode(m) {
 // exception comes back on its own and nobody has to remember.
 async function buildSeams() {
     const host = document.getElementById("seam-host");
-    host.innerHTML = '<div class="seam-empty">reading…</div>';
     let seams = [];
     try { seams = (await (await fetch("/attention")).json()).seams || []; }
     catch { seams = []; }
+    // THE RAIL SHOWS WHAT THIS REPOSITORY HAS. Files, because there are files;
+    // the journal, because there is a history. A folder with no seam in it has
+    // no seam, and a permanent panel explaining a thing somebody is not using is
+    // an advertisement in the one place that is supposed to be an account. Where
+    // seams are declared they appear; where they are not, `gate demo seam` and
+    // the readme are where the idea lives.
+    const head = document.getElementById("seams-head");
     if (!seams.length) {
-        // what a seam IS, in the order somebody needs it, ending with the two
-        // commands that make one.
-        // say what it IS, in the order somebody needs it, and end with the two
-        // commands. Explaining our own reasoning to a reader is writing for
-        // ourselves; defining a thing by what it is not leaves them holding
-        // nothing.
-        host.innerHTML = '<div class="seam-empty">'
-            + "<p>No seam here yet.</p>"
-            + "<p>A seam is two sides of one agreement. An API states what it declares; "
-            + "a library states what it carries. When the two disagree, gate names the "
-            + "field and the line.</p>"
-            + "<p>Each side writes its own:</p>"
-            + "<code>gate declare contract openapi.json -o api.swift</code>"
-            + "<code>gate declare carrier sdk.json -o sdk.swift</code>"
-            + "<p>Then this list fills. <code>gate demo seam</code> builds a small one to "
-            + "look at.</p></div>";
+        head.hidden = true; host.hidden = true; host.innerHTML = "";
         return;
     }
+    head.hidden = false; host.hidden = false;
     host.innerHTML = "";
     for (const s of seams) {
         const box = document.createElement("div");

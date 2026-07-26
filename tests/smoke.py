@@ -1213,10 +1213,12 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     ds = os.path.join(tmp, "demo-seam")
     _, seam_demo = run("demo", "seam", ds)
     S.append(("a second demo shows the seam itself: what each side owes the other, and where they part",
-              seam_demo.get("waiting_on_you") == ["/scrape · moderation"]
-              and seam_demo.get("you_wait_on") == ["/scrape · autodelete"]
+              # a domain everybody has: send a message. Somebody else's endpoint
+              # names make a demonstration that must be decoded before it teaches.
+              seam_demo.get("waiting_on_you") == ["/messages · attachments"]
+              and seam_demo.get("you_wait_on") == ["/messages · replyTo"]
               and len(seam_demo.get("parted", [])) == 1
-              and "waitFor" in seam_demo["parted"][0]
+              and "sendAt" in seam_demo["parted"][0]
               # and it leaves the pieces on disk for the reader to drive by hand
               and all(os.path.exists(os.path.join(ds, f)) for f in
                       ("openapi.json", "sdk.declared.json", "known.json", "tickets.json",
@@ -1256,12 +1258,11 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               # the tooltip to mean anything, which is a term used before it is
               # introduced. These are the product's own words for the same thing.
               and '"your word"' in ui and '"their word"' in ui
-              # where there is none it says what a seam IS and what to type —
-              # never what it is not, and never our reasoning for showing nothing
-              and "No seam here yet" in ui
-              and "A seam is two sides of one agreement" in ui
-              and "gate declare contract openapi.json -o api.swift" in ui
-              and "blank screen" not in ui and "specimen" not in ui.split("seam-empty", 1)[1][:900]))
+              # and the rail shows what this repository HAS. A folder with no seam
+              # in it has no seam, and a permanent panel about a thing nobody is
+              # using is an advertisement standing in an account.
+              and "head.hidden = true; host.hidden = true" in ui
+              and "seam-empty" not in ui))
 
     # ── THE PITCH STAYS OUTSIDE THE VERDICT. A brand may say `sight for
     # promises`; a verdict may not. What a reader is handed by the tool is what
