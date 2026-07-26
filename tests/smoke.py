@@ -1240,13 +1240,20 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               # a pair is recognised by what the files say they are
               and r'public enum \w+: Carrier \{\}' in seam_src
               and r'public enum F_\w+: Declared \{' in seam_src
-              # the view is a view, beside the others, and asks the same question
-              # in the same words the command line uses
-              and 'data-m="seams"' in ui and "async function buildSeams()" in ui
+              # it sits with FILES and JOURNAL, which are the other things that
+              # are about this repository — the Full/Bare/Table switch asks how to
+              # look at ONE FILE, and a seam is not a view of a file at all
+              and 'data-fold="seams"' in ui and 'data-m="seams"' not in ui
+              and "async function buildSeams()" in ui
+              # and it asks the same question the command line asks, in the same
+              # words, so nobody learns a second vocabulary to look through glass
               and '"waits on you"' in ui and '"you are waiting"' in ui and '"came back"' in ui
-              # and the empty account teaches rather than shows a specimen
-              and "an empty account is a fact" in ui
-              and "gate declare contract openapi.json -o api.swift" in ui))
+              # where there is none it says what a seam IS and what to type —
+              # never what it is not, and never our reasoning for showing nothing
+              and "No seam here yet" in ui
+              and "A seam is two sides of one agreement" in ui
+              and "gate declare contract openapi.json -o api.swift" in ui
+              and "blank screen" not in ui and "specimen" not in ui.split("seam-empty", 1)[1][:900]))
 
     # ── THE PITCH STAYS OUTSIDE THE VERDICT. A brand may say `sight for
     # promises`; a verdict may not. What a reader is handed by the tool is what

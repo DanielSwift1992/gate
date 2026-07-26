@@ -225,17 +225,19 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
    the category of the line is a caption. Nothing here is a verdict — a seam is a
    standing account of who owes whom a word, and the court over it is `gate
    seam`. */
-#seam-host{position:absolute;inset:0;overflow:auto;background:var(--paper);display:none;
-  padding:calc(var(--u)*6) calc(var(--u)*8) calc(var(--u)*40)}
-.seam-pair{margin-bottom:calc(var(--u)*10)}
-.seam-pair h3{font:600 13px -apple-system,sans-serif;color:var(--ink);margin:0 0 var(--u)}
-.seam-row{display:flex;gap:calc(var(--u)*3);align-items:baseline;padding:var(--u) 0}
-.seam-kind{flex:0 0 11em;color:var(--seam);font:11px/1.5 -apple-system,sans-serif}
-.seam-row.back .seam-kind{color:var(--law)}
-.seam-addr{font:12.5px/19px ui-monospace,Menlo,monospace;color:var(--ink)}
-.seam-why{color:var(--muted);font:11px/1.5 -apple-system,sans-serif}
-.seam-empty{max-width:42em;color:var(--muted);font:13px/1.6 -apple-system,sans-serif}
-.seam-empty code{font-family:ui-monospace,Menlo,monospace;color:var(--ink)}
+#seam-host{padding:0 calc(var(--u)*4) calc(var(--u)*4)}
+.seam-pair{margin-bottom:calc(var(--u)*5)}
+.seam-pair h4{font:600 11px -apple-system,sans-serif;color:var(--ink);margin:calc(var(--u)*2) 0 var(--u)}
+.seam-row{padding:var(--u) 0;cursor:default}
+.seam-kind{color:var(--seam);font:11px/1.5 -apple-system,sans-serif;
+  margin-top:calc(var(--u)*3);text-transform:uppercase;letter-spacing:.04em}
+.seam-kind.back{color:var(--law)}
+.seam-src{color:var(--seam);margin-top:calc(var(--u)*2)}
+.seam-addr{display:block;font:12px/17px ui-monospace,Menlo,monospace;color:var(--ink)}
+.seam-why{display:block;color:var(--muted);font:11px/1.4 -apple-system,sans-serif}
+.seam-empty{color:var(--muted);font:12px/1.55 -apple-system,sans-serif}
+.seam-empty code{display:block;font-family:ui-monospace,Menlo,monospace;color:var(--ink);
+  font-size:11px;margin:var(--u) 0}
 .stale{color:var(--law)}
 #bare .note{display:block}
 #bare .slot{cursor:pointer;border-bottom:1px dashed var(--line)}
@@ -328,6 +330,8 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 </style>
 <div id="rail"><div id="brand"><b>gate</b><span id="brandline" class="caption"></span></div>
   <h3 class="fold caption" data-fold="files"><i></i>files</h3><div id="filelist" class="foldable"></div>
+  <h3 class="fold caption" id="seams-head" data-fold="seams"><i></i>seams</h3>
+  <div id="seam-host" class="foldable"></div>
   <h3 class="fold" id="journal-head" data-fold="journal"><i></i>journal <span class="obs caption"></span></h3>
   <div id="journal" class="foldable"></div></div>
 <div class="split" id="split-rail" style="display:none"></div>
@@ -337,7 +341,7 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 <div id="main">
   <div id="bar">
     <span class="seg" id="nav-seg"><button id="nav-back" disabled>&lsaquo;</button><button id="nav-fwd" disabled>&rsaquo;</button></span>
-    <span class="seg" id="view-seg"><button class="on" data-m="full">Full</button><button data-m="bare">Bare</button><button data-m="table">Table</button><button data-m="seams">Seams</button></span>
+    <span class="seg" id="view-seg"><button class="on" data-m="full">Full</button><button data-m="bare">Bare</button><button data-m="table">Table</button></span>
     <b id="fname" class="fact">gate.swift</b>
     <button id="keys-btn" title="Keyboard shortcuts">?</button>
     <span id="gitstate" class="observed" title="Edits go straight to the file on disk. gate keeps no state of its own: commit or discard with git."></span>
@@ -346,7 +350,6 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
     <div id="editor-host"></div>
     <pre id="bare"></pre>
     <div id="table-host"></div>
-    <div id="seam-host"></div>
   </div>
   <div id="verdict-panel">
     <div id="inspect" class="observed" title="the cursor on a name says what it is"></div>
@@ -528,6 +531,7 @@ async function buildJournal() {
         journalCommits = j.commits || []; journalWorld = j.world_files || []; journalMe = j.me || "";
     } catch { journalCommits = []; }
     renderJournal();
+    buildSeams();
 }
 
 
@@ -1789,11 +1793,9 @@ function setMode(m) {
     document.getElementById("editor-host").style.display = m === "full" ? "" : "none";
     document.getElementById("bare").style.display = m === "bare" ? "block" : "none";
     document.getElementById("table-host").style.display = m === "table" ? "block" : "none";
-    document.getElementById("seam-host").style.display = m === "seams" ? "block" : "none";
     document.querySelectorAll("#view-seg button").forEach(b => b.classList.toggle("on", b.dataset.m === m));
     if (m === "bare" && lastParsed) document.getElementById("bare").innerHTML = bareForm(lastParsed, cm.getValue());
     if (m === "table") buildTables();
-    if (m === "seams") buildSeams();
     if (m === "full") cm.refresh();
 }
 
@@ -1815,56 +1817,67 @@ async function buildSeams() {
         // an empty account is a fact. Inventing a specimen to fill it would be
         // the one lie this thing cannot afford, so the empty state teaches
         // instead: what a seam is, and the two commands that make one.
+        // say what it IS, in the order somebody needs it, and end with the two
+        // commands. Explaining our own reasoning to a reader is writing for
+        // ourselves; defining a thing by what it is not leaves them holding
+        // nothing.
         host.innerHTML = '<div class="seam-empty">'
-            + "<p>No seam is declared in this folder, so there is nothing here yet — "
-            + "and an empty account is a fact, not a blank screen to fill with a specimen.</p>"
-            + "<p>A seam is two sides that each say their own words. One states what it "
-            + "declares; the other claims what it carries. Neither reads the other's code: "
-            + "each emits its side from what it already keeps, and a disagreement between "
-            + "the two is refused with an address.</p>"
-            + "<p><code>gate declare contract openapi.json -o api.swift</code><br>"
-            + "<code>gate declare carrier sdk.json -o sdk.swift</code></p>"
-            + "<p>Then this view fills, and <code>gate seam api.swift sdk.swift</code> is the "
-            + "court over the pair. <code>gate demo seam</code> builds a small one to look at.</p>"
-            + "</div>";
+            + "<p>No seam here yet.</p>"
+            + "<p>A seam is two sides of one agreement. An API states what it declares; "
+            + "a library states what it carries. When the two disagree, gate names the "
+            + "field and the line.</p>"
+            + "<p>Each side writes its own:</p>"
+            + "<code>gate declare contract openapi.json -o api.swift</code>"
+            + "<code>gate declare carrier sdk.json -o sdk.swift</code>"
+            + "<p>Then this list fills. <code>gate demo seam</code> builds a small one to "
+            + "look at.</p></div>";
         return;
     }
     host.innerHTML = "";
     for (const s of seams) {
         const box = document.createElement("div");
         box.className = "seam-pair";
-        const head = document.createElement("h3");
-        head.textContent = s.carrier + " against " + s.contract_file
-            + " · " + s.stated + " stated, " + s.claimed + " claimed";
+        const head = document.createElement("h4");
+        head.textContent = s.carrier + " against " + s.contract_file;
         box.appendChild(head);
-        const row = (kind, addr, why, back) => {
-            const r = document.createElement("div");
-            r.className = "seam-row" + (back ? " back" : "");
-            r.innerHTML = '<span class="seam-kind">' + esc(kind) + '</span>'
-                + '<span class="seam-addr">' + esc(addr) + "</span>"
-                + (why ? '<span class="seam-why">' + esc(why) + "</span>" : "");
-            box.appendChild(r);
+        // grouped by KIND, because the kind is what tells you why you are
+        // looking at a line: `what waits on me` is one glance, not a scan of
+        // labels. The order is the order of urgency — what came back stands
+        // first, its ground having gone out from under it.
+        const group = (kind, items, why, back) => {
+            if (!items.length) return;
+            const h = document.createElement("div");
+            h.className = "seam-kind" + (back ? " back" : "");
+            h.textContent = kind;
+            box.appendChild(h);
+            for (const x of items) {
+                const r = document.createElement("div");
+                r.className = "seam-row";
+                r.innerHTML = '<span class="seam-addr">' + esc(x.address) + "</span>"
+                    + '<span class="seam-why">' + esc(why(x)) + "</span>";
+                box.appendChild(r);
+            }
         };
-        for (const x of s.expired)
-            row("came back", x.address, "set aside for " + x.because + ", and " + x.because
-                + " is closed", true);
-        for (const x of s.waits_on_you)
-            row("waits on you", x.address, x.why || "stated by the contract; this side has not "
-                + "said whether it carries it");
-        for (const x of s.you_wait_on)
-            row("you are waiting", x.address, x.why || "carried here; the contract has not stated it");
-        for (const x of s.parted) row("parted", x.address, x.why);
-        for (const x of s.known)
-            row("set aside", x.address, "by " + x.declared_by + " for " + x.because
-                + " (" + x.state.toLowerCase() + ")");
+        group("came back", s.expired,
+              x => "set aside for " + x.because + ", and " + x.because + " is closed", true);
+        group("waits on you", s.waits_on_you,
+              x => x.why || "stated by the contract; this side has not said whether it carries it");
+        group("you are waiting", s.you_wait_on,
+              x => x.why || "carried here; the contract has not stated it");
+        group("parted", s.parted, x => x.why || "");
+        group("set aside", s.known,
+              x => "by " + x.declared_by + " for " + x.because + " (" + x.state.toLowerCase() + ")");
         if (!s.expired.length && !s.waits_on_you.length && !s.you_wait_on.length
-            && !s.parted.length && !s.known.length)
-            row("", "nothing waits on either side", "");
+            && !s.parted.length && !s.known.length) {
+            const q = document.createElement("div");
+            q.className = "seam-why";
+            q.textContent = "nothing waits on either side";
+            box.appendChild(q);
+        }
         const src = document.createElement("div");
-        src.className = "seam-why";
-        src.textContent = "read from " + s.contract_file + " and " + s.carrier_file
-            + (s.read_known ? ", divergences from " + s.read_known : "")
-            + (s.read_tracker ? ", their reasons checked against " + s.read_tracker : "");
+        src.className = "seam-src caption";
+        src.textContent = [s.contract_file, s.carrier_file, s.read_known, s.read_tracker]
+            .filter(Boolean).join(" · ");
         box.appendChild(src);
         host.appendChild(box);
     }

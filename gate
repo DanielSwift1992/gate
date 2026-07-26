@@ -1695,7 +1695,7 @@ def cmd_badge(a):
                       if shallow or not marks else
                       f"{judged} commits that touched this world were judged again, oldest {marks[-1][1]}"
                       + (f", and the last that did not hold was {broke}" if broke else ", and every one held"))
-                     + " — the claims are the judge's count, not a number kept anywhere"),
+                     + " — the judge counts the claims again on every run"),
             "next": ("put it in the README beside the build: it says how WIDE the green is, "
                      "which a badge that only says green does not"),
             "mutates": bool(out_path)}
@@ -2001,9 +2001,8 @@ def cmd_attention(a):
             "known": known_mine + known_theirs + known_part,
             "expired": expired_mine + expired_theirs + expired_part,
             "stated": len(stated), "claimed": len(claims),
-            "note": ("a standing account of who owes whom a word, not a history of what moved. "
-                     "An unanswered axis sits with whoever owes the answer, so this reads the same "
-                     "from either side" + ("; a divergence somebody declared is set aside while the "
+            "note": ("a standing account of who owes whom a word. An unanswered axis sits with "
+                     "whoever owes the answer, so this reads the same from either side" + ("; a divergence somebody declared is set aside while the "
                      "thing it cites is open, and comes back when that closes" if known else "")),
             "next": ("answer the first line above, or declare the divergence with something that can "
                      "close" if waits_on_me else
@@ -2059,8 +2058,8 @@ def cmd_seam(a):
             "note": (f"{len(where)} claims judged"
                      + (f"; {len(silent)} field{'s' if len(silent) != 1 else ''} the contract declares "
                         + ("are" if len(silent) != 1 else "is")
-                        + " claimed by nobody, which is no disagreement — a claim never made cannot "
-                        "be refused" if silent else "")),
+                        + " claimed by nobody: a claim never made cannot be refused, so it stands "
+                        "beside the judgement" if silent else "")),
             "next": ("open the address above: two declarations, both signed, do not agree"
                      if refusals else "wire it into CI: neither side can move without the other seeing"),
             "mutates": False}
@@ -2187,7 +2186,7 @@ def cmd_drift(a):
             "over_threshold": bool(over is not None and median > over),
             "threshold": over,
             "ms": round((time.time() - t0) * 1000, 1),
-            "note": ("a measurement, not a judgement: no world entered here, so nothing is judged. "
+            "note": ("an observation, of a world that has not entered: git objects, and a walk. "
                      + (f"no history to date anything: {' and '.join(thin)} arrived with one commit "
                         "standing in for all of them. " if thin else
                         f"{len(revs)} revisions of the contract were read, and the library's history "
