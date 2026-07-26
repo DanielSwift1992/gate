@@ -218,12 +218,25 @@ head. A refusal points at its address instead.
   silent error", because that is precisely what nobody saw. It speaks for a
   world, and for nothing else: a badge over an observation would be a verdict
   wearing a number, and no court sat.
-- **And judgement waits for the gate.** A shape is refused only when both sides
-  have been declared into gate's grammar (`gate stdlib show genre-contract`),
-  and then the refusal is about two declarations, each signed by whoever made
-  it — never about somebody's source read from outside. Reaching across the gate
-  for a premise is how a court ends up reasoning honestly about an invented
-  world; the reader that did it is gone.
+- **And judgement begins at the gate.** `gate declare` is the crossing: a
+  contract emits a view of the document it publishes, a library emits — from its
+  own build, with its own tools — a small declaration of what it carries, and
+  states its own name for a field only where that name does not follow. Both are
+  views of what each side already keeps, so neither can drift from its source.
+  `gate seam` is the one court over the pair: a disagreement is refused at an
+  address, naming each side in the words that side used, and a field nobody
+  claimed is named beside the judgement rather than inside it — a claim never
+  made cannot be refused. Nothing is read out of anybody's source: reaching
+  across the gate for a premise is how a court ends up reasoning honestly about
+  an invented world, and the reader that did it is gone.
+
+  ```sh
+  gate declare contract openapi.json -o api.swift        # the API's own word
+  gate declare carrier  sdk.json     -o sdk.swift        # what their build emitted
+  gate seam api.swift sdk.swift
+  # seam: refused 1 · 5.8 ms
+  #   /scrape · waitFor · the contract declares it count; SdkJS declares it text
+  ```
 - **A citation may not outlive the thing it cites.** `gate import refs
   tickets.json --code .` reads a tracker's own export and every place your code
   names a ticket, and judges them as one world: a `TODO(PROJ-42)` whose ticket
@@ -420,7 +433,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 169 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 171 end-to-end checks, the definition of green
 ```
 
 ## Status

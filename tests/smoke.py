@@ -1056,6 +1056,64 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
         "interface Req {\n  url: string;\n}\n")
     _, bare_types = run("drift", os.path.join(con, "spec.json"),
                         "--client", os.path.join(con, "typesonly"), "--name", "Types")
+    # ── THE ACT OF ENTRY, and the one court that follows it. Everything gate
+    # judges is on this side of it and nothing else is: what a walk finds outside
+    # stays an observation forever, because judgement has no jurisdiction over a
+    # world nobody has spoken for.
+    # The two halves are asymmetric on purpose. A contract states its own types
+    # in a public format, so one emitter serves everybody and gate ships it —
+    # reading a document that declares itself is not the inference that was
+    # removed. A library's grammar is its own, so gate ships no reader for it at
+    # all: that library's build emits a small declaration, and gate only renders
+    # what it said into the shared words. The declaration is a VIEW of what they
+    # already keep, never a copy, so it cannot drift from them.
+    ent = os.path.join(tmp, "entry")
+    os.makedirs(ent, exist_ok=True)
+    open(os.path.join(ent, "openapi.json"), "w").write(json.dumps({"paths": {"/scrape": {"post": {
+        "requestBody": {"content": {"application/json": {"schema": {"properties": {
+            "url": {"type": "string"}, "waitFor": {"type": "integer"},
+            "include": {"type": "array"}, "extra": {"type": "string"},
+            "open": {"anyOf": [{"type": "string"}, {"type": "integer"}]}}}}}}}}}}))
+    open(os.path.join(ent, "sdk.json"), "w").write(json.dumps({
+        "carrier": "SdkJS", "against": {"contract": "openapi.json", "revision": "a1b2c3d"},
+        "carries": [{"route": "/scrape", "field": "url", "as": "Text"},
+                    {"route": "/scrape", "field": "waitFor", "as": "Text"},
+                    {"route": "/scrape", "field": "include", "as": "Many",
+                     "mine": "include_collections"}]}))
+    _, dc = run("declare", "contract", os.path.join(ent, "openapi.json"),
+                "-o", os.path.join(ent, "api.swift"))
+    _, dk = run("declare", "carrier", os.path.join(ent, "sdk.json"),
+                "-o", os.path.join(ent, "sdk.swift"))
+    _, parted = run("seam", os.path.join(ent, "api.swift"), os.path.join(ent, "sdk.swift"))
+    said = " ".join(x["claim"] for x in parted.get("refusals", []))
+    S.append(("what enters is judged, and only what enters: two declarations, each signed by whoever made it",
+              # the contract declares four; the fifth it leaves open, and an open
+              # shape is not a shape it has stated
+              dc.get("declares") == 4 and dk.get("declares") == 3
+              # one disagreement, addressed, naming both sides' own words
+              and parted.get("verdict") == "refused" and len(parted["refusals"]) == 1
+              and "waitFor" in parted["refusals"][0]["address"]
+              and "contract declares it count" in said and "SdkJS declares it text" in said
+              # a field nobody claimed is named beside the court, never inside it
+              and parted.get("unclaimed") == ["/scrape · extra"]))
+
+    # ── and a carrier that agrees is not refused, and its rename is spoken in
+    # its own words when it is — the coordinate is stated only where it does not
+    # follow, since a declaration restating what already matches is a second copy
+    # and a second copy drifts.
+    open(os.path.join(ent, "sdk2.json"), "w").write(json.dumps({
+        "carrier": "SdkJS", "against": {"contract": "openapi.json"},
+        "carries": [{"route": "/scrape", "field": "waitFor", "as": "Count"},
+                    {"route": "/scrape", "field": "include", "as": "Text",
+                     "mine": "include_collections"}]}))
+    run("declare", "carrier", os.path.join(ent, "sdk2.json"), "-o", os.path.join(ent, "sdk2.swift"))
+    _, mixed = run("seam", os.path.join(ent, "api.swift"), os.path.join(ent, "sdk2.swift"))
+    mixed_says = " ".join(x["claim"] for x in mixed.get("refusals", []))
+    S.append(("a seam names each side in the words that side used, and holds where they agree",
+              len(mixed.get("refusals", [])) == 1
+              and "its own include_collections" in mixed_says
+              and mixed.get("carrier") == "SdkJS"))
+
     # ── THE PITCH STAYS OUTSIDE THE VERDICT. A brand may say `sight for
     # promises`; a verdict may not. What a reader is handed by the tool is what
     # was observed, the bounds it was observed in, numbers, and a recipe — and

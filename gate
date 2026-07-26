@@ -1716,6 +1716,140 @@ def first_mentions(root, names, only=None, without=None):
     return seen
 
 
+DECLARE_HEADER = """// printed by gate declare — one side of a seam, SAID rather than found.
+// Whoever runs this owns what it says: it is a view of a document they publish,
+// emitted by their own build and signed by merging it. Nothing here was read out
+// of anybody's source, because judgement has no jurisdiction over a world that
+// has not entered — and this file IS the entering.
+//
+"""
+
+CARRIER_HEADER = """// printed by gate declare carrier — what a library says it carries, emitted from
+// what that library already keeps: its own generated schema, its own types. The
+// emitter lives on its side and belongs to it; this only renders what it said
+// into the grammar both sides are judged in. Where its own name for a field
+// differs from the contract's, the correspondence is stated too — and only
+// where it does not follow, since a declaration that restates what already
+// matches is a second copy, and a second copy drifts.
+//
+"""
+
+
+def cmd_declare(a):
+    # declare contract SPEC [-o F] · declare carrier DECL.json [-o F]
+    #
+    # THE ACT OF ENTRY. Everything gate judges is on this side of it, and nothing
+    # else is: what a walk finds outside remains an observation forever. The two
+    # halves are asymmetric on purpose. A contract states its own types in a
+    # public format, so one emitter serves everybody and we ship it. A library's
+    # grammar is its own, so we ship no reader for it at all — its build emits a
+    # small declaration, and this renders that into the shared words.
+    import json as _json
+    what = a[0] if a else ""
+    out_path = a[a.index("-o") + 1] if "-o" in a else None
+    if what == "contract":
+        src = a[1]
+        fields = [f for f in read_contract(src) if f.get("shape")]
+        lines = [DECLARE_HEADER + STDLIB["genre-contract"], ""]
+        for f in fields:
+            rec = "F_" + sanitize(f["route"]) + "_" + sanitize(f["field"])
+            lines += [f"// {f['route']} · {f['field']}",
+                      f"public enum {rec}: Declared {{",
+                      f"    public typealias Of = {f['shape']}", "}"]
+        world = "\n".join(lines) + "\n"
+        if out_path:
+            open(out_path, "w").write(world)
+        return {"command": "declare contract", "of": os.path.basename(src),
+                "declares": len(fields), "wrote": out_path, "world": None if out_path else world,
+                "note": ("a view of that document: every field it states a type for, as a record "
+                         "whose shape is an axis. Fields it leaves open state no shape and are not "
+                         "here — a contract that says `anyOf` has not said which"),
+                "next": "commit it: from here on it is what you have said, and it is judged",
+                "mutates": bool(out_path)}
+    if what == "carrier":
+        decl = _json.load(open(a[1], encoding="utf-8"))
+        who = sanitize(decl.get("carrier") or "Carrier")
+        against = decl.get("against") or {}
+        lines = [CARRIER_HEADER
+                 + f"// {who} · against {against.get('contract', 'a contract')}"
+                 + (f" at {against['revision']}" if against.get("revision") else "") + "\n",
+                 f"public enum {who}: Carrier {{}}", ""]
+        for i, c in enumerate(decl.get("carries") or []):
+            rec = "F_" + sanitize(c["route"]) + "_" + sanitize(c["field"])
+            mine = f" (it calls it {c['mine']})" if c.get("mine") else ""
+            lines += [f"// {c['route']} · {c['field']}{mine}",
+                      f"public typealias Carry_{i} = Carries<{who}, {rec}, {c['as']}>"]
+        world = "\n".join(lines) + "\n"
+        if out_path:
+            open(out_path, "w").write(world)
+        return {"command": "declare carrier", "carrier": who,
+                "declares": len(decl.get("carries") or []), "wrote": out_path,
+                "world": None if out_path else world,
+                "against": against,
+                "note": ("what this library says it carries. It is not judgeable alone — a carrier "
+                         "declaration is about a contract, and the pair is judged by `gate seam`"),
+                "next": "gate seam <the contract's declaration> <this file>",
+                "mutates": bool(out_path)}
+    return {"command": "declare", "asks": True,
+            "note": "declare contract SPEC [-o F]  ·  declare carrier DECL.json [-o F]",
+            "next": ("the carrier declaration is emitted by that library's own build: "
+                     '{"carrier": N, "against": {...}, "carries": [{"route", "field", "as", "mine"?}]}')}
+
+
+def cmd_seam(a):
+    # seam CONTRACT.swift CARRIER.swift — two declarations, one world, one court.
+    #
+    # This is the only place gate refuses anything about a pair, and it can only
+    # do it because both sides are here BY THEIR OWN WORD. The refusal is never
+    # about somebody's code: it is about two sentences that do not agree, each
+    # signed by whoever wrote it.
+    if len(a) < 2:
+        return {"command": "seam", "asks": True,
+                "note": "seam CONTRACT.swift CARRIER.swift — both sides, as each declared them",
+                "next": "gate declare contract … and gate declare carrier … first"}
+    left, right = open(a[0], encoding="utf-8").read(), open(a[1], encoding="utf-8").read()
+    m = re.search(r"public enum (\w+): Carrier", right)
+    who = m.group(1) if m else "that library"
+    where = {}
+    for m in re.finditer(r"^// (\S+) · (\S+)(?: \(it calls it (\S+)\))?\npublic typealias (Carry_\d+)",
+                         right, re.M):
+        where[m.group(4)] = (m.group(1), m.group(2), m.group(3))
+    d = tempfile.mkdtemp(prefix="gate-seam-")
+    path = os.path.join(d, "seam.swift")
+    open(path, "w").write(left + "\n" + right)
+    t0 = time.time()
+    outp = subprocess.run([JUDGE, "judge", "where", path], capture_output=True, text=True).stdout
+    ms = round((time.time() - t0) * 1000, 1)
+    refusals = []
+    for m in re.finditer(r"^✗ '(\w+)[^']*' requires the types '[^']*' \(aka '([^']+)'\) and "
+                         r"'[^']*' \(aka '([^']+)'\)", outp, re.M):
+        cert, want, got = m.groups()
+        route, field, mine = where.get(cert, ("?", cert, None))
+        refusals.append({"address": f"{route} · {field}",
+                         "claim": (f"the contract declares it {want.lower()}; {who} declares "
+                                   + (f"its own {mine} as " if mine else "it ")
+                                   + f"{got.lower()}")})
+    # a field the contract declares and no carrier claims: not a disagreement,
+    # since a claim never made cannot be refused — named beside the judgement
+    claimed = {(r, f) for r, f, _ in where.values()}
+    silent = [m.group(1) + " · " + m.group(2)
+              for m in re.finditer(r"^// (\S+) · (\S+)$", left, re.M)
+              if (m.group(1), m.group(2)) not in claimed]
+    shutil.rmtree(d, ignore_errors=True)
+    return {"command": "seam", "verdict": "refused" if refusals else "holds",
+            "refusals": refusals, "judged": len(where), "unclaimed": silent,
+            "judge_ms": ms,
+            "carrier": who,
+            "note": (f"{len(where)} claims judged"
+                     + (f"; {len(silent)} field{'s' if len(silent) != 1 else ''} the contract declares "
+                        + ("are" if len(silent) != 1 else "is")
+                        + " claimed by nobody, which is no disagreement — a claim never made cannot "
+                        "be refused" if silent else "")),
+            "next": ("open the address above: two declarations, both signed, do not agree"
+                     if refusals else "wire it into CI: neither side can move without the other seeing"),
+            "mutates": False}
+
+
 def cmd_drift(a):
     # drift CONTRACT --client DIR [--since DATE] [--name N] [--fail-over DAYS]
     #
@@ -1880,6 +2014,22 @@ def body_media(spec):
     return seen
 
 
+# what a contract SAYS a field is. This is not inference and never was: an
+# OpenAPI document states the type outright, in its own words, and reading it is
+# reading a declaration rather than guessing at one. The reader that inferred
+# shapes from a client's SOURCE is what went; a document that declares its own
+# types is a different thing entirely, and its author signs it by publishing it.
+DECLARED = {"string": "Text", "integer": "Count", "number": "Count",
+            "boolean": "Flag", "array": "Many", "object": "Nested"}
+
+
+def declared_shape(t):
+    if isinstance(t, list):
+        t = [x for x in t if x != "null"]
+        t = t[0] if len(t) == 1 else None       # two types is the contract leaving it open
+    return DECLARED.get(t)
+
+
 def contract_fields(spec):
     # the same reading, from a document already in hand — because the drift
     # command reads a hundred and fifty of them out of git without writing one
@@ -1946,7 +2096,8 @@ def contract_fields(spec):
                     # a query parameter declared as an object carries its fields
                     # in its properties; its own name is a wrapper nobody writes
                     for nm, pr in sorted(inner.items()):
-                        out.append({"route": route, "field": nm, "where": "query"})
+                        out.append({"route": route, "field": nm, "where": "query",
+                                    "shape": declared_shape((pr or {}).get("type"))})
                     continue
                 # `project_ids[]` is how a repeated key is written ON THE WIRE;
                 # the name a library spells is `project_ids`, and the brackets
@@ -1960,7 +2111,8 @@ def contract_fields(spec):
                 # both sides are able to say.
                 if not SPELLABLE.fullmatch(nm):
                     continue
-                out.append({"route": route, "field": nm, "where": "query"})
+                out.append({"route": route, "field": nm, "where": "query",
+                            "shape": declared_shape((p.get("schema") or {}).get("type") or p.get("type"))})
             content = (op.get("requestBody") or {}).get("content") or {}
             body = (content.get("application/json") or {}).get("schema")
             if not body:
@@ -2011,7 +2163,8 @@ def contract_fields(spec):
                     # never in: it is no part of a request, so a client that does
                     # not carry it is not behind anything
                     continue
-                out.append({"route": route, "field": name, "where": "body"})
+                out.append({"route": route, "field": name, "where": "body",
+                            "shape": declared_shape(prop.get("type") or resolve(prop).get("type"))})
     return out
 
 
@@ -2783,6 +2936,14 @@ USAGE = """usage (the git-shaped porcelain):
   gate diff  transfer WHO DEPT        · gate diff  grant|revoke WHO DOC
   gate diff  hire ID RANK HOME GIVEN FAMILY BORN SITE
   gate apply transfer|grant|revoke|hire ...   (writes only on holds, like a commit)
+  gate declare contract SPEC [-o F]   (the act of entry: a view of a document
+  gate declare carrier DECL.json [-o F] you publish, or of what your build says
+                                       your library carries — after this it is
+                                       what you have SAID, and judged)
+  gate seam CONTRACT.swift CARRIER.swift
+                                      (the one court over a pair: two
+                                       declarations, each signed by whoever made
+                                       it, refused at an address when they part)
   gate drift SPEC --client DIR [--since DATE] [--fail-over DAYS]
                                       (OBSERVATION of a world that has not
                                        entered: git objects and a walk whose
@@ -2823,6 +2984,10 @@ def dispatch(cmd, rest):
         return cmd_import_codeowners(rest[1:])
     if cmd == "drift":
         return cmd_drift(rest)
+    if cmd == "declare":
+        return cmd_declare(rest)
+    if cmd == "seam":
+        return cmd_seam(rest)
     if cmd == "badge":
         return cmd_badge(rest)
     if cmd == "import" and rest and rest[0] == "refs":
@@ -2993,6 +3158,18 @@ def humanize(out):
             lines.append("  commit it, and every clone has the tool — nothing to install")
             if v.get("judge_sha256"):
                 lines.append(f"  judge sha256: {v['judge_sha256'][:16]}…")
+    elif cmd.startswith("declare"):
+        if out.get("asks"):
+            lines.append("usage: " + out["note"])
+            lines.append(f"  next: {out['next']}")
+        else:
+            lines.append(f"{cmd}: {out['declares']} declared"
+                         + (f" · wrote {out['wrote']}" if out.get("wrote") else ""))
+            lines.append(f"  note: {out['note']}")
+            lines.append(f"  next: {out['next']}")
+    elif cmd == "seam" and out.get("asks"):
+        lines.append("usage: " + out["note"])
+        lines.append(f"  next: {out['next']}")
     elif cmd == "drift" and out.get("asks"):
         lines.append("usage: " + out["note"])
         lines.append(f"  next: {out['next']}")
