@@ -1687,6 +1687,20 @@ def shape_of_type(t):
     # library carries. Each of those three was an accusation against a client
     # that had written its type correctly, and all three came of reading inward.
     t = t.strip().rstrip("?")
+    # a type may be wrapped in parentheses for the sake of what follows it —
+    # `({ [key: string]: Params | undefined }) | null` is a map — and leaving
+    # them on hid the brace, so the `string` inside the index signature was read
+    # as the whole shape. The same reading inward, wearing different brackets.
+    while t.startswith("(") and t.endswith(")"):
+        inner, depth, ok = t[1:-1], 0, True
+        for ch in inner:
+            depth += (ch == "(") - (ch == ")")
+            if depth < 0:
+                ok = False
+                break
+        if not ok or depth:
+            break
+        t = inner.strip()
     if not t:
         return None
     if t.endswith("[]"):
@@ -1749,14 +1763,19 @@ def route_home(route_fields, named, where):
     # about this request is heard too, but only about what the main rooms do not
     # declare. Otherwise a stray `{ name: string }` anywhere would count as the
     # request itself.
-    home, whole = [], []
+    fit, whole = [], []
     for i, shared in cand.items():
         own = len(named[i]) or 1
         if len(shared) >= 4 or (len(shared) >= 2 and len(shared) / own >= 0.5):
-            home.append(i)
+            fit.append((len(shared), i))
         elif len(shared) == own:
             whole.append(i)
-    return home, whole
+    # and only the CLOSEST of those that fit. A request of a dozen fields will
+    # brush four of them against every neighbour it has — a hundred and fifty
+    # blocks called themselves home to one realtime call — and among a hundred
+    # and fifty someone always says the wrong word.
+    best = max((n for n, _ in fit), default=0)
+    return [i for n, i in fit if n == best], whole
 
 
 def shapes_seen(body, field):
@@ -1792,7 +1811,13 @@ def shapes_seen(body, field):
 
 BLOCK_START = re.compile(
     r"^[ \t]*(?:(?:export|public|private|declare|pub|async|final|abstract)\s+)*"
-    r"(?:class|interface|struct|type|def|func|fn|enum)\s+\w+", re.M)
+    r"(?:class|interface|struct|type|def|func|fn|enum)\s+\w+"
+    # a generated client keeps every schema inside ONE interface, and a request
+    # body may be written as an inline object inside another — so a name opening
+    # a brace starts a block as surely as the word `interface` does. Without
+    # this, ten thousand lines of generated schema are one place, and locality
+    # buys nothing there.
+    r"|^[ \t]*[\"']?\w+[\"']?\??\s*:\s*\{", re.M)
 BLOCK_FIELD = re.compile(r"^[ \t]*[\"']?(\w+)[\"']?\s*\??\s*:", re.M)
 
 
@@ -1858,20 +1883,23 @@ def cmd_import_contract(a):
     for route, names in list(homes.items()):
         homes[route] = route_home(names, named_in, where)
     for f in fields:
-        key = (f["route"], f["field"])
+        key, vs = (f["route"], f["field"]), name_variants(f["field"])
         home, whole = homes[f["route"]]
+        # the two questions are not equally strong, so they are not asked the
+        # same way. WHETHER the library carries a field is asked of the whole of
+        # it and answered generously: a client may keep the field anywhere, and
+        # every absence this reader checked by hand but one turned out to be a
+        # field declared somewhere it had not thought to look. An absence reads
+        # as news, so it is claimed only when the name appears NOWHERE.
+        # AS WHAT is asked only at home, and where home does not declare the
+        # field the answer is silence — a stranger's `int` is not its shape.
+        carried[key] = any(re.search(r"\b" + re.escape(n) + r"\b", body) for n in vs)
         if home or whole:
-            vs = name_variants(f["field"])
             places = ([i for i in home if vs & named_in[i]]
                       or [i for i in whole if vs & named_in[i]])
-            carried[key] = bool(places)
             seen_at[key] = set().union(*(shapes_seen(blocks[i], f["field"])
                                          for i in places)) if places else set()
         else:
-            # no home: the library declares this request nowhere as a piece, so
-            # the whole of it is asked rather than nothing at all
-            carried[key] = any(re.search(r"\b" + re.escape(n) + r"\b", body)
-                               for n in name_variants(f["field"]))
             seen_at[key] = shapes_seen(body, f["field"])
     named = sum(1 for v in carried.values() if v)
     # A library that FORWARDS A BAG is not a library that lags: whatever you hand

@@ -957,14 +957,18 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     open(os.path.join(con, "spec-types.json"), "w").write(json.dumps({"paths": {
         "/multi": {"post": {"requestBody": {"content": {"application/json": {"schema": {"properties": {
             "searches": {"type": "array"}, "params": {"type": "object"},
-            "locale": {"type": "string"}}}}}}}},
+            "locale": {"type": "string"}, "sparse_vectors": {"type": "object"}}}}}}}},
         "/solo": {"post": {"requestBody": {"content": {"application/json": {"schema": {"properties": {
             "tongue": {"type": "string"}}}}}}}}}}))
     open(os.path.join(con, "written", "client.ts"), "w").write(
         "interface Multi {\n"
         "  searches: ExtractBaseTypes<SearchParams<T[number], Infix>>[];\n"
         "  params: RuleSchema | RuleSchema[];\n"
-        "  locale: string;\n}\n"
+        "  locale: string;\n"
+        # a map wearing parentheses, as a generated client writes it
+        "  sparse_vectors?: ({\n"
+        "    [key: string]: SparseVectorParams | undefined;\n"
+        "  }) | null;\n}\n"
         # neither of these is the /solo request — one field of two apiece — so
         # the whole library answers, and there the alias must not silence the
         # plain word
@@ -975,7 +979,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     S.append(("a type ends where its brackets end, a union names no one shape, and an alias elsewhere does not silence what was said",
               written.get("verdict") == "holds" and not written.get("refusals")
               # searches and locale are read; params answered with a union
-              and written.get("judged") == 3 and written.get("shape_unread") == 1))
+              and written.get("judged") == 4 and written.get("shape_unread") == 1))
 
     # ── and a request is read WHERE THE LIBRARY DECLARES IT. The fields of one
     # body are written together, so the block that holds them is the place to
@@ -994,7 +998,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
         "requestBody": {"content": {"application/json": {"schema": {"properties": {
             "name": {"type": "string"}, "fields": {"type": "array"},
             "token_separators": {"type": "array"}, "enable_nested_fields": {"type": "boolean"},
-            "images": {"type": "array"}}}}}}}}}}))
+            "images": {"type": "array"}, "voice_query_model": {"type": "object"}}}}}}}}}}))
     open(os.path.join(con, "home", "client.ts"), "w").write(
         "export interface BaseCollectionCreateSchema {\n  name: string;\n"
         "  token_separators?: string[];\n  enable_nested_fields?: boolean;\n}\n"
@@ -1008,9 +1012,37 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     S.append(("a request is read where the library declares it, and a home may be built of more than one room",
               # the base answers for its three, the one-field extension for `fields`
               at_home.get("judged") == 4
-              # and the usage report answers for nothing: `images` is absent, not a count
-              and "does not carry it" in home_says and "as count" not in home_says
-              and len(at_home.get("refusals", [])) == 1))
+              # `images` lives only in a usage report: home does not declare it, so
+              # nothing is said of its shape — a stranger's count is not an answer
+              and "as count" not in home_says and at_home.get("shape_unread") == 1
+              # and the one field written nowhere at all is the one absence claimed
+              and len(at_home.get("refusals", [])) == 1
+              and "voice_query_model" in at_home["refusals"][0]["address"]))
+
+    # ── and a generated client keeps every schema it has inside ONE interface,
+    # which is one place only if nothing inside it counts as a place. Then the
+    # request and a telemetry report ten thousand lines away are the same block,
+    # whichever spelling the reader meets first wins, and a map is read as text
+    # because a report calls that name a string. A name opening a brace starts a
+    # block as surely as the word `interface` does.
+    os.makedirs(os.path.join(con, "generated"), exist_ok=True)
+    open(os.path.join(con, "spec-generated.json"), "w").write(json.dumps({"paths": {"/collections": {"put": {
+        "requestBody": {"content": {"application/json": {"schema": {"properties": {
+            "shard_number": {"type": "integer"}, "sparse_vectors": {"type": "object"},
+            "on_disk_payload": {"type": "boolean"}}}}}}}}}}))
+    open(os.path.join(con, "generated", "schema.ts"), "w").write(
+        "export interface components {\n  schemas: {\n"
+        "    CreateCollection: {\n      shard_number?: number;\n"
+        "      sparse_vectors?: ({\n"
+        "        [key: string]: SparseVectorParams | undefined;\n      }) | null;\n"
+        "      on_disk_payload?: boolean;\n    };\n"
+        "    TelemetryReport: {\n      sparse_vectors: string;\n      uptime: number;\n"
+        "      version: string;\n      peers: number;\n    };\n  };\n}\n")
+    _, gen = run("import", "contract", os.path.join(con, "spec-generated.json"),
+                 "--client", os.path.join(con, "generated"), "--name", "Generated")
+    S.append(("a schema nested inside a generated interface is its own place, or the whole file is one",
+              gen.get("verdict") == "holds" and not gen.get("refusals")
+              and gen.get("judged") == 3))
 
     # ── and the check is the whole ceremony: one command in the CI the client
     # already has. It exits non-zero on a stale citation and zero when the code
