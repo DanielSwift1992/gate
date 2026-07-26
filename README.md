@@ -220,6 +220,13 @@ head. A refusal points at its address instead.
   it reads: behind on 24 of 71 fields, median 28 days, two never carried at all.
   A shallow clone is told it has no past to measure rather than credited with a
   punctual one.
+- **A whole endpoint may be missing, not only a field.** The same reading names
+  a route the contract declares that the library never writes: weaviate's python
+  client implements neither `/objects/validate` nor `/replication/scale`, and
+  typesense's javascript one has no `/config` at all. A path goes on the wire as
+  written, so its literal segments are a name both sides spell — the braces are
+  skipped, being a slot and not a word, and a library that writes no URL at all
+  is accused of no route whatever.
 - **A green must say how wide it is.** `gate badge -o gate.svg` counts the
   claims the judge counted — nothing stores that number — and replays every
   commit that touched the world back through the same judge until one does not
@@ -423,7 +430,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 178 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 179 end-to-end checks, the definition of green
 ```
 
 ## Status

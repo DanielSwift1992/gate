@@ -1111,8 +1111,19 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
         "  }) | null;\n}\n"
         # both of these are the /solo request, so both are heard — and there the
         # one that aliases its type must not silence the one that spelled it
-        "interface P {\n  tongue: string;\n  dialect: string;\n}\n"
         "interface Q {\n  tongue: TongueSchema;\n  dialect: DialectSchema;\n}\n")
+    # a docstring is not a declaration, and it sits INSIDE the block that is:
+    # `:param tongue: Given a phone number in plain words` reads as a name and a
+    # type to any pattern that looks for a colon, and the English `number` in the
+    # prose became the shape — a hundred and twenty-eight accusations against
+    # twilio's client, every one of them a line of documentation
+    open(os.path.join(con, "written", "params.py"), "w").write(
+        "class P:\n"
+        '    """\n'
+        "    :param tongue: Given a phone number in plain words\n"
+        '    """\n'
+        "    tongue: str\n"
+        "    dialect: str\n")
     _, written = run("import", "contract", os.path.join(con, "spec-types.json"),
                      "--client", os.path.join(con, "written"), "--name", "Written")
     S.append(("a type ends where its brackets end, a union names no one shape, and an alias elsewhere does not silence what was said",
@@ -1176,17 +1187,31 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
         "    name: NotRequired[str]\n")
     _, quoted = run("import", "contract", os.path.join(con, "spec-quoted.json"),
                     "--client", os.path.join(con, "quoted"), "--name", "Quoted")
+    # a form is a request too: its field names go on the wire exactly as
+    # written, which is the same thing that makes a query key judgeable, and
+    # twilio declares sixty-two bodies that are nothing else. What stays
+    # unread is a media type whose fields this reader cannot see at all.
+    os.makedirs(os.path.join(con, "form"), exist_ok=True)
     open(os.path.join(con, "spec-form.json"), "w").write(json.dumps({"paths": {"/messages": {"post": {
         "requestBody": {"content": {"application/x-www-form-urlencoded": {"schema": {"properties": {
             "Body": {"type": "string"}, "To": {"type": "string"}}}}}}}}}}))
+    open(os.path.join(con, "form", "client.ts"), "w").write(
+        "interface Message {\n  Body: string;\n  To: string;\n}\n")
     _, form = run("import", "contract", os.path.join(con, "spec-form.json"),
-                  "--client", os.path.join(con, "quoted"), "--name", "Form")
-    S.append(("a type in quotes is still a type, and a contract that posts forms is told so rather than passed",
+                  "--client", os.path.join(con, "form"), "--name", "Form")
+    open(os.path.join(con, "spec-xml.json"), "w").write(json.dumps({"paths": {"/legacy": {"post": {
+        "requestBody": {"content": {"application/xml": {"schema": {"properties": {
+            "Body": {"type": "string"}}}}}}}}}}))
+    _, xml = run("import", "contract", os.path.join(con, "spec-xml.json"),
+                 "--client", os.path.join(con, "form"), "--name", "Xml")
+    S.append(("a type in quotes is still a type, a form is a request like any other, and a language this reader does not speak is named",
               quoted.get("verdict") == "holds" and not quoted.get("refusals")
               and quoted.get("judged") == 2
-              # and the form contract judges nothing, and says which language it spoke
-              and form.get("judged") == 0 and not form.get("refusals")
-              and "form-urlencoded" in (form.get("note") or "")))
+              # the form contract is judged like any other
+              and form.get("judged") == 2 and not form.get("refusals")
+              # and the one whose language this reader does not speak is told so
+              and xml.get("judged") == 0 and not xml.get("refusals")
+              and "application/xml" in (xml.get("note") or "")))
 
     # ── and a generated client keeps every schema it has inside ONE interface,
     # which is one place only if nothing inside it counts as a place. Then the
@@ -1333,6 +1358,49 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and bool(re.search(r"the seam has parted in \d+ place", seam_parts))
               and seam_json.get("verdict") == "refused"))
 
+    # ── AND A WHOLE ROUTE MAY BE MISSING, which is a larger thing than a field
+    # and stayed invisible while only fields were read: weaviate's python client
+    # implements neither `/objects/validate` nor `/replication/scale`, and
+    # typesense's javascript one has no `/config` at all — found by a field only
+    # because that route happened to declare one. A path goes on the wire as
+    # written, so its literal segments are a name both sides spell; the braces
+    # are skipped, being a slot and not a word.
+    # Unless the library names no route whatever: a package of types alone
+    # writes no URL, and telling it that it is missing every endpoint is the
+    # blind reader again, wearing a bigger accusation.
+    os.makedirs(os.path.join(con, "routed"), exist_ok=True)
+    open(os.path.join(con, "spec-routes.json"), "w").write(json.dumps({"paths": {
+        "/collections/{name}/documents": {"post": {"requestBody": {"content": {"application/json": {
+            "schema": {"properties": {"text": {"type": "string"}}}}}}}},
+        "/config": {"post": {"requestBody": {"content": {"application/json": {
+            "schema": {"properties": {"slow_ms": {"type": "integer"}}}}}}}}}}))
+    open(os.path.join(con, "routed", "client.ts"), "w").write(
+        'const PATH = "/collections";\n'
+        "interface Doc {\n  text: string;\n}\n"
+        'async function add(name: string, d: Doc) {\n'
+        '  return post(`${PATH}/${name}/documents`, d);\n}\n'
+        "interface Cfg {\n  slow_ms: number;\n}\n")
+    _, rt = run("import", "contract", os.path.join(con, "spec-routes.json"),
+                "--client", os.path.join(con, "routed"), "--name", "Routed")
+    route_says = " ".join(x["claim"] for x in rt.get("refusals", []))
+    # and the same contract against a library that is read in full but writes no
+    # URL anywhere — a package of types alone. Its fields are judged; not one
+    # route may be held against it.
+    os.makedirs(os.path.join(con, "typesonly"), exist_ok=True)
+    open(os.path.join(con, "typesonly", "client.ts"), "w").write(
+        "interface Doc {\n  text: string;\n}\ninterface Cfg {\n  slow_ms: number;\n}\n")
+    _, noroute = run("import", "contract", os.path.join(con, "spec-routes.json"),
+                     "--client", os.path.join(con, "typesonly"), "--name", "Typesonly")
+    S.append(("a route the contract declares and the library never names is named, unless it names no route at all",
+              # /config is nowhere in that client, /collections/{name}/documents is
+              "never names it" in route_says and "/config" in " ".join(
+                  x["address"] for x in rt.get("refusals", []))
+              and len([x for x in rt.get("refusals", []) if "never names it" in x["claim"]]) == 1
+              # the types-only library is accused of no route whatever
+              and not [x for x in noroute.get("refusals", []) if "never names it" in x["claim"]]
+              # read in full, so the silence about routes is the rule and not blindness
+              and noroute.get("judged") == 2))
+
     # ── and a badge for a seam, not only for a world. Somebody who came to
     # measure their own contract against their own client has no world of facts
     # to count, so the road they walked ended with nothing to hang up — the
@@ -1345,7 +1413,8 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     S.append(("a badge speaks for a seam as well as for a world, and both say how wide they are",
               cb.get("of") == "contract" and cb.get("verdict") == "refused"
               and cb.get("fields") == 4 and cb.get("claims", 0) > 0
-              and bool(re.match(r"judged \d+/\d+ · refused \d+$", cb.get("text", "")))))
+              # and the number names its unit, since the denominator has moved once
+              and bool(re.match(r"judged \d+/\d+ fields · refused \d+$", cb.get("text", "")))))
 
     # ── and the check is the whole ceremony: one command in the CI the client
     # already has. It exits non-zero on a stale citation and zero when the code

@@ -1574,7 +1574,10 @@ def cmd_badge(a):
     if "--contract" in a:
         con = cmd_import_contract([a[a.index("--contract") + 1]]
                                   + [x for x in a if x not in ("--contract", a[a.index("--contract") + 1])])
-        right = f"judged {con.get('judged', 0)}/{con.get('fields', 0)} · " + \
+        # a number that moves must name its unit: this denominator grew the day
+        # query keys were first read, and a bare `47/90` would have moved under
+        # a reader who had no way to know what it counted
+        right = f"judged {con.get('judged', 0)}/{con.get('fields', 0)} fields · " + \
                 ("holds" if con["verdict"] == "holds" else f"refused {len(con.get('refusals', []))}")
         if out_path:
             lw, rw = 40, 8 + int(len(right) * 6.2)
@@ -1947,8 +1950,20 @@ def contract_fields(spec):
                 # belong to the transport, not to either side's vocabulary
                 out.append({"route": route, "field": re.sub(r"\[\]$", "", p["name"]),
                             "shape": SHAPE_OF.get(t), "where": "query"})
-            body = (op.get("requestBody", {}).get("content", {})
-                      .get("application/json", {}).get("schema"))
+            content = (op.get("requestBody") or {}).get("content") or {}
+            body = (content.get("application/json") or {}).get("schema")
+            if not body:
+                # A FORM IS A REQUEST TOO. Twilio declares sixty-two bodies and
+                # every one of them is x-www-form-urlencoded, so a reader that
+                # took JSON alone saw none of them and said `holds`. The field
+                # names in a form go on the wire exactly as written — the same
+                # thing that makes a query key judgeable — and the schema beside
+                # them is shaped identically. JSON is preferred where both are
+                # offered, because that is the one a typed client writes.
+                for kind in ("application/x-www-form-urlencoded", "multipart/form-data"):
+                    if (content.get(kind) or {}).get("schema"):
+                        body = content[kind]["schema"]
+                        break
             if not body:
                 # swagger 2.0 puts the body among the parameters, marked `in:
                 # body`, and its schemas live under `definitions`. Two of the
@@ -2111,6 +2126,19 @@ def shape_of_type(t):
     while len(t) > 1 and t[0] == t[-1] and t[0] in "\"'":
         t = t[1:-1].strip()
     if not t:
+        return None
+    # A TYPE IS A WORD OR A CONSTRUCTION, NEVER A SENTENCE. `:param near_number:
+    # Given a phone number, find a geographically close one` reads as a name and
+    # a type to any pattern that looks for a colon, and the English `number` in
+    # the prose then became the shape: a hundred and twenty-eight accusations
+    # against twilio's client, every one of them a docstring.
+    # Counting words only outside brackets, because documentation carries them
+    # too: `Limit results to a specific area ([LATA](https://…))` is a sentence
+    # with a link in it, and a rule that excused anything bracketed let thirty of
+    # these through. Punctuation is not a word, so `A | B` stays a type.
+    bare = [w for w in re.sub(r"[\[\(<\{][^\]\)>\}]*[\]\)>\}]", " ", t).split()
+            if re.search(r"\w", w)]
+    if len(bare) >= 3:
         return None
     if t.endswith("[]"):
         return "Many"
@@ -2415,6 +2443,28 @@ def cmd_import_contract(a):
         for f in missing:
             refusals.append({"address": f"{os.path.basename(src)} · {f['route']} · {f['field']}",
                              "claim": f"the contract declares it, {who} does not carry it"})
+        # AND A WHOLE ROUTE MAY BE MISSING, which is a larger thing than a field
+        # and was invisible while only fields were read: weaviate's python client
+        # implements neither `/objects/validate` nor `/replication/scale`, and
+        # typesense's javascript one has no `/config` at all. A path goes on the
+        # wire as written, so its literal segments are a name both sides spell —
+        # the braces are skipped, being a slot and not a word.
+        # unless the library names no route at all: a package of types alone
+        # writes no URL, and telling it that it is missing every endpoint is the
+        # blind reader again, wearing a bigger accusation.
+        spelt = {}
+        for route in dict.fromkeys(f["route"] for f in fields):
+            segs = [s for s in route.split("/") if s and not s.startswith("{")]
+            if segs:
+                # a segment stands between delimiters, and JS writes its paths in
+                # template strings — a backtick closes a path as surely as a quote
+                spelt[route] = all(re.search(r"[\"'`/]" + re.escape(s) + r"(?=[\"'`/?]|$)", body, re.M)
+                                   for s in segs)
+        if any(spelt.values()):
+            for route, named_here in spelt.items():
+                if not named_here:
+                    refusals.append({"address": f"{os.path.basename(src)} · {route}",
+                                     "claim": f"the contract declares this route, {who} never names it"})
     if not keep:
         shutil.rmtree(os.path.dirname(out_path), ignore_errors=True)
     # a green is only as wide as what was judged, so the silences are printed
