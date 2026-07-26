@@ -1327,17 +1327,23 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
         "parameters": [{"name": "setName", "in": "path", "schema": {"type": "string"}}],
         "get": {"parameters": [
             {"name": "ids[]", "in": "query", "schema": {"type": "array"}},
+            {"name": "StartTime<", "in": "query", "schema": {"type": "string"}},
             {"name": "opts", "in": "query", "schema": {"type": "object", "properties": {
                 "exclude_fields": {"type": "string"}, "limit": {"type": "integer"}}}}]},
         "put": {"requestBody": {"content": {"application/json": {"schema": {"properties": {
-            "items": {"type": "array"}}}}}}}}}}))
+            "items": {"type": "array"},
+            # the wire encoding a structure, and a comparison written into a key:
+            # no library spells either, and looking for them found nothing three
+            # hundred and ninety-six times on twilio's own client
+            "Parameter1.Name": {"type": "string"}}}}}}}}}}))
     open(os.path.join(con, "params", "client.ts"), "w").write(
         "interface SetQuery {\n  ids?: string[];\n  exclude_fields?: string;\n  limit?: number;\n}\n"
         "interface SetBody {\n  items: string[];\n}\n")
     _, prm = run("import", "contract", os.path.join(con, "spec-params.json"),
                  "--client", os.path.join(con, "params"), "--name", "Params")
     S.append(("a request is not only its body, and a name is judged only where the wire carries it",
-              # ids, exclude_fields, limit, items — and setName is not a field at all
+              # ids, exclude_fields, limit, items — and setName, `Parameter1.Name`
+              # and `StartTime<` are not fields at all: no source spells them
               prm.get("fields") == 4 and prm.get("judged") == 4
               and prm.get("verdict") == "holds" and not prm.get("refusals")))
 

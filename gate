@@ -1843,6 +1843,11 @@ CONTRACT_HEADER = """// printed by gate import contract — what an API contract
 //
 """
 
+# a name both sides can say: letters, digits, underscores and hyphens, because a
+# hyphen converts between conventions and a dot does not — a dot inside a key is
+# the wire encoding a structure, and no source anywhere carries it as a word.
+SPELLABLE = re.compile(r"[A-Za-z_]\w*(?:-\w+)*")
+
 SHAPE_OF = {"string": "Text", "integer": "Count", "number": "Count",
             "boolean": "Flag", "array": "Many", "object": "Nested"}
 
@@ -1948,7 +1953,16 @@ def contract_fields(spec):
                 # `project_ids[]` is how a repeated key is written ON THE WIRE;
                 # the name a library spells is `project_ids`, and the brackets
                 # belong to the transport, not to either side's vocabulary
-                out.append({"route": route, "field": re.sub(r"\[\]$", "", p["name"]),
+                nm = re.sub(r"\[\]$", "", p["name"])
+                # and only a name a library could spell. Twilio writes the
+                # comparison into the key — `StartTime<`, `StartTime>` — and no
+                # source anywhere can carry that word, so looking for it finds
+                # nothing and reports an absence that means only that the wire
+                # has a syntax. The same ground as the path names: judge what
+                # both sides are able to say.
+                if not SPELLABLE.fullmatch(nm):
+                    continue
+                out.append({"route": route, "field": nm,
                             "shape": SHAPE_OF.get(t), "where": "query"})
             content = (op.get("requestBody") or {}).get("content") or {}
             body = (content.get("application/json") or {}).get("schema")
@@ -1987,6 +2001,14 @@ def contract_fields(spec):
                 # breaking it. Nineteen such accusations against a correct client
                 # is what this cost before the shape was allowed to be nothing.
                 prop = prop or {}
+                if not SPELLABLE.fullmatch(name):
+                    # `Parameter1.Name` … `Parameter99.Value` is how twilio writes
+                    # a list of pairs ON THE WIRE, and no library spells it: a dot
+                    # inside a key belongs to the encoding, and looking for it in
+                    # source found nothing three hundred and ninety-six times.
+                    # A hyphen does convert — `log-slow-requests-time-ms` is
+                    # `log_slow_requests_time_ms` in Python — so it stays.
+                    continue
                 if prop.get("readOnly"):
                     # the contract's own word that this field travels out and
                     # never in: it is no part of a request, so a client that does
@@ -2237,10 +2259,34 @@ def shapes_seen(body, field):
     # answer, or a library whose fields mostly alias other types would be judged
     # on almost nothing. Two sites that name two different shapes is the one
     # thing that counts as two voices.
+    return shapes_from(block_types(body), field)
+
+
+def block_types(text, _seen={}):
+    # every `name:` in a block and the type written after it, read ONCE. Asking
+    # the question per field instead re-scanned the same block for each of them,
+    # and on a large pair — twilio's contract against twilio's client — that
+    # turned a command which promises milliseconds into minutes.
+    key = id(text)
+    got = _seen.get(key)
+    if got is not None and got[0] is text:
+        return got[1]
+    d = {}
+    for m in re.finditer(r"\b(\w+)\??\s*:\s*", text):
+        d.setdefault(m.group(1), []).append(type_text(text, m.end()))
+    # a home has several rooms and its fields alternate between them, so keeping
+    # only the last one meant reading each room again for every field in it
+    if len(_seen) > 64:
+        _seen.clear()
+    _seen[key] = (text, d)
+    return d
+
+
+def shapes_from(typed, field):
     shapes = set()
     for name in name_variants(field):
-        for m in re.finditer(r"\b" + re.escape(name) + r"\??\s*:\s*", body):
-            here = shapes_of_type(type_text(body, m.end()))
+        for t in typed.get(name, ()):
+            here = shapes_of_type(t)
             if here and UNREAD not in here:
                 shapes |= here
     return shapes
@@ -2335,6 +2381,12 @@ def cmd_import_contract(a):
     body, files = read_carrier(root)
     blocks = carrier_blocks(body)
     named_in, where = carrier_index(blocks)
+    # the whole body, read ONCE into the words it contains and the segments it
+    # spells. Searching it per field and per route segment instead is a scan of
+    # twenty megabytes apiece — on twilio, a thousand of them, and a command that
+    # promises milliseconds took minutes.
+    words = set(re.findall(r"\w+", body))
+    spoken = set(re.findall(r"[\"'`/]([A-Za-z0-9_.\-]+)(?=[\"'`/?]|$)", body, re.M))
     homes, carried, seen_at = {}, {}, {}
     for f in fields:
         homes.setdefault(f["route"], set()).add(f["field"])
@@ -2351,7 +2403,7 @@ def cmd_import_contract(a):
         # as news, so it is claimed only when the name appears NOWHERE.
         # AS WHAT is asked only at home, and where home does not declare the
         # field the answer is silence — a stranger's `int` is not its shape.
-        carried[key] = any(re.search(r"\b" + re.escape(n) + r"\b", body) for n in vs)
+        carried[key] = any(n in words for n in vs)
         if home or whole:
             places = ([i for i in home if vs & named_in[i]]
                       or [i for i in whole if vs & named_in[i]])
@@ -2458,8 +2510,7 @@ def cmd_import_contract(a):
             if segs:
                 # a segment stands between delimiters, and JS writes its paths in
                 # template strings — a backtick closes a path as surely as a quote
-                spelt[route] = all(re.search(r"[\"'`/]" + re.escape(s) + r"(?=[\"'`/?]|$)", body, re.M)
-                                   for s in segs)
+                spelt[route] = all(s in spoken for s in segs)
         if any(spelt.values()):
             for route, named_here in spelt.items():
                 if not named_here:
