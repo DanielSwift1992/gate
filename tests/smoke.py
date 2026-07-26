@@ -1245,9 +1245,17 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               # look at ONE FILE, and a seam is not a view of a file at all
               and 'data-fold="seams"' in ui and 'data-m="seams"' not in ui
               and "async function buildSeams()" in ui
-              # and it asks the same question the command line asks, in the same
-              # words, so nobody learns a second vocabulary to look through glass
-              and '"waits on you"' in ui and '"you are waiting"' in ui and '"came back"' in ui
+              # it borrows the rail's own grammar rather than inventing a second
+              # one: a row is a commit's row, the address is a fact, the kind is
+              # a badge, and WHY it is there lives in the title — answered on
+              # demand, the way this bench has always answered `what is this`,
+              # instead of printed under every line down a narrow column
+              and 'r.className = "commit"' in ui and '"came back"' in ui
+              and 'r.title = why' in ui
+              # and a badge is a word that stands alone: `you` and `them` needed
+              # the tooltip to mean anything, which is a term used before it is
+              # introduced. These are the product's own words for the same thing.
+              and '"your word"' in ui and '"their word"' in ui
               # where there is none it says what a seam IS and what to type —
               # never what it is not, and never our reasoning for showing nothing
               and "No seam here yet" in ui
