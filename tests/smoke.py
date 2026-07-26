@@ -850,6 +850,39 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               # the same reading, refused where there is no history to read
               and thin.get("thin") and not thin.get("late")))
 
+    # ── and the library is only where the library is. Let loose over a whole
+    # repository this measurement lies twice: a monorepo answers for a sibling
+    # package that happens to spell the same word, and — worse — a contract kept
+    # beside its own client answers for the client, because the commit that adds
+    # a field to the spec adds that name in a line beginning with a plus. Every
+    # field then reads as adopted the day it was declared, and the report is a
+    # clean bill of health made of the contract talking to itself.
+    mono = os.path.join(dr, "mono")
+    os.makedirs(os.path.join(mono, "sdk"), exist_ok=True)
+    os.makedirs(os.path.join(mono, "other"), exist_ok=True)
+    subprocess.run(["git", "init", "-q", "-b", "main", mono])
+    msp = os.path.join(mono, "openapi.json")
+    open(msp, "w").write(spec_with(["limit"])); at(mono, "2024-01-10", "the contract, in the same repo")
+    open(os.path.join(mono, "sdk", "client.ts"), "w").write("interface Q {\n  limit?: number;\n}\n")
+    at(mono, "2024-01-10", "the sdk answers it")
+    open(msp, "w").write(spec_with(["limit", "with_vector"])); at(mono, "2024-02-01", "a field is added")
+    # a sibling package names it at once; the sdk never does
+    open(os.path.join(mono, "other", "notes.ts"), "w").write("const with_vector = true;\n")
+    at(mono, "2024-02-02", "a neighbour spells the word")
+    _, mn = run("drift", msp, "--client", os.path.join(mono, "sdk"), "--name", "Sdk")
+    # and the same repository asked about ITSELF: here the contract is inside the
+    # walk, so only the exclusion keeps it from answering for the code. Without
+    # it the field reads as adopted on the day it was declared — by the very
+    # commit that declared it.
+    _, whole = run("drift", msp, "--client", mono, "--name", "Whole")
+    S.append(("a library is measured where the library is, not wherever its repository says the word",
+              # the neighbour's line and the contract's own line are both refused a vote
+              mn.get("fields") == 2 and mn.get("never") == ["with_vector"]
+              and mn.get("late") == 0
+              # asked about the whole repo, the neighbour answers a day late — the
+              # contract itself, which said the word first, does not answer at all
+              and whole.get("late") == 1 and whole.get("worst_days") == 1))
+
     # ── the souvenir, and the only numbers on it are ones nobody can raise by
     # hand. A coverage badge is gamed by writing tests that assert nothing; this
     # one counts CLAIMS, which the judge counts, and DAYS, which come from

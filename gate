@@ -1678,15 +1678,24 @@ def contract_revisions(path, since=None):
     return root, out
 
 
-def first_mentions(root, names):
+def first_mentions(root, names, only=None, without=None):
     # when each name first appeared in a library, read from the diffs themselves.
     # A name is looked for in every spelling the library might use, which is why
     # this sees a Go client the contract door cannot: `json:"with_vector"` holds
     # the wire name even where the field beside it is written `WithVector`.
+    # and only where the library IS. Two ways this lies if it is let loose over a
+    # whole repository: a monorepo answers for a sibling package, and — worse —
+    # a contract kept beside its client answers for the client, since the commit
+    # that adds a field to the spec adds the name in a line beginning with a
+    # plus. That reads as same-day adoption of everything, forever.
+    where = ["--", only] if only else []
+    if without:
+        where = (where or ["--"]) + [":(exclude)" + without]
     left = {n: re.compile(r"\b(?:" + "|".join(re.escape(v) for v in name_variants(n)) + r")\b")
             for n in names}
     seen, when = {}, None
-    p = subprocess.Popen(["git", "-C", root, "log", "--reverse", "-p", "--no-color", "--format=~gate~ %as"],
+    p = subprocess.Popen(["git", "-C", root, "log", "--reverse", "-p", "--no-color",
+                          "--format=~gate~ %as", *where],
                          stdout=subprocess.PIPE, text=True, errors="replace")
     for line in p.stdout:
         if line.startswith("~gate~ "):
@@ -1750,7 +1759,14 @@ def cmd_drift(a):
                          + " " + ("has" if len(thin) == 1 else "have")
                          + " one commit standing in for all of them, so nothing is said either way"),
                 "next": "git fetch --unshallow in " + thin[0] + ", then ask again"}
-    seen = first_mentions(croot, list(first)) if (first and croot) else {}
+    croot = os.path.realpath(croot) if croot else ""
+    here = os.path.relpath(os.path.realpath(root), croot) if croot else "."
+    spec_rel = (os.path.relpath(os.path.realpath(src), croot)
+                if croot and os.path.realpath(src).startswith(croot + os.sep) else None)
+    seen = (first_mentions(croot, list(first),
+                           only=None if here in (".", "") else here,
+                           without=spec_rel)
+            if (first and croot) else {})
     late, never = [], []
     for f, sd in first.items():
         cd = seen.get(f)
