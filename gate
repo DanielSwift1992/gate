@@ -1733,6 +1733,15 @@ def cmd_drift(a):
     # file has refuted the claim, which is exactly what makes it a claim.
     import json as _json
     from datetime import date as _date
+    # the first thing a stranger types is `--help`, and taking it for a filename
+    # printed an observation of a contract that does not exist
+    if not a or a[0].startswith("-") or not os.path.exists(a[0]):
+        return {"command": "drift", "asks": True,
+                "note": ("drift CONTRACT --client DIR [--since DATE] [--name N] [--fail-over DAYS]"
+                         + ("" if not a or a[0].startswith("-") else
+                            f" — no such contract here: {a[0]}")),
+                "next": "the contract is a JSON OpenAPI document in a git checkout; "
+                        "for YAML, `yq -o=json '.' spec.yml > spec.json` first"}
     src = a[0]
     root = a[a.index("--client") + 1] if "--client" in a else "."
     since = a[a.index("--since") + 1] if "--since" in a else None
@@ -2984,6 +2993,9 @@ def humanize(out):
             lines.append("  commit it, and every clone has the tool — nothing to install")
             if v.get("judge_sha256"):
                 lines.append(f"  judge sha256: {v['judge_sha256'][:16]}…")
+    elif cmd == "drift" and out.get("asks"):
+        lines.append("usage: " + out["note"])
+        lines.append(f"  next: {out['next']}")
     elif cmd == "drift":
         # every line here names its CATEGORY, because the two kinds of fact
         # below are not equally certified: a date is an object, an absence is a

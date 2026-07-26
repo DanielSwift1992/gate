@@ -1055,6 +1055,17 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
         "interface Req {\n  url: string;\n}\n")
     _, bare_types = run("drift", os.path.join(con, "spec.json"),
                         "--client", os.path.join(con, "typesonly"), "--name", "Types")
+    # ── and the first thing a stranger types is `--help`. Taking it for a
+    # filename printed an observation of a contract that does not exist, in the
+    # first second of the first minute somebody spends here.
+    _, asked = run("drift", "--help")
+    _, missing_spec = run("drift", os.path.join(tmp, "nowhere.json"), "--client", tmp)
+    S.append(("the first thing a stranger types is not a filename",
+              asked.get("asks") and "drift CONTRACT" in asked.get("note", "")
+              and missing_spec.get("asks") and "no such contract" in missing_spec.get("note", "")
+              # and asking is not an error
+              and "verdict" not in asked and not asked.get("over_threshold")))
+
     S.append(("a library that spells no route at all is accused of missing none",
               bare_types.get("silent_routes") == [] and "url" not in bare_types.get("unwritten", [])))
 

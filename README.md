@@ -153,9 +153,10 @@ gate survey                            # read-only: unwritten links mined from
 ```
 
 The porcelain is deliberately git-shaped: `init · status/fsck · log · check ·
-diff · apply · import/export · verify · guard · library · survey · serve ·
-report · stdlib · my · demo · findings · --version`. A red verdict exits non-zero, so hooks and
-CI need no wrappers.
+diff · apply · import/export · verify · guard · library · survey · drift ·
+badge · serve · report · stdlib · my · demo · findings · --version`. A refusal
+exits non-zero, so hooks and CI need no wrappers — and `drift`, which judges
+nothing, exits non-zero only on a threshold you declare yourself.
 
 Every command ends with the one step that comes next, chosen by what your
 repository already has — the journal before any translation, then the hook,
@@ -210,6 +211,13 @@ head. A refusal points at its address instead.
   carries its bounds. On weaviate's TypeScript client it reads: behind on 24 of
   71 names, median 28 days, and two the library has never written. The exit code
   is a threshold you declare with `--fail-over`, never a judgement.
+- **A green must say how wide it is.** `gate badge -o gate.svg` counts the
+  claims the judge counted — nothing stores that number — and replays every
+  commit that touched the world back through the same judge until one does not
+  hold, so the days on it are earned rather than declared. It will not say "no
+  silent error", because that is precisely what nobody saw. It speaks for a
+  world, and for nothing else: a badge over an observation would be a verdict
+  wearing a number, and no court sat.
 - **And judgement waits for the gate.** A shape is refused only when both sides
   have been declared into gate's grammar (`gate stdlib show genre-contract`),
   and then the refusal is about two declarations, each signed by whoever made
@@ -412,7 +420,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 167 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 168 end-to-end checks, the definition of green
 ```
 
 ## Status
