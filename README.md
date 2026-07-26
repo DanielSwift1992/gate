@@ -152,6 +152,24 @@ head. A refusal points at its address instead.
   leaves the client hand-written. A library that forwards an untyped bag is told
   so plainly rather than accused of lagging on every field: it lags on nothing,
   and it helps nobody.
+- **And how long it has been behind is a different question, with a different
+  answer.** `gate drift openapi.json --client ./sdk` measures the past instead
+  of the present, because clients catch up: one that lagged nine months on a
+  field and then shipped it looks today exactly like one that never lagged, so
+  asking "is it behind now" finds almost nothing and reports calm. Git holds
+  both ends — the day the contract first declared a field, the day the library
+  first wrote it — and neither side is fetched, so the contract may sit in a
+  checkout that has never heard of the library. On weaviate's TypeScript client
+  it reads: behind on 24 of 71 fields, median 28 days, two never carried at all.
+  A shallow clone is told it has no past to measure rather than credited with a
+  punctual one.
+- **A green must say how wide it is.** `gate badge -o gate.svg` counts the
+  claims the judge counted — nothing stores that number — and replays every
+  commit that touched the world back through the same judge until one does not
+  hold, so the days on it are earned rather than declared. It will not say "no
+  silent error", because that is precisely what nobody saw; it says how much was
+  judged and how long that has held, which is duller and provable, and which
+  anybody may re-run to check.
 - **A citation may not outlive the thing it cites.** `gate import refs
   tickets.json --code .` reads a tracker's own export and every place your code
   names a ticket, and judges them as one world: a `TODO(PROJ-42)` whose ticket
