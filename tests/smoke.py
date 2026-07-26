@@ -467,8 +467,20 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     os.makedirs(os.path.join(lad, "tables"))
     subprocess.run(["git", "init", "-q", "-b", "main", lad])
     c, r = run("status", cwd=lad)
-    S.append(("an empty repo is offered the journal, which needs no translation",
-              r.get("verdict") == "no world here" and "gate log" in r.get("next", "")))
+    # and the rung is chosen by what is actually there. A repository with no
+    # world AND no commits was sent to read its own history, which sent it back
+    # to status: two rungs pointing at each other and nothing to stand on. Where
+    # there is nothing at all, the step that produces something is a world to
+    # look at; where there is a history, the journal needs no translation.
+    S.append(("a repo with nothing in it is sent somewhere that produces something",
+              r.get("verdict") == "no world here" and "gate demo" in r.get("next", "")))
+    open(os.path.join(lad, "readme.md"), "w").write("# something\n")
+    subprocess.run(["git", "add", "-A"], cwd=lad)
+    subprocess.run(["git", "-c", "commit.gpgsign=false", "-c", "user.email=t@t", "-c", "user.name=T",
+                    "commit", "-qm", "a first commit, unrelated to any world"], cwd=lad)
+    _, past = run("status", cwd=lad)
+    S.append(("a repo with a history and no world is offered the journal, which needs no translation",
+              past.get("verdict") == "no world here" and "gate log" in past.get("next", "")))
     for f in ("people.csv", "grants.csv"):
         shutil.copy(os.path.join(DEMO, f), os.path.join(lad, "tables", f))
     c, r = run("status", cwd=lad)
@@ -1322,6 +1334,19 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
         parsed = r.returncode == 0 and "ok" in r.stdout
     S.append(("every script the bench serves compiles, which greping it never showed",
               bool(scripts) and (parsed is True or (node is None and parsed is None))))
+
+    # ── A NAME IS NOT AN ACTION, AND A BADGE IS MARKED BY ITS EDGE. The blue in
+    # this bench belongs to the hand: it paints what you press. An author's name
+    # is a fact about a commit, so it is ink like every other fact, and the
+    # underline arrives under the pointer to say it can be pressed. And a badge
+    # filled with --mist disappeared the moment the row under it went --mist too,
+    # which is every hover — a fill that matches its own background is not a
+    # marker at all.
+    S.append(("an author's name is a fact and not a button, and a badge keeps its edge under the pointer",
+              ".commit .who{cursor:pointer;color:var(--ink)" in ui
+              and "var(--action)" not in ui.split(".commit .who{", 1)[1].split("}", 1)[0]
+              and ".badge.closed{border:1px solid var(--line)" in ui
+              and "background" not in ui.split(".badge.closed{", 1)[1].split("}", 1)[0]))
 
     # ── THE PITCH STAYS OUTSIDE THE VERDICT. A brand may say `sight for
     # promises`; a verdict may not. What a reader is handed by the tool is what

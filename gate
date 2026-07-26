@@ -941,7 +941,8 @@ def cmd_library(a):
         v = cmd_verify([os.path.join(TABLES, "people.csv"), os.path.join(TABLES, "grants.csv")])
         if "seeds" in v:
             lib["coverage"] = {s["seed"]: ("held" if s["world"] == "refused" else "no gate") for s in v["seeds"]}
-    result = {"command": "library", "facts": FACTS, **lib}
+    result = {"command": "library", "facts": FACTS, **lib,
+              "next": "run `gate status` to judge what this vocabulary is used to say"}
     if out_path:
         with open(out_path, "w") as f:
             json.dump(lib, f, indent=2, sort_keys=True)
@@ -1056,6 +1057,10 @@ def repo_journal(n=200, scope="world"):
     me = subprocess.run(["git", "config", "user.email"], cwd=base,
                         capture_output=True, text=True).stdout.strip()
     return {"command": "log", "default_branch": default, "scope": scope, "limit": n,
+            "next": ("run `gate status` to have the judge read what these commits changed"
+                     if world_files() else
+                     "run `gate demo` for a world to look at, or drop a table you already export "
+                     "into tables/ and run `gate status`"),
             "me": me, "world_files": sorted(world), "commits": commits}
 
 
@@ -1312,6 +1317,9 @@ def cmd_survey(a):
         world = {"facts": FACTS, "verdict": r["verdict"], "refusals": len(r["refusals"])}
     return {
         "command": "survey",
+        "next": ("run `gate status`: these are candidates from your history, and a world is what "
+                 "holds them" if world_files() else
+                 "nothing here is judged yet: put a table into tables/ and run `gate status`"),
         "commits": len(commits),
         "unwritten_links": links,
         "identity": {
@@ -2804,6 +2812,7 @@ def cmd_findings(a):
     nums = [x for x in a if x.isdigit()]
     found = repo_findings(int(nums[0]) if nums else 400)
     return {"command": "findings", "findings": found,
+            "next": "run `gate status`: what is judged answers in milliseconds, and this does not",
             "judged": sum(1 for f in found if f["kind"] == "judged"),
             "observed": sum(1 for f in found if f["kind"] != "judged"),
             "markdown": findings_markdown(found) if "--md" in a else None,
@@ -2852,6 +2861,7 @@ def cmd_init(a):
         if prior:
             hooks_note += f" — it was {prior}"
     return {"command": "init", "root": root, "created": made, "hooks": hooks_note,
+            "next": next_rung(False),
             "undo_hooks": undo, "changed_git_config": bool(hooks_note), "vendored": vendored}
 
 
@@ -3309,8 +3319,18 @@ def dispatch(cmd, rest):
             # the reader is standing on, not the whole ladder.
             inside = subprocess.run(["git", "rev-parse", "--is-inside-work-tree"],
                                     capture_output=True, text=True).stdout.strip() == "true"
+            # AND CHOSEN BY WHAT IS ACTUALLY HERE. A repository with no world and
+            # no commits was sent to read its own history, which sent it back to
+            # status: two rungs pointing at each other and nothing to stand on.
+            # Where there is nothing at all, the one step that produces something
+            # is a world to look at.
+            commits = subprocess.run(["git", "rev-list", "--count", "HEAD"],
+                                     capture_output=True, text=True).stdout.strip()
+            has_past = commits.isdigit() and int(commits) > 0
             return {"command": "status", "verdict": "no world here", "refusals": [],
                     "next": ("run `gate log` to read this repository's own history: nothing to translate"
+                             if inside and has_past else
+                             "run `gate demo` for a world to look at: people, grants, and one refusal"
                              if inside else "run `gate init .` to start a world in this folder"),
                     "then": "drop your CSVs into tables/ and run gate status again, or gate demo to see one",
                     "mutates": False}
@@ -3464,6 +3484,8 @@ def humanize(out):
             lines.append(f"    {t}")
     elif cmd == "init":
         lines.append(f"init: {out['root']}" + (f" · created {len(out['created'])} files" if out["created"] else " · already there"))
+        if out.get("next"):
+            lines.append(f"  next: {out['next']}")
         if out.get("hooks"):
             lines.append(f"  {out['hooks']}")
         if out.get("undo_hooks"):
@@ -3542,6 +3564,9 @@ def humanize(out):
                          f"{out['median_days']} — this exits non-zero by your rule, not by a verdict")
         lines.append(f"  note: {out['note']}")
         lines.append(f"  next: {out['next']}")
+    elif cmd == "library":
+        f = out.get("forms") or out.get("crystal") or {}
+        lines.append(f"library: {len(f)} forms" + (f" · wrote {out['wrote']}" if out.get("wrote") else ""))
     elif cmd == "export":
         lines.append(f"export: {out['people']} people, {out['grants']} grants → {', '.join(out['wrote'])}")
     elif cmd == "log":
@@ -3583,6 +3608,15 @@ def humanize(out):
         lines.append(f"  fabric: {f.get('facts') or 'no world yet'} · " + (f"{f['verdict']}, {f['refusals']} refusal(s)" if f.get("verdict") else f.get("note", "")))
     else:
         return json.dumps(out, ensure_ascii=False, indent=2)
+    # EVERY OUTPUT ENDS WITH THE STEP THAT COMES NEXT. It is the oldest rule
+    # here and it was kept by hand, branch by branch, which meant five commands
+    # quietly did not: `log`, `library`, `survey`, `findings`, and — worst —
+    # `init`, where somebody has just set everything up and is looking for what
+    # to do. A reader who has to plan their own next move is a reader carrying
+    # the map, and carrying the map is exactly what this is supposed to take off
+    # them. The rule lives in one place now, so a new verb cannot forget it.
+    if out.get("next") and not any(l.startswith("  next:") for l in lines):
+        lines.append(f"  next: {out['next']}")
     return "\n".join(lines)
 
 

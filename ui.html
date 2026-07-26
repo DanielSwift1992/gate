@@ -110,11 +110,18 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .commit .subj{flex:1 1 auto;min-width:0;display:flex;gap:calc(var(--u)*3);align-items:baseline;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .commit .subj{text-overflow:ellipsis}
 .commit .meta{flex:0 0 auto;white-space:nowrap;display:flex;align-items:center;gap:calc(var(--u)*3);font-variant-numeric:tabular-nums}
-.commit .who{cursor:pointer;color:var(--action)}
-.commit .who:hover{text-decoration:underline}
+/* A NAME IS NOT AN ACTION. The blue here belonged to the hand — it is what this
+   bench paints things you press — and an author's name is a fact about a commit,
+   not a button. It reads as one now: ink like every other fact, with the
+   underline arriving under the pointer to say it can be pressed. */
+.commit .who{cursor:pointer;color:var(--ink);text-decoration:underline dotted var(--line);
+  text-underline-offset:3px}
+.commit .who:hover{text-decoration:underline solid var(--ink)}
 .badge{flex:none;padding:0 calc(var(--u)*3);border-radius:8px}
-.badge.closed{background:var(--mist);color:var(--muted)}
-.badge.open{background:var(--mist);color:var(--muted)}
+/* the badge is marked by an EDGE, not by a fill: filled with --mist it vanished
+   the moment the row underneath went --mist too, which is every hover */
+.badge.closed{border:1px solid var(--line);color:var(--muted)}
+.badge.open{border:1px solid var(--line);color:var(--muted)}
 #next{margin-left:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52%}
 #filter-note,#load-more{padding:calc(var(--u)*2) calc(var(--u)*7);font:11px -apple-system,sans-serif;color:var(--action);cursor:pointer}
 #filter-note:hover,#load-more:hover{text-decoration:underline}
