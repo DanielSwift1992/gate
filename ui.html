@@ -973,7 +973,10 @@ async function render() {
     let r;
     if (files.length > 1) {
         r = await (await fetch("/verdict?f=" + encodeURIComponent(active), { method: "POST", body: text })).json();
-        r.declarations = files.length + " files"; r.premises = "judged together"; r.milliseconds = r.judge_ms || 0;
+        // the width travels with the verdict: `holds` over three files says
+        // nothing until it says over how much
+        r.wide = r.premises; r.declarations = files.length + " files";
+        r.premises = "judged together"; r.milliseconds = r.judge_ms || 0;
         r.refusals = r.refusals.map(x => { const [f, line] = x.address.split(":"); return { file: f, line: +line, premise: x.claim }; });
     } else {
         r = local; r.refusals = r.refusals.map(x => ({ file: active, line: x.line, premise: x.premise }));
@@ -983,19 +986,26 @@ async function render() {
     document.getElementById("status").innerHTML =
         (files.length > 1
             ? "<b>" + r.declarations + "</b> " + r.premises
+              + (r.wide ? " · <b>" + r.wide + "</b> claims checked" : "")
             : "<b>" + r.declarations + "</b> declarations · <b>" + r.premises + "</b> claims checked")
         + " · " + (+r.milliseconds).toFixed(1) + " ms";
     const pending = r.refusals.filter(x => /states none/.test(x.premise));
     const broken = r.refusals.filter(x => !/states none/.test(x.premise));
-    document.getElementById("chip").outerHTML = broken.length
+    // a refusal and a decision are different things and neither hides the other.
+    // One chip that showed whichever came first made the slots waiting on you
+    // vanish the moment something broke — which is exactly when there is most to
+    // decide.
+    const waits = pending.length
+        ? '<span class="chip" style="background:color-mix(in srgb,var(--law) 15%,transparent);color:var(--law)" title="'
+            + pending.length + ' slots are not filled in yet. Nothing disagrees; the record is just unfinished.">'
+            + pending.length + ' to fill</span>'
+        : "";
+    document.getElementById("chip").outerHTML = (broken.length
         ? '<span class="chip bad" id="chip" title="' + broken.length
             + ' claims disagree with the rest. Each is listed below, with its line.">refuses '
             + broken.length + '</span>'
-        : pending.length
-        ? '<span class="chip" id="chip" style="background:color-mix(in srgb,var(--law) 15%,transparent);color:var(--law)" title="'
-            + pending.length + ' slots are not filled in yet. Nothing disagrees; the record is just unfinished.">'
-            + pending.length + ' to fill</span>'
-        : '<span class="chip ok" id="chip" title="Every claim in these files agrees with every other one.">holds</span>';
+        : '<span class="chip ok" id="chip" title="Every claim in these files agrees with every other one.">holds</span>')
+        + waits;
     clearFlags(); applyFlags(r.refusals);
     showNext();
     badFiles = new Set(r.refusals.map(x => x.file || active).filter(Boolean));

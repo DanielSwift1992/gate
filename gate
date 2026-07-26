@@ -2907,8 +2907,15 @@ def cmd_serve(a):
             refusals += entry_guards_over(sources)
             refusals += manifest_guards() + policy_guards() + stdlib_guards() + vendored_guards()
             times = re.findall(r"([\d.]+) ms", raw)
+            # AND THE WIDTH OF IT. The judge counts what it checked and says so;
+            # dropping that on the way to the bench left a green over several
+            # files saying only `judged together`, which is a verdict with no
+            # measure — the same empty green the doors spent a day losing.
+            size = re.search(r"(\d+) declarations · (\d+) lookups · (\d+) premises", raw)
             body = json.dumps({"verdict": "holds" if not refusals else "refused",
                                "refusals": refusals,
+                               "declarations": int(size.group(1)) if size else None,
+                               "premises": int(size.group(3)) if size else None,
                                "judge_ms": float(times[-1]) if times else None}).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json")

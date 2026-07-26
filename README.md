@@ -154,7 +154,8 @@ gate survey                            # read-only: unwritten links mined from
 
 The porcelain is deliberately git-shaped: `init · status/fsck · log · check ·
 diff · apply · import/export · verify · guard · library · survey · drift ·
-badge · serve · report · stdlib · my · demo · findings · --version`. A refusal
+badge · declare · seam · serve · report · stdlib · my · demo · findings ·
+--version`. A refusal
 exits non-zero, so hooks and CI need no wrappers — and `drift`, which judges
 nothing, exits non-zero only on a threshold you declare yourself.
 
@@ -433,7 +434,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 171 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 172 end-to-end checks, the definition of green
 ```
 
 ## Status

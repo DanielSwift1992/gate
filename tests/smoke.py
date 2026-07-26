@@ -565,9 +565,31 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "/states none/.test(x.premise)" in ui
               and "+ pending.length + ' to fill</span>'" in ui
               and "is not filled in yet" in ui))
-    S.append(("and the chip reddens for disagreements alone, not for empty slots",
-              "outerHTML = broken.length" in ui
-              and "+ broken.length + '</span>'" in ui))
+    # and the two are shown TOGETHER, because a refusal and a decision are
+    # different things and neither may hide the other: one chip that showed
+    # whichever came first made the slots waiting on their owner vanish the
+    # moment something broke — which is exactly the moment there is most to
+    # decide.
+    S.append(("and the chip reddens for disagreements alone, never for empty slots, and neither hides the other",
+              "outerHTML = (broken.length" in ui
+              and "+ broken.length + '</span>'" in ui
+              # the waiting slots are built apart from the verdict and appended to it
+              and "const waits = pending.length" in ui and "+ waits;" in ui
+              # and they never wear the colour a lie earns
+              and "chip bad" not in ui.split("const waits = pending.length", 1)[1].split(";", 1)[0]))
+
+    # ── AND A GREEN SAYS HOW WIDE IT IS, on the bench as at the command line.
+    # The judge counts what it checked and prints the count; dropping it on the
+    # way to the browser left a verdict over several files reading `judged
+    # together` and nothing else — which is a green with no measure, the very
+    # thing a day of doors was spent losing. Several files is the ordinary case,
+    # so this was the ordinary case.
+    S.append(("the bench says how much was checked, and says it where several files are judged at once",
+              # the server keeps the judge's own count instead of discarding it
+              '"premises": int(size.group(3)) if size else None' in open(GATE).read()
+              # and the bench prints it in the multi-file line, where it used to vanish
+              and "r.wide = r.premises" in ui
+              and '(r.wide ? " · <b>" + r.wide + "</b> claims checked" : "")' in ui))
 
     S.append(("a jump can be walked back and forward, across files too",
               "function navGo(" in ui and "navFrom = navHere()" in ui
