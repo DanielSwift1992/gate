@@ -16,6 +16,13 @@ def run(*args, cwd=None):
         return r.returncode, {"raw": r.stdout[:200], "stderr": r.stderr[:200]}
 
 
+def say(*args, cwd=None):
+    # the human line, not the JSON: the porcelain has its own words and the
+    # canon of names governs them
+    r = subprocess.run([sys.executable, GATE, *args], capture_output=True, text=True, cwd=cwd)
+    return r.stdout
+
+
 def main():
     tmp = tempfile.mkdtemp(prefix="gate-smoke-")
     repo = os.path.join(tmp, "client")
@@ -1308,6 +1315,23 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               # ids, exclude_fields, limit, items — and setName is not a field at all
               prm.get("fields") == 4 and prm.get("judged") == 4
               and prm.get("verdict") == "holds" and not prm.get("refusals")))
+
+    # ── and a seam belongs to a PAIR, so the canon of names gives it a verb and
+    # not a property. `are we compatible?` puts the question straight back into
+    # the politics this whole turn exists to take it out of; `the seam has
+    # parted, here` keeps it about the thing, and an address follows. The
+    # machine word is untouched — `verdict` stays holds/refused for whatever
+    # reads the JSON, which is the same split the porcelain has everywhere.
+    seam_holds = say("import", "contract", os.path.join(con, "spec-params.json"),
+                     "--client", os.path.join(con, "params"), "--name", "Params")
+    seam_parts = say("import", "contract", os.path.join(con, "spec.json"),
+                     "--client", os.path.join(con, "wrongshape"), "--name", "Wrong")
+    _, seam_json = run("import", "contract", os.path.join(con, "spec.json"),
+                       "--client", os.path.join(con, "wrongshape"), "--name", "Wrong")
+    S.append(("a seam is spoken of as a pair and an act, and the machine word stays where machines read it",
+              "the seam holds" in seam_holds
+              and bool(re.search(r"the seam has parted in \d+ place", seam_parts))
+              and seam_json.get("verdict") == "refused"))
 
     # ── and a badge for a seam, not only for a world. Somebody who came to
     # measure their own contract against their own client has no world of facts

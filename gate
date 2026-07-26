@@ -3296,6 +3296,15 @@ def humanize(out):
         return "\n".join(lines)
     if "verdict" in out:
         head = "holds" if out["verdict"] == "holds" else f"refused {len(out.get('refusals', []))}"
+        # a seam belongs to a PAIR, and the canon of names gives it a verb rather
+        # than a property: `are we compatible?` puts the question back where the
+        # whole turn was meant to take it from — politics — while `the seam has
+        # parted, here` keeps it about the thing. The machine word is untouched:
+        # `verdict` stays holds/refused for whatever reads the JSON.
+        if cmd == "import contract" and not out.get("note", "").startswith(out.get("carrier", "\0")):
+            n = len(out.get("refusals", []))
+            head = ("the seam holds" if out["verdict"] == "holds"
+                    else f"the seam has parted in {n} place" + ("s" if n != 1 else ""))
         tail = []
         if isinstance(out.get("world"), dict):
             w = out["world"]
