@@ -1879,18 +1879,6 @@ public enum MyWatch: AccessLedger {
     # It is said ONCE and goes, it says nothing at all on a first visit (there is
     # no `since` yet to speak of), and it never repeats the verdict — the chip
     # says the state, this says the change.
-    S.append(("the bench says what happened while you were away, in one line, and says nothing on a first visit",
-              "function morningLine()" in ui and 'const SEEN = "gate.last.seen"' in ui
-              and "if (!before) return;" in ui
-              # said once: the guard is set before anything else can call it again
-              and "if (morningSaid) return;" in ui
-              # a state of affairs, and the numbers behind it
-              and "nothing has touched these facts since you last looked" in ui
-              and "since you last looked, by \" + hands" in ui
-              # and it is spoken through the same quiet bar everything else uses,
-              # never as a panel of its own
-              and "say(holds" in ui))
-
     # ── and the page says when it is talking to a bench that predates it. The
     # server reads its page off the disk and answers out of memory, so a gate
     # updated while it runs leaves a new page speaking to an old process: every
@@ -1902,6 +1890,19 @@ public enum MyWatch: AccessLedger {
               'const BENCH_FOR = "' + re.search(r'^VERSION = "([^"]+)"', src, re.M).group(1) + '";' in ui
               and 'fetch("/version"' in ui and "restart `gate serve`" in ui
               and '"gate": VERSION' in src))
+
+    # ── A BAR THAT EXPIRES MAY ANSWER AN ACTION; IT MAY NEVER REPORT A STATE.
+    # You asked for the save, so a word about the save may go and be forgotten.
+    # A state you did not cause — the night's commits, a bench older than its own
+    # page — is still true a minute later, and a message that takes itself away
+    # is a rumour: unpointable, unreadable twice, gone if you happened to look
+    # elsewhere. This bench is built on the opposite of a rumour.
+    S.append(("nothing the bench must still be true about is said in a bar that expires",
+              # the two states it reports both have a place that keeps them
+              "benchStale" in ui and 'class="stale"' in ui
+              and "say(" not in ui.split('fetch("/version"', 1)[1].split("}).catch", 1)[0]
+              # and `say` remains what it was: an answer to something you did
+              and "There is nothing to save" in ui))
 
     listed = set(re.findall(r"^(\S+\.(?:py|js|html|css|sh|md))",
                             readme.split("## Repository")[-1], re.M)) if "## Repository" in readme else set()
