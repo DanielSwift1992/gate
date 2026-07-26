@@ -1905,9 +1905,48 @@ def contract_fields(spec):
     for route, ops in (spec.get("paths") or {}).items():
         if not isinstance(ops, dict):
             continue
+        # A REQUEST IS NOT ONLY ITS BODY. Half of what a contract declares stands
+        # in its parameters — the id in the path, the limit in the query — and
+        # reading bodies alone judged forty-six per cent of these contracts and
+        # called that the whole of them. Deepgram declares seventeen body fields
+        # and two hundred and forty-six parameters: six per cent judged, and a
+        # green over it would have meant almost nothing. The contract states
+        # each one outright, name and place and sort, so there is nothing to
+        # guess here — only something that was not being read.
+        shared = [p for p in (ops.get("parameters") or []) if isinstance(p, dict)]
         for verb, op in ops.items():
             if not isinstance(op, dict):
                 continue
+            for p in (op.get("parameters") or []) + shared:
+                # QUERY ONLY, and the reason is what a name IS. A query key goes
+                # on the wire exactly as written, so both sides must spell it the
+                # same and may be judged against each other. The name inside
+                # `{braces}` never goes anywhere: it is documentation of a slot,
+                # and a client owes it nothing — typesense writes
+                # `{curationSetName}` and its library calls the same thing
+                # `name`, which is not drift and must not be reported as any.
+                if not isinstance(p, dict) or p.get("in") != "query" or not p.get("name"):
+                    continue
+                sch = p.get("schema") or {}
+                inner = resolve(sch).get("properties") if sch else None
+                if inner:
+                    # a query parameter declared as an object carries its fields
+                    # in its properties; its own name is a wrapper nobody writes
+                    for nm, pr in sorted(inner.items()):
+                        pt = (pr or {}).get("type")
+                        out.append({"route": route, "field": nm,
+                                    "shape": SHAPE_OF.get(pt if not isinstance(pt, list) else None),
+                                    "where": "query"})
+                    continue
+                t = sch.get("type") or p.get("type")
+                if isinstance(t, list):
+                    t = [x for x in t if x != "null"]
+                    t = t[0] if len(t) == 1 else None
+                # `project_ids[]` is how a repeated key is written ON THE WIRE;
+                # the name a library spells is `project_ids`, and the brackets
+                # belong to the transport, not to either side's vocabulary
+                out.append({"route": route, "field": re.sub(r"\[\]$", "", p["name"]),
+                            "shape": SHAPE_OF.get(t), "where": "query"})
             body = (op.get("requestBody", {}).get("content", {})
                       .get("application/json", {}).get("schema"))
             if not body:
@@ -1947,7 +1986,7 @@ def contract_fields(spec):
                     # crashed the door on a valid document.
                     t = [x for x in t if x != "null"]
                     t = t[0] if len(t) == 1 else None
-                out.append({"route": route, "field": name, "shape": SHAPE_OF.get(t)})
+                out.append({"route": route, "field": name, "shape": SHAPE_OF.get(t), "where": "body"})
     return out
 
 

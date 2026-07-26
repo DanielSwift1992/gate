@@ -1276,6 +1276,39 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               dirs_.get("fields") == 2 and dirs_.get("judged") == 2
               and dirs_.get("verdict") == "holds" and not dirs_.get("refusals")))
 
+    # ── A REQUEST IS NOT ONLY ITS BODY. Half of what a contract declares stands
+    # in its parameters, and reading bodies alone judged forty-six per cent of
+    # these contracts while calling that the whole: deepgram declares seventeen
+    # body fields against two hundred and forty-six parameters, so a green over
+    # it meant almost nothing.
+    # QUERY, though, and not path — and the reason is what a name IS. A query key
+    # goes on the wire exactly as written, so both sides must spell it the same
+    # and may be judged against each other. The name inside `{braces}` never goes
+    # anywhere: it documents a slot, and a client owes it nothing — typesense
+    # writes `{curationSetName}` where its own library says `name`, which is not
+    # drift and must not be reported as any. `project_ids[]` is the transport's
+    # way of writing a repeated key, not a word either side spells. And a query
+    # parameter declared as an object carries its fields in its properties; its
+    # own name is a wrapper nobody writes.
+    os.makedirs(os.path.join(con, "params"), exist_ok=True)
+    open(os.path.join(con, "spec-params.json"), "w").write(json.dumps({"paths": {"/sets/{setName}": {
+        "parameters": [{"name": "setName", "in": "path", "schema": {"type": "string"}}],
+        "get": {"parameters": [
+            {"name": "ids[]", "in": "query", "schema": {"type": "array"}},
+            {"name": "opts", "in": "query", "schema": {"type": "object", "properties": {
+                "exclude_fields": {"type": "string"}, "limit": {"type": "integer"}}}}]},
+        "put": {"requestBody": {"content": {"application/json": {"schema": {"properties": {
+            "items": {"type": "array"}}}}}}}}}}))
+    open(os.path.join(con, "params", "client.ts"), "w").write(
+        "interface SetQuery {\n  ids?: string[];\n  exclude_fields?: string;\n  limit?: number;\n}\n"
+        "interface SetBody {\n  items: string[];\n}\n")
+    _, prm = run("import", "contract", os.path.join(con, "spec-params.json"),
+                 "--client", os.path.join(con, "params"), "--name", "Params")
+    S.append(("a request is not only its body, and a name is judged only where the wire carries it",
+              # ids, exclude_fields, limit, items — and setName is not a field at all
+              prm.get("fields") == 4 and prm.get("judged") == 4
+              and prm.get("verdict") == "holds" and not prm.get("refusals")))
+
     # ── and a badge for a seam, not only for a world. Somebody who came to
     # measure their own contract against their own client has no world of facts
     # to count, so the road they walked ended with nothing to hang up — the
