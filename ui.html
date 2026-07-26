@@ -1851,6 +1851,13 @@ async function buildSeams() {
         const box = document.createElement("div");
         const head = document.createElement("div");
         head.className = "seam-pair caption observed";
+        if (s.alone) {
+            head.textContent = s.carrier + " · declared, waiting for the other side";
+            head.title = "You have said what this side " + s.alone + ". Until the other side's "
+                + "declaration is here there is no pair to read: bring it in, or put yours in "
+                + "their repository and let their own CI hold them to it.";
+            box.appendChild(head); host.appendChild(box); continue;
+        }
         // HOW MUCH OF THIS AGREEMENT I ACTUALLY HOLD is the measure of being
         // integrated with somebody, and it is a count rather than a feeling: of
         // everything the other end states, this many are claimed here. No role,

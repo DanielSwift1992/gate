@@ -163,7 +163,17 @@ extension OurSide { public static var typeName: String { "sdk.swift" } }
 ```
 
 Membership is yours to state; which side a file is, that file says about itself.
-Nothing appears in your rail because it was lying in the folder.
+Nothing appears in your rail because it was lying in the folder. `gate declare
+carrier … --mine` writes those two lines for you.
+
+**How the other side finds out** is a pull request, and nothing else. gate never
+fetches and never sends: the other side's declaration arrives because you brought
+it — a checkout in CI, a copy, whatever you already trust. To let them know
+somebody depends on them, put your file and its two manifest lines in **their**
+repository. From then on their own CI parts the seam the day they touch what you
+carry, with an address, and no registry has to exist for it. Unsubscribing is
+deleting the file: a commit like any other — visible, dated, and nobody's to do
+quietly.
 
 From then on:
 
@@ -475,7 +485,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 187 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 188 end-to-end checks, the definition of green
 ```
 
 ## Status

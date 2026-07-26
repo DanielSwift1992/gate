@@ -1414,6 +1414,35 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               not [r for r in owned_status.get("refusals", [])
                    if "api.swift" in r.get("address", "") or "sdk.swift" in r.get("address", "")]))
 
+    # ── AND THE ACT OF SAYING IT IS MINE IS ONE COMMAND. gate never fetches and
+    # never sends: the other side arrives because an operator brought it, by a
+    # checkout or a copy or whatever they already trust, and the manifest only
+    # writes down that this pair is one this world answers for. The other
+    # direction — letting them know somebody depends on them — is a pull
+    # request: your file and its two lines in THEIR repository, after which
+    # their own CI parts the seam the day they touch what you carry. There is no
+    # registry to be in and no server to ask, and unsubscribing is deleting a
+    # file, which is a commit like any other: visible, dated, nobody's to do
+    # quietly.
+    sub = os.path.join(tmp, "subscribe")
+    os.makedirs(sub, exist_ok=True)
+    shutil.copy(os.path.join(ent, "sdk.json"), os.path.join(sub, "sdk.json"))
+    _, mine = run("declare", "carrier", os.path.join(sub, "sdk.json"),
+                  "-o", os.path.join(sub, "sdk.swift"), "--mine")
+    # read defensively: a check must FAIL, never explode. An exception here
+    # stops every check after it and hides which one broke, which is a worse red
+    # than a red.
+    mpath = os.path.join(sub, "gate.manifest.swift")
+    man = open(mpath).read() if os.path.exists(mpath) else ""
+    S.append(("saying a seam is mine is one command, and one side declared alone is a state rather than a blank",
+              mine.get("declared_in") == "gate.manifest.swift"
+              and "public protocol SeamFile {}" in man and '"sdk.swift"' in man
+              # and the next names the act that makes the other side hold to it
+              and "THEIR repository" in mine.get("next", "")
+              # having moved first, this side sees that it moved rather than nothing
+              and seams_here_probe(sub) == 1
+              and "declared, waiting for the other side" in ui))
+
     # ── FRICTION IS NOT EVENLY DESERVED. Saying a true thing should cost
     # nothing; setting a true thing aside should cost a reason that can close,
     # since an exception with no term is an amnesty and every temporary one

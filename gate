@@ -1849,6 +1849,38 @@ CARRIER_HEADER = """// printed by gate declare carrier — what a library says i
 """
 
 
+def declare_mine(path, argv):
+    # SAYING IT IS MINE, in the file that already says what is mine. gate never
+    # fetches and never sends: the other side arrives because an operator brought
+    # it — a checkout in CI, a copy, whatever they already trust — and this only
+    # writes down that the pair is one this world answers for. Two lines, in the
+    # same document and the same shape as the layout, so the same reader that
+    # judges the world reads them.
+    #
+    # The other direction is a pull request. Put this file and these two lines in
+    # THEIR repository and their own CI holds them to it: touch the field and the
+    # seam parts on their side, with an address. Unsubscribing is deleting the
+    # file, which is a commit like any other — visible, dated, and nobody's to do
+    # quietly.
+    d = os.path.dirname(os.path.abspath(path)) or "."
+    mp = os.path.join(d, "gate.manifest.swift")
+    name = sanitize(os.path.splitext(os.path.basename(path))[0]).title().replace("_", "") or "Side"
+    text = open(mp, encoding="utf-8").read() if os.path.exists(mp) else (
+        "// the layout is a fact of the world: files are declared here, gate obeys\n"
+        "public protocol WorldFile {}\n")
+    if "public protocol SeamFile {}" not in text:
+        text += ("\n// and the seams this world says it is party to. A seam is here because\n"
+                 "// this side declared it, never because a file was lying beside the others.\n"
+                 "public protocol SeamFile {}\n")
+    line = ('public enum ' + name + ': SeamFile {}\n'
+            'extension ' + name + ' { public static var typeName: String { "'
+            + os.path.basename(path) + '" } }\n')
+    if line not in text:
+        text += line
+    open(mp, "w").write(text)
+    return os.path.basename(mp)
+
+
 def cmd_declare(a):
     # declare contract SPEC [-o F] · declare carrier DECL.json [-o F]
     #
@@ -1863,6 +1895,7 @@ def cmd_declare(a):
     out_path = a[a.index("-o") + 1] if "-o" in a else None
     if what == "contract":
         src = a[1]
+        mine_too = "--mine" in a
         fields = [f for f in read_contract(src) if f.get("shape")]
         lines = [DECLARE_HEADER + STDLIB["genre-contract"], ""]
         for f in fields:
@@ -1873,7 +1906,8 @@ def cmd_declare(a):
         world = "\n".join(lines) + "\n"
         if out_path:
             open(out_path, "w").write(world)
-        return {"command": "declare contract", "of": os.path.basename(src),
+        mine = declare_mine(out_path, a) if (mine_too and out_path) else None
+        return {"command": "declare contract", "of": os.path.basename(src), "declared_in": mine,
                 "declares": len(fields), "wrote": out_path, "world": None if out_path else world,
                 "note": ("a view of that document: every field it states a type for, as a record "
                          "whose shape is an axis. Fields it leaves open state no shape and are not "
@@ -1896,14 +1930,18 @@ def cmd_declare(a):
         world = "\n".join(lines) + "\n"
         if out_path:
             open(out_path, "w").write(world)
-        return {"command": "declare carrier", "carrier": who,
+        mine = declare_mine(out_path, a) if ("--mine" in a and out_path) else None
+        return {"command": "declare carrier", "carrier": who, "declared_in": mine,
                 "declares": len(decl.get("carries") or []), "wrote": out_path,
                 "world": None if out_path else world,
                 "against": against,
                 "note": ("what this library says it carries. It is not judgeable alone — a carrier "
                          "declaration is about a contract, and the pair is judged by `gate seam`"),
-                "next": ("declare it in gate.manifest.swift as a SeamFile — a seam is yours "
-                         "because you said so — then `gate seam <contract> <this file>`"),
+                "next": ("run it again with --mine to write it into gate.manifest.swift, and put "
+                         "this file plus those two lines in THEIR repository: their own CI then "
+                         "holds them to what you carry" if not mine else
+                         "put this file and its two manifest lines in THEIR repository: from then "
+                         "on their CI parts the seam the day they touch what you carry"),
                 "mutates": bool(out_path)}
     return {"command": "declare", "asks": True,
             "note": "declare contract SPEC [-o F]  ·  declare carrier DECL.json [-o F]",
@@ -1962,6 +2000,22 @@ def seams_here(root=None):
     known = os.path.join(base, "known.json")
     tick = os.path.join(base, "tickets.json")
     out = []
+    # A SIDE DECLARED ALONE IS A STATE, NOT A BLANK. Somebody who has just said
+    # what they carry and is waiting for the other end to arrive would otherwise
+    # see nothing at all and think the declaration had not taken — which is the
+    # ordinary state of whoever moves first, and moving first is what we ask.
+    if not (stated and claimed):
+        for f in (stated + claimed):
+            side = "carries" if f in claimed else "states"
+            out.append({"command": "attention", "alone": side,
+                        "carrier": re.search(r"public enum (\w+): Carrier",
+                                             open(f, encoding="utf-8").read())
+                        .group(1) if f in claimed else os.path.basename(f),
+                        "contract_file": os.path.basename(f), "carrier_file": os.path.basename(f),
+                        "stated": 0, "claimed": 0, "waits_on_you": [], "you_wait_on": [],
+                        "parted": [], "known": [], "expired": [], "against": None,
+                        "read_known": None, "read_tracker": None})
+        return out
     for c in stated:
         for k in claimed:
             args = [c, k]
