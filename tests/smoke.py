@@ -889,6 +889,34 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "carries it as text" in wrong_says and "calls it count" in wrong_says
               and bag.get("verdict") == "holds" and "untyped bag" in (bag.get("note") or "")))
 
+    # ── and silence is not agreement, on either side of the seam. A contract
+    # that writes `anyOf` has not named a shape, it has left the shape OPEN, and
+    # a door that quietly reads an open field as one particular sort accuses a
+    # correct library of breaking a claim nobody made — nineteen times over, on a
+    # real client, before this was caught. A library whose type could not be made
+    # out has likewise not answered, and filling its silence with the contract's
+    # own answer produces a certificate that agrees with itself: a green 171
+    # fields wide that meant only that the reader had nodded at its own words.
+    # So neither is judged, both are counted, and the count is printed beside the
+    # verdict — a green must say how wide it is.
+    os.makedirs(os.path.join(con, "silent"), exist_ok=True)
+    open(os.path.join(con, "spec-open.json"), "w").write(json.dumps({"paths": {"/probe": {"post": {
+        "requestBody": {"content": {"application/json": {"schema": {"properties": {
+            "url": {"type": "string"},
+            "withPayload": {"anyOf": [{"type": "boolean"}, {"type": "array"}]},
+            "waitFor": {"type": "integer"}}}}}}}}}}))
+    open(os.path.join(con, "silent", "client.ts"), "w").write(
+        "interface Req {\n  url: string;\n  withPayload?: string;\n}\n"
+        "const defaults = { waitFor: 0 };\n")
+    _, quiet = run("import", "contract", os.path.join(con, "spec-open.json"),
+                   "--client", os.path.join(con, "silent"), "--name", "Quiet")
+    S.append(("silence is not agreement: an open shape and an unreadable type are counted, never judged",
+              quiet.get("verdict") == "holds" and not quiet.get("refusals")
+              # the open field is not refused — and not counted as agreement either
+              and quiet.get("judged") == 1 and quiet.get("shape_open") == 1
+              and quiet.get("shape_unread") == 1
+              and "judged 1 of the 3" in (quiet.get("note") or "")))
+
     # ── and the check is the whole ceremony: one command in the CI the client
     # already has. It exits non-zero on a stale citation and zero when the code
     # and the tracker agree, so no wrapper is needed; the export may sit in

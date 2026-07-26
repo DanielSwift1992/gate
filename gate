@@ -1576,8 +1576,16 @@ def read_contract(path):
             if not body:
                 continue
             for name, prop in sorted((resolve(body).get("properties") or {}).items()):
-                out.append({"route": route, "field": name,
-                            "shape": SHAPE_OF.get((prop or {}).get("type"), "Nested")})
+                # a property may point at a schema instead of naming a type, so
+                # follow the ref one hop. What must NOT happen is a default: a
+                # contract that says `anyOf` has not named a shape, it has left
+                # the shape open, and calling that open field `nested` invents a
+                # claim the contract never made and then accuses a library of
+                # breaking it. Nineteen such accusations against a correct client
+                # is what this cost before the shape was allowed to be nothing.
+                prop = prop or {}
+                t = prop.get("type") or resolve(prop).get("type")
+                out.append({"route": route, "field": name, "shape": SHAPE_OF.get(t)})
     return out
 
 
@@ -1681,21 +1689,32 @@ def cmd_import_contract(a):
                 "mutates": False}
     lines = [CONTRACT_HEADER + STDLIB["genre-contract"], ""]
     lines.append(f"public enum {who}: Carrier {{}}")
-    srcmap, missing = {}, []
+    srcmap, missing, open_shape, unread = {}, [], [], []
     for i, f in enumerate(fields):
+        if not carried[(f["route"], f["field"])]:
+            missing.append(f)
+            continue
+        # the shape the LIBRARY says, not the one the contract says — else the
+        # certificate would agree with itself and judge nothing at all. So where
+        # either side is silent, NOTHING is written: a contract that leaves the
+        # shape open states no claim to break, and a library whose type could not
+        # be read has not answered. Substituting the contract's own answer for the
+        # silent one bought a green on 171 of 178 fields once, and that green
+        # meant only that the door had agreed with itself.
+        as_shape = shape_seen(body, f["field"])
+        if f["shape"] is None:
+            open_shape.append(f)
+            continue
+        if as_shape is None:
+            unread.append(f)
+            continue
         rec = f"F_{sanitize(f['route'])}_{sanitize(f['field'])}"
+        cert = f"Carry_{i}"
         lines.append(f"public enum {rec}: Declared {{")
         lines.append(f"    public typealias Of = {f['shape']}")
         lines.append("}")
-        if carried[(f["route"], f["field"])]:
-            cert = f"Carry_{i}"
-            # the shape the LIBRARY says, not the one the contract says — else the
-            # certificate would agree with itself and judge nothing at all
-            as_shape = shape_seen(body, f["field"]) or f["shape"]
-            lines.append(f"public typealias {cert} = Carries<{who}, {rec}, {as_shape}>")
-            srcmap[cert] = f
-        else:
-            missing.append(f)
+        lines.append(f"public typealias {cert} = Carries<{who}, {rec}, {as_shape}>")
+        srcmap[cert] = f
     world = "\n".join(lines) + "\n"
     with open(out_path, "w") as fh:
         fh.write(world)
@@ -1715,10 +1734,18 @@ def cmd_import_contract(a):
                          "claim": f"the contract declares it, {who} does not carry it"})
     if not keep:
         shutil.rmtree(os.path.dirname(out_path), ignore_errors=True)
+    # a green is only as wide as what was judged, so the silences are printed
+    # beside it: no reader should have to guess whether nothing broke or nothing
+    # was asked.
+    note = (f"judged {len(srcmap)} of the {len(fields)} fields the contract declares; "
+            f"{len(open_shape)} leave the shape open in the contract itself and "
+            f"{len(unread)} are carried with a type this reader could not make out")
     return {"command": "import contract", "carrier": who, "fields": len(fields),
-            "carried": named, "sources_read": files, "ms": ms,
+            "carried": named, "judged": len(srcmap), "shape_open": len(open_shape),
+            "shape_unread": len(unread), "sources_read": files, "ms": ms,
             "wrote": out_path if keep else None,
             "verdict": "refused" if refusals else "holds", "refusals": refusals,
+            "note": note,
             "next": ("open the field above: the contract says it, this library does not"
                      if refusals else "wire it into CI: this library cannot fall behind the contract unseen"),
             "mutates": True}
