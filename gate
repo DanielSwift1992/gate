@@ -1544,6 +1544,150 @@ def cmd_import_rbac(a):
     }
 
 
+def git_lines(root, *args):
+    r = subprocess.run(["git", "-C", root] + list(args), capture_output=True, text=True, errors="replace")
+    return [l for l in r.stdout.split("\n") if l.strip()]
+
+
+def contract_revisions(path, since=None):
+    # every revision of a contract, oldest first, read out of git and never off
+    # the disk: one `cat-file --batch` for the lot, because a hundred and fifty
+    # `git show` calls is a minute of somebody's morning.
+    # through realpath on BOTH sides: git answers with the real path, and on a
+    # mac the temp directory is a symlink, so a path taken as written produced a
+    # relative name climbing out of the repository and a history of nothing.
+    full = os.path.realpath(path)
+    here = os.path.dirname(full) or "."
+    root = (subprocess.run(["git", "-C", here, "rev-parse", "--show-toplevel"],
+                           capture_output=True, text=True).stdout or "").strip()
+    if not root:
+        return None, []
+    root = os.path.realpath(root)
+    rel = os.path.relpath(full, root)
+    if rel.startswith(".."):
+        return None, []
+    args = ["log", "--reverse", "--format=%H %as"] + (["--since=" + since] if since else []) + ["--", rel]
+    marks = [l.split(None, 1) for l in git_lines(root, *args)]
+    if not marks:
+        return root, []
+    p = subprocess.Popen(["git", "-C", root, "cat-file", "--batch"],
+                         stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    blob, _ = p.communicate("\n".join(f"{sha}:{rel}" for sha, _d in marks).encode())
+    out, i = [], 0
+    for (_sha, when) in marks:
+        j = blob.find(b"\n", i)
+        if j < 0:
+            break
+        head = blob[i:j].split()
+        if len(head) < 3:                      # the path did not exist in that tree
+            i = j + 1
+            continue
+        size = int(head[2])
+        out.append((when, blob[j + 1:j + 1 + size]))
+        i = j + 1 + size + 1
+    return root, out
+
+
+def first_mentions(root, names):
+    # when each name first appeared in a library, read from the diffs themselves.
+    # A name is looked for in every spelling the library might use, which is why
+    # this sees a Go client the contract door cannot: `json:"with_vector"` holds
+    # the wire name even where the field beside it is written `WithVector`.
+    left = {n: re.compile(r"\b(?:" + "|".join(re.escape(v) for v in name_variants(n)) + r")\b")
+            for n in names}
+    seen, when = {}, None
+    p = subprocess.Popen(["git", "-C", root, "log", "--reverse", "-p", "--no-color", "--format=~gate~ %as"],
+                         stdout=subprocess.PIPE, text=True, errors="replace")
+    for line in p.stdout:
+        if line.startswith("~gate~ "):
+            when = line[7:].strip()
+            continue
+        if not line.startswith("+") or line.startswith("+++"):
+            continue
+        for n in [n for n, rx in left.items() if rx.search(line)]:
+            seen[n] = when
+            del left[n]
+        if not left:
+            break
+    p.stdout.close()
+    p.terminate()
+    return seen
+
+
+def cmd_drift(a):
+    # drift CONTRACT --client DIR [--since DATE] [--name N] — how long this
+    # library has spent behind its own contract, measured rather than argued.
+    # A snapshot cannot see this: a client that lagged nine months on a field and
+    # then caught up looks identical today to one that never lagged at all, so
+    # asking `is it behind now` finds almost nothing and reports calm. The
+    # question with an answer is HOW LONG, and git holds it on both sides —
+    # nothing is fetched, nothing is sent, and the two sides may sit in
+    # unconnected checkouts.
+    import json as _json
+    from datetime import date as _date
+    src = a[0]
+    root = a[a.index("--client") + 1] if "--client" in a else "."
+    since = a[a.index("--since") + 1] if "--since" in a else None
+    who = a[a.index("--name") + 1] if "--name" in a else sanitize(os.path.basename(os.path.abspath(root)))
+    t0 = time.time()
+    _sroot, revs = contract_revisions(src, since)
+    first = {}
+    for when, blob in revs:
+        try:
+            spec = _json.loads(blob.decode("utf-8", "replace"))
+        except Exception:
+            continue                            # a revision that did not parse says nothing
+        for f in contract_fields(spec):
+            first.setdefault(f["field"], when)
+    croot = (subprocess.run(["git", "-C", root, "rev-parse", "--show-toplevel"],
+                            capture_output=True, text=True).stdout or "").strip()
+    # a measurement of the past needs a past. A shallow clone has one commit
+    # standing in for all of them, so every field looks as old as the checkout
+    # and every library looks punctual — this command would report `never been
+    # behind` on the strength of a single revision, which is the same empty
+    # green the contract door had, wearing a longer sentence.
+    def shallow(r):
+        return r and (subprocess.run(["git", "-C", r, "rev-parse", "--is-shallow-repository"],
+                                     capture_output=True, text=True).stdout or "").strip() == "true"
+    thin = [w for w, r, n in ((os.path.basename(src), _sroot, len(revs)), (who, croot, 2))
+            if not r or shallow(r) or n < 2]
+    if thin:
+        return {"command": "drift", "contract": os.path.basename(src), "carrier": who,
+                "revisions": len(revs), "fields": len(first), "since": since,
+                "late": 0, "never": [], "median_days": 0, "worst_days": 0, "worst": [],
+                "ms": round((time.time() - t0) * 1000, 1), "thin": thin,
+                "note": ("no history to measure on this machine: " + " and ".join(thin)
+                         + " " + ("has" if len(thin) == 1 else "have")
+                         + " one commit standing in for all of them, so nothing is said either way"),
+                "next": "git fetch --unshallow in " + thin[0] + ", then ask again"}
+    seen = first_mentions(croot, list(first)) if (first and croot) else {}
+    late, never = [], []
+    for f, sd in first.items():
+        cd = seen.get(f)
+        if cd is None:
+            never.append(f)
+            continue
+        days = (_date.fromisoformat(cd) - _date.fromisoformat(sd)).days
+        if days > 0:
+            late.append({"field": f, "contract": sd, "carrier": cd, "days": days})
+    late.sort(key=lambda x: -x["days"])
+    mid = sorted(x["days"] for x in late)
+    median = 0 if not mid else (mid[len(mid) // 2] if len(mid) % 2 else
+                                (mid[len(mid) // 2 - 1] + mid[len(mid) // 2]) // 2)
+    return {"command": "drift", "contract": os.path.basename(src), "carrier": who,
+            "revisions": len(revs), "fields": len(first), "since": since,
+            "late": len(late), "never": sorted(never), "median_days": median,
+            "worst_days": late[0]["days"] if late else 0, "worst": late[:5],
+            "ms": round((time.time() - t0) * 1000, 1),
+            "note": ("read " + str(len(revs)) + " revisions of the contract and the whole history of "
+                     + who + " — from git alone, on this machine, in JSON: a contract kept in YAML "
+                     "is not read here"),
+            "next": ("wire `gate import contract` into the CI of this library: what took "
+                     + str(late[0]["days"]) + " days to notice is noticed at the commit"
+                     if late else
+                     "nothing here has lagged: keep it that way with `gate import contract` in CI")}
+
+
 CONTRACT_HEADER = """// printed by gate import contract — what an API contract declares against what
 // a client library carries, written in the contract crystal (`gate stdlib show
 // genre-contract`). A field is a record with a shape, a library is a carrier,
@@ -1559,7 +1703,13 @@ def read_contract(path):
     # an OpenAPI document, read for the one thing a client must agree with: the
     # fields of a request body and the sort of thing each one is.
     import json as _json
-    spec = _json.load(open(path, encoding="utf-8"))
+    return contract_fields(_json.load(open(path, encoding="utf-8")))
+
+
+def contract_fields(spec):
+    # the same reading, from a document already in hand — because the drift
+    # command reads a hundred and fifty of them out of git without writing one
+    # to disk
     shelf = dict(spec.get("definitions") or {})
     shelf.update((spec.get("components") or {}).get("schemas") or {})
 
@@ -2768,6 +2918,10 @@ USAGE = """usage (the git-shaped porcelain):
   gate diff  transfer WHO DEPT        · gate diff  grant|revoke WHO DOC
   gate diff  hire ID RANK HOME GIVEN FAMILY BORN SITE
   gate apply transfer|grant|revoke|hire ...   (writes only on holds, like a commit)
+  gate import contract SPEC --client DIR        (a contract against a library)
+  gate drift SPEC --client DIR [--since DATE]   (how long that library has spent
+                                                 behind it — measured from git,
+                                                 both sides, nothing fetched)
   gate import people.csv grants.csv [-o gate.swift]
   gate export gate.swift -o people.csv grants.csv
   gate verify people.csv grants.csv --against CMD
@@ -2800,6 +2954,8 @@ def dispatch(cmd, rest):
         return cmd_import_codeowners(rest[1:])
     if cmd == "import" and rest and rest[0] == "contract":
         return cmd_import_contract(rest[1:])
+    if cmd == "drift":
+        return cmd_drift(rest)
     if cmd == "import" and rest and rest[0] == "refs":
         return cmd_import_refs(rest[1:])
     if cmd == "import" and rest and rest[0] == "rbac":
@@ -2961,6 +3117,30 @@ def humanize(out):
             lines.append("  commit it, and every clone has the tool — nothing to install")
             if v.get("judge_sha256"):
                 lines.append(f"  judge sha256: {v['judge_sha256'][:16]}…")
+    elif cmd == "drift":
+        # the anxious half of the pair, and it is COLD: this one is not a
+        # morning's reassurance but a measurement of the past, and it is about a
+        # library, never about whoever wrote it
+        if out.get("thin"):
+            lines.append(f"drift: not measurable here · {', '.join(out['thin'])} arrived without history")
+        elif not out["fields"]:
+            lines.append(f"drift: nothing read · {out['contract']} declares no request field this reader can see")
+        elif not out["late"] and not out["never"]:
+            lines.append(f"drift: {out['carrier']} has never been behind {out['contract']} "
+                         f"· {out['fields']} fields over {out['revisions']} revisions")
+        else:
+            lines.append(f"drift: {out['carrier']} has been behind {out['contract']} on "
+                         f"{out['late']} of {out['fields']} fields · median {out['median_days']} days "
+                         f"· worst {out['worst_days']}")
+        for w in out.get("worst", []):
+            lines.append(f"  {out['contract']} · {w['field']} · the contract said it {w['contract']}, "
+                         f"{out['carrier']} {w['carrier']} — {w['days']} days")
+        for n in out.get("never", [])[:5]:
+            lines.append(f"  {out['contract']} · {n} · the contract says it, {out['carrier']} never has")
+        if len(out["never"]) > 5:
+            lines.append(f"  … and {len(out['never']) - 5} more the library has never carried")
+        lines.append(f"  note: {out['note']}")
+        lines.append(f"  next: {out['next']}")
     elif cmd == "export":
         lines.append(f"export: {out['people']} people, {out['grants']} grants → {', '.join(out['wrote'])}")
     elif cmd == "log":

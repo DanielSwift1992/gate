@@ -809,6 +809,47 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "var(--" not in style.split(".cm-declname{", 1)[1].split("}", 1)[0]
               and "kindname" not in ui))
 
+    # ── HOW LONG, not whether. A snapshot asks the wrong question: a library
+    # that lagged nine months on a field and then caught up looks today exactly
+    # like one that never lagged, so `is it behind now` finds almost nothing and
+    # reports calm. Drift is a duration, and git holds both ends of it — the day
+    # the contract said a field, and the day the library first wrote it.
+    # And the measurement needs a past to measure: a shallow clone has one commit
+    # standing in for all of them, so every field looks as old as the checkout
+    # and every library looks punctual. Answering `never been behind` off a
+    # single revision is the empty green again, in a longer sentence.
+    dr = os.path.join(tmp, "drift")
+    spec_repo, lib_repo = os.path.join(dr, "contract"), os.path.join(dr, "library")
+    for r in (spec_repo, lib_repo):
+        os.makedirs(r, exist_ok=True)
+        subprocess.run(["git", "init", "-q", "-b", "main", r])
+
+    def at(repo, when, msg):
+        env = dict(os.environ, GIT_AUTHOR_DATE=when + "T12:00:00", GIT_COMMITTER_DATE=when + "T12:00:00")
+        subprocess.run(["git", "add", "-A"], cwd=repo)
+        subprocess.run(["git", "-c", "commit.gpgsign=false", "-c", "user.email=t@t", "-c", "user.name=T",
+                        "commit", "-qm", msg], cwd=repo, env=env)
+
+    def spec_with(fields):
+        return json.dumps({"paths": {"/points": {"post": {"requestBody": {"content": {
+            "application/json": {"schema": {"properties": {f: {"type": "string"} for f in fields}}}}}}}}})
+    sp = os.path.join(spec_repo, "openapi.json")
+    open(sp, "w").write(spec_with(["limit"])); at(spec_repo, "2024-01-10", "the contract begins")
+    open(sp, "w").write(spec_with(["limit", "with_vector"])); at(spec_repo, "2024-02-01", "a field is added")
+    open(sp, "w").write(spec_with(["limit", "with_vector", "shard_key"])); at(spec_repo, "2024-03-01", "and another")
+    cl = os.path.join(lib_repo, "client.ts")
+    open(cl, "w").write("interface Q {\n  limit?: number;\n}\n"); at(lib_repo, "2024-01-10", "the library begins")
+    # sixty days late on one field, and the third it has never carried at all
+    open(cl, "w").write("interface Q {\n  limit?: number;\n  with_vector?: boolean;\n}\n")
+    at(lib_repo, "2024-04-01", "catch up, eventually")
+    _, dft = run("drift", sp, "--client", lib_repo, "--name", "Lib")
+    _, thin = run("drift", sp, "--client", os.path.join(tmp, "contract-shallow"), "--name", "Nowhere")
+    S.append(("drift is a duration and git holds both ends of it, and a clone without a past measures nothing",
+              dft.get("fields") == 3 and dft.get("late") == 1
+              and dft.get("worst_days") == 60 and dft.get("never") == ["shard_key"]
+              # the same reading, refused where there is no history to read
+              and thin.get("thin") and not thin.get("late")))
+
     # ── an offer is a question put over a value, and a shadow is light taken
     # away. Both were told wrong. The list opened on its first row rather than on
     # what already stood in the slot, so keeping a value meant finding it in the
