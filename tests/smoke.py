@@ -913,6 +913,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               # and it never claims to have seen what nobody saw
               and "silent" not in (bg.get("note") or "") and "claims" in bg.get("text", "")))
 
+
     # ── an offer is a question put over a value, and a shadow is light taken
     # away. Both were told wrong. The list opened on its first row rather than on
     # what already stood in the slot, so keeping a value meant finding it in the
@@ -1244,6 +1245,20 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               # only /keys' two fields are a request at all
               dirs_.get("fields") == 2 and dirs_.get("judged") == 2
               and dirs_.get("verdict") == "holds" and not dirs_.get("refusals")))
+
+    # ── and a badge for a seam, not only for a world. Somebody who came to
+    # measure their own contract against their own client has no world of facts
+    # to count, so the road they walked ended with nothing to hang up — the
+    # finish line unreachable by the very path that leads to it. Same rule
+    # either way: the number on it is how much was judged out of how much was
+    # there, because a badge that says only green once said green over three
+    # fields of a hundred and seventy-eight.
+    _, cb = run("badge", "--contract", os.path.join(con, "spec.json"),
+                "--client", os.path.join(con, "wrongshape"), "--name", "Wrong")
+    S.append(("a badge speaks for a seam as well as for a world, and both say how wide they are",
+              cb.get("of") == "contract" and cb.get("verdict") == "refused"
+              and cb.get("fields") == 4 and cb.get("claims", 0) > 0
+              and bool(re.match(r"judged \d+/\d+ · refused \d+$", cb.get("text", "")))))
 
     # ── and the check is the whole ceremony: one command in the CI the client
     # already has. It exits non-zero on a stale citation and zero when the code

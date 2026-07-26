@@ -60,6 +60,63 @@ You never migrate your systems. You translate one domain — the tables you
 already export — and everything else keeps talking to the world through
 the verbs below.
 
+## Start with your own drift
+
+If you publish an API and a client library for it, this takes four commands and
+answers a question about your repositories, not ours. Nothing is uploaded and
+nothing is fetched: both sides are read out of git on your machine.
+
+```sh
+git clone https://github.com/you/gate && cd gate      # 1. no install step
+./gate drift ../api/openapi.json --client ../sdk-js   # 2. how long has it lagged?
+./gate import contract ../api/openapi.json --client ../sdk-js   # 3. and today?
+./gate badge --contract ../api/openapi.json --client ../sdk-js -o gate.svg   # 4. hang it up
+```
+
+The fourth prints `judged 47/90 · refused 1`, and the first number is the point:
+a badge that only says green would have said green over three fields out of a
+hundred and seventy-eight, which is a thing this door has actually done.
+
+The second command is the one worth running first. It reads every revision of
+your contract and the whole history of your library, and tells you how long that
+library has spent behind it — a question a look at today cannot answer, because
+clients catch up:
+
+```
+drift: sdk-js has been behind openapi.json on 24 of 71 fields · median 28 days · worst 77
+  openapi.json · transferType · the contract said it 2025-04-29, sdk-js 2025-07-15 — 77 days
+  openapi.json · includeUsers · the contract says it, sdk-js never has
+```
+
+Two honest notes before you run it. A shallow clone has no past to measure and
+is told so rather than credited with a clean one — `git fetch --unshallow`
+first. And the reader takes JSON; if your contract is YAML, one line converts
+it, and gate keeps saying plainly that it does not read YAML itself:
+
+```sh
+yq -o=json '.' openapi.yml > /tmp/openapi.json    # or: python3 -c 'import yaml,json,sys;json.dump(yaml.safe_load(open(sys.argv[1])),sys.stdout)' openapi.yml > /tmp/openapi.json
+```
+
+Then keep it from happening again — one step in the CI the library already has:
+
+```yaml
+# .github/workflows/contract.yml
+name: contract
+on: [push, pull_request]
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with: { repository: you/api, path: .api }        # the contract, brought here
+      - uses: actions/checkout@v4
+        with: { repository: you/gate, path: .gate }      # the tool travels too
+      - run: .gate/gate import contract .api/openapi.json --client .
+```
+
+A red verdict exits non-zero, so there is no wrapper and no action to install.
+
 ## Quick start
 
 ```sh
@@ -366,7 +423,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 174 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 175 end-to-end checks, the definition of green
 ```
 
 ## Status

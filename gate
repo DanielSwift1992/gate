@@ -1565,6 +1565,29 @@ def cmd_badge(a):
     from datetime import date as _date
     out_path = a[a.index("-o") + 1] if "-o" in a else None
     since = a[a.index("--since") + 1] if "--since" in a else None
+    # a badge for a seam rather than a world. Somebody who came here to measure
+    # their own contract against their own client has no world of facts to count,
+    # and the path they walked ended with nothing to hang up — which made the
+    # finish line unreachable by the very road that leads to it. The width rule
+    # is the same either way: the number on it is how much was judged, out of
+    # how much was there.
+    if "--contract" in a:
+        con = cmd_import_contract([a[a.index("--contract") + 1]]
+                                  + [x for x in a if x not in ("--contract", a[a.index("--contract") + 1])])
+        right = f"judged {con.get('judged', 0)}/{con.get('fields', 0)} · " + \
+                ("holds" if con["verdict"] == "holds" else f"refused {len(con.get('refusals', []))}")
+        if out_path:
+            lw, rw = 40, 8 + int(len(right) * 6.2)
+            open(out_path, "w").write(BADGE_SVG.format(
+                w=lw + rw, lw=lw, rw=rw, tx=lw + 5, right=esc_xml(right),
+                fill="#007D36" if con["verdict"] == "holds" else "#BF4035", alt="gate: " + right))
+        return {"command": "badge", "of": "contract", "claims": con.get("judged", 0),
+                "fields": con.get("fields", 0), "verdict": con["verdict"],
+                "refusals": con.get("refusals", []), "wrote": out_path, "text": right,
+                "note": con.get("note", ""),
+                "next": ("the number is the width, not the verdict: a green over three fields of "
+                         "a hundred and seventy-eight is what this badge exists to prevent"),
+                "mutates": bool(out_path)}
     files = world_files()
     if not files:
         return {"command": "badge", "verdict": "no world here", "refusals": [],
