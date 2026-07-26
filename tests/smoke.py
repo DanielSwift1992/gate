@@ -1258,11 +1258,44 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               # the tooltip to mean anything, which is a term used before it is
               # introduced. These are the product's own words for the same thing.
               and '"your word"' in ui and '"their word"' in ui
+              # and the registers say which half is which without a word: the
+              # field is the thing spoken of and stands in ink, the route is
+              # where it lives and stands back
+              and '<span class="seam-where">' in ui and ".seam-where{color:var(--seam)}" in ui
               # and the rail shows what this repository HAS. A folder with no seam
               # in it has no seam, and a permanent panel about a thing nobody is
               # using is an advertisement standing in an account.
               and "head.hidden = true; host.hidden = true" in ui
               and "seam-empty" not in ui))
+
+    # ── ONE SIDE OF A SEAM IS NOT A SHADOW OF THIS WORLD. A repository that
+    # declares its layout guards against a stray `*.swift` beside it, since an
+    # undeclared world file is a second truth nobody judges — but a seam
+    # declaration is not a world file at all. It is what somebody said about an
+    # agreement, and it says which it is in its own first lines. Read as a stray,
+    # it earned two refusals from anybody who both declared a layout and used a
+    # seam: an accusation about something never claimed, which is the whole of
+    # what this tool exists against.
+    bth = os.path.join(tmp, "both")
+    os.makedirs(os.path.join(bth, "tables"), exist_ok=True)
+    subprocess.run(["git", "init", "-q", bth])
+    shutil.copy(os.path.join(DEMO, "people.csv"), os.path.join(bth, "tables", "people.csv"))
+    shutil.copy(os.path.join(DEMO, "grants.csv"), os.path.join(bth, "tables", "grants.csv"))
+    run("status", cwd=bth)                                  # bootstrap the world
+    open(os.path.join(bth, "gate.manifest.swift"), "w").write(
+        "// the world, and the files it is written across\n"
+        "public enum Layout {\n    public typealias Files = Any\n}\n")
+    shutil.copy(os.path.join(ent, "api.swift"), os.path.join(bth, "api.swift"))
+    shutil.copy(os.path.join(ent, "sdk3.swift"), os.path.join(bth, "sdk.swift"))
+    _, together = run("status", cwd=bth)
+    shadows = [r for r in together.get("refusals", []) if "shadow" in r.get("claim", "")]
+    open(os.path.join(bth, "stray.swift"), "w").write("public enum Stray: Ranked {}\n")
+    _, with_stray = run("status", cwd=bth)
+    S.append(("a seam declaration beside a declared layout is not a shadow, and a stray world file still is",
+              together.get("verdict") == "holds" and not shadows
+              # and the guard still does its own job
+              and [r["address"] for r in with_stray.get("refusals", [])
+                   if "shadow" in r["claim"]] == ["stray.swift"]))
 
     # ── THE PITCH STAYS OUTSIDE THE VERDICT. A brand may say `sight for
     # promises`; a verdict may not. What a reader is handed by the tool is what
