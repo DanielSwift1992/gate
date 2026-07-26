@@ -147,6 +147,14 @@ gate status                      # first print + first verdict, in ms
 `gate serve` in a repository that has no world yet still opens: the journal
 reads the repository itself, with nothing to translate.
 
+The bench has four views. **Full** is the file, **Bare** the same facts with the
+ceremony stripped, **Table** them as rows — and **Seams**, which is not about
+this world at all but about the pairs it is party to: who owes whom a word, read
+the same from either side, and what somebody has set aside on purpose with the
+thing they cited. Where nothing is declared it says so and shows the two commands
+that make a seam, because an empty account is a fact and filling the screen with
+a specimen would be the one lie this cannot afford.
+
 From then on:
 
 ```sh
@@ -457,7 +465,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 179 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 180 end-to-end checks, the definition of green
 ```
 
 ## Status

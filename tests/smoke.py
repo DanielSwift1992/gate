@@ -1222,6 +1222,32 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
                       ("openapi.json", "sdk.declared.json", "known.json", "tickets.json",
                        "api.swift", "sdk.swift"))))
 
+    # ── AND THE BENCH SHOWS THE SEAMS, not only the world where you are alone.
+    # Everything built this way lived at the command line while the thing the
+    # owner actually looks at knew nothing of it: the interface was a move behind
+    # the architecture, and the owner was legislating a world with one party in
+    # it. A declaration is a world in the contract grammar, so a pair is found by
+    # what the files SAY they are rather than by where they sit — one states
+    # records, the other claims them, and a folder may hold either side or both.
+    # Where nobody has declared anything the account is empty, and an empty
+    # account is a fact: inventing a specimen to fill the screen would be the one
+    # lie this thing cannot afford, so the empty state teaches instead.
+    seam_src = open(GATE, encoding="utf-8").read()
+    S.append(("the bench shows the seams this folder is party to, and says plainly when there are none",
+              # the route exists and is promised where the others are promised
+              '#   GET  /attention' in seam_src and 'u.path == "/attention"' in seam_src
+              and "def seams_here(" in seam_src
+              # a pair is recognised by what the files say they are
+              and r'public enum \w+: Carrier \{\}' in seam_src
+              and r'public enum F_\w+: Declared \{' in seam_src
+              # the view is a view, beside the others, and asks the same question
+              # in the same words the command line uses
+              and 'data-m="seams"' in ui and "async function buildSeams()" in ui
+              and '"waits on you"' in ui and '"you are waiting"' in ui and '"came back"' in ui
+              # and the empty account teaches rather than shows a specimen
+              and "an empty account is a fact" in ui
+              and "gate declare contract openapi.json -o api.swift" in ui))
+
     # ── THE PITCH STAYS OUTSIDE THE VERDICT. A brand may say `sight for
     # promises`; a verdict may not. What a reader is handed by the tool is what
     # was observed, the bounds it was observed in, numbers, and a recipe — and

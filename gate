@@ -1876,6 +1876,41 @@ def seam_read(left, right):
     return stated, claims, (who.group(1) if who else "that library")
 
 
+def seams_here(root=None):
+    # every pair the folder holds: files that STATE records, files that CLAIM
+    # them, and a `known.json` beside them if somebody has declared a divergence.
+    base = os.path.abspath(root or (os.path.dirname(os.path.abspath(FACTS)) if FACTS else "."))
+    stated, claimed = [], []
+    for f in sorted(os.listdir(base)):
+        if not f.endswith(".swift"):
+            continue
+        try:
+            txt = open(os.path.join(base, f), encoding="utf-8").read()
+        except OSError:
+            continue
+        if re.search(r"^public enum \w+: Carrier \{\}", txt, re.M):
+            claimed.append(os.path.join(base, f))
+        elif re.search(r"^public enum F_\w+: Declared \{", txt, re.M):
+            stated.append(os.path.join(base, f))
+    known = os.path.join(base, "known.json")
+    tick = os.path.join(base, "tickets.json")
+    out = []
+    for c in stated:
+        for k in claimed:
+            args = [c, k]
+            if os.path.exists(known):
+                args += ["--known", known]
+            if os.path.exists(tick):
+                args += ["--tracker", tick]
+            a = cmd_attention(args)
+            a["contract_file"] = os.path.basename(c)
+            a["carrier_file"] = os.path.basename(k)
+            a["read_known"] = os.path.basename(known) if os.path.exists(known) else None
+            a["read_tracker"] = os.path.basename(tick) if os.path.exists(tick) else None
+            out.append(a)
+    return out
+
+
 def cmd_attention(a):
     # attention CONTRACT.swift CARRIER.swift [--as WHO] [--known K.json] [--tracker T.json]
     #
@@ -2888,6 +2923,8 @@ def cmd_serve(a):
     #   GET  /log?n=&scope=          the journal (scope: world|all) — observed
     #   GET  /show?hash=&f=          one commit, read as the facts it changed
     #   GET  /status                 the verdict, as the CLI gives it
+    #   GET  /attention              the seams this folder is party to: who owes
+    #                                whom a word, read the same from either side
     #   GET  /check/view?who=&doc=   a question, answered by a verdict
     #   GET  /diff/transfer?who=&to= what would break (changes nothing)
     #   POST /verdict?f=name         judge the whole list with this file's
@@ -3016,6 +3053,16 @@ def cmd_serve(a):
                     out = commit_change(q.get("hash", ""), q.get("f") or None)
                 elif u.path == "/status":
                     out = dispatch("status", [])
+                elif u.path == "/attention":
+                    # THE SEAMS THIS REPOSITORY IS PARTY TO. A declaration is a
+                    # world in the contract grammar, so the pair is found by what
+                    # the files SAY they are rather than by where they sit: one
+                    # states records, the other claims them, and a repository may
+                    # be either side or both. Where nobody has declared anything
+                    # there is nothing to show and the bench says so — an empty
+                    # account is a fact, and inventing a specimen to fill it
+                    # would be the one lie this thing cannot afford.
+                    out = {"command": "attention", "seams": seams_here()}
                 elif u.path == "/check/view":
                     out = cmd_ask([q["who"], q["doc"]])
                 elif u.path == "/diff/transfer":
