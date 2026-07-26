@@ -1790,8 +1790,21 @@ def cmd_drift(a):
                            only=None if here in (".", "") else here,
                            without=spec_rel)
             if (first and croot) else {})
-    late, never = [], []
+    # A WINDOW HAS AN EDGE, and it is the loudest wrong number this command can
+    # print. With --since, whatever the contract already declared when the
+    # window opened carries the window's own date rather than the day it was
+    # declared, so a field five years old reads as new and its library reads as
+    # five hundred and seventy-two days late. On box that inflated nine true
+    # findings into thirty-two.
+    # and a window has an edge: with --since, whatever the contract already
+    # declared when the window opened carries the window's own date, which is
+    # not the day it was declared. Those cannot be dated either.
+    edge = revs[0][0] if (since and revs) else None
+    late, never, undatable = [], [], []
     for f, sd in first.items():
+        if sd == edge:
+            undatable.append(f)
+            continue
         cd = seen.get(f)
         if cd is None:
             never.append(f)
@@ -1810,7 +1823,10 @@ def cmd_drift(a):
             "ms": round((time.time() - t0) * 1000, 1),
             "note": ("read " + str(len(revs)) + " revisions of the contract and the whole history of "
                      + who + " — from git alone, on this machine, in JSON: a contract kept in YAML "
-                     "is not read here"),
+                     "is not read here"
+                     + (f"; {len(undatable)} were already declared when the window opened, so "
+                        "they carry its date rather than their own and are not counted"
+                        if undatable else "")),
             "next": ("wire `gate import contract` into the CI of this library: what took "
                      + str(late[0]["days"]) + " days to notice is noticed at the commit"
                      if late else
@@ -1833,6 +1849,22 @@ def read_contract(path):
     # fields of a request body and the sort of thing each one is.
     import json as _json
     return contract_fields(_json.load(open(path, encoding="utf-8")))
+
+
+def body_media(spec):
+    # what a contract sends its requests AS. Asked only when nothing was read,
+    # to say why: twilio posts sixty-two bodies and every one of them is a form,
+    # so a reader that takes JSON alone finds no field, judges nothing, and says
+    # `holds` — which is the empty green again, in a contract that never spoke
+    # this reader's language at all.
+    seen = {}
+    for _r, ops in (spec.get("paths") or {}).items():
+        for _v, op in (ops or {}).items():
+            if not isinstance(op, dict):
+                continue
+            for k in ((op.get("requestBody") or {}).get("content") or {}):
+                seen[k] = seen.get(k, 0) + 1
+    return seen
 
 
 def contract_fields(spec):
@@ -2031,6 +2063,14 @@ def shape_of_type(t):
         if not ok or depth:
             break
         t = inner.strip()
+    # a type may be written as a string so it can name something declared later:
+    # `NotRequired["Dict[str, str]|UntypedStripeObject[str]"]` is a map, and read
+    # with its quotes on it is an unreadable word with `str` showing inside — so
+    # a client that had it right was accused nine times. Quotes are stripped
+    # here and nowhere else: inside `Literal[...]` they mark values, and that
+    # branch has already taken them.
+    while len(t) > 1 and t[0] == t[-1] and t[0] in "\"'":
+        t = t[1:-1].strip()
     if not t:
         return None
     if t.endswith("[]"):
@@ -2211,6 +2251,20 @@ def cmd_import_contract(a):
     out_path = (a[a.index("-o") + 1] if keep
                 else os.path.join(tempfile.mkdtemp(prefix="gate-contract-"), "contract-gate.swift"))
     fields = read_contract(src)
+    if not fields:
+        # nothing to judge, and the reason belongs in the answer: a contract that
+        # posts forms, or one whose bodies this reader could not reach, must not
+        # come back `holds` as though everything had been checked
+        media = body_media(json.load(open(src, encoding="utf-8")))
+        other = ", ".join(sorted(k for k in media if k != "application/json"))
+        return {"command": "import contract", "carrier": who, "fields": 0, "judged": 0,
+                "sources_read": 0, "verdict": "holds", "refusals": [],
+                "note": ("nothing was judged: " + (
+                    f"this contract sends its requests as {other} — a media type this reader "
+                    f"does not take, so it saw none of the {sum(media.values())} bodies it declares"
+                    if other else "this contract declares no request body with fields in it")),
+                "next": "point --contract at a document whose requests are JSON, or read this as the finding",
+                "mutates": False}
     body, files = read_carrier(root)
     blocks = carrier_blocks(body)
     named_in, where = carrier_index(blocks)

@@ -1151,6 +1151,36 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and len(at_home.get("refusals", [])) == 1
               and "voice_query_model" in at_home["refusals"][0]["address"]))
 
+    # ── a type written as a string, and a contract that speaks another language.
+    # `NotRequired["Dict[str, str]|UntypedStripeObject[str]"]` names a map, and
+    # read with its quotes on it is an unreadable word with `str` showing inside:
+    # a client that had it right was accused nine times over. And a contract may
+    # post FORMS — twilio declares sixty-two bodies and every one of them is
+    # x-www-form-urlencoded — where a reader that takes JSON alone finds no
+    # field, judges nothing, and answers `holds`: the empty green again, this
+    # time about a document that never spoke its language at all.
+    os.makedirs(os.path.join(con, "quoted"), exist_ok=True)
+    open(os.path.join(con, "spec-quoted.json"), "w").write(json.dumps({"paths": {"/accounts": {"post": {
+        "requestBody": {"content": {"application/json": {"schema": {"properties": {
+            "metadata": {"type": "object"}, "name": {"type": "string"}}}}}}}}}}))
+    open(os.path.join(con, "quoted", "params.py"), "w").write(
+        "class AccountCreateParams(TypedDict):\n"
+        "    metadata: NotRequired[\"Dict[str, str]|UntypedStripeObject[str]\"]\n"
+        "    name: NotRequired[str]\n")
+    _, quoted = run("import", "contract", os.path.join(con, "spec-quoted.json"),
+                    "--client", os.path.join(con, "quoted"), "--name", "Quoted")
+    open(os.path.join(con, "spec-form.json"), "w").write(json.dumps({"paths": {"/messages": {"post": {
+        "requestBody": {"content": {"application/x-www-form-urlencoded": {"schema": {"properties": {
+            "Body": {"type": "string"}, "To": {"type": "string"}}}}}}}}}}))
+    _, form = run("import", "contract", os.path.join(con, "spec-form.json"),
+                  "--client", os.path.join(con, "quoted"), "--name", "Form")
+    S.append(("a type in quotes is still a type, and a contract that posts forms is told so rather than passed",
+              quoted.get("verdict") == "holds" and not quoted.get("refusals")
+              and quoted.get("judged") == 2
+              # and the form contract judges nothing, and says which language it spoke
+              and form.get("judged") == 0 and not form.get("refusals")
+              and "form-urlencoded" in (form.get("note") or "")))
+
     # ── and a generated client keeps every schema it has inside ONE interface,
     # which is one place only if nothing inside it counts as a place. Then the
     # request and a telemetry report ten thousand lines away are the same block,
