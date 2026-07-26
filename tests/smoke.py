@@ -1252,8 +1252,16 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               # a badge, and WHY it is there lives in the title — answered on
               # demand, the way this bench has always answered `what is this`,
               # instead of printed under every line down a narrow column
-              and 'r.className = "commit"' in ui and '"came back"' in ui
-              and 'r.title = why' in ui
+              and 'r.className = "commit touches"' in ui and '"came back"' in ui
+              # EVERY ADDRESS THIS BENCH PRINTS IS REACHABLE. A row that looks
+              # clickable and does nothing is worse than a plain list — the
+              # affordance came along with the styling and was not honoured. A
+              # line opens the side that SAID it, read-only, since neither side
+              # is this world's to edit from here.
+              and "r.onclick = () => openSeamSide(" in ui
+              and "async function openSeamSide(" in ui
+              and 'cm.setOption("readOnly", true)' in ui
+              and 'u.path == "/seamside"' in seam_src and "#   GET  /seamside" in seam_src
               # and a badge is a word that stands alone: `you` and `them` needed
               # the tooltip to mean anything, which is a term used before it is
               # introduced. These are the product's own words for the same thing.
@@ -1296,6 +1304,24 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               # and the guard still does its own job
               and [r["address"] for r in with_stray.get("refusals", [])
                    if "shadow" in r["claim"]] == ["stray.swift"]))
+
+    # ── AND THE PAGE HAS TO PARSE. Every check here reads the bench as text and
+    # asks whether the right words are in it — which says nothing about whether
+    # the browser can run a line of it. A name collision in one function made the
+    # whole script fail to compile, the seams list came up empty, and the battery
+    # was green throughout: greping a program is not the same as loading it.
+    scripts = re.findall(r"<script>(.*?)</script>", ui, re.S)
+    node = shutil.which("node")
+    parsed = None
+    if node and scripts:
+        probe = os.path.join(tmp, "parse-ui.js")
+        open(probe, "w").write(
+            "const s = " + json.dumps(scripts) + ";\n"
+            "for (const x of s) new Function(x);\nconsole.log('ok');\n")
+        r = subprocess.run([node, probe], capture_output=True, text=True)
+        parsed = r.returncode == 0 and "ok" in r.stdout
+    S.append(("every script the bench serves compiles, which greping it never showed",
+              bool(scripts) and (parsed is True or (node is None and parsed is None))))
 
     # ── THE PITCH STAYS OUTSIDE THE VERDICT. A brand may say `sight for
     # promises`; a verdict may not. What a reader is handed by the tool is what

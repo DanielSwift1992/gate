@@ -1923,6 +1923,13 @@ def seams_here(root=None):
             if os.path.exists(tick):
                 args += ["--tracker", tick]
             a = cmd_attention(args)
+            import json as _j
+            try:
+                decl = re.search(r"^// \w+ · against ([^\n]+)$",
+                                 open(k, encoding="utf-8").read(2000), re.M)
+                a["against"] = decl.group(1) if decl else None
+            except OSError:
+                a["against"] = None
             a["contract_file"] = os.path.basename(c)
             a["carrier_file"] = os.path.basename(k)
             a["read_known"] = os.path.basename(known) if os.path.exists(known) else None
@@ -2944,6 +2951,8 @@ def cmd_serve(a):
     #   GET  /status                 the verdict, as the CLI gives it
     #   GET  /attention              the seams this folder is party to: who owes
     #                                whom a word, read the same from either side
+    #   GET  /seamside?f=name        one side of a seam, to read: every address
+    #                                the bench prints must be reachable
     #   GET  /check/view?who=&doc=   a question, answered by a verdict
     #   GET  /diff/transfer?who=&to= what would break (changes nothing)
     #   POST /verdict?f=name         judge the whole list with this file's
@@ -2980,6 +2989,16 @@ def cmd_serve(a):
             try:
                 if u.path in ("/", "/ui"):
                     return self.send_file(os.path.join(here, "ui.html"), "text/html; charset=utf-8")
+                if u.path == "/seamside":
+                    # one side of a seam, to READ. Every address this bench prints
+                    # should be reachable: a line you cannot open is a line you
+                    # are asked to take on trust, which is the one thing nothing
+                    # here asks for.
+                    base = os.path.dirname(os.path.abspath(FACTS)) if FACTS else os.getcwd()
+                    want = os.path.join(base, os.path.basename(q.get("f", "")))
+                    if not (want.endswith(".swift") and os.path.exists(want) and is_seam_side(want)):
+                        self.send_response(404); self.end_headers(); return
+                    return self.send_file(want, "text/plain; charset=utf-8")
                 if u.path == "/version":
                     # WHAT IS ACTUALLY RUNNING. The bench serves its page off the
                     # disk and its answers out of memory, so a gate updated while

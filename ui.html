@@ -1245,6 +1245,24 @@ async function openShelf(mod, name) {
     }
 }
 
+// one side of a seam, read-only: it belongs to whoever declared it, and this
+// world is not the place to edit somebody's word about an agreement
+async function openSeamSide(file, name) {
+    const text = await (await fetch("/seamside?f=" + encodeURIComponent(file))).text();
+    active = ""; viewingShelf = file;
+    document.getElementById("fname").textContent = file;
+    document.getElementById("fname").style.display = "";
+    setMode("full");
+    cm.setValue(text);
+    cm.setOption("readOnly", true);
+    buildRail();
+    say(file + " is one side of a seam: what that side says, read here.");
+    if (name) {
+        const i = text.split("\n").findIndex(l => new RegExp("· " + name + "$").test(l));
+        if (i >= 0) reveal(i + 2);
+    }
+}
+
 function buildTables() {
     const host = document.getElementById("table-host");
     host.innerHTML = "";
@@ -1826,14 +1844,22 @@ async function buildSeams() {
         const box = document.createElement("div");
         const head = document.createElement("div");
         head.className = "seam-pair caption observed";
-        head.textContent = s.carrier + " against " + s.contract_file;
-        head.title = "read from " + [s.contract_file, s.carrier_file, s.read_known,
-                                     s.read_tracker].filter(Boolean).join(", ");
+        head.textContent = s.against ? s.against.replace(/^\S+ · /, "") : s.carrier;
+        head.title = s.carrier + " says what it carries of " + (s.against || s.contract_file)
+            + ". Read from " + [s.contract_file, s.carrier_file, s.read_known,
+                                s.read_tracker].filter(Boolean).join(", ") + ".";
         box.appendChild(head);
-        const line = (addr, kind, why, back) => {
+        // EVERY ADDRESS THIS BENCH PRINTS IS REACHABLE. A row that looks like a
+        // row you can click and does nothing is worse than a plain list: the
+        // affordance was borrowed along with the styling and then not honoured.
+        // A line opens the side that SAID it — the contract where the contract
+        // stated it, the library where the library claimed it — read-only,
+        // because neither side is this world's to edit from here.
+        const line = (addr, kind, why, back, side) => {
             const r = document.createElement("div");
-            r.className = "commit";
-            r.title = why;
+            r.className = "commit touches";
+            r.title = why + " Click to read where it is written.";
+            r.onclick = () => openSeamSide(side, addr.split(" · ").pop());
             // the field is the thing; the route is where it lives. Registers say
             // so without a word: context muted, the fact in ink — the eye reads
             // `attachments, in /messages` with nothing added to explain a dot.
@@ -1848,16 +1874,17 @@ async function buildSeams() {
         };
         for (const x of s.expired)
             line(x.address, "came back", "It was set aside for " + x.because + ". "
-                 + x.because + " is closed, so it stands again.", true);
+                 + x.because + " is closed, so it stands again.", true, s.carrier_file);
         for (const x of s.waits_on_you)
             line(x.address, "your word", x.why || "The contract states this field. This side has not "
-                 + "said whether it carries it.");
+                 + "said whether it carries it.", false, s.contract_file);
         for (const x of s.you_wait_on)
-            line(x.address, "their word", x.why || "This side carries it. The contract has not stated it.");
-        for (const x of s.parted) line(x.address, "parted", x.why || "");
+            line(x.address, "their word", x.why || "This side carries it. The contract has not stated it.",
+                 false, s.carrier_file);
+        for (const x of s.parted) line(x.address, "parted", x.why || "", false, s.carrier_file);
         for (const x of s.known)
             line(x.address, "set aside", "Set aside by " + x.declared_by + " for " + x.because
-                 + ", which is " + x.state.toLowerCase() + ".");
+                 + ", which is " + x.state.toLowerCase() + ".", false, s.carrier_file);
         if (!s.expired.length && !s.waits_on_you.length && !s.you_wait_on.length
             && !s.parted.length && !s.known.length) {
             const q = document.createElement("div");
