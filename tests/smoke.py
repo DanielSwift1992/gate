@@ -959,7 +959,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
             "searches": {"type": "array"}, "params": {"type": "object"},
             "locale": {"type": "string"}, "sparse_vectors": {"type": "object"}}}}}}}},
         "/solo": {"post": {"requestBody": {"content": {"application/json": {"schema": {"properties": {
-            "tongue": {"type": "string"}}}}}}}}}}))
+            "tongue": {"type": "string"}, "dialect": {"type": "string"}}}}}}}}}}))
     open(os.path.join(con, "written", "client.ts"), "w").write(
         "interface Multi {\n"
         "  searches: ExtractBaseTypes<SearchParams<T[number], Infix>>[];\n"
@@ -969,17 +969,16 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
         "  sparse_vectors?: ({\n"
         "    [key: string]: SparseVectorParams | undefined;\n"
         "  }) | null;\n}\n"
-        # neither of these is the /solo request — one field of two apiece — so
-        # the whole library answers, and there the alias must not silence the
-        # plain word
-        "interface P {\n  tongue: string;\n  other: number;\n}\n"
-        "interface Q {\n  tongue: TongueSchema;\n  another: number;\n}\n")
+        # both of these are the /solo request, so both are heard — and there the
+        # one that aliases its type must not silence the one that spelled it
+        "interface P {\n  tongue: string;\n  dialect: string;\n}\n"
+        "interface Q {\n  tongue: TongueSchema;\n  dialect: DialectSchema;\n}\n")
     _, written = run("import", "contract", os.path.join(con, "spec-types.json"),
                      "--client", os.path.join(con, "written"), "--name", "Written")
     S.append(("a type ends where its brackets end, a union names no one shape, and an alias elsewhere does not silence what was said",
               written.get("verdict") == "holds" and not written.get("refusals")
               # searches and locale are read; params answered with a union
-              and written.get("judged") == 4 and written.get("shape_unread") == 1))
+              and written.get("judged") == 5 and written.get("shape_unread") == 1))
 
     # ── and a request is read WHERE THE LIBRARY DECLARES IT. The fields of one
     # body are written together, so the block that holds them is the place to
@@ -1065,6 +1064,54 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     S.append(("a reader that made out nothing does not report an empty library",
               dark.get("judged") == 0 and dark.get("verdict") == "holds"
               and not dark.get("refusals") and "cannot make out" in (dark.get("note") or "")))
+
+    # ── and a contract written in the version of the standard that is current
+    # must not throw the door off its hinges. OpenAPI 3.1 spells a nullable
+    # field `["string", "null"]` and an open one `["string", "integer"]`: null
+    # is not another shape, two shapes are the contract declining to name one,
+    # and a list read as a key crashed on a document that was perfectly valid.
+    os.makedirs(os.path.join(con, "v31"), exist_ok=True)
+    open(os.path.join(con, "spec-v31.json"), "w").write(json.dumps({"openapi": "3.1.0", "paths": {"/keys": {"post": {
+        "requestBody": {"content": {"application/json": {"schema": {"properties": {
+            "name": {"type": ["string", "null"]}, "expires": {"type": ["string", "integer"]},
+            "enabled": {"type": "boolean"}}}}}}}}}}))
+    open(os.path.join(con, "v31", "client.ts"), "w").write(
+        "interface CreateKey {\n  name?: string;\n  expires?: number;\n  enabled?: boolean;\n}\n")
+    _, v31 = run("import", "contract", os.path.join(con, "spec-v31.json"),
+                 "--client", os.path.join(con, "v31"), "--name", "V31")
+    S.append(("a nullable field names one shape and an open one names none, in the version of the standard that is current",
+              v31.get("verdict") == "holds" and not v31.get("refusals")
+              # name and enabled are judged; `expires` is the contract's own openness
+              and v31.get("judged") == 2 and v31.get("shape_open") == 1))
+
+    # ── and a field that only ever travels outward is no part of a request. The
+    # contract says so itself two ways: `readOnly` on the property, or one shape
+    # described for both directions — weaviate posts an `Object` and receives an
+    # `Object`, and its timestamps are stamped by the server. Judged as request
+    # fields they made thirty accusations against a client that was carrying
+    # exactly what it should, the closest thing to those names in it being the
+    # flags that ask for them back.
+    os.makedirs(os.path.join(con, "directions"), exist_ok=True)
+    open(os.path.join(con, "spec-directions.json"), "w").write(json.dumps({"paths": {
+        "/objects": {"post": {
+            "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/definitions/Object"}}}},
+            "responses": {"200": {"schema": {"$ref": "#/definitions/Object"}}}}},
+        "/keys": {"post": {
+            "requestBody": {"content": {"application/json": {"schema": {"properties": {
+                "name": {"type": "string"}, "enabled": {"type": "boolean"},
+                "createdAt": {"type": "integer", "readOnly": True}}}}}},
+            "responses": {"200": {"description": "ok"}}}}},
+        "definitions": {"Object": {"properties": {
+            "class": {"type": "string"}, "creationTimeUnix": {"type": "integer"}}}}}))
+    open(os.path.join(con, "directions", "client.ts"), "w").write(
+        "interface CreateKey {\n  name?: string;\n  enabled?: boolean;\n}\n"
+        "interface MetadataQuery {\n  creationTimeUnix: boolean;\n  class: object;\n}\n")
+    _, dirs_ = run("import", "contract", os.path.join(con, "spec-directions.json"),
+                   "--client", os.path.join(con, "directions"), "--name", "Directions")
+    S.append(("what the contract also sends back, and what it marks read-only, is no part of a request",
+              # only /keys' two fields are a request at all
+              dirs_.get("fields") == 2 and dirs_.get("judged") == 2
+              and dirs_.get("verdict") == "holds" and not dirs_.get("refusals")))
 
     # ── and the check is the whole ceremony: one command in the CI the client
     # already has. It exits non-zero on a stale citation and zero when the code

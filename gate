@@ -1560,10 +1560,36 @@ def read_contract(path):
     # fields of a request body and the sort of thing each one is.
     import json as _json
     spec = _json.load(open(path, encoding="utf-8"))
+    shelf = dict(spec.get("definitions") or {})
+    shelf.update((spec.get("components") or {}).get("schemas") or {})
+
     def resolve(s):
         if "$ref" in s:
-            return spec.get("components", {}).get("schemas", {}).get(s["$ref"].split("/")[-1], {})
+            return shelf.get(s["$ref"].split("/")[-1], {})
         return s
+    # what the contract also SENDS BACK. A spec may describe one shape for both
+    # directions — weaviate posts an `Object` and receives an `Object` — and then
+    # its fields say nothing about what a request carries: the timestamps in it
+    # are stamped by the server, and a client is not behind for leaving them out
+    # or for keeping a flag of that name instead. Where the contract itself does
+    # not separate the directions, this door does not pretend to.
+    returned = set()
+
+    def gather(node):
+        if isinstance(node, dict):
+            if "$ref" in node and isinstance(node["$ref"], str):
+                returned.add(node["$ref"])
+            for v in node.values():
+                gather(v)
+        elif isinstance(node, list):
+            for v in node:
+                gather(v)
+
+    for _r, _ops in (spec.get("paths") or {}).items():
+        for _v, _op in (_ops or {}).items():
+            if isinstance(_op, dict):
+                gather(_op.get("responses"))
+
     out = []
     for route, ops in (spec.get("paths") or {}).items():
         if not isinstance(ops, dict):
@@ -1574,6 +1600,18 @@ def read_contract(path):
             body = (op.get("requestBody", {}).get("content", {})
                       .get("application/json", {}).get("schema"))
             if not body:
+                # swagger 2.0 puts the body among the parameters, marked `in:
+                # body`, and its schemas live under `definitions`. Two of the
+                # projects looked at here are written that way and the door read
+                # nothing at all of either — not a refusal, not a silence, just
+                # a contract that appeared to declare no fields.
+                for p in (op.get("parameters") or []):
+                    if isinstance(p, dict) and p.get("in") == "body" and p.get("schema"):
+                        body = p["schema"]
+                        break
+            if not body:
+                continue
+            if isinstance(body, dict) and body.get("$ref") in returned:
                 continue
             for name, prop in sorted((resolve(body).get("properties") or {}).items()):
                 # a property may point at a schema instead of naming a type, so
@@ -1584,7 +1622,20 @@ def read_contract(path):
                 # breaking it. Nineteen such accusations against a correct client
                 # is what this cost before the shape was allowed to be nothing.
                 prop = prop or {}
+                if prop.get("readOnly"):
+                    # the contract's own word that this field travels out and
+                    # never in: it is no part of a request, so a client that does
+                    # not carry it is not behind anything
+                    continue
                 t = prop.get("type") or resolve(prop).get("type")
+                if isinstance(t, list):
+                    # OpenAPI 3.1 spells a nullable field `["string", "null"]`,
+                    # and a genuinely open one `["string", "integer"]`. Null is
+                    # not another shape; two shapes are the contract declining to
+                    # name one, as `anyOf` does. Reading the list as a key
+                    # crashed the door on a valid document.
+                    t = [x for x in t if x != "null"]
+                    t = t[0] if len(t) == 1 else None
                 out.append({"route": route, "field": name, "shape": SHAPE_OF.get(t)})
     return out
 
@@ -1847,12 +1898,19 @@ def read_carrier(root):
     text, files = [], 0
     for dirpath, dirs, names in os.walk(root):
         dirs[:] = [d for d in dirs
-                   if d not in (".git", "node_modules", "target", "dist", "build", ".venv")
+                   if d not in (".git", "node_modules", "target", "dist", "build", ".venv", "proto")
                    and "test" not in d.lower() and "example" not in d.lower()]
         for f in names:
             if os.path.splitext(f)[1] not in (".py", ".ts", ".js", ".rs", ".go", ".rb", ".java", ".kt"):
                 continue
             if "test" in f.lower() or "example" in f.lower():
+                continue
+            # a protobuf stub is not this library's word about a REST request.
+            # Weaviate vendors several versioned copies of one, and in them
+            # `creation_time_unix: bool` is a flag asking gRPC to include a
+            # timestamp — read as the timestamp itself it accused the client of
+            # carrying a number as a boolean, thirty-two times.
+            if "_pb2" in f or f.endswith("_pb.js") or f.endswith("_pb.ts"):
                 continue
             try:
                 text.append(open(os.path.join(dirpath, f), encoding="utf-8", errors="replace").read())
@@ -1900,7 +1958,12 @@ def cmd_import_contract(a):
             seen_at[key] = set().union(*(shapes_seen(blocks[i], f["field"])
                                          for i in places)) if places else set()
         else:
-            seen_at[key] = shapes_seen(body, f["field"])
+            # and where the request is not located at all, no shape is read. The
+            # last road to an invented claim ran through here: `class` is a word
+            # a library says everywhere, and answering with whatever wore it
+            # first is the mistake this door spent a day removing in every other
+            # form it takes.
+            seen_at[key] = set()
     named = sum(1 for v in carried.values() if v)
     # A library that FORWARDS A BAG is not a library that lags: whatever you hand
     # it reaches the wire, so no field is missing — and none is offered, checked
