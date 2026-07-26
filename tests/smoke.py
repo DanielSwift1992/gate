@@ -790,17 +790,45 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # what the shelf does. Declares, not mentions — the kinds a record conforms to
     # and the axes it answers are the genre's, and colouring them local said the
     # world had authored its own genre, which also made a question (an axis) and
-    # an answer (a value) one colour. WHETHER a name is still open is the weight,
-    # and it is the judge's own quantity: a kind may still be answered by many
-    # (|S| > 1), a record is itself (|S| = 1), a name resolving to nothing has
-    # none (|S| = 0, the wave). Read from the genre's own conformers, never a
-    # list beside it, and never a second hue — the eye has no room for a sixth.
-    S.append(("a hue says where a name is from and the weight whether it is still open, each read from the one source",
+    # an answer (a value) one colour.
+    # WHAT THE LINE DECLARES is the weight. A declaration holds two names, the one
+    # it declares and the one it answers to, and weighting kinds instead put the
+    # accent on the second: `MyBench: Bench` shouted Bench, and the eye went to
+    # the answer rather than to the question. The bare view had always weighted
+    # the subject, so the two views disagreed about what a line was about — and
+    # the bare one was right. An axis name is neither: it is the label of a slot,
+    # and it is set in plain ink there, so it is set in plain ink here.
+    S.append(("a hue says where a name is from, the weight says what the line declares, and both views agree",
               "for (const [name] of parsed.declarations) out.add(name);" in ui
               and "for (const c of d.conformances) out.add(c);" not in ui
-              and "(conformers[word] || protoAxes[word]) ? \" kindname\"" in ui
-              and ".cm-kindname{font-weight:600}" in ui
-              and "var(--" not in style.split(".cm-kindname{", 1)[1].split("}", 1)[0]))
+              and "(?:enum|protocol|struct|extension)\\s+$/.test(before) ? \" declname\"" in ui
+              and "(?:typealias|associatedtype)\\s+$/.test(before)) return \"axisname\"" in ui
+              # the weight carries no hue of its own, and the axis carries no weight
+              and ".cm-declname{font-weight:600}" in ui
+              and ".cm-axisname{color:var(--ink)}" in ui
+              and "var(--" not in style.split(".cm-declname{", 1)[1].split("}", 1)[0]
+              and "kindname" not in ui))
+
+    # ── an offer is a question put over a value, and a shadow is light taken
+    # away. Both were told wrong. The list opened on its first row rather than on
+    # what already stood in the slot, so keeping a value meant finding it in the
+    # offer first; and it could be dismissed only from the editor, leaving it
+    # hanging over a table that had scrolled out from under it. The shadow was
+    # cast in the ink, which in the dark theme is the LIGHT end of the ladder, so
+    # every raised thing wore a halo. A shadow belongs to no theme.
+    dark_block = style.split(':root[data-theme="dark"]{', 1)[1].split("}", 1)[0]
+    S.append(("an offer opens on the value it is asking about, closes when looked away from, and casts a shadow that is dark in both themes",
+              "offerIndex(items, td.textContent)" in ui
+              and "offerIndex(items, sl.textContent)" in ui
+              # cast toward nothing, and the dark theme may not redefine it
+              and "--shade:" in style and "--shade" not in dark_block
+              and not re.search(r"box-shadow:[^;}]*var\(--ink\)", style)
+              # dismissed from anywhere; only the box-anchored list minds a scroll,
+              # since the editor scrolls its own lines as you type
+              and "if (awayFromOffer(e)) hideCompletion();" in ui
+              and "if (compRect && awayFromOffer(e)) hideCompletion();" in ui
+              and "Escape" not in ui.split('if (mode !== "bare") return;', 1)[1].split("});", 1)[0]
+              and 'if (e.key === "Escape" && !compEl.hidden) { e.preventDefault(); hideCompletion(); }\n}, true);' in ui))
 
     # ── the chromatic budget of a scene (Р3). Telling categories apart by hue is
     # expensive: every extra chromatic code in the field taxes the reading of all
@@ -1520,9 +1548,13 @@ const pairs = [
     ["a name the world declares against the same name only on the shelf",
      at("public typealias Home = Finance", { declares: ["Finance"] }, "Finance"),
      at("public typealias Home = Finance", { declares: [] }, "Finance")],
-    ["a kind anything may still answer to against a record that is itself",
-     at("public enum Emp: Employee", { kinds: { Employee: ["Emp"] } }, "Employee"),
-     at("public enum Emp: Employee", { kinds: {} }, "Employee")],
+    // the weight no longer says whether a name is still open — it says which of
+    // the two names on a declaration line the line is ABOUT, because the accent
+    // was landing on the inheritance. What a name is, a kind or a record, is
+    // told in words at the cursor now instead of in the paint.
+    ["a name with a home to jump to against the same name with none",
+     at("public typealias Home = Finance", { jumpable: ["Finance"] }, "Finance"),
+     at("public typealias Home = Finance", {}, "Finance")],
     ["a name that resolves against one that resolves to nothing",
      at("public typealias Sex = Male", {}, "Male"),
      at("public typealias Sex = Male", { broken: ["Male"] }, "Male")],

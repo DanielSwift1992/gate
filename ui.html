@@ -51,6 +51,11 @@
   --knownname: #8D48D3; --knownname: color(xyz-d65 calc(250/1000) calc(150/1000) calc(630/1000));
   --seam: #939393; --seam: color(xyz-d65 calc(276/1000) calc(290/1000) calc(316/1000));
   --select: #D7D7D7; --select: color(xyz-d65 calc(646/1000) calc(680/1000) calc(740/1000));
+  /* a shadow is light taken away, so it is cast toward nothing in either theme.
+     Cast in --ink it followed the text instead, and in the dark theme the ink is
+     the LIGHT end: every raised thing wore a halo. This one belongs to no theme
+     and is overridden by neither. */
+  --shade: #000; --shade: color(xyz-d65 0 0 0);
 }
 :root[data-theme="dark"]{color-scheme:dark;
   --ink: #CECFCF; --ink: color(xyz-d65 calc(590/1000) calc(621/1000) calc(676/1000));
@@ -123,20 +128,20 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .foldable.shut{display:none}
 #keys-btn{border:none;background:transparent;color:var(--muted);font:13px -apple-system,sans-serif;width:20px;height:20px;border-radius:5px;cursor:pointer;padding:0}
 #keys-btn:hover{background:var(--mist);color:var(--ink)}
-#keys-panel{position:fixed;top:38px;right:14px;z-index:30;width:min(360px,86vw);background:var(--paper);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 28px color-mix(in srgb,var(--ink) 18%,transparent);padding:calc(var(--u)*6) calc(var(--u)*7)}
+#keys-panel{position:fixed;top:38px;right:14px;z-index:30;width:min(360px,86vw);background:var(--paper);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 28px color-mix(in srgb,var(--shade) 18%,transparent);padding:calc(var(--u)*6) calc(var(--u)*7)}
 #keys-panel h4{margin:0 0 calc(var(--u)*4);font:600 13px/1 -apple-system,sans-serif}
 #keys-panel p{margin:calc(var(--u)*4) 0 0;font:11px/1.5 -apple-system,sans-serif;color:var(--muted)}
 .krow{display:flex;gap:calc(var(--u)*4);align-items:baseline;padding:var(--u) 0;font:11px/1.45 -apple-system,sans-serif}
 .krow kbd{flex:0 0 5.6em;font:11px ui-monospace,Menlo,monospace;color:var(--ink);background:var(--mist);border-radius:5px;padding:var(--u) calc(var(--u)*2);text-align:center}
 .krow span{color:var(--muted)}
-#completion{position:absolute;z-index:32;background:var(--paper);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 22px color-mix(in srgb,var(--ink) 16%,transparent);padding:calc(var(--u)*2);min-width:11em;max-height:15em;overflow:auto}
+#completion{position:absolute;z-index:32;background:var(--paper);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 22px color-mix(in srgb,var(--shade) 16%,transparent);padding:calc(var(--u)*2);min-width:11em;max-height:15em;overflow:auto}
 .crow{padding:var(--u) calc(var(--u)*4);border-radius:5px;cursor:pointer;white-space:nowrap}
 .crow.on{background:color-mix(in srgb,var(--action) 14%,transparent);color:var(--action)}
 .crow:hover{background:var(--mist)}
 .cnote{padding:calc(var(--u)*2) calc(var(--u)*4) var(--u);border-top:0.5px solid var(--line);margin-top:calc(var(--u)*2)}
 #inspect{flex:none;padding:calc(var(--u)*3) calc(var(--u)*8) calc(var(--u)*2);border-bottom:0.5px solid var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #inspect:empty::before{content:"the cursor on a name says what it is";opacity:.5}
-#say{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:31;background:var(--ink);color:var(--paper);font:13px -apple-system,sans-serif;padding:calc(var(--u)*3) calc(var(--u)*7);border-radius:8px;box-shadow:0 6px 20px color-mix(in srgb,var(--ink) 30%,transparent)}
+#say{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:31;background:var(--ink);color:var(--paper);font:13px -apple-system,sans-serif;padding:calc(var(--u)*3) calc(var(--u)*7);border-radius:8px;box-shadow:0 6px 20px color-mix(in srgb,var(--shade) 30%,transparent)}
 #brand{padding:calc(var(--u)*7) calc(var(--u)*7) calc(var(--u)*3)}
 #brand b{display:block;font:600 15px/1.2 -apple-system,sans-serif;letter-spacing:-.01em}
 #brand span{display:block;margin-top:calc(var(--u)*2)}
@@ -167,7 +172,7 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .seg{display:inline-flex;background:var(--mist);border-radius:8px;padding:var(--u);gap:var(--u)}
 .seg button{border:none;border-radius:5px;margin:0;background:transparent;color:var(--muted);font:13px -apple-system,sans-serif;padding:calc(var(--u)*2) calc(var(--u)*6);cursor:pointer}
 .seg button:hover{color:var(--ink)}
-.seg button.on{background:var(--paper);color:var(--ink);box-shadow:0 1px 2px color-mix(in srgb,var(--ink) 12%,transparent)}
+.seg button.on{background:var(--paper);color:var(--ink);box-shadow:0 1px 2px color-mix(in srgb,var(--shade) 12%,transparent)}
 .seg button:disabled{opacity:.3;cursor:default}
 .seg button:disabled:hover{color:var(--muted)}
 #nav-seg button{padding:calc(var(--u)*2) calc(var(--u)*5);font-size:15px;line-height:1}
@@ -198,7 +203,12 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .cm-s-default .cm-string{color:var(--knownname)}
 .cm-s-default .cm-comment{color:var(--muted)}
 .cm-localtype{color:var(--localtype)}.cm-knownname{color:var(--knownname)}
-.cm-kindname{font-weight:600}
+/* weight says SUBJECT: a declaration line holds two names, the one it declares
+   and the one it answers to, and the eye must land on the first. An axis name
+   is neither a fact nor a stranger — it is the label of a slot — so it is set
+   in plain ink, the way the bare view has always set it. */
+.cm-declname{font-weight:600}
+.cm-axisname{color:var(--ink)}
 .CodeMirror.holding .cm-jumpable{text-decoration:underline;text-underline-offset:2px;cursor:pointer}
 .cm-badname{text-decoration:underline wavy var(--bad);text-underline-offset:3px}.cm-ghost{color:var(--seam)}
 .line-flag-bad{background:color-mix(in srgb,var(--bad) 6%,transparent)}
@@ -346,16 +356,19 @@ CodeMirror.defineMode("gate-swift", () => ({
             if (word === "self" || keywordSet.has(word)) return "keyword";
             if (/^[A-Z]/.test(word)) {
                 if (unresolved.has(word)) return "badname";   // nothing survives: |S| = 0
+                const before = stream.string.slice(0, stream.start);
+                // an axis name is the label of a slot: plain ink, as in Bare
+                if (/\b(?:typealias|associatedtype)\s+$/.test(before)) return "axisname";
                 const home = jumpable.has(word) ? " jumpable" : "";
-                // a kind is OPEN — many may still answer to it (|S| > 1); a record
-                // is closed, it is itself (|S| = 1). That is the judge's own
-                // quantity, so it is shown, and not with a hue of its own: the
-                // hue says where a name is from, the weight says whether it is
-                // still open. Two questions, two channels.
-                const open = (conformers[word] || protoAxes[word]) ? " kindname" : "";
-                if (stream.string[stream.start - 1] === ".") return "knownname" + home + open;
-                if (localNames.has(word)) return "localtype" + home + open;
-                return "knownname" + home + open;
+                // the weight goes to what the line DECLARES, not to what it
+                // inherits. Weighting kinds instead put the accent on the
+                // inheritance — `MyBench: Bench` shouted Bench — and the eye
+                // went to the answer rather than the question. Hue still says
+                // where a name is from; the two views agree now.
+                const subject = /\b(?:enum|protocol|struct|extension)\s+$/.test(before) ? " declname" : "";
+                if (stream.string[stream.start - 1] === ".") return "knownname" + home + subject;
+                if (localNames.has(word)) return "localtype" + home + subject;
+                return "knownname" + home + subject;
             }
             return null;
         }
@@ -763,6 +776,13 @@ function allowedAt(cur) {
 }
 
 let compSlot = null, compRect = null;   // the offer may belong to a slot in Bare
+// an offer over a slot that already holds a value opens ON that value: the list
+// is a question about what stands there, and starting it elsewhere asks the
+// reader to find their own answer in it before they can keep it.
+const offerIndex = (items, current) => {
+    const i = items.indexOf((current || "").trim());
+    return i < 0 ? 0 : i;
+};
 function hideCompletion() {
     compEl.hidden = true; compItems = []; compFrom = null; compSlot = null; compRect = null;
 }
@@ -783,6 +803,8 @@ function drawCompletion(reposition) {
     compEl.hidden = false;
     for (const row of compEl.querySelectorAll(".crow"))
         row.onmousedown = (e) => { e.preventDefault(); acceptCompletion(+row.dataset.i); };
+    const on = compEl.querySelector(".crow.on");
+    if (on) on.scrollIntoView({ block: "nearest" });
 }
 
 function acceptCompletion(i) {
@@ -1268,7 +1290,8 @@ function buildTables() {
                         const kind = axesOfHost(host)[key];
                         const items = fillersFor(kind, host, key);
                         if (!items) return;
-                        compItems = items; compChosen = 0; compSlot = { kind: "alias", line: a.line, host: d.name, axis: key };
+                        compItems = items; compChosen = offerIndex(items, td.textContent);
+                        compSlot = { kind: "alias", line: a.line, host: d.name, axis: key };
                         compRect = td.getBoundingClientRect();
                         compEl.dataset.kind = kind ? "a value of " + kind : "";
                         drawCompletion(true);
@@ -1662,7 +1685,8 @@ document.getElementById("bare").addEventListener("click", (e) => {
             : ((gates[slot.head] || [])[slot.index]);
         const items = fillersFor(kind, host, slot.axis);
         if (!items) return;
-        compItems = items; compChosen = 0; compSlot = slot;
+        compItems = items; compSlot = slot;
+        compChosen = slot.kind === "hole" ? 0 : offerIndex(items, sl.textContent);
         compRect = sl.getBoundingClientRect();
         compEl.dataset.kind = kind ? "a value of " + kind : "";
         drawCompletion(true);
@@ -1683,8 +1707,30 @@ document.getElementById("bare").addEventListener("click", (e) => {
 document.addEventListener("keydown", (e) => {
     if (mode !== "bare") return;
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") { e.preventDefault(); cm.undo(); render(); }
-    if (e.key === "Escape" && !compEl.hidden) { e.preventDefault(); hideCompletion(); }
 });
+
+// ── an offer is a question, and looking away answers it. It closes on a press
+// outside itself, on Escape, and when the ground it is pinned to scrolls out
+// from under it: the list is placed at a box's coordinates and holds them, so a
+// scrolled table would leave it hanging over a row it no longer belongs to.
+// This lives outside any one view because the offer does — the editor, the bare
+// form and the table all open the same list, and only the editor used to be
+// able to dismiss it.
+const awayFromOffer = (e) =>
+    !compEl.hidden && !(e.target instanceof Node && compEl.contains(e.target));
+document.addEventListener("mousedown", (e) => {
+    if (awayFromOffer(e)) hideCompletion();
+}, { capture: true, passive: true });
+// only the box-anchored offer closes on a scroll. The one that follows the
+// caret is the editor's own, and CodeMirror scrolls its lines as you type — it
+// would shut the list on the keystroke that opened it.
+for (const ev of ["wheel", "scroll"])
+    document.addEventListener(ev, (e) => {
+        if (compRect && awayFromOffer(e)) hideCompletion();
+    }, { capture: true, passive: true });
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !compEl.hidden) { e.preventDefault(); hideCompletion(); }
+}, true);
 
 function setMode(m) {
     mode = m;
