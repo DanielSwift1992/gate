@@ -844,6 +844,11 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     open(sp, "w").write(spec_with(["limit"])); at(spec_repo, "2024-01-10", "the contract begins")
     open(sp, "w").write(spec_with(["limit", "with_vector"])); at(spec_repo, "2024-02-01", "a field is added")
     open(sp, "w").write(spec_with(["limit", "with_vector", "shard_key"])); at(spec_repo, "2024-03-01", "and another")
+    # and the contract retires one. A name it no longer says is not a name the
+    # library is missing: dating needs the union over every revision, the walk
+    # needs the contract as it stands, and asking the walk about retired names
+    # turned one true absence into thirty on a real pair.
+    open(sp, "w").write(spec_with(["limit", "with_vector"])); at(spec_repo, "2024-05-01", "and drops it again")
     cl = os.path.join(lib_repo, "client.ts")
     open(cl, "w").write("interface Q {\n  limit?: number;\n}\n"); at(lib_repo, "2024-01-10", "the library begins")
     # sixty days late on one field, and the third it has never carried at all
@@ -852,8 +857,9 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     _, dft = run("drift", sp, "--client", lib_repo, "--name", "Lib")
     _, thin = run("drift", sp, "--client", os.path.join(tmp, "contract-shallow"), "--name", "Nowhere")
     S.append(("drift is a duration and git holds both ends of it, and a clone without a past measures nothing",
-              dft.get("fields") == 3 and dft.get("late") == 1
-              and dft.get("worst_days") == 60 and dft.get("never") == ["shard_key"]
+              # two fields stand today; the retired one is dated but not walked for
+              dft.get("declares") == 2 and dft.get("late") == 1
+              and dft.get("worst_days") == 60 and dft.get("unwritten") == []
               # the same reading, refused where there is no history to read
               and thin.get("thin") and not thin.get("late")))
 
@@ -884,7 +890,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     _, whole = run("drift", msp, "--client", mono, "--name", "Whole")
     S.append(("a library is measured where the library is, not wherever its repository says the word",
               # the neighbour's line and the contract's own line are both refused a vote
-              mn.get("fields") == 2 and mn.get("never") == ["with_vector"]
+              mn.get("declares") == 2 and mn.get("unwritten") == ["with_vector"]
               and mn.get("late") == 0
               # asked about the whole repo, the neighbour answers a day late — the
               # contract itself, which said the word first, does not answer at all
@@ -987,440 +993,70 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and any("calls it closed" in s for s in said)
               and any("no such thing" in s for s in said)))
 
-    # ── a client may not fall behind the contract unseen. Types make each side
-    # self-consistent and say nothing about the other, so a hand-written library
-    # can lag a contract for releases while its own checker stays happy; the only
-    # thing tying them today is a generator, one pipeline per language. Here the
-    # seam does it instead: the SHAPE is judged (carrying a number as text is
-    # refused, and the judge names both), and ABSENCE is named beside it, since a
-    # claim never made cannot be refused.
-    # The third case is the one a hand search always gets wrong and this must
-    # not: a library that FORWARDS AN UNTYPED BAG lags on nothing — whatever you
-    # hand it reaches the wire — so calling every field missing there would be
-    # the loudest wrong answer the door can give.
+    # ── OBSERVATION, AND NOTHING ELSE. What lives here judges nothing: it looks
+    # at a world that has not entered ours, so it holds no court, prints no
+    # verdict, and says of every line which CATEGORY of fact it is. The half that
+    # judged shapes is gone — its premises were reached for across the gate,
+    # where a court has no jurisdiction, and a certificate over a premise nobody
+    # declared is honest reasoning about an invented world.
+    #
+    # PRESENCE is an object: a commit that introduced a string is named by its
+    # own hash. ABSENCE is a walk, and a walk is only as good as its bounds — so
+    # the bounds are printed beside every absence, and a reader who points at one
+    # excluded file has refuted the claim, which is what makes it a claim at all.
     con = os.path.join(tmp, "contract")
-    for part in ("typed", "wrongshape", "bag"):
-        os.makedirs(os.path.join(con, part), exist_ok=True)
-    open(os.path.join(con, "spec.json"), "w").write(json.dumps({"paths": {"/scrape": {"post": {
-        "requestBody": {"content": {"application/json": {"schema": {"properties": {
-            "url": {"type": "string"}, "waitFor": {"type": "integer"},
-            "headers": {"type": "object"}, "actions": {"type": "array"}}}}}}}}}}))
-    open(os.path.join(con, "typed", "client.ts"), "w").write(
-        "interface Req {\n  url: string;\n  waitFor?: number;\n"
-        "  headers?: Record<string, string>;\n  actions?: object[];\n}\n")
-    open(os.path.join(con, "wrongshape", "client.ts"), "w").write(
-        "interface Req {\n  url: string;\n  waitFor?: string;\n"
-        "  headers?: Record<string, string>;\n  actions?: object[];\n}\n")
-    open(os.path.join(con, "bag", "client.py"), "w").write(
-        "def scrape(url: str, params: Dict[str, Any] = None):\n"
-        "    body = {'url': url}\n    body.update(params or {})\n    return body\n")
-    def contract_run(part, name):
-        return run("import", "contract", os.path.join(con, "spec.json"),
-                   "--client", os.path.join(con, part), "--name", name)
-    _, typed = contract_run("typed", "Typed")
-    _, wrong = contract_run("wrongshape", "Wrong")
-    _, bag = contract_run("bag", "Bag")
-    wrong_says = " ".join(x["claim"] for x in wrong.get("refusals", []))
-    S.append(("a client may not fall behind its contract unseen: a shape is judged, an absence is named, and a bag is neither",
-              typed.get("verdict") == "holds"
-              # a map of strings is a map: reading the word inside it as the whole
-              # shape would accuse a library of a mismatch it does not have
-              and not typed.get("refusals")
-              and "carries it as text" in wrong_says and "calls it count" in wrong_says
-              and bag.get("verdict") == "holds" and "untyped bag" in (bag.get("note") or "")))
-
-    # ── and silence is not agreement, on either side of the seam. A contract
-    # that writes `anyOf` has not named a shape, it has left the shape OPEN, and
-    # a door that quietly reads an open field as one particular sort accuses a
-    # correct library of breaking a claim nobody made — nineteen times over, on a
-    # real client, before this was caught. A library whose type could not be made
-    # out has likewise not answered, and filling its silence with the contract's
-    # own answer produces a certificate that agrees with itself: a green 171
-    # fields wide that meant only that the reader had nodded at its own words.
-    # So neither is judged, both are counted, and the count is printed beside the
-    # verdict — a green must say how wide it is.
-    os.makedirs(os.path.join(con, "silent"), exist_ok=True)
-    open(os.path.join(con, "spec-open.json"), "w").write(json.dumps({"paths": {"/probe": {"post": {
-        "requestBody": {"content": {"application/json": {"schema": {"properties": {
-            "url": {"type": "string"},
-            "withPayload": {"anyOf": [{"type": "boolean"}, {"type": "array"}]},
-            "waitFor": {"type": "integer"}}}}}}}}}}))
-    open(os.path.join(con, "silent", "client.ts"), "w").write(
-        "interface Req {\n  url: string;\n  withPayload?: string;\n  waitFor?: WaitSpec;\n}\n")
-    _, quiet = run("import", "contract", os.path.join(con, "spec-open.json"),
-                   "--client", os.path.join(con, "silent"), "--name", "Quiet")
-    S.append(("silence is not agreement: an open shape and an unreadable type are counted, never judged",
-              quiet.get("verdict") == "holds" and not quiet.get("refusals")
-              # the open field is not refused — and not counted as agreement either
-              and quiet.get("judged") == 1 and quiet.get("shape_open") == 1
-              and quiet.get("shape_unread") == 1
-              and "judged 1 of the 3" in (quiet.get("note") or "")))
-
-    # ── and the name on the wire is not the name in the library. A contract's
-    # `log-slow-requests-time-ms` is `log_slow_requests_time_ms` in Python and
-    # `logSlowRequestsTimeMs` in a typed client, and reading only the wire
-    # spelling reported a field as UNCARRIED that the library carries in full —
-    # the worst sort of wrong, because an absence reads as news.
-    # Beside it the mirror case: a library may declare one name twice and mean
-    # two things — typesense writes `stopwords: string[]` for the set it sends
-    # and `stopwords?: string` for the set it names in a query — and taking
-    # whichever the walk reached first let the order of files on disk pick the
-    # verdict. Two shapes are not a mismatch, they are an unanswered question.
-    os.makedirs(os.path.join(con, "renamed"), exist_ok=True)
-    open(os.path.join(con, "spec-names.json"), "w").write(json.dumps({"paths": {"/cfg": {"post": {
-        "requestBody": {"content": {"application/json": {"schema": {"properties": {
-            "log-slow-requests-time-ms": {"type": "integer"},
-            "stopwords": {"type": "array"}}}}}}}}}}))
-    open(os.path.join(con, "renamed", "client.py"), "w").write(
-        "class Config:\n    log_slow_requests_time_ms: int\n")
-    open(os.path.join(con, "renamed", "types.ts"), "w").write(
-        "interface Send {\n  stopwords: string[];\n}\n"
-        "interface Query {\n  stopwords?: string;\n}\n")
-    _, named_ok = run("import", "contract", os.path.join(con, "spec-names.json"),
-                      "--client", os.path.join(con, "renamed"), "--name", "Renamed")
-    S.append(("a wire name is read through the library's own spelling, and a name said twice is not judged once",
-              named_ok.get("verdict") == "holds" and not named_ok.get("refusals")
-              and named_ok.get("judged") == 1 and named_ok.get("shape_split") == 1))
-
-    # ── and a written type ends where its brackets end, not at the first comma.
-    # `ExtractBaseTypes<SearchParams<T[number], Infix>>[]` is a list; cut at the
-    # comma inside the generic it loses its `[]`, shows `T[number]`, and the list
-    # is read as a number — a mismatch invented out of punctuation.
-    # A union is open on THIS side of the seam exactly as `anyOf` is open on the
-    # other: `RuleSchema | RuleSchema[]` has not said which sort it carries, and
-    # letting the arm that can be read speak for the arm that cannot accused a
-    # correct library. But that poison belongs to the type, not to the field:
-    # across declaration sites an unreadable one is merely quiet, and a field
-    # written plainly in one place and aliased in another is still judged on the
-    # place that said something.
-    os.makedirs(os.path.join(con, "written"), exist_ok=True)
-    open(os.path.join(con, "spec-types.json"), "w").write(json.dumps({"paths": {
-        "/multi": {"post": {"requestBody": {"content": {"application/json": {"schema": {"properties": {
-            "searches": {"type": "array"}, "params": {"type": "object"},
-            "locale": {"type": "string"}, "sparse_vectors": {"type": "object"}}}}}}}},
-        "/solo": {"post": {"requestBody": {"content": {"application/json": {"schema": {"properties": {
-            "tongue": {"type": "string"}, "dialect": {"type": "string"}}}}}}}}}}))
-    open(os.path.join(con, "written", "client.ts"), "w").write(
-        "interface Multi {\n"
-        "  searches: ExtractBaseTypes<SearchParams<T[number], Infix>>[];\n"
-        "  params: RuleSchema | RuleSchema[];\n"
-        "  locale: string;\n"
-        # a map wearing parentheses, as a generated client writes it
-        "  sparse_vectors?: ({\n"
-        "    [key: string]: SparseVectorParams | undefined;\n"
-        "  }) | null;\n}\n"
-        # both of these are the /solo request, so both are heard — and there the
-        # one that aliases its type must not silence the one that spelled it
-        "interface Q {\n  tongue: TongueSchema;\n  dialect: DialectSchema;\n}\n")
-    # a docstring is not a declaration, and it sits INSIDE the block that is:
-    # `:param tongue: Given a phone number in plain words` reads as a name and a
-    # type to any pattern that looks for a colon, and the English `number` in the
-    # prose became the shape — a hundred and twenty-eight accusations against
-    # twilio's client, every one of them a line of documentation
-    open(os.path.join(con, "written", "params.py"), "w").write(
-        "class P:\n"
-        '    """\n'
-        "    :param tongue: Given a phone number in plain words\n"
-        '    """\n'
-        "    tongue: str\n"
-        "    dialect: str\n")
-    _, written = run("import", "contract", os.path.join(con, "spec-types.json"),
-                     "--client", os.path.join(con, "written"), "--name", "Written")
-    S.append(("a type ends where its brackets end, a union names no one shape, and an alias elsewhere does not silence what was said",
-              written.get("verdict") == "holds" and not written.get("refusals")
-              # searches and locale are read; params answered with a union
-              and written.get("judged") == 5 and written.get("shape_unread") == 1))
-
-    # ── and a request is read WHERE THE LIBRARY DECLARES IT. The fields of one
-    # body are written together, so the block that holds them is the place to
-    # ask — and it answers both questions, whether the field is carried and as
-    # what. Asking them in different places reported a mismatch on `images`
-    # against a client whose only `images` is a counter in a usage report: the
-    # word existed somewhere, so the field looked carried, and a stranger's
-    # `int` became its shape. Kinship is how much of the BLOCK is about this
-    # request, not how many names coincide, or a twenty-field report brushing
-    # two of them outranks the schema itself.
-    # A home may also be built of more than one room: a typed client writes the
-    # bulk in a base and hangs the rest off it in one-field extensions, and a
-    # block wholly about this request is heard for what the base does not say.
-    os.makedirs(os.path.join(con, "home"), exist_ok=True)
-    open(os.path.join(con, "spec-home.json"), "w").write(json.dumps({"paths": {"/collections": {"post": {
-        "requestBody": {"content": {"application/json": {"schema": {"properties": {
-            "name": {"type": "string"}, "fields": {"type": "array"},
-            "token_separators": {"type": "array"}, "enable_nested_fields": {"type": "boolean"},
-            "images": {"type": "array"}, "voice_query_model": {"type": "object"}}}}}}}}}}))
-    open(os.path.join(con, "home", "client.ts"), "w").write(
-        "export interface BaseCollectionCreateSchema {\n  name: string;\n"
-        "  token_separators?: string[];\n  enable_nested_fields?: boolean;\n}\n"
-        "interface CollectionCreateSchemaWithSrc extends BaseCollectionCreateSchema {\n"
-        "  fields: CollectionFieldSchema[];\n}\n"
-        "export interface UsageReport {\n  images: number;\n  name: string;\n"
-        "  spend: number;\n  minutes: number;\n  requests: number;\n}\n")
-    _, at_home = run("import", "contract", os.path.join(con, "spec-home.json"),
-                     "--client", os.path.join(con, "home"), "--name", "AtHome")
-    home_says = " ".join(x["claim"] for x in at_home.get("refusals", []))
-    S.append(("a request is read where the library declares it, and a home may be built of more than one room",
-              # the base answers for its three, the one-field extension for `fields`
-              at_home.get("judged") == 4
-              # `images` lives only in a usage report: home does not declare it, so
-              # nothing is said of its shape — a stranger's count is not an answer
-              and "as count" not in home_says and at_home.get("shape_unread") == 1
-              # and the one field written nowhere at all is the one absence claimed
-              and len(at_home.get("refusals", [])) == 1
-              and "voice_query_model" in at_home["refusals"][0]["address"]))
-
-    # ── a type written as a string, and a contract that speaks another language.
-    # `NotRequired["Dict[str, str]|UntypedStripeObject[str]"]` names a map, and
-    # read with its quotes on it is an unreadable word with `str` showing inside:
-    # a client that had it right was accused nine times over. And a contract may
-    # post FORMS — twilio declares sixty-two bodies and every one of them is
-    # x-www-form-urlencoded — where a reader that takes JSON alone finds no
-    # field, judges nothing, and answers `holds`: the empty green again, this
-    # time about a document that never spoke its language at all.
-    os.makedirs(os.path.join(con, "quoted"), exist_ok=True)
-    open(os.path.join(con, "spec-quoted.json"), "w").write(json.dumps({"paths": {"/accounts": {"post": {
-        "requestBody": {"content": {"application/json": {"schema": {"properties": {
-            "metadata": {"type": "object"}, "name": {"type": "string"}}}}}}}}}}))
-    open(os.path.join(con, "quoted", "params.py"), "w").write(
-        "class AccountCreateParams(TypedDict):\n"
-        "    metadata: NotRequired[\"Dict[str, str]|UntypedStripeObject[str]\"]\n"
-        "    name: NotRequired[str]\n")
-    _, quoted = run("import", "contract", os.path.join(con, "spec-quoted.json"),
-                    "--client", os.path.join(con, "quoted"), "--name", "Quoted")
-    # a form is a request too: its field names go on the wire exactly as
-    # written, which is the same thing that makes a query key judgeable, and
-    # twilio declares sixty-two bodies that are nothing else. What stays
-    # unread is a media type whose fields this reader cannot see at all.
-    os.makedirs(os.path.join(con, "form"), exist_ok=True)
-    open(os.path.join(con, "spec-form.json"), "w").write(json.dumps({"paths": {"/messages": {"post": {
-        "requestBody": {"content": {"application/x-www-form-urlencoded": {"schema": {"properties": {
-            "Body": {"type": "string"}, "To": {"type": "string"}}}}}}}}}}))
-    open(os.path.join(con, "form", "client.ts"), "w").write(
-        "interface Message {\n  Body: string;\n  To: string;\n}\n")
-    _, form = run("import", "contract", os.path.join(con, "spec-form.json"),
-                  "--client", os.path.join(con, "form"), "--name", "Form")
-    open(os.path.join(con, "spec-xml.json"), "w").write(json.dumps({"paths": {"/legacy": {"post": {
-        "requestBody": {"content": {"application/xml": {"schema": {"properties": {
-            "Body": {"type": "string"}}}}}}}}}}))
-    _, xml = run("import", "contract", os.path.join(con, "spec-xml.json"),
-                 "--client", os.path.join(con, "form"), "--name", "Xml")
-    S.append(("a type in quotes is still a type, a form is a request like any other, and a language this reader does not speak is named",
-              quoted.get("verdict") == "holds" and not quoted.get("refusals")
-              and quoted.get("judged") == 2
-              # the form contract is judged like any other
-              and form.get("judged") == 2 and not form.get("refusals")
-              # and the one whose language this reader does not speak is told so
-              and xml.get("judged") == 0 and not xml.get("refusals")
-              and "application/xml" in (xml.get("note") or "")))
-
-    # ── and a generated client keeps every schema it has inside ONE interface,
-    # which is one place only if nothing inside it counts as a place. Then the
-    # request and a telemetry report ten thousand lines away are the same block,
-    # whichever spelling the reader meets first wins, and a map is read as text
-    # because a report calls that name a string. A name opening a brace starts a
-    # block as surely as the word `interface` does.
-    os.makedirs(os.path.join(con, "generated"), exist_ok=True)
-    open(os.path.join(con, "spec-generated.json"), "w").write(json.dumps({"paths": {"/collections": {"put": {
-        "requestBody": {"content": {"application/json": {"schema": {"properties": {
-            "shard_number": {"type": "integer"}, "sparse_vectors": {"type": "object"},
-            "on_disk_payload": {"type": "boolean"}}}}}}}}}}))
-    open(os.path.join(con, "generated", "schema.ts"), "w").write(
-        "export interface components {\n  schemas: {\n"
-        "    CreateCollection: {\n      shard_number?: number;\n"
-        "      sparse_vectors?: ({\n"
-        "        [key: string]: SparseVectorParams | undefined;\n      }) | null;\n"
-        "      on_disk_payload?: boolean;\n    };\n"
-        "    TelemetryReport: {\n      sparse_vectors: string;\n      uptime: number;\n"
-        "      version: string;\n      peers: number;\n    };\n  };\n}\n")
-    _, gen = run("import", "contract", os.path.join(con, "spec-generated.json"),
-                 "--client", os.path.join(con, "generated"), "--name", "Generated")
-    S.append(("a schema nested inside a generated interface is its own place, or the whole file is one",
-              gen.get("verdict") == "holds" and not gen.get("refusals")
-              and gen.get("judged") == 3))
-
-    # ── and a reader that can see nothing may not call it an empty room. A Go
-    # client writes `SparseVectors map[string]Params `json:"sparse_vectors"`'
-    # with no colon in sight, so this reader makes out not one declaration —
-    # and then found every field of the contract missing and said so sixteen
-    # times over a library that carries them all. That is the vacuous green's
-    # twin and it is worse, because it speaks.
-    os.makedirs(os.path.join(con, "unread"), exist_ok=True)
-    open(os.path.join(con, "spec-unread.json"), "w").write(json.dumps({"paths": {"/points": {"post": {
-        "requestBody": {"content": {"application/json": {"schema": {"properties": {
-            "with_vector": {"type": "boolean"}, "limit": {"type": "integer"},
-            "offset": {"type": "integer"}}}}}}}}}}))
-    open(os.path.join(con, "unread", "client.go"), "w").write(
-        "package qdrant\n\ntype ScrollPoints struct {\n"
-        "\tWithVector *bool  `json:\"with_vector,omitempty\"`\n"
-        "\tLimit      *uint32 `json:\"limit,omitempty\"`\n"
-        "\tOffset     *uint32 `json:\"offset,omitempty\"`\n}\n")
-    _, dark = run("import", "contract", os.path.join(con, "spec-unread.json"),
-                  "--client", os.path.join(con, "unread"), "--name", "Dark")
-    S.append(("a reader that made out nothing does not report an empty library",
-              dark.get("judged") == 0 and dark.get("verdict") == "holds"
-              and not dark.get("refusals") and "cannot make out" in (dark.get("note") or "")))
-
-    # ── and a contract written in the version of the standard that is current
-    # must not throw the door off its hinges. OpenAPI 3.1 spells a nullable
-    # field `["string", "null"]` and an open one `["string", "integer"]`: null
-    # is not another shape, two shapes are the contract declining to name one,
-    # and a list read as a key crashed on a document that was perfectly valid.
-    os.makedirs(os.path.join(con, "v31"), exist_ok=True)
-    open(os.path.join(con, "spec-v31.json"), "w").write(json.dumps({"openapi": "3.1.0", "paths": {"/keys": {"post": {
-        "requestBody": {"content": {"application/json": {"schema": {"properties": {
-            "name": {"type": ["string", "null"]}, "expires": {"type": ["string", "integer"]},
-            "enabled": {"type": "boolean"}}}}}}}}}}))
-    open(os.path.join(con, "v31", "client.ts"), "w").write(
-        "interface CreateKey {\n  name?: string;\n  expires?: number;\n  enabled?: boolean;\n}\n")
-    _, v31 = run("import", "contract", os.path.join(con, "spec-v31.json"),
-                 "--client", os.path.join(con, "v31"), "--name", "V31")
-    S.append(("a nullable field names one shape and an open one names none, in the version of the standard that is current",
-              v31.get("verdict") == "holds" and not v31.get("refusals")
-              # name and enabled are judged; `expires` is the contract's own openness
-              and v31.get("judged") == 2 and v31.get("shape_open") == 1))
-
-    # ── and a field that only ever travels outward is no part of a request. The
-    # contract says so itself two ways: `readOnly` on the property, or one shape
-    # described for both directions — weaviate posts an `Object` and receives an
-    # `Object`, and its timestamps are stamped by the server. Judged as request
-    # fields they made thirty accusations against a client that was carrying
-    # exactly what it should, the closest thing to those names in it being the
-    # flags that ask for them back.
-    os.makedirs(os.path.join(con, "directions"), exist_ok=True)
-    open(os.path.join(con, "spec-directions.json"), "w").write(json.dumps({"paths": {
-        "/objects": {"post": {
-            "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/definitions/Object"}}}},
-            "responses": {"200": {"schema": {"$ref": "#/definitions/Object"}}}}},
-        "/keys": {"post": {
+    os.makedirs(os.path.join(con, "lib"), exist_ok=True)
+    open(os.path.join(con, "spec.json"), "w").write(json.dumps({"paths": {
+        "/scrape": {"post": {
+            "parameters": [
+                {"name": "waitFor", "in": "query", "schema": {"type": "integer"}},
+                {"name": "ids[]", "in": "query", "schema": {"type": "array"}},
+                {"name": "StartTime<", "in": "query", "schema": {"type": "string"}},
+                {"name": "opts", "in": "query", "schema": {"type": "object", "properties": {
+                    "exclude_fields": {"type": "string"}}}}],
             "requestBody": {"content": {"application/json": {"schema": {"properties": {
-                "name": {"type": "string"}, "enabled": {"type": "boolean"},
-                "createdAt": {"type": "integer", "readOnly": True}}}}}},
-            "responses": {"200": {"description": "ok"}}}}},
-        "definitions": {"Object": {"properties": {
-            "class": {"type": "string"}, "creationTimeUnix": {"type": "integer"}}}}}))
-    open(os.path.join(con, "directions", "client.ts"), "w").write(
-        "interface CreateKey {\n  name?: string;\n  enabled?: boolean;\n}\n"
-        "interface MetadataQuery {\n  creationTimeUnix: boolean;\n  class: object;\n}\n")
-    _, dirs_ = run("import", "contract", os.path.join(con, "spec-directions.json"),
-                   "--client", os.path.join(con, "directions"), "--name", "Directions")
-    S.append(("what the contract also sends back, and what it marks read-only, is no part of a request",
-              # only /keys' two fields are a request at all
-              dirs_.get("fields") == 2 and dirs_.get("judged") == 2
-              and dirs_.get("verdict") == "holds" and not dirs_.get("refusals")))
+                "url": {"type": "string"},
+                "log-slow-requests-time-ms": {"type": "integer"},
+                "Parameter1.Name": {"type": "string"},
+                "createdAt": {"type": "integer", "readOnly": True}}}}}}}},
+        "/forms": {"post": {"requestBody": {"content": {"application/x-www-form-urlencoded": {
+            "schema": {"properties": {"Body": {"type": "string"}}}}}}}},
+        "/echo": {"post": {
+            "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/definitions/Thing"}}}},
+            "responses": {"200": {"schema": {"$ref": "#/definitions/Thing"}}}}}},
+        "definitions": {"Thing": {"properties": {"echoed": {"type": "string"}}}}}))
+    open(os.path.join(con, "lib", "client.ts"), "w").write(
+        'const PATH = "/scrape";\n'
+        "interface Req {\n  url: string;\n  waitFor?: number;\n  ids?: string[];\n"
+        "  exclude_fields?: string;\n  log_slow_requests_time_ms?: number;\n}\n"
+        'async function go(r: Req) { return post(`${PATH}`, r); }\n')
+    _, obs = run("drift", os.path.join(con, "spec.json"),
+                 "--client", os.path.join(con, "lib"), "--name", "Lib")
+    S.append(("what is observed of a world that has not entered carries no verdict, and every absence carries the bounds of its walk",
+              # no court sat, so there is no verdict to read
+              "verdict" not in obs
+              # the contract is read by a parser: a form is a request, a query key
+              # is a name on the wire, an object parameter is its properties, a
+              # read-only field and a body the contract also returns are no part
+              # of a request, and `{setName}`, `Parameter1.Name`, `StartTime<`
+              # and `ids[]`'s brackets are wire syntax nobody spells
+              and obs.get("declares") == 6
+              # the walk found every name but one, and says where it looked
+              and obs.get("unwritten") == ["Body"] and obs["scope"]["files"] == 1
+              and "skipping" in obs.get("note", "")
+              # `/scrape` is spelled in a constant, so the walk does read routes —
+              # and `/forms`, which it never spells, is named
+              and obs.get("silent_routes") == ["/forms"]))
 
-    # ── A REQUEST IS NOT ONLY ITS BODY. Half of what a contract declares stands
-    # in its parameters, and reading bodies alone judged forty-six per cent of
-    # these contracts while calling that the whole: deepgram declares seventeen
-    # body fields against two hundred and forty-six parameters, so a green over
-    # it meant almost nothing.
-    # QUERY, though, and not path — and the reason is what a name IS. A query key
-    # goes on the wire exactly as written, so both sides must spell it the same
-    # and may be judged against each other. The name inside `{braces}` never goes
-    # anywhere: it documents a slot, and a client owes it nothing — typesense
-    # writes `{curationSetName}` where its own library says `name`, which is not
-    # drift and must not be reported as any. `project_ids[]` is the transport's
-    # way of writing a repeated key, not a word either side spells. And a query
-    # parameter declared as an object carries its fields in its properties; its
-    # own name is a wrapper nobody writes.
-    os.makedirs(os.path.join(con, "params"), exist_ok=True)
-    open(os.path.join(con, "spec-params.json"), "w").write(json.dumps({"paths": {"/sets/{setName}": {
-        "parameters": [{"name": "setName", "in": "path", "schema": {"type": "string"}}],
-        "get": {"parameters": [
-            {"name": "ids[]", "in": "query", "schema": {"type": "array"}},
-            {"name": "StartTime<", "in": "query", "schema": {"type": "string"}},
-            {"name": "opts", "in": "query", "schema": {"type": "object", "properties": {
-                "exclude_fields": {"type": "string"}, "limit": {"type": "integer"}}}}]},
-        "put": {"requestBody": {"content": {"application/json": {"schema": {"properties": {
-            "items": {"type": "array"},
-            # the wire encoding a structure, and a comparison written into a key:
-            # no library spells either, and looking for them found nothing three
-            # hundred and ninety-six times on twilio's own client
-            "Parameter1.Name": {"type": "string"}}}}}}}}}}))
-    open(os.path.join(con, "params", "client.ts"), "w").write(
-        "interface SetQuery {\n  ids?: string[];\n  exclude_fields?: string;\n  limit?: number;\n}\n"
-        "interface SetBody {\n  items: string[];\n}\n")
-    _, prm = run("import", "contract", os.path.join(con, "spec-params.json"),
-                 "--client", os.path.join(con, "params"), "--name", "Params")
-    S.append(("a request is not only its body, and a name is judged only where the wire carries it",
-              # ids, exclude_fields, limit, items — and setName, `Parameter1.Name`
-              # and `StartTime<` are not fields at all: no source spells them
-              prm.get("fields") == 4 and prm.get("judged") == 4
-              and prm.get("verdict") == "holds" and not prm.get("refusals")))
-
-    # ── and a seam belongs to a PAIR, so the canon of names gives it a verb and
-    # not a property. `are we compatible?` puts the question straight back into
-    # the politics this whole turn exists to take it out of; `the seam has
-    # parted, here` keeps it about the thing, and an address follows. The
-    # machine word is untouched — `verdict` stays holds/refused for whatever
-    # reads the JSON, which is the same split the porcelain has everywhere.
-    seam_holds = say("import", "contract", os.path.join(con, "spec-params.json"),
-                     "--client", os.path.join(con, "params"), "--name", "Params")
-    seam_parts = say("import", "contract", os.path.join(con, "spec.json"),
-                     "--client", os.path.join(con, "wrongshape"), "--name", "Wrong")
-    _, seam_json = run("import", "contract", os.path.join(con, "spec.json"),
-                       "--client", os.path.join(con, "wrongshape"), "--name", "Wrong")
-    S.append(("a seam is spoken of as a pair and an act, and the machine word stays where machines read it",
-              "the seam holds" in seam_holds
-              and bool(re.search(r"the seam has parted in \d+ place", seam_parts))
-              and seam_json.get("verdict") == "refused"))
-
-    # ── AND A WHOLE ROUTE MAY BE MISSING, which is a larger thing than a field
-    # and stayed invisible while only fields were read: weaviate's python client
-    # implements neither `/objects/validate` nor `/replication/scale`, and
-    # typesense's javascript one has no `/config` at all — found by a field only
-    # because that route happened to declare one. A path goes on the wire as
-    # written, so its literal segments are a name both sides spell; the braces
-    # are skipped, being a slot and not a word.
-    # Unless the library names no route whatever: a package of types alone
-    # writes no URL, and telling it that it is missing every endpoint is the
-    # blind reader again, wearing a bigger accusation.
-    os.makedirs(os.path.join(con, "routed"), exist_ok=True)
-    open(os.path.join(con, "spec-routes.json"), "w").write(json.dumps({"paths": {
-        "/collections/{name}/documents": {"post": {"requestBody": {"content": {"application/json": {
-            "schema": {"properties": {"text": {"type": "string"}}}}}}}},
-        "/config": {"post": {"requestBody": {"content": {"application/json": {
-            "schema": {"properties": {"slow_ms": {"type": "integer"}}}}}}}}}}))
-    open(os.path.join(con, "routed", "client.ts"), "w").write(
-        'const PATH = "/collections";\n'
-        "interface Doc {\n  text: string;\n}\n"
-        'async function add(name: string, d: Doc) {\n'
-        '  return post(`${PATH}/${name}/documents`, d);\n}\n'
-        "interface Cfg {\n  slow_ms: number;\n}\n")
-    _, rt = run("import", "contract", os.path.join(con, "spec-routes.json"),
-                "--client", os.path.join(con, "routed"), "--name", "Routed")
-    route_says = " ".join(x["claim"] for x in rt.get("refusals", []))
-    # and the same contract against a library that is read in full but writes no
-    # URL anywhere — a package of types alone. Its fields are judged; not one
-    # route may be held against it.
+    # ── and a library that writes no URL at all is not one that lacks every
+    # endpoint: it is one that keeps its paths somewhere this walk did not go.
     os.makedirs(os.path.join(con, "typesonly"), exist_ok=True)
     open(os.path.join(con, "typesonly", "client.ts"), "w").write(
-        "interface Doc {\n  text: string;\n}\ninterface Cfg {\n  slow_ms: number;\n}\n")
-    _, noroute = run("import", "contract", os.path.join(con, "spec-routes.json"),
-                     "--client", os.path.join(con, "typesonly"), "--name", "Typesonly")
-    S.append(("a route the contract declares and the library never names is named, unless it names no route at all",
-              # /config is nowhere in that client, /collections/{name}/documents is
-              "never names it" in route_says and "/config" in " ".join(
-                  x["address"] for x in rt.get("refusals", []))
-              and len([x for x in rt.get("refusals", []) if "never names it" in x["claim"]]) == 1
-              # the types-only library is accused of no route whatever
-              and not [x for x in noroute.get("refusals", []) if "never names it" in x["claim"]]
-              # read in full, so the silence about routes is the rule and not blindness
-              and noroute.get("judged") == 2))
-
-    # ── and a badge for a seam, not only for a world. Somebody who came to
-    # measure their own contract against their own client has no world of facts
-    # to count, so the road they walked ended with nothing to hang up — the
-    # finish line unreachable by the very path that leads to it. Same rule
-    # either way: the number on it is how much was judged out of how much was
-    # there, because a badge that says only green once said green over three
-    # fields of a hundred and seventy-eight.
-    _, cb = run("badge", "--contract", os.path.join(con, "spec.json"),
-                "--client", os.path.join(con, "wrongshape"), "--name", "Wrong")
-    S.append(("a badge speaks for a seam as well as for a world, and both say how wide they are",
-              cb.get("of") == "contract" and cb.get("verdict") == "refused"
-              and cb.get("fields") == 4 and cb.get("claims", 0) > 0
-              # and the number names its unit, since the denominator has moved once
-              and bool(re.match(r"judged \d+/\d+ fields · refused \d+$", cb.get("text", "")))))
+        "interface Req {\n  url: string;\n}\n")
+    _, bare_types = run("drift", os.path.join(con, "spec.json"),
+                        "--client", os.path.join(con, "typesonly"), "--name", "Types")
+    S.append(("a library that spells no route at all is accused of missing none",
+              bare_types.get("silent_routes") == [] and "url" not in bare_types.get("unwritten", [])))
 
     # ── and the check is the whole ceremony: one command in the CI the client
     # already has. It exits non-zero on a stale citation and zero when the code

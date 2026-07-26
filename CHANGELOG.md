@@ -4,15 +4,24 @@
 
 The working prototype, end to end:
 
-- A client may not fall behind its contract unseen. `gate import contract` reads
-  an OpenAPI document and a client library and judges them as one world: the
-  shape is judged (carrying a number as text is refused with both shapes named)
-  and absence is named beside it, since a claim never made cannot be refused. Run
-  against a real project's three official clients it holds for the TypeScript
-  one, refuses the Rust one for a field the contract declares and the library
-  does not carry, and tells the Python one plainly that it forwards an untyped
-  bag — which lags on nothing and helps nobody. That third answer is the one a
-  hand search always gets wrong.
+- What a library has been, observed and never judged. `gate drift` reads an
+  OpenAPI document out of git — every revision of it — and walks a client
+  library once, and prints two kinds of fact with their kinds named: the day the
+  contract first declared a name against the day the library first wrote it (a
+  commit, carrying its own hash), and the names and routes no walked file writes
+  (a walk, carrying its bounds, so that pointing at one skipped file refutes the
+  claim). It prints no verdict: the library never entered gate's world, and
+  nothing outside the gate can be judged, because nobody there has spoken for
+  anything. The exit code belongs to a threshold the operator declares.
+
+  It replaced a door that judged shapes by reading a client's own source. That
+  door was honest reasoning over invented premises — a certificate is only as
+  true as what it is built on, and its premises were reached for across the gate
+  by a regular expression. Fifteen special cases went into making the reading
+  better and it never became right: prose read as a type, a wire encoding read
+  as a name, a docstring read as a declaration. Judgement returns when both
+  sides are declared, in `gate stdlib show genre-contract`, and then a refusal is
+  about two declarations rather than about anybody's code.
 
 - A citation may not outlive the thing it cites. `gate import refs` reads a
   tracker's own export and every `TODO(KEY)` your code writes, and judges them as

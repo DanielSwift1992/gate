@@ -1565,32 +1565,9 @@ def cmd_badge(a):
     from datetime import date as _date
     out_path = a[a.index("-o") + 1] if "-o" in a else None
     since = a[a.index("--since") + 1] if "--since" in a else None
-    # a badge for a seam rather than a world. Somebody who came here to measure
-    # their own contract against their own client has no world of facts to count,
-    # and the path they walked ended with nothing to hang up — which made the
-    # finish line unreachable by the very road that leads to it. The width rule
-    # is the same either way: the number on it is how much was judged, out of
-    # how much was there.
-    if "--contract" in a:
-        con = cmd_import_contract([a[a.index("--contract") + 1]]
-                                  + [x for x in a if x not in ("--contract", a[a.index("--contract") + 1])])
-        # a number that moves must name its unit: this denominator grew the day
-        # query keys were first read, and a bare `47/90` would have moved under
-        # a reader who had no way to know what it counted
-        right = f"judged {con.get('judged', 0)}/{con.get('fields', 0)} fields · " + \
-                ("holds" if con["verdict"] == "holds" else f"refused {len(con.get('refusals', []))}")
-        if out_path:
-            lw, rw = 40, 8 + int(len(right) * 6.2)
-            open(out_path, "w").write(BADGE_SVG.format(
-                w=lw + rw, lw=lw, rw=rw, tx=lw + 5, right=esc_xml(right),
-                fill="#007D36" if con["verdict"] == "holds" else "#BF4035", alt="gate: " + right))
-        return {"command": "badge", "of": "contract", "claims": con.get("judged", 0),
-                "fields": con.get("fields", 0), "verdict": con["verdict"],
-                "refusals": con.get("refusals", []), "wrote": out_path, "text": right,
-                "note": con.get("note", ""),
-                "next": ("the number is the width, not the verdict: a green over three fields of "
-                         "a hundred and seventy-eight is what this badge exists to prevent"),
-                "mutates": bool(out_path)}
+    # a badge counts JUDGED claims, so it belongs to a world and to nothing else.
+    # It once spoke for a seam too, over premises no one had declared — a badge
+    # over an observation is a verdict wearing a number, and there was no court.
     files = world_files()
     if not files:
         return {"command": "badge", "verdict": "no world here", "refusals": [],
@@ -1740,116 +1717,135 @@ def first_mentions(root, names, only=None, without=None):
 
 
 def cmd_drift(a):
-    # drift CONTRACT --client DIR [--since DATE] [--name N] — how long this
-    # library has spent behind its own contract, measured rather than argued.
-    # A snapshot cannot see this: a client that lagged nine months on a field and
-    # then caught up looks identical today to one that never lagged at all, so
-    # asking `is it behind now` finds almost nothing and reports calm. The
-    # question with an answer is HOW LONG, and git holds it on both sides —
-    # nothing is fetched, nothing is sent, and the two sides may sit in
-    # unconnected checkouts.
+    # drift CONTRACT --client DIR [--since DATE] [--name N] [--fail-over DAYS]
+    #
+    # OBSERVATION, AND NOTHING ELSE. This looks at a world that has not entered
+    # ours, so it holds no court and carries no verdict: what it prints are
+    # lexical facts about git objects — a string is in this diff, a commit bears
+    # this date — and the reader may re-run every one of them. Judgement waits
+    # for the gate; nothing outside it can be judged, because nobody there has
+    # spoken for anything.
+    #
+    # Two kinds of fact, and they are not equally certified. PRESENCE is an
+    # object: the commit that introduced a string is named by its own hash.
+    # ABSENCE is a walk, and a walk is only as good as its bounds — so the bounds
+    # are printed beside every absence, and a reader who points at one excluded
+    # file has refuted the claim, which is exactly what makes it a claim.
     import json as _json
     from datetime import date as _date
     src = a[0]
     root = a[a.index("--client") + 1] if "--client" in a else "."
     since = a[a.index("--since") + 1] if "--since" in a else None
     who = a[a.index("--name") + 1] if "--name" in a else sanitize(os.path.basename(os.path.abspath(root)))
+    over = int(a[a.index("--fail-over") + 1]) if "--fail-over" in a else None
     t0 = time.time()
     _sroot, revs = contract_revisions(src, since)
-    first = {}
+    # HISTORY DATES; TODAY WALKS. The union over every revision is what the
+    # contract has EVER said, and dating needs that — but a name the contract
+    # retired two years ago is not one the library is missing, and asking the
+    # walk about it turned one true absence into thirty. So the walk asks the
+    # contract as it stands, and only the dates come from the union.
+    declared, current, routes = {}, [], {}
     for when, blob in revs:
         try:
             spec = _json.loads(blob.decode("utf-8", "replace"))
         except Exception:
             continue                            # a revision that did not parse says nothing
         for f in contract_fields(spec):
-            first.setdefault(f["field"], when)
+            declared.setdefault(f["field"], when)
+    try:
+        now = contract_fields(_json.loads(open(src, encoding="utf-8").read()))
+    except Exception:
+        now = []
+    for f in now:
+        current.append(f["field"])
+        routes.setdefault(f["route"], True)
+        declared.setdefault(f["field"], None)
+
+    # ── the walk, and its bounds
+    body, scope = read_carrier(root)
+    words = set(re.findall(r"\w+", body))
+    spoken = set(re.findall(r"[\"'`/]([A-Za-z0-9_.\-]+)(?=[\"'`/?]|$)", body, re.M))
+    unwritten = sorted({n for n in current if not (name_variants(n) & words)})
+    silent = []
+    if any(all(s in spoken for s in [x for x in r.split("/") if x and not x.startswith("{")])
+           for r in routes):
+        # a library that writes no URL at all is not a library that lacks every
+        # endpoint: it is one that keeps its paths somewhere this walk did not go
+        for r in sorted(routes):
+            segs = [x for x in r.split("/") if x and not x.startswith("{")]
+            if segs and not all(s in spoken for s in segs):
+                silent.append(r)
+
+    # ── the history, where there is one
     croot = (subprocess.run(["git", "-C", root, "rev-parse", "--show-toplevel"],
                             capture_output=True, text=True).stdout or "").strip()
-    # a measurement of the past needs a past. A shallow clone has one commit
-    # standing in for all of them, so every field looks as old as the checkout
-    # and every library looks punctual — this command would report `never been
-    # behind` on the strength of a single revision, which is the same empty
-    # green the contract door had, wearing a longer sentence.
+    croot = os.path.realpath(croot) if croot else ""
+
     def shallow(r):
         return r and (subprocess.run(["git", "-C", r, "rev-parse", "--is-shallow-repository"],
                                      capture_output=True, text=True).stdout or "").strip() == "true"
     thin = [w for w, r, n in ((os.path.basename(src), _sroot, len(revs)), (who, croot, 2))
             if not r or shallow(r) or n < 2]
-    if thin:
-        return {"command": "drift", "contract": os.path.basename(src), "carrier": who,
-                "revisions": len(revs), "fields": len(first), "since": since,
-                "late": 0, "never": [], "median_days": 0, "worst_days": 0, "worst": [],
-                "ms": round((time.time() - t0) * 1000, 1), "thin": thin,
-                "note": ("no history to measure on this machine: " + " and ".join(thin)
-                         + " " + ("has" if len(thin) == 1 else "have")
-                         + " one commit standing in for all of them, so nothing is said either way"),
-                "next": "git fetch --unshallow in " + thin[0] + ", then ask again"}
-    croot = os.path.realpath(croot) if croot else ""
-    here = os.path.relpath(os.path.realpath(root), croot) if croot else "."
-    spec_rel = (os.path.relpath(os.path.realpath(src), croot)
-                if croot and os.path.realpath(src).startswith(croot + os.sep) else None)
-    seen = (first_mentions(croot, list(first),
-                           only=None if here in (".", "") else here,
-                           without=spec_rel)
-            if (first and croot) else {})
-    # A WINDOW HAS AN EDGE, and it is the loudest wrong number this command can
-    # print. With --since, whatever the contract already declared when the
-    # window opened carries the window's own date rather than the day it was
-    # declared, so a field five years old reads as new and its library reads as
-    # five hundred and seventy-two days late. On box that inflated nine true
-    # findings into thirty-two.
-    # and a window has an edge: with --since, whatever the contract already
-    # declared when the window opened carries the window's own date, which is
-    # not the day it was declared. Those cannot be dated either.
-    edge = revs[0][0] if (since and revs) else None
-    late, never, undatable = [], [], []
-    for f, sd in first.items():
-        if sd == edge:
-            undatable.append(f)
-            continue
-        cd = seen.get(f)
-        if cd is None:
-            never.append(f)
-            continue
-        days = (_date.fromisoformat(cd) - _date.fromisoformat(sd)).days
-        if days > 0:
-            late.append({"field": f, "contract": sd, "carrier": cd, "days": days})
-    late.sort(key=lambda x: -x["days"])
-    mid = sorted(x["days"] for x in late)
-    median = 0 if not mid else (mid[len(mid) // 2] if len(mid) % 2 else
-                                (mid[len(mid) // 2 - 1] + mid[len(mid) // 2]) // 2)
+    late, undatable, median, worst = [], [], 0, []
+    if not thin:
+        here = os.path.relpath(os.path.realpath(root), croot)
+        spec_rel = (os.path.relpath(os.path.realpath(src), croot)
+                    if os.path.realpath(src).startswith(croot + os.sep) else None)
+        seen = first_mentions(croot, list(declared),
+                              only=None if here in (".", "") else here, without=spec_rel)
+        # A WINDOW HAS AN EDGE, and it is the loudest wrong number here. With
+        # --since, whatever the contract already declared when the window opened
+        # carries the window's own date rather than the day it was said, so a
+        # field five years old reads as new. On box that inflated nine true
+        # readings into thirty-two.
+        edge = revs[0][0] if since else None
+        for f, sd in declared.items():
+            if sd is None or sd == edge:
+                undatable.append(f)
+                continue
+            cd = seen.get(f)
+            if cd is None:
+                continue                        # absence is the walk's business, above
+            days = (_date.fromisoformat(cd) - _date.fromisoformat(sd)).days
+            if days > 0:
+                late.append({"field": f, "contract": sd, "carrier": cd, "days": days})
+        late.sort(key=lambda x: -x["days"])
+        mid = sorted(x["days"] for x in late)
+        median = 0 if not mid else (mid[len(mid) // 2] if len(mid) % 2 else
+                                    (mid[len(mid) // 2 - 1] + mid[len(mid) // 2]) // 2)
+        worst = late[:5]
+    # the exit code is the OPERATOR'S threshold, declared by them, and never a
+    # verdict: this command has no standing to fail anybody's build on its own
+    # reading of a world that never entered.
     return {"command": "drift", "contract": os.path.basename(src), "carrier": who,
-            "revisions": len(revs), "fields": len(first), "since": since,
-            "late": len(late), "never": sorted(never), "median_days": median,
-            "worst_days": late[0]["days"] if late else 0, "worst": late[:5],
+            "revisions": len(revs), "declares": len(current), "since": since,
+            "thin": thin, "scope": scope,
+            "unwritten": unwritten, "silent_routes": silent,
+            "late": len(late), "median_days": median,
+            "worst_days": late[0]["days"] if late else 0, "worst": worst,
+            "undatable": len(undatable),
+            "over_threshold": bool(over is not None and median > over),
+            "threshold": over,
             "ms": round((time.time() - t0) * 1000, 1),
-            "note": ("read " + str(len(revs)) + " revisions of the contract and the whole history of "
-                     + who + " — from git alone, on this machine, in JSON: a contract kept in YAML "
-                     "is not read here"
-                     + (f"; {len(undatable)} were already declared when the window opened, so "
-                        "they carry its date rather than their own and are not counted"
-                        if undatable else "")),
-            "next": ("wire `gate import contract` into the CI of this library: what took "
-                     + str(late[0]["days"]) + " days to notice is noticed at the commit"
-                     if late else
-                     "nothing here has lagged: keep it that way with `gate import contract` in CI")}
+            "note": ("a measurement, not a judgement: no world entered here, so nothing is judged. "
+                     + (f"no history to date anything: {' and '.join(thin)} arrived with one commit "
+                        "standing in for all of them. " if thin else
+                        f"{len(revs)} revisions of the contract were read, and the library's history "
+                        "walked once. ")
+                     + f"Absence is a fact about this walk: {scope['files']} files under "
+                     + f"{scope['root']}, kinds {scope['kinds']}, skipping {scope['skipped']}"
+                     + (f"; {len(undatable)} names cannot be dated, being already declared when the "
+                        "window opened" if undatable else "")),
+            "next": ("re-run it yourself: everything above is a git object or a walk whose bounds "
+                     "are printed with it" if not thin else
+                     f"git fetch --unshallow in {thin[0]}, and the dates become readable")}
 
-
-CONTRACT_HEADER = """// printed by gate import contract — what an API contract declares against what
-// a client library carries, written in the contract crystal (`gate stdlib show
-// genre-contract`). A field is a record with a shape, a library is a carrier,
-// and carrying it as the wrong sort of thing is refused by name.
-//
-"""
 
 # a name both sides can say: letters, digits, underscores and hyphens, because a
 # hyphen converts between conventions and a dot does not — a dot inside a key is
 # the wire encoding a structure, and no source anywhere carries it as a word.
 SPELLABLE = re.compile(r"[A-Za-z_]\w*(?:-\w+)*")
-
-SHAPE_OF = {"string": "Text", "integer": "Count", "number": "Count",
-            "boolean": "Flag", "array": "Many", "object": "Nested"}
 
 
 def read_contract(path):
@@ -1941,15 +1937,8 @@ def contract_fields(spec):
                     # a query parameter declared as an object carries its fields
                     # in its properties; its own name is a wrapper nobody writes
                     for nm, pr in sorted(inner.items()):
-                        pt = (pr or {}).get("type")
-                        out.append({"route": route, "field": nm,
-                                    "shape": SHAPE_OF.get(pt if not isinstance(pt, list) else None),
-                                    "where": "query"})
+                        out.append({"route": route, "field": nm, "where": "query"})
                     continue
-                t = sch.get("type") or p.get("type")
-                if isinstance(t, list):
-                    t = [x for x in t if x != "null"]
-                    t = t[0] if len(t) == 1 else None
                 # `project_ids[]` is how a repeated key is written ON THE WIRE;
                 # the name a library spells is `project_ids`, and the brackets
                 # belong to the transport, not to either side's vocabulary
@@ -1962,8 +1951,7 @@ def contract_fields(spec):
                 # both sides are able to say.
                 if not SPELLABLE.fullmatch(nm):
                     continue
-                out.append({"route": route, "field": nm,
-                            "shape": SHAPE_OF.get(t), "where": "query"})
+                out.append({"route": route, "field": nm, "where": "query"})
             content = (op.get("requestBody") or {}).get("content") or {}
             body = (content.get("application/json") or {}).get("schema")
             if not body:
@@ -2014,16 +2002,7 @@ def contract_fields(spec):
                     # never in: it is no part of a request, so a client that does
                     # not carry it is not behind anything
                     continue
-                t = prop.get("type") or resolve(prop).get("type")
-                if isinstance(t, list):
-                    # OpenAPI 3.1 spells a nullable field `["string", "null"]`,
-                    # and a genuinely open one `["string", "integer"]`. Null is
-                    # not another shape; two shapes are the contract declining to
-                    # name one, as `anyOf` does. Reading the list as a key
-                    # crashed the door on a valid document.
-                    t = [x for x in t if x != "null"]
-                    t = t[0] if len(t) == 1 else None
-                out.append({"route": route, "field": name, "shape": SHAPE_OF.get(t), "where": "body"})
+                out.append({"route": route, "field": name, "where": "body"})
     return out
 
 
@@ -2042,298 +2021,37 @@ def name_variants(name):
     return {name, plain, snake_of(plain), camel}
 
 
-SHAPE_WORDS = [
-    (r"\bbool(ean)?\b", "Flag"),
-    (r"\b(u|i)\d+\b|\bf\d+\b|\bnumber\b|\bint(eger)?\b|\bfloat\b|\bdouble\b", "Count"),
-    (r"\bstr(ing)?\b|\bString\b|&str", "Text"),
-]
 
 
-UNREAD = "…"
-SHAPES = {"Text", "Count", "Flag", "Many", "Nested"}
-NULLISH = re.compile(r"^(null|undefined|None|nil|nullptr)$", re.I)
 
 
-def type_text(body, i):
-    # the written type, from just after the colon to where it actually ends.
-    # Brackets decide that, not the first comma: `ExtractBaseTypes<SearchParams<
-    # T[number], Infix>>[]` ends in `[]` and is a list, but cutting it at the
-    # comma inside the generic leaves `T[number]` showing and reads the list as
-    # a number. A comma, a closing bracket or a semicolon ends the type only at
-    # depth nought.
-    depth, out = 0, []
-    for ch in body[i:i + 400]:
-        if ch in "<[({":
-            depth += 1
-        elif ch in ">])}":
-            if depth == 0:
-                break
-            depth -= 1
-        elif depth == 0 and (ch in ";,\n=" or ch == "{"):
-            break
-        out.append(ch)
-    return "".join(out).strip()
 
 
-def split_union(t):
-    # the arms of a union, at depth nought: `string | string[]`, `Optional[int]`,
-    # `Union[str, bytes]`. A wrapper that only says "or nothing" — Optional, and
-    # the null and undefined arms — is not another shape and is dropped.
-    m = re.match(r"^(?:Optional|Union)\[(.*)\]$", t.strip(), re.S)
-    if m:
-        t, sep = m.group(1), ","
-    else:
-        sep = "|"
-    arms, depth, cur = [], 0, []
-    for ch in t:
-        if ch in "<[({":
-            depth += 1
-        elif ch in ">])}":
-            depth -= 1
-        if ch == sep and depth == 0:
-            arms.append("".join(cur)); cur = []
-        else:
-            cur.append(ch)
-    arms.append("".join(cur))
-    return [a.strip() for a in arms if a.strip() and not NULLISH.match(a.strip())]
 
 
-def shapes_of_type(t):
-    # what a written type NAMES — nothing, one thing, or more than one. A union
-    # is open on this side of the seam exactly as `anyOf` is open on the other:
-    # a library that writes `A | A[]` has not said which sort it carries, and an
-    # arm this reader cannot name leaves the whole type unanswered rather than
-    # letting its readable neighbour speak for it.
-    arms = split_union(t)
-    if not arms:
-        return set()
-    return {shape_of_type(a) or UNREAD for a in arms}
 
 
-CONTAINER_HEADS = ("list", "sequence", "vec", "array", "set", "frozenset", "iterable", "seq")
-MAP_HEADS = ("dict", "hashmap", "btreemap", "map", "record", "mapping", "object")
-# heads that carry no shape of their own and hand it straight through
-PASS_HEADS = ("required", "notrequired", "optional", "annotated", "option", "readonly",
-              "box", "arc", "rc", "partial", "nonnull", "field", "union")
 
 
-def shape_of_type(t):
-    # what SORT a written type is, read from the HEAD of the construction and
-    # never from a word inside it. `Record<string, string>` is a map, not text;
-    # `Required[SequenceNotStr[str]]` is a sequence, not text; and the `float` in
-    # `Literal["float", "base64"]` is a value the API accepts, not a number the
-    # library carries. Each of those three was an accusation against a client
-    # that had written its type correctly, and all three came of reading inward.
-    t = t.strip().rstrip("?")
-    # a type may be wrapped in parentheses for the sake of what follows it —
-    # `({ [key: string]: Params | undefined }) | null` is a map — and leaving
-    # them on hid the brace, so the `string` inside the index signature was read
-    # as the whole shape. The same reading inward, wearing different brackets.
-    while t.startswith("(") and t.endswith(")"):
-        inner, depth, ok = t[1:-1], 0, True
-        for ch in inner:
-            depth += (ch == "(") - (ch == ")")
-            if depth < 0:
-                ok = False
-                break
-        if not ok or depth:
-            break
-        t = inner.strip()
-    # a type may be written as a string so it can name something declared later:
-    # `NotRequired["Dict[str, str]|UntypedStripeObject[str]"]` is a map, and read
-    # with its quotes on it is an unreadable word with `str` showing inside — so
-    # a client that had it right was accused nine times. Quotes are stripped
-    # here and nowhere else: inside `Literal[...]` they mark values, and that
-    # branch has already taken them.
-    while len(t) > 1 and t[0] == t[-1] and t[0] in "\"'":
-        t = t[1:-1].strip()
-    if not t:
-        return None
-    # A TYPE IS A WORD OR A CONSTRUCTION, NEVER A SENTENCE. `:param near_number:
-    # Given a phone number, find a geographically close one` reads as a name and
-    # a type to any pattern that looks for a colon, and the English `number` in
-    # the prose then became the shape: a hundred and twenty-eight accusations
-    # against twilio's client, every one of them a docstring.
-    # Counting words only outside brackets, because documentation carries them
-    # too: `Limit results to a specific area ([LATA](https://…))` is a sentence
-    # with a link in it, and a rule that excused anything bracketed let thirty of
-    # these through. Punctuation is not a word, so `A | B` stays a type.
-    bare = [w for w in re.sub(r"[\[\(<\{][^\]\)>\}]*[\]\)>\}]", " ", t).split()
-            if re.search(r"\w", w)]
-    if len(bare) >= 3:
-        return None
-    if t.endswith("[]"):
-        return "Many"
-    if t.startswith("{"):
-        return "Nested"
-    m = re.match(r"^([A-Za-z_][\w.]*)\s*[\[<](.*)[\]>]$", t, re.S)
-    if m:
-        head, inner = m.group(1).rsplit(".", 1)[-1].lower(), m.group(2)
-        if head == "literal":
-            arms = split_union("Union[" + inner + "]")
-            if arms and all(re.fullmatch(r"[\"'].*[\"']", a, re.S) for a in arms):
-                return "Text"
-            if arms and all(re.fullmatch(r"-?\d+(\.\d+)?", a) for a in arms):
-                return "Count"
-            return None
-        if head.startswith(CONTAINER_HEADS):
-            return "Many"
-        if head.startswith(MAP_HEADS):
-            return "Nested"
-        if head.startswith(PASS_HEADS):
-            arms = split_union("Union[" + inner + "]")
-            # Annotated says the type first and its trimmings after
-            shapes = {shape_of_type(arms[0])} if head == "annotated" else {shape_of_type(a) for a in arms}
-            return shapes.pop() if len(shapes) == 1 else None
-        # a generic this reader does not know is not its contents
-        return None
-    for pat, shape in SHAPE_WORDS:
-        if re.search(pat, t):
-            return shape
-    return None
 
 
-def route_home(route_fields, named, where):
-    # WHERE this library declares this request. The fields of one request body
-    # are written together, so the block that declares most of them is the place
-    # to ask — and once it is found it answers BOTH questions, whether the field
-    # is carried and as what. Asking them in different places is what reported a
-    # mismatch on `images` against a client whose only `images` is a counter in a
-    # usage report: the word was present somewhere, so the field looked carried,
-    # and a stranger's `int` was read as its shape. One shared name is not
-    # kinship either — in a large SDK a response model brushes against a request
-    # body by an accident of vocabulary — so a home needs two.
-    cand = {}
-    for s in route_fields:
-        for v in name_variants(s):
-            for i in where.get(v, ()):
-                cand.setdefault(i, set()).add(s)
-    # kinship is measured by how much of the BLOCK is about this request, not by
-    # how many names happened to coincide. A usage report with twenty fields
-    # touching two of a request's is not that request; a create-schema with eight
-    # fields of which six are its own is. Counting coincidences instead let a
-    # report outrank a schema, and taking only the single best block then hid the
-    # rest — a library may split one request over a create form and an update
-    # form, and both are home.
-    # and a home may be built of more than one room. A typed client writes the
-    # bulk of a request in a base and hangs the rest off it in one-field
-    # extensions — typesense keeps eight of nine fields in a base schema and
-    # `fields` alone in an interface that extends it — so a block that is WHOLLY
-    # about this request is heard too, but only about what the main rooms do not
-    # declare. Otherwise a stray `{ name: string }` anywhere would count as the
-    # request itself.
-    fit, whole = [], []
-    for i, shared in cand.items():
-        own = len(named[i]) or 1
-        if len(shared) >= 4 or (len(shared) >= 2 and len(shared) / own >= 0.5):
-            fit.append((len(shared), i))
-        elif len(shared) == own:
-            whole.append(i)
-    # and only the CLOSEST of those that fit. A request of a dozen fields will
-    # brush four of them against every neighbour it has — a hundred and fifty
-    # blocks called themselves home to one realtime call — and among a hundred
-    # and fifty someone always says the wrong word.
-    best = max((n for n, _ in fit), default=0)
-    return [i for n, i in fit if n == best], whole
-
-
-def shapes_seen(body, field):
-    # every SORT this library gives the name, not the first one found. A client
-    # writes the type plainly wherever it types a request — `waitFor?: number`,
-    # `pub wait_for: Option<u32>`, `wait_for: int` — so it is read where the
-    # field is declared, never guessed from its name.
-    #
-    # ALL of them, because a name can be declared more than once and mean
-    # different things: typesense writes `stopwords: string[]` for the set it
-    # sends and `stopwords?: string` for the set it names in a query, and taking
-    # whichever came first let the order of files on disk decide the verdict.
-    # Two shapes are not a mismatch, they are an unanswered question — the same
-    # openness a contract shows when it writes `anyOf` — so the caller is handed
-    # the whole set and judges only when exactly one thing was said.
-    # silence and disagreement are different things, and the difference is which
-    # level they live on. WITHIN one written type an unreadable arm poisons the
-    # whole of it — `A | A[]` names a list and something this reader cannot see,
-    # so the type has not answered, and letting the readable arm speak alone
-    # accused a correct library twice. ACROSS declaration sites an unreadable
-    # site is merely quiet: it does not get a vote against a site that did
-    # answer, or a library whose fields mostly alias other types would be judged
-    # on almost nothing. Two sites that name two different shapes is the one
-    # thing that counts as two voices.
-    return shapes_from(block_types(body), field)
-
-
-def block_types(text, _seen={}):
-    # every `name:` in a block and the type written after it, read ONCE. Asking
-    # the question per field instead re-scanned the same block for each of them,
-    # and on a large pair — twilio's contract against twilio's client — that
-    # turned a command which promises milliseconds into minutes.
-    key = id(text)
-    got = _seen.get(key)
-    if got is not None and got[0] is text:
-        return got[1]
-    d = {}
-    for m in re.finditer(r"\b(\w+)\??\s*:\s*", text):
-        d.setdefault(m.group(1), []).append(type_text(text, m.end()))
-    # a home has several rooms and its fields alternate between them, so keeping
-    # only the last one meant reading each room again for every field in it
-    if len(_seen) > 64:
-        _seen.clear()
-    _seen[key] = (text, d)
-    return d
-
-
-def shapes_from(typed, field):
-    shapes = set()
-    for name in name_variants(field):
-        for t in typed.get(name, ()):
-            here = shapes_of_type(t)
-            if here and UNREAD not in here:
-                shapes |= here
-    return shapes
-
-
-BLOCK_START = re.compile(
-    r"^[ \t]*(?:(?:export|public|private|declare|pub|async|final|abstract)\s+)*"
-    r"(?:class|interface|struct|type|def|func|fn|enum)\s+\w+"
-    # a generated client keeps every schema inside ONE interface, and a request
-    # body may be written as an inline object inside another — so a name opening
-    # a brace starts a block as surely as the word `interface` does. Without
-    # this, ten thousand lines of generated schema are one place, and locality
-    # buys nothing there.
-    r"|^[ \t]*[\"']?\w+[\"']?\??\s*:\s*\{", re.M)
-BLOCK_FIELD = re.compile(r"^[ \t]*[\"']?(\w+)[\"']?\s*\??\s*:", re.M)
-
-
-def carrier_blocks(body):
-    # the library cut where it declares things: a class, an interface, a struct,
-    # a function. The fields of one request body are written TOGETHER, and that
-    # togetherness is the only way to tell the `seconds` of a video from the
-    # `seconds` a sleep takes — thirty readable places in one SDK spell that
-    # name, and twenty-nine of them are about something else.
-    marks = sorted({0, len(body)} | {m.start() for m in BLOCK_START.finditer(body)})
-    return [body[a:b] for a, b in zip(marks, marks[1:]) if b > a]
-
-
-def carrier_index(blocks):
-    named = [set(BLOCK_FIELD.findall(b)) for b in blocks]
-    where = {}
-    for i, ns in enumerate(named):
-        for n in ns:
-            where.setdefault(n, []).append(i)
-    return named, where
+CARRIER_KINDS = (".py", ".ts", ".js", ".rs", ".go", ".rb", ".java", ".kt")
 
 
 def read_carrier(root):
-    # what a client library names. ONLY its own sources: a field mentioned in a
-    # test or an example proves nothing about what the library exposes, and
-    # counting those was the first way a hand search gets this wrong.
+    # what a client library names, and — said out loud — WHERE THIS LOOKED. A
+    # hash certifies that bytes exist; nothing certifies that they do not, so
+    # `the library never names it` is a fact about a WALK, and a walk without its
+    # bounds is unfalsifiable in form and refutable in substance: point at one
+    # excluded file and the claim is gone. So the bounds travel with every
+    # absence this reader reports.
     text, files = [], 0
     for dirpath, dirs, names in os.walk(root):
         dirs[:] = [d for d in dirs
                    if d not in (".git", "node_modules", "target", "dist", "build", ".venv", "proto")
                    and "test" not in d.lower() and "example" not in d.lower()]
         for f in names:
-            if os.path.splitext(f)[1] not in (".py", ".ts", ".js", ".rs", ".go", ".rb", ".java", ".kt"):
+            if os.path.splitext(f)[1] not in CARRIER_KINDS:
                 continue
             if "test" in f.lower() or "example" in f.lower():
                 continue
@@ -2349,198 +2067,13 @@ def read_carrier(root):
             except OSError:
                 continue
             files += 1
-    return "\n".join(text), files
+    return "\n".join(text), {
+        "files": files, "root": os.path.abspath(root),
+        "kinds": " ".join(CARRIER_KINDS),
+        "skipped": "directories named test/example, and .git node_modules target dist build .venv proto; "
+                   "files named test/example; protobuf stubs (_pb2, _pb.js, _pb.ts)",
+    }
 
-
-def cmd_import_contract(a):
-    # import contract <spec.json> --client DIR [--name N] [-o out.swift] — what
-    # the contract declares against what a library carries. The shapes are
-    # judged; a field carried by nobody is named beside them, at the line of the
-    # contract that declares it.
-    src = a[0]
-    root = a[a.index("--client") + 1] if "--client" in a else "."
-    who = a[a.index("--name") + 1] if "--name" in a else sanitize(os.path.basename(os.path.abspath(root)))
-    keep = "-o" in a
-    out_path = (a[a.index("-o") + 1] if keep
-                else os.path.join(tempfile.mkdtemp(prefix="gate-contract-"), "contract-gate.swift"))
-    fields = read_contract(src)
-    if not fields:
-        # nothing to judge, and the reason belongs in the answer: a contract that
-        # posts forms, or one whose bodies this reader could not reach, must not
-        # come back `holds` as though everything had been checked
-        media = body_media(json.load(open(src, encoding="utf-8")))
-        other = ", ".join(sorted(k for k in media if k != "application/json"))
-        return {"command": "import contract", "carrier": who, "fields": 0, "judged": 0,
-                "sources_read": 0, "verdict": "holds", "refusals": [],
-                "note": ("nothing was judged: " + (
-                    f"this contract sends its requests as {other} — a media type this reader "
-                    f"does not take, so it saw none of the {sum(media.values())} bodies it declares"
-                    if other else "this contract declares no request body with fields in it")),
-                "next": "point --contract at a document whose requests are JSON, or read this as the finding",
-                "mutates": False}
-    body, files = read_carrier(root)
-    blocks = carrier_blocks(body)
-    named_in, where = carrier_index(blocks)
-    # the whole body, read ONCE into the words it contains and the segments it
-    # spells. Searching it per field and per route segment instead is a scan of
-    # twenty megabytes apiece — on twilio, a thousand of them, and a command that
-    # promises milliseconds took minutes.
-    words = set(re.findall(r"\w+", body))
-    spoken = set(re.findall(r"[\"'`/]([A-Za-z0-9_.\-]+)(?=[\"'`/?]|$)", body, re.M))
-    homes, carried, seen_at = {}, {}, {}
-    for f in fields:
-        homes.setdefault(f["route"], set()).add(f["field"])
-    for route, names in list(homes.items()):
-        homes[route] = route_home(names, named_in, where)
-    for f in fields:
-        key, vs = (f["route"], f["field"]), name_variants(f["field"])
-        home, whole = homes[f["route"]]
-        # the two questions are not equally strong, so they are not asked the
-        # same way. WHETHER the library carries a field is asked of the whole of
-        # it and answered generously: a client may keep the field anywhere, and
-        # every absence this reader checked by hand but one turned out to be a
-        # field declared somewhere it had not thought to look. An absence reads
-        # as news, so it is claimed only when the name appears NOWHERE.
-        # AS WHAT is asked only at home, and where home does not declare the
-        # field the answer is silence — a stranger's `int` is not its shape.
-        carried[key] = any(n in words for n in vs)
-        if home or whole:
-            places = ([i for i in home if vs & named_in[i]]
-                      or [i for i in whole if vs & named_in[i]])
-            seen_at[key] = set().union(*(shapes_seen(blocks[i], f["field"])
-                                         for i in places)) if places else set()
-        else:
-            # and where the request is not located at all, no shape is read. The
-            # last road to an invented claim ran through here: `class` is a word
-            # a library says everywhere, and answering with whatever wore it
-            # first is the mistake this door spent a day removing in every other
-            # form it takes.
-            seen_at[key] = set()
-    named = sum(1 for v in carried.values() if v)
-    # A library that FORWARDS A BAG is not a library that lags: whatever you hand
-    # it reaches the wire, so no field is missing — and none is offered, checked
-    # or spelled for you either. Saying "eighteen fields are missing" of such a
-    # library is the loudest wrong answer this door can give, and it is exactly
-    # the mistake a hand search makes. Counting named fields does not catch it:
-    # a bag-forwarder still names one or two. The forwarding itself is the sign.
-    BAG = (r"Dict\[str,\s*Any\]|dict\[str,\s*Any\]|\*\*kwargs"
-           r"|\[key:\s*string\]:\s*any|Record<string,\s*any>"
-           r"|serde_json::Value|map\[string\]interface\{\}")
-    # BOTH signals, or the rule cuts the wrong way: a typed library may still use
-    # a loose value in one corner, and naming almost every field is proof enough
-    # that it carries the contract. A bag forwards AND names next to nothing.
-    if fields and re.search(BAG, body) and named * 3 < len(fields):
-        return {"command": "import contract", "carrier": who, "fields": len(fields),
-                "sources_read": files, "verdict": "holds", "refusals": [],
-                "note": (f"{who} forwards an untyped bag: of the {len(fields)} fields the contract "
-                         f"declares it names {named}, and the rest reach the wire unchecked. Nothing "
-                         "here can disagree — and nothing offers, spells or checks a field for "
-                         "whoever calls it, so a typo is delivered rather than refused"),
-                "next": "point --client at a library that types its request, or read this as the finding",
-                "mutates": False}
-    lines = [CONTRACT_HEADER + STDLIB["genre-contract"], ""]
-    lines.append(f"public enum {who}: Carrier {{}}")
-    srcmap, missing, open_shape, unread, split = {}, [], [], [], []
-    for i, f in enumerate(fields):
-        if not carried[(f["route"], f["field"])]:
-            missing.append(f)
-            continue
-        # the shape the LIBRARY says, not the one the contract says — else the
-        # certificate would agree with itself and judge nothing at all. So where
-        # either side is silent, NOTHING is written: a contract that leaves the
-        # shape open states no claim to break, and a library whose type could not
-        # be read has not answered. Substituting the contract's own answer for the
-        # silent one bought a green on 171 of 178 fields once, and that green
-        # meant only that the door had agreed with itself.
-        seen = seen_at[(f["route"], f["field"])]
-        if f["shape"] is None:
-            open_shape.append(f)
-            continue
-        if not seen or seen == {UNREAD}:
-            unread.append(f)
-            continue
-        if len(seen) > 1:
-            split.append(f)
-            continue
-        as_shape = seen.pop()
-        rec = f"F_{sanitize(f['route'])}_{sanitize(f['field'])}"
-        cert = f"Carry_{i}"
-        lines.append(f"public enum {rec}: Declared {{")
-        lines.append(f"    public typealias Of = {f['shape']}")
-        lines.append("}")
-        lines.append(f"public typealias {cert} = Carries<{who}, {rec}, {as_shape}>")
-        srcmap[cert] = f
-    world = "\n".join(lines) + "\n"
-    with open(out_path, "w") as fh:
-        fh.write(world)
-    t0 = time.time()
-    outp = subprocess.run([JUDGE, "judge", "where", out_path], capture_output=True, text=True).stdout
-    ms = round((time.time() - t0) * 1000, 1)
-    refusals = []
-    for m in re.finditer(r"^✗ '(\w+)[^']*' requires the types '[^']*' \(aka '([^']+)'\) and '[^']*' \(aka '([^']+)'\)", outp, re.M):
-        cert, want, got = m.groups()
-        if cert in srcmap:
-            f = srcmap[cert]
-            refusals.append({"address": f"{os.path.basename(src)} · {f['route']} · {f['field']}",
-                             "claim": f"the contract calls it {want.lower()}, {who} carries it as {got.lower()}"})
-    # named beside the judged: a field this library does not carry at all.
-    # Unless NOTHING was read here — a Go or Java client writes its fields as
-    # `SparseVectors map[string]Params` with no colon in sight, and a reader that
-    # cannot see a single declaration will find every name missing and say so
-    # sixteen times. An absence means the name is nowhere; it cannot mean the
-    # reader was blind. This is the vacuous green's twin, and it is worse,
-    # because it speaks.
-    blind = not srcmap and fields
-    if not blind:
-        for f in missing:
-            refusals.append({"address": f"{os.path.basename(src)} · {f['route']} · {f['field']}",
-                             "claim": f"the contract declares it, {who} does not carry it"})
-        # AND A WHOLE ROUTE MAY BE MISSING, which is a larger thing than a field
-        # and was invisible while only fields were read: weaviate's python client
-        # implements neither `/objects/validate` nor `/replication/scale`, and
-        # typesense's javascript one has no `/config` at all. A path goes on the
-        # wire as written, so its literal segments are a name both sides spell —
-        # the braces are skipped, being a slot and not a word.
-        # unless the library names no route at all: a package of types alone
-        # writes no URL, and telling it that it is missing every endpoint is the
-        # blind reader again, wearing a bigger accusation.
-        spelt = {}
-        for route in dict.fromkeys(f["route"] for f in fields):
-            segs = [s for s in route.split("/") if s and not s.startswith("{")]
-            if segs:
-                # a segment stands between delimiters, and JS writes its paths in
-                # template strings — a backtick closes a path as surely as a quote
-                spelt[route] = all(s in spoken for s in segs)
-        if any(spelt.values()):
-            for route, named_here in spelt.items():
-                if not named_here:
-                    refusals.append({"address": f"{os.path.basename(src)} · {route}",
-                                     "claim": f"the contract declares this route, {who} never names it"})
-    if not keep:
-        shutil.rmtree(os.path.dirname(out_path), ignore_errors=True)
-    # a green is only as wide as what was judged, so the silences are printed
-    # beside it: no reader should have to guess whether nothing broke or nothing
-    # was asked.
-    note = ((f"{who} declares its requests in a way this reader cannot make out — not one "
-             f"of the {len(fields)} fields could be read, so nothing is claimed about it, "
-             f"least of all that it carries none of them")
-            if blind else
-            f"judged {len(srcmap)} of the {len(fields)} fields the contract declares; "
-            f"{len(open_shape)} leave the shape open in the contract itself, "
-            f"{len(unread)} are carried with a type this reader could not make out, "
-            f"and {len(split)} are declared by this library in more than one shape")
-    return {"command": "import contract", "carrier": who, "fields": len(fields),
-            "carried": named, "judged": len(srcmap), "shape_open": len(open_shape),
-            "shape_unread": len(unread), "shape_split": len(split),
-            "sources_read": files, "ms": ms,
-            "wrote": out_path if keep else None,
-            "verdict": "refused" if refusals else "holds", "refusals": refusals,
-            "note": note,
-            "next": ("open the field above: the contract says it, this library does not" if refusals
-                     else "point --client at a library whose fields are written with their types"
-                     if blind else
-                     "wire it into CI: this library cannot fall behind the contract unseen"),
-            "mutates": True}
 
 
 REFS_HEADER = """// printed by gate import refs — the citations this code makes to a tracker,
@@ -3241,10 +2774,12 @@ USAGE = """usage (the git-shaped porcelain):
   gate diff  transfer WHO DEPT        · gate diff  grant|revoke WHO DOC
   gate diff  hire ID RANK HOME GIVEN FAMILY BORN SITE
   gate apply transfer|grant|revoke|hire ...   (writes only on holds, like a commit)
-  gate import contract SPEC --client DIR        (a contract against a library)
-  gate drift SPEC --client DIR [--since DATE]   (how long that library has spent
-                                                 behind it — measured from git,
-                                                 both sides, nothing fetched)
+  gate drift SPEC --client DIR [--since DATE] [--fail-over DAYS]
+                                      (OBSERVATION of a world that has not
+                                       entered: git objects and a walk whose
+                                       bounds are printed. No verdict — judgement
+                                       is behind the gate. The exit code is the
+                                       operator's own threshold, never a court's)
   gate badge [-o gate.svg]            (claims judged, and how long every commit
                                        that touched them has held — replayed)
   gate import people.csv grants.csv [-o gate.swift]
@@ -3277,8 +2812,6 @@ def dispatch(cmd, rest):
         return cmd_change(rest)
     if cmd == "import" and rest and rest[0] == "codeowners":
         return cmd_import_codeowners(rest[1:])
-    if cmd == "import" and rest and rest[0] == "contract":
-        return cmd_import_contract(rest[1:])
     if cmd == "drift":
         return cmd_drift(rest)
     if cmd == "badge":
@@ -3378,7 +2911,9 @@ def dispatch(cmd, rest):
 
 
 def is_red(out):
-    return out.get("verdict") == "refused" or bool(out.get("translation_holes")) or out.get("base", "").startswith("dirty")
+    # a threshold the operator declared is not a verdict, but it is theirs to act
+    # on, so it reaches the exit code the same way a refusal does
+    return out.get("over_threshold") or out.get("verdict") == "refused" or bool(out.get("translation_holes")) or out.get("base", "").startswith("dirty")
 
 
 def humanize(out):
@@ -3397,15 +2932,6 @@ def humanize(out):
         return "\n".join(lines)
     if "verdict" in out:
         head = "holds" if out["verdict"] == "holds" else f"refused {len(out.get('refusals', []))}"
-        # a seam belongs to a PAIR, and the canon of names gives it a verb rather
-        # than a property: `are we compatible?` puts the question back where the
-        # whole turn was meant to take it from — politics — while `the seam has
-        # parted, here` keeps it about the thing. The machine word is untouched:
-        # `verdict` stays holds/refused for whatever reads the JSON.
-        if cmd == "import contract" and not out.get("note", "").startswith(out.get("carrier", "\0")):
-            n = len(out.get("refusals", []))
-            head = ("the seam holds" if out["verdict"] == "holds"
-                    else f"the seam has parted in {n} place" + ("s" if n != 1 else ""))
         tail = []
         if isinstance(out.get("world"), dict):
             w = out["world"]
@@ -3459,27 +2985,33 @@ def humanize(out):
             if v.get("judge_sha256"):
                 lines.append(f"  judge sha256: {v['judge_sha256'][:16]}…")
     elif cmd == "drift":
-        # the anxious half of the pair, and it is COLD: this one is not a
-        # morning's reassurance but a measurement of the past, and it is about a
-        # library, never about whoever wrote it
+        # every line here names its CATEGORY, because the two kinds of fact
+        # below are not equally certified: a date is an object, an absence is a
+        # walk. The word `refused` appears nowhere — no world entered, so no
+        # court sat.
+        head = f"drift: observation of {out['carrier']} against {out['contract']}"
         if out.get("thin"):
-            lines.append(f"drift: not measurable here · {', '.join(out['thin'])} arrived without history")
-        elif not out["fields"]:
-            lines.append(f"drift: nothing read · {out['contract']} declares no request field this reader can see")
-        elif not out["late"] and not out["never"]:
-            lines.append(f"drift: {out['carrier']} has never been behind {out['contract']} "
-                         f"· {out['fields']} fields over {out['revisions']} revisions")
+            head += " · no history here, so nothing is dated"
+        elif out["late"]:
+            head += (f" · behind on {out['late']} names · median {out['median_days']} days"
+                     f" · worst {out['worst_days']}")
         else:
-            lines.append(f"drift: {out['carrier']} has been behind {out['contract']} on "
-                         f"{out['late']} of {out['fields']} fields · median {out['median_days']} days "
-                         f"· worst {out['worst_days']}")
+            head += " · nothing arrived late"
+        lines.append(head)
         for w in out.get("worst", []):
-            lines.append(f"  {out['contract']} · {w['field']} · the contract said it {w['contract']}, "
-                         f"{out['carrier']} {w['carrier']} — {w['days']} days")
-        for n in out.get("never", [])[:5]:
-            lines.append(f"  {out['contract']} · {n} · the contract says it, {out['carrier']} never has")
-        if len(out["never"]) > 5:
-            lines.append(f"  … and {len(out['never']) - 5} more the library has never carried")
+            lines.append(f"  in history · {w['field']} · the contract's earliest revision saying it is "
+                         f"{w['contract']}, the library's earliest commit writing it {w['carrier']} "
+                         f"— {w['days']} days")
+        for n in out.get("unwritten", [])[:5]:
+            lines.append(f"  in this walk · {n} · the contract declares it; no file walked writes it")
+        if len(out.get("unwritten", [])) > 5:
+            lines.append(f"  … and {len(out['unwritten']) - 5} more names no file walked writes")
+        for r in out.get("silent_routes", [])[:3]:
+            lines.append(f"  in this walk · {r} · the contract declares this route; no file walked "
+                         "spells its segments")
+        if out.get("over_threshold"):
+            lines.append(f"  threshold: you set --fail-over {out['threshold']}, and the median is "
+                         f"{out['median_days']} — this exits non-zero by your rule, not by a verdict")
         lines.append(f"  note: {out['note']}")
         lines.append(f"  next: {out['next']}")
     elif cmd == "export":

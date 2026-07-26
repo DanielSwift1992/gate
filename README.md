@@ -62,46 +62,46 @@ the verbs below.
 
 ## Start with your own drift
 
-If you publish an API and a client library for it, this takes four commands and
+If you publish an API and a client library for it, this takes two commands and
 answers a question about your repositories, not ours. Nothing is uploaded and
 nothing is fetched: both sides are read out of git on your machine.
 
 ```sh
 git clone https://github.com/you/gate && cd gate      # 1. no install step
-./gate drift ../api/openapi.json --client ../sdk-js   # 2. how long has it lagged?
-./gate import contract ../api/openapi.json --client ../sdk-js   # 3. and today?
-./gate badge --contract ../api/openapi.json --client ../sdk-js -o gate.svg   # 4. hang it up
+./gate drift ../api/openapi.json --client ../sdk-js   # 2. what has it been?
 ```
 
-The fourth prints `judged 47/90 · refused 1`, and the first number is the point:
-a badge that only says green would have said green over three fields out of a
-hundred and seventy-eight, which is a thing this door has actually done.
-
-The second command is the one worth running first. It reads every revision of
-your contract and the whole history of your library, and tells you how long that
-library has spent behind it — a question a look at today cannot answer, because
-clients catch up:
+**This observes; it does not judge.** The library has not entered gate's world,
+and gate holds no court over a world that has not entered — so `drift` prints no
+verdict. What it prints are facts you can re-run: a commit that first wrote a
+string is named by its own hash, and every absence carries the bounds of the
+walk that found it, so pointing at one file it skipped refutes the claim. That
+is what makes it a claim.
 
 ```
-drift: sdk-js has been behind openapi.json on 24 of 71 fields · median 28 days · worst 77
-  openapi.json · transferType · the contract said it 2025-04-29, sdk-js 2025-07-15 — 77 days
-  openapi.json · includeUsers · the contract says it, sdk-js never has
+drift: observation of sdk-js against openapi.json · behind on 24 names · median 28 days · worst 77
+  in history · transferType · the contract's earliest revision saying it is 2025-04-29,
+               the library's earliest commit writing it 2025-07-15 — 77 days
+  in this walk · includeUsers · the contract declares it; no file walked writes it
+  in this walk · /config · the contract declares this route; no file walked spells its segments
+  note: … absence is a fact about this walk: 214 files under …, kinds .ts .js …, skipping …
 ```
 
-Two honest notes before you run it. A shallow clone has no past to measure and
-is told so rather than credited with a clean one — `git fetch --unshallow`
-first. And the reader takes JSON; if your contract is YAML, one line converts
-it, and gate keeps saying plainly that it does not read YAML itself:
+Two honest notes. A shallow clone has no past to date anything with and is told
+so rather than credited with a clean one — `git fetch --unshallow` first. And
+the contract is read by a JSON parser; if yours is YAML, one line converts it,
+and gate keeps saying plainly that it does not read YAML itself:
 
 ```sh
-yq -o=json '.' openapi.yml > /tmp/openapi.json    # or: python3 -c 'import yaml,json,sys;json.dump(yaml.safe_load(open(sys.argv[1])),sys.stdout)' openapi.yml > /tmp/openapi.json
+yq -o=json '.' openapi.yml > /tmp/openapi.json
 ```
 
-Then keep it from happening again — one step in the CI the library already has:
+In CI, the threshold is **yours**, declared by you, and the exit code carries
+your rule rather than anybody's verdict:
 
 ```yaml
-# .github/workflows/contract.yml
-name: contract
+# .github/workflows/drift.yml
+name: drift
 on: [push, pull_request]
 jobs:
   gate:
@@ -109,13 +109,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
-        with: { repository: you/api, path: .api }        # the contract, brought here
+        with: { repository: you/api,  path: .api  }      # the contract, brought here
       - uses: actions/checkout@v4
         with: { repository: you/gate, path: .gate }      # the tool travels too
-      - run: .gate/gate import contract .api/openapi.json --client .
+      - run: .gate/gate drift .api/openapi.json --client . --fail-over 30
 ```
 
-A red verdict exits non-zero, so there is no wrapper and no action to install.
+Judgement begins on the other side of the gate: when both sides are **declared**
+into gate's own grammar, a disagreement between them is refused with an address,
+and the refusal is about two declarations rather than about anybody's code.
 
 ## Quick start
 
@@ -198,42 +200,22 @@ head. A refusal points at its address instead.
   breaking commit found automatically), a merge guard (textually clean,
   semantically broken merges get named), and a free audit journal
   (`git log` over grants, signed commits as signed grants).
-- **A client may not fall behind its contract unseen.** `gate import contract
-  openapi.json --client ./sdk` reads what the contract declares and what a
-  library actually carries, and judges them as one world: a field carried as the
-  wrong sort of thing is refused with both shapes named, and one the library does
-  not carry at all is named beside it. Types cannot do this — they make each side
-  self-consistent and say nothing about the other, which is why a hand-written
-  client lags a contract for releases while its own checker stays happy. The only
-  other thing that ties them is a generator, one pipeline per language; this
-  leaves the client hand-written. A library that forwards an untyped bag is told
-  so plainly rather than accused of lagging on every field: it lags on nothing,
-  and it helps nobody.
-- **And how long it has been behind is a different question, with a different
-  answer.** `gate drift openapi.json --client ./sdk` measures the past instead
-  of the present, because clients catch up: one that lagged nine months on a
-  field and then shipped it looks today exactly like one that never lagged, so
-  asking "is it behind now" finds almost nothing and reports calm. Git holds
-  both ends — the day the contract first declared a field, the day the library
-  first wrote it — and neither side is fetched, so the contract may sit in a
-  checkout that has never heard of the library. On weaviate's TypeScript client
-  it reads: behind on 24 of 71 fields, median 28 days, two never carried at all.
-  A shallow clone is told it has no past to measure rather than credited with a
-  punctual one.
-- **A whole endpoint may be missing, not only a field.** The same reading names
-  a route the contract declares that the library never writes: weaviate's python
-  client implements neither `/objects/validate` nor `/replication/scale`, and
-  typesense's javascript one has no `/config` at all. A path goes on the wire as
-  written, so its literal segments are a name both sides spell — the braces are
-  skipped, being a slot and not a word, and a library that writes no URL at all
-  is accused of no route whatever.
-- **A green must say how wide it is.** `gate badge -o gate.svg` counts the
-  claims the judge counted — nothing stores that number — and replays every
-  commit that touched the world back through the same judge until one does not
-  hold, so the days on it are earned rather than declared. It will not say "no
-  silent error", because that is precisely what nobody saw; it says how much was
-  judged and how long that has held, which is duller and provable, and which
-  anybody may re-run to check.
+- **What a library has been, observed and never judged.** `gate drift
+  openapi.json --client ./sdk` measures a world that has not entered: the day
+  the contract first declared a name, the day the library first wrote it, the
+  names no walked file writes, the routes no walked file spells. It prints no
+  verdict, because no court sat — nothing outside the gate can be judged, since
+  nobody there has spoken for anything. Each line says which kind of fact it is:
+  a commit is an object and carries its own hash; an absence is a walk and
+  carries its bounds. On weaviate's TypeScript client it reads: behind on 24 of
+  71 names, median 28 days, and two the library has never written. The exit code
+  is a threshold you declare with `--fail-over`, never a judgement.
+- **And judgement waits for the gate.** A shape is refused only when both sides
+  have been declared into gate's grammar (`gate stdlib show genre-contract`),
+  and then the refusal is about two declarations, each signed by whoever made
+  it — never about somebody's source read from outside. Reaching across the gate
+  for a premise is how a court ends up reasoning honestly about an invented
+  world; the reader that did it is gone.
 - **A citation may not outlive the thing it cites.** `gate import refs
   tickets.json --code .` reads a tracker's own export and every place your code
   names a ticket, and judges them as one world: a `TODO(PROJ-42)` whose ticket
@@ -430,7 +412,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 179 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 167 end-to-end checks, the definition of green
 ```
 
 ## Status
