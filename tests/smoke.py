@@ -1044,6 +1044,28 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               gen.get("verdict") == "holds" and not gen.get("refusals")
               and gen.get("judged") == 3))
 
+    # ── and a reader that can see nothing may not call it an empty room. A Go
+    # client writes `SparseVectors map[string]Params `json:"sparse_vectors"`'
+    # with no colon in sight, so this reader makes out not one declaration —
+    # and then found every field of the contract missing and said so sixteen
+    # times over a library that carries them all. That is the vacuous green's
+    # twin and it is worse, because it speaks.
+    os.makedirs(os.path.join(con, "unread"), exist_ok=True)
+    open(os.path.join(con, "spec-unread.json"), "w").write(json.dumps({"paths": {"/points": {"post": {
+        "requestBody": {"content": {"application/json": {"schema": {"properties": {
+            "with_vector": {"type": "boolean"}, "limit": {"type": "integer"},
+            "offset": {"type": "integer"}}}}}}}}}}))
+    open(os.path.join(con, "unread", "client.go"), "w").write(
+        "package qdrant\n\ntype ScrollPoints struct {\n"
+        "\tWithVector *bool  `json:\"with_vector,omitempty\"`\n"
+        "\tLimit      *uint32 `json:\"limit,omitempty\"`\n"
+        "\tOffset     *uint32 `json:\"offset,omitempty\"`\n}\n")
+    _, dark = run("import", "contract", os.path.join(con, "spec-unread.json"),
+                  "--client", os.path.join(con, "unread"), "--name", "Dark")
+    S.append(("a reader that made out nothing does not report an empty library",
+              dark.get("judged") == 0 and dark.get("verdict") == "holds"
+              and not dark.get("refusals") and "cannot make out" in (dark.get("note") or "")))
+
     # ── and the check is the whole ceremony: one command in the CI the client
     # already has. It exits non-zero on a stale citation and zero when the code
     # and the tracker agree, so no wrapper is needed; the export may sit in
