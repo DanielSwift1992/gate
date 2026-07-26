@@ -1857,6 +1857,18 @@ public enum MyWatch: AccessLedger {
     S.append(("the bench's promised routes are the routes the server answers",
               contract == routes))
 
+    # ── and the page says when it is talking to a bench that predates it. The
+    # server reads its page off the disk and answers out of memory, so a gate
+    # updated while it runs leaves a new page speaking to an old process: every
+    # file fresh, every endpoint stale, and nothing saying so — a page asking for
+    # answers the running server has never heard of, failing quietly. That is the
+    # one way this bench must never fail, since its whole promise is that what
+    # you see is what is judged.
+    S.append(("the bench says so when the page and the process are not the same gate",
+              'const BENCH_FOR = "' + re.search(r'^VERSION = "([^"]+)"', src, re.M).group(1) + '";' in ui
+              and 'fetch("/version"' in ui and "restart `gate serve`" in ui
+              and '"gate": VERSION' in src))
+
     listed = set(re.findall(r"^(\S+\.(?:py|js|html|css|sh|md))",
                             readme.split("## Repository")[-1], re.M)) if "## Repository" in readme else set()
     missing = sorted(f for f in listed if not os.path.exists(os.path.join(HERE, f))

@@ -2696,6 +2696,9 @@ def cmd_serve(a):
     # serve [port] [--no-open] — the bench, and the local JSON surface it reads.
     # THE CONTRACT (the bench depends on exactly this, and nothing else):
     #   GET  /  and /ui              the bench itself
+    #   GET  /version                {gate: VERSION} — what is actually running,
+    #                                since the page comes off the disk and the
+    #                                answers come out of memory
     #   GET  /files                  {files: [name], personal: name|null}
     #   GET  /shelf                  {modules: [name]} — the genres on the shelf
     #   GET  /shelf?m=name           the text of one shelf module, to read
@@ -2740,6 +2743,18 @@ def cmd_serve(a):
             try:
                 if u.path in ("/", "/ui"):
                     return self.send_file(os.path.join(here, "ui.html"), "text/html; charset=utf-8")
+                if u.path == "/version":
+                    # WHAT IS ACTUALLY RUNNING. The bench serves its page off the
+                    # disk and its answers out of memory, so a gate updated while
+                    # it runs leaves a new page talking to an old server — every
+                    # file fresh, every endpoint stale, and nothing saying so.
+                    body = json.dumps({"gate": VERSION}).encode()
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Cache-Control", "no-store")
+                    self.end_headers()
+                    self.wfile.write(body)
+                    return
                 if u.path == "/judge.js":
                     return self.send_file(os.path.join(here, "judge.js"), "text/javascript")
                 if u.path == "/codemirror.js":

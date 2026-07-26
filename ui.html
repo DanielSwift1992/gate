@@ -339,6 +339,18 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 <script src="/codemirror.js"></script>
 <script src="/judge.js"></script>
 <script>
+// the version this page was written against. The bench reads its page off the
+// disk and answers out of memory, so after a pull the two can disagree: the page
+// is new, the server is the process that was already running. Nothing said so,
+// and a page talking to a server that has never heard of half its answers fails
+// quietly — the one failure this bench must never have.
+const BENCH_FOR = "0.1.0";
+fetch("/version", { cache: "no-store" }).then(r => r.json()).then(v => {
+    if (v.gate !== BENCH_FOR)
+        say("this page is from gate " + BENCH_FOR + ", the bench serving it is "
+            + v.gate + " — restart `gate serve`");
+}).catch(() => {});
+
 const keywordSet = new Set(["public","enum","protocol","typealias","extension","where",
     "static","var","some","associatedtype","import","struct","let","func"]);
 let localNames = new Set(), unresolved = new Set();
