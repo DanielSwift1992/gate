@@ -1796,6 +1796,119 @@ def cmd_declare(a):
                      '{"carrier": N, "against": {...}, "carries": [{"route", "field", "as", "mine"?}]}')}
 
 
+def seam_read(left, right):
+    # the two declarations, taken apart: what the contract stated, what the
+    # carrier claimed, and whose name is on the claims.
+    stated = {(m.group(1), m.group(2)) for m in re.finditer(r"^// (\S+) · (\S+)$", left, re.M)}
+    claims = {}
+    for m in re.finditer(r"^// (\S+) · (\S+)(?: \(it calls it (\S+)\))?\npublic typealias (Carry_\d+)",
+                         right, re.M):
+        claims[m.group(4)] = (m.group(1), m.group(2), m.group(3))
+    who = re.search(r"public enum (\w+): Carrier", right)
+    return stated, claims, (who.group(1) if who else "that library")
+
+
+def cmd_attention(a):
+    # attention CONTRACT.swift CARRIER.swift [--as WHO] [--known K.json] [--tracker T.json]
+    #
+    # NOT WHAT CHANGED — WHAT WAITS FOR A WORD. History is diachronic and git
+    # already keeps it; this is the other cut, the standing ledger of who owes
+    # whom a sentence. It is two-sided by construction rather than by design: an
+    # unanswered axis sits on the side that owes the answer, so the same movement
+    # that shows a front-end what its back-end is waiting for shows the back-end
+    # what the front-end is waiting for. A sensor opens a hole for a technologist
+    # exactly as a client opens one for a contract.
+    #
+    # AND INTENTION IS DECLARED, NEVER GUESSED. A divergence somebody said out
+    # loud is a fact with an author; one nobody said is, by construction,
+    # unintended — that is the gate's own law, applied to disagreement. But a
+    # declaration without a term is an amnesty, and every temporary exception
+    # outlives its reason, so a declared divergence must CITE something that can
+    # close. When the tracker says it closed, the exception stops holding and the
+    # item comes back — louder, because the ground it stood on is gone.
+    import json as _json
+    if len(a) < 2:
+        return {"command": "attention", "asks": True,
+                "note": "attention CONTRACT.swift CARRIER.swift [--as WHO] [--known K.json] [--tracker T.json]",
+                "next": "gate declare contract … and gate declare carrier … first"}
+    left, right = open(a[0], encoding="utf-8").read(), open(a[1], encoding="utf-8").read()
+    stated, claims, carrier = seam_read(left, right)
+    me = a[a.index("--as") + 1] if "--as" in a else carrier
+    known = _json.load(open(a[a.index("--known") + 1], encoding="utf-8")) if "--known" in a else {}
+    tracker = read_tracker(a[a.index("--tracker") + 1]) if "--tracker" in a else {}
+
+    d = tempfile.mkdtemp(prefix="gate-att-")
+    path = os.path.join(d, "seam.swift")
+    open(path, "w").write(left + "\n" + right)
+    outp = subprocess.run([JUDGE, "judge", "where", path], capture_output=True, text=True).stdout
+    shutil.rmtree(d, ignore_errors=True)
+    claimed = {(r, f) for r, f, _ in claims.values()}
+    parted = {}
+    for m in re.finditer(r"^✗ '(\w+)[^']*' requires the types '[^']*' \(aka '([^']+)'\) and "
+                         r"'[^']*' \(aka '([^']+)'\)", outp, re.M):
+        cert, want, got = m.groups()
+        route, field, mine = claims.get(cert, ("?", cert, None))
+        # a claim about something the contract never stated is not a
+        # DISAGREEMENT — there is nothing to disagree with. It is the contract
+        # owing a sentence, and it belongs in the other column entirely; left
+        # here it read as a conflict with a record that does not exist.
+        if (route, field) in stated:
+            parted[(route, field)] = (want.lower(), got.lower(), mine)
+    # who owes what: the carrier owes an answer on a field the contract stated
+    # and it has not spoken of; the contract owes one on a field the carrier
+    # carries and it never declared — the same shape, pointing the other way
+    owes_carrier = sorted(stated - claimed)
+    owes_contract = sorted(claimed - stated)
+
+    def excuse(route, field):
+        # a declared divergence, and whether the thing it cites is still open
+        for k in (known.get("diverges") or []):
+            if k.get("route") == route and k.get("field") == field:
+                why = k.get("because") or ""
+                state = tracker.get(why)
+                return {"address": f"{route} · {field}", "because": why,
+                        "declared_by": k.get("declared_by") or "somebody",
+                        "state": state or ("unread" if tracker else "not checked")}
+        return None
+
+    def sort(items, kind):
+        live, dead, plain = [], [], []
+        for route, field in items:
+            ex = excuse(route, field)
+            if ex is None:
+                plain.append({"address": f"{route} · {field}", "kind": kind})
+            elif ex["state"] == "Closed":
+                dead.append({**ex, "kind": kind})
+            else:
+                live.append({**ex, "kind": kind})
+        return plain, live, dead
+
+    waits_on_me, known_mine, expired_mine = sort(owes_carrier if me == carrier else owes_contract,
+                                                 "unanswered")
+    i_wait, known_theirs, expired_theirs = sort(owes_contract if me == carrier else owes_carrier,
+                                                "unanswered")
+    parts, known_part, expired_part = sort(sorted(parted), "parted")
+    for p in parts + known_part + expired_part:
+        route, field = p["address"].split(" · ")
+        want, got, mine = parted[(route, field)]
+        p["why"] = (f"the contract states {want}; {carrier} declares "
+                    + (f"its own {mine} as " if mine else "") + got)
+    return {"command": "attention", "as": me, "carrier": carrier,
+            "waits_on_you": waits_on_me, "you_wait_on": i_wait, "parted": parts,
+            "known": known_mine + known_theirs + known_part,
+            "expired": expired_mine + expired_theirs + expired_part,
+            "stated": len(stated), "claimed": len(claims),
+            "note": ("a standing account of who owes whom a word, not a history of what moved. "
+                     "An unanswered axis sits with whoever owes the answer, so this reads the same "
+                     "from either side" + ("; a divergence somebody declared is set aside while the "
+                     "thing it cites is open, and comes back when that closes" if known else "")),
+            "next": ("answer the first line above, or declare the divergence with something that can "
+                     "close" if waits_on_me else
+                     "nothing waits on you here" if not (i_wait or parts) else
+                     "these wait on the other side; they are listed so you know what you are waiting for"),
+            "mutates": False}
+
+
 def cmd_seam(a):
     # seam CONTRACT.swift CARRIER.swift — two declarations, one world, one court.
     #
@@ -2962,6 +3075,12 @@ USAGE = """usage (the git-shaped porcelain):
   gate declare carrier DECL.json [-o F] you publish, or of what your build says
                                        your library carries — after this it is
                                        what you have SAID, and judged)
+  gate attention CONTRACT.swift CARRIER.swift [--as WHO] [--known K.json]
+                 [--tracker T.json]     (what waits for a WORD, not what changed:
+                                       who owes whom a sentence, read the same
+                                       from either side. A declared divergence
+                                       is set aside while what it cites is open,
+                                       and comes back by itself when that closes)
   gate seam CONTRACT.swift CARRIER.swift
                                       (the one court over a pair: two
                                        declarations, each signed by whoever made
@@ -3010,6 +3129,8 @@ def dispatch(cmd, rest):
         return cmd_declare(rest)
     if cmd == "seam":
         return cmd_seam(rest)
+    if cmd == "attention":
+        return cmd_attention(rest)
     if cmd == "badge":
         return cmd_badge(rest)
     if cmd == "import" and rest and rest[0] == "refs":
@@ -3180,6 +3301,29 @@ def humanize(out):
             lines.append("  commit it, and every clone has the tool — nothing to install")
             if v.get("judge_sha256"):
                 lines.append(f"  judge sha256: {v['judge_sha256'][:16]}…")
+    elif cmd == "attention":
+        if out.get("asks"):
+            lines.append("usage: " + out["note"]); lines.append(f"  next: {out['next']}")
+        else:
+            lines.append(f"attention: as {out['as']} · {len(out['waits_on_you'])} waiting on you · "
+                         f"{len(out['you_wait_on'])} you are waiting for · {len(out['parted'])} parted"
+                         + (f" · {len(out['expired'])} came back" if out["expired"] else ""))
+            for x in out["expired"]:
+                lines.append(f"  came back · {x['address']} · it was set aside for {x['because']}, "
+                             f"and {x['because']} is closed")
+            for x in out["waits_on_you"]:
+                lines.append(f"  waits on you · {x['address']} · "
+                             + (x.get("why") or "stated by the contract; you have not said whether you carry it"))
+            for x in out["you_wait_on"]:
+                lines.append(f"  you are waiting · {x['address']} · "
+                             + (x.get("why") or "you carry it; the contract has not stated it"))
+            for x in out["parted"]:
+                lines.append(f"  parted · {x['address']} · {x['why']}")
+            for x in out["known"]:
+                lines.append(f"  known · {x['address']} · set aside by {x['declared_by']} "
+                             f"for {x['because']} ({x['state'].lower()})")
+            lines.append(f"  note: {out['note']}")
+            lines.append(f"  next: {out['next']}")
     elif cmd.startswith("declare"):
         if out.get("asks"):
             lines.append("usage: " + out["note"])

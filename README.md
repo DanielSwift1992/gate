@@ -154,7 +154,7 @@ gate survey                            # read-only: unwritten links mined from
 
 The porcelain is deliberately git-shaped: `init · status/fsck · log · check ·
 diff · apply · import/export · verify · guard · library · survey · drift ·
-badge · declare · seam · serve · report · stdlib · my · demo · findings ·
+badge · declare · seam · attention · serve · report · stdlib · my · demo · findings ·
 --version`. A refusal
 exits non-zero, so hooks and CI need no wrappers — and `drift`, which judges
 nothing, exits non-zero only on a threshold you declare yourself.
@@ -238,6 +238,21 @@ head. A refusal points at its address instead.
   # seam: refused 1 · 5.8 ms
   #   /scrape · waitFor · the contract declares it count; SdkJS declares it text
   ```
+- **And what waits for a word is a different question from what changed.** History
+  is git's, and anybody can arrange it for themselves; `gate attention` is the
+  other cut — a standing account of who owes whom a sentence. It is two-sided by
+  construction rather than by design, since an unanswered axis sits with whoever
+  owes the answer: the same movement shows a client what its contract waits for
+  and the contract what the client waits for, and a sensor opens a hole for a
+  technologist exactly as a client opens one for a contract.
+
+  Intention is declared, never guessed. A divergence somebody said out loud is a
+  fact with an author; one nobody said is unintended by construction. But a
+  declaration without a term is an amnesty, so a declared divergence **cites
+  something that can close** — and when the tracker says it closed, the exception
+  stops holding and the item comes back first and loudest, its ground gone. The
+  honest path stays the cheap one: fixing costs nothing, and setting something
+  aside costs a name, a reason, and an expiry that arrives on its own.
 - **A citation may not outlive the thing it cites.** `gate import refs
   tickets.json --code .` reads a tracker's own export and every place your code
   names a ticket, and judges them as one world: a `TODO(PROJ-42)` whose ticket
@@ -434,7 +449,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 175 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 177 end-to-end checks, the definition of green
 ```
 
 ## Status

@@ -1136,6 +1136,61 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "its own include_collections" in mixed_says
               and mixed.get("carrier") == "SdkJS"))
 
+    # ── NOT WHAT CHANGED, BUT WHAT WAITS FOR A WORD. History is the other cut
+    # and git already keeps it; this is the standing account of who owes whom a
+    # sentence. It is two-sided by construction rather than by design: an
+    # unanswered axis sits with whoever owes the answer, so the same movement
+    # that shows a client what its contract is waiting for shows the contract
+    # what the client is waiting for. A claim about something the contract never
+    # stated is not a disagreement — there is nothing there to disagree with —
+    # it is the contract owing a sentence, and it belongs in the other column.
+    open(os.path.join(ent, "sdk3.json"), "w").write(json.dumps({
+        "carrier": "SdkJS", "against": {"contract": "openapi.json"},
+        "carries": [{"route": "/scrape", "field": "url", "as": "Text"},
+                    {"route": "/scrape", "field": "waitFor", "as": "Text"},
+                    {"route": "/scrape", "field": "autodelete", "as": "Flag"}]}))
+    run("declare", "carrier", os.path.join(ent, "sdk3.json"), "-o", os.path.join(ent, "sdk3.swift"))
+    A = [os.path.join(ent, "api.swift"), os.path.join(ent, "sdk3.swift")]
+    _, att = run("attention", *A, "--as", "SdkJS")
+    mine = [x["address"] for x in att.get("waits_on_you", [])]
+    theirs = [x["address"] for x in att.get("you_wait_on", [])]
+    S.append(("attention is a standing account of who owes whom a word, and it reads the same from either side",
+              # the contract stated `include` and `extra`; this library has said
+              # nothing of either, so they wait on it
+              sorted(mine) == ["/scrape · extra", "/scrape · include"]
+              # and it carries one the contract never stated, so that waits on the contract
+              and theirs == ["/scrape · autodelete"]
+              # a real disagreement is neither, and is named as its own thing
+              and [x["address"] for x in att.get("parted", [])] == ["/scrape · waitFor"]
+              # never a verdict: no court sits over who owes what
+              and "verdict" not in att))
+
+    # ── AND INTENTION IS DECLARED, NEVER GUESSED. A divergence somebody said out
+    # loud is a fact with an author; one nobody said is unintended by
+    # construction — the gate's own law, applied to disagreement. But a
+    # declaration without a term is an amnesty: every temporary exception
+    # outlives its reason, so a declared divergence CITES something that can
+    # close, and when the tracker says it closed the exception stops holding and
+    # the item comes back — first, and louder, because its ground is gone.
+    open(os.path.join(ent, "known.json"), "w").write(json.dumps({"diverges": [
+        {"route": "/scrape", "field": "waitFor", "because": "PROJ-42", "declared_by": "sdk-team"}]}))
+    open(os.path.join(ent, "open.json"), "w").write(json.dumps([{"key": "PROJ-42", "status": "In Progress"}]))
+    open(os.path.join(ent, "shut.json"), "w").write(json.dumps([{"key": "PROJ-42", "status": "Done"}]))
+    _, held = run("attention", *A, "--as", "SdkJS",
+                  "--known", os.path.join(ent, "known.json"),
+                  "--tracker", os.path.join(ent, "open.json"))
+    _, back = run("attention", *A, "--as", "SdkJS",
+                  "--known", os.path.join(ent, "known.json"),
+                  "--tracker", os.path.join(ent, "shut.json"))
+    S.append(("a declared divergence is set aside while what it cites is open, and comes back by itself when that closes",
+              # while the reason is open it is not attention, but it is not hidden
+              held.get("parted") == [] and len(held.get("known", [])) == 1
+              and held["known"][0]["declared_by"] == "sdk-team"
+              and held["known"][0]["because"] == "PROJ-42"
+              # and when the reason closes nobody has to remember: it returns
+              and back.get("expired") and back["expired"][0]["address"] == "/scrape · waitFor"
+              and not back.get("known")))
+
     # ── THE PITCH STAYS OUTSIDE THE VERDICT. A brand may say `sight for
     # promises`; a verdict may not. What a reader is handed by the tool is what
     # was observed, the bounds it was observed in, numbers, and a recipe — and
