@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 # The regression battery: every verb, end to end, in a throwaway repo.
 # Run: python3 tests/smoke.py
-import json, os, re, shutil, subprocess, sys, tempfile
+import ast, json, os, re, shutil, subprocess, sys, tempfile
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GATE = os.path.join(HERE, "gate")
 DEMO = os.path.join(HERE, "demo")
+STDLIB = os.path.join(HERE, "stdlib")
 
 
 def run(*args, cwd=None):
@@ -1055,6 +1056,27 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
         "interface Req {\n  url: string;\n}\n")
     _, bare_types = run("drift", os.path.join(con, "spec.json"),
                         "--client", os.path.join(con, "typesonly"), "--name", "Types")
+    # ── THE PITCH STAYS OUTSIDE THE VERDICT. A brand may say `sight for
+    # promises`; a verdict may not. What a reader is handed by the tool is what
+    # was observed, the bounds it was observed in, numbers, and a recipe — and
+    # the sensory words that make the sale would, standing there, be the tool
+    # claiming to see what it has not seen. Kept as a discipline this leaks
+    # eventually, so it is a wall: string constants the tool prints, and every
+    # crystal it ships as text.
+    # `light` is deliberately absent from the list — the palette's light is a
+    # physical subject, not a metaphor, and a fence that forbids a domain its own
+    # word is a fence in the wrong place.
+    PITCH = re.compile(r"\b(blind\w*|prayer\w*|candle\w*|illuminat\w*|darkness|eyesight"
+                       r"|vision|sight|hearing)\b", re.I)
+    spoken = [n.value for n in ast.walk(ast.parse(open(GATE).read()))
+              if isinstance(n, ast.Constant) and isinstance(n.value, str)]
+    shipped = [open(os.path.join(STDLIB, f)).read()
+               for f in os.listdir(STDLIB) if f.endswith(".swift")] if os.path.isdir(STDLIB) else []
+    S.append(("the words that sell stay out of what the tool says",
+              bool(spoken) and bool(shipped)
+              and not [s for s in spoken if PITCH.search(s)]
+              and not [s for s in shipped if PITCH.search(s)]))
+
     # ── and the first thing a stranger types is `--help`. Taking it for a
     # filename printed an observation of a contract that does not exist, in the
     # first second of the first minute somebody spends here.
