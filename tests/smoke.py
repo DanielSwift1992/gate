@@ -17,6 +17,21 @@ def run(*args, cwd=None):
         return r.returncode, {"raw": r.stdout[:200], "stderr": r.stderr[:200]}
 
 
+def seams_here_probe(folder):
+    # the seam count as the bench would compute it, in a subprocess so the
+    # battery never imports the tool it is judging
+    code = ("import sys, types;"
+            "src=open(%r,encoding='utf-8').read();"
+            "g=types.ModuleType('g'); g.__file__=%r;"
+            "exec(compile(src,'gate','exec'), g.__dict__);"
+            "print(len(g.seams_here(%r)))" % (GATE, GATE, folder))
+    r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+    try:
+        return int((r.stdout or "0").strip().splitlines()[-1])
+    except Exception:
+        return -1
+
+
 def say(*args, cwd=None):
     # the human line, not the JSON: the porcelain has its own words and the
     # canon of names governs them
@@ -1352,6 +1367,52 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "var(--action)" not in ui.split(".commit .who{", 1)[1].split("}", 1)[0]
               and ".badge.closed{border:1px solid var(--line)" in ui
               and "background" not in ui.split(".badge.closed{", 1)[1].split("}", 1)[0]))
+
+    # ── WHICH SEAMS ARE MINE IS MINE TO SAY. They were found by sniffing the
+    # folder for files that looked like seam sides — guessing at somebody's
+    # relationships from the shape of what happens to be lying about, which is
+    # the same sin as reading a library's source, one storey up, and it put
+    # things in an owner's rail that the owner never put there.
+    # Membership is declared, in the file that already declares what belongs to
+    # this world. Which side a file is, that file says about itself in its own
+    # first lines: mine to say what is mine, theirs to say what theirs is.
+    own = os.path.join(tmp, "owned")
+    os.makedirs(own, exist_ok=True)
+    for f in ("api.swift", "sdk3.swift"):
+        shutil.copy(os.path.join(ent, f), os.path.join(own, f.replace("sdk3", "sdk")))
+    _, unowned = run("demo", "seam", os.path.join(tmp, "owned-demo"))
+    S.append(("a seam is in my rail because I said it is mine, never because a file was lying about",
+              # the two sides are there, and undeclared they are nobody's
+              seams_here_probe(own) == 0
+              # declared in the layout file, the same one that declares the world
+              and (open(os.path.join(own, "gate.manifest.swift"), "w").write(
+                  "public protocol SeamFile {}\n"
+                  "public enum A: SeamFile {}\n"
+                  'extension A { public static var typeName: String { "api.swift" } }\n'
+                  "public enum B: SeamFile {}\n"
+                  'extension B { public static var typeName: String { "sdk.swift" } }\n') or True)
+              and seams_here_probe(own) == 1
+              # and the demo declares its own, so the rail it shows is one it owns
+              and os.path.exists(os.path.join(tmp, "owned-demo", "gate.manifest.swift"))
+              and "SeamFile" in open(os.path.join(tmp, "owned-demo", "gate.manifest.swift")).read()))
+
+    # ── and the layout takes only what is declared a world file. The same
+    # document names both, in the same shape — a name and a path — so reading
+    # every path literal in it swept the seam sides into the judged list, where
+    # one reads as a fragment of a world it was never part of. Seven refusals
+    # about a file that had claimed nothing, from the act of declaring ownership.
+    open(os.path.join(own, "gate.swift"), "w").write("public enum Nobody: Ranked {}\n")
+    open(os.path.join(own, "gate.manifest.swift"), "w").write(
+        "public protocol WorldFile {}\n"
+        "public protocol SeamFile {}\n"
+        "public enum A: SeamFile {}\n"
+        'extension A { public static var typeName: String { "api.swift" } }\n'
+        "public enum B: SeamFile {}\n"
+        'extension B { public static var typeName: String { "sdk.swift" } }\n')
+    _, owned_status = run("status", cwd=own)
+    S.append(("declaring a seam does not put it in the judged world",
+              not [r for r in owned_status.get("refusals", [])
+                   if "api.swift" in r.get("address", "") or "sdk.swift" in r.get("address", "")]))
 
     # ── FRICTION IS NOT EVENLY DESERVED. Saying a true thing should cost
     # nothing; setting a true thing aside should cost a reason that can close,

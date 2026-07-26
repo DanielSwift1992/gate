@@ -18,7 +18,17 @@ def read_manifest(d):
     if not os.path.exists(mp):
         return None
     text = open(mp).read()
-    paths = re.findall(r'typeName:\s*String\s*\{\s*"([^"]+)"\s*\}', text)
+    # ONLY WHAT IS DECLARED A WORLD FILE. The same document also declares the
+    # seams this world is party to, in the same shape — a name and a path — and
+    # taking every path literal in it swept those into the judged list, where a
+    # seam side reads as a fragment of a world it was never part of.
+    paths = []
+    for n in re.findall(r"public enum (\w+): WorldFile \{\}", text):
+        m = re.search("extension " + n + r"\b[^{]*\{[^}]*?\"([^\"]+)\"", text, re.S)
+        if m:
+            paths.append(m.group(1))
+    if not paths and "WorldFile" not in text:
+        paths = re.findall(r'typeName:\s*String\s*\{\s*"([^"]+)"\s*\}', text)  # older layouts
     return {"manifest": mp, "files": [os.path.join(d, p) for p in paths]}
 
 
@@ -1205,6 +1215,14 @@ def cmd_demo_seam(a):
                open(os.path.join(root, "known.json"), "w"), indent=1)
     _json.dump([{"key": "PROJ-42", "status": "In Progress"}],
                open(os.path.join(root, "tickets.json"), "w"), indent=1)
+    open(os.path.join(root, "gate.manifest.swift"), "w").write(
+        "// what this folder declares itself party to. A seam is not found by\n"
+        "// looking at what is lying about: it is here because this side said so.\n"
+        "public protocol SeamFile {}\n"
+        "public enum TheContract: SeamFile {}\n"
+        'extension TheContract { public static var typeName: String { "api.swift" } }\n'
+        "public enum OurSide: SeamFile {}\n"
+        'extension OurSide { public static var typeName: String { "sdk.swift" } }\n')
     api = cmd_declare(["contract", os.path.join(root, "openapi.json"),
                        "-o", os.path.join(root, "api.swift")])
     sdk = cmd_declare(["carrier", os.path.join(root, "sdk.declared.json"),
@@ -1884,7 +1902,8 @@ def cmd_declare(a):
                 "against": against,
                 "note": ("what this library says it carries. It is not judgeable alone — a carrier "
                          "declaration is about a contract, and the pair is judged by `gate seam`"),
-                "next": "gate seam <the contract's declaration> <this file>",
+                "next": ("declare it in gate.manifest.swift as a SeamFile — a seam is yours "
+                         "because you said so — then `gate seam <contract> <this file>`"),
                 "mutates": bool(out_path)}
     return {"command": "declare", "asks": True,
             "note": "declare contract SPEC [-o F]  ·  declare carrier DECL.json [-o F]",
@@ -1904,16 +1923,36 @@ def seam_read(left, right):
     return stated, claims, (who.group(1) if who else "that library")
 
 
+def declared_seam_files(base):
+    # WHICH SEAMS ARE MINE IS MINE TO SAY. Sniffing the folder for files that
+    # look like seam sides is guessing at somebody's relationships from the shape
+    # of what happens to be lying about — the same sin as reading a library's
+    # source, one storey up. The layout file already declares what belongs to
+    # this world; it declares the seams this world is party to the same way, and
+    # the rail shows exactly that and nothing else.
+    # Membership is DECLARED; which side a file is, that file says about itself
+    # in its own first lines. Mine to say what is mine; theirs to say what theirs
+    # is.
+    mp = os.path.join(base, "gate.manifest.swift")
+    if not os.path.exists(mp):
+        return []
+    text = open(mp, encoding="utf-8", errors="replace").read()
+    names = re.findall(r"public enum (\w+): SeamFile \{\}", text)
+    out = []
+    for n in names:
+        m = re.search("extension " + n + r"\b[^{]*\{[^}]*?\"([^\"]+)\"", text, re.S)
+        if m:
+            out.append(os.path.join(base, m.group(1)))
+    return out
+
+
 def seams_here(root=None):
-    # every pair the folder holds: files that STATE records, files that CLAIM
-    # them, and a `known.json` beside them if somebody has declared a divergence.
+    # the pairs this folder has DECLARED itself party to, and a `known.json`
+    # beside them if somebody has said a divergence is meant.
     base = os.path.abspath(root or (os.path.dirname(os.path.abspath(FACTS)) if FACTS else "."))
     stated, claimed = [], []
-    for f in sorted(os.listdir(base)):
-        if not f.endswith(".swift"):
-            continue
-        full = os.path.join(base, f)
-        if not is_seam_side(full):
+    for full in declared_seam_files(base):
+        if not (os.path.exists(full) and is_seam_side(full)):
             continue
         txt = open(full, encoding="utf-8", errors="replace").read(4000)
         if re.search(r"^public enum \w+: Carrier \{\}", txt, re.M):

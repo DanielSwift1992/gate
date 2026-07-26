@@ -149,9 +149,21 @@ reads the repository itself, with nothing to translate.
 
 **Full**, **Bare** and **Table** are three ways to look at one file. Beside the
 file list and the journal — the other two things that are about the repository
-rather than about a file — **seams** appears when the folder has any: the pairs
-it is party to, one line each, with what came back standing first. The rail
-shows what a repository has, so a folder with no seam in it shows none.
+rather than about a file — **seams** appears when this world has declared any:
+the pairs it is party to, one line each, with what came back standing first. A
+seam is there because you said it is yours, in the same file that declares your
+layout:
+
+```swift
+public protocol SeamFile {}
+public enum TheContract: SeamFile {}
+extension TheContract { public static var typeName: String { "api.swift" } }
+public enum OurSide: SeamFile {}
+extension OurSide { public static var typeName: String { "sdk.swift" } }
+```
+
+Membership is yours to state; which side a file is, that file says about itself.
+Nothing appears in your rail because it was lying in the folder.
 
 From then on:
 
@@ -463,7 +475,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 185 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 187 end-to-end checks, the definition of green
 ```
 
 ## Status
