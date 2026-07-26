@@ -2046,6 +2046,47 @@ def cmd_attention(a):
             "mutates": False}
 
 
+def cmd_aside(a):
+    # aside ROUTE FIELD --because KEY [--by WHO] [-o known.json] — say out loud
+    # that a divergence is meant, and name the thing that will end it.
+    #
+    # FRICTION IS NOT EVENLY DESERVED. Saying a true thing should cost nothing;
+    # setting a true thing aside should cost a reason that can close, because an
+    # exception with no term is an amnesty and every temporary one outlives what
+    # it was for. So this asks for the reason and refuses without it — and then
+    # takes the two hand-edits it used to take and makes them one sentence.
+    import json as _json
+    if len(a) < 2 or "--because" not in a:
+        return {"command": "aside", "asks": True,
+                "note": "aside ROUTE FIELD --because KEY [--by WHO] [-o known.json]",
+                "next": ("the reason is not optional: name something that can close — a ticket, a "
+                         "release — and this stands aside only while that is open")}
+    route, field = a[0], a[1]
+    because = a[a.index("--because") + 1]
+    by = a[a.index("--by") + 1] if "--by" in a else (
+        subprocess.run(["git", "config", "user.name"], capture_output=True, text=True).stdout.strip()
+        or "somebody")
+    path = a[a.index("-o") + 1] if "-o" in a else "known.json"
+    known = {"diverges": []}
+    if os.path.exists(path):
+        try:
+            known = _json.load(open(path, encoding="utf-8"))
+        except Exception:
+            known = {"diverges": []}
+    rows = [d for d in (known.get("diverges") or [])
+            if not (d.get("route") == route and d.get("field") == field)]
+    rows.append({"route": route, "field": field, "because": because, "declared_by": by})
+    known["diverges"] = rows
+    _json.dump(known, open(path, "w"), indent=1)
+    return {"command": "aside", "address": f"{route} · {field}", "because": because,
+            "declared_by": by, "wrote": path, "standing": len(rows),
+            "note": (f"{by} says this one is meant, while {because} is open. It stands out of the "
+                     f"way until {because} closes, and comes back by itself when it does"),
+            "next": (f"point a tracker export at it — `gate attention … --known {path} --tracker "
+                     "tickets.json` — and the day it closes this returns first"),
+            "mutates": True}
+
+
 def cmd_seam(a):
     # seam CONTRACT.swift CARRIER.swift — two declarations, one world, one court.
     #
@@ -3247,6 +3288,9 @@ USAGE = """usage (the git-shaped porcelain):
                                        from either side. A declared divergence
                                        is set aside while what it cites is open,
                                        and comes back by itself when that closes)
+  gate aside ROUTE FIELD --because KEY (say a divergence is meant, naming what
+                                       will end it — it stands out of the way
+                                       while that is open and returns by itself)
   gate seam CONTRACT.swift CARRIER.swift
                                       (the one court over a pair: two
                                        declarations, each signed by whoever made
@@ -3295,6 +3339,8 @@ def dispatch(cmd, rest):
         return cmd_declare(rest)
     if cmd == "seam":
         return cmd_seam(rest)
+    if cmd == "aside":
+        return cmd_aside(rest)
     if cmd == "attention":
         return cmd_attention(rest)
     if cmd == "badge":
@@ -3496,6 +3542,14 @@ def humanize(out):
             lines.append("  commit it, and every clone has the tool — nothing to install")
             if v.get("judge_sha256"):
                 lines.append(f"  judge sha256: {v['judge_sha256'][:16]}…")
+    elif cmd == "aside":
+        if out.get("asks"):
+            lines.append("usage: " + out["note"]); lines.append(f"  next: {out['next']}")
+        else:
+            lines.append(f"aside: {out['address']} · while {out['because']} is open "
+                         f"· said by {out['declared_by']} · {out['standing']} standing")
+            lines.append(f"  note: {out['note']}")
+            lines.append(f"  next: {out['next']}")
     elif cmd == "attention":
         if out.get("asks"):
             lines.append("usage: " + out["note"]); lines.append(f"  next: {out['next']}")

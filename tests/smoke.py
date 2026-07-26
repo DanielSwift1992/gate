@@ -1353,6 +1353,27 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and ".badge.closed{border:1px solid var(--line)" in ui
               and "background" not in ui.split(".badge.closed{", 1)[1].split("}", 1)[0]))
 
+    # ── FRICTION IS NOT EVENLY DESERVED. Saying a true thing should cost
+    # nothing; setting a true thing aside should cost a reason that can close,
+    # since an exception with no term is an amnesty and every temporary one
+    # outlives what it was for. Setting aside took two files edited by hand,
+    # which is friction in the wrong place — it is one sentence now, and it still
+    # refuses without a reason, because that part of the cost is the point.
+    _, no_reason = run("aside", "/messages", "sendAt", cwd=ent)
+    _, said = run("aside", "/messages", "sendAt", "--because", "PROJ-9", "--by", "sdk-team",
+                  "-o", os.path.join(ent, "aside.json"), cwd=ent)
+    twice = run("aside", "/messages", "sendAt", "--because", "PROJ-10", "--by", "sdk-team",
+                "-o", os.path.join(ent, "aside.json"), cwd=ent)[1]
+    written = json.load(open(os.path.join(ent, "aside.json")))
+    S.append(("setting something aside costs a reason that can close, and costs nothing else",
+              # without a reason it does not happen at all
+              no_reason.get("asks") and "not optional" in no_reason.get("next", "")
+              # with one, it is a single sentence and the reason is kept with the author
+              and said.get("because") == "PROJ-9" and said.get("declared_by") == "sdk-team"
+              # and saying it again about the same field replaces rather than piles up
+              and twice.get("standing") == 1
+              and written["diverges"][0]["because"] == "PROJ-10"))
+
     # ── THE PITCH STAYS OUTSIDE THE VERDICT. A brand may say `sight for
     # promises`; a verdict may not. What a reader is handed by the tool is what
     # was observed, the bounds it was observed in, numbers, and a recipe — and
