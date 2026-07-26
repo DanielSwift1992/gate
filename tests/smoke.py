@@ -906,8 +906,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
             "withPayload": {"anyOf": [{"type": "boolean"}, {"type": "array"}]},
             "waitFor": {"type": "integer"}}}}}}}}}}))
     open(os.path.join(con, "silent", "client.ts"), "w").write(
-        "interface Req {\n  url: string;\n  withPayload?: string;\n}\n"
-        "const defaults = { waitFor: 0 };\n")
+        "interface Req {\n  url: string;\n  withPayload?: string;\n  waitFor?: WaitSpec;\n}\n")
     _, quiet = run("import", "contract", os.path.join(con, "spec-open.json"),
                    "--client", os.path.join(con, "silent"), "--name", "Quiet")
     S.append(("silence is not agreement: an open shape and an unreadable type are counted, never judged",
@@ -955,21 +954,63 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # written plainly in one place and aliased in another is still judged on the
     # place that said something.
     os.makedirs(os.path.join(con, "written"), exist_ok=True)
-    open(os.path.join(con, "spec-types.json"), "w").write(json.dumps({"paths": {"/multi": {"post": {
-        "requestBody": {"content": {"application/json": {"schema": {"properties": {
+    open(os.path.join(con, "spec-types.json"), "w").write(json.dumps({"paths": {
+        "/multi": {"post": {"requestBody": {"content": {"application/json": {"schema": {"properties": {
             "searches": {"type": "array"}, "params": {"type": "object"},
-            "locale": {"type": "string"}}}}}}}}}}))
+            "locale": {"type": "string"}}}}}}}},
+        "/solo": {"post": {"requestBody": {"content": {"application/json": {"schema": {"properties": {
+            "tongue": {"type": "string"}}}}}}}}}}))
     open(os.path.join(con, "written", "client.ts"), "w").write(
-        "interface Multi {\n  searches: ExtractBaseTypes<SearchParams<T[number], Infix>>[];\n}\n"
-        "declare function upsert(params: RuleSchema | RuleSchema[]): Promise<void>;\n"
-        "interface One {\n  locale: string;\n}\n"
-        "interface Alias {\n  locale: LocaleSchema;\n}\n")
+        "interface Multi {\n"
+        "  searches: ExtractBaseTypes<SearchParams<T[number], Infix>>[];\n"
+        "  params: RuleSchema | RuleSchema[];\n"
+        "  locale: string;\n}\n"
+        # neither of these is the /solo request — one field of two apiece — so
+        # the whole library answers, and there the alias must not silence the
+        # plain word
+        "interface P {\n  tongue: string;\n  other: number;\n}\n"
+        "interface Q {\n  tongue: TongueSchema;\n  another: number;\n}\n")
     _, written = run("import", "contract", os.path.join(con, "spec-types.json"),
                      "--client", os.path.join(con, "written"), "--name", "Written")
     S.append(("a type ends where its brackets end, a union names no one shape, and an alias elsewhere does not silence what was said",
               written.get("verdict") == "holds" and not written.get("refusals")
               # searches and locale are read; params answered with a union
-              and written.get("judged") == 2 and written.get("shape_unread") == 1))
+              and written.get("judged") == 3 and written.get("shape_unread") == 1))
+
+    # ── and a request is read WHERE THE LIBRARY DECLARES IT. The fields of one
+    # body are written together, so the block that holds them is the place to
+    # ask — and it answers both questions, whether the field is carried and as
+    # what. Asking them in different places reported a mismatch on `images`
+    # against a client whose only `images` is a counter in a usage report: the
+    # word existed somewhere, so the field looked carried, and a stranger's
+    # `int` became its shape. Kinship is how much of the BLOCK is about this
+    # request, not how many names coincide, or a twenty-field report brushing
+    # two of them outranks the schema itself.
+    # A home may also be built of more than one room: a typed client writes the
+    # bulk in a base and hangs the rest off it in one-field extensions, and a
+    # block wholly about this request is heard for what the base does not say.
+    os.makedirs(os.path.join(con, "home"), exist_ok=True)
+    open(os.path.join(con, "spec-home.json"), "w").write(json.dumps({"paths": {"/collections": {"post": {
+        "requestBody": {"content": {"application/json": {"schema": {"properties": {
+            "name": {"type": "string"}, "fields": {"type": "array"},
+            "token_separators": {"type": "array"}, "enable_nested_fields": {"type": "boolean"},
+            "images": {"type": "array"}}}}}}}}}}))
+    open(os.path.join(con, "home", "client.ts"), "w").write(
+        "export interface BaseCollectionCreateSchema {\n  name: string;\n"
+        "  token_separators?: string[];\n  enable_nested_fields?: boolean;\n}\n"
+        "interface CollectionCreateSchemaWithSrc extends BaseCollectionCreateSchema {\n"
+        "  fields: CollectionFieldSchema[];\n}\n"
+        "export interface UsageReport {\n  images: number;\n  name: string;\n"
+        "  spend: number;\n  minutes: number;\n  requests: number;\n}\n")
+    _, at_home = run("import", "contract", os.path.join(con, "spec-home.json"),
+                     "--client", os.path.join(con, "home"), "--name", "AtHome")
+    home_says = " ".join(x["claim"] for x in at_home.get("refusals", []))
+    S.append(("a request is read where the library declares it, and a home may be built of more than one room",
+              # the base answers for its three, the one-field extension for `fields`
+              at_home.get("judged") == 4
+              # and the usage report answers for nothing: `images` is absent, not a count
+              and "does not carry it" in home_says and "as count" not in home_says
+              and len(at_home.get("refusals", [])) == 1))
 
     # ── and the check is the whole ceremony: one command in the CI the client
     # already has. It exits non-zero on a stale citation and zero when the code

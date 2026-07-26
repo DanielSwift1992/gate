@@ -1672,18 +1672,91 @@ def shapes_of_type(t):
     return {shape_of_type(a) or UNREAD for a in arms}
 
 
+CONTAINER_HEADS = ("list", "sequence", "vec", "array", "set", "frozenset", "iterable", "seq")
+MAP_HEADS = ("dict", "hashmap", "btreemap", "map", "record", "mapping", "object")
+# heads that carry no shape of their own and hand it straight through
+PASS_HEADS = ("required", "notrequired", "optional", "annotated", "option", "readonly",
+              "box", "arc", "rc", "partial", "nonnull", "field", "union")
+
+
 def shape_of_type(t):
-    # containers first, ALWAYS: a map of strings is a map, and reading the word
-    # inside it as the whole shape accuses a library of a mismatch it does not
-    # have — `Record<string, string>` is nested, not text.
-    if re.search(r"\[\s*\]|\bVec<|\bArray<|\bList\[|\blist\[|\bSequence\[", t):
+    # what SORT a written type is, read from the HEAD of the construction and
+    # never from a word inside it. `Record<string, string>` is a map, not text;
+    # `Required[SequenceNotStr[str]]` is a sequence, not text; and the `float` in
+    # `Literal["float", "base64"]` is a value the API accepts, not a number the
+    # library carries. Each of those three was an accusation against a client
+    # that had written its type correctly, and all three came of reading inward.
+    t = t.strip().rstrip("?")
+    if not t:
+        return None
+    if t.endswith("[]"):
         return "Many"
-    if re.search(r"\bDict\[|\bHashMap<|\bBTreeMap<|\bobject\b|\bRecord<|\bMap<|\{", t):
+    if t.startswith("{"):
         return "Nested"
+    m = re.match(r"^([A-Za-z_][\w.]*)\s*[\[<](.*)[\]>]$", t, re.S)
+    if m:
+        head, inner = m.group(1).rsplit(".", 1)[-1].lower(), m.group(2)
+        if head == "literal":
+            arms = split_union("Union[" + inner + "]")
+            if arms and all(re.fullmatch(r"[\"'].*[\"']", a, re.S) for a in arms):
+                return "Text"
+            if arms and all(re.fullmatch(r"-?\d+(\.\d+)?", a) for a in arms):
+                return "Count"
+            return None
+        if head.startswith(CONTAINER_HEADS):
+            return "Many"
+        if head.startswith(MAP_HEADS):
+            return "Nested"
+        if head.startswith(PASS_HEADS):
+            arms = split_union("Union[" + inner + "]")
+            # Annotated says the type first and its trimmings after
+            shapes = {shape_of_type(arms[0])} if head == "annotated" else {shape_of_type(a) for a in arms}
+            return shapes.pop() if len(shapes) == 1 else None
+        # a generic this reader does not know is not its contents
+        return None
     for pat, shape in SHAPE_WORDS:
         if re.search(pat, t):
             return shape
     return None
+
+
+def route_home(route_fields, named, where):
+    # WHERE this library declares this request. The fields of one request body
+    # are written together, so the block that declares most of them is the place
+    # to ask — and once it is found it answers BOTH questions, whether the field
+    # is carried and as what. Asking them in different places is what reported a
+    # mismatch on `images` against a client whose only `images` is a counter in a
+    # usage report: the word was present somewhere, so the field looked carried,
+    # and a stranger's `int` was read as its shape. One shared name is not
+    # kinship either — in a large SDK a response model brushes against a request
+    # body by an accident of vocabulary — so a home needs two.
+    cand = {}
+    for s in route_fields:
+        for v in name_variants(s):
+            for i in where.get(v, ()):
+                cand.setdefault(i, set()).add(s)
+    # kinship is measured by how much of the BLOCK is about this request, not by
+    # how many names happened to coincide. A usage report with twenty fields
+    # touching two of a request's is not that request; a create-schema with eight
+    # fields of which six are its own is. Counting coincidences instead let a
+    # report outrank a schema, and taking only the single best block then hid the
+    # rest — a library may split one request over a create form and an update
+    # form, and both are home.
+    # and a home may be built of more than one room. A typed client writes the
+    # bulk of a request in a base and hangs the rest off it in one-field
+    # extensions — typesense keeps eight of nine fields in a base schema and
+    # `fields` alone in an interface that extends it — so a block that is WHOLLY
+    # about this request is heard too, but only about what the main rooms do not
+    # declare. Otherwise a stray `{ name: string }` anywhere would count as the
+    # request itself.
+    home, whole = [], []
+    for i, shared in cand.items():
+        own = len(named[i]) or 1
+        if len(shared) >= 4 or (len(shared) >= 2 and len(shared) / own >= 0.5):
+            home.append(i)
+        elif len(shared) == own:
+            whole.append(i)
+    return home, whole
 
 
 def shapes_seen(body, field):
@@ -1715,6 +1788,31 @@ def shapes_seen(body, field):
             if here and UNREAD not in here:
                 shapes |= here
     return shapes
+
+
+BLOCK_START = re.compile(
+    r"^[ \t]*(?:(?:export|public|private|declare|pub|async|final|abstract)\s+)*"
+    r"(?:class|interface|struct|type|def|func|fn|enum)\s+\w+", re.M)
+BLOCK_FIELD = re.compile(r"^[ \t]*[\"']?(\w+)[\"']?\s*\??\s*:", re.M)
+
+
+def carrier_blocks(body):
+    # the library cut where it declares things: a class, an interface, a struct,
+    # a function. The fields of one request body are written TOGETHER, and that
+    # togetherness is the only way to tell the `seconds` of a video from the
+    # `seconds` a sleep takes — thirty readable places in one SDK spell that
+    # name, and twenty-nine of them are about something else.
+    marks = sorted({0, len(body)} | {m.start() for m in BLOCK_START.finditer(body)})
+    return [body[a:b] for a, b in zip(marks, marks[1:]) if b > a]
+
+
+def carrier_index(blocks):
+    named = [set(BLOCK_FIELD.findall(b)) for b in blocks]
+    where = {}
+    for i, ns in enumerate(named):
+        for n in ns:
+            where.setdefault(n, []).append(i)
+    return named, where
 
 
 def read_carrier(root):
@@ -1752,10 +1850,29 @@ def cmd_import_contract(a):
                 else os.path.join(tempfile.mkdtemp(prefix="gate-contract-"), "contract-gate.swift"))
     fields = read_contract(src)
     body, files = read_carrier(root)
-    carried = {}
+    blocks = carrier_blocks(body)
+    named_in, where = carrier_index(blocks)
+    homes, carried, seen_at = {}, {}, {}
     for f in fields:
-        carried[(f["route"], f["field"])] = any(
-            re.search(r"\b" + re.escape(n) + r"\b", body) for n in name_variants(f["field"]))
+        homes.setdefault(f["route"], set()).add(f["field"])
+    for route, names in list(homes.items()):
+        homes[route] = route_home(names, named_in, where)
+    for f in fields:
+        key = (f["route"], f["field"])
+        home, whole = homes[f["route"]]
+        if home or whole:
+            vs = name_variants(f["field"])
+            places = ([i for i in home if vs & named_in[i]]
+                      or [i for i in whole if vs & named_in[i]])
+            carried[key] = bool(places)
+            seen_at[key] = set().union(*(shapes_seen(blocks[i], f["field"])
+                                         for i in places)) if places else set()
+        else:
+            # no home: the library declares this request nowhere as a piece, so
+            # the whole of it is asked rather than nothing at all
+            carried[key] = any(re.search(r"\b" + re.escape(n) + r"\b", body)
+                               for n in name_variants(f["field"]))
+            seen_at[key] = shapes_seen(body, f["field"])
     named = sum(1 for v in carried.values() if v)
     # A library that FORWARDS A BAG is not a library that lags: whatever you hand
     # it reaches the wire, so no field is missing — and none is offered, checked
@@ -1792,7 +1909,7 @@ def cmd_import_contract(a):
         # be read has not answered. Substituting the contract's own answer for the
         # silent one bought a green on 171 of 178 fields once, and that green
         # meant only that the door had agreed with itself.
-        seen = shapes_seen(body, f["field"])
+        seen = seen_at[(f["route"], f["field"])]
         if f["shape"] is None:
             open_shape.append(f)
             continue
