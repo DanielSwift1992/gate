@@ -850,6 +850,36 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               # the same reading, refused where there is no history to read
               and thin.get("thin") and not thin.get("late")))
 
+    # ── the souvenir, and the only numbers on it are ones nobody can raise by
+    # hand. A coverage badge is gamed by writing tests that assert nothing; this
+    # one counts CLAIMS, which the judge counts, and DAYS, which come from
+    # replaying the world's own history through the same judge — so anybody may
+    # re-run it and get the same answer. What it must never say is `no silent
+    # error`, since that is precisely what nobody saw: it says how much was
+    # judged and how long it has held, which is duller and provable.
+    bd = os.path.join(tmp, "badge")
+    os.makedirs(bd, exist_ok=True)
+    subprocess.run(["git", "init", "-q", "-b", "main", bd])
+    os.makedirs(os.path.join(bd, "tables"), exist_ok=True)
+    shutil.copy(os.path.join(DEMO, "people.csv"), os.path.join(bd, "tables", "people.csv"))
+    shutil.copy(os.path.join(DEMO, "grants.csv"), os.path.join(bd, "tables", "grants.csv"))
+    run("status", cwd=bd)                                   # bootstrap the world
+    bw = os.path.join(bd, "gate.swift")
+    good = open(bw).read()
+    at(bd, "2026-01-10", "the world begins")
+    open(bw, "w").write(good.replace("Rank = Manager", "Rank = Nonesuch", 1))
+    at(bd, "2026-02-01", "a rank that is nobody")           # this one does not hold
+    open(bw, "w").write(good)
+    at(bd, "2026-03-01", "put it back")
+    _, bg = run("badge", cwd=bd)
+    S.append(("a badge counts what the judge counted and how long the history has held, and neither can be raised by hand",
+              bg.get("verdict") == "holds" and bg.get("claims", 0) > 0
+              # the replay finds the commit that did not hold and stops there
+              and bg.get("last_refusal") == "2026-02-01"
+              and bg.get("commits_judged") == 2
+              # and it never claims to have seen what nobody saw
+              and "silent" not in (bg.get("note") or "") and "claims" in bg.get("text", "")))
+
     # ── an offer is a question put over a value, and a shadow is light taken
     # away. Both were told wrong. The list opened on its first row rather than on
     # what already stood in the slot, so keeping a value meant finding it in the

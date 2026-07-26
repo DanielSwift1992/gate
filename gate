@@ -1544,6 +1544,96 @@ def cmd_import_rbac(a):
     }
 
 
+BADGE_SVG = ('<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="20" role="img" '
+             'aria-label="{alt}"><rect width="{lw}" height="20" rx="3" fill="#2F3131"/>'
+             '<rect x="{lw}" width="{rw}" height="20" rx="3" fill="{fill}"/>'
+             '<g font-family="ui-monospace,Menlo,monospace" font-size="11">'
+             '<text x="6" y="14" fill="#FDFDFD">gate</text>'
+             '<text x="{tx}" y="14" fill="#FDFDFD">{right}</text></g></svg>')
+
+
+def cmd_badge(a):
+    # badge [-o FILE.svg] [--since DATE] — the souvenir, and the only numbers on
+    # it are ones nobody can raise by hand. A coverage badge can be gamed by
+    # writing tests that assert nothing; this one cannot, because the claims are
+    # counted by the judge and the days are counted by REPLAYING the world's own
+    # history through it. Anybody may re-run it and get the same answer.
+    #
+    # What it does NOT say is `no silent error`, because that is exactly what
+    # nobody saw. It says how many claims were judged and how long every commit
+    # that touched them has held — provable, and duller, and true.
+    from datetime import date as _date
+    out_path = a[a.index("-o") + 1] if "-o" in a else None
+    since = a[a.index("--since") + 1] if "--since" in a else None
+    files = world_files()
+    if not files:
+        return {"command": "badge", "verdict": "no world here", "refusals": [],
+                "next": "run `gate init .` to start a world in this folder",
+                "then": "then `gate badge -o gate.svg` prints a badge nobody can forge", "mutates": False}
+    t0 = time.time()
+    raw = subprocess.run([JUDGE, "judge", *files], capture_output=True, text=True).stdout
+    m = re.search(r"(\d+) declarations · (\d+) lookups · (\d+) premises", raw)
+    claims = int(m.group(3)) if m else 0
+    holds = "THE JUDGE holds" in raw
+    root = (subprocess.run(["git", "rev-parse", "--show-toplevel"],
+                           capture_output=True, text=True).stdout or "").strip()
+    root = os.path.realpath(root) if root else ""
+    rels = [os.path.relpath(os.path.realpath(f), root) for f in files] if root else []
+    shallow = root and (subprocess.run(["git", "-C", root, "rev-parse", "--is-shallow-repository"],
+                                       capture_output=True, text=True).stdout or "").strip() == "true"
+    marks = ([l.split(None, 1) for l in git_lines(
+        root, "log", "--format=%H %as", *(["--since=" + since] if since else []), "--", *rels)]
+        if root and not shallow else [])
+    # newest first, back until one refuses: the leash is the run of commits since
+    # the last time this world did not hold
+    judged, broke = 0, None
+    for sha, when in marks:
+        d = tempfile.mkdtemp(prefix="gate-badge-")
+        wrote = []
+        for rel in rels:
+            blob = subprocess.run(["git", "-C", root, "show", f"{sha}:{rel}"],
+                                  capture_output=True, text=True)
+            if blob.returncode:
+                continue                       # the file was not in that tree yet
+            p = os.path.join(d, os.path.basename(rel))
+            open(p, "w").write(blob.stdout)
+            wrote.append(p)
+        ok = wrote and "THE JUDGE holds" in subprocess.run(
+            [JUDGE, "judge", *wrote], capture_output=True, text=True).stdout
+        shutil.rmtree(d, ignore_errors=True)
+        if not wrote:
+            continue
+        judged += 1
+        if not ok:
+            broke = when
+            break
+    span = marks[0][1] if marks else None
+    days = ((_date.today() - _date.fromisoformat(broke)).days if broke
+            else (_date.today() - _date.fromisoformat(marks[-1][1])).days if marks else None)
+    right = f"{claims} claims · {'holds' if holds else 'refused'}" + (f" · {days}d" if days is not None else "")
+    if out_path:
+        lw, rw = 40, 8 + int(len(right) * 6.2)
+        open(out_path, "w").write(BADGE_SVG.format(
+            w=lw + rw, lw=lw, rw=rw, tx=lw + 5, right=esc_xml(right),
+            fill="#007D36" if holds else "#BF4035", alt="gate: " + right))
+    return {"command": "badge", "claims": claims, "verdict": "holds" if holds else "refused",
+            "commits_judged": judged, "unbroken_days": days, "last_refusal": broke,
+            "shallow": bool(shallow), "wrote": out_path, "text": right,
+            "ms": round((time.time() - t0) * 1000, 1),
+            "note": (("this repository arrived without history, so only today is counted"
+                      if shallow or not marks else
+                      f"{judged} commits that touched this world were judged again, oldest {marks[-1][1]}"
+                      + (f", and the last that did not hold was {broke}" if broke else ", and every one held"))
+                     + " — the claims are the judge's count, not a number kept anywhere"),
+            "next": ("put it in the README beside the build: it says how WIDE the green is, "
+                     "which a badge that only says green does not"),
+            "mutates": bool(out_path)}
+
+
+def esc_xml(s):
+    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
 def git_lines(root, *args):
     r = subprocess.run(["git", "-C", root] + list(args), capture_output=True, text=True, errors="replace")
     return [l for l in r.stdout.split("\n") if l.strip()]
@@ -2922,6 +3012,8 @@ USAGE = """usage (the git-shaped porcelain):
   gate drift SPEC --client DIR [--since DATE]   (how long that library has spent
                                                  behind it — measured from git,
                                                  both sides, nothing fetched)
+  gate badge [-o gate.svg]            (claims judged, and how long every commit
+                                       that touched them has held — replayed)
   gate import people.csv grants.csv [-o gate.swift]
   gate export gate.swift -o people.csv grants.csv
   gate verify people.csv grants.csv --against CMD
@@ -2956,6 +3048,8 @@ def dispatch(cmd, rest):
         return cmd_import_contract(rest[1:])
     if cmd == "drift":
         return cmd_drift(rest)
+    if cmd == "badge":
+        return cmd_badge(rest)
     if cmd == "import" and rest and rest[0] == "refs":
         return cmd_import_refs(rest[1:])
     if cmd == "import" and rest and rest[0] == "rbac":
@@ -3058,6 +3152,11 @@ def humanize(out):
     # humans get lines, machines get --json (git's porcelain pattern)
     lines = []
     cmd = out.get("command", "")
+    if cmd == "badge" and out.get("verdict") != "no world here":
+        lines.append("badge: " + out["text"] + (f" · wrote {out['wrote']}" if out.get("wrote") else ""))
+        lines.append(f"  note: {out['note']}")
+        lines.append(f"  next: {out['next']}")
+        return "\n".join(lines)
     if out.get("verdict") == "no world here":
         lines.append("status: no world here")
         lines.append(f"  next: {out['next']}")
