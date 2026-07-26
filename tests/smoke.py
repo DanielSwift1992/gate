@@ -943,6 +943,34 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               named_ok.get("verdict") == "holds" and not named_ok.get("refusals")
               and named_ok.get("judged") == 1 and named_ok.get("shape_split") == 1))
 
+    # ── and a written type ends where its brackets end, not at the first comma.
+    # `ExtractBaseTypes<SearchParams<T[number], Infix>>[]` is a list; cut at the
+    # comma inside the generic it loses its `[]`, shows `T[number]`, and the list
+    # is read as a number — a mismatch invented out of punctuation.
+    # A union is open on THIS side of the seam exactly as `anyOf` is open on the
+    # other: `RuleSchema | RuleSchema[]` has not said which sort it carries, and
+    # letting the arm that can be read speak for the arm that cannot accused a
+    # correct library. But that poison belongs to the type, not to the field:
+    # across declaration sites an unreadable one is merely quiet, and a field
+    # written plainly in one place and aliased in another is still judged on the
+    # place that said something.
+    os.makedirs(os.path.join(con, "written"), exist_ok=True)
+    open(os.path.join(con, "spec-types.json"), "w").write(json.dumps({"paths": {"/multi": {"post": {
+        "requestBody": {"content": {"application/json": {"schema": {"properties": {
+            "searches": {"type": "array"}, "params": {"type": "object"},
+            "locale": {"type": "string"}}}}}}}}}}))
+    open(os.path.join(con, "written", "client.ts"), "w").write(
+        "interface Multi {\n  searches: ExtractBaseTypes<SearchParams<T[number], Infix>>[];\n}\n"
+        "declare function upsert(params: RuleSchema | RuleSchema[]): Promise<void>;\n"
+        "interface One {\n  locale: string;\n}\n"
+        "interface Alias {\n  locale: LocaleSchema;\n}\n")
+    _, written = run("import", "contract", os.path.join(con, "spec-types.json"),
+                     "--client", os.path.join(con, "written"), "--name", "Written")
+    S.append(("a type ends where its brackets end, a union names no one shape, and an alias elsewhere does not silence what was said",
+              written.get("verdict") == "holds" and not written.get("refusals")
+              # searches and locale are read; params answered with a union
+              and written.get("judged") == 2 and written.get("shape_unread") == 1))
+
     # ── and the check is the whole ceremony: one command in the CI the client
     # already has. It exits non-zero on a stale citation and zero when the code
     # and the tracker agree, so no wrapper is needed; the export may sit in

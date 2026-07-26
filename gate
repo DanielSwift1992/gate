@@ -1611,6 +1611,67 @@ SHAPE_WORDS = [
 ]
 
 
+UNREAD = "…"
+SHAPES = {"Text", "Count", "Flag", "Many", "Nested"}
+NULLISH = re.compile(r"^(null|undefined|None|nil|nullptr)$", re.I)
+
+
+def type_text(body, i):
+    # the written type, from just after the colon to where it actually ends.
+    # Brackets decide that, not the first comma: `ExtractBaseTypes<SearchParams<
+    # T[number], Infix>>[]` ends in `[]` and is a list, but cutting it at the
+    # comma inside the generic leaves `T[number]` showing and reads the list as
+    # a number. A comma, a closing bracket or a semicolon ends the type only at
+    # depth nought.
+    depth, out = 0, []
+    for ch in body[i:i + 400]:
+        if ch in "<[({":
+            depth += 1
+        elif ch in ">])}":
+            if depth == 0:
+                break
+            depth -= 1
+        elif depth == 0 and (ch in ";,\n=" or ch == "{"):
+            break
+        out.append(ch)
+    return "".join(out).strip()
+
+
+def split_union(t):
+    # the arms of a union, at depth nought: `string | string[]`, `Optional[int]`,
+    # `Union[str, bytes]`. A wrapper that only says "or nothing" — Optional, and
+    # the null and undefined arms — is not another shape and is dropped.
+    m = re.match(r"^(?:Optional|Union)\[(.*)\]$", t.strip(), re.S)
+    if m:
+        t, sep = m.group(1), ","
+    else:
+        sep = "|"
+    arms, depth, cur = [], 0, []
+    for ch in t:
+        if ch in "<[({":
+            depth += 1
+        elif ch in ">])}":
+            depth -= 1
+        if ch == sep and depth == 0:
+            arms.append("".join(cur)); cur = []
+        else:
+            cur.append(ch)
+    arms.append("".join(cur))
+    return [a.strip() for a in arms if a.strip() and not NULLISH.match(a.strip())]
+
+
+def shapes_of_type(t):
+    # what a written type NAMES — nothing, one thing, or more than one. A union
+    # is open on this side of the seam exactly as `anyOf` is open on the other:
+    # a library that writes `A | A[]` has not said which sort it carries, and an
+    # arm this reader cannot name leaves the whole type unanswered rather than
+    # letting its readable neighbour speak for it.
+    arms = split_union(t)
+    if not arms:
+        return set()
+    return {shape_of_type(a) or UNREAD for a in arms}
+
+
 def shape_of_type(t):
     # containers first, ALWAYS: a map of strings is a map, and reading the word
     # inside it as the whole shape accuses a library of a mismatch it does not
@@ -1638,12 +1699,21 @@ def shapes_seen(body, field):
     # Two shapes are not a mismatch, they are an unanswered question — the same
     # openness a contract shows when it writes `anyOf` — so the caller is handed
     # the whole set and judges only when exactly one thing was said.
+    # silence and disagreement are different things, and the difference is which
+    # level they live on. WITHIN one written type an unreadable arm poisons the
+    # whole of it — `A | A[]` names a list and something this reader cannot see,
+    # so the type has not answered, and letting the readable arm speak alone
+    # accused a correct library twice. ACROSS declaration sites an unreadable
+    # site is merely quiet: it does not get a vote against a site that did
+    # answer, or a library whose fields mostly alias other types would be judged
+    # on almost nothing. Two sites that name two different shapes is the one
+    # thing that counts as two voices.
     shapes = set()
     for name in name_variants(field):
-        for m in re.finditer(r"\b" + re.escape(name) + r"\??\s*:\s*([^;,\n{]+)", body):
-            s = shape_of_type(m.group(1).strip())
-            if s:
-                shapes.add(s)
+        for m in re.finditer(r"\b" + re.escape(name) + r"\??\s*:\s*", body):
+            here = shapes_of_type(type_text(body, m.end()))
+            if here and UNREAD not in here:
+                shapes |= here
     return shapes
 
 
@@ -1726,7 +1796,7 @@ def cmd_import_contract(a):
         if f["shape"] is None:
             open_shape.append(f)
             continue
-        if not seen:
+        if not seen or seen == {UNREAD}:
             unread.append(f)
             continue
         if len(seen) > 1:
