@@ -1851,7 +1851,13 @@ async function buildSeams() {
         const box = document.createElement("div");
         const head = document.createElement("div");
         head.className = "seam-pair caption observed";
-        head.textContent = s.against ? s.against.replace(/^\S+ · /, "") : s.carrier;
+        // HOW MUCH OF THIS AGREEMENT I ACTUALLY HOLD is the measure of being
+        // integrated with somebody, and it is a count rather than a feeling: of
+        // everything the other end states, this many are claimed here. No role,
+        // no rank, no side is above the other — a seam has two ends and mine is
+        // one of them.
+        const held = s.stated ? " · " + s.claimed + " of " + s.stated + " held" : "";
+        head.textContent = (s.against ? s.against.replace(/^\S+ · /, "") : s.carrier) + held;
         head.title = s.carrier + " says what it carries of " + (s.against || s.contract_file)
             + ". Read from " + [s.contract_file, s.carrier_file, s.read_known,
                                 s.read_tracker].filter(Boolean).join(", ") + ".";

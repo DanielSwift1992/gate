@@ -1282,6 +1282,11 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               # field is the thing spoken of and stands in ink, the route is
               # where it lives and stands back
               and '<span class="seam-where">' in ui and ".seam-where{color:var(--seam)}" in ui
+              # and how much of the agreement is actually held, which is what
+              # being integrated with somebody amounts to — a count, not a
+              # feeling, and the same count from either end. No rank appears
+              # anywhere: a seam has two ends and neither is above the other.
+              and 's.claimed + " of " + s.stated + " held"' in ui
               # and the rail shows what this repository HAS. A folder with no seam
               # in it has no seam, and a permanent panel about a thing nobody is
               # using is an advertisement standing in an account.
