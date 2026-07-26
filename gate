@@ -1149,10 +1149,67 @@ def cmd_vendor(root):
     return {"carried": carried, "judge_sha256": digest, "shim": "./gatew"}
 
 
+SEAM_DEMO_SPEC = {"paths": {"/scrape": {"post": {
+    "parameters": [{"name": "waitFor", "in": "query", "schema": {"type": "integer"}}],
+    "requestBody": {"content": {"application/json": {"schema": {"properties": {
+        "url": {"type": "string"}, "include": {"type": "array"},
+        "moderation": {"type": "string"}}}}}}}}}}
+
+SEAM_DEMO_SDK = {"carrier": "SdkJS", "against": {"contract": "openapi.json", "revision": "a1b2c3d"},
+                 "carries": [{"route": "/scrape", "field": "url", "as": "Text"},
+                             {"route": "/scrape", "field": "waitFor", "as": "Text"},
+                             {"route": "/scrape", "field": "include", "as": "Many",
+                              "mine": "include_collections"},
+                             {"route": "/scrape", "field": "autodelete", "as": "Flag"}]}
+
+
+def cmd_demo_seam(a):
+    # demo seam [dir] — the other half of this thing, for whoever came here
+    # because their client and their contract disagree rather than because of
+    # who may read what. Two sides, each saying its own words, one disagreement,
+    # one thing each is waiting on from the other — in three commands and no
+    # accounts. Everything in it is what a real pair would emit from its own
+    # build; nothing here talks to a network either.
+    import json as _json
+    root = os.path.abspath(a[0] if a else "gate-seam-demo")
+    os.makedirs(root, exist_ok=True)
+    _json.dump(SEAM_DEMO_SPEC, open(os.path.join(root, "openapi.json"), "w"), indent=1)
+    _json.dump(SEAM_DEMO_SDK, open(os.path.join(root, "sdk.declared.json"), "w"), indent=1)
+    _json.dump({"diverges": [{"route": "/scrape", "field": "waitFor", "because": "PROJ-42",
+                              "declared_by": "sdk-team"}]},
+               open(os.path.join(root, "known.json"), "w"), indent=1)
+    _json.dump([{"key": "PROJ-42", "status": "In Progress"}],
+               open(os.path.join(root, "tickets.json"), "w"), indent=1)
+    api = cmd_declare(["contract", os.path.join(root, "openapi.json"),
+                       "-o", os.path.join(root, "api.swift")])
+    sdk = cmd_declare(["carrier", os.path.join(root, "sdk.declared.json"),
+                       "-o", os.path.join(root, "sdk.swift")])
+    att = cmd_attention([os.path.join(root, "api.swift"), os.path.join(root, "sdk.swift"),
+                         "--as", "SdkJS"])
+    rel = os.path.relpath(root)
+    return {"command": "demo seam", "root": root,
+            "declared": {"contract": api["declares"], "carrier": sdk["declares"]},
+            "waiting_on_you": [x["address"] for x in att["waits_on_you"]],
+            "you_wait_on": [x["address"] for x in att["you_wait_on"]],
+            "parted": [x["address"] + " · " + x["why"] for x in att["parted"]],
+            "next": f"cd {rel} && gate attention api.swift sdk.swift --as SdkJS",
+            "try": [f"gate seam api.swift sdk.swift — the court over the pair, in ms",
+                    f"gate attention api.swift sdk.swift --as SdkJS --known known.json "
+                    "--tracker tickets.json — the same, with one divergence declared",
+                    "edit tickets.json: mark PROJ-42 done, and watch the exception come back",
+                    "gate declare contract openapi.json — the emitter, on your own spec"],
+            "mutates": True}
+
+
 def cmd_demo(a):
     # demo [dir] — a world to look at in thirty seconds: real people, real
-    # grants, a hook, and a lie already planted so the first thing anybody
-    # sees is a refusal with an address. Nothing here talks to a network.
+    # grants, a hook. Nothing here talks to a network.
+    #
+    # AND IT ANSWERS ONE QUESTION FOR YOU, because the whole promise of this
+    # thing is `a refusal names the line`, and a green world shows none. Told
+    # `try asking` a newcomer has to pick the right command before anything
+    # happens; the payoff was one keystroke away and behind a choice. It is on
+    # the screen now, in the same breath as the world it is about.
     root = os.path.abspath(a[0] if a else "gate-demo")
     os.makedirs(os.path.join(root, "tables"), exist_ok=True)
     here = os.path.dirname(os.path.abspath(__file__))
@@ -1174,10 +1231,21 @@ def cmd_demo(a):
     subprocess.run(["git", "-c", "user.email=you@example.com", "-c", "user.name=You",
                     "-c", "commit.gpgsign=false", "commit", "-qm", "a world of people and grants"],
                    cwd=root, capture_output=True)
-    return {"command": "demo", "root": root,
+    here_was = os.getcwd()
+    shown = []
+    try:
+        os.chdir(root)
+        globals()["FACTS"], globals()["MANIFEST"] = world, None
+        asked = cmd_ask(["Emp9001", "EngineeringShare"])
+        shown = [r.get("address", "") + " · " + r.get("claim", "") for r in asked.get("refusals", [])]
+    except Exception:
+        shown = []
+    finally:
+        os.chdir(here_was)
+    return {"command": "demo", "root": root, "asked": "gate check view Emp9001 EngineeringShare",
+            "refused": shown,
             "next": f"cd {os.path.relpath(root)} && gate serve, then break a fact and watch",
             "try": ["gate status — the world holds, in milliseconds",
-                    "gate check view Emp9001 EngineeringShare — a question, answered by a refusal",
                     "gate apply revoke Emp9002 FinanceShare — an edit that is judged before it lands",
                     "open gate.swift and change one Home to Engineering — the judge names the line"],
             "mutates": True}
@@ -3075,6 +3143,9 @@ USAGE = """usage (the git-shaped porcelain):
   gate declare carrier DECL.json [-o F] you publish, or of what your build says
                                        your library carries — after this it is
                                        what you have SAID, and judged)
+  gate demo | gate demo seam          (thirty seconds each: a world with a
+                                       question already answered, or two sides
+                                       with one disagreement between them)
   gate attention CONTRACT.swift CARRIER.swift [--as WHO] [--known K.json]
                  [--tracker T.json]     (what waits for a WORD, not what changed:
                                        who owes whom a sentence, read the same
@@ -3192,6 +3263,8 @@ def dispatch(cmd, rest):
         return cmd_library(rest)
     if cmd == "survey":
         return cmd_survey(rest)
+    if cmd == "demo" and rest and rest[0] == "seam":
+        return cmd_demo_seam(rest[1:])
     if cmd == "demo":
         return cmd_demo(rest)
     if cmd == "my":
@@ -3284,8 +3357,23 @@ def humanize(out):
             lines.append(f"  world:  {w}")
         for l in out.get("legacy_says", []):
             lines.append(f"  legacy: {l}")
+    elif cmd == "demo seam":
+        lines.append(f"demo seam: two sides in {out['root']} — the contract states "
+                     f"{out['declared']['contract']}, the library claims {out['declared']['carrier']}")
+        for x in out["waiting_on_you"]:
+            lines.append(f"  waits on the library · {x}")
+        for x in out["you_wait_on"]:
+            lines.append(f"  waits on the contract · {x}")
+        for x in out["parted"]:
+            lines.append(f"  parted · {x}")
+        lines.append(f"  next: {out['next']}")
+        for x in out["try"]:
+            lines.append(f"    {x}")
     elif cmd == "demo":
         lines.append(f"demo: a world in {out['root']}")
+        for r in out.get("refused", []):
+            lines.append(f"  asked `{out['asked']}` for you, and it answers:")
+            lines.append(f"    {r}")
         lines.append(f"  next: {out['next']}")
         for t in out["try"]:
             lines.append(f"    {t}")

@@ -1191,6 +1191,37 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and back.get("expired") and back["expired"][0]["address"] == "/scrape · waitFor"
               and not back.get("known")))
 
+    # ── THE FIRST THIRTY SECONDS. The whole promise of this thing is that a
+    # refusal names the line, and a world that holds shows none — so a newcomer
+    # was handed a green world and a list of commands to try, with the payoff one
+    # keystroke away and behind a choice they had no way to make yet. The demo
+    # asks one question for them and prints the answer, in the same breath as the
+    # world it is about.
+    dm = os.path.join(tmp, "demo-first")
+    _, made = run("demo", dm)
+    S.append(("the first thing a newcomer sees is a refusal with an address, not a list of things to try",
+              made.get("refused") and ":" in made["refused"][0]
+              and "VerifiedView" in made["refused"][0]
+              and made.get("asked", "").startswith("gate check view")))
+
+    # ── and the other door, for whoever came because a client and a contract
+    # disagree rather than because of who may read what. Two sides, each in its
+    # own words, and all three kinds of item at once: one the library owes, one
+    # the contract owes, one they genuinely disagree about. Access grants are not
+    # that person's pain, and making them learn a domain they do not have before
+    # they can see the mechanism is a tax nobody pays twice.
+    ds = os.path.join(tmp, "demo-seam")
+    _, seam_demo = run("demo", "seam", ds)
+    S.append(("a second demo shows the seam itself: what each side owes the other, and where they part",
+              seam_demo.get("waiting_on_you") == ["/scrape · moderation"]
+              and seam_demo.get("you_wait_on") == ["/scrape · autodelete"]
+              and len(seam_demo.get("parted", [])) == 1
+              and "waitFor" in seam_demo["parted"][0]
+              # and it leaves the pieces on disk for the reader to drive by hand
+              and all(os.path.exists(os.path.join(ds, f)) for f in
+                      ("openapi.json", "sdk.declared.json", "known.json", "tickets.json",
+                       "api.swift", "sdk.swift"))))
+
     # ── THE PITCH STAYS OUTSIDE THE VERDICT. A brand may say `sight for
     # promises`; a verdict may not. What a reader is handed by the tool is what
     # was observed, the bounds it was observed in, numbers, and a recipe — and

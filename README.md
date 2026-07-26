@@ -122,9 +122,17 @@ and the refusal is about two declarations rather than about anybody's code.
 ## Quick start
 
 ```sh
-gate demo && cd gate-demo        # a world of people and grants, in one command
+gate demo seam                   # two sides, one disagreement, in one command
+gate demo && cd gate-demo        # a world of people and grants, and one refusal
 gate serve                       # the bench opens: break a fact, watch the judge
 ```
+
+`gate demo seam` is the shorter road if you came here because a client and a
+contract disagree rather than because of who may read what — it prints what each
+side owes the other and where they part, and leaves the pieces on disk to drive
+by hand. `gate demo` asks one question of the world it just made and prints the
+answer, so the thing this is all about — a refusal that names the line — is on
+the screen before you have chosen anything.
 
 Or start from your own rows:
 
@@ -449,7 +457,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 177 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 179 end-to-end checks, the definition of green
 ```
 
 ## Status
