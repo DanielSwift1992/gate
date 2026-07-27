@@ -2000,6 +2000,48 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
                    os.path.join(HERE, "stdlib", "bench-palette.swift")],
                   capture_output=True, text=True).stdout))
 
+    # ── THE JUDGE'S TABLES ARE A RESTATEMENT OF A FILE WE ALREADY SHIP. Our port
+    # carries one domain's policy hard-coded — ranks, departments, workplaces,
+    # genders, the shares and their homes, and which axes each protocol owes —
+    # because it was written as a line-for-line mirror of the binary, whose own
+    # header calls that table a differential seat: the policy stated a second
+    # time on purpose, so two encodings can check each other.
+    #
+    # That seat is not ours. Organization was only ever an example of what a user
+    # might write; it belongs in a file of theirs, not inside an arbiter. And it
+    # can be, because every one of those tables is already declared in the forms
+    # file we present: departments are the conformers of `Department`, the axes
+    # each protocol owes are its own `associatedtype` lines. This check derives
+    # them and holds the two equal — which is the precondition for deleting one.
+    # While both exist they may not part; when the port reads the presented file
+    # instead, this is what will have proved the swap loses nothing.
+    org = open(os.path.join(HERE, "stdlib", "forms-organization.swift"), encoding="utf-8").read()
+    js = open(os.path.join(HERE, "judge.js"), encoding="utf-8").read()
+
+    def _conformers(proto):
+        return sorted(set(re.findall(r"public enum (\w+): " + proto + r"\b", org)))
+
+    def _baked(name):
+        m = re.search(r"const " + name + r" = new Set\(\[(.*?)\]\)", js, re.S)
+        return sorted(x.strip().strip('"') for x in m.group(1).split(",") if x.strip()) if m else None
+    derived_shares = sorted(re.findall(
+        r"public enum (\w+): Document \{ public typealias Home = (\w+)", org))
+    m = re.search(r"const shareHomes = new Map\(\[(.*?)\]\)", js, re.S)
+    baked_shares = sorted(re.findall(r'\["(\w+)", "(\w+)"\]', m.group(1))) if m else None
+    protos = {a: b for a, b in re.findall(r"public protocol (\w+)\s*\{([^}]*)\}", org, re.S)}
+    S.append(("what the judge has baked in is what the presented forms already say",
+              _conformers("Ranked") == _baked("ranks")
+              and _conformers("Department") == _baked("departments")
+              and _conformers("Workplace") == _baked("workplaces")
+              and _conformers("Sexed") == _baked("genders")
+              and derived_shares == baked_shares
+              # and the axes each protocol owes are read off its own lines, where
+              # they name a declared form rather than a category label
+              and [a for a, _ in re.findall(r"associatedtype (\w+)\s*:\s*(\w+)",
+                                            protos.get("Employee", ""))] == ["Home", "Rank", "Site"]
+              and re.findall(r"associatedtype (\w+)\s*:\s*(\w+)",
+                             protos.get("Document", "")) == [("Home", "Department")]))
+
     # ── AN EXHIBIT, NOT A WISH. What follows records what a claim written in the
     # head of the file that depends on it does TODAY, line by line, because the
     # answer is the case for the one change everything left is waiting on: the
