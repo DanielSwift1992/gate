@@ -11,25 +11,70 @@ import json, os, re, shutil, subprocess, sys, tempfile, time
 ROOT = os.environ.get("GATE_CORPUS")
 
 
-def read_manifest(d):
-    # the layout is a fact of the world: gate.manifest.swift declares files
-    # as File atoms (typeName literal = path). We obey what is declared.
+# THE ROLES A ROW MAY HAVE, and each one names a different court. This is not
+# decoration on a row: it decides who reads it. A world row is judged with the
+# rest of my world; a seam row is judged only where it meets mine; a forms row
+# is read by nothing today — the plain fragment is closed to protocols, so a
+# forms row is inert and says so rather than pretending. A row whose role is
+# none of these is refused, never swept into the world: that exact sweep broke
+# a world once, when every path literal in the manifest was taken as a fact.
+ROLES = {
+    "world": "judged with the rest of my world",
+    "seam": "judged where it meets mine, and nowhere else",
+    "forms": "inert for the plain judge: the fragment is closed to protocols",
+}
+
+
+def read_manifest_rows(d):
+    # ONE LIST, AND THE COLUMNS THAT MAKE IT ONE. Whose source a file is
+    # (`Mine` / `Theirs`) is one column; which court reads it is another; and
+    # for anything taken, the revision it was taken at is a third. Two protocols
+    # named for a ROLE — WorldFile, SeamFile — had been carrying all three at
+    # once, which is why a genre fitted nowhere: its source is theirs and its
+    # role is neither of the two the names allowed.
+    #
+    # The older spellings are still read. A file on somebody's disk is not
+    # wrong because the tool learned a better word for it.
     mp = os.path.join(d, "gate.manifest.swift")
     if not os.path.exists(mp):
+        return None, None
+    text = open(mp, encoding="utf-8", errors="replace").read()
+    rows = []
+    for m in re.finditer(r"public enum (\w+): (Mine|Theirs|WorldFile|SeamFile) \{\}", text):
+        name, atom = m.group(1), m.group(2)
+        body = re.search("extension " + name + r"\b[^{]*\{(.*?)\n(?=public |extension |\Z)",
+                         text + "\n", re.S)
+        body = body.group(1) if body else ""
+
+        def field(k, b=body):
+            f = re.search(k + r':\s*String\s*\{\s*"([^"]*)"\s*\}', b)
+            return f.group(1) if f else None
+        path = field("typeName")
+        if not path:
+            continue
+        source = "mine" if atom in ("Mine", "WorldFile") else "theirs"
+        rows.append({"name": name, "source": source, "path": path,
+                     "role": field("role") or ("world" if atom == "WorldFile" else
+                                               "seam" if atom == "SeamFile" else None),
+                     "from": field("from"),
+                     "line": text[:m.start()].count("\n") + 1})
+    if not rows and "Mine" not in text and "WorldFile" not in text:
+        # older layouts: a bare list of paths, every one of them a world file
+        rows = [{"name": None, "source": "mine", "path": p, "role": "world",
+                 "from": None, "line": 0}
+                for p in re.findall(r'typeName:\s*String\s*\{\s*"([^"]+)"\s*\}', text)]
+    return mp, rows
+
+
+def read_manifest(d):
+    # the layout is a fact of the world: gate.manifest.swift declares files, and
+    # the judged world is the rows whose role is `world` — nothing else in the
+    # document is a fragment of it
+    mp, rows = read_manifest_rows(d)
+    if mp is None:
         return None
-    text = open(mp).read()
-    # ONLY WHAT IS DECLARED A WORLD FILE. The same document also declares the
-    # seams this world is party to, in the same shape — a name and a path — and
-    # taking every path literal in it swept those into the judged list, where a
-    # seam side reads as a fragment of a world it was never part of.
-    paths = []
-    for n in re.findall(r"public enum (\w+): WorldFile \{\}", text):
-        m = re.search("extension " + n + r"\b[^{]*\{[^}]*?\"([^\"]+)\"", text, re.S)
-        if m:
-            paths.append(m.group(1))
-    if not paths and "WorldFile" not in text:
-        paths = re.findall(r'typeName:\s*String\s*\{\s*"([^"]+)"\s*\}', text)  # older layouts
-    return {"manifest": mp, "files": [os.path.join(d, p) for p in paths]}
+    return {"manifest": mp, "rows": rows,
+            "files": [os.path.join(d, r["path"]) for r in rows if r["role"] == "world"]}
 
 
 def discover_world():
@@ -77,12 +122,43 @@ def manifest_guards():
     if not MANIFEST:
         return []
     bad = []
+    man = os.path.basename(MANIFEST["manifest"])
+    for r in MANIFEST.get("rows") or []:
+        # A ROLE IS NOT OPTIONAL, because it names the court. Left unsaid it has
+        # to be guessed, and the one time this document was read by guessing —
+        # every path literal taken as a world file — the seams were swept into
+        # the judged world and the world broke. Guessing is the failure mode, so
+        # the row that does not say is refused at its own line.
+        if not r["role"]:
+            bad.append({"address": f"{man}:{r['line']}",
+                        "claim": f"`{r['name']}` does not say what it is for. A row names its court: "
+                                 + " · ".join(f"`{k}` — {v}" for k, v in ROLES.items())})
+        elif r["role"] not in ROLES:
+            bad.append({"address": f"{man}:{r['line']}",
+                        "claim": f"`{r['name']}` is for `{r['role']}`, which no court here reads. "
+                                 "A row gate cannot place is refused, never quietly taken as a "
+                                 "fragment of your world: " + " · ".join(ROLES)})
+        # AND WHAT IS TAKEN IS TAKEN AT A REVISION. There are no ranges anywhere
+        # in this tool, which is the whole reason no version solver exists — but
+        # a pin nobody wrote down pins nothing, and until now the revision lived
+        # in side channels beside the file rather than in the list that accounts
+        # for it.
+        if r["source"] == "theirs" and not r["from"]:
+            bad.append({"address": f"{man}:{r['line']}",
+                        "claim": f"`{r['name']}` is theirs and does not say which revision it was "
+                                 "taken at. Taken means taken from somewhere, at something: "
+                                 "`gate theirs " + r["path"] + " --at REV`"})
     for p in MANIFEST["files"]:
         if not os.path.exists(p):
-            bad.append({"address": os.path.basename(MANIFEST["manifest"]), "claim": f"the manifest declares {os.path.relpath(p, os.path.dirname(MANIFEST['manifest']))}, and no such file exists"})
+            bad.append({"address": man, "claim": f"the manifest declares {os.path.relpath(p, os.path.dirname(MANIFEST['manifest']))}, and no such file exists"})
     d = os.path.dirname(MANIFEST["manifest"])
-    declared = set(MANIFEST["files"]) | {MANIFEST["manifest"], os.path.join(d, "gate.swift"),
-                                         os.path.join(d, "gate.policy.swift")}  # meta, like the manifest itself
+    # A SHADOW IS A FILE NOBODY SPOKE FOR, and a row of ANY role has been spoken
+    # for. Reading only the world rows here called a declared seam side — and
+    # then a declared forms file — a shadow, which is an accusation about
+    # something that was claimed out loud in the document being read.
+    declared = ({os.path.join(d, r["path"]) for r in (MANIFEST.get("rows") or [])}
+                | {MANIFEST["manifest"], os.path.join(d, "gate.swift"),
+                   os.path.join(d, "gate.policy.swift")})  # meta, like the manifest itself
     for f in sorted(os.listdir(d)):
         p = os.path.join(d, f)
         if f.endswith(".swift") and p not in declared and not is_seam_side(p):
@@ -1216,13 +1292,22 @@ def cmd_demo_seam(a):
     _json.dump([{"key": "PROJ-42", "status": "In Progress"}],
                open(os.path.join(root, "tickets.json"), "w"), indent=1)
     open(os.path.join(root, "gate.manifest.swift"), "w").write(
-        "// what this folder declares itself party to. A seam is not found by\n"
-        "// looking at what is lying about: it is here because this side said so.\n"
-        "public protocol SeamFile {}\n"
-        "public enum TheContract: SeamFile {}\n"
-        'extension TheContract { public static var typeName: String { "api.swift" } }\n'
-        "public enum OurSide: SeamFile {}\n"
-        'extension OurSide { public static var typeName: String { "sdk.swift" } }\n')
+        "// what this folder took, and from where. A seam is not found by looking\n"
+        "// at what is lying about: it is here because this side said so, at the\n"
+        "// revision it was taken at.\n"
+        "public protocol Theirs {}\n"
+        "public enum TheContract: Theirs {}\n"
+        "extension TheContract {\n"
+        '    public static var typeName: String { "api.swift" }\n'
+        '    public static var role: String { "seam" }\n'
+        '    public static var from: String { "messages-api@a1b2c3d" }\n'
+        "}\n"
+        "public enum OurSide: Theirs {}\n"
+        "extension OurSide {\n"
+        '    public static var typeName: String { "sdk.swift" }\n'
+        '    public static var role: String { "seam" }\n'
+        '    public static var from: String { "messages-js@4f10e22" }\n'
+        "}\n")
     api = cmd_declare(["contract", os.path.join(root, "openapi.json"),
                        "-o", os.path.join(root, "api.swift")])
     sdk = cmd_declare(["carrier", os.path.join(root, "sdk.declared.json"),
@@ -1856,22 +1941,25 @@ CARRIER_HEADER = """// printed by gate declare carrier — what a library says i
 """
 
 
-def declare_side(path, kind):
-    # MINE AND THEIRS, WRITTEN THE SAME WAY, in the one document that already
-    # says what this world is made of. The manifest is entirely mine — it is
-    # where I say which files I write and which I only read — and that is the
-    # whole of the difference:
+def declare_side(path, kind, role, frm=None):
+    # ONE MOVEMENT, TWO DIRECTIONS, AND NOBODY SPECIAL. Everything here is an
+    # emitted view of somebody's source: my world is a view of my facts, their
+    # spec is a view of theirs, and the judge in bin/ is a view of the corpus —
+    # `build-judge.sh` clones at a revision, builds, and writes the revision
+    # down beside the binary, which is this same act spelled in sh.
     #
-    #   WorldFile  mine.    I wrote it, it is judged, and changing it changes
-    #                       the verdict.
-    #   SeamFile   theirs.  I only read it. It is judged where it meets mine,
-    #                       and nowhere else.
+    #   Mine    my source.     I emit it, it is judged, and changing it changes
+    #                          the verdict.
+    #   Theirs  their source.  I took it, at a revision I write down. I read it
+    #                          and never rewrite it.
+    #
+    # The row also says its ROLE, because that is which court reads it, and gate
+    # refuses a row it cannot place rather than guessing — guessing is how the
+    # seams once got swept into the judged world.
     #
     # gate never fetches and never sends: a file of theirs arrives because an
     # operator brought it — a checkout in CI, a copy, whatever they already
-    # trust — and this only writes down that it is here and which side it is on.
-    # Two lines, in the same shape as the layout, so the reader that judges the
-    # world reads them too.
+    # trust — and this only writes down that it is here, whose it is, and when.
     #
     # The other direction is a pull request. Put a side and its two lines in
     # THEIR repository and their own CI holds them to it: touch the field and
@@ -1882,16 +1970,22 @@ def declare_side(path, kind):
     mp = os.path.join(d, "gate.manifest.swift")
     name = sanitize(os.path.splitext(os.path.basename(path))[0]).title().replace("_", "") or "Side"
     text = open(mp, encoding="utf-8").read() if os.path.exists(mp) else (
-        "// the layout is a fact of the world: files are declared here, gate obeys\n"
-        "public protocol WorldFile {}\n")
-    if kind == "SeamFile" and "public protocol SeamFile {}" not in text:
-        text += ("\n// and the files this world reads but does not write. They are here\n"
-                 "// because this side said so, never because a file was lying beside\n"
-                 "// the others.\n"
-                 "public protocol SeamFile {}\n")
+        "// ONE LIST, AND THREE COLUMNS. Whose source a file is, what court reads\n"
+        "// it, and — for anything taken — the revision it was taken at. gate\n"
+        "// obeys this document and never guesses at a row.\n"
+        "public protocol Mine {}\n")
+    if kind == "Theirs" and "public protocol Theirs {}" not in text:
+        text += ("\n// and what this world took from somewhere else. A file is here because\n"
+                 "// this side said so, never because it was lying beside the others, and it\n"
+                 "// says the revision it was taken at: there are no ranges anywhere in this\n"
+                 "// tool, which is why nothing here has to be solved.\n"
+                 "public protocol Theirs {}\n")
     line = ('public enum ' + name + ': ' + kind + ' {}\n'
-            'extension ' + name + ' { public static var typeName: String { "'
-            + os.path.basename(path) + '" } }\n')
+            'extension ' + name + ' {\n'
+            '    public static var typeName: String { "' + os.path.basename(path) + '" }\n'
+            '    public static var role: String { "' + role + '" }\n'
+            + ('    public static var from: String { "' + frm + '" }\n' if frm else '')
+            + '}\n')
     if line not in text:
         # KEPT IN ITS OWN GROUP, because this document is read by a person: what
         # I write and what I only read are the one distinction it exists to draw,
@@ -1911,36 +2005,66 @@ def declare_side(path, kind):
 
 
 def declare_mine(path, argv):
-    return declare_side(path, "SeamFile")
+    at = argv[argv.index("--at") + 1] if "--at" in argv else None
+    return declare_side(path, "Theirs", "seam", at)
 
 
 def cmd_side(a, kind):
-    # gate mine PATH · gate theirs PATH — the two ways in, and the only two.
+    # gate mine PATH [--role R] · gate theirs PATH --at REV [--role R]
+    #
     # The same command shape both directions, so that saying a true thing about
-    # a file I wrote costs exactly what saying one about a file of theirs costs.
-    word = "mine" if kind == "WorldFile" else "theirs"
-    if not a:
-        return {"command": word, "asks": True, "note": f"gate {word} PATH",
-                "next": ("a file you write, judged with the rest of your world"
-                         if kind == "WorldFile" else
-                         "a file you only read — the other side of a seam, brought here by you")}
-    path = a[0]
+    # a file I emitted costs exactly what saying one about a file I took costs.
+    # The asymmetry that remains is the one that is really there: what I took, I
+    # took from somewhere at something, and that is a fact about it the way its
+    # path is.
+    word = "mine" if kind == "Mine" else "theirs"
+    role = a[a.index("--role") + 1] if "--role" in a else ("world" if kind == "Mine" else "seam")
+    at = a[a.index("--at") + 1] if "--at" in a else None
+    rest = [x for x in a if not x.startswith("--")]
+    for flag in ("--role", "--at"):
+        if flag in a and a.index(flag) + 1 < len(a):
+            rest = [x for x in rest if x != a[a.index(flag) + 1]]
+    usage = (f"gate {word} PATH" + ("" if kind == "Mine" else " --at REV")
+             + " [--role " + "|".join(ROLES) + "]")
+    if not rest:
+        return {"command": word, "asks": True, "note": usage,
+                "next": ("a file you emit, judged with the rest of your world"
+                         if kind == "Mine" else
+                         "a file you took from somewhere, at the revision you took it at")}
+    path = rest[0]
     if not os.path.exists(path):
         return {"command": word, "asks": True, "note": f"no file at {path}",
                 "next": "bring the file here first — gate never fetches: a file of theirs "
                         "arrives by a checkout, a copy, a vendor step you already trust"}
-    mp = declare_side(path, kind)
-    if kind == "WorldFile":
-        return {"command": "mine", "file": os.path.basename(path), "declared_in": mp,
-                "mutates": True,
-                "note": "mine: I write it, it is judged with the rest of my world, and changing "
-                        "it changes the verdict",
-                "next": "gate status — it is judged from here on"}
-    return {"command": "theirs", "file": os.path.basename(path), "declared_in": mp,
-            "mutates": True,
-            "note": "theirs: I only read it. It is judged where it meets mine — at the seam — "
-                    "and nowhere else, and gate will never rewrite it",
-            "next": "gate attention — what now waits for a word, read the same from either side"}
+    if role not in ROLES:
+        return {"command": word, "asks": True,
+                "note": f"`{role}` is not a court anything here reads",
+                "next": "a row says what it is for: "
+                        + " · ".join(f"`{k}` — {v}" for k, v in ROLES.items())}
+    if kind == "Theirs" and not at:
+        # THE PIN IS THE POINT. Nothing in this tool expresses a range, which is
+        # exactly why no version solver exists here — the problem is not solved,
+        # it cannot be stated. A revision nobody wrote down gives that away for
+        # free, so taking without one is not a thing that happens.
+        return {"command": word, "asks": True,
+                "note": "what is taken is taken at a revision, and this one says none",
+                "next": f"gate theirs {os.path.basename(path)} --at REV — a commit, a tag, a "
+                        "release: whatever the source calls the thing you actually took"}
+    mp = declare_side(path, kind, role, at)
+    out = {"command": word, "file": os.path.basename(path), "declared_in": mp,
+           "role": role, "role_means": ROLES[role], "mutates": True}
+    if kind == "Mine":
+        out["note"] = ("mine: I emit it, it is judged with the rest of my world, and changing "
+                       "it changes the verdict")
+        out["next"] = "gate status — it is judged from here on"
+        return out
+    out["at"] = at
+    out["note"] = (f"theirs, taken at {at}: I read it and never rewrite it. To move it, take it "
+                   "again at a newer revision — there is nothing here to solve")
+    out["next"] = ("gate attention — what now waits for a word, read the same from either side"
+                   if role == "seam" else
+                   "gate status — the row is accounted for, and its court is `" + role + "`")
+    return out
 
 
 def cmd_declare(a):
@@ -1968,7 +2092,9 @@ def cmd_declare(a):
         world = "\n".join(lines) + "\n"
         if out_path:
             open(out_path, "w").write(world)
-        mine = declare_mine(out_path, a) if (mine_too and out_path) else None
+        mine = declare_side(out_path, "Theirs", "seam",
+                            a[a.index("--at") + 1] if "--at" in a else
+                            os.path.basename(src)) if (mine_too and out_path) else None
         return {"command": "declare contract", "of": os.path.basename(src), "declared_in": mine,
                 "declares": len(fields), "wrote": out_path, "world": None if out_path else world,
                 "note": ("a view of that document: every field it states a type for, as a record "
@@ -1992,7 +2118,14 @@ def cmd_declare(a):
         world = "\n".join(lines) + "\n"
         if out_path:
             open(out_path, "w").write(world)
-        mine = declare_side(out_path, "SeamFile") if (("--theirs" in a or "--mine" in a) and out_path) else None
+        # THE PIN IT ALREADY CARRIES. A carrier declaration says what contract it
+        # was built against and at what revision; asking the operator to type
+        # that again would be asking for a second copy of a fact, and a second
+        # copy drifts. `--at` overrides where the emitter said nothing.
+        pin = (a[a.index("--at") + 1] if "--at" in a
+               else against.get("revision") or against.get("contract"))
+        mine = (declare_side(out_path, "Theirs", "seam", pin)
+                if (("--theirs" in a or "--mine" in a) and out_path) else None)
         return {"command": "declare carrier", "carrier": who, "declared_in": mine,
                 "declares": len(decl.get("carries") or []), "wrote": out_path,
                 "world": None if out_path else world,
@@ -2033,17 +2166,10 @@ def declared_seam_files(base):
     # Membership is DECLARED; which side a file is, that file says about itself
     # in its own first lines. Mine to say what is mine; theirs to say what theirs
     # is.
-    mp = os.path.join(base, "gate.manifest.swift")
-    if not os.path.exists(mp):
+    mp, rows = read_manifest_rows(base)
+    if mp is None:
         return []
-    text = open(mp, encoding="utf-8", errors="replace").read()
-    names = re.findall(r"public enum (\w+): SeamFile \{\}", text)
-    out = []
-    for n in names:
-        m = re.search("extension " + n + r"\b[^{]*\{[^}]*?\"([^\"]+)\"", text, re.S)
-        if m:
-            out.append(os.path.join(base, m.group(1)))
-    return out
+    return [os.path.join(base, r["path"]) for r in rows if r["role"] == "seam"]
 
 
 def seams_here(root=None):
@@ -3426,11 +3552,18 @@ def cmd_serve(a):
 
 USAGE = """usage (the git-shaped porcelain):
   gate init [dir]                     · gate status | fsck
-  gate mine FILE                      (a file you write: judged with your world,
+  gate mine FILE [--role R]           (a file you emit: judged with your world,
                                        and changing it changes the verdict)
-  gate theirs FILE                    (a file you only read: judged where it
-                                       meets yours, and nowhere else. gate never
-                                       fetches it — you brought it here)
+  gate theirs FILE --at REV [--role R]
+                                      (a file you took, at the revision you took
+                                       it at. You read it, never rewrite it, and
+                                       gate never fetches it — you brought it
+                                       here. There are no ranges anywhere in
+                                       this tool, so there is nothing to solve;
+                                       to move, take it again at a newer one.
+                                       R is world|seam|forms — which court reads
+                                       the row, and a row gate cannot place is
+                                       refused rather than guessed at)
   gate check view WHO DOC             · gate check administer|delete WHO DOC
   gate diff  transfer WHO DEPT        · gate diff  grant|revoke WHO DOC
   gate diff  hire ID RANK HOME GIVEN FAMILY BORN SITE
@@ -3609,9 +3742,9 @@ def dispatch(cmd, rest):
     if cmd == "stdlib":
         return cmd_stdlib(rest)
     if cmd == "mine":
-        return cmd_side(rest, "WorldFile")
+        return cmd_side(rest, "Mine")
     if cmd == "theirs":
-        return cmd_side(rest, "SeamFile")
+        return cmd_side(rest, "Theirs")
     raise SystemExit(USAGE)
 
 
@@ -3713,9 +3846,11 @@ def humanize(out):
         if out.get("asks"):
             lines.append("usage: " + out["note"])
         else:
-            lines.append(f"{cmd}: {out['file']} · written down in {out['declared_in']}")
-            lines.append("  " + ("you write it — judged with your world" if cmd == "mine"
-                                 else "you only read it — judged where it meets yours"))
+            # what was taken, and at what — the whole account in the line that
+            # takes it, because a pin stated nowhere pins nothing
+            took = f" · took it at {out['at']}" if out.get("at") else ""
+            lines.append(f"{cmd}: {out['file']}{took} · written down in {out['declared_in']}")
+            lines.append(f"  role `{out['role']}` — {out['role_means']}")
     elif cmd == "aside":
         if out.get("asks"):
             lines.append("usage: " + out["note"]); lines.append(f"  next: {out['next']}")

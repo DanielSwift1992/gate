@@ -154,45 +154,71 @@ reads the repository itself, with nothing to translate.
 
 **Full**, **Bare** and **Table** are three ways to look at one file.
 
-## Mine, theirs, and the judge
+## Mine and theirs
 
-There are two kinds of file, and one thing that is not a file at all.
+Everything here is an emitted view of somebody's source, and nobody is special.
+Your world is a view of your facts. Their spec is a view of theirs. The judge in
+`bin/` is a view of the corpus — `bin/build-judge.sh` clones at a revision,
+builds, and writes the revision down beside the binary, which is the same act
+this page describes, spelled in `sh`.
 
-**Mine** are the files I write. They are judged with the rest of my world, and
-changing one changes the verdict. **Theirs** are the files I only read — the
-other side of a seam. They are judged where they meet mine, and nowhere else.
-One word each:
+So there are two verbs, and every node has both:
 
 ```sh
-gate mine   people.swift    # I write it, and I answer for it
-gate theirs api.swift       # I read it, and it is judged at the seam
+gate mine   people.swift                     # I emit it, and I answer for it
+gate theirs api.swift --at openapi@3f2a1c9   # I took it, at what I took it at
 ```
 
-Both write the same document, and that document is entirely mine: it is where I
-say which files I write and which I only read.
+Both write one document, and the document is entirely yours. It has three
+columns: **whose source** a file is, **which court** reads it, and — for
+anything taken — **the revision** it was taken at.
 
 ```swift
 // gate.manifest.swift
-public protocol WorldFile {}
-public enum People: WorldFile {}
-extension People { public static var typeName: String { "people.swift" } }
+public protocol Mine {}
+public enum People: Mine {}
+extension People {
+    public static var typeName: String { "people.swift" }
+    public static var role: String { "world" }
+}
 
-public protocol SeamFile {}
-public enum TheContract: SeamFile {}
-extension TheContract { public static var typeName: String { "api.swift" } }
+public protocol Theirs {}
+public enum TheContract: Theirs {}
+extension TheContract {
+    public static var typeName: String { "api.swift" }
+    public static var role: String { "seam" }
+    public static var from: String { "openapi@3f2a1c9" }
+}
+```
+
+**The role names a court, so it is not optional.** `world` is judged with the
+rest of your world; `seam` is judged where it meets yours and nowhere else;
+`forms` is inert for the plain judge, which is closed to protocols. A row gate
+cannot place is refused at its own line — never swept quietly into your world,
+which is what happened the one time this document was read by guessing.
+
+**What is taken is taken at a revision, and there are no ranges.** That is the
+whole reason no version solver exists here: the problem is not solved, it cannot
+be stated. To move, take it again at a newer revision. Two takes of the same name
+do not get resolved by a heuristic — they are refused with both addresses:
+
+```
+status: refused 1
+  b-forms.swift:2 · `Thermal` is declared twice: once at a-forms.swift:2 and again
+                    here. One name, one declaration
 ```
 
 Nothing appears in the rail because it was lying in the folder. `gate declare
-carrier … --theirs` writes those two lines for you.
+carrier … --theirs` writes the row for you, taking the pin from the `against`
+block the declaration already carries — nobody types a second copy of a fact.
 
-**The judge** is the third thing, and it is not a file here. `Department`,
-`Ranked`, `Site` — the words a world speaks — are compiled inside it. A world
-speaks them with no file of that name anywhere near it; a copy put beside the
-world is read by nothing; and a copy declared as a file of mine is refused
-outright, because a world is records and a genre is the grammar records are
-written in. So `gate stdlib` prints, and what it prints is a printout: reading,
-not source. `gate --version` names the revision the words were compiled from,
-and that revision — not any file — is what a world depends on.
+**The words a world speaks are not a file at all.** `Department`, `Ranked`,
+`Site` are compiled inside the judge. A world speaks them with no file of that
+name anywhere near it; a copy put beside the world is read by nothing; and a copy
+declared as a world row is refused, because a world is records and a genre is the
+grammar records are written in. `gate stdlib` prints, and what it prints is a
+printout. `gate --version` names the revision those words were compiled from, and
+that revision — not any file — is what a world depends on.
 
 The rail says the same three things in the same order: **mine**, **theirs**,
 **the judge**, with the revision beside it.
@@ -519,7 +545,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 192 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 194 end-to-end checks, the definition of green
 ```
 
 ## Status

@@ -1401,7 +1401,9 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and seams_here_probe(own) == 1
               # and the demo declares its own, so the rail it shows is one it owns
               and os.path.exists(os.path.join(tmp, "owned-demo", "gate.manifest.swift"))
-              and "SeamFile" in open(os.path.join(tmp, "owned-demo", "gate.manifest.swift")).read()))
+              # the older spelling above is still read: a file on somebody's disk
+              # is not wrong because the tool learned a better word for it
+              and "Theirs" in open(os.path.join(tmp, "owned-demo", "gate.manifest.swift")).read()))
 
     # ── and the layout takes only what is declared a world file. The same
     # document names both, in the same shape — a name and a path — so reading
@@ -1435,7 +1437,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     os.makedirs(sub, exist_ok=True)
     shutil.copy(os.path.join(ent, "sdk.json"), os.path.join(sub, "sdk.json"))
     _, mine = run("declare", "carrier", os.path.join(sub, "sdk.json"),
-                  "-o", os.path.join(sub, "sdk.swift"), "--mine")
+                  "-o", os.path.join(sub, "sdk.swift"), "--theirs")
     # read defensively: a check must FAIL, never explode. An exception here
     # stops every check after it and hides which one broke, which is a worse red
     # than a red.
@@ -1443,7 +1445,11 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     man = open(mpath).read() if os.path.exists(mpath) else ""
     S.append(("saying a seam is mine is one command, and one side declared alone is a state rather than a blank",
               mine.get("declared_in") == "gate.manifest.swift"
-              and "public protocol SeamFile {}" in man and '"sdk.swift"' in man
+              and "public protocol Theirs {}" in man and '"sdk.swift"' in man
+              # and the row carries the pin the declaration already stated, so
+              # nobody types a second copy of a fact that would then drift
+              and 'public static var role: String { "seam" }' in man
+              and 'public static var from: String {' in man
               # and the next names the act that makes the other side hold to it
               and "THEIR repository" in mine.get("next", "")
               # having moved first, this side sees that it moved rather than nothing
@@ -1559,6 +1565,8 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     two_src = open(GATE, encoding="utf-8").read()
     open(os.path.join(two, "gate.swift"), "w").write("public enum Sales: Department {}\n")
     open(os.path.join(two, "more.swift"), "w").write("public enum Ops: Department {}\n")
+    open(os.path.join(two, "api.swift"), "w").write(
+        "// contract\npublic enum F_x: Declared { public typealias Of = Text }\n")
     before = run("status", cwd=two)[1]
     mine_said = run("mine", "more.swift", cwd=two)[1]
     after = run("status", cwd=two)[1]
@@ -1569,14 +1577,80 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               mine_said.get("command") == "mine" and mine_said.get("file") == "more.swift"
               and before.get("world", {}).get("declarations") == 1
               and after.get("world", {}).get("declarations") == 2
-              and "public enum More: WorldFile {}" in manifest
-              # theirs is the other atom in the same document, not a second document
-              and 'cmd_side(rest, "SeamFile")' in two_src and 'cmd_side(rest, "WorldFile")' in two_src
+              and "public enum More: Mine {}" in manifest
+              and 'public static var role: String { "world" }' in manifest
+              # theirs is the other value of the same column, not a second document
+              and 'cmd_side(rest, "Theirs")' in two_src and 'cmd_side(rest, "Mine")' in two_src
               # and a file that is not here is asked for, never fetched
               and missing.get("asks") and "no file at" in missing.get("note", "")
               and "gate never fetches" in missing.get("next", "")
               # both are in the usage, so neither is knowledge you must already have
               and "gate mine FILE" in two_src and "gate theirs FILE" in two_src))
+
+    # ── WHAT IS TAKEN IS TAKEN AT A REVISION, AND A ROW NAMES ITS COURT. Nothing
+    # in this tool expresses a version range, which is the whole reason no solver
+    # exists here: the problem is not solved, it cannot be stated. But a pin
+    # nobody writes down pins nothing, and the revision had been living in side
+    # channels beside the file — inside an emitted carrier, in a dotfile next to
+    # the binary — rather than in the list that accounts for what this world is
+    # made of. And the role is not decoration on a row: it says which court reads
+    # it, so a row gate cannot place is refused at its own line rather than taken
+    # quietly as a fragment of the world. That exact sweep broke a world once.
+    no_pin = run("theirs", "api.swift", cwd=two)[1]
+    bad_role = run("theirs", "api.swift", "--at", "r1", "--role", "sensor", cwd=two)[1]
+    pinned = run("theirs", "api.swift", "--at", "openapi@3f2a1c9", cwd=two)[1]
+    with_pin = open(os.path.join(two, "gate.manifest.swift")).read()
+    # and the same is refused when the operator wrote the row by hand
+    hand = tempfile.mkdtemp()
+    open(os.path.join(hand, "gate.swift"), "w").write("public enum Sales: Department {}\n")
+    open(os.path.join(hand, "b.swift"), "w").write("// contract\npublic enum F_y: Declared { public typealias Of = Text }\n")
+    open(os.path.join(hand, "gate.manifest.swift"), "w").write(
+        "public protocol Theirs {}\n"
+        "public enum B: Theirs {}\n"
+        "extension B {\n"
+        '    public static var typeName: String { "b.swift" }\n'
+        '    public static var role: String { "sensor" }\n'
+        "}\n")
+    hand_said = run("status", cwd=hand)[1]
+    claims = " ".join(r.get("claim", "") for r in hand_said.get("refusals", []))
+    S.append(("what is taken says at what, and a row says which court reads it",
+              # taking without a revision does not happen at all
+              no_pin.get("asks") and "taken at a revision" in no_pin.get("note", "")
+              and "--at REV" in no_pin.get("next", "")
+              # a role no court reads is refused before it is written
+              and bad_role.get("asks") and "not a court" in bad_role.get("note", "")
+              # with a pin it is written down, and the line says what was taken and at what
+              and pinned.get("at") == "openapi@3f2a1c9" and pinned.get("role") == "seam"
+              and 'public static var from: String { "openapi@3f2a1c9" }' in with_pin
+              # a file I emit needs no pin: I am the source
+              and 'public static var from' not in with_pin.split("public protocol Theirs")[0]
+              # and by hand it is caught the same way, at the row's own line
+              and hand_said.get("verdict") == "refused"
+              and "which no court here reads" in claims
+              and "does not say which revision it was taken at" in claims
+              and any(r.get("address", "").startswith("gate.manifest.swift:")
+                      for r in hand_said.get("refusals", []))))
+
+    # ── A ROW OF ANY ROLE HAS BEEN SPOKEN FOR. The shadow guard reads the world
+    # rows, and a shadow is a file nobody spoke for — so reading only those
+    # called a declared forms file a shadow, which is an accusation about
+    # something claimed out loud in the very document being read. Same shape as
+    # the sweep it replaced, one storey along: the document says three kinds of
+    # thing and a reader that knows one kind will mistake the other two.
+    frm = tempfile.mkdtemp()
+    open(os.path.join(frm, "gate.swift"), "w").write("public enum Sales: Department {}\n")
+    open(os.path.join(frm, "vendor-forms.swift"), "w").write(
+        "public protocol Sensor {}\npublic enum Thermal: Sensor {}\n")
+    took = run("theirs", "vendor-forms.swift", "--at", "acme/forms@9d1e", "--role", "forms",
+               cwd=frm)[1]
+    frm_status = run("status", cwd=frm)[1]
+    S.append(("a taken forms file is accounted for, inert, and not a shadow",
+              took.get("role") == "forms" and took.get("at") == "acme/forms@9d1e"
+              and "inert for the plain judge" in took.get("role_means", "")
+              # it is not swept into the world: the count is the world's alone
+              and frm_status.get("world", {}).get("declarations") == 1
+              # and it is not accused of being a stray, because it was declared
+              and frm_status.get("verdict") == "holds"))
 
     # ── WHAT THIS JUDGE WAS MADE FROM. Its identity is its bytes, and that is
     # what a reviewer reproduces — but bytes say what a thing IS, never what it
