@@ -435,6 +435,10 @@ let localNames = new Set(), unresolved = new Set();
 // its actual court. A dependency belongs to whoever depends: writing it is
 // theirs to do, and the command that writes a row is a scribe, not the door.
 let layoutFile = null;
+// the forms this world presents: the operator's own files saying what a
+// record may be. Their names belong to the vocabulary the bench offers,
+// and their court is `where`, never the plain stream.
+let formsFiles = new Set();
 let jumpable = new Set();      // names with a home: underlined, and clickable
 let vocabulary = {};           // name -> the shelf module that declares it
 let conformers = {}, axisOf = {}, protoAxes = {}, gates = {};
@@ -2292,8 +2296,16 @@ for (const head of document.querySelectorAll("h3.fold")) {
 async function loadVocabulary() {
     vocabulary = {}; conformers = {}; axisOf = {}; protoAxes = {}; gates = {};
     const list = await (await fetch("/shelf")).json().catch(() => ({}));
-    for (const mod of (list.modules || [])) {
-        const text = await (await fetch("/shelf?m=" + encodeURIComponent(mod))).text();
+    // WHAT THIS WORLD PRESENTS COMES FIRST, because it is what this world is
+    // written in. Reading only the shelf left the bench offering the ranks it
+    // was born knowing while the operator's own file, sitting right there in
+    // their repository, had just declared another one.
+    const sources = [];
+    for (const f of formsFiles)
+        sources.push([f, await (await fetch("/world?f=" + encodeURIComponent(f))).text()]);
+    for (const mod of (list.modules || []))
+        sources.push([mod, await (await fetch("/shelf?m=" + encodeURIComponent(mod))).text()]);
+    for (const [mod, text] of sources) {
         // reading the shelf, not judging a world: the extras parse (a truthy
         // vocabulary turns it on) reads a forms file's top-level certificates as
         // vocabulary instead of refusing them the way the plain world judge
@@ -2311,7 +2323,11 @@ async function loadVocabulary() {
             } else {                                        // a plain atom: what it stands in for
                 for (const conf of d.conformances) {
                     const c = conf.trim();
-                    if (c) (conformers[c] || (conformers[c] = [])).push(d.name);
+                    // one name, one entry: the presented file and the shelf may
+                    // say the same word, and an offer that lists it twice is a
+                    // list that has stopped being an account of what there is
+                    if (c && !(conformers[c] || (conformers[c] = [])).includes(d.name))
+                        conformers[c].push(d.name);
                 }
             }
         }
@@ -2319,10 +2335,13 @@ async function loadVocabulary() {
 }
 
 (async () => {
-    await loadVocabulary();
+    // what this world presents has to be known before the vocabulary is built,
+    // or the bench reads the shelf and misses the file sitting next to the world
     const fl = await (await fetch("/files")).json().catch(() => ({ files: [] }));
     files = fl.files || []; personalFile = fl.personal || null; personalEmpty = !!fl.personal_empty;
     layoutFile = fl.layout || null;
+    formsFiles = new Set(fl.forms || []);
+    await loadVocabulary();
     // the rail carries files AND the journal, so it shows for any clone
     // the line says what is true HERE: with a world, the judge is at work;
     // without one, only the history is being read

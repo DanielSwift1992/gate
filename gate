@@ -386,6 +386,16 @@ def bench_files():
     # it is. A dependency belongs in code, written by the person who depends.
     if MANIFEST and os.path.exists(MANIFEST["manifest"]):
         out.append((os.path.relpath(MANIFEST["manifest"], base), MANIFEST["manifest"]))
+    # AND THE FORMS THIS WORLD PRESENTS. They are the operator's own files —
+    # what a record may say is written there, in their repository, theirs to
+    # change — so the bench opens them and reads the words they declare. Without
+    # this, adding a rank to your own file left the bench offering the ones it
+    # was born knowing and not the one you had just written.
+    for r in (MANIFEST.get("rows") if MANIFEST else None) or []:
+        if r["role"] == "forms":
+            p = os.path.join(base, r["path"])
+            if os.path.exists(p) and (r["path"], p) not in out:
+                out.append((r["path"], p))
     pf = personal_path()
     if pf:   # the slot is always offered; the file may not exist yet
         name = "my.swift" if not any(n == "my.swift" for n, _ in out) else "personal-my.swift"
@@ -1794,7 +1804,16 @@ def stdlib_guards():
 
 
 def disk_sources():
-    return [(n, open(p).read()) for n, p in bench_files() if os.path.exists(p)]
+    # ONE NAMESPACE IS ONE STREAM. The duplicate guard asks whether two files
+    # declare one name, and that question only means anything inside a stream
+    # judged together. A forms file is its own stream — each spells its own
+    # ladder from Unit, the way the corpus tells every world to — so metrics and
+    # palette both saying `W2` is two worlds each counting for itself, not one
+    # world saying a thing twice.
+    forms = {r["path"] for r in ((MANIFEST.get("rows") if MANIFEST else None) or [])
+             if r["role"] == "forms"}
+    return [(n, open(p).read()) for n, p in bench_files()
+            if os.path.exists(p) and n not in forms]
 
 
 def duplicate_guards():
@@ -3792,8 +3811,12 @@ def cmd_serve(a):
                     lay = (os.path.relpath(MANIFEST["manifest"],
                                            os.path.dirname(os.path.abspath(FACTS)))
                            if MANIFEST and os.path.exists(MANIFEST["manifest"]) else None)
+                    forms_rows = [r["path"] for r in
+                                  ((MANIFEST.get("rows") if MANIFEST else None) or [])
+                                  if r["role"] == "forms" and r["path"] in names]
                     body = json.dumps({"files": names,
                                        "layout": lay if lay in names else None,
+                                       "forms": forms_rows,
                                        "personal": names[-1] if pf else None,
                                        "personal_empty": bool(pf) and not os.path.exists(pf)}).encode()
                     self.send_response(200)
@@ -3906,6 +3929,8 @@ def cmd_serve(a):
             d = tempfile.mkdtemp(prefix="gate-bench-")
             paths = []
             layout = MANIFEST["manifest"] if MANIFEST else None
+            forms_here = {r["path"] for r in ((MANIFEST.get("rows") if MANIFEST else None) or [])
+                          if r["role"] == "forms"}
             for name, p in bench_files():
                 if p != active and not os.path.exists(p):
                     continue                      # a personal world nobody wrote
@@ -3919,7 +3944,7 @@ def cmd_serve(a):
                 # it declares protocols, which the plain court refuses on sight,
                 # so putting it in this stream turned every row into a refusal.
                 # Its court is the guards, and they answer below.
-                if p != layout:
+                if p != layout and name not in forms_here:
                     paths.append(tp)
             raw = subprocess.run([JUDGE, "judge", *paths], capture_output=True, text=True).stdout
             refusals = [{"address": m.group(1).replace("__", "/"), "claim": m.group(2).strip()}

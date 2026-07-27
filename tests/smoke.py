@@ -2108,6 +2108,42 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               # and a head that closes on its own line closes on its own line
               and "const selfClosed = opens > 0 && opens === closes;" in js))
 
+    # ── THE BENCH READS THE FORMS THIS WORLD PRESENTS. What a record may be is
+    # written in the operator's own file now, and the bench had been offering
+    # the words it was born knowing while that file, sitting beside the world,
+    # had just declared another. Add a rank to your own forms and the bench
+    # offers it — that is the whole of "the client can read our world".
+    #
+    # The forms file is opened and read, and never handed to the plain stream:
+    # its court is `where`, and the plain fragment refuses a protocol on sight.
+    # And it is its own namespace — each forms file spells its own ladder from
+    # Unit, as the corpus tells every world to, so metrics and palette both
+    # saying `W2` is two worlds each counting for itself rather than one world
+    # saying a thing twice. The duplicate guard asks its question inside a
+    # stream; widening it to every file on the bench made gate refuse itself.
+    pres = tempfile.mkdtemp()
+    run("demo", cwd=pres)
+    pres_root = os.path.join(pres, "gate-demo")
+    pres_forms = os.path.join(pres_root, "forms-organization.swift")
+    pres_man = open(os.path.join(pres_root, "gate.manifest.swift"), encoding="utf-8").read()
+    with open(pres_forms, "a") as f:
+        f.write("\npublic enum Director: Ranked {}\n")
+    pres_status = run("status", cwd=pres_root)[1]
+    S.append(("a world presents the forms it speaks, and the operator may change them",
+              # the demo ships them as a file of its own, declared as forms
+              os.path.exists(pres_forms)
+              and 'public static var typeName: String { "forms-organization.swift" }' in pres_man
+              and "public typealias Kind = FormsFile" in pres_man
+              # not the shelf's printout, so the first edit is not a refusal
+              and not open(pres_forms, encoding="utf-8").read().startswith("// gate stdlib")
+              and pres_status.get("verdict") == "holds"
+              # the bench opens it, and the plain stream never sees it
+              and 'if r["role"] == "forms"' in shelf_src
+              and "name not in forms_here" in shelf_src
+              # its words reach what the bench offers
+              and "for (const f of formsFiles)" in ui
+              and 'sources.push([f, await (await fetch("/world?f="' in ui))
+
     # ── AN EXHIBIT, NOT A WISH. What follows records what a claim written in the
     # head of the file that depends on it does TODAY, line by line, because the
     # answer is the case for the one change everything left is waiting on: the
