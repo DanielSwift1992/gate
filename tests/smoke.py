@@ -1471,15 +1471,25 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # you cannot get by looking. And at the command line the same list came out
     # as a blob of JSON. Somebody who cannot see the vocabulary cannot know it is
     # theirs to read, and nobody arrives already knowing.
+    # And TWO UNLIKE THINGS ARE SAID APART. A genre is a kind of world you can
+    # speak — Department, Ranked, Site. The rest of the shelf is furniture this
+    # tool is made of: its palette, its metrics, git's own atoms. One flat list
+    # under one word claimed a unity that is not there, and the names had been
+    # saying so all along. And the corpus is on neither list, which is why it
+    # felt like a different kind of dependency: it is one. Its forms travel
+    # compiled inside the judge, and the version line names where they came from.
     shelf_said = say("stdlib", cwd=ent)
-    S.append(("the vocabulary is visible, both at the command line and in the bench",
-              "on the shelf" in shelf_said and "genre-organization" in shelf_said
+    S.append(("genres are what you can speak, gate's own worlds are said apart, and the corpus is neither",
+              "genres you can speak" in shelf_said and "worlds gate is made of" in shelf_said
+              and "genre-organization" in shelf_said
+              and "(gate's own)" in shelf_said.split("bench-palette", 1)[1][:70]
+              and "compiled into it from the corpus" in shelf_said
               and "gate stdlib show" in shelf_said and "materialize" in shelf_said
-              # and the bench lists it beside the other things about this place,
-              # each one opening as the plain Swift it is
+              # and the rail lists the genres, each opening as the plain Swift it is
               and 'data-fold="shelf"' in ui and "async function buildShelf()" in ui
+              and 'mods.filter(m => m.startsWith("genre-"))' in ui
               and "r.onclick = () => openShelf(m);" in ui
-              and "as plain Swift" in ui))
+              and "<i></i>genres</h3>" in ui))
 
     # ── WHAT THIS JUDGE WAS MADE FROM. Its identity is its bytes, and that is
     # what a reviewer reproduces — but bytes say what a thing IS, never what it

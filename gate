@@ -3715,9 +3715,19 @@ def humanize(out):
         # WHAT MAY BE SAID HERE, in a sentence rather than a blob. An operator
         # who cannot see the vocabulary cannot know it is theirs to read: the
         # shelf was reachable only by already knowing a name on it.
-        lines.append(f"stdlib: {len(out['modules'])} on the shelf")
-        for name, note in out["modules"].items():
-            lines.append(f"  {name:<20} {note.split('—')[-1].strip()[:60]}")
+        # TWO UNLIKE THINGS, SAID APART. A genre is a kind of world you can
+        # speak; the rest is furniture this tool is made of — its palette, its
+        # metrics, git's own atoms. One flat list under one word claimed a unity
+        # that is not there, and the names had been saying so all along.
+        gen = {k: v for k, v in out["modules"].items() if k.startswith("genre-")}
+        own = {k: v for k, v in out["modules"].items() if not k.startswith("genre-")}
+        lines.append(f"stdlib: {len(gen)} genres you can speak, {len(own)} worlds gate is made of")
+        for name, note in gen.items():
+            lines.append(f"  {name:<20} {note.split('—')[-1].strip()[:58]}")
+        for name, note in own.items():
+            lines.append(f"  {name:<20} {note.split('—')[-1].strip()[:58]}   (gate's own)")
+        lines.append("  note: the forms the judge itself carries are not here — they are compiled "
+                     "into it from the corpus, and `gate --version` names the revision")
         lines.append("  next: `gate stdlib show <name>` reads one as plain Swift, "
                      "`gate stdlib materialize <name>` makes a copy yours")
     elif cmd == "library":

@@ -167,12 +167,17 @@ public enum OurSide: SeamFile {}
 extension OurSide { public static var typeName: String { "sdk.swift" } }
 ```
 
-Above them stands **vocabulary**: the words a world may speak — `Department`,
-`Ranked`, `Site` — each opening as the plain Swift it is. `gate stdlib` lists the
-same shelf, `gate stdlib show <name>` prints one, and `gate stdlib materialize
-<name>` puts a copy in your repository where it becomes yours to change. The
-shelf is what may be said; `gate library` is what you say; the world is what you
-said.
+Above them stands **genres**: kinds of world you can speak — `Department`,
+`Ranked`, `Site` — each opening as the plain Swift it is, and
+`gate stdlib materialize <name>` puts a copy in your repository where it becomes
+yours to change. A genre is what may be said; `gate library` is what you say;
+the world is what you said.
+
+The shelf also carries worlds gate itself is made of — its palette, its metrics,
+git's own atoms — and `gate stdlib` lists those apart, because a grammar you
+adopt and furniture this tool is built from are not one kind of thing. The corpus
+is on neither list: its forms travel compiled inside the judge, and
+`gate --version` names the revision they came from.
 
 Membership is yours to state; which side a file is, that file says about itself.
 Nothing appears in your rail because it was lying in the folder. `gate declare

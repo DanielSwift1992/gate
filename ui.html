@@ -334,7 +334,7 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 </style>
 <div id="rail"><div id="brand"><b>gate</b><span id="brandline" class="caption"></span></div>
   <h3 class="fold caption" data-fold="files"><i></i>files</h3><div id="filelist" class="foldable"></div>
-  <h3 class="fold caption" id="shelf-head" data-fold="shelf"><i></i>vocabulary</h3>
+  <h3 class="fold caption" id="shelf-head" data-fold="shelf"><i></i>genres</h3>
   <div id="shelf-host" class="foldable"></div>
   <h3 class="fold caption" id="seams-head" data-fold="seams"><i></i>seams</h3>
   <div id="seam-host" class="foldable"></div>
@@ -541,23 +541,27 @@ async function buildJournal() {
     buildShelf();
 }
 
-// ── WHAT MAY BE SAID HERE. The shelf carries the words a world speaks —
-// Department, Ranked, Site — and they are plain Swift, readable and copyable.
-// The bench knew the list all along and showed it nowhere: it opened a shelf
-// module only for somebody who already knew a name on it, which is knowledge
-// you cannot get by looking. An operator who cannot see the vocabulary cannot
-// know it is theirs to read.
+// ── THE GENRES: KINDS OF WORLD YOU CAN SPEAK. `Department`, `Ranked`, `Site` —
+// plain Swift, readable and copyable, and a copy in your repository is yours to
+// change. The shelf also carries gate's own worlds — its palette, its metrics,
+// git's atoms — and calling both `vocabulary` claimed a unity that is not
+// there: one is a grammar you adopt, the other is furniture this tool is made
+// of. The names already said so, and only this list did not.
+// The corpus underneath is on neither list, and that is why it felt like a
+// different kind of dependency — it IS one. Its forms are carried compiled
+// inside the judge; `gate --version` names the revision they came from.
 async function buildShelf() {
     const host = document.getElementById("shelf-host");
     let mods = [];
     try { mods = (await (await fetch("/shelf")).json()).modules || []; } catch { mods = []; }
+    mods = mods.filter(m => m.startsWith("genre-"));
     host.innerHTML = "";
     document.getElementById("shelf-head").hidden = !mods.length;
     for (const m of mods) {
         const r = document.createElement("div");
         r.className = "commit touches";
-        r.title = "Read " + m + ".swift as plain Swift. `gate stdlib materialize " + m
-            + "` puts a copy in your repository, where it becomes yours to change.";
+        r.title = "A kind of world you can speak, in plain Swift. `gate stdlib materialize "
+            + m + "` puts a copy in your repository, where it becomes yours to change.";
         r.innerHTML = '<div class="subj fact">' + esc(m) + "</div>";
         r.onclick = () => openShelf(m);
         host.appendChild(r);
