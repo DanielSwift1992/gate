@@ -1620,6 +1620,19 @@ def stdlib_guards():
         return []
     d = os.path.dirname(os.path.abspath(FACTS))
     bad = []
+    # AND EVERY PAGE ON THE SHELF SAYS WHICH IT IS. Sorting these by the shape
+    # of their names was a guess dressed as a category; the rule that replaced
+    # it — each file states its own role in its own second line — is only worth
+    # anything if a file that forgets is caught rather than quietly filed under
+    # nothing. A shelf page with no role is not a small omission: it decides
+    # whether an operator is shown the page at all.
+    for name in STDLIB:
+        if stdlib_role(name) is None:
+            bad.append({"address": f"stdlib/{name}.swift:2",
+                        "claim": "this page does not say what it is. A shelf file states its own "
+                                 "role in its second line — `// role: forms` for what an operator "
+                                 "speaks, `// role: gate's own` for this tool's furniture — and "
+                                 "one that says nothing cannot be placed"})
     for name, body in STDLIB.items():
         p = os.path.join(d, f"{name}.swift")
         if os.path.exists(p):

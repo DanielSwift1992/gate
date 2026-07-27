@@ -2753,6 +2753,27 @@ public enum MyWatch: AccessLedger {
               "MIT licensed" in readme
               and open(os.path.join(HERE, "LICENSE"), encoding="utf-8").read().startswith("MIT License")))
 
+    # ── AND A PAGE THAT FORGETS TO SAY WHICH IT IS GOES RED. The rule that each
+    # shelf file states its own role in its own second line replaced a guess
+    # dressed as a category, and a rule nobody checks decays into the guess it
+    # replaced. Probed by taking the line away from a copy of the real file and
+    # putting it back — never by trusting the files to stay right.
+    shelf_file = os.path.join(HERE, "stdlib", "forms-organization.swift")
+    kept = open(shelf_file, encoding="utf-8").read()
+    try:
+        stripped = "\n".join(l for l in kept.split("\n") if not l.startswith("// role:"))
+        open(shelf_file, "w").write(stripped)
+        roleless = run("status", cwd=HERE)[1]
+    finally:
+        open(shelf_file, "w").write(kept)
+    S.append(("a shelf page that does not say what it is goes red at its own line",
+              roleless.get("verdict") == "refused"
+              and any(r.get("address") == "stdlib/forms-organization.swift:2"
+                      and "does not say what it is" in r.get("claim", "")
+                      for r in roleless.get("refusals", []))
+              # and with the line back, this repository holds again
+              and run("status", cwd=HERE)[1].get("verdict") == "holds"))
+
     # ── AND A WORD THAT WAS RETIRED STAYS RETIRED. `genre` named a thing this
     # tool no longer believes in: a kind of world handed down, belonging to the
     # judge. What there is instead is forms — the grammar records are written
