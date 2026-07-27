@@ -167,6 +167,13 @@ public enum OurSide: SeamFile {}
 extension OurSide { public static var typeName: String { "sdk.swift" } }
 ```
 
+Above them stands **vocabulary**: the words a world may speak — `Department`,
+`Ranked`, `Site` — each opening as the plain Swift it is. `gate stdlib` lists the
+same shelf, `gate stdlib show <name>` prints one, and `gate stdlib materialize
+<name>` puts a copy in your repository where it becomes yours to change. The
+shelf is what may be said; `gate library` is what you say; the world is what you
+said.
+
 Membership is yours to state; which side a file is, that file says about itself.
 Nothing appears in your rail because it was lying in the folder. `gate declare
 carrier … --mine` writes those two lines for you.
@@ -490,7 +497,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 189 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 190 end-to-end checks, the definition of green
 ```
 
 ## Status

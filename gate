@@ -3711,6 +3711,15 @@ def humanize(out):
                          f"{out['median_days']} — this exits non-zero by your rule, not by a verdict")
         lines.append(f"  note: {out['note']}")
         lines.append(f"  next: {out['next']}")
+    elif cmd == "stdlib" and out.get("modules"):
+        # WHAT MAY BE SAID HERE, in a sentence rather than a blob. An operator
+        # who cannot see the vocabulary cannot know it is theirs to read: the
+        # shelf was reachable only by already knowing a name on it.
+        lines.append(f"stdlib: {len(out['modules'])} on the shelf")
+        for name, note in out["modules"].items():
+            lines.append(f"  {name:<20} {note.split('—')[-1].strip()[:60]}")
+        lines.append("  next: `gate stdlib show <name>` reads one as plain Swift, "
+                     "`gate stdlib materialize <name>` makes a copy yours")
     elif cmd == "library":
         f = out.get("forms") or out.get("crystal") or {}
         lines.append(f"library: {len(f)} forms" + (f" · wrote {out['wrote']}" if out.get("wrote") else ""))

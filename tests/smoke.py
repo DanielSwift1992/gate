@@ -1464,6 +1464,23 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and twice.get("standing") == 1
               and written["diverges"][0]["because"] == "PROJ-10"))
 
+    # ── WHAT MAY BE SAID HERE. The shelf carries the words a world speaks —
+    # Department, Ranked, Site — and they are plain Swift, readable and copyable.
+    # The bench knew the list all along and showed it nowhere: it opened a shelf
+    # module only for somebody who already knew a name on it, which is knowledge
+    # you cannot get by looking. And at the command line the same list came out
+    # as a blob of JSON. Somebody who cannot see the vocabulary cannot know it is
+    # theirs to read, and nobody arrives already knowing.
+    shelf_said = say("stdlib", cwd=ent)
+    S.append(("the vocabulary is visible, both at the command line and in the bench",
+              "on the shelf" in shelf_said and "genre-organization" in shelf_said
+              and "gate stdlib show" in shelf_said and "materialize" in shelf_said
+              # and the bench lists it beside the other things about this place,
+              # each one opening as the plain Swift it is
+              and 'data-fold="shelf"' in ui and "async function buildShelf()" in ui
+              and "r.onclick = () => openShelf(m);" in ui
+              and "as plain Swift" in ui))
+
     # ── WHAT THIS JUDGE WAS MADE FROM. Its identity is its bytes, and that is
     # what a reviewer reproduces — but bytes say what a thing IS, never what it
     # was made from, so the one dependency this whole tool rests on was stated as

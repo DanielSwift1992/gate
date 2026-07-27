@@ -238,7 +238,7 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
    always answered `what is this` on demand rather than printing it nine times
    down a narrow column. Nothing new is measured here: the rows are commits'
    rows, so the ladder is the one already judged. */
-#seam-host{padding-bottom:calc(var(--u)*3)}
+#seam-host,#shelf-host{padding-bottom:calc(var(--u)*3)}
 .seam-pair{padding:calc(var(--u)*2) calc(var(--u)*7) 0}
 .badge.back{color:var(--law)}
 .seam-where{color:var(--seam)}
@@ -334,6 +334,8 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 </style>
 <div id="rail"><div id="brand"><b>gate</b><span id="brandline" class="caption"></span></div>
   <h3 class="fold caption" data-fold="files"><i></i>files</h3><div id="filelist" class="foldable"></div>
+  <h3 class="fold caption" id="shelf-head" data-fold="shelf"><i></i>vocabulary</h3>
+  <div id="shelf-host" class="foldable"></div>
   <h3 class="fold caption" id="seams-head" data-fold="seams"><i></i>seams</h3>
   <div id="seam-host" class="foldable"></div>
   <h3 class="fold" id="journal-head" data-fold="journal"><i></i>journal <span class="obs caption"></span></h3>
@@ -536,6 +538,30 @@ async function buildJournal() {
     } catch { journalCommits = []; }
     renderJournal();
     buildSeams();
+    buildShelf();
+}
+
+// ── WHAT MAY BE SAID HERE. The shelf carries the words a world speaks —
+// Department, Ranked, Site — and they are plain Swift, readable and copyable.
+// The bench knew the list all along and showed it nowhere: it opened a shelf
+// module only for somebody who already knew a name on it, which is knowledge
+// you cannot get by looking. An operator who cannot see the vocabulary cannot
+// know it is theirs to read.
+async function buildShelf() {
+    const host = document.getElementById("shelf-host");
+    let mods = [];
+    try { mods = (await (await fetch("/shelf")).json()).modules || []; } catch { mods = []; }
+    host.innerHTML = "";
+    document.getElementById("shelf-head").hidden = !mods.length;
+    for (const m of mods) {
+        const r = document.createElement("div");
+        r.className = "commit touches";
+        r.title = "Read " + m + ".swift as plain Swift. `gate stdlib materialize " + m
+            + "` puts a copy in your repository, where it becomes yours to change.";
+        r.innerHTML = '<div class="subj fact">' + esc(m) + "</div>";
+        r.onclick = () => openShelf(m);
+        host.appendChild(r);
+    }
 }
 
 
