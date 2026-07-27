@@ -2753,6 +2753,38 @@ public enum MyWatch: AccessLedger {
               "MIT licensed" in readme
               and open(os.path.join(HERE, "LICENSE"), encoding="utf-8").read().startswith("MIT License")))
 
+    # ── PROSE IS READ AS PROSE, AND THE FILE'S WRAP IS NOT PART OF WHAT IS
+    # SAID. Bare set every comment LINE as its own block inside a `pre`, so one
+    # paragraph came out a column of fragments with a blank line between each,
+    # and where the file happened to wrap leaked into the reading. A run is one
+    # paragraph now, ended by a bare `//` — the only mark a writer has for
+    # stopping — and the air goes between paragraphs rather than inside one.
+    #
+    # Two registers, because the material already has two. A `///` note belongs
+    # to the record under it and stands against it; a `//` comment belongs to
+    # nobody and keeps its air. And what the prose already says is shown: the
+    # corpus's own notation, ``Name`` for a name and `x` for a literal, is set
+    # in the register that name wears everywhere else. Nothing more is read
+    # into it — a view may not add what the text does not have.
+    S.append(("a comment reads as a paragraph, in the register of speech",
+              # one run, one paragraph, and the bare marker ends it
+              "if (!said) { run = null; return; }" in ui
+              and "run.text += \" \" + said" in ui
+              and "function noteProse(" in ui
+              # prose is set as speech and wraps, rather than as preformatted code
+              and "#bare .note{display:block;white-space:normal" in ui
+              and "-apple-system,sans-serif" in ui.split("#bare .note{")[1][:140]
+              # the two kinds are told apart, and the attached one has no gap
+              and "#bare .note.said{" in ui and "#bare .note.free{" in ui
+              and 'class="note said"' in ui and 'class="note free"' in ui
+              # the corpus's own notation is shown, and nothing beyond it
+              and "``([A-Za-z_]\\w*)``" in ui and "`([^`]+)`" in ui
+              # and what gate itself prints has its thoughts separated, so the
+              # view has something true to reflect rather than a guess to make
+              and 'emit("//")' in shelf_src
+              # while the old ownership lie is gone from that header for good
+              and "where it becomes yours" not in shelf_src))
+
     # ── AND A PAGE THAT FORGETS TO SAY WHICH IT IS GOES RED. The rule that each
     # shelf file states its own role in its own second line replaced a guess
     # dressed as a category, and a rule nobody checks decays into the guess it

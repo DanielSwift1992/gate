@@ -250,7 +250,20 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 /* the pins hang under the pair they belong to, in the pair's own column */
 .seam-took{padding:0 calc(var(--u)*7);color:var(--seam)}
 .stale{color:var(--law)}
-#bare .note{display:block}
+/* ── PROSE IS READ AS PROSE. A comment is somebody talking, and Bare had been
+   setting each source LINE as its own block inside a `pre` — so one paragraph
+   came out a column of fragments with a blank line between every one of them,
+   and the hard wrap of the file leaked into the reading. A run of comment lines
+   is one paragraph now: speech register, wrapped to the pane, and the air goes
+   between paragraphs where it belongs rather than inside one. ── */
+#bare .note{display:block;white-space:normal;max-width:62ch;
+  font:13px/1.5 -apple-system,sans-serif;color:var(--muted)}
+/* a note that belongs to the record below it stands with it — no gap to cross,
+   and the eye takes them as one thing. A note belonging to nobody keeps its air. */
+#bare .note.said{margin:0 0 calc(var(--u)*1)}
+#bare .note.free{margin:calc(var(--u)*5) 0 calc(var(--u)*4)}
+#bare .note code{font:12px/1.4 ui-monospace,Menlo,monospace;color:var(--ink)}
+#bare .note .known{font:12px/1.4 ui-monospace,Menlo,monospace}
 #bare .slot{cursor:pointer;border-bottom:1px dashed var(--line)}
 #bare .slot.elsewhere{cursor:default;border-bottom-style:none}
 /* a hole already says it three ways — the word, the dashes, the quiet register —
@@ -1755,11 +1768,37 @@ function freeComments(text, notes, parsed) {
         for (const [, d] of parsed.declarations) claim(d.line);
         for (const [, a] of (parsed.topAliases || new Map())) claim(a.line);
     }
+    // A RUN OF LINES IS ONE PARAGRAPH. The file wraps where the file wraps;
+    // that is a fact about the text, not about what is being said, and letting
+    // it through turned a paragraph into a column of fragments. A blank line —
+    // or anything that is not a comment — ends the run, because that is where
+    // the writer themselves stopped.
+    let run = null;
     lines.forEach((raw, i) => {
         const t = raw.trim();
-        if (t.startsWith("//") && !taken.has(i)) out.push({ line: i + 1, text: t.replace(/^\/+/, "").trim() });
+        if (t.startsWith("//") && !taken.has(i)) {
+            const said = t.replace(/^\/+/, "").trim();
+            // a bare `//` is where the writer stopped: it ends the paragraph
+            // without ending the comment, and it is the only mark of that
+            if (!said) { run = null; return; }
+            if (run) run.text += " " + said;
+            else { run = { line: i + 1, text: said }; out.push(run); }
+        } else if (run && !t.startsWith("//")) {
+            run = null;
+        }
     });
-    return out;
+    return out.filter(c => c.text);
+}
+
+// ── WHAT THE TEXT ALREADY SAYS, shown rather than spelled. A note written for
+// this world names things in it, in the notation the corpus itself uses:
+// `single` for a literal, ``double`` for a name. Rendering those in the name's
+// own register is not decoration — it is the same fact the prose states, read
+// twice. Nothing else is interpreted: a view may not add what the text lacks.
+function noteProse(text) {
+    return esc(text)
+        .replace(/``([A-Za-z_]\w*)``/g, (_, n) => '<span class="known">' + n + "</span>")
+        .replace(/`([^`]+)`/g, (_, c) => "<code>" + c + "</code>");
 }
 
 function bareForm(parsed, text) {
@@ -1776,8 +1815,12 @@ function bareForm(parsed, text) {
             + '" title="' + (placeable ? "choose a value" : "edit in Full") + '">'
             + nameTokens(value) + "</span>";
     };
-    const noteLines = (name) => (notes.get(name) || [])
-        .map(t => '<span class="note observed">' + esc(t) + "</span>");
+    // a note that belongs to a record is one paragraph too, and it stands
+    // against the record rather than floating a line away from it
+    const noteLines = (name) => {
+        const said = (notes.get(name) || []).join(" ").trim();
+        return said ? ['<span class="note said">' + noteProse(said) + "</span>"] : [];
+    };
     // one stream, in the order the document has it: a record with its note above
     // it, and the comments that belong to nobody where they were written
     const items = [];
@@ -1815,7 +1858,7 @@ function bareForm(parsed, text) {
         if ((d.entries || []).length)
             items.push({ line: d.line + 0.5, block: ['    <span class="add caption" data-add-claim="' + name + '">+ add claim</span>'] });
     for (const c of freeComments(src, notes, parsed))
-        items.push({ line: c.line, block: ['<span class="note observed">' + esc(c.text) + "</span>"] });
+        items.push({ line: c.line, block: ['<span class="note free">' + noteProse(c.text) + "</span>"] });
     items.sort((a, b) => a.line - b.line);
     return items.flatMap(i => i.block).join("\n")
         + '\n<span class="add caption" data-add-record="1">+ add record</span>';

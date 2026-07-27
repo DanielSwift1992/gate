@@ -700,13 +700,20 @@ def cmd_import(a):
         for ln in chunk.split("\n"):
             lines.append((ln, src))
 
+    # THREE THOUGHTS, SAID APART. A blank comment line is where the writer
+    # stopped, and a reader — a person or the Bare view — has no other way to
+    # know. Run together they read as one long sentence that changes subject
+    # twice, which is what they did until somebody looked at them set as prose.
     emit("// the facts world — the source you read and edit, not a generated")
     emit("// artifact. The tables only seeded it once (below); the world, not the")
     emit("// tables, is the truth. A gate.manifest.swift may split it across")
     emit("// several files, all judged together. git carries the history.")
+    emit("//")
     emit(f"// seeded by gate import from: {os.path.basename(people_csv)}, {os.path.basename(grants_csv)}")
-    emit("// the language it is written in: `gate stdlib show forms-organization`")
-    emit("// (`materialize` puts that file beside this one, where it becomes yours)")
+    emit("//")
+    emit("// the language it is written in: `gate stdlib show forms-organization`.")
+    emit("// Those words are compiled into the judge; `materialize` writes them out")
+    emit("// beside this file to READ — editing that copy adds no word to the language.")
     people = list(csv.DictReader(open(people_csv)))
     grants = list(csv.DictReader(open(grants_csv)))
 
