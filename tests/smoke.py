@@ -2185,6 +2185,44 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               # and nothing here executes anything: no shell, no eval of a command
               and "child_process" not in ui and "mutating_routes" in shelf_src))
 
+    # ── THE LAYER MAP, AS A FENCE. Four layers, and only two of them may put a
+    # proper name inside an arbiter. The MECHANISM knows no name: it parses a
+    # fragment, builds a dictionary out of what it was handed, looks up each
+    # reference, counts. The LANGUAGE is what it must know as grammar — the
+    # counting forms, Unit and Plus and Twice — because it cannot add without
+    # them. WORLDS are everything else, and a world's name inside a mechanism is
+    # a leak, not a feature.
+    #
+    # Swept by machine rather than by eye, the port's own literals fall in
+    # exactly two piles: five that are the language, and twenty-five that are one
+    # reference world — its ranks, its departments, its shares, its gates. The
+    # same sweep on the corpus reads WhereJudge with five language names and no
+    # world at all, and the plain Judge with thirty-six names and every one of
+    # them that world's. So the where court is already the clean mechanism, and
+    # the leak is the plain one — which is exactly what its behaviour says: it
+    # refuses a presented protocol and carries a table.
+    #
+    # This holds the pile still. A new world name in our port goes red here, and
+    # when the leak is swept the number drops rather than a comment going stale.
+    port = open(os.path.join(HERE, "judge.js"), encoding="utf-8").read()
+    LANGUAGE = {"Unit", "Plus", "Twice", "Times", "Never"}
+    LEAKED = {"IndividualContributor", "Lead", "Manager", "Finance", "Engineering",
+              "Sales", "People", "OnSite", "Hybrid", "Remote", "Male", "Female",
+              "FinanceShare", "EngineeringShare", "SalesShare", "PeopleShare",
+              "Employee", "Person", "GivenNameCycle", "FamilyNameCycle",
+              "BirthYearCycle", "VerifiedView", "VerifiedInDepartment",
+              "VerifiedAtRank", "VerifiedAtWorkplace"}
+    AXES = {"Rank", "Home", "Site", "Given", "Family", "Sex", "Born", "Next"}
+    found = set(re.findall(r'"([A-Z][A-Za-z]+)"', port))
+    S.append(("the mechanism holds the language and one named leak, and nothing else",
+              # the language belongs and is all there
+              LANGUAGE <= found
+              # every world name in it is one of the ones already counted: a new
+              # one means a world walked into the mechanism while nobody looked
+              and not (found - LANGUAGE - LEAKED - AXES)
+              # and the leak has not grown
+              and len(found & LEAKED) <= len(LEAKED)))
+
     # ── AN EXHIBIT, NOT A WISH. What follows records what a claim written in the
     # head of the file that depends on it does TODAY, line by line, because the
     # answer is the case for the one change everything left is waiting on: the
