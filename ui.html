@@ -1447,6 +1447,11 @@ function buildTables() {
         const notes = attachNotes(cm.getValue(), lastParsed);
         const hasNotes = group.rows.some(d => notes.has(d.name));
         const head = document.createElement("tr");
+        // THE HAND GOES LAST. A note is read far more often than a record is
+        // removed, and the remove sat between the facts and the note — so every
+        // reading crossed a destructive control to reach the sentence, and the
+        // hand stood in the middle of what it acts on. Reading order follows
+        // how often a thing is read; the register law puts the hand at the edge.
         for (const key of ["name", ...group.keys, ...(hasNotes ? ["note"] : []), ""]) {
             const th = document.createElement("th"); th.className = "caption";
             th.innerHTML = key + mark(key);
@@ -1493,19 +1498,19 @@ function buildTables() {
                 }
                 tr.append(td);
             }
+            if (hasNotes) {
+                // the same prose, in the same register, in every view that
+                // shows it — the notation the corpus uses is shown, not spelled
+                const nt = document.createElement("td");
+                nt.className = "cell-note";
+                nt.innerHTML = noteProse((notes.get(d.name) || []).join(" ").trim());
+                tr.append(nt);
+            }
             const del = document.createElement("td");
             del.className = "cut caption"; del.textContent = "\u00d7";
             del.title = "remove this record";
             del.onclick = () => removeUnit({ kind: "record", line: d.line, host: d.name });
             tr.append(del);
-            if (hasNotes) {
-                const td = document.createElement("td");
-                // the same prose, in the same register, in every view that
-                // shows it — the notation the corpus uses is shown, not spelled
-                td.className = "cell-note";
-                td.innerHTML = noteProse((notes.get(d.name) || []).join(" ").trim());
-                tr.append(td);
-            }
             table.append(tr);
         }
         host.append(table);

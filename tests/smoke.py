@@ -2837,9 +2837,24 @@ public enum MyWatch: AccessLedger {
               and "#table-host td,#table-host th{white-space:nowrap}" in ui
               # and a note in a table is the same prose in the same register as
               # everywhere else it is shown — one rendering, not three
-              and 'td.className = "cell-note"' in ui
-              and "td.innerHTML = noteProse(" in ui
-              and "#table-host td.cell-note{white-space:normal;max-width:44ch" in ui))
+              and 'nt.className = "cell-note"' in ui
+              and "nt.innerHTML = noteProse(" in ui
+              and "#table-host td.cell-note{white-space:normal;max-width:44ch" in ui
+              # AND THE CELLS STAND UNDER THE HEADINGS THEY BELONG TO. The head
+              # read name · axes · note · (blank) while the row was built
+              # name · axes · remove · note — so the × sat under `note` and the
+              # sentence sat under nothing. Not a matter of taste: the columns
+              # were labelled wrongly, and nobody had looked at a table with a
+              # note in it since the note column was added.
+              #
+              # The order is also the right one to want. A note is read far more
+              # often than a record is removed, and a destructive control had
+              # been standing between the facts and the sentence — crossed on
+              # every reading. The hand goes at the edge, which is where the
+              # register law puts it and where a misclick costs least.
+              and ui.index('nt.className = "cell-note"')
+              < ui.index('del.className = "cut caption"')
+              and '["name", ...group.keys, ...(hasNotes ? ["note"] : []), ""]' in ui))
 
     # ── AND A PAGE THAT FORGETS TO SAY WHICH IT IS GOES RED. The rule that each
     # shelf file states its own role in its own second line replaced a guess
