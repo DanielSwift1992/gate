@@ -226,10 +226,12 @@ carrier … --theirs` writes the row for you, taking the pin from the `against`
 block the declaration already carries — nobody types a second copy of a fact.
 
 **The words a world speaks are not a file at all.** `Department`, `Ranked`,
-`Site` are compiled inside the judge. A world speaks them with no file of that
-name anywhere near it; a copy put beside the world is read by nothing; and a copy
-declared as a world row is refused, because a world is records and forms are the
-grammar records are written in. `gate stdlib` prints, and what it prints is a
+`Site` are not files your world is made of. A world speaks them with no file of
+that name anywhere near it; a copy put beside the world is read by nothing; and
+a copy declared as a world row is refused — not because the words live anywhere
+privileged, but because the judge's FRAGMENT knows five shapes and `public
+protocol` is not one of them. A world is records; forms are the grammar records
+are written in. `gate stdlib` prints, and what it prints is a
 printout. `gate --version` names the revision those words were compiled from, and
 that revision — not any file — is what a world depends on.
 
@@ -469,10 +471,13 @@ head. A refusal points at its address instead.
   and it ships as a real Swift file in `stdlib/`, judged by the product's
   own judge in its own battery. Where they come from is a fact about this
   moment, not a principle, and the two roads are said apart. The corpus's
-  forms are **compiled into the judge**: a world speaks `Department` with no
-  file of that name beside it, `gate --version` names the revision they came
-  from, and a copy of the printout declared as a world row is refused —
-  a world is records, forms are the grammar records are written in. Forms of
+  forms are carried **by the judge we ship**, which is a differential arbiter
+  for one reference world: its own header says the table it holds is that
+  world's policy stated a second time, on purpose, so two encodings can check
+  each other. A world speaks `Department` with no file of that name beside it,
+  `gate --version` names the revision, and a copy of the printout declared as a
+  world row is refused — because the judge's fragment knows five file shapes and
+  `public protocol` is not one of them. Forms of
   your **own** are presented by file and judged as a `forms` row: invent a
   word in your fork, say something true about it and it holds, say something
   false and it is refused at the line. The goal is one road — an empty prism,

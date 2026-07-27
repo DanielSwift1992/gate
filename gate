@@ -170,8 +170,8 @@ def manifest_guards(rows=None):
         # mechanics until the prism empties, and the name a role gives ought to
         # be resolved by the judge the way `Rank = Blah` already is — «the name
         # Blah resolves to nothing». It is not, yet: that tier fires only for an
-        # axis declared in a form the judge carries compiled, and this world's
-        # forms are not among them. So the check below is a stand-in wearing its
+        # axis whose requirements the judge knows, and those come from a map
+        # naming one reference world's protocols. So the check below is a stand-in wearing its
         # own name, not a court. A scaffold with a judged input would be honest;
         # a scaffold calling itself a court would not, and the difference is the
         # whole of what this tool sells.
@@ -712,7 +712,7 @@ def cmd_import(a):
     emit(f"// seeded by gate import from: {os.path.basename(people_csv)}, {os.path.basename(grants_csv)}")
     emit("//")
     emit("// the language it is written in: `gate stdlib show forms-organization`.")
-    emit("// Those words are compiled into the judge; `materialize` writes them out")
+    emit("// Those words are carried by the judge; `materialize` writes them out")
     emit("// beside this file to READ — editing that copy adds no word to the language.")
     people = list(csv.DictReader(open(people_csv)))
     grants = list(csv.DictReader(open(grants_csv)))
@@ -1715,7 +1715,7 @@ def cmd_stdlib(a):
         with open(path, "w") as f:
             f.write(STDLIB[name])
         return {"command": "stdlib materialize", "wrote": path,
-                "note": "a printout, not a source. These words live compiled inside the judge: "
+                "note": "a printout, not a source. These words are carried by the judge we ship: "
                         "the world can speak them with this file absent, and editing this copy "
                         "adds no word to the language. It is here to be READ",
                 "next": "gate --version names the revision they were compiled from — that, and "
@@ -4363,7 +4363,7 @@ def humanize(out):
         # AND IT IS NOT A SHELF OF FILES. Splitting it into speech and gate's
         # own furniture drew a line that does not matter to anybody using this,
         # and hid the line that does: none of it is yours. Every word here is
-        # compiled inside the judge — a world speaks `Department` with no file
+        # carried by the judge we ship — a world speaks `Department` with no file
         # of that name anywhere near it, and a copy declared as a world file is
         # refused outright. So a printout is exactly that, and the dependency is
         # the judge, named by revision.

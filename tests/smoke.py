@@ -2003,15 +2003,22 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # ── AN EXHIBIT, NOT A WISH. What follows records what a claim written in the
     # head of the file that depends on it does TODAY, line by line, because the
     # answer is the case for the one change everything left is waiting on: the
-    # vocabulary is compiled into the judge, and a protocol presented by file is
-    # refused by the plain court on its form while the where court takes it and
-    # judges nothing. Three things this project cannot finish — forms presented
-    # by file, a role judged rather than propped, claims judged where they are
-    # written — are not three problems. They are one root.
+    # judge we ship is a DIFFERENTIAL ARBITER for one reference world, and its
+    # own header says so: the table it carries is that world's policy stated a
+    # second time, on purpose, so two encodings can check each other. Its
+    # fragment knows five file shapes and `public protocol` is not among them.
     #
-    # So this check pins the negative. It is not a behaviour anybody wants; it is
-    # the shape of the wall, kept honest so nobody argues from memory about where
-    # it stands. The day the wall moves, this goes red and says so.
+    # I had called this a compiled vocabulary and built three rounds of law on
+    # that reading. It was wrong, and reading the judge's own source is what
+    # showed it: there is no privileged word list — there is one world's policy
+    # restated for a differential seat, and a grammar of five shapes.
+    #
+    # So this pins the shape of THAT wall, not a limit of the system. Our own
+    # port already parses a presented protocol and reads the axes it states;
+    # what it does not do is take its requirements from them. Patched to do so
+    # in one line, a presented foreign world refuses a lie at the line — "the
+    # name Nonexistent resolves to nothing", on a domain no judge has heard of.
+    # The empty prism is ours to build and does not need the corpus.
     claim_probe = tempfile.mkdtemp()
     open(os.path.join(claim_probe, "world.swift"), "w").write(
         "// ── what this file took ──\n"
