@@ -2039,14 +2039,49 @@ def declare_side(path, kind, role, frm=None):
         last = max((i for i, r in enumerate(rows) if r.startswith("public enum ")
                     and r.endswith(": " + kind + " {}")), default=-1)
         if last >= 0:
+            # PAST THE WHOLE BLOCK, not past one line of it. A row is written as
+            # an extension BODY now, and stepping over it by its first line put
+            # the next row inside the previous one's braces — where it parsed as
+            # something, so the reader kept going and simply lost the row it had
+            # swallowed. An account that quietly stops being true is the one
+            # failure this tool exists to make impossible, so it is a brace
+            # count now and not a guess at a shape.
             while last + 1 < len(rows) and rows[last + 1].startswith("extension "):
-                last += 1
+                depth = 0
+                while last + 1 < len(rows):
+                    last += 1
+                    depth += rows[last].count("{") - rows[last].count("}")
+                    if depth <= 0:
+                        break
             rows.insert(last + 1, line.rstrip("\n"))
             text = "\n".join(rows)
         else:
             text += line
     open(mp, "w").write(text)
     return os.path.basename(mp)
+
+
+def forget_side(path, d):
+    # UNSUBSCRIBING IS DELETING A LINE, and it has to be as cheap as writing one
+    # or the list rots: a row nobody can remove without opening the file by hand
+    # is a row people stop maintaining, and then the account lies. The FILE is
+    # not touched — taking a thing out of your account is not the same act as
+    # throwing it away, and gate does not get to decide the second one.
+    mp = os.path.join(d, "gate.manifest.swift")
+    if not os.path.exists(mp):
+        return None, None
+    text = open(mp, encoding="utf-8").read()
+    _, rows = read_manifest_rows(d)
+    row = next((r for r in (rows or []) if r["path"] == path
+                or os.path.basename(r["path"]) == os.path.basename(path)), None)
+    if not row or not row["name"]:
+        return None, None
+    n = row["name"]
+    text = re.sub(r"public enum " + n + r": (?:Mine|Theirs|WorldFile|SeamFile) \{\}\n"
+                  r"(?:extension " + n + r"\b[^{]*\{.*?\n\}\n|extension " + n + r"\b[^\n]*\n)",
+                  "", text, count=1, flags=re.S)
+    open(mp, "w").write(text)
+    return os.path.basename(mp), row
 
 
 def declare_mine(path, argv):
@@ -2070,13 +2105,36 @@ def cmd_side(a, kind):
         if flag in a and a.index(flag) + 1 < len(a):
             rest = [x for x in rest if x != a[a.index(flag) + 1]]
     usage = (f"gate {word} PATH" + ("" if kind == "Mine" else " --at REV")
-             + " [--role " + "|".join(ROLES) + "]")
+             + " [--role " + "|".join(ROLES) + "] · " + f"gate {word} PATH --forget")
     if not rest:
-        return {"command": word, "asks": True, "note": usage,
-                "next": ("a file you emit, judged with the rest of your world"
-                         if kind == "Mine" else
-                         "a file you took from somewhere, at the revision you took it at")}
+        # THE SAME WORD ASKS AND ANSWERS. With a path it declares; with none it
+        # is the question an owner actually has — what have I got, whose is it,
+        # and how fresh. Answering that needed no new noun, and a list you can
+        # only get by opening a file in an editor is a list nobody looks at.
+        d = os.path.dirname(os.path.abspath(FACTS)) if FACTS else os.getcwd()
+        _, rows = read_manifest_rows(d)
+        held = [r for r in (rows or []) if r["source"] == word]
+        if not held:
+            return {"command": word, "asks": True, "note": usage,
+                    "next": ("a file you emit, judged with the rest of your world"
+                             if kind == "Mine" else
+                             "a file you took from somewhere, at the revision you took it at")}
+        return {"command": word, "held": [
+            {"file": r["path"], "role": r["role"], "at": r["from"]} for r in held],
+            "note": usage, "mutates": False}
     path = rest[0]
+    if "--forget" in a:
+        d = os.path.dirname(os.path.abspath(path)) or "."
+        mp, row = forget_side(os.path.basename(path), d)
+        if not mp:
+            return {"command": word, "asks": True,
+                    "note": f"{os.path.basename(path)} is not in your list",
+                    "next": f"gate {word} — what is in it"}
+        return {"command": word, "forgot": row["path"], "declared_in": mp, "mutates": True,
+                "note": "out of your account. The file is still on disk: taking a thing out of "
+                        "your list is not throwing it away, and that second act is yours alone",
+                "next": "delete the file too if you meant that — a commit like any other, "
+                        "visible and dated"}
     if not os.path.exists(path):
         return {"command": word, "asks": True, "note": f"no file at {path}",
                 "next": "bring the file here first — gate never fetches: a file of theirs "
@@ -2266,6 +2324,14 @@ def seams_here(root=None):
                 a["against"] = None
             a["contract_file"] = os.path.basename(c)
             a["carrier_file"] = os.path.basename(k)
+            # AND THE PIN, WHERE THE OWNER IS LOOKING. `against` is what the
+            # other side said it built against; this is what YOU wrote down when
+            # you took each file, which is the fact you can act on — and it was
+            # readable only by opening the manifest in an editor.
+            _, _rows = read_manifest_rows(os.path.dirname(os.path.abspath(c)))
+            _at = {r["path"]: r["from"] for r in (_rows or [])}
+            a["took"] = [{"file": os.path.basename(f), "at": _at.get(os.path.basename(f))}
+                         for f in (c, k)]
             a["read_known"] = os.path.basename(known) if os.path.exists(known) else None
             a["read_tracker"] = os.path.basename(tick) if os.path.exists(tick) else None
             out.append(a)
@@ -3898,6 +3964,18 @@ def humanize(out):
         # see which a file is without opening it.
         if out.get("asks"):
             lines.append("usage: " + out["note"])
+        elif out.get("held") is not None:
+            # THE ACCOUNT, in the shape somebody reads down a column: what, what
+            # for, and how fresh. An owner who cannot see this cannot own it.
+            lines.append(f"{cmd}: {len(out['held'])}")
+            for h in out["held"]:
+                at = f" · at {h['at']}" if h.get("at") else ""
+                lines.append(f"  {h['file']:<28} {h['role'] or '—':<7}{at}")
+            lines.append(f"  next: `gate {cmd} FILE --forget` takes one out of the list, "
+                         "and leaves the file alone")
+        elif out.get("forgot"):
+            lines.append(f"{cmd}: {out['forgot']} · out of {out['declared_in']}")
+            lines.append("  the file is still on disk — that is a separate act, and yours")
         else:
             # what was taken, and at what — the whole account in the line that
             # takes it, because a pin stated nowhere pins nothing

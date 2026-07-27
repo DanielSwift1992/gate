@@ -1617,6 +1617,52 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               # both are in the usage, so neither is knowledge you must already have
               and "gate mine FILE" in two_src and "gate theirs FILE" in two_src))
 
+    # ── AND A ROW WRITTEN AFTER ANOTHER DOES NOT LAND INSIDE IT. Rows are kept
+    # in their own group so a person can read the document, and stepping to the
+    # end of a group was done by its first line — which was true while a row was
+    # one line and stopped being true the moment a row grew a body. The next row
+    # went in between somebody else's braces, where it still parsed as SOMETHING,
+    # so the reader carried on and simply lost the row it had swallowed. An
+    # account that quietly stops being true is the one failure this tool exists
+    # to make impossible, and it was mine, in this file, for a day.
+    many = tempfile.mkdtemp()
+    open(os.path.join(many, "gate.swift"), "w").write("public enum Sales: Department {}\n")
+    open(os.path.join(many, "w.swift"), "w").write("public enum Ops: Department {}\n")
+    for who in "abc":
+        open(os.path.join(many, f"{who}.swift"), "w").write(
+            f"// contract\npublic enum F_{who}: Declared {{ public typealias Of = Text }}\n")
+    run("theirs", "a.swift", "--at", "r1", cwd=many)
+    run("mine", "w.swift", cwd=many)                       # interleaved, so the groups collide
+    run("theirs", "b.swift", "--at", "r2", cwd=many)
+    run("theirs", "c.swift", "--at", "r3", cwd=many)
+    kept = run("theirs", cwd=many)[1].get("held") or []
+    kept_mine = run("mine", cwd=many)[1].get("held") or []
+    S.append(("a row written after another lands beside it, never inside it",
+              [h["file"] for h in kept] == ["a.swift", "b.swift", "c.swift"]
+              and [h["at"] for h in kept] == ["r1", "r2", "r3"]
+              and [h["file"] for h in kept_mine] == ["w.swift"]
+              # and the document still reads as one brace-balanced whole
+              and open(os.path.join(many, "gate.manifest.swift")).read().count("{")
+              == open(os.path.join(many, "gate.manifest.swift")).read().count("}")))
+
+    # ── AND THE LIST IS THE OWNER'S TO READ AND TO SHORTEN. A row nobody can see
+    # without opening a file in an editor is a row nobody maintains, and one
+    # nobody can remove without hand-editing is worse: the account rots and then
+    # it lies. The same word asks and answers — with a path it declares, with
+    # none it says what is held and how fresh — and taking a row out never
+    # touches the file, because removing a thing from your account and throwing
+    # it away are two acts and only the first is gate's to do.
+    gone = run("theirs", "b.swift", "--forget", cwd=many)[1]
+    after = run("theirs", cwd=many)[1].get("held") or []
+    S.append(("the account can be read and shortened, and forgetting keeps the file",
+              gone.get("forgot") == "b.swift"
+              and [h["file"] for h in after] == ["a.swift", "c.swift"]
+              # the file itself is untouched: that act is the operator's alone
+              and os.path.exists(os.path.join(many, "b.swift"))
+              and "still on disk" in gone.get("note", "")
+              # and a row that is not there is said so rather than silently done
+              and run("theirs", "nope.swift", "--forget", cwd=many)[1].get("asks")))
+
     # ── WHAT IS TAKEN IS TAKEN AT A REVISION, AND A ROW NAMES ITS COURT. Nothing
     # in this tool expresses a version range, which is the whole reason no solver
     # exists here: the problem is not solved, it cannot be stated. But a pin

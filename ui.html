@@ -247,6 +247,8 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .seam-pair{padding:calc(var(--u)*2) calc(var(--u)*7) 0}
 .badge.back{color:var(--law)}
 .seam-where{color:var(--seam)}
+/* the pins hang under the pair they belong to, in the pair's own column */
+.seam-took{padding:0 calc(var(--u)*7);color:var(--seam)}
 .stale{color:var(--law)}
 #bare .note{display:block}
 #bare .slot{cursor:pointer;border-bottom:1px dashed var(--line)}
@@ -1931,6 +1933,22 @@ async function buildSeams() {
             + ". Read from " + [s.contract_file, s.carrier_file, s.read_known,
                                 s.read_tracker].filter(Boolean).join(", ") + ".";
         box.appendChild(head);
+        // WHAT YOU TOOK, AND AT WHAT. The line above says what the other side
+        // built against; this says what YOU wrote down when you took each file,
+        // which is the fact you can act on — and until now it was readable only
+        // by opening the manifest in an editor. An owner who cannot see how
+        // fresh a thing is does not own it, they just have it.
+        for (const t of (s.took || [])) {
+            const p = document.createElement("div");
+            p.className = "seam-took caption";
+            p.textContent = t.at ? t.file + " · took at " + t.at
+                                 : t.file + " · taken at nothing written down";
+            p.title = t.at ? "You declared this file taken at " + t.at
+                + ". To move, take it again at a newer revision: `gate theirs " + t.file
+                + " --at REV`. There are no ranges here, so there is nothing to resolve."
+                : "This row says no revision. `gate theirs " + t.file + " --at REV` writes one.";
+            box.appendChild(p);
+        }
         // EVERY ADDRESS THIS BENCH PRINTS IS REACHABLE. A row that looks like a
         // row you can click and does nothing is worse than a plain list: the
         // affordance was borrowed along with the styling and then not honoured.
