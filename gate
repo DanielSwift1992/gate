@@ -1389,14 +1389,21 @@ def cmd_stdlib(a):
         with open(path, "w") as f:
             f.write(STDLIB[name])
         return {"command": "stdlib materialize", "wrote": path,
-                "note": "now yours to version and import; edit it = remove the stdlib header (drift of an unedited copy is guarded by status)"}
+                "note": "a printout, not a source. These words live compiled inside the judge: "
+                        "the world can speak them with this file absent, and editing this copy "
+                        "adds no word to the language. It is here to be READ",
+                "next": "gate --version names the revision they were compiled from — that, and "
+                        "not this file, is the thing your world depends on"}
     return {"command": "stdlib", "modules": {k: v.split("\n")[0].replace("// ", "") for k, v in STDLIB.items()},
-            "note": "hidden is not secret: show prints, materialize lands the file in your repo"}
+            "note": "printouts of what the judge already carries — not files your world is made of"}
 
 
 def stdlib_guards():
-    # a materialized copy still carrying the stdlib header must match the
-    # binary's: drifted — re-materialize, or drop the header to own the file
+    # A PRINTOUT THAT NO LONGER MATCHES WHAT IT PRINTS. The copy claims, in its
+    # own header, to be the words this judge carries; once edited it says
+    # something the judge will not answer for, and a reader has no way to tell.
+    # It is not a source — editing it adds no word to the language — so the only
+    # honest ends are to print it again or to stop claiming it is the printout.
     if not FACTS:
         return []
     d = os.path.dirname(os.path.abspath(FACTS))
@@ -1406,7 +1413,7 @@ def stdlib_guards():
         if os.path.exists(p):
             text = open(p).read()
             if text.startswith(MATERIALIZED_MARK) and text != body:
-                bad.append({"address": f"{name}.swift", "claim": "a materialized stdlib copy drifted from the binary's: re-materialize, or remove the header to own the file"})
+                bad.append({"address": f"{name}.swift", "claim": "this printout no longer matches the words the judge carries, and still says it does. Editing it adds no word to the language: print it again, or drop the header so it stops claiming to be the printout"})
     return bad
 
 
@@ -1849,36 +1856,91 @@ CARRIER_HEADER = """// printed by gate declare carrier — what a library says i
 """
 
 
-def declare_mine(path, argv):
-    # SAYING IT IS MINE, in the file that already says what is mine. gate never
-    # fetches and never sends: the other side arrives because an operator brought
-    # it — a checkout in CI, a copy, whatever they already trust — and this only
-    # writes down that the pair is one this world answers for. Two lines, in the
-    # same document and the same shape as the layout, so the same reader that
-    # judges the world reads them.
+def declare_side(path, kind):
+    # MINE AND THEIRS, WRITTEN THE SAME WAY, in the one document that already
+    # says what this world is made of. The manifest is entirely mine — it is
+    # where I say which files I write and which I only read — and that is the
+    # whole of the difference:
     #
-    # The other direction is a pull request. Put this file and these two lines in
-    # THEIR repository and their own CI holds them to it: touch the field and the
-    # seam parts on their side, with an address. Unsubscribing is deleting the
-    # file, which is a commit like any other — visible, dated, and nobody's to do
-    # quietly.
+    #   WorldFile  mine.    I wrote it, it is judged, and changing it changes
+    #                       the verdict.
+    #   SeamFile   theirs.  I only read it. It is judged where it meets mine,
+    #                       and nowhere else.
+    #
+    # gate never fetches and never sends: a file of theirs arrives because an
+    # operator brought it — a checkout in CI, a copy, whatever they already
+    # trust — and this only writes down that it is here and which side it is on.
+    # Two lines, in the same shape as the layout, so the reader that judges the
+    # world reads them too.
+    #
+    # The other direction is a pull request. Put a side and its two lines in
+    # THEIR repository and their own CI holds them to it: touch the field and
+    # the seam parts on their side, with an address. Unsubscribing is deleting
+    # the file, which is a commit like any other — visible, dated, and nobody's
+    # to do quietly.
     d = os.path.dirname(os.path.abspath(path)) or "."
     mp = os.path.join(d, "gate.manifest.swift")
     name = sanitize(os.path.splitext(os.path.basename(path))[0]).title().replace("_", "") or "Side"
     text = open(mp, encoding="utf-8").read() if os.path.exists(mp) else (
         "// the layout is a fact of the world: files are declared here, gate obeys\n"
         "public protocol WorldFile {}\n")
-    if "public protocol SeamFile {}" not in text:
-        text += ("\n// and the seams this world says it is party to. A seam is here because\n"
-                 "// this side declared it, never because a file was lying beside the others.\n"
+    if kind == "SeamFile" and "public protocol SeamFile {}" not in text:
+        text += ("\n// and the files this world reads but does not write. They are here\n"
+                 "// because this side said so, never because a file was lying beside\n"
+                 "// the others.\n"
                  "public protocol SeamFile {}\n")
-    line = ('public enum ' + name + ': SeamFile {}\n'
+    line = ('public enum ' + name + ': ' + kind + ' {}\n'
             'extension ' + name + ' { public static var typeName: String { "'
             + os.path.basename(path) + '" } }\n')
     if line not in text:
-        text += line
+        # KEPT IN ITS OWN GROUP, because this document is read by a person: what
+        # I write and what I only read are the one distinction it exists to draw,
+        # and appending everything to the bottom mixes them back together.
+        rows = text.split("\n")
+        last = max((i for i, r in enumerate(rows) if r.startswith("public enum ")
+                    and r.endswith(": " + kind + " {}")), default=-1)
+        if last >= 0:
+            while last + 1 < len(rows) and rows[last + 1].startswith("extension "):
+                last += 1
+            rows.insert(last + 1, line.rstrip("\n"))
+            text = "\n".join(rows)
+        else:
+            text += line
     open(mp, "w").write(text)
     return os.path.basename(mp)
+
+
+def declare_mine(path, argv):
+    return declare_side(path, "SeamFile")
+
+
+def cmd_side(a, kind):
+    # gate mine PATH · gate theirs PATH — the two ways in, and the only two.
+    # The same command shape both directions, so that saying a true thing about
+    # a file I wrote costs exactly what saying one about a file of theirs costs.
+    word = "mine" if kind == "WorldFile" else "theirs"
+    if not a:
+        return {"command": word, "asks": True, "note": f"gate {word} PATH",
+                "next": ("a file you write, judged with the rest of your world"
+                         if kind == "WorldFile" else
+                         "a file you only read — the other side of a seam, brought here by you")}
+    path = a[0]
+    if not os.path.exists(path):
+        return {"command": word, "asks": True, "note": f"no file at {path}",
+                "next": "bring the file here first — gate never fetches: a file of theirs "
+                        "arrives by a checkout, a copy, a vendor step you already trust"}
+    mp = declare_side(path, kind)
+    if kind == "WorldFile":
+        return {"command": "mine", "file": os.path.basename(path), "declared_in": mp,
+                "mutates": True,
+                "note": "mine: I write it, it is judged with the rest of my world, and changing "
+                        "it changes the verdict",
+                "next": "gate status — it is judged from here on"}
+    return {"command": "theirs", "file": os.path.basename(path), "declared_in": mp,
+            "mutates": True,
+            "note": "theirs: I only read it. It is judged where it meets mine — at the seam — "
+                    "and nowhere else, and gate will never rewrite it",
+            "next": "gate attention — what now waits for a word, read the same from either side"}
 
 
 def cmd_declare(a):
@@ -1895,7 +1957,7 @@ def cmd_declare(a):
     out_path = a[a.index("-o") + 1] if "-o" in a else None
     if what == "contract":
         src = a[1]
-        mine_too = "--mine" in a
+        mine_too = "--theirs" in a or "--mine" in a
         fields = [f for f in read_contract(src) if f.get("shape")]
         lines = [DECLARE_HEADER + STDLIB["genre-contract"], ""]
         for f in fields:
@@ -1930,14 +1992,14 @@ def cmd_declare(a):
         world = "\n".join(lines) + "\n"
         if out_path:
             open(out_path, "w").write(world)
-        mine = declare_mine(out_path, a) if ("--mine" in a and out_path) else None
+        mine = declare_side(out_path, "SeamFile") if (("--theirs" in a or "--mine" in a) and out_path) else None
         return {"command": "declare carrier", "carrier": who, "declared_in": mine,
                 "declares": len(decl.get("carries") or []), "wrote": out_path,
                 "world": None if out_path else world,
                 "against": against,
                 "note": ("what this library says it carries. It is not judgeable alone — a carrier "
                          "declaration is about a contract, and the pair is judged by `gate seam`"),
-                "next": ("run it again with --mine to write it into gate.manifest.swift, and put "
+                "next": ("run it again with --theirs to write it into gate.manifest.swift, and put "
                          "this file plus those two lines in THEIR repository: their own CI then "
                          "holds them to what you carry" if not mine else
                          "put this file and its two manifest lines in THEIR repository: from then "
@@ -3148,7 +3210,7 @@ def cmd_serve(a):
                     # disk and its answers out of memory, so a gate updated while
                     # it runs leaves a new page talking to an old server — every
                     # file fresh, every endpoint stale, and nothing saying so.
-                    body = json.dumps({"gate": VERSION}).encode()
+                    body = json.dumps({"gate": VERSION, "judge_from": judge_from()}).encode()
                     self.send_response(200)
                     self.send_header("Content-Type", "application/json")
                     self.send_header("Cache-Control", "no-store")
@@ -3364,6 +3426,11 @@ def cmd_serve(a):
 
 USAGE = """usage (the git-shaped porcelain):
   gate init [dir]                     · gate status | fsck
+  gate mine FILE                      (a file you write: judged with your world,
+                                       and changing it changes the verdict)
+  gate theirs FILE                    (a file you only read: judged where it
+                                       meets yours, and nowhere else. gate never
+                                       fetches it — you brought it here)
   gate check view WHO DOC             · gate check administer|delete WHO DOC
   gate diff  transfer WHO DEPT        · gate diff  grant|revoke WHO DOC
   gate diff  hire ID RANK HOME GIVEN FAMILY BORN SITE
@@ -3541,6 +3608,10 @@ def dispatch(cmd, rest):
         return repo_journal(int(nums[0]) if nums else 200, scope)
     if cmd == "stdlib":
         return cmd_stdlib(rest)
+    if cmd == "mine":
+        return cmd_side(rest, "WorldFile")
+    if cmd == "theirs":
+        return cmd_side(rest, "SeamFile")
     raise SystemExit(USAGE)
 
 
@@ -3635,6 +3706,16 @@ def humanize(out):
             lines.append("  commit it, and every clone has the tool — nothing to install")
             if v.get("judge_sha256"):
                 lines.append(f"  judge sha256: {v['judge_sha256'][:16]}…")
+    elif cmd in ("mine", "theirs"):
+        # SAID IN ONE LINE, THE SAME LINE BOTH WAYS. The whole difference is the
+        # verb: one I write, one I only read — and the operator should be able to
+        # see which a file is without opening it.
+        if out.get("asks"):
+            lines.append("usage: " + out["note"])
+        else:
+            lines.append(f"{cmd}: {out['file']} · written down in {out['declared_in']}")
+            lines.append("  " + ("you write it — judged with your world" if cmd == "mine"
+                                 else "you only read it — judged where it meets yours"))
     elif cmd == "aside":
         if out.get("asks"):
             lines.append("usage: " + out["note"]); lines.append(f"  next: {out['next']}")
@@ -3715,21 +3796,22 @@ def humanize(out):
         # WHAT MAY BE SAID HERE, in a sentence rather than a blob. An operator
         # who cannot see the vocabulary cannot know it is theirs to read: the
         # shelf was reachable only by already knowing a name on it.
-        # TWO UNLIKE THINGS, SAID APART. A genre is a kind of world you can
-        # speak; the rest is furniture this tool is made of — its palette, its
-        # metrics, git's own atoms. One flat list under one word claimed a unity
-        # that is not there, and the names had been saying so all along.
-        gen = {k: v for k, v in out["modules"].items() if k.startswith("genre-")}
-        own = {k: v for k, v in out["modules"].items() if not k.startswith("genre-")}
-        lines.append(f"stdlib: {len(gen)} genres you can speak, {len(own)} worlds gate is made of")
-        for name, note in gen.items():
+        #
+        # AND IT IS NOT A SHELF OF FILES. Splitting it into genres and gate's
+        # own furniture drew a line that does not matter to anybody using this,
+        # and hid the line that does: none of it is yours. Every word here is
+        # compiled inside the judge — a world speaks `Department` with no file
+        # of that name anywhere near it, and a copy declared as a world file is
+        # refused outright. So a printout is exactly that, and the dependency is
+        # the judge, named by revision.
+        lines.append(f"stdlib: {len(out['modules'])} printouts of the words the judge carries")
+        for name, note in out["modules"].items():
             lines.append(f"  {name:<20} {note.split('—')[-1].strip()[:58]}")
-        for name, note in own.items():
-            lines.append(f"  {name:<20} {note.split('—')[-1].strip()[:58]}   (gate's own)")
-        lines.append("  note: the forms the judge itself carries are not here — they are compiled "
-                     "into it from the corpus, and `gate --version` names the revision")
-        lines.append("  next: `gate stdlib show <name>` reads one as plain Swift, "
-                     "`gate stdlib materialize <name>` makes a copy yours")
+        lines.append("  these are THEIRS: read them, quote them, learn them — but they are not "
+                     "files your world is made of, and editing one adds no word to the language. "
+                     "`gate --version` names the revision they were compiled from")
+        lines.append("  next: `gate stdlib show <name>` reads one as plain Swift · "
+                     "`gate mine FILE` / `gate theirs FILE` is how a file joins your world")
     elif cmd == "library":
         f = out.get("forms") or out.get("crystal") or {}
         lines.append(f"library: {len(f)} forms" + (f" · wrote {out['wrote']}" if out.get("wrote") else ""))

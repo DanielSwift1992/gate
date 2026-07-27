@@ -160,11 +160,18 @@ def main():
     with open(os.path.join(lib, "genre-grants.swift"), "a") as f:
         f.write("// edit\n")
     c, r = run("status", cwd=lib)
-    S.append(("drifted stdlib copy named", r["verdict"] == "refused" and any("drifted" in x["claim"] for x in r["refusals"])))
+    S.append(("an edited printout is caught still claiming to be the printout",
+              r["verdict"] == "refused"
+              and any("no longer matches the words the judge carries" in x["claim"]
+                      for x in r["refusals"])))
     t = open(os.path.join(lib, "genre-grants.swift")).read().replace("// gate stdlib", "// mine:", 1)
     open(os.path.join(lib, "genre-grants.swift"), "w").write(t)
     c, r = run("status", cwd=lib)
-    S.append(("header removed = the file is owned", r["verdict"] == "holds"))
+    # dropping the header ends the claim — it does not turn the file into a
+    # source. Nothing declares it, so nothing reads it, and the world is what
+    # it was before the copy existed.
+    S.append(("dropping the header ends the claim, and the file goes back to being read by nothing",
+              r["verdict"] == "holds"))
 
     c, r = run("import", "rbac", os.path.join(DEMO, "rbac.json"), "-o", os.path.join(tmp, "rbac-gate.swift"))
     S.append(("rbac: two real breaks named by k8s source", c == 1 and len(r.get("refusals", [])) == 2
@@ -631,7 +638,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
 
     S.append(("the bench shows the shelf as reference, not as the world",
               'viewingShelf = mod' in ui and 'chip" id="chip" style=' in ui
-              and 'on the shelf, judged by' in ui and "if (viewingShelf)" in ui))
+              and 'a printout of what the judge carries' in ui and "if (viewingShelf)" in ui))
     S.append(("and returning to a world file resumes judgement",
               'viewingShelf = null' in ui and 'cm.setOption("readOnly", false); viewingShelf = null' in ui))
 
@@ -1471,25 +1478,105 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # you cannot get by looking. And at the command line the same list came out
     # as a blob of JSON. Somebody who cannot see the vocabulary cannot know it is
     # theirs to read, and nobody arrives already knowing.
-    # And TWO UNLIKE THINGS ARE SAID APART. A genre is a kind of world you can
-    # speak — Department, Ranked, Site. The rest of the shelf is furniture this
-    # tool is made of: its palette, its metrics, git's own atoms. One flat list
-    # under one word claimed a unity that is not there, and the names had been
-    # saying so all along. And the corpus is on neither list, which is why it
-    # felt like a different kind of dependency: it is one. Its forms travel
-    # compiled inside the judge, and the version line names where they came from.
+    # AND THE ONE LINE THAT MATTERS IS MINE AGAINST THEIRS. There are files I
+    # write, whose verdict follows what I do to them, and files I only read.
+    # Splitting the shelf instead into genres and gate's own furniture drew a
+    # line nobody using this needs, and hid the one they do: NONE OF THE SHELF
+    # IS EITHER. Those words are compiled inside the judge — a world speaks
+    # `Department` with no file of that name near it — so a shelf page is a
+    # printout, and the dependency is the judge, named by revision.
     shelf_said = say("stdlib", cwd=ent)
-    S.append(("genres are what you can speak, gate's own worlds are said apart, and the corpus is neither",
-              "genres you can speak" in shelf_said and "worlds gate is made of" in shelf_said
-              and "genre-organization" in shelf_said
-              and "(gate's own)" in shelf_said.split("bench-palette", 1)[1][:70]
-              and "compiled into it from the corpus" in shelf_said
-              and "gate stdlib show" in shelf_said and "materialize" in shelf_said
-              # and the rail lists the genres, each opening as the plain Swift it is
-              and 'data-fold="shelf"' in ui and "async function buildShelf()" in ui
-              and 'mods.filter(m => m.startsWith("genre-"))' in ui
+    shelf_src = open(GATE, encoding="utf-8").read()
+    S.append(("the shelf is one list of printouts, and says it is not yours",
+              "printouts of the words the judge carries" in shelf_said
+              and "genre-organization" in shelf_said and "bench-palette" in shelf_said
+              and "these are THEIRS" in shelf_said
+              and "editing one adds no word to the language" in shelf_said
+              and "gate --version` names the revision" in shelf_said
+              and "gate stdlib show" in shelf_said
+              and "gate mine FILE` / `gate theirs FILE`" in shelf_said
+              # no split survives: one flat list, no side-label on the furniture
+              and "genres you can speak" not in shelf_said
+              and "(gate's own)" not in shelf_said
+              # and the rail says the same three things in the same order
+              and "<i></i>mine</h3>" in ui and "<i></i>theirs</h3>" in ui
+              and "<i></i>the judge<span id=\"judge-rev\"" in ui
+              and ui.index("<i></i>mine</h3>") < ui.index("<i></i>theirs</h3>")
+              < ui.index("<i></i>the judge<span")
+              and 'mods.filter(m => m.startsWith("genre-"))' not in ui
               and "r.onclick = () => openShelf(m);" in ui
-              and "<i></i>genres</h3>" in ui))
+              # the revision is shown where the words are listed, or said missing
+              and 'v.judge_from ? v.judge_from.slice(0, 7) : "revision unrecorded"' in ui
+              and '"judge_from": judge_from()' in shelf_src))
+
+    # ── A SHELF PAGE IS A PRINTOUT, AND THIS IS THE PROBE THAT SAYS SO. The tool
+    # invited an operator to materialize a genre and called the copy theirs to
+    # change, which is a sentence the machinery had never agreed to: the words
+    # live compiled inside the judge. A world speaks `Department` with no file of
+    # that name anywhere near it; the file put beside the world is read by
+    # nothing; and declaring it as a file of mine is refused outright, because a
+    # world is records and a genre is the grammar records are written in. Three
+    # ways of finding out it is not a source — the invitation was the lie.
+    shelf_probe = tempfile.mkdtemp()
+    world_p = os.path.join(shelf_probe, "gate.swift")
+    open(world_p, "w").write("public enum Sales: Department {}\npublic enum Boss: Ranked {}\n")
+    bare = run("status", cwd=shelf_probe)[1]
+    run("stdlib", "materialize", "genre-organization", cwd=shelf_probe)
+    beside = run("status", cwd=shelf_probe)[1]
+    run("mine", "genre-organization.swift", cwd=shelf_probe)
+    as_mine = run("status", cwd=shelf_probe)[1]
+    with open(os.path.join(shelf_probe, "genre-organization.swift"), "a") as f:
+        f.write("\npublic enum Architect: Ranked {}\n")
+    edited = run("status", cwd=shelf_probe)[1]
+    S.append(("the words a world speaks are the judge's, and a copy of them is inert",
+              # spoken with no such file present
+              bare.get("verdict") == "holds" and bare.get("world", {}).get("declarations") == 2
+              # and the file beside the world adds nothing and takes nothing
+              and beside.get("verdict") == "holds"
+              and beside.get("world", {}).get("declarations")
+              == bare.get("world", {}).get("declarations")
+              # and calling it a file of mine is refused: a genre is not a world
+              and as_mine.get("verdict") == "refused"
+              and any("outside the fragment" in r.get("claim", "")
+                      for r in as_mine.get("refusals", []))
+              # and an edited printout is caught still claiming to be the printout
+              and any("no longer matches the words the judge carries" in r.get("claim", "")
+                      for r in edited.get("refusals", []))
+              # so the tool no longer offers the copy as something to own
+              and "yours to version" not in shelf_src and "makes a copy yours" not in shelf_src
+              and "remove the header to own the file" not in shelf_src
+              and "It is here to be READ" in shelf_src))
+
+    # ── TWO WORDS IN, AND THE SAME SHAPE BOTH WAYS. There are files I write and
+    # files I only read, and until now only the second had a command: a seam side
+    # could be declared in one word while adding a file of my own meant opening
+    # the manifest and copying a shape by hand. Friction is not evenly deserved,
+    # but it was pointing the wrong way — the cheaper act should be the one that
+    # says what I am answerable for. Both are one word now, both write the same
+    # document, and the document is mine either way: it is where I say which
+    # files I write and which I only read.
+    two = tempfile.mkdtemp()
+    two_src = open(GATE, encoding="utf-8").read()
+    open(os.path.join(two, "gate.swift"), "w").write("public enum Sales: Department {}\n")
+    open(os.path.join(two, "more.swift"), "w").write("public enum Ops: Department {}\n")
+    before = run("status", cwd=two)[1]
+    mine_said = run("mine", "more.swift", cwd=two)[1]
+    after = run("status", cwd=two)[1]
+    manifest = open(os.path.join(two, "gate.manifest.swift")).read()
+    missing = run("theirs", "not-here.swift", cwd=two)[1]
+    S.append(("adding a file of mine and a file of theirs is one word each",
+              # mine: it joins the judged world, and the count moves
+              mine_said.get("command") == "mine" and mine_said.get("file") == "more.swift"
+              and before.get("world", {}).get("declarations") == 1
+              and after.get("world", {}).get("declarations") == 2
+              and "public enum More: WorldFile {}" in manifest
+              # theirs is the other atom in the same document, not a second document
+              and 'cmd_side(rest, "SeamFile")' in two_src and 'cmd_side(rest, "WorldFile")' in two_src
+              # and a file that is not here is asked for, never fetched
+              and missing.get("asks") and "no file at" in missing.get("note", "")
+              and "gate never fetches" in missing.get("next", "")
+              # both are in the usage, so neither is knowledge you must already have
+              and "gate mine FILE" in two_src and "gate theirs FILE" in two_src))
 
     # ── WHAT THIS JUDGE WAS MADE FROM. Its identity is its bytes, and that is
     # what a reviewer reproduces — but bytes say what a thing IS, never what it

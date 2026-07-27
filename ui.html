@@ -131,7 +131,12 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 #rail h3.fold i::before{content:"▾"}
 #rail h3.fold.shut i{transform:rotate(-90deg)}
 #rail h3.fold .obs{flex:1 1 100%;padding-left:calc(var(--u)*7)}
+/* the revision is a fact, not a heading: it keeps its own case and its own face */
+#judge-rev{font-family:ui-monospace,Menlo,monospace;text-transform:none;letter-spacing:0;opacity:.65;margin-top:var(--u)}
 #rail h3.fold.shut .obs{display:none}
+/* except the revision: it is the one dependency here, and a shut list is
+   exactly when an operator wants it stated rather than hunted for */
+#rail h3.fold.shut #judge-rev{display:block}
 .foldable.shut{display:none}
 #keys-btn{border:none;background:transparent;color:var(--muted);font:13px -apple-system,sans-serif;width:20px;height:20px;border-radius:5px;cursor:pointer;padding:0}
 #keys-btn:hover{background:var(--mist);color:var(--ink)}
@@ -333,11 +338,11 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .pending:hover{background:var(--mist)}
 </style>
 <div id="rail"><div id="brand"><b>gate</b><span id="brandline" class="caption"></span></div>
-  <h3 class="fold caption" data-fold="files"><i></i>files</h3><div id="filelist" class="foldable"></div>
-  <h3 class="fold caption" id="shelf-head" data-fold="shelf"><i></i>genres</h3>
-  <div id="shelf-host" class="foldable"></div>
-  <h3 class="fold caption" id="seams-head" data-fold="seams"><i></i>seams</h3>
+  <h3 class="fold caption" data-fold="files"><i></i>mine</h3><div id="filelist" class="foldable"></div>
+  <h3 class="fold caption" id="seams-head" data-fold="seams"><i></i>theirs</h3>
   <div id="seam-host" class="foldable"></div>
+  <h3 class="fold caption" id="shelf-head" data-fold="shelf"><i></i>the judge<span id="judge-rev" class="obs"></span></h3>
+  <div id="shelf-host" class="foldable"></div>
   <h3 class="fold" id="journal-head" data-fold="journal"><i></i>journal <span class="obs caption"></span></h3>
   <div id="journal" class="foldable"></div></div>
 <div class="split" id="split-rail" style="display:none"></div>
@@ -379,6 +384,10 @@ const BENCH_FOR = "0.1.0";
 // bench, so it stands in the line that reports the bench's own condition.
 let benchStale = "";
 fetch("/version", { cache: "no-store" }).then(r => r.json()).then(v => {
+    // the one dependency that cannot be edited, only re-pinned — so it is named
+    // where the words it carries are listed, and said plainly when unrecorded
+    const rev = document.getElementById("judge-rev");
+    if (rev) rev.textContent = v.judge_from ? v.judge_from.slice(0, 7) : "revision unrecorded";
     if (v.gate !== BENCH_FOR) {
         benchStale = " · this page is gate " + BENCH_FOR + ", the bench serving it is "
             + v.gate + " — restart `gate serve`";
@@ -517,7 +526,9 @@ function buildRail() {
         // your personal world stands apart: it is in your own git, and the
         // shared repository does not have it
         row.innerHTML = '<span class="dot"></span>' + f + (f === personalFile
-            ? '<span class="mine caption" title="Your personal world. It lives in your own git at ~/.gate/me and is never in the shared repository.">mine</span>' : "");
+            // every file under this heading is mine, so the badge must say the
+            // thing that is different about this one: it is not in the repository
+            ? '<span class="mine caption" title="Your personal world. It lives in your own git at ~/.gate/me and is never in the shared repository.">not shared</span>' : "");
         row.onclick = () => {
             const from = navHere();       // opening a file from the rail is a jump too
             loadFile(f); recordJump(from); // loadFile sets `active` before it awaits
@@ -541,27 +552,32 @@ async function buildJournal() {
     buildShelf();
 }
 
-// ── THE GENRES: KINDS OF WORLD YOU CAN SPEAK. `Department`, `Ranked`, `Site` —
-// plain Swift, readable and copyable, and a copy in your repository is yours to
-// change. The shelf also carries gate's own worlds — its palette, its metrics,
-// git's atoms — and calling both `vocabulary` claimed a unity that is not
-// there: one is a grammar you adopt, the other is furniture this tool is made
-// of. The names already said so, and only this list did not.
-// The corpus underneath is on neither list, and that is why it felt like a
-// different kind of dependency — it IS one. Its forms are carried compiled
-// inside the judge; `gate --version` names the revision they came from.
+// ── THE WORDS THE JUDGE CARRIES, and the reason they are not on either of the
+// two lists above. The rail says MINE and THEIRS because that is the whole of
+// the difference between files: one kind I write and the verdict follows me,
+// one kind I only read. `Department`, `Ranked`, `Site` are neither. They are
+// not files here at all — a world speaks them with no such file anywhere near
+// it, and a copy declared as a world file is refused. They are compiled inside
+// the judge, and what these pages show is a printout.
+//
+// The earlier split — genres over here, gate's own furniture over there — drew
+// a line nobody using this needs and hid the one they do: none of it is yours,
+// and none of it can be changed by editing a copy. So one list, under the name
+// of the thing it belongs to, with the revision it was compiled from beside it.
+// That revision IS the dependency, and it is the only part of this a world can
+// be pinned to.
 async function buildShelf() {
     const host = document.getElementById("shelf-host");
     let mods = [];
     try { mods = (await (await fetch("/shelf")).json()).modules || []; } catch { mods = []; }
-    mods = mods.filter(m => m.startsWith("genre-"));
     host.innerHTML = "";
     document.getElementById("shelf-head").hidden = !mods.length;
     for (const m of mods) {
         const r = document.createElement("div");
         r.className = "commit touches";
-        r.title = "A kind of world you can speak, in plain Swift. `gate stdlib materialize "
-            + m + "` puts a copy in your repository, where it becomes yours to change.";
+        r.title = "Words the judge carries, printed as Swift. This is not a file your world is "
+            + "made of: your world speaks these with no such file present, and editing a copy "
+            + "adds no word to the language.";
         r.innerHTML = '<div class="subj fact">' + esc(m) + "</div>";
         r.onclick = () => openShelf(m);
         host.appendChild(r);
@@ -1041,7 +1057,7 @@ async function render() {
         clearFlags();
         badFiles = new Set(); buildRail();
         document.getElementById("status").innerHTML =
-            "<b>" + viewingShelf + ".swift</b> · on the shelf, judged by <code>gate stdlib</code>";
+            "<b>" + viewingShelf + ".swift</b> · a printout of what the judge carries — theirs, read-only";
         document.getElementById("chip").outerHTML =
             '<span class="chip" id="chip" style="background:var(--mist);color:var(--muted)">reference</span>';
         document.getElementById("next").textContent = "";
@@ -1273,8 +1289,10 @@ async function openShelf(mod, name) {
     cm.setValue(text);
     cm.setOption("readOnly", true);
     buildRail();
-    say(mod + ".swift is on the shelf, not in your repository: read it here, or "
-        + "`gate stdlib materialize " + mod + "` to make it yours.");
+    // the bar already says what this is; the line says the one thing the bar
+    // cannot fit — that a copy of it is not a source
+    say("Your world speaks these words with no file of this name beside it, and editing a "
+        + "copy adds none to the language. `gate stdlib materialize " + mod + "` to read it offline.");
     if (name) {
         const i = text.split("\n").findIndex(l => new RegExp("\\b" + name + "\\b").test(l)
             && /^\s*(public\s+)?(enum|protocol|struct|typealias)/.test(l));
@@ -1566,12 +1584,12 @@ function livedCombos() {
 
 // A name is the one free birth in a closed world, so it is the one place the
 // bench cannot offer a list — but it can refuse: a name already declared, or one
-// the shelf owns, is not written at all. Nothing enters the file until it is
-// whole and free.
+// the judge already carries, is not written at all. Nothing enters the file
+// until it is whole and free.
 function nameTaken(n) {
     if (!/^[A-Z][A-Za-z0-9_]*$/.test(n)) return "a record's name begins with a capital";
     if (layoutOrActive().has(n)) return "the world already declares " + n;
-    if (vocabulary[n]) return "the shelf already owns " + n;
+    if (vocabulary[n]) return "the judge already carries " + n;
     return null;
 }
 
@@ -2107,7 +2125,12 @@ function applyFold(name, shut) {
 }
 for (const head of document.querySelectorAll("h3.fold")) {
     const name = head.dataset.fold;
-    applyFold(name, !!layout()["shut_" + name]);
+    // THE RAIL OPENS ON WHAT IS YOURS. Your files and your seams are the work;
+    // the judge's own words are reference, and eight rows of them above the
+    // journal made the reference look like the subject. Shut until asked for —
+    // and once you have said either way, your word is the one that is kept.
+    const stored = layout()["shut_" + name];
+    applyFold(name, stored === undefined ? name === "shelf" : !!stored);
     head.onclick = () => {
         const shut = !head.classList.contains("shut");
         applyFold(name, shut);

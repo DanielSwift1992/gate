@@ -152,36 +152,50 @@ gate status                      # first print + first verdict, in ms
 `gate serve` in a repository that has no world yet still opens: the journal
 reads the repository itself, with nothing to translate.
 
-**Full**, **Bare** and **Table** are three ways to look at one file. Beside the
-file list and the journal — the other two things that are about the repository
-rather than about a file — **seams** appears when this world has declared any:
-the pairs it is party to, one line each, with what came back standing first. A
-seam is there because you said it is yours, in the same file that declares your
-layout:
+**Full**, **Bare** and **Table** are three ways to look at one file.
+
+## Mine, theirs, and the judge
+
+There are two kinds of file, and one thing that is not a file at all.
+
+**Mine** are the files I write. They are judged with the rest of my world, and
+changing one changes the verdict. **Theirs** are the files I only read — the
+other side of a seam. They are judged where they meet mine, and nowhere else.
+One word each:
+
+```sh
+gate mine   people.swift    # I write it, and I answer for it
+gate theirs api.swift       # I read it, and it is judged at the seam
+```
+
+Both write the same document, and that document is entirely mine: it is where I
+say which files I write and which I only read.
 
 ```swift
+// gate.manifest.swift
+public protocol WorldFile {}
+public enum People: WorldFile {}
+extension People { public static var typeName: String { "people.swift" } }
+
 public protocol SeamFile {}
 public enum TheContract: SeamFile {}
 extension TheContract { public static var typeName: String { "api.swift" } }
-public enum OurSide: SeamFile {}
-extension OurSide { public static var typeName: String { "sdk.swift" } }
 ```
 
-Above them stands **genres**: kinds of world you can speak — `Department`,
-`Ranked`, `Site` — each opening as the plain Swift it is, and
-`gate stdlib materialize <name>` puts a copy in your repository where it becomes
-yours to change. A genre is what may be said; `gate library` is what you say;
-the world is what you said.
+Nothing appears in the rail because it was lying in the folder. `gate declare
+carrier … --theirs` writes those two lines for you.
 
-The shelf also carries worlds gate itself is made of — its palette, its metrics,
-git's own atoms — and `gate stdlib` lists those apart, because a grammar you
-adopt and furniture this tool is built from are not one kind of thing. The corpus
-is on neither list: its forms travel compiled inside the judge, and
-`gate --version` names the revision they came from.
+**The judge** is the third thing, and it is not a file here. `Department`,
+`Ranked`, `Site` — the words a world speaks — are compiled inside it. A world
+speaks them with no file of that name anywhere near it; a copy put beside the
+world is read by nothing; and a copy declared as a file of mine is refused
+outright, because a world is records and a genre is the grammar records are
+written in. So `gate stdlib` prints, and what it prints is a printout: reading,
+not source. `gate --version` names the revision the words were compiled from,
+and that revision — not any file — is what a world depends on.
 
-Membership is yours to state; which side a file is, that file says about itself.
-Nothing appears in your rail because it was lying in the folder. `gate declare
-carrier … --mine` writes those two lines for you.
+The rail says the same three things in the same order: **mine**, **theirs**,
+**the judge**, with the revision beside it.
 
 **How the other side finds out** is a pull request, and nothing else. gate never
 fetches and never sends: the other side's declaration arrives because you brought
@@ -207,8 +221,8 @@ gate survey                            # read-only: unwritten links mined from
 
 The porcelain is deliberately git-shaped: `init · status/fsck · log · check ·
 diff · apply · import/export · verify · guard · library · survey · drift ·
-badge · declare · seam · attention · serve · report · stdlib · my · demo · findings ·
---version`. A refusal
+badge · mine · theirs · declare · seam · attention · serve · report · stdlib · my ·
+demo · findings · --version`. A refusal
 exits non-zero, so hooks and CI need no wrappers — and `drift`, which judges
 nothing, exits non-zero only on a threshold you declare yourself.
 
@@ -385,16 +399,19 @@ head. A refusal points at its address instead.
   shared world alone. Clear it and it is gone again. Privacy is the
   repository boundary, not a policy; sharing is moving a declaration into
   the shared world and committing it.
-- **A shelf of genres, and a genre is the unit.** A domain has one
+- **A genre is the unit, and it belongs to the judge.** A domain has one
   vocabulary — the forms and axes a world of that kind is written in — and
   it ships as a real Swift file in `stdlib/`, judged by the product's own
-  judge in its own battery. An imported world names the genre it is written
-  in, so the language is one command away: `gate stdlib show
-  genre-organization`, and `materialize` lands it in your repo where it
-  becomes yours. In the bench, hold ⌘ and every name in the file underlines:
-  click one and it opens where it is declared, whether that is your own file
-  or the genre on the shelf. Nothing a printed world says is left without a
-  home, and a check keeps it that way. Hidden is not secret.
+  judge in its own battery. But it is not a file *your* world is made of:
+  those words travel compiled inside the judge, so a world speaks them with
+  nothing of that name beside it, and a copy declared as yours is refused —
+  a world is records, a genre is the grammar records are written in. So the
+  language is one command away to *read*: `gate stdlib show
+  genre-organization`, and `materialize` writes the printout out for
+  offline reading. In the bench, hold ⌘ and every name in the file
+  underlines: click one and it opens where it is declared, whether that is
+  your own file or the judge's own page. Nothing a printed world says is
+  left without a home, and a check keeps it that way. Hidden is not secret.
 
 ## Carrying gate in your repository
 
@@ -496,13 +513,13 @@ LICENSE         MIT · NOTICE.md says what travels with gate
 gate            the CLI (python prototype; the judge does the judging)
 bin/gate-judge  the judge, one static binary (built from the public
                 theory corpus: bin/build-judge.sh [pin])
-stdlib/         the shelf: definitions as real Swift files, self-judged
+stdlib/         the judge's own words, printed as real Swift files, self-judged
 judge.js        the browser judge (byte-parity port) for the bench
 ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 190 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 192 end-to-end checks, the definition of green
 ```
 
 ## Status
