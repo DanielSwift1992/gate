@@ -1447,12 +1447,23 @@ function buildTables() {
         const notes = attachNotes(cm.getValue(), lastParsed);
         const hasNotes = group.rows.some(d => notes.has(d.name));
         const head = document.createElement("tr");
-        // THE HAND GOES LAST. A note is read far more often than a record is
-        // removed, and the remove sat between the facts and the note — so every
-        // reading crossed a destructive control to reach the sentence, and the
-        // hand stood in the middle of what it acts on. Reading order follows
-        // how often a thing is read; the register law puts the hand at the edge.
-        for (const key of ["name", ...group.keys, ...(hasNotes ? ["note"] : []), ""]) {
+        // ── ONE LIST OF COLUMNS, READ BY BOTH. The heading row and the cell row
+        // were each built from their own idea of the order, and they parted: the
+        // head read name · axes · note · blank while a row was built name · axes
+        // · remove · note, so the × stood under the word `note` and the sentence
+        // stood under nothing at all. It had been that way since the note column
+        // arrived, because a table with a note in it is rare and nobody looked.
+        //
+        // A check would have caught it once. This cannot happen again: there is
+        // one list, and the head and the row both walk it — a disagreement is no
+        // longer a bug to notice, it is a thing there is no way to write. Which
+        // is what this whole tool sells, turned on its own page.
+        //
+        // The hand goes last, and that is the order to want as well: a note is
+        // read far more often than a record is removed, and a destructive
+        // control had been standing between the facts and the sentence.
+        const columns = ["name", ...group.keys, ...(hasNotes ? ["note"] : []), ""];
+        for (const key of columns) {
             const th = document.createElement("th"); th.className = "caption";
             th.innerHTML = key + mark(key);
             th.onclick = () => {
@@ -1469,10 +1480,28 @@ function buildTables() {
         }
         for (const d of rows) {
             const tr = document.createElement("tr");
-            const name = document.createElement("td");
-            name.className = "fact cell-name"; name.textContent = d.name;
-            name.title = "go to line " + d.line; name.onclick = () => jumpTo(d.name);
-            tr.append(name);
+            const cellFor = {};
+            {
+                const name = document.createElement("td");
+                name.className = "fact cell-name"; name.textContent = d.name;
+                name.title = "go to line " + d.line; name.onclick = () => jumpTo(d.name);
+                cellFor["name"] = name;
+            }
+            {
+                const nt = document.createElement("td");
+                // the same prose, in the same register, in every view that shows
+                // it — the notation the corpus uses is shown, not spelled
+                nt.className = "cell-note";
+                nt.innerHTML = noteProse((notes.get(d.name) || []).join(" ").trim());
+                cellFor["note"] = nt;
+            }
+            {
+                const del = document.createElement("td");
+                del.className = "cut caption"; del.textContent = "\u00d7";
+                del.title = "remove this record";
+                del.onclick = () => removeUnit({ kind: "record", line: d.line, host: d.name });
+                cellFor[""] = del;
+            }
             for (const key of group.keys) {
                 const td = document.createElement("td");
                 td.className = "fact cell-value";
@@ -1496,21 +1525,9 @@ function buildTables() {
                         drawCompletion(true);
                     };
                 }
-                tr.append(td);
+                cellFor[key] = td;
             }
-            if (hasNotes) {
-                // the same prose, in the same register, in every view that
-                // shows it — the notation the corpus uses is shown, not spelled
-                const nt = document.createElement("td");
-                nt.className = "cell-note";
-                nt.innerHTML = noteProse((notes.get(d.name) || []).join(" ").trim());
-                tr.append(nt);
-            }
-            const del = document.createElement("td");
-            del.className = "cut caption"; del.textContent = "\u00d7";
-            del.title = "remove this record";
-            del.onclick = () => removeUnit({ kind: "record", line: d.line, host: d.name });
-            tr.append(del);
+            for (const key of columns) tr.append(cellFor[key]);
             table.append(tr);
         }
         host.append(table);

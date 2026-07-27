@@ -1947,6 +1947,67 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "await loadFile(t.claim); reveal(t.line)" in ui
               and "that sentence is the fact, and this is a reading of it" in ui))
 
+    # ── AN EXHIBIT, NOT A WISH. What follows records what a claim written in the
+    # head of the file that depends on it does TODAY, line by line, because the
+    # answer is the case for the one change everything left is waiting on: the
+    # vocabulary is compiled into the judge, and a protocol presented by file is
+    # refused by the plain court on its form while the where court takes it and
+    # judges nothing. Three things this project cannot finish — forms presented
+    # by file, a role judged rather than propped, claims judged where they are
+    # written — are not three problems. They are one root.
+    #
+    # So this check pins the negative. It is not a behaviour anybody wants; it is
+    # the shape of the wall, kept honest so nobody argues from memory about where
+    # it stands. The day the wall moves, this goes red and says so.
+    claim_probe = tempfile.mkdtemp()
+    open(os.path.join(claim_probe, "world.swift"), "w").write(
+        "// ── what this file took ──\n"
+        "public protocol Role {}\n"
+        "public enum SeamFile: Role {}\n"
+        "public protocol Theirs {}\n"
+        "public enum Rev_api {}\n"
+        'extension Rev_api { public static var typeName: String { "openapi@3f2a1c9" } }\n'
+        "public enum TheContract: Theirs {\n"
+        "    public typealias Kind = SeamFile\n"
+        "    public typealias At = Rev_api\n"
+        "}\n"
+        "\npublic enum Sales: Department {}\n")
+    judge_bin = os.path.join(HERE, "bin", "gate-judge")
+    plain = subprocess.run([judge_bin, "judge", os.path.join(claim_probe, "world.swift")],
+                           capture_output=True, text=True).stdout
+    where = subprocess.run([judge_bin, "judge", "where", os.path.join(claim_probe, "world.swift")],
+                           capture_output=True, text=True).stdout
+    S.append(("a claim written where it is used is judged by neither court today",
+              # the plain court refuses it on FORM: a protocol is outside the
+              # fragment, and so is the extension that spells a typeName
+              "outside the fragment" in plain
+              and "public protocol Role {}" in plain
+              and "typeName" in plain
+              # and the where court takes the same text and judges nothing at
+              # all — a green over nought uses, which says neither yes nor no
+              and "THE WHERE holds" in where and "across 0 uses" in where))
+
+    # ── AND THE DIAMOND HOLDS ON CLAIMS, which is the half that already works.
+    # Two files claiming the same revision atom are two truths about one name,
+    # and that is refused with BOTH addresses rather than resolved by a rule
+    # nobody can read. No solver exists here because no range can be written;
+    # what a conflict gets instead is a sentence and two places to look.
+    dia = tempfile.mkdtemp()
+    open(os.path.join(dia, "gate.swift"), "w").write("public enum Sales: Department {}\n")
+    for who in "ab":
+        open(os.path.join(dia, f"{who}.swift"), "w").write(
+            "public enum Rev_api {}\n"
+            f"public enum Ops{who}: Department {{}}\n")
+        run("mine", f"{who}.swift", cwd=dia)
+    doubled = run("status", cwd=dia)[1]
+    S.append(("one claim declared in two files is refused with both addresses",
+              doubled.get("verdict") == "refused"
+              and any("Rev_api" in r.get("claim", "")
+                      and "declared twice" in r.get("claim", "")
+                      and "a.swift:1" in r.get("claim", "")
+                      and (r.get("address") or "").startswith("b.swift:")
+                      for r in doubled.get("refusals", []))))
+
     # ── WHAT THIS JUDGE WAS MADE FROM. Its identity is its bytes, and that is
     # what a reviewer reproduces — but bytes say what a thing IS, never what it
     # was made from, so the one dependency this whole tool rests on was stated as
@@ -2852,9 +2913,14 @@ public enum MyWatch: AccessLedger {
               # been standing between the facts and the sentence — crossed on
               # every reading. The hand goes at the edge, which is where the
               # register law puts it and where a misclick costs least.
-              and ui.index('nt.className = "cell-note"')
-              < ui.index('del.className = "cut caption"')
-              and '["name", ...group.keys, ...(hasNotes ? ["note"] : []), ""]' in ui))
+              # and it cannot part again, because there is now ONE list and the
+              # heading row and the cell row both walk it. A check would have
+              # caught this once; a single source makes it unwritable — which is
+              # what this tool sells, turned on its own page.
+              and 'const columns = ["name", ...group.keys, ...(hasNotes ? ["note"] : []), ""]' in ui
+              and "for (const key of columns) {" in ui
+              and "for (const key of columns) tr.append(cellFor[key]);" in ui
+              and ui.count("const columns = [") == 1))
 
     # ── AND A PAGE THAT FORGETS TO SAY WHICH IT IS GOES RED. The rule that each
     # shelf file states its own role in its own second line replaced a guess
