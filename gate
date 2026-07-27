@@ -1468,6 +1468,27 @@ def cmd_demo(a):
     world = os.path.join(root, "gate.swift")
     cmd_import([os.path.join(root, "tables", "people.csv"),
                 os.path.join(root, "tables", "grants.csv"), "-o", world])
+    # AND THE WORLD PRESENTS THE FORMS IT IS WRITTEN IN. Organization was only
+    # ever an example of what somebody might write, and it had been living
+    # inside the arbiters instead — one domain's ranks and departments baked
+    # into a thing meant to judge any domain. It belongs beside the world that
+    # speaks it, as a file the operator could have written and can now read,
+    # change, or replace. A world that presents its forms is judged by what it
+    # presented rather than by what a judge was born knowing.
+    forms = os.path.join(root, "forms-organization.swift")
+    body = STDLIB["forms-organization"].split("\n")
+    # the shelf's header says "this is the printout" and a guard holds it to
+    # that. Here it is not a printout of anything: it is this world's own forms,
+    # yours to change, and saying otherwise would make the first edit a refusal
+    while body and body[0].startswith("//"):
+        body.pop(0)
+    with open(forms, "w") as f:
+        f.write("// the forms this world is written in — an example of what you might\n"
+                "// write, and yours from here: change a rank, add a department, and the\n"
+                "// world beside it is judged by what you said rather than by anything\n"
+                "// this tool was born knowing.\n"
+                + "\n".join(body).lstrip("\n"))
+    declare_side(forms, "Mine", "forms")
     with open(os.path.join(root, "gate.policy.swift"), "w") as f:
         f.write('// who someone is, and what an action demands — facts, beside the world\n'
                 'public enum MailYou: Identity {\n    public typealias Person = Emp9000\n}\n'

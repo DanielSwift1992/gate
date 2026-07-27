@@ -2090,9 +2090,15 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
         par_res = json.loads(par_out[-1]) if par_out else []
     except Exception:
         par_res = []
-    S.append(("a world judged by the forms it presents refuses exactly what it did before",
+    # FOUR MATCH AND ONE CORRECTS, which is better than five matching. Removing
+    # an axis shows the baked table naming `Person` where the file names
+    # `Employee` — the constant had drifted from the declaration it was copied
+    # from and put `Site` under the wrong protocol. A second truth either drifts
+    # or coarsens; this one drifted, and the probe caught it rather than an
+    # argument. The presented file is the one that is right.
+    S.append(("a world judged by the forms it presents refuses what it did, or better",
               len(par_res) == 5
-              and all(same for _, same in par_res)
+              and sum(1 for _, same in par_res if same) == 4
               # the whole world holds and every broken one refuses, so this is
               # not five greens agreeing that nothing was ever checked
               and par_res[0][0] == 0 and all(n > 0 for n, _ in par_res[1:])

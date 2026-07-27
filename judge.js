@@ -60,6 +60,16 @@ const gatePremises = new Map([
 function domainOf(declarations) {
     const conformers = new Map();   // protocol -> Set of names that conform
     const requires = new Map();     // protocol -> [[axis, the form it must be]]
+    for (const [name, declaration] of declarations) {
+        for (const conformance of declaration.conformances) {
+            if (!conformers.has(conformance)) conformers.set(conformance, new Set());
+            conformers.get(conformance).add(name);
+        }
+        if (declaration.axes && declaration.axes.length) {
+            requires.set(name, declaration.axes.map(
+                (axis) => [axis, (declaration.axisKinds || {})[axis] || null]));
+        }
+    }
     return { conformers, requires };
 }
 
