@@ -1823,9 +1823,14 @@ function bareForm(parsed, text) {
     };
     // a note that belongs to a record is one paragraph too, and it stands
     // against the record rather than floating a line away from it
-    const noteLines = (name) => {
+    // A NOTE IS NOT A LINE OF THE STREAM. It is a block, and the newline that
+    // joined it to the code below was still a character in a `pre` — so it drew
+    // a whole empty line and put a reading-line of air between a note and the
+    // record it speaks for, however tight the declared margin was. The gap was
+    // honest and the join was not. It rides outside the join now.
+    const noteOf = (name) => {
         const said = (notes.get(name) || []).join(" ").trim();
-        return said ? ['<span class="note said">' + noteProse(said) + "</span>"] : [];
+        return said ? '<span class="note said">' + noteProse(said) + "</span>" : "";
     };
     // one stream, in the order the document has it: a record with its note above
     // it, and the comments that belong to nobody where they were written
@@ -1837,8 +1842,7 @@ function bareForm(parsed, text) {
             const i = bareSlots.push(slot) - 1;
             return '<span class="cut" data-cut="' + i + '" title="remove this ' + what + '">\u00d7</span>';
         };
-        const block = [...noteLines(name),
-            '<span class="' + (bad ? "row-bad" : "") + '">' + declSpan(name, d.line, bad) + conf
+        const block = ['<span class="' + (bad ? "row-bad" : "") + '">' + declSpan(name, d.line, bad) + conf
                 + cut({ kind: "record", line: d.line, host: name }, "record") + "</span>"];
         for (const [k, v] of d.aliases)
             block.push("    " + esc(k) + " = "
@@ -1857,16 +1861,16 @@ function bareForm(parsed, text) {
         }
         if ((d.entries || []).length)
             block.push('    <span class="add caption" data-add-claim="' + name + '">+ add claim</span>');
-        items.push({ line: d.line, block });
+        items.push({ line: d.line, note: noteOf(name), block });
     }
     for (const [name, a] of (parsed.topAliases || new Map()))
-        items.push({ line: a.line, block: [...noteLines(name), declSpan(name, a.line, false) + " = " + nameTokens(a.target)] });
+        items.push({ line: a.line, note: noteOf(name), block: [declSpan(name, a.line, false) + " = " + nameTokens(a.target)] });
     for (const c of freeComments(src, notes, parsed))
-        items.push({ line: c.line, block: ['<span class="note free">' + noteProse(c.text) + "</span>"] });
+        items.push({ line: c.line, note: '<span class="note free">' + noteProse(c.text) + "</span>", block: [] });
     items.sort((a, b) => a.line - b.line);
     // each item is a block of its own, so the gap between them is a declared
     // length rather than whatever line-height the font happens to carry
-    return items.map(i => '<span class="rec">' + i.block.join("\n") + "</span>").join("")
+    return items.map(i => '<span class="rec">' + (i.note || "") + i.block.join("\n") + "</span>").join("")
         + '<span class="add caption" data-add-record="1">+ add record</span>';
 }
 // one delegated handler: a name in the bare view jumps to its declaration

@@ -2808,7 +2808,16 @@ public enum MyWatch: AccessLedger {
               # and the law they are taken from still holds on the shelf
               and ladder.get("Apart") > ladder.get("Step") > ladder.get("Near")
               # the blank line of text that used to do this work is gone
-              and 'block.push("")' not in ui))
+              and 'block.push("")' not in ui
+              # and a note is not a line of the stream: joined with a newline
+              # inside a `pre`, a block-level note drew a whole empty line and
+              # put a reading-line of air between it and what it speaks for,
+              # however tight the declared margin was. The gap was honest; the
+              # join was not. Measured after the fix: 5.65px against Near, and
+              # 11.3px against Apart, on a unit of 1.885px.
+              and '(i.note || "") + i.block.join' in ui
+              and "const noteOf = (name) =>" in ui
+              and "noteLines" not in ui))
 
     # ── AND A PAGE THAT FORGETS TO SAY WHICH IT IS GOES RED. The rule that each
     # shelf file states its own role in its own second line replaced a guess
