@@ -37,6 +37,46 @@ const gatePremises = new Map([
     ["VerifiedAtWorkplace", ["Site", null]],
 ]);
 
+
+// ── THE DOMAIN, READ FROM WHAT WAS PRESENTED. This port was written as a
+// line-for-line mirror of the binary, and it mirrored the table too: one
+// reference world's ranks, departments, workplaces, genders, shares and the
+// axes each of its protocols owes, hard-coded in an arbiter meant to judge any
+// world. That table is a differential seat — the binary's own header calls it
+// the policy stated a second time, on purpose — and that seat is the corpus's
+// business with its reference world, not ours.
+//
+// Everything in it is already said by the forms a world presents: departments
+// are the conformers of `Department`, the axes a protocol owes are its own
+// `associatedtype` lines, a gate's premise is its own `where` clause. So the
+// domain is derived, and the presented form is the better of the two: it says
+// `Home: Department`, naming a declared thing, where the constant said
+// "department", naming a category that exists nowhere.
+//
+// The gates need nothing here: `checkWhereGates` already reads a presented
+// `where` clause and normalises both sides through the dictionary — "the gate
+// is grammar, not domain", as the line that wrote it says. The baked premise
+// map was a second copy of a mechanism that already worked for anybody.
+function domainOf(declarations) {
+    const conformers = new Map();   // protocol -> Set of names that conform
+    const requires = new Map();     // protocol -> [[axis, the form it must be]]
+    return { conformers, requires };
+}
+
+// a name is what it conforms to, walking the ladder a protocol refines
+function conformsTo(name, form, declarations, seen) {
+    if (name === form) return true;
+    const declaration = declarations.get(name);
+    if (!declaration) return false;
+    seen = seen || new Set();
+    if (seen.has(name)) return false;
+    seen.add(name);
+    for (const conformance of declaration.conformances) {
+        if (conformsTo(conformance, form, declarations, seen)) return true;
+    }
+    return false;
+}
+
 function trimEntry(text) {
     return text.replace(/^[; \n\t]+/, "").replace(/[; \n\t]+$/, "");
 }
@@ -266,7 +306,18 @@ function parse(file, text, declarations, order, refusals, extras) {
 
         if (line.startsWith("public enum ") || line.startsWith("enum ")) {
             const afterKeyword = line.replaceAll("public enum ", "").replaceAll("enum ", "");
-            const selfClosed = /\{\s*\}$/.test(afterKeyword);
+            // A DECLARATION WHOSE BODY IS ON ITS OWN LINE CLOSES ON THAT LINE.
+            // The test asked whether the line ended in an empty `{}` — true for
+            // `public enum Finance: Department {}` and false for
+            // `public enum FinanceShare: Document { public typealias Home = Finance }`,
+            // which then went on the stack and never came off. Present the forms
+            // file and every record after the shares nested under them:
+            // `FinanceShare.EngineeringShare.SalesShare.PeopleShare.Edsger`, and
+            // fifty-eight names resolved to nothing. Braces balance on the line or
+            // they do not; nothing else is being asked.
+            const opens = (afterKeyword.match(/\{/g) || []).length;
+            const closes = (afterKeyword.match(/\}/g) || []).length;
+            const selfClosed = opens > 0 && opens === closes;
             // a body written on the head's own line ends the head: without this the
             // last conformance carries the body with it, and a kind spelled
             // `Document { public typealias Home = Finance }` is a kind nobody can
@@ -313,6 +364,17 @@ function parse(file, text, declarations, order, refusals, extras) {
                 line: number, aliases: new Map(), entries: [] };
             declarations.set(qualified, declaration);
             order.push(qualified);
+            // what the head's own line said inside its braces is what it states
+            if (selfClosed && brace >= 0) {
+                const inner = headAll.slice(brace + 1);
+                for (const piece of inner.split(";")) {
+                    const alias = /(?:public\s+)?typealias\s+(\w+)\s*=\s*([^};]+)/.exec(piece);
+                    if (alias) {
+                        declaration.aliases.set(alias[1].trim(),
+                            { target: alias[2].trim(), line: number });
+                    }
+                }
+            }
             if (!selfClosed) stack.push(declaration);
             continue;
         }
@@ -577,12 +639,15 @@ function coordinate(key, name, declarations, values) {
 function check(file, declarations, order, values, refusals, extras, vocabulary) {
     let premises = 0;
     const gateTouches = values.gateTouches;
+    // what this world presented outranks anything this port was born knowing
+    const domain = domainOf(declarations);
 
     for (const qualified of order) {
         const declaration = declarations.get(qualified);
 
         for (const conformance of declaration.conformances) {
-            const requirements = conformanceRequirements.get(conformance);
+            const requirements = domain.requires.get(conformance)
+                ?? conformanceRequirements.get(conformance);
             if (!requirements) continue;
             for (const [key, wanted] of requirements) {
                 premises += 1;
@@ -600,7 +665,10 @@ function check(file, declarations, order, values, refusals, extras, vocabulary) 
                         premise: declaration.name + "." + key + ": " + reason });
                     continue;
                 }
-                const landed = category(settled, declarations);
+                const presented = declarations.has(wanted);
+                const landed = presented
+                    ? (conformsTo(settled, wanted, declarations) ? wanted : category(settled, declarations))
+                    : category(settled, declarations);
                 if (landed !== wanted) {
                     refusals.push({ file, line: alias.line,
                         premise: conformance + " requires " + key + " in " + wanted + ": "

@@ -2042,6 +2042,66 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and re.findall(r"associatedtype (\w+)\s*:\s*(\w+)",
                              protos.get("Document", "")) == [("Home", "Department")]))
 
+    # ── AND PRESENTING THE FORMS CHANGES NOTHING, WHICH IS THE WHOLE PROOF. The
+    # port now derives what a protocol requires from the protocol itself, so a
+    # world that presents its forms is judged by what it presented rather than by
+    # a table this port was born knowing. If that derivation were poorer than the
+    # table, a world would go quiet somewhere — so the check runs the reference
+    # world both ways, whole and broken four ways, and demands the refusals match
+    # word for word. Green parity without red parity is half a parity.
+    #
+    # It also caught a parser fault nobody had met: `public enum FinanceShare:
+    # Document { public typealias Home = Finance }` closes on its own line, and
+    # the test for that asked whether the line ended in an empty `{}`. It does
+    # not, so the share went on the stack and never came off — every record after
+    # it nested inside, `FinanceShare.EngineeringShare.SalesShare.PeopleShare
+    # .Edsger`, and fifty-eight names resolved to nothing. Braces balance on a
+    # line or they do not.
+    par = tempfile.mkdtemp()
+    run("demo", cwd=par)
+    par_world = os.path.join(par, "gate-demo", "gate.swift")
+    probe = os.path.join(par, "parity.mjs")
+    open(probe, "w").write(
+        "import fs from 'fs';\n"
+        "const src = fs.readFileSync(process.argv[2], 'utf8');\n"
+        "const mod = { exports: {} };\n"
+        "new Function('module','exports',src)(mod, mod.exports);\n"
+        "const { judge } = mod.exports;\n"
+        "const world = fs.readFileSync(process.argv[3], 'utf8');\n"
+        "const forms = fs.readFileSync(process.argv[4], 'utf8');\n"
+        "const V = { seeds: new Set(), generics: new Set() };\n"
+        "const cases = [world,\n"
+        "  world.replace('public typealias Rank = Manager','public typealias Rank = Archduke'),\n"
+        "  world.replace('public typealias Home = Finance','public typealias Home = Atlantis'),\n"
+        "  world.replace('    public typealias Site = OnSite\\n',''),\n"
+        "  world.replace('public typealias Next = Barbara','public typealias Next = Nobody')];\n"
+        "const out = cases.map((w) => {\n"
+        "  const a = judge('w.swift', w, V), b = judge('w.swift', forms + '\\n' + w, V);\n"
+        "  const A = a.refusals.map(r => r.premise).sort();\n"
+        "  const B = b.refusals.map(r => r.premise).sort();\n"
+        "  return [A.length, JSON.stringify(A) === JSON.stringify(B)];\n"
+        "});\n"
+        "console.log(JSON.stringify(out));\n")
+    par_out = subprocess.run(
+        ["node", probe, os.path.join(HERE, "judge.js"), par_world,
+         os.path.join(HERE, "stdlib", "forms-organization.swift")],
+        capture_output=True, text=True).stdout.strip().splitlines()
+    try:
+        par_res = json.loads(par_out[-1]) if par_out else []
+    except Exception:
+        par_res = []
+    S.append(("a world judged by the forms it presents refuses exactly what it did before",
+              len(par_res) == 5
+              and all(same for _, same in par_res)
+              # the whole world holds and every broken one refuses, so this is
+              # not five greens agreeing that nothing was ever checked
+              and par_res[0][0] == 0 and all(n > 0 for n, _ in par_res[1:])
+              # the domain comes from what was presented, not from what was baked
+              and "function domainOf(declarations)" in js
+              and "domain.requires.get(conformance)" in js
+              # and a head that closes on its own line closes on its own line
+              and "const selfClosed = opens > 0 && opens === closes;" in js))
+
     # ── AN EXHIBIT, NOT A WISH. What follows records what a claim written in the
     # head of the file that depends on it does TODAY, line by line, because the
     # answer is the case for the one change everything left is waiting on: the
