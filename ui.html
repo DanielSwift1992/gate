@@ -27,6 +27,15 @@
         || (window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"));
 })();
 </script>
+<!-- ── WHAT THIS PAGE PAINTS WITH AND SPACES ITSELF BY, served from the worlds
+     that declare them. Every colour and every step used to be written here a
+     second time — `color(xyz-d65 calc(307/1000) …)` beside a record already
+     saying 307, `calc(var(--u)*6)` beside a step already named Apart — with a
+     check standing between the copies to keep them equal. A check is what you
+     reach for when a single source is out of reach; here it was not. This page
+     now holds no colour and no length of its own: it names them, and what it
+     names is what the judge holds. ── -->
+<link rel="stylesheet" href="/ladder.css">
 <style>
 /* ── the palette, generated from the judged stdlib/bench-palette.swift: the hex
    is the sRGB fallback, and color(xyz-d65 …) carries the SAME numbers the atom
@@ -38,40 +47,13 @@
      measures its spacing in the letter it sets. --u is one fifth of the line,
      and every gap is a multiple of it — one ladder, no length off it. */
   --textline: 1.45rem; --u: calc(var(--textline) / 10);
-  --ink: #1C191A; --ink: color(xyz-d65 calc(10/1000) calc(10/1000) calc(11/1000));
-  --paper: #FDFDFD; --paper: color(xyz-d65 calc(931/1000) calc(980/1000) calc(1067/1000));
-  --mist: #F3F4F3; --mist: color(xyz-d65 calc(855/1000) calc(900/1000) calc(980/1000));
-  --line: #D7D7D7; --line: color(xyz-d65 calc(646/1000) calc(680/1000) calc(740/1000));
-  --muted: #868686; --muted: color(xyz-d65 calc(228/1000) calc(240/1000) calc(261/1000));
-  --ok: #007D36; --ok: color(xyz-d65 calc(80/1000) calc(150/1000) calc(60/1000));
-  --bad: #BF4035; --bad: color(xyz-d65 calc(240/1000) calc(150/1000) calc(50/1000));
-  --action: #2269CF; --action: color(xyz-d65 calc(170/1000) calc(150/1000) calc(610/1000));
-  --law: #AB5406; --law: color(xyz-d65 calc(200/1000) calc(150/1000) calc(20/1000));
-  --localtype: #1B7781; --localtype: color(xyz-d65 calc(110/1000) calc(150/1000) calc(230/1000));
-  --knownname: #8D48D3; --knownname: color(xyz-d65 calc(250/1000) calc(150/1000) calc(630/1000));
-  --seam: #939393; --seam: color(xyz-d65 calc(276/1000) calc(290/1000) calc(316/1000));
-  --select: #D7D7D7; --select: color(xyz-d65 calc(646/1000) calc(680/1000) calc(740/1000));
   /* a shadow is light taken away, so it is cast toward nothing in either theme.
      Cast in --ink it followed the text instead, and in the dark theme the ink is
      the LIGHT end: every raised thing wore a halo. This one belongs to no theme
      and is overridden by neither. */
   --shade: #000; --shade: color(xyz-d65 0 0 0);
 }
-:root[data-theme="dark"]{color-scheme:dark;
-  --ink: #CECFCF; --ink: color(xyz-d65 calc(590/1000) calc(621/1000) calc(676/1000));
-  --paper: #1C191A; --paper: color(xyz-d65 calc(10/1000) calc(10/1000) calc(11/1000));
-  --mist: #2F3131; --mist: color(xyz-d65 calc(28/1000) calc(30/1000) calc(33/1000));
-  --line: #403F3F; --line: color(xyz-d65 calc(48/1000) calc(50/1000) calc(54/1000));
-  --muted: #878788; --muted: color(xyz-d65 calc(232/1000) calc(244/1000) calc(266/1000));
-  --ok: #24C75B; --ok: color(xyz-d65 calc(230/1000) calc(419/1000) calc(168/1000));
-  --bad: #D4A19F; --bad: color(xyz-d65 calc(461/1000) calc(419/1000) calc(384/1000));
-  --action: #9DADD7; --action: color(xyz-d65 calc(412/1000) calc(419/1000) calc(705/1000));
-  --law: #D6A28E; --law: color(xyz-d65 calc(454/1000) calc(419/1000) calc(314/1000));
-  --localtype: #2BBECF; --localtype: color(xyz-d65 calc(307/1000) calc(419/1000) calc(656/1000));
-  --knownname: #B9A5D6; --knownname: color(xyz-d65 calc(454/1000) calc(419/1000) calc(691/1000));
-  --seam: #6B6B6B; --seam: color(xyz-d65 calc(140/1000) calc(147/1000) calc(160/1000));
-  --select: #383839; --select: color(xyz-d65 calc(38/1000) calc(40/1000) calc(44/1000));
-}
+:root[data-theme="dark"]{color-scheme:dark}
 *{box-sizing:border-box}
 /* ── REGISTERS: material is a function of the wire (MiC at the pixel). A register
    is declared ONCE here; an element only names it, and no rule restates what the
@@ -271,8 +253,8 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
    groups stand `Apart`; a note and the record it speaks for are PARTS OF ONE
    THING, so they sit `Near`, closer than rows stand from each other. Read the
    ladder and the spacing states the kinship instead of guessing at it. ── */
-#bare .rec{display:block;margin-bottom:calc(var(--u)*6)}      /* Apart: between groups */
-#bare .note.said{margin:0 0 calc(var(--u)*3)}                 /* Near: parts of one thing */
+#bare .rec{display:block;margin-bottom:var(--apart)}
+#bare .note.said{margin:0 0 var(--near)}
 #bare .note.free{margin:0}
 #bare .note code{font:12px/1.4 ui-monospace,Menlo,monospace;color:var(--ink)}
 #bare .note .known{font:12px/1.4 ui-monospace,Menlo,monospace}
@@ -633,17 +615,22 @@ async function buildJournal() {
 async function buildShelf() {
     const host = document.getElementById("shelf-host");
     let mods = [];
+    let roles = {};
     try {
         const shelf = await (await fetch("/shelf")).json();
-        mods = (shelf.modules || []).filter(m => (shelf.roles || {})[m] === "forms");
+        mods = shelf.modules || []; roles = shelf.roles || {};
     } catch { mods = []; }
     host.innerHTML = "";
     for (const m of mods) {
         const r = document.createElement("div");
         r.className = "commit touches";
-        r.title = "Words the judge carries, printed as Swift. This is not a file your world is "
-            + "made of: your world speaks these with no such file present, and editing a copy "
-            + "adds no word to the language.";
+        r.title = (roles[m] === "forms"
+            ? "Words the judge carries, printed as Swift — what your world and your policy are "
+              + "written in. Your world speaks these with no such file present, and editing a "
+              + "copy adds no word to the language."
+            : "A judged world this bench itself runs under: the palette it paints with, the "
+              + "ladder of lengths it spaces itself on, the atoms its surface is made of. "
+              + "Taken with the tool, like everything else here.");
         r.innerHTML = '<div class="subj fact">' + esc(m) + "</div>";
         r.onclick = () => openShelf(m);
         host.appendChild(r);

@@ -703,21 +703,41 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     VAR2ATOM = {"--ink": "Ink", "--paper": "Paper", "--mist": "Mist", "--line": "Line",
         "--muted": "Muted", "--ok": "Ok", "--bad": "Bad", "--action": "Action", "--law": "Law",
         "--localtype": "LocalType", "--knownname": "KnownName", "--seam": "Seam", "--select": "Select"}
-    def _block(sel): return ui.split(sel, 1)[1].split("}", 1)[0] if sel in ui else ""
+    # ── AND THE PAGE HOLDS NO COLOUR OF ITS OWN. It used to carry every one of
+    # these numbers a second time — `color(xyz-d65 calc(307/1000) …)` beside a
+    # record already saying 307 — and this check stood between the two copies
+    # keeping them equal. A check is what you reach for when a single source is
+    # out of reach, and here it was not: the bench serves the palette from the
+    # world that declares it, so there is nothing left to compare. What is
+    # checked now is that the page states no colour at all, and that what is
+    # served is what is declared.
+    served = subprocess.run(
+        [sys.executable, "-c",
+         "import types;src=open(%r,encoding='utf-8').read();g=types.ModuleType('g');"
+         "g.__file__=%r;exec(compile(src,'gate','exec'),g.__dict__);"
+         "print(g.palette_tokens())" % (GATE, GATE)],
+        capture_output=True, text=True).stdout
+
+    def _block(sel, text):
+        return text.split(sel, 1)[1].split("}", 1)[0] if sel in text else ""
+
     def _match(block, mode):
         for var, atom in VAR2ATOM.items():
             m = re.search(re.escape(var) + r": color\(xyz-d65 calc\((\d+)/1000\) calc\((\d+)/1000\) calc\((\d+)/1000\)\)", block)
-            if not m: return False
+            if not m:
+                return False
             if (int(m.group(1)), int(m.group(2)), int(m.group(3))) != (
                     axes.get((atom, mode, "X")), axes.get((atom, mode, "Y")), axes.get((atom, mode, "Z"))):
                 return False
         return True
-    stripped = re.sub(r':root(\[data-theme="dark"\])?\{.*?\n\}', "", ui, flags=re.S)
-    no_stray = not re.search(r"#[0-9a-fA-F]{3,6}\b", stripped) and "rgb(" not in stripped
-    S.append(("the palette the bench renders is the palette the judge holds: same numbers, no colour outside it",
-              _match(_block(":root{"), "Lit")
-              and _match(_block(':root[data-theme="dark"]{'), "Dim")
-              and no_stray))
+    S.append(("the palette the bench renders is the palette the judge holds: one source, no copy",
+              # served from the declared world, both halves, every atom
+              _match(_block(":root {", served), "Lit")
+              and _match(_block(':root[data-theme="dark"] {', served), "Dim")
+              # and the page names colours without ever stating one
+              and "color(xyz-d65 calc(" not in re.sub(r"<!--.*?-->", "", ui, flags=re.S)
+              and '<link rel="stylesheet" href="/ladder.css">' in ui
+              and not re.search(r"#[0-9a-fA-F]{6}\b", re.sub(r"--shade[^;]*;", "", ui))))
 
     # ── distances are one ladder too, and it starts at the reading line: --u is
     # a tenth of it and every gap a WHOLE multiple, so a length is spelled the
@@ -1549,9 +1569,16 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               # the command line says both counts and says all of it is theirs
               and "you can speak" in shelf_said and "all of it theirs" in shelf_said
               and "(gate's own furniture)" in shelf_said
-              # and the rail carries only what can be spoken, cut by role
-              and 'shelf.roles || {})[m] === "forms"' in ui
-              and 'mods.filter(m => m.startsWith("genre-"))' not in ui))
+              # AND THE RAIL CARRIES EVERYTHING TAKEN. It had been cut down to
+              # what an operator can speak, on the reasoning that this tool's own
+              # furniture answers no question they have — which was me deciding
+              # what somebody needs to know about the thing they are looking at.
+              # The palette this page paints with and the ladder it spaces itself
+              # on are laws the page RUNS UNDER; they are theirs like everything
+              # else here, and a law you cannot see is a law you cannot check.
+              and "mods = shelf.modules || []" in ui
+              and 'shelf.roles || {})[m] === "forms"' not in ui
+              and "A judged world this bench itself runs under" in ui))
 
     # ── A SHELF PAGE IS A PRINTOUT, AND THIS IS THE PROBE THAT SAYS SO. The tool
     # invited an operator to materialize a genre and called the copy theirs to
@@ -2896,9 +2923,23 @@ public enum MyWatch: AccessLedger {
         blk = ui.split(sel + "{", 1)[1].split("}", 1)[0] if (sel + "{") in ui else ""
         m = re.search(prop + r"[^;}]*?calc\(var\(--u\)\*(\d+)\)", blk)
         return int(m.group(1)) if m else None
+    # AND THE PAGE NAMES THE STEP RATHER THAN REPEATING ITS NUMBER. The
+    # stylesheet had been spelling `calc(var(--u)*6)` where the shelf says
+    # `Apart` — one number written in two places, joined by this very check.
+    # A check is what you reach for when a single source is out of reach, and
+    # here it was not: the bench serves the ladder from the judged file, the
+    # page says `var(--apart)`, and the two can no longer part.
+    def _named(sel, prop):
+        blk = ui.split(sel + "{", 1)[1].split("}", 1)[0] if (sel + "{") in ui else ""
+        m = re.search(prop + r"[^;}]*?var\(--(\w+)\)", blk)
+        return m.group(1) if m else None
     S.append(("the gaps in Bare are the steps the world names for those kinships",
-              _gap("#bare .rec", "margin-bottom") == ladder.get("Apart")
-              and _gap("#bare .note.said") == ladder.get("Near")
+              _named("#bare .rec", "margin-bottom") == "apart"
+              and _named("#bare .note.said", "margin") == "near"
+              # and the names are emitted from the file that declares them
+              and "def ladder_tokens(" in shelf_src
+              and 'u.path == "/ladder.css"' in shelf_src
+              and '<link rel="stylesheet" href="/ladder.css">' in ui
               # and the law they are taken from still holds on the shelf
               and ladder.get("Apart") > ladder.get("Step") > ladder.get("Near")
               # the blank line of text that used to do this work is gone

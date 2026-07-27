@@ -1561,6 +1561,129 @@ def cmd_survey(a):
 
 MATERIALIZED_MARK = "// gate stdlib"
 
+def _peano(text):
+    # every number in these worlds is spelled on the file's own ladder from Unit,
+    # so reading one is walking that spelling — never a table kept beside it
+    vals = {}
+
+    def ev(e):
+        e = e.strip()
+        if e == "Unit":
+            return 1
+        if e == "Never":
+            return 0
+        if e in vals:
+            return vals[e]
+        m = re.fullmatch(r"[WN](\d+)", e)
+        if m:
+            return int(m.group(1))
+        if e.startswith("Twice<"):
+            return 2 * ev(e[6:-1])
+        if e.startswith("Plus<"):
+            inner, d = e[5:-1], 0
+            for i, c in enumerate(inner):
+                if c == "<":
+                    d += 1
+                elif c == ">":
+                    d -= 1
+                elif c == "," and d == 0:
+                    return ev(inner[:i]) + ev(inner[i + 1:])
+        raise ValueError(e)
+    for m in re.finditer(r"^public typealias (\w+) = (.+)$", text, re.M):
+        name, expr = m.group(1), m.group(2).split("//")[0].strip()
+        try:
+            vals[name] = ev(expr)
+        except ValueError:
+            continue
+    return vals
+
+
+def palette_tokens():
+    # ── THE COLOURS, READ FROM THE WORLD THAT DECLARES THEM. The stylesheet had
+    # been carrying every one of these numbers a second time — `color(xyz-d65
+    # calc(307/1000) …)` beside a record that already said 307 — with a check
+    # standing between the two copies to keep them equal. A check is what you
+    # reach for when a single source is out of reach; here it was not. The page
+    # holds no colour of its own now: what it paints with is what the judge holds.
+    vals = _peano(STDLIB.get("bench-palette", ""))
+    names = sorted({m.group(1) for m in
+                    re.finditer(r"^public typealias (\w+)(?:Lit|Dim)X = ", 
+                                STDLIB.get("bench-palette", ""), re.M)})
+
+    def srgb(x, y, z):
+        # a hex fallback for anything that cannot read color(); a rendering of
+        # the declared fact, never a second statement of it
+        lin = (3.2406 * x - 1.5372 * y - 0.4986 * z,
+               -0.9689 * x + 1.8758 * y + 0.0415 * z,
+               0.0557 * x - 0.2040 * y + 1.0570 * z)
+        out = []
+        for c in lin:
+            c = 12.92 * c if c <= 0.0031308 else 1.055 * (max(c, 0) ** (1 / 2.4)) - 0.055
+            out.append(max(0, min(255, round(c * 255))))
+        return "#%02X%02X%02X" % tuple(out)
+
+    def block(half):
+        rows = []
+        for n in names:
+            try:
+                x, y, z = (vals[f"{n}{half}X"], vals[f"{n}{half}Y"], vals[f"{n}{half}Z"])
+            except KeyError:
+                continue
+            var = "--" + n[0].lower() + re.sub(r"([A-Z])", lambda m: m.group(1).lower(), n[1:])
+            rows.append(f"  {var}: {srgb(x / 1000, y / 1000, z / 1000)};"
+                        f" {var}: color(xyz-d65 calc({x}/1000) calc({y}/1000) calc({z}/1000));")
+        return "\n".join(rows)
+    return (":root {\n" + block("Lit") + "\n}\n"
+            + ':root[data-theme="dark"] {\n' + block("Dim") + "\n}\n")
+
+
+def ladder_tokens():
+    # ── THE STEPS, READ FROM THE WORLD THAT DECLARES THEM. The stylesheet had
+    # been spelling the multiples itself — `calc(var(--u)*6)` where the shelf
+    # says `Apart` — which is the same number written in two places and held
+    # together by a check. A check is what you reach for when a single source is
+    # out of reach; here it was not. The page names the step now, and the number
+    # comes from the file that is judged for it, so the two cannot part.
+    text = STDLIB.get("bench-metrics", "")
+    vals, out = {}, []
+
+    def ev(e):
+        e = e.strip()
+        if e == "Unit":
+            return 1
+        if e == "Never":
+            return 0
+        if e in vals:
+            return vals[e]
+        m = re.fullmatch(r"W(\d+)", e)
+        if m:
+            return int(m.group(1))
+        if e.startswith("Twice<"):
+            return 2 * ev(e[6:-1])
+        if e.startswith("Plus<"):
+            inner, d = e[5:-1], 0
+            for i, c in enumerate(inner):
+                if c == "<":
+                    d += 1
+                elif c == ">":
+                    d -= 1
+                elif c == "," and d == 0:
+                    return ev(inner[:i]) + ev(inner[i + 1:])
+        raise ValueError(e)
+    for m in re.finditer(r"^public typealias (\w+) = (.+)$", text, re.M):
+        name, expr = m.group(1), m.group(2).split("//")[0].strip()
+        try:
+            vals[name] = ev(expr)
+        except ValueError:
+            continue
+    # `Line` is left out: the page already spends that name on a border colour,
+    # and one word may not mean two things in one document
+    for name in ("Tight", "Snug", "Near", "Step", "Room", "Apart", "Edge", "Wide"):
+        if name in vals:
+            out.append(f"  --{name.lower()}: calc(var(--u) * {vals[name]});")
+    return ":root {\n" + "\n".join(out) + "\n}\n"
+
+
 def load_stdlib():
     # the shelf's single source: stdlib/*.swift next to the CLI. Readable,
     # editable, judged by our own judge in our own battery (self-hosted);
@@ -3576,6 +3699,17 @@ def cmd_serve(a):
             u = urlparse(self.path)
             q = {k: v[0] for k, v in parse_qs(u.query).items()}
             try:
+                if u.path == "/ladder.css":
+                    # the named steps, emitted from the judged world so the page
+                    # can say `var(--apart)` and never a number of its own
+                    body = (palette_tokens() + ladder_tokens()).encode()
+                    self.send_response(200)
+                    self.send_header("Content-Type", "text/css; charset=utf-8")
+                    self.send_header("Cache-Control", "no-store")
+                    self.send_header("Content-Length", str(len(body)))
+                    self.end_headers()
+                    self.wfile.write(body)
+                    return
                 if u.path in ("/", "/ui"):
                     return self.send_file(os.path.join(here, "ui.html"), "text/html; charset=utf-8")
                 if u.path == "/seamside":
