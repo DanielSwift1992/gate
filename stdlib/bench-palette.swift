@@ -96,6 +96,18 @@ where Times<N25, Z> == Plus<Times<N28, Y>, Plus<Unit, Margin>> {}
 public enum TowardWarm<Y, Z, Margin>: Close {}
 extension TowardWarm: Chromatic
 where Times<N27, Y> == Plus<Times<N25, Z>, Plus<Unit, Margin>> {}
+// ── AND TWO CHANNELS THAT MUST BE TOLD APART STAND APART. Every hue here was
+// certified for its SIDE — toward blue, toward warm — and for its lightness,
+// and nothing ever certified the DISTANCE between two of them. So a channel
+// could drift until it nearly met another and no certificate would say a word:
+// mine and theirs are 400 apart on Z in the lit half and 35 in the dim one, an
+// eleven-fold collapse that left the whole mine/theirs distinction resting on
+// an axis no law looked at. A pair the eye must separate is a pair the world
+// must hold apart, and by a stated amount.
+public enum Apart<A, B, Margin>: Close {}
+extension Apart: Ordered
+where A == Plus<B, Plus<Unit, Margin>> {}
+
 public protocol Opposite {}
 public enum Opposed<AX, AY, BX, BY, Aslack, Bslack>: Close {}
 extension Opposed: Opposite
@@ -265,3 +277,18 @@ public typealias SeamUnderMuted_lit = Brighter<SeamLitY, MutedLitY, Plus<Unit, P
 public typealias SeamUnderMuted_dim = Brighter<MutedDimY, SeamDimY, Plus<W32, W64>>
 public typealias SelectOverMist_lit = Brighter<MistLitY, SelectLitY, Plus<Unit, Plus<W2, Plus<W8, Plus<W16, Plus<W64, W128>>>>>>
 public typealias SelectOverMist_dim = Brighter<SelectDimY, MistDimY, Plus<Unit, W8>>
+
+// ── the two questions a name's hue answers, held apart by name. Whose source it
+// is (mine against theirs) and, where a verdict speaks, that against theirs —
+// these are the pairs a reader must never confuse, so they are the pairs the
+// world states a floor for. The floors are today's distances: a drift below any
+// of them turns this repository red at the line rather than in somebody's eye.
+public typealias MineApartTheirs_X_lit = Apart<KnownNameLitX, LocalTypeLitX, Plus<Unit, Plus<W2, Plus<W8, W128>>>>
+public typealias MineApartTheirs_X_dim = Apart<KnownNameDimX, LocalTypeDimX, Plus<W2, Plus<W16, W128>>>
+public typealias MineApartTheirs_Z_lit = Apart<KnownNameLitZ, LocalTypeLitZ, Plus<Unit, Plus<W2, Plus<W4, Plus<W8, Plus<W128, W256>>>>>>
+// THE WEAK ONE, SAID OUT LOUD RATHER THAN LEFT UNSAID: 35 where its twin is 400.
+// The distinction survives here on X alone, and this line is what will notice
+// if that last thread thins too.
+public typealias MineApartTheirs_Z_dim = Apart<KnownNameDimZ, LocalTypeDimZ, Plus<W2, W32>>
+public typealias TheirsApartBad_Z_lit = Apart<KnownNameLitZ, BadLitZ, Plus<Unit, Plus<W2, Plus<W64, W512>>>>
+public typealias TheirsApartBad_Z_dim = Apart<KnownNameDimZ, BadDimZ, Plus<W2, Plus<W16, Plus<W32, W256>>>>

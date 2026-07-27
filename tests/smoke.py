@@ -1947,6 +1947,32 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "await loadFile(t.claim); reveal(t.line)" in ui
               and "that sentence is the fact, and this is a reading of it" in ui))
 
+    # ── A HUE ANSWERS TWO QUESTIONS AND NOTHING HELD THEM APART. Every channel
+    # was certified for its SIDE — toward blue, toward warm — and for its
+    # lightness, and no certificate ever spoke about the DISTANCE between two of
+    # them. So a channel could drift until it nearly met another and the palette
+    # would hold: mine and theirs stand 400 apart on Z in the light theme and 35
+    # in the dark, an eleven-fold collapse, leaving the whole mine/theirs
+    # distinction resting on an axis no law looked at. Found by an eye, not by
+    # this battery, which is the point of writing the floor down.
+    pal = open(os.path.join(HERE, "stdlib", "bench-palette.swift"), encoding="utf-8").read()
+    S.append(("two channels a reader must separate are held apart by a stated floor",
+              # the form exists and says what it means
+              "public enum Apart<A, B, Margin>: Close {}" in pal
+              and "where A == Plus<B, Plus<Unit, Margin>> {}" in pal
+              # both questions a name's hue answers are floored, in both halves
+              and all(f"public typealias {n} = Apart<" in pal for n in (
+                  "MineApartTheirs_X_lit", "MineApartTheirs_X_dim",
+                  "MineApartTheirs_Z_lit", "MineApartTheirs_Z_dim",
+                  "TheirsApartBad_Z_lit", "TheirsApartBad_Z_dim"))
+              # and the weak one is named as weak rather than buried in a number
+              and "THE WEAK ONE, SAID OUT LOUD" in pal
+              # the floors are live: the judge counts them among what it holds
+              and "116 equalities" in subprocess.run(
+                  [os.path.join(HERE, "bin", "gate-judge"), "judge", "where",
+                   os.path.join(HERE, "stdlib", "bench-palette.swift")],
+                  capture_output=True, text=True).stdout))
+
     # ── AN EXHIBIT, NOT A WISH. What follows records what a claim written in the
     # head of the file that depends on it does TODAY, line by line, because the
     # answer is the case for the one change everything left is waiting on: the
