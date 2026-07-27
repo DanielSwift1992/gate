@@ -2785,6 +2785,31 @@ public enum MyWatch: AccessLedger {
               # while the old ownership lie is gone from that header for good
               and "where it becomes yours" not in shelf_src))
 
+    # ── AND THE GAPS IN BARE ARE THE STEPS THE WORLD NAMES FOR THOSE KINSHIPS,
+    # not merely steps it names for something. Records were held apart by a
+    # blank line of TEXT — the font's line-height, some eight units and a fifth,
+    # a number nobody declared and nobody could defend — and the note margins I
+    # first picked were named lengths standing for the wrong relations: `Tight`,
+    # which is what holds inside one mark, between a note and the record it
+    # speaks for. The law of proximity says which is which, so the page is tied
+    # to it by NAME: a record with its axes is a group and groups stand `Apart`;
+    # a note and its record are parts of one thing and sit `Near`, and `Near` is
+    # tighter than `Apart` because the shelf holds it so.
+    ladder = _steps(open(os.path.join(HERE, "stdlib", "bench-metrics.swift"),
+                         encoding="utf-8").read())
+
+    def _gap(sel, prop="margin"):
+        blk = ui.split(sel + "{", 1)[1].split("}", 1)[0] if (sel + "{") in ui else ""
+        m = re.search(prop + r"[^;}]*?calc\(var\(--u\)\*(\d+)\)", blk)
+        return int(m.group(1)) if m else None
+    S.append(("the gaps in Bare are the steps the world names for those kinships",
+              _gap("#bare .rec", "margin-bottom") == ladder.get("Apart")
+              and _gap("#bare .note.said") == ladder.get("Near")
+              # and the law they are taken from still holds on the shelf
+              and ladder.get("Apart") > ladder.get("Step") > ladder.get("Near")
+              # the blank line of text that used to do this work is gone
+              and 'block.push("")' not in ui))
+
     # ── AND A PAGE THAT FORGETS TO SAY WHICH IT IS GOES RED. The rule that each
     # shelf file states its own role in its own second line replaced a guess
     # dressed as a category, and a rule nobody checks decays into the guess it

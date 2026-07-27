@@ -258,10 +258,16 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
    between paragraphs where it belongs rather than inside one. ── */
 #bare .note{display:block;white-space:normal;max-width:62ch;
   font:13px/1.5 -apple-system,sans-serif;color:var(--muted)}
-/* a note that belongs to the record below it stands with it — no gap to cross,
-   and the eye takes them as one thing. A note belonging to nobody keeps its air. */
-#bare .note.said{margin:0 0 calc(var(--u)*1)}
-#bare .note.free{margin:calc(var(--u)*5) 0 calc(var(--u)*4)}
+/* ── AND EVERY GAP HERE IS A NAMED STEP, which it had not been. Records were
+   held apart by a blank line of text — the font's line-height, some eight and a
+   fifth units, a number nobody declared and nobody could defend. The law of
+   proximity says what these gaps are: a record with its axes is a GROUP, so
+   groups stand `Apart`; a note and the record it speaks for are PARTS OF ONE
+   THING, so they sit `Near`, closer than rows stand from each other. Read the
+   ladder and the spacing states the kinship instead of guessing at it. ── */
+#bare .rec{display:block;margin-bottom:calc(var(--u)*6)}      /* Apart: between groups */
+#bare .note.said{margin:0 0 calc(var(--u)*3)}                 /* Near: parts of one thing */
+#bare .note.free{margin:0}
 #bare .note code{font:12px/1.4 ui-monospace,Menlo,monospace;color:var(--ink)}
 #bare .note .known{font:12px/1.4 ui-monospace,Menlo,monospace}
 #bare .slot{cursor:pointer;border-bottom:1px dashed var(--line)}
@@ -1849,19 +1855,19 @@ function bareForm(parsed, text) {
             block.push("    " + nameTokens(e.head) + (args.length ? "&lt;" + args.join(", ") + "&gt;" : "")
                 + cut({ kind: "entry", line: e.line, host: name }, "claim"));
         }
-        if (d.aliases.size || (d.entries || []).length) block.push("");
+        if ((d.entries || []).length)
+            block.push('    <span class="add caption" data-add-claim="' + name + '">+ add claim</span>');
         items.push({ line: d.line, block });
     }
     for (const [name, a] of (parsed.topAliases || new Map()))
         items.push({ line: a.line, block: [...noteLines(name), declSpan(name, a.line, false) + " = " + nameTokens(a.target)] });
-    for (const [name, d] of parsed.declarations)
-        if ((d.entries || []).length)
-            items.push({ line: d.line + 0.5, block: ['    <span class="add caption" data-add-claim="' + name + '">+ add claim</span>'] });
     for (const c of freeComments(src, notes, parsed))
         items.push({ line: c.line, block: ['<span class="note free">' + noteProse(c.text) + "</span>"] });
     items.sort((a, b) => a.line - b.line);
-    return items.flatMap(i => i.block).join("\n")
-        + '\n<span class="add caption" data-add-record="1">+ add record</span>';
+    // each item is a block of its own, so the gap between them is a declared
+    // length rather than whatever line-height the font happens to carry
+    return items.map(i => '<span class="rec">' + i.block.join("\n") + "</span>").join("")
+        + '<span class="add caption" data-add-record="1">+ add record</span>';
 }
 // one delegated handler: a name in the bare view jumps to its declaration
 document.getElementById("bare").addEventListener("click", (e) => {
