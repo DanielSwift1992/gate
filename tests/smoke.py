@@ -2157,6 +2157,34 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "for (const f of formsFiles)" in ui
               and 'sources.push([f, await (await fetch("/world?f="' in ui))
 
+    # ── THE LAST MILE, AND WHERE IT STOPS. Every answer ends with a step and the
+    # step names a command in backticks — which is a sentence to read, and a
+    # sentence gets retyped, with somebody's own path, slightly wrong. The
+    # command is lifted out beside the prose: ready as it stands, with whatever
+    # the run already knew filled in, one click to the clipboard for a person
+    # and one field for an agent that should not have to parse prose.
+    #
+    # And it is copied, never run. The bench reads and judges; the Enter belongs
+    # to whoever owns the repository, in the tools they already have open. A page
+    # that executes inside a repository holding other people's files is an attack
+    # surface we would have built for ourselves, and what this bench can promise
+    # today is that nothing it shows can change anything.
+    mile = tempfile.mkdtemp()
+    run("demo", cwd=mile)
+    mile_out = run("status", cwd=os.path.join(mile, "gate-demo"))[1]
+    S.append(("the step comes with the command ready, and the running is not ours",
+              # the machine half: the command beside the sentence, not inside it
+              mile_out.get("command_to_run") == "gate init ."
+              and "`gate init .`" in mile_out.get("next", "")
+              and "def command_in(" in shelf_src
+              # only a command is lifted, never an arbitrary backticked word
+              and 'r"(gate|git|bin/|yq|swift)\\b"' in shelf_src
+              # the human half: it goes to the clipboard, and says where it runs
+              and "navigator.clipboard.writeText(ready)" in ui
+              and "It runs in your terminal, not here" in ui
+              # and nothing here executes anything: no shell, no eval of a command
+              and "child_process" not in ui and "mutating_routes" in shelf_src))
+
     # ── AN EXHIBIT, NOT A WISH. What follows records what a claim written in the
     # head of the file that depends on it does TODAY, line by line, because the
     # answer is the case for the one change everything left is waiting on: the

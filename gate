@@ -3865,6 +3865,11 @@ def cmd_serve(a):
                     out = commit_change(q.get("hash", ""), q.get("f") or None)
                 elif u.path == "/status":
                     out = dispatch("status", [])
+                    # the bench asks the same question the terminal does, so it
+                    # gets the same ready command back rather than re-deriving it
+                    ready = command_in(out)
+                    if ready:
+                        out["command_to_run"] = ready
                 elif u.path == "/attention":
                     # THE SEAMS THIS REPOSITORY IS PARTY TO. A declaration is a
                     # world in the contract grammar, so the pair is found by what
@@ -4509,6 +4514,30 @@ def judge_version():
         return "missing"
 
 
+def command_in(out):
+    # ── THE LAST MILE. Every answer here ends with a step, and the step names a
+    # command in backticks — which is a sentence to read, not a thing to run.
+    # Somebody then retypes it, with their own path, and gets it slightly wrong.
+    # The command is lifted out beside the sentence: ready as it stands, with
+    # whatever this run already knew filled in, for a person to copy and for an
+    # agent to read without parsing prose.
+    #
+    # What is NOT here, and on purpose: running it. The bench reads and judges;
+    # the Enter is the operator's, in their own terminal, with their own tools.
+    # A page that executes in a repository holding somebody else's files is an
+    # attack surface we would have built ourselves, and the one thing this bench
+    # can promise today is that it cannot break anything.
+    for field in ("next", "then", "try"):
+        said = out.get(field)
+        if not isinstance(said, str):
+            continue
+        m = re.search(r"`([^`]+)`", said)
+        if m and re.match(r"(gate|git|bin/|yq|swift)\b", m.group(1).strip()):
+            return m.group(1).strip()
+    return None
+
+
+
 def main():
     if len(sys.argv) < 2:
         raise SystemExit(USAGE)
@@ -4534,6 +4563,10 @@ def main():
         out = cmd_report(rest)
     else:
         out = dispatch(cmd, rest)
+    if isinstance(out, dict) and "command_to_run" not in out:
+        ready = command_in(out)
+        if ready:
+            out["command_to_run"] = ready
     print(json.dumps(out, ensure_ascii=False, indent=2) if as_json else humanize(out))
     sys.exit(1 if is_red(out) else 0)
 

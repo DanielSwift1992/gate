@@ -105,6 +105,16 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .badge.closed{border:1px solid var(--line);color:var(--muted)}
 .badge.open{border:1px solid var(--line);color:var(--muted)}
 #next{margin-left:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52%}
+/* ── THE LAST MILE. The step was a sentence to read, and a sentence gets
+   retyped — with somebody's own path, slightly wrong. The command stands ready
+   as it is, one click to the clipboard, and the Enter is theirs in their own
+   terminal. This bench does not run things: a page that executes in a
+   repository holding other people's files is an attack surface we would have
+   built ourselves, and what it can promise today is that it breaks nothing. ── */
+#next .run{font-family:ui-monospace,Menlo,monospace;color:var(--action);cursor:pointer;
+  border-bottom:1px dashed var(--action);padding-bottom:var(--tight)}
+#next .run:hover{background:var(--mist)}
+#next .run.took{color:var(--ok);border-bottom-color:var(--ok)}
 #filter-note,#load-more{padding:calc(var(--u)*2) calc(var(--u)*7);font:11px -apple-system,sans-serif;color:var(--action);cursor:pointer}
 #filter-note:hover,#load-more:hover{text-decoration:underline}
 #rail h3.fold{cursor:pointer;display:flex;flex-wrap:wrap;align-items:flex-start;gap:calc(var(--u)*3);user-select:none}
@@ -1230,7 +1240,30 @@ async function showNext() {
         const line = st.next || "";
         if (line === nextShown) return;
         nextShown = line;
-        document.getElementById("next").textContent = line ? "next: " + line : "";
+        const host = document.getElementById("next");
+        host.textContent = line ? "next: " + line : "";
+        // the command the CLI already worked out, ready to carry away. It is
+        // the same string the terminal would want, with what this run knew
+        // already filled in — copied, never run: the Enter belongs to whoever
+        // owns the repository, in the tools they already have open.
+        const ready = st.command_to_run;
+        if (!ready) return;
+        const at = host.textContent.indexOf(ready);
+        if (at < 0) return;
+        const before = host.textContent.slice(0, at);
+        const after = host.textContent.slice(at + ready.length);
+        host.textContent = before;
+        const chip = document.createElement("span");
+        chip.className = "run"; chip.textContent = ready;
+        chip.title = "Copy this. It runs in your terminal, not here — the bench "
+            + "reads and judges, and nothing it shows you can change your repository.";
+        chip.onclick = async () => {
+            try { await navigator.clipboard.writeText(ready); } catch { return; }
+            chip.classList.add("took");
+            setTimeout(() => chip.classList.remove("took"), 1200);
+        };
+        host.appendChild(chip);
+        host.appendChild(document.createTextNode(after));
     } catch { }
 }
 
