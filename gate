@@ -2446,9 +2446,17 @@ def seams_here(root=None):
             # other side said it built against; this is what YOU wrote down when
             # you took each file, which is the fact you can act on — and it was
             # readable only by opening the manifest in an editor.
-            _, _rows = read_manifest_rows(os.path.dirname(os.path.abspath(c)))
-            _at = {r["path"]: r["from"] for r in (_rows or [])}
-            a["took"] = [{"file": os.path.basename(f), "at": _at.get(os.path.basename(f))}
+            _mp, _rows = read_manifest_rows(os.path.dirname(os.path.abspath(c)))
+            _row = {r["path"]: r for r in (_rows or [])}
+            # AND THE VIEW POINTS AT THE PRIMARY. What is taken is a reading of
+            # a claim, and the claim is a line in a file the operator wrote — so
+            # the row carries the address of that line rather than standing as a
+            # thing of its own. Nothing here is editable: you go and change the
+            # sentence you wrote, and this changes with it.
+            a["took"] = [{"file": os.path.basename(f),
+                          "at": (_row.get(os.path.basename(f)) or {}).get("from"),
+                          "claim": os.path.basename(_mp) if _mp else None,
+                          "line": (_row.get(os.path.basename(f)) or {}).get("line")}
                          for f in (c, k)]
             a["read_known"] = os.path.basename(known) if os.path.exists(known) else None
             a["read_tracker"] = os.path.basename(tick) if os.path.exists(tick) else None

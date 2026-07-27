@@ -1905,6 +1905,41 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and read_oldest.get("verdict") == "holds"
               and read_oldest.get("world", {}).get("declarations") == 2))
 
+    # ── A VIEW POINTS AT THE PRIMARY, AND THE PRIMARY IS A LINE YOU WROTE.
+    # Theory paper 0, Part III: a space is not a process — the identities hold,
+    # and talk of time concerns only the ORDER in which the standing structure
+    # is read. A view is an order of reading; it cannot add a truth. So what is
+    # taken carries the address of the sentence that took it, and clicking it
+    # goes there rather than opening a thing of its own. The one editable
+    # surface is my own files; everything else is a reading of them.
+    demo_pair = tempfile.mkdtemp()
+    run("demo", "seam", os.path.join(demo_pair, "d"), cwd=demo_pair)
+    pair_at = os.path.join(demo_pair, "d")
+    if not os.path.isdir(pair_at):
+        pair_at = os.path.join(demo_pair, "gate-seam-demo")
+
+    def _took(folder):
+        code = ("import types, json;"
+                "src=open(%r,encoding='utf-8').read();"
+                "g=types.ModuleType('g'); g.__file__=%r;"
+                "exec(compile(src,'gate','exec'), g.__dict__);"
+                "s=g.seams_here(%r);"
+                "print(json.dumps((s[0].get('took') if s else None) or []))"
+                % (GATE, GATE, folder))
+        r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+        try:
+            return json.loads((r.stdout or "[]").strip().splitlines()[-1])
+        except Exception:
+            return []
+    took = _took(pair_at)
+    S.append(("what is taken points back at the line that took it",
+              len(took) == 2
+              and all(t.get("claim") == "gate.manifest.swift" and t.get("line")
+                      for t in took)
+              # and the bench goes there rather than opening a fourth thing
+              and "await loadFile(t.claim); reveal(t.line)" in ui
+              and "that sentence is the fact, and this is a reading of it" in ui))
+
     # ── WHAT THIS JUDGE WAS MADE FROM. Its identity is its bytes, and that is
     # what a reviewer reproduces — but bytes say what a thing IS, never what it
     # was made from, so the one dependency this whole tool rests on was stated as

@@ -1946,15 +1946,21 @@ async function buildSeams() {
         // which is the fact you can act on — and until now it was readable only
         // by opening the manifest in an editor. An owner who cannot see how
         // fresh a thing is does not own it, they just have it.
+        // WHAT YOU TOOK, AND WHERE YOU SAID SO. This is a view of a claim, and
+        // the claim is a line you wrote — so the row goes there rather than
+        // standing as a thing of its own. Nothing is edited here: you change
+        // the sentence in your own file, and every view of it follows.
         for (const t of (s.took || [])) {
             const p = document.createElement("div");
-            p.className = "seam-took caption";
+            p.className = "seam-took caption" + (t.line ? " touches" : "");
             p.textContent = t.at ? t.file + " · took at " + t.at
                                  : t.file + " · taken at nothing written down";
-            p.title = t.at ? "You declared this file taken at " + t.at
-                + ". To move, take it again at a newer revision: `gate theirs " + t.file
-                + " --at REV`. There are no ranges here, so there is nothing to resolve."
-                : "This row says no revision. `gate theirs " + t.file + " --at REV` writes one.";
+            p.title = (t.at ? "You declared this file taken at " + t.at + ". "
+                            : "This row says no revision. ")
+                + (t.line ? "Click to open the line you wrote it on, in " + t.claim
+                   + " — that sentence is the fact, and this is a reading of it."
+                   : "`gate theirs " + t.file + " --at REV` writes one.");
+            if (t.line) p.onclick = async () => { await loadFile(t.claim); reveal(t.line); };
             box.appendChild(p);
         }
         // EVERY ADDRESS THIS BENCH PRINTS IS REACHABLE. A row that looks like a
