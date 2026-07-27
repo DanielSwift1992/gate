@@ -181,17 +181,41 @@ def forms_guards():
     if not MANIFEST:
         return []
     d = os.path.dirname(MANIFEST["manifest"])
+    rows = [r for r in (MANIFEST.get("rows") or []) if r["role"] == "forms"
+            and os.path.exists(os.path.join(d, r["path"]))]
+    if not rows:
+        return []
+    # ONE STREAM, IN THE ORDER THE MANIFEST GIVES. Judging each row on its own
+    # is the trap this project already paid for and wrote down: `where` over a
+    # LIST is blind, and its silence is selective by order — a law split across
+    # two files goes green in isolation and refuses the moment they are glued.
+    # I shipped the isolated form because I had not read what was already known.
+    # The glued stream is the proven shape; the order comes from the document
+    # rather than from the folder, so the same repository always reads the same.
+    glued, where, at = [], {}, 0
+    for r in rows:
+        text = open(os.path.join(d, r["path"]), encoding="utf-8", errors="replace").read()
+        for i, line in enumerate(text.split("\n"), 1):
+            m = re.match(r"public (?:typealias|enum|protocol) (\w+)", line)
+            if m and m.group(1) not in where:
+                where[m.group(1)] = f"{r['path']}:{i}"
+        glued.append(text)
+        at += text.count("\n")
+    tmp = tempfile.mkdtemp(prefix="gate-forms-")
+    p = os.path.join(tmp, "forms.swift")
+    open(p, "w").write("\n".join(glued))
+    out = subprocess.run([JUDGE, "judge", "where", p], capture_output=True, text=True).stdout
+    shutil.rmtree(tmp, ignore_errors=True)
     bad = []
-    for r in MANIFEST.get("rows") or []:
-        if r["role"] != "forms":
+    for line in out.split("\n"):
+        if not line.strip().startswith("✗"):
             continue
-        p = os.path.join(d, r["path"])
-        if not os.path.exists(p):
-            continue
-        out = subprocess.run([JUDGE, "judge", "where", p], capture_output=True, text=True).stdout
-        for line in out.split("\n"):
-            if line.strip().startswith("✗"):
-                bad.append({"address": r["path"], "claim": line.strip()[1:].strip()})
+        claim = line.strip()[1:].strip()
+        # the address is the file that SAYS the certificate, not the stream it
+        # was read in — a refusal must land where somebody can go and fix it
+        m = re.match(r"'(\w+)", claim)
+        bad.append({"address": where.get(m.group(1)) if m else None
+                    or rows[0]["path"], "claim": claim})
     return bad
 
 
@@ -311,6 +335,12 @@ def bench_files():
         return []
     base = os.path.dirname(os.path.abspath(FACTS))
     out = [(os.path.relpath(p, base), p) for p in world_files()]
+    # AND THE DOCUMENT WHERE YOU WRITE WHAT YOU TOOK. It is your file, in your
+    # language, and it was the one file this bench would not open — so a command
+    # that writes a row for you looked like the way in rather than the shortcut
+    # it is. A dependency belongs in code, written by the person who depends.
+    if MANIFEST and os.path.exists(MANIFEST["manifest"]):
+        out.append((os.path.relpath(MANIFEST["manifest"], base), MANIFEST["manifest"]))
     pf = personal_path()
     if pf:   # the slot is always offered; the file may not exist yet
         name = "my.swift" if not any(n == "my.swift" for n, _ in out) else "personal-my.swift"
@@ -3488,7 +3518,11 @@ def cmd_serve(a):
                     named = bench_files()
                     names = [n for n, _ in named]
                     pf = personal_path()
+                    lay = (os.path.relpath(MANIFEST["manifest"],
+                                           os.path.dirname(os.path.abspath(FACTS)))
+                           if MANIFEST and os.path.exists(MANIFEST["manifest"]) else None)
                     body = json.dumps({"files": names,
+                                       "layout": lay if lay in names else None,
                                        "personal": names[-1] if pf else None,
                                        "personal_empty": bool(pf) and not os.path.exists(pf)}).encode()
                     self.send_response(200)

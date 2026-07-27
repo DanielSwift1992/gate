@@ -1747,8 +1747,43 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               # and a lie about that same invented word is refused, at the file
               and lied.get("verdict") == "refused"
               and any("ArchitectIsTwoLines" in r.get("claim", "")
-                      and r.get("address") == "vendor-forms.swift"
+                      and (r.get("address") or "").startswith("vendor-forms.swift:")
                       for r in lied.get("refusals", []))))
+
+    # ── AND THE FORMS ROWS ARE JUDGED AS ONE STREAM, WHICH IS NOT A DETAIL.
+    # `where` over a LIST of files is blind, and its silence is selective by
+    # order: a law split across two files holds in isolation and refuses the
+    # moment they are glued. This project had already found that, written it
+    # down, and stood a vector on it — and I shipped the isolated form anyway,
+    # because I had read the machinery and not the canon. The order comes from
+    # the manifest, so the same repository always reads the same way, and the
+    # address lands in the file that SAYS the certificate rather than in the
+    # stream it was read in.
+    split = tempfile.mkdtemp()
+    open(os.path.join(split, "gate.swift"), "w").write("public enum Sales: Department {}\n")
+    whole = open(os.path.join(HERE, "stdlib", "bench-metrics.swift"), encoding="utf-8").read()
+    cut = whole.index("public typealias AirIsTwoLines")
+    open(os.path.join(split, "forms-a.swift"), "w").write(whole[:cut])
+    open(os.path.join(split, "forms-b.swift"), "w").write(
+        "// the other half of one law\n"
+        "public typealias AirIsTwoLines = Same<TwoLines, Plus<Line, Edge>>\n")
+    run("theirs", "forms-a.swift", "--at", "r1", "--role", "forms", cwd=split)
+    run("theirs", "forms-b.swift", "--at", "r2", "--role", "forms", cwd=split)
+    caught = run("status", cwd=split)[1]
+    # and the same pair, made true again, holds
+    open(os.path.join(split, "forms-b.swift"), "w").write(
+        "// the other half of one law\n"
+        "public typealias AirIsTwoLines = Same<TwoLines, Plus<Line, Line>>\n")
+    mended = run("status", cwd=split)[1]
+    S.append(("a law split across two forms files is caught, not silently held",
+              caught.get("verdict") == "refused"
+              and any("AirIsTwoLines" in r.get("claim", "")
+                      # addressed where it is written, not where it was read
+                      and (r.get("address") or "").startswith("forms-b.swift:")
+                      for r in caught.get("refusals", []))
+              and mended.get("verdict") == "holds"
+              # one stream, ordered by the document rather than by the folder
+              and "in the order the manifest gives" in shelf_src.lower()))
 
     # ── GATE IS THE FIRST INHABITANT, and the tool that refuses a world which
     # has not declared itself had not declared its own. Its facts about its own
