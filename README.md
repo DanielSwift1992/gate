@@ -192,10 +192,14 @@ extension TheContract {
 ```
 
 **The role names a court, so it is not optional.** `world` is judged with the
-rest of your world; `seam` is judged where it meets yours and nowhere else;
-`forms` is inert for the plain judge, which is closed to protocols. A row gate
-cannot place is refused at its own line — never swept quietly into your world,
-which is what happened the one time this document was read by guessing.
+rest of your world, by the plain court. `seam` is judged where it meets yours
+and nowhere else. `forms` — the grammar a world is written in, and the
+certificates over it — is judged by the `where` court: invent a word in your own
+fork of a genre, say something true about it and it holds, say something false
+and it is refused at the line. `judge` is the court itself, and is the one row
+held by a reproducible build rather than by judgement. A row gate cannot place is
+refused at its own line — never swept quietly into your world, which is what
+happened the one time this document was read by guessing.
 
 **What is taken is taken at a revision, and there are no ranges.** That is the
 whole reason no version solver exists here: the problem is not solved, it cannot
@@ -222,6 +226,30 @@ that revision — not any file — is what a world depends on.
 
 The rail says the same three things in the same order: **mine**, **theirs**,
 **the judge**, with the revision beside it.
+
+## gate is the first inhabitant
+
+This repository has a `gate.manifest.swift` of its own, and it is not a
+demonstration. The tool's facts about its own surface — the palette it paints
+with, the ladder of lengths its page is spaced on, the atoms its bench is made
+of — are its world, declared in the same columns as yours and judged by the same
+judge. Break an equality in `stdlib/bench-metrics.swift` and `gate status` in
+this repository refuses at the line, exactly as it would in yours. Its badge is
+not a sample; it is its life.
+
+**And self-application is not self-certification.** The judge does not judge the
+judge. No self-reference is the floor this whole theory stands on, and a court
+that certified itself would be worth nothing — so the judge's row is accounting,
+not a verdict. What holds it is a build anybody can repeat: take the pin, run
+`bin/build-judge.sh <commit>`, compare the bytes. That check lives outside this
+world on purpose.
+
+gate lives under its own court everywhere a court is possible, and names the one
+place where it is not. At the time of writing, the single refusal this repository
+carries is that one: the judge's revision is unrecorded, because the binary in
+`bin/` predates the recording. Running `bin/build-judge.sh` ends it. The tool
+does not exempt itself from the rule it holds you to, and does not pretend the
+exemption away either.
 
 **How the other side finds out** is a pull request, and nothing else. gate never
 fetches and never sends: the other side's declaration arrives because you brought
@@ -545,7 +573,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 195 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 196 end-to-end checks, the definition of green
 ```
 
 ## Status

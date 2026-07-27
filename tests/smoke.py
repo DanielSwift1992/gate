@@ -1667,20 +1667,77 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # something claimed out loud in the very document being read. Same shape as
     # the sweep it replaced, one storey along: the document says three kinds of
     # thing and a reader that knows one kind will mistake the other two.
+    #
+    # AND A FORMS ROW IS JUDGED. It was called inert on the strength of one
+    # probe, and the probe was the wrong shape: `where` does not check bare
+    # conformance, so a green over nought uses said nothing either way. Given
+    # certificates it reads them with teeth. The court was simply never called.
     frm = tempfile.mkdtemp()
     open(os.path.join(frm, "gate.swift"), "w").write("public enum Sales: Department {}\n")
-    open(os.path.join(frm, "vendor-forms.swift"), "w").write(
-        "public protocol Sensor {}\npublic enum Thermal: Sensor {}\n")
+    shutil.copy(os.path.join(HERE, "stdlib", "bench-metrics.swift"),
+                os.path.join(frm, "vendor-forms.swift"))
     took = run("theirs", "vendor-forms.swift", "--at", "acme/forms@9d1e", "--role", "forms",
                cwd=frm)[1]
     frm_status = run("status", cwd=frm)[1]
-    S.append(("a taken forms file is accounted for, inert, and not a shadow",
+    # a word this fork invents, and a true thing said about it
+    with open(os.path.join(frm, "vendor-forms.swift"), "a") as f:
+        f.write("\npublic typealias Architect = Twice<Line>\n"
+                "public typealias ArchitectIsTwoLines = Same<Architect, Plus<Line, Line>>\n")
+    learned = run("status", cwd=frm)[1]
+    # and the same word, lied about
+    t = open(os.path.join(frm, "vendor-forms.swift")).read()
+    open(os.path.join(frm, "vendor-forms.swift"), "w").write(
+        t.replace("Same<Architect, Plus<Line, Line>>", "Same<Architect, Plus<Line, Edge>>", 1))
+    lied = run("status", cwd=frm)[1]
+    S.append(("a taken forms file is accounted for, judged, and not a shadow",
               took.get("role") == "forms" and took.get("at") == "acme/forms@9d1e"
-              and "inert for the plain judge" in took.get("role_means", "")
-              # it is not swept into the world: the count is the world's alone
+              and "where court" in took.get("role_means", "")
+              # it is not swept into the plain world: that count is the world's alone
               and frm_status.get("world", {}).get("declarations") == 1
               # and it is not accused of being a stray, because it was declared
-              and frm_status.get("verdict") == "holds"))
+              and frm_status.get("verdict") == "holds"
+              # a word invented in the fork is learned: the truth about it holds
+              and learned.get("verdict") == "holds"
+              # and a lie about that same invented word is refused, at the file
+              and lied.get("verdict") == "refused"
+              and any("ArchitectIsTwoLines" in r.get("claim", "")
+                      and r.get("address") == "vendor-forms.swift"
+                      for r in lied.get("refusals", []))))
+
+    # ── GATE IS THE FIRST INHABITANT, and the tool that refuses a world which
+    # has not declared itself had not declared its own. Its facts about its own
+    # surface sat on a shelf, shown to operators as reference, because there was
+    # nowhere else to put them — and a world made only of forms was read as no
+    # world at all, so this repository could not see the shape it is.
+    #
+    # AND THE BOUNDARY, WHICH IS THE EASY PLACE TO LIE BEAUTIFULLY. The judge
+    # does not judge the judge: no self-reference is the floor the whole theory
+    # stands on, and a court that certified itself would be worth nothing. So
+    # the judge is a row of accounting, held by a build anybody can repeat, and
+    # the sentence "fully self-verifying" is one this tool may never say.
+    own = open(os.path.join(HERE, "gate.manifest.swift"), encoding="utf-8").read()
+    own_status = run("status", cwd=HERE)[1]
+    prose = own + open(os.path.join(HERE, "README.md"), encoding="utf-8").read()
+    S.append(("gate lives under its own court, and names the one place a court cannot reach",
+              # its own surface is declared as its own world, in the same columns
+              'public static var typeName: String { "stdlib/bench-palette.swift" }' in own
+              and 'public static var role: String { "forms" }' in own
+              and "public enum BenchPalette: Mine {}" in own
+              # the judge is accounted for as taken, and its role says what holds it
+              and "public enum TheJudge: Theirs {}" in own
+              and 'public static var role: String { "judge" }' in own
+              and "not by judgement" in shelf_src
+              # the boundary is stated where somebody would look for the claim
+              and "SELF-APPLICATION IS NOT SELF-CERTIFICATION" in own
+              and "no self-reference" in own
+              # and the forbidden sentence is nowhere, in any casing
+              and "self-verifying" not in prose.lower()
+              and "verifies itself" not in prose.lower()
+              # this repository judges itself for real: the one refusal it has is
+              # the honest one, and it is about provenance rather than a verdict
+              and own_status.get("verdict") == "refused"
+              and all("which revision it was taken at" in r.get("claim", "")
+                      for r in own_status.get("refusals", []))))
 
     # ── WHAT THIS JUDGE WAS MADE FROM. Its identity is its bytes, and that is
     # what a reviewer reproduces — but bytes say what a thing IS, never what it
@@ -2403,11 +2460,18 @@ public enum MyWatch: AccessLedger {
               any(f["kind"] == "judged" for f in r["findings"])
               if run("status", cwd=jrepo)[1]["verdict"] == "refused" else True))
 
-    # ── the claims about ourselves are judged too ──
+    # ── GATE'S OWN SEAMS, which had been kept here since before there was a word
+    # for them. Every one of these is the same shape the tool sells: two sides
+    # that must agree, neither reading the other's mind, refused at an address
+    # when they part. The README says which verbs exist and the code has them;
+    # the README says how many checks there are and this file has them; the
+    # bench's page is promised routes and the server answers exactly those.
+    # `gate declares ↔ gate does`, held by the same discipline an operator's
+    # contract and client are held to — which is why naming them costs nothing:
+    # they were already being kept.
+    #
     # A tool that sells judgement over memory may not keep its own claims by
-    # memory. The README's count of these checks, the verbs it lists, the files
-    # it names and the routes the bench is promised are all compared with what
-    # the code actually does. This runs LAST, so the count includes everything.
+    # memory. This runs LAST, so the count includes everything.
     readme = open(os.path.join(HERE, "README.md"), encoding="utf-8").read()
     src = open(GATE, encoding="utf-8").read()
 

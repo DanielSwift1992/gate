@@ -19,9 +19,10 @@ ROOT = os.environ.get("GATE_CORPUS")
 # none of these is refused, never swept into the world: that exact sweep broke
 # a world once, when every path literal in the manifest was taken as a fact.
 ROLES = {
-    "world": "judged with the rest of my world",
+    "world": "judged with the rest of my world, by the plain court",
     "seam": "judged where it meets mine, and nowhere else",
-    "forms": "inert for the plain judge: the fragment is closed to protocols",
+    "forms": "grammar and the certificates over it, judged by the where court",
+    "judge": "the court itself: held by a reproducible build, not by judgement",
 }
 
 
@@ -163,6 +164,34 @@ def manifest_guards():
         p = os.path.join(d, f)
         if f.endswith(".swift") and p not in declared and not is_seam_side(p):
             bad.append({"address": f, "claim": "a world file the manifest never declares: a shadow outside the judged list"})
+    return bad
+
+
+def forms_guards():
+    # A FORMS ROW IS JUDGED, AND I HAD SIMPLY NOT CALLED THE COURT. It was
+    # reported inert on the strength of one probe — a conformance the plain
+    # judge refuses — and the probe was the wrong shape: `where` does not check
+    # bare conformance at all, so a green over nought uses said nothing either
+    # way. Given the certificates it does read, it judges them with teeth: the
+    # bench's own palette holds 110 equalities under it.
+    #
+    # So the grammar a world is written in is answerable after all, by the court
+    # that fits it, and that court is asked here. It is one stream per row: two
+    # files as two arguments are two canons that never meet.
+    if not MANIFEST:
+        return []
+    d = os.path.dirname(MANIFEST["manifest"])
+    bad = []
+    for r in MANIFEST.get("rows") or []:
+        if r["role"] != "forms":
+            continue
+        p = os.path.join(d, r["path"])
+        if not os.path.exists(p):
+            continue
+        out = subprocess.run([JUDGE, "judge", "where", p], capture_output=True, text=True).stdout
+        for line in out.split("\n"):
+            if line.strip().startswith("✗"):
+                bad.append({"address": r["path"], "claim": line.strip()[1:].strip()})
     return bad
 
 
@@ -3535,7 +3564,7 @@ def cmd_serve(a):
             # bench may not say holds where a hook would refuse
             refusals += duplicate_guards_over(sources)
             refusals += entry_guards_over(sources)
-            refusals += manifest_guards() + policy_guards() + stdlib_guards() + vendored_guards()
+            refusals += manifest_guards() + forms_guards() + policy_guards() + stdlib_guards() + vendored_guards()
             times = re.findall(r"([\d.]+) ms", raw)
             # AND THE WIDTH OF IT. The judge counts what it checked and says so;
             # dropping that on the way to the bench left a green over several
@@ -3669,7 +3698,13 @@ def dispatch(cmd, rest):
         return cmd_init(rest)
     if cmd in ("status", "fsck"):
         files = world_files()
-        if not files:
+        # A WORLD OF FORMS IS STILL A WORLD. `world_files` is the plain court's
+        # list and rightly holds no forms row — but emptiness there was being
+        # read as emptiness altogether, so a repository that declares its
+        # grammar and nothing else was told it had nothing. That repository is
+        # this one: gate's own facts about its surface are forms, judged by the
+        # where court, and until now the tool could not see the shape it is.
+        if not files and not (MANIFEST and MANIFEST.get("rows")):
             # no world here — but this IS a git repository, and the journal
             # reads one of those with no translation at all. Offer the rung
             # the reader is standing on, not the whole ladder.
@@ -3700,6 +3735,7 @@ def dispatch(cmd, rest):
         if len(files) > 1:  # one claim, one file: the one that makes it
             refusals = attribute_refusals(refusals, [(os.path.basename(p), open(p).read()) for p in files])
         refusals += manifest_guards()
+        refusals += forms_guards()
         refusals += policy_guards()
         refusals += stdlib_guards()
         refusals += vendored_guards()
