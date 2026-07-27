@@ -1446,10 +1446,11 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     S.append(("saying a seam is mine is one command, and one side declared alone is a state rather than a blank",
               mine.get("declared_in") == "gate.manifest.swift"
               and "public protocol Theirs {}" in man and '"sdk.swift"' in man
+              # written as axes, the way every record in this world is written
+              and "public typealias Kind = SeamFile" in man
               # and the row carries the pin the declaration already stated, so
               # nobody types a second copy of a fact that would then drift
-              and 'public static var role: String { "seam" }' in man
-              and 'public static var from: String {' in man
+              and "public typealias At = Rev_" in man
               # and the next names the act that makes the other side hold to it
               and "THEIR repository" in mine.get("next", "")
               # having moved first, this side sees that it moved rather than nothing
@@ -1607,8 +1608,8 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               mine_said.get("command") == "mine" and mine_said.get("file") == "more.swift"
               and before.get("world", {}).get("declarations") == 1
               and after.get("world", {}).get("declarations") == 2
-              and "public enum More: Mine {}" in manifest
-              and 'public static var role: String { "world" }' in manifest
+              and "public enum More: Mine {" in manifest
+              and "public typealias Kind = WorldFile" in manifest
               # theirs is the other value of the same column, not a second document
               and 'cmd_side(rest, "Theirs")' in two_src and 'cmd_side(rest, "Mine")' in two_src
               # and a file that is not here is asked for, never fetched
@@ -1663,6 +1664,34 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               # and a row that is not there is said so rather than silently done
               and run("theirs", "nope.swift", "--forget", cwd=many)[1].get("asks")))
 
+    # ── AND EVERY EDIT TO THIS DOCUMENT COUNTS BRACES. Twice in a day something
+    # that edits it was written for the shape a row happened to have: the insert
+    # stepped over an extension by its first line and put the next row inside
+    # somebody's braces; the removal matched a one-line pattern, reported the
+    # row gone, and left it there. Both lied without saying so, in the list that
+    # accounts for everything else. Nothing here reads a shape any more.
+    keeps = tempfile.mkdtemp()
+    open(os.path.join(keeps, "gate.swift"), "w").write("public enum Sales: Department {}\n")
+    for who in "ab":
+        open(os.path.join(keeps, f"{who}.swift"), "w").write(
+            f"// contract\npublic enum F_{who}: Declared {{ public typealias Of = Text }}\n")
+    open(os.path.join(keeps, "w.swift"), "w").write("public enum Ops: Department {}\n")
+    run("theirs", "a.swift", "--at", "r1", cwd=keeps)
+    run("mine", "w.swift", cwd=keeps)
+    run("theirs", "b.swift", "--at", "r2", cwd=keeps)
+    dropped = run("theirs", "a.swift", "--forget", cwd=keeps)[1]
+    left = run("theirs", cwd=keeps)[1].get("held") or []
+    doc = open(os.path.join(keeps, "gate.manifest.swift")).read()
+    S.append(("what the tool says it removed is removed, and the document stays whole",
+              dropped.get("forgot") == "a.swift"
+              # said gone AND gone: the report and the file agree
+              and [h["file"] for h in left] == ["b.swift"]
+              and "public enum A: Theirs" not in doc
+              # the rest is untouched and the braces still balance
+              and (run("mine", cwd=keeps)[1].get("held") or [{}])[0].get("file") == "w.swift"
+              and doc.count("{") == doc.count("}")
+              and run("status", cwd=keeps)[1].get("verdict") == "holds"))
+
     # ── WHAT IS TAKEN IS TAKEN AT A REVISION, AND A ROW NAMES ITS COURT. Nothing
     # in this tool expresses a version range, which is the whole reason no solver
     # exists here: the problem is not solved, it cannot be stated. But a pin
@@ -1697,9 +1726,12 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and bad_role.get("asks") and "not a court" in bad_role.get("note", "")
               # with a pin it is written down, and the line says what was taken and at what
               and pinned.get("at") == "openapi@3f2a1c9" and pinned.get("role") == "seam"
-              and 'public static var from: String { "openapi@3f2a1c9" }' in with_pin
+              # a revision is an atom of its own, so two rows at one revision
+              # say the same NAME rather than the same text
+              and 'public static var typeName: String { "openapi@3f2a1c9" }' in with_pin
+              and "public typealias At = Rev_openapi_3f2a1c9" in with_pin
               # a file I emit needs no pin: I am the source
-              and 'public static var from' not in with_pin.split("public protocol Theirs")[0]
+              and "typealias At" not in with_pin.split("public protocol Theirs")[0]
               # and by hand it is caught the same way, at the row's own line
               and hand_said.get("verdict") == "refused"
               and "which no court here reads" in claims
@@ -1802,11 +1834,11 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     S.append(("gate lives under its own court, and names the one place a court cannot reach",
               # its own surface is declared as its own world, in the same columns
               'public static var typeName: String { "stdlib/bench-palette.swift" }' in own
-              and 'public static var role: String { "forms" }' in own
-              and "public enum BenchPalette: Mine {}" in own
+              and "public typealias Kind = FormsFile" in own
+              and "public enum BenchPalette: Mine {" in own
               # the judge is accounted for as taken, and its role says what holds it
-              and "public enum TheJudge: Theirs {}" in own
-              and 'public static var role: String { "judge" }' in own
+              and "public enum TheJudge: Theirs {" in own
+              and "public typealias Kind = JudgeFile" in own
               and "not by judgement" in shelf_src
               # the boundary is stated where somebody would look for the claim
               and "SELF-APPLICATION IS NOT SELF-CERTIFICATION" in own
@@ -1816,9 +1848,62 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "verifies itself" not in prose.lower()
               # this repository judges itself for real: the one refusal it has is
               # the honest one, and it is about provenance rather than a verdict
-              and own_status.get("verdict") == "refused"
-              and all("which revision it was taken at" in r.get("claim", "")
-                      for r in own_status.get("refusals", []))))
+              # and it holds: the revision it carried unrecorded is written down,
+              # so the tool is not asking of anybody a thing it had not done
+              and own_status.get("verdict") == "holds"
+              and open(os.path.join(HERE, "bin", "gate-judge.from"),
+                       encoding="utf-8").read().strip().startswith("0fd0b38")))
+
+    # ── AND A ROW IS WRITTEN THE WAY EVERY RECORD IN THIS WORLD IS WRITTEN:
+    # axes to declared atoms, and exactly one string — the `typeName` literal
+    # that spells a name. I had invented `var role` and `var from` beside it,
+    # a second notation nobody else here writes, and the correction came from
+    # the canon rather than from the machinery: the machinery never objected,
+    # because gate reads this document itself. A revision is an atom of its
+    # own, so two rows taken at one revision say the same NAME, not the same
+    # text — which is what makes a pin a name rather than a spelling.
+    #
+    # Both older spellings are still read. A file on somebody's disk is not
+    # wrong because the tool learned a better word for it.
+    old = tempfile.mkdtemp()
+    open(os.path.join(old, "gate.swift"), "w").write("public enum Sales: Department {}\n")
+    open(os.path.join(old, "a.swift"), "w").write("public enum Ops: Department {}\n")
+    open(os.path.join(old, "b.swift"), "w").write(
+        "// contract\npublic enum F_y: Declared { public typealias Of = Text }\n")
+    open(os.path.join(old, "gate.manifest.swift"), "w").write(
+        "public protocol Mine {}\n"
+        "public enum A: Mine {}\n"
+        "extension A {\n"
+        '    public static var typeName: String { "a.swift" }\n'
+        '    public static var role: String { "world" }\n'
+        "}\n"
+        "public protocol Theirs {}\n"
+        "public enum B: Theirs {}\n"
+        "extension B {\n"
+        '    public static var typeName: String { "b.swift" }\n'
+        '    public static var role: String { "seam" }\n'
+        '    public static var from: String { "old@r9" }\n'
+        "}\n")
+    read_old = run("theirs", cwd=old)[1].get("held") or []
+    # and the oldest of all: two protocols that named a role and nothing else
+    open(os.path.join(old, "gate.manifest.swift"), "w").write(
+        "public protocol WorldFile {}\n"
+        "public enum A: WorldFile {}\n"
+        'extension A { public static var typeName: String { "a.swift" } }\n')
+    read_oldest = run("status", cwd=old)[1]
+    S.append(("a row is axes and one literal, and the older spellings still read",
+              # the spelling gate writes today
+              "public typealias Kind = WorldFile" in with_pin
+              and "public typealias At = Rev_" in with_pin
+              and "public static var role: String" not in with_pin
+              and "public static var from: String" not in with_pin
+              # a revision is a NAME: its own atom, spelled by its own typeName
+              and 'extension Rev_openapi_3f2a1c9 { public static var typeName' in with_pin
+              # yesterday's spelling still reads, revision and all
+              and [(h["file"], h["at"]) for h in read_old] == [("b.swift", "old@r9")]
+              # and the oldest still names a judged world
+              and read_oldest.get("verdict") == "holds"
+              and read_oldest.get("world", {}).get("declarations") == 2))
 
     # ── WHAT THIS JUDGE WAS MADE FROM. Its identity is its bytes, and that is
     # what a reviewer reproduces — but bytes say what a thing IS, never what it

@@ -402,6 +402,12 @@ fetch("/version", { cache: "no-store" }).then(r => r.json()).then(v => {
 const keywordSet = new Set(["public","enum","protocol","typealias","extension","where",
     "static","var","some","associatedtype","import","struct","let","func"]);
 let localNames = new Set(), unresolved = new Set();
+// THE LAYOUT IS THE OPERATOR'S OWN DOCUMENT, not a fragment of the world. It
+// declares protocols, which the plain court refuses on sight — so it is opened
+// and written here like any file of theirs, and judged by the guards that are
+// its actual court. A dependency belongs to whoever depends: writing it is
+// theirs to do, and the command that writes a row is a scribe, not the door.
+let layoutFile = null;
 let jumpable = new Set();      // names with a home: underlined, and clickable
 let vocabulary = {};           // name -> the shelf module that declares it
 let conformers = {}, axisOf = {}, protoAxes = {}, gates = {};
@@ -1056,7 +1062,9 @@ function repaintNames(parsed, refusals) {
     localNames = new Set([...namesOf(parsed), ...siblingNames]);
     jumpable = new Set([...layoutDecls.keys(), ...Object.keys(vocabulary)]);
     unresolved = new Set();
-    for (const ref of (refusals || [])) {
+    // nothing in the layout resolves to a world name, and marking it all as
+    // unknown would paint the operator's own document as a mistake
+    for (const ref of (active === layoutFile ? [] : refusals || [])) {
         const m = ref.premise.match(/\b([A-Z]\w*)(?:\.\w+)? resolves to nothing|the name ([A-Z]\w*) resolves/);
         if (m) unresolved.add(m[1] || m[2]);
     }
@@ -2095,6 +2103,7 @@ async function tick(write) {
 async function siblings() {
     siblingNames = new Set(); layoutDecls = new Map(); declFile = new Map();
     for (const f of files) {
+        if (f === layoutFile) continue;          // its names are the layout's, not the world's
         const t = f === active ? editor.value : await (await fetch("/world?f=" + encodeURIComponent(f))).text();
         const parsed = judge(f, t).parsed;
         if (f !== active) namesOf(parsed).forEach(n => siblingNames.add(n));
@@ -2218,6 +2227,7 @@ async function loadVocabulary() {
     await loadVocabulary();
     const fl = await (await fetch("/files")).json().catch(() => ({ files: [] }));
     files = fl.files || []; personalFile = fl.personal || null; personalEmpty = !!fl.personal_empty;
+    layoutFile = fl.layout || null;
     // the rail carries files AND the journal, so it shows for any clone
     // the line says what is true HERE: with a world, the judge is at work;
     // without one, only the history is being read

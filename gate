@@ -26,7 +26,7 @@ ROLES = {
 }
 
 
-def read_manifest_rows(d):
+def read_manifest_rows(d, text=None):
     # ONE LIST, AND THE COLUMNS THAT MAKE IT ONE. Whose source a file is
     # (`Mine` / `Theirs`) is one column; which court reads it is another; and
     # for anything taken, the revision it was taken at is a third. Two protocols
@@ -37,27 +37,57 @@ def read_manifest_rows(d):
     # The older spellings are still read. A file on somebody's disk is not
     # wrong because the tool learned a better word for it.
     mp = os.path.join(d, "gate.manifest.swift")
-    if not os.path.exists(mp):
-        return None, None
-    text = open(mp, encoding="utf-8", errors="replace").read()
+    if text is None:
+        if not os.path.exists(mp):
+            return None, None
+        text = open(mp, encoding="utf-8", errors="replace").read()
+    # WHAT A RECORD MAY SAY, IN THE SHAPE EVERY OTHER RECORD USES. An atom
+    # carries its facts as AXES — `typealias Kind = Seam` — and exactly one
+    # string is allowed, the `typeName` literal that gives a name its spelling.
+    # I had invented `var role` and `var from` beside it, which is a second
+    # notation nobody else in this world writes, and a revision is an atom of
+    # its own: `At = MessagesApi_a1b2c3d`, whose typeName is the revision.
+    #
+    # Both spellings are read. A file on somebody's disk is not wrong because
+    # the tool learned a better word for it.
+    lit = {}
+    for m in re.finditer(r"extension (\w+)\b[^{]*\{(.*?)\n(?=public |extension |\Z)",
+                         text + "\n", re.S):
+        f = re.search(r'typeName:\s*String\s*\{\s*"([^"]*)"\s*\}', m.group(2))
+        if f:
+            lit[m.group(1)] = f.group(1)
+    ROLE_OF = {"WorldFile": "world", "SeamFile": "seam", "FormsFile": "forms",
+               "JudgeFile": "judge", "Seam": "seam"}
     rows = []
-    for m in re.finditer(r"public enum (\w+): (Mine|Theirs|WorldFile|SeamFile) \{\}", text):
+    for m in re.finditer(r"public enum (\w+): (Mine|Theirs|WorldFile|SeamFile) \{", text):
         name, atom = m.group(1), m.group(2)
-        body = re.search("extension " + name + r"\b[^{]*\{(.*?)\n(?=public |extension |\Z)",
+        body = re.search("public enum " + name + r"\b[^{]*\{(.*?)\n\}",
                          text + "\n", re.S)
-        body = body.group(1) if body else ""
+        inner = body.group(1) if body else ""
+        ext = re.search("extension " + name + r"\b[^{]*\{(.*?)\n(?=public |extension |\Z)",
+                        text + "\n", re.S)
+        outer = ext.group(1) if ext else ""
 
-        def field(k, b=body):
+        def field(k, b=inner + outer):
             f = re.search(k + r':\s*String\s*\{\s*"([^"]*)"\s*\}', b)
             return f.group(1) if f else None
-        path = field("typeName")
+
+        def axis(k, b=inner + outer):
+            a = re.search(r"typealias " + k + r"\s*=\s*(\w+)", b)
+            return a.group(1) if a else None
+        path = lit.get(name) or field("typeName")
         if not path:
             continue
         source = "mine" if atom in ("Mine", "WorldFile") else "theirs"
+        kind = axis("Kind")
+        at = axis("At")
         rows.append({"name": name, "source": source, "path": path,
-                     "role": field("role") or ("world" if atom == "WorldFile" else
-                                               "seam" if atom == "SeamFile" else None),
-                     "from": field("from"),
+                     # the axis first: it is the shape this world writes in
+                     "role": (ROLE_OF.get(kind, kind.lower() if kind else None)
+                              or field("role")
+                              or ("world" if atom == "WorldFile" else
+                                  "seam" if atom == "SeamFile" else None)),
+                     "from": (lit.get(at) if at else None) or field("from"),
                      "line": text[:m.start()].count("\n") + 1})
     if not rows and "Mine" not in text and "WorldFile" not in text:
         # older layouts: a bare list of paths, every one of them a world file
@@ -117,19 +147,34 @@ def world_files():
     return files
 
 
-def manifest_guards():
+def manifest_guards(rows=None):
     # layout guards, both directions (the playground manifest's genre):
     # a declared file exists; a neighbouring *.swift is declared (no shadows)
+    #
+    # `rows` overrides what is on disk, so the bench can hold the layout to the
+    # same promise as every other file it opens: judged as you type. Reading the
+    # saved copy while somebody edits an unsaved one shows green over a lie.
     if not MANIFEST:
         return []
     bad = []
     man = os.path.basename(MANIFEST["manifest"])
-    for r in MANIFEST.get("rows") or []:
+    d = os.path.dirname(MANIFEST["manifest"])
+    live = MANIFEST.get("rows") if rows is None else rows
+    for r in live or []:
         # A ROLE IS NOT OPTIONAL, because it names the court. Left unsaid it has
         # to be guessed, and the one time this document was read by guessing —
         # every path literal taken as a world file — the seams were swept into
         # the judged world and the world broke. Guessing is the failure mode, so
         # the row that does not say is refused at its own line.
+        # AND THIS IS A SCAFFOLD, SAID PLAINLY. Routing by role is gate's own
+        # mechanics until the prism empties, and the name a role gives ought to
+        # be resolved by the judge the way `Rank = Blah` already is — «the name
+        # Blah resolves to nothing». It is not, yet: that tier fires only for an
+        # axis declared in a form the judge carries compiled, and this world's
+        # forms are not among them. So the check below is a stand-in wearing its
+        # own name, not a court. A scaffold with a judged input would be honest;
+        # a scaffold calling itself a court would not, and the difference is the
+        # whole of what this tool sells.
         if not r["role"]:
             bad.append({"address": f"{man}:{r['line']}",
                         "claim": f"`{r['name']}` does not say what it is for. A row names its court: "
@@ -149,15 +194,15 @@ def manifest_guards():
                         "claim": f"`{r['name']}` is theirs and does not say which revision it was "
                                  "taken at. Taken means taken from somewhere, at something: "
                                  "`gate theirs " + r["path"] + " --at REV`"})
-    for p in MANIFEST["files"]:
+    for p in ([os.path.join(d, r["path"]) for r in live if r["role"] == "world"]
+              if rows is not None else MANIFEST["files"]):
         if not os.path.exists(p):
-            bad.append({"address": man, "claim": f"the manifest declares {os.path.relpath(p, os.path.dirname(MANIFEST['manifest']))}, and no such file exists"})
-    d = os.path.dirname(MANIFEST["manifest"])
+            bad.append({"address": man, "claim": f"the manifest declares {os.path.relpath(p, d)}, and no such file exists"})
     # A SHADOW IS A FILE NOBODY SPOKE FOR, and a row of ANY role has been spoken
     # for. Reading only the world rows here called a declared seam side — and
     # then a declared forms file — a shadow, which is an accusation about
     # something that was claimed out loud in the document being read.
-    declared = ({os.path.join(d, r["path"]) for r in (MANIFEST.get("rows") or [])}
+    declared = ({os.path.join(d, r["path"]) for r in (live or [])}
                 | {MANIFEST["manifest"], os.path.join(d, "gate.swift"),
                    os.path.join(d, "gate.policy.swift")})  # meta, like the manifest itself
     for f in sorted(os.listdir(d)):
@@ -1353,20 +1398,27 @@ def cmd_demo_seam(a):
     open(os.path.join(root, "gate.manifest.swift"), "w").write(
         "// what this folder took, and from where. A seam is not found by looking\n"
         "// at what is lying about: it is here because this side said so, at the\n"
-        "// revision it was taken at.\n"
+        "// revision it was taken at. The columns are axes to declared atoms, and\n"
+        "// the one string is the typeName literal — a revision is an atom too.\n"
+        "public protocol Role {}\n"
+        "public enum SeamFile: Role {}\n"
         "public protocol Theirs {}\n"
-        "public enum TheContract: Theirs {}\n"
-        "extension TheContract {\n"
-        '    public static var typeName: String { "api.swift" }\n'
-        '    public static var role: String { "seam" }\n'
-        '    public static var from: String { "messages-api@a1b2c3d" }\n'
+        "public enum Rev_messages_api {}\n"
+        "extension Rev_messages_api "
+        '{ public static var typeName: String { "messages-api@a1b2c3d" } }\n'
+        "public enum TheContract: Theirs {\n"
+        "    public typealias Kind = SeamFile\n"
+        "    public typealias At = Rev_messages_api\n"
         "}\n"
-        "public enum OurSide: Theirs {}\n"
-        "extension OurSide {\n"
-        '    public static var typeName: String { "sdk.swift" }\n'
-        '    public static var role: String { "seam" }\n'
-        '    public static var from: String { "messages-js@4f10e22" }\n'
-        "}\n")
+        'extension TheContract { public static var typeName: String { "api.swift" } }\n'
+        "public enum Rev_messages_js {}\n"
+        "extension Rev_messages_js "
+        '{ public static var typeName: String { "messages-js@4f10e22" } }\n'
+        "public enum OurSide: Theirs {\n"
+        "    public typealias Kind = SeamFile\n"
+        "    public typealias At = Rev_messages_js\n"
+        "}\n"
+        'extension OurSide { public static var typeName: String { "sdk.swift" } }\n')
     api = cmd_declare(["contract", os.path.join(root, "openapi.json"),
                        "-o", os.path.join(root, "api.swift")])
     sdk = cmd_declare(["carrier", os.path.join(root, "sdk.declared.json"),
@@ -2044,23 +2096,44 @@ def declare_side(path, kind, role, frm=None):
     d = os.path.dirname(os.path.abspath(path)) or "."
     mp = os.path.join(d, "gate.manifest.swift")
     name = sanitize(os.path.splitext(os.path.basename(path))[0]).title().replace("_", "") or "Side"
+    ROLE_ATOM = {"world": "WorldFile", "seam": "SeamFile", "forms": "FormsFile",
+                 "judge": "JudgeFile"}
     text = open(mp, encoding="utf-8").read() if os.path.exists(mp) else (
         "// ONE LIST, AND THREE COLUMNS. Whose source a file is, what court reads\n"
         "// it, and — for anything taken — the revision it was taken at. gate\n"
         "// obeys this document and never guesses at a row.\n"
-        "public protocol Mine {}\n")
+        "//\n"
+        "// Written the way every record in this world is written: the columns are\n"
+        "// AXES to declared atoms, and the one string is the `typeName` literal\n"
+        "// that spells a name. A revision is an atom of its own, so two rows taken\n"
+        "// at the same revision say the same name rather than the same text.\n"
+        "public protocol Role {}\n"
+        "public enum WorldFile: Role {}\n"
+        "public enum SeamFile: Role {}\n"
+        "public enum FormsFile: Role {}\n"
+        "public enum JudgeFile: Role {}\n"
+        "\npublic protocol Mine {}\n")
     if kind == "Theirs" and "public protocol Theirs {}" not in text:
         text += ("\n// and what this world took from somewhere else. A file is here because\n"
                  "// this side said so, never because it was lying beside the others, and it\n"
                  "// says the revision it was taken at: there are no ranges anywhere in this\n"
                  "// tool, which is why nothing here has to be solved.\n"
                  "public protocol Theirs {}\n")
-    line = ('public enum ' + name + ': ' + kind + ' {}\n'
-            'extension ' + name + ' {\n'
-            '    public static var typeName: String { "' + os.path.basename(path) + '" }\n'
-            '    public static var role: String { "' + role + '" }\n'
-            + ('    public static var from: String { "' + frm + '" }\n' if frm else '')
-            + '}\n')
+    rev = ""
+    if frm:
+        rev_atom = "Rev_" + re.sub(r"\W+", "_", frm).strip("_")
+        if "public enum " + rev_atom + " {}" not in text:
+            rev = ('public enum ' + rev_atom + ' {}\n'
+                   'extension ' + rev_atom + ' { public static var typeName: String { "'
+                   + frm + '" } }\n')
+    line = (rev
+            + 'public enum ' + name + ': ' + kind + ' {\n'
+            + '    public typealias Kind = ' + ROLE_ATOM[role] + '\n'
+            + ('    public typealias At = Rev_' + re.sub(r"\W+", "_", frm).strip("_") + '\n'
+               if frm else '')
+            + '}\n'
+            + 'extension ' + name + ' { public static var typeName: String { "'
+            + os.path.basename(path) + '" } }\n')
     if line not in text:
         # KEPT IN ITS OWN GROUP, because this document is read by a person: what
         # I write and what I only read are the one distinction it exists to draw,
@@ -2106,11 +2179,26 @@ def forget_side(path, d):
                 or os.path.basename(r["path"]) == os.path.basename(path)), None)
     if not row or not row["name"]:
         return None, None
-    n = row["name"]
-    text = re.sub(r"public enum " + n + r": (?:Mine|Theirs|WorldFile|SeamFile) \{\}\n"
-                  r"(?:extension " + n + r"\b[^{]*\{.*?\n\}\n|extension " + n + r"\b[^\n]*\n)",
-                  "", text, count=1, flags=re.S)
-    open(mp, "w").write(text)
+    # BY BRACES, NOT BY SHAPE. A row is an enum body and an extension body now,
+    # and a pattern written for the one-line form matched neither — so this said
+    # the row was gone and left it there, which is the same silent lie the
+    # grouping insert told a day ago. Anything that edits this document counts
+    # braces; nothing about it is guessed from how a line happens to look.
+    n, rows_out, i = row["name"], [], 0
+    lines = text.split("\n")
+    heads = ("public enum " + n + ":", "extension " + n + " ", "extension " + n + "{")
+    while i < len(lines):
+        if lines[i].startswith(heads[0]) or lines[i].startswith(heads[1]) \
+                or lines[i].startswith(heads[2]):
+            depth = lines[i].count("{") - lines[i].count("}")
+            i += 1
+            while depth > 0 and i < len(lines):
+                depth += lines[i].count("{") - lines[i].count("}")
+                i += 1
+            continue
+        rows_out.append(lines[i])
+        i += 1
+    open(mp, "w").write("\n".join(rows_out))
     return os.path.basename(mp), row
 
 
@@ -3634,13 +3722,22 @@ def cmd_serve(a):
             active = self.pick(q)
             d = tempfile.mkdtemp(prefix="gate-bench-")
             paths = []
+            layout = MANIFEST["manifest"] if MANIFEST else None
             for name, p in bench_files():
                 if p != active and not os.path.exists(p):
                     continue                      # a personal world nobody wrote
                 tp = os.path.join(d, name.replace(os.sep, "__"))
                 with open(tp, "w") as f:
                     f.write(text if p == active else open(p).read())
-                paths.append(tp)
+                # THE LAYOUT IS OPENABLE, NOT PLAIN-JUDGED. It is the operator's
+                # own document and belongs in the bench — a dependency is written
+                # by whoever depends, and this was the one file of theirs the
+                # bench would not open. But it is not a fragment of the world:
+                # it declares protocols, which the plain court refuses on sight,
+                # so putting it in this stream turned every row into a refusal.
+                # Its court is the guards, and they answer below.
+                if p != layout:
+                    paths.append(tp)
             raw = subprocess.run([JUDGE, "judge", *paths], capture_output=True, text=True).stdout
             refusals = [{"address": m.group(1).replace("__", "/"), "claim": m.group(2).strip()}
                         for m in re.finditer(r"^\s+(\S+\.swift:\d+)\s+(.+)$", raw, re.M)]
@@ -3652,7 +3749,8 @@ def cmd_serve(a):
                 by_file.setdefault(fname, []).append(ref)
             byname = dict(bench_files())
             sources = [(n, text if p == active else (open(p).read() if os.path.exists(p) else ""))
-                       for n, p in bench_files() if p == active or os.path.exists(p)]
+                       for n, p in bench_files()
+                       if (p == active or os.path.exists(p)) and p != layout]
             if len(sources) > 1:
                 refusals = attribute_refusals(refusals, sources)
             else:
@@ -3664,7 +3762,10 @@ def cmd_serve(a):
             # bench may not say holds where a hook would refuse
             refusals += duplicate_guards_over(sources)
             refusals += entry_guards_over(sources)
-            refusals += manifest_guards() + forms_guards() + policy_guards() + stdlib_guards() + vendored_guards()
+            # the layout is held to the same promise as every other file here:
+            # judged as you type, from the editor's text and not the saved copy
+            live = read_manifest_rows(base, text)[1] if active == layout else None
+            refusals += manifest_guards(live) + forms_guards() + policy_guards() + stdlib_guards() + vendored_guards()
             times = re.findall(r"([\d.]+) ms", raw)
             # AND THE WIDTH OF IT. The judge counts what it checked and says so;
             # dropping that on the way to the bench left a green over several

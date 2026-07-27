@@ -7,58 +7,57 @@
 // else to put them. They were never reference. They are this world's records,
 // and here they are said to be.
 //
-// Whose source a file is, which court reads it, and — for anything taken — the
-// revision it was taken at. Nothing here is exempt from the columns everybody
-// else fills in.
+// WRITTEN THE WAY EVERY RECORD IS WRITTEN. The columns are AXES to declared
+// atoms, and the one string is the `typeName` literal that spells a name — the
+// single allowance this world makes. A revision is an atom of its own, so two
+// rows taken at the same revision say the same NAME, not the same text.
+public protocol Role {}
+public enum WorldFile: Role {}
+public enum SeamFile: Role {}
+public enum FormsFile: Role {}
+public enum JudgeFile: Role {}
+
 public protocol Mine {}
 
 // The forms this bench is written in, and the certificates over them. Judged by
 // the where court, which reads the equalities: break one and `gate status` in
 // this repository refuses at the line, the same as in yours.
-public enum BenchAtoms: Mine {}
-extension BenchAtoms {
-    public static var typeName: String { "stdlib/bench-atoms.swift" }
-    public static var role: String { "forms" }
+public enum BenchAtoms: Mine {
+    public typealias Kind = FormsFile
 }
-public enum BenchMetrics: Mine {}
-extension BenchMetrics {
-    public static var typeName: String { "stdlib/bench-metrics.swift" }
-    public static var role: String { "forms" }
+extension BenchAtoms { public static var typeName: String { "stdlib/bench-atoms.swift" } }
+public enum BenchMetrics: Mine {
+    public typealias Kind = FormsFile
 }
-public enum BenchPalette: Mine {}
-extension BenchPalette {
-    public static var typeName: String { "stdlib/bench-palette.swift" }
-    public static var role: String { "forms" }
+extension BenchMetrics { public static var typeName: String { "stdlib/bench-metrics.swift" } }
+public enum BenchPalette: Mine {
+    public typealias Kind = FormsFile
 }
+extension BenchPalette { public static var typeName: String { "stdlib/bench-palette.swift" } }
 
 // The words this tool hands to whoever uses it: they arrive in an operator's
 // repository as the header of whatever gate emits, so they are this world's to
 // answer for and not somebody's reference shelf.
-public enum GenreContract: Mine {}
-extension GenreContract {
-    public static var typeName: String { "stdlib/genre-contract.swift" }
-    public static var role: String { "forms" }
+public enum FormsContract: Mine {
+    public typealias Kind = FormsFile
 }
-public enum GenreGrants: Mine {}
-extension GenreGrants {
-    public static var typeName: String { "stdlib/genre-grants.swift" }
-    public static var role: String { "forms" }
+extension FormsContract { public static var typeName: String { "stdlib/genre-contract.swift" } }
+public enum FormsGrants: Mine {
+    public typealias Kind = FormsFile
 }
-public enum GenreOrganization: Mine {}
-extension GenreOrganization {
-    public static var typeName: String { "stdlib/genre-organization.swift" }
-    public static var role: String { "forms" }
+extension FormsGrants { public static var typeName: String { "stdlib/genre-grants.swift" } }
+public enum FormsOrganization: Mine {
+    public typealias Kind = FormsFile
 }
-public enum GenreReference: Mine {}
-extension GenreReference {
-    public static var typeName: String { "stdlib/genre-reference.swift" }
-    public static var role: String { "forms" }
+extension FormsOrganization { public static var typeName: String { "stdlib/genre-organization.swift" } }
+public enum FormsReference: Mine {
+    public typealias Kind = FormsFile
 }
-public enum GitAtoms: Mine {}
-extension GitAtoms {
-    public static var typeName: String { "stdlib/git-atoms.swift" }
-    public static var role: String { "forms" }
+extension FormsReference { public static var typeName: String { "stdlib/genre-reference.swift" } }
+public enum GitAtoms: Mine {
+    public typealias Kind = FormsFile
 }
+extension GitAtoms { public static var typeName: String { "stdlib/git-atoms.swift" } }
 
 // AND THE ONE THING THIS WORLD TOOK. The judge is a view of the corpus the way
 // this world is a view of these facts — `bin/build-judge.sh` clones at a
@@ -73,8 +72,10 @@ extension GitAtoms {
 // on purpose. gate lives under its own court everywhere a court is possible,
 // and this line is the one place where it is not.
 public protocol Theirs {}
-public enum TheJudge: Theirs {}
-extension TheJudge {
-    public static var typeName: String { "bin/gate-judge" }
-    public static var role: String { "judge" }
+public enum Rev_vi_0fd0b38 {}
+extension Rev_vi_0fd0b38 { public static var typeName: String { "verification-is-identification@0fd0b38" } }
+public enum TheJudge: Theirs {
+    public typealias Kind = JudgeFile
+    public typealias At = Rev_vi_0fd0b38
 }
+extension TheJudge { public static var typeName: String { "bin/gate-judge" } }

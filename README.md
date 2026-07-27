@@ -173,22 +173,31 @@ Both write one document, and the document is entirely yours. It has three
 columns: **whose source** a file is, **which court** reads it, and — for
 anything taken — **the revision** it was taken at.
 
+It is written the way every record in this world is written: the columns are
+**axes** to declared atoms, and the one string is the `typeName` literal that
+spells a name. A revision is an atom of its own, so two rows taken at the same
+revision say the same **name**, not the same text.
+
 ```swift
 // gate.manifest.swift
+public protocol Role {}
+public enum WorldFile: Role {}
+public enum SeamFile: Role {}
+
 public protocol Mine {}
-public enum People: Mine {}
-extension People {
-    public static var typeName: String { "people.swift" }
-    public static var role: String { "world" }
+public enum People: Mine {
+    public typealias Kind = WorldFile
 }
+extension People { public static var typeName: String { "people.swift" } }
 
 public protocol Theirs {}
-public enum TheContract: Theirs {}
-extension TheContract {
-    public static var typeName: String { "api.swift" }
-    public static var role: String { "seam" }
-    public static var from: String { "openapi@3f2a1c9" }
+public enum Rev_openapi_3f2a1c9 {}
+extension Rev_openapi_3f2a1c9 { public static var typeName: String { "openapi@3f2a1c9" } }
+public enum TheContract: Theirs {
+    public typealias Kind = SeamFile
+    public typealias At = Rev_openapi_3f2a1c9
 }
+extension TheContract { public static var typeName: String { "api.swift" } }
 ```
 
 **The role names a court, so it is not optional.** `world` is judged with the
@@ -573,7 +582,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 199 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 201 end-to-end checks, the definition of green
 ```
 
 ## Status
