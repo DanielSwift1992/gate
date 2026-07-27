@@ -1,4 +1,5 @@
 // gate stdlib bench-palette v1 — the palette as a judged world.
+// role: gate's own
 // Levels of light on a 0..1000 scale (a tenth of a percent), spelled on this
 // file's own ladder from Unit — the built-in U stay symbolic, so a world
 // spells its own ladder. The scale is a tenth of a percent and not a percent

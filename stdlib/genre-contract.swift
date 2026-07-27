@@ -1,4 +1,5 @@
 // gate stdlib genre-contract v1 — a contract and the clients that carry it,
+// role: forms
 // as one judged world.
 //
 // A contract is written once and copied into a server and into every client

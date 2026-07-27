@@ -1,4 +1,5 @@
 // gate stdlib git-atoms v1 — the git world itself, as declarations.
+// role: forms
 // The substrate's own objects become atoms: judged records reference them.
 // Enforcement stays with git and the platform; these are the names.
 

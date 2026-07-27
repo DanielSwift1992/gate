@@ -1479,8 +1479,24 @@ def cmd_stdlib(a):
                         "adds no word to the language. It is here to be READ",
                 "next": "gate --version names the revision they were compiled from — that, and "
                         "not this file, is the thing your world depends on"}
-    return {"command": "stdlib", "modules": {k: v.split("\n")[0].replace("// ", "") for k, v in STDLIB.items()},
+    return {"command": "stdlib",
+            "modules": {k: v.split("\n")[0].replace("// ", "") for k, v in STDLIB.items()},
+            "roles": {k: stdlib_role(k) for k in STDLIB},
             "note": "printouts of what the judge already carries — not files your world is made of"}
+
+
+def stdlib_role(name):
+    # WHICH IT IS, THE FILE SAYS ITSELF — the same rule a seam side already
+    # lives by. Sorting these by the shape of their names was a guess dressed
+    # as a category, and it put the tool's own furniture in front of an
+    # operator who has no use for it. `forms` is what YOUR world and policy are
+    # written in; `gate's own` is how this page looks and spaces itself, which
+    # is gate's business and is judged in gate's own battery.
+    for line in STDLIB.get(name, "").split("\n")[:4]:
+        m = re.match(r"// role: (.+)", line.strip())
+        if m:
+            return m.group(1).strip()
+    return None
 
 
 def stdlib_guards():
@@ -3356,7 +3372,8 @@ def cmd_serve(a):
                         # the SAME judge that judges and builds its vocabulary
                         # from that parse — the shelf has one reader, not a regex
                         # here beside the judge over there.
-                        body = json.dumps({"modules": list(STDLIB)}).encode()
+                        body = json.dumps({"modules": list(STDLIB),
+                                           "roles": {k: stdlib_role(k) for k in STDLIB}}).encode()
                         self.send_response(200)
                         self.send_header("Content-Type", "application/json")
                         self.send_header("Cache-Control", "no-store")
@@ -3939,9 +3956,13 @@ def humanize(out):
         # of that name anywhere near it, and a copy declared as a world file is
         # refused outright. So a printout is exactly that, and the dependency is
         # the judge, named by revision.
-        lines.append(f"stdlib: {len(out['modules'])} printouts of the words the judge carries")
+        roles = out.get("roles") or {}
+        speak = [k for k in out["modules"] if roles.get(k) == "forms"]
+        lines.append(f"stdlib: {len(speak)} you can speak, "
+                     f"{len(out['modules']) - len(speak)} gate's own — all of it theirs")
         for name, note in out["modules"].items():
-            lines.append(f"  {name:<20} {note.split('—')[-1].strip()[:58]}")
+            own = "" if roles.get(name) == "forms" else "   (gate's own furniture)"
+            lines.append(f"  {name:<20} {note.split('—')[-1].strip()[:52]}{own}")
         lines.append("  these are THEIRS: read them, quote them, learn them — but they are not "
                      "files your world is made of, and editing one adds no word to the language. "
                      "`gate --version` names the revision they were compiled from")

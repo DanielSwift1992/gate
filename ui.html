@@ -566,10 +566,24 @@ async function buildJournal() {
 // of the thing it belongs to, with the revision it was compiled from beside it.
 // That revision IS the dependency, and it is the only part of this a world can
 // be pinned to.
+// AND ONLY WHAT YOU CAN SPEAK. The shelf also carries this tool's own
+// furniture — how the page looks, how it spaces itself, the lengths its battery
+// holds it to — and an operator has no use for any of it: it never enters their
+// repository and answers no question they have. Those are gate's own world, and
+// where they belong is gate's own rail, under `mine`, the day this tool declares
+// its world the way it asks everybody else to. Until then they stay off a page
+// that is supposed to be an account of YOUR repository.
+//
+// The cut is the role, which each file states in its own second line — not the
+// shape of its name. `git-atoms` is here and is not a genre: it is what your
+// merge policy is written in.
 async function buildShelf() {
     const host = document.getElementById("shelf-host");
     let mods = [];
-    try { mods = (await (await fetch("/shelf")).json()).modules || []; } catch { mods = []; }
+    try {
+        const shelf = await (await fetch("/shelf")).json();
+        mods = (shelf.modules || []).filter(m => (shelf.roles || {})[m] === "forms");
+    } catch { mods = []; }
     host.innerHTML = "";
     document.getElementById("shelf-head").hidden = !mods.length;
     for (const m of mods) {

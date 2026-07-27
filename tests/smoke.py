@@ -1494,26 +1494,56 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     shelf_said = say("stdlib", cwd=ent)
     shelf_src = open(GATE, encoding="utf-8").read()
     S.append(("the shelf is one list of printouts, and says it is not yours",
-              "printouts of the words the judge carries" in shelf_said
+              "all of it theirs" in shelf_said
               and "genre-organization" in shelf_said and "bench-palette" in shelf_said
               and "these are THEIRS" in shelf_said
               and "editing one adds no word to the language" in shelf_said
               and "gate --version` names the revision" in shelf_said
               and "gate stdlib show" in shelf_said
               and "gate mine FILE` / `gate theirs FILE`" in shelf_said
-              # no split survives: one flat list, no side-label on the furniture
-              and "genres you can speak" not in shelf_said
-              and "(gate's own)" not in shelf_said
               # and the rail says the same three things in the same order
               and "<i></i>mine</h3>" in ui and "<i></i>theirs</h3>" in ui
               and "<i></i>the judge<span id=\"judge-rev\"" in ui
               and ui.index("<i></i>mine</h3>") < ui.index("<i></i>theirs</h3>")
               < ui.index("<i></i>the judge<span")
-              and 'mods.filter(m => m.startsWith("genre-"))' not in ui
               and "r.onclick = () => openShelf(m);" in ui
               # the revision is shown where the words are listed, or said missing
               and 'v.judge_from ? v.judge_from.slice(0, 7) : "revision unrecorded"' in ui
               and '"judge_from": judge_from()' in shelf_src))
+
+    # ── AND THE OPERATOR'S RAIL SHOWS WHAT THE OPERATOR CAN SPEAK. The shelf
+    # carries two unlike things and calling them one was a category invented to
+    # hold what had not been sorted. Five of them are what YOUR world and policy
+    # are written in — they arrive in your repository as the header of whatever
+    # gate emits, and without them nothing you keep is expressible. Three are
+    # this tool's own furniture: how its page looks, how it spaces itself, the
+    # lengths its own battery holds it to. Those never enter your repository and
+    # answer no question you have.
+    #
+    # Neither is yours, so this is not the mine/theirs line drawn twice — it is
+    # the ROLE column, and each file states its own role in its own second line
+    # rather than being sorted by the shape of its name. `git-atoms` proves the
+    # difference: not a genre, and it is what a merge policy is written in.
+    roles = run("stdlib", cwd=ent)[1].get("roles") or {}
+    S.append(("the shelf says which of it you can speak, and each file says so itself",
+              roles.get("genre-organization") == "forms"
+              and roles.get("genre-contract") == "forms"
+              # not a genre by name, and speakable all the same
+              and roles.get("git-atoms") == "forms"
+              # the tool's own furniture says it is the tool's own
+              and roles.get("bench-palette") == "gate's own"
+              and roles.get("bench-metrics") == "gate's own"
+              and roles.get("bench-atoms") == "gate's own"
+              # said in the file, not guessed from the name
+              and all(open(os.path.join(HERE, "stdlib", f"{m}.swift"),
+                           encoding="utf-8").read().split("\n")[1].startswith("// role: ")
+                      for m in roles)
+              # the command line says both counts and says all of it is theirs
+              and "you can speak" in shelf_said and "all of it theirs" in shelf_said
+              and "(gate's own furniture)" in shelf_said
+              # and the rail carries only what can be spoken, cut by role
+              and 'shelf.roles || {})[m] === "forms"' in ui
+              and 'mods.filter(m => m.startsWith("genre-"))' not in ui))
 
     # ── A SHELF PAGE IS A PRINTOUT, AND THIS IS THE PROBE THAT SAYS SO. The tool
     # invited an operator to materialize a genre and called the copy theirs to
