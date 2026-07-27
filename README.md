@@ -16,6 +16,11 @@ a refusal names the exact line of your own file.
 
 No server. No runtime. No new formats. Nothing leaves your repository.
 
+The judge is built from a public corpus and says which revision it came from:
+`gate --version` prints the commit, and `bin/build-judge.sh <commit>` reproduces
+the same bytes. Bytes say what a thing is; only the revision says what it was
+made from.
+
 ```
 $ gate status
 status: refused 1 · 18 declarations · 84 premises · 1.1 ms
@@ -485,7 +490,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 188 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 189 end-to-end checks, the definition of green
 ```
 
 ## Status

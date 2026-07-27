@@ -1464,6 +1464,34 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and twice.get("standing") == 1
               and written["diverges"][0]["because"] == "PROJ-10"))
 
+    # ── WHAT THIS JUDGE WAS MADE FROM. Its identity is its bytes, and that is
+    # what a reviewer reproduces — but bytes say what a thing IS, never what it
+    # was made from, so the one dependency this whole tool rests on was stated as
+    # an opaque hash that nobody could check without already knowing the answer.
+    # No seam is wanted here: a seam is for two parties with no judge between
+    # them, and this pair shares one — a disagreement with the corpus is refused
+    # at a keystroke rather than reported. What was missing is provenance, and
+    # where it is missing that is said rather than glossed.
+    keep = os.path.join(HERE, "bin", "gate-judge.from")
+    had = open(keep).read() if os.path.exists(keep) else None
+    try:
+        if os.path.exists(keep):
+            os.remove(keep)
+        silent = say("--version")
+        open(keep, "w").write("1f4c0a9d3e7b2c5a8f0d6e4b1c9a7f3d5e2b8c40\n")
+        spoken = say("--version")
+    finally:
+        if had is not None:
+            open(keep, "w").write(had)
+        elif os.path.exists(keep):
+            os.remove(keep)
+    S.append(("the judge says which revision of the corpus it was built from, and says so when it cannot",
+              "is not recorded" in silent
+              and "verification-is-identification 1f4c0a9d3e7b" in spoken
+              and "build-judge.sh 1f4c0a9d3e7b" in spoken
+              # and the build writes it down rather than leaving it to be guessed
+              and "git rev-parse HEAD" in open(os.path.join(HERE, "bin", "build-judge.sh")).read()))
+
     # ── THE PITCH STAYS OUTSIDE THE VERDICT. A brand may say `sight for
     # promises`; a verdict may not. What a reader is handed by the tool is what
     # was observed, the bounds it was observed in, numbers, and a recipe — and

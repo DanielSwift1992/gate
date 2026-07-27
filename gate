@@ -3770,6 +3770,18 @@ def humanize(out):
 VERSION = "0.1.0"
 
 
+def judge_from():
+    # WHICH REVISION OF THE CORPUS THIS JUDGE CAME FROM. Bytes say what a thing
+    # is; they do not say what it was made from, and a dependency stated as an
+    # opaque hash cannot be checked by anybody who does not already know the
+    # answer. The build records the commit beside the binary. Where it is
+    # missing, that is said rather than glossed.
+    try:
+        return open(JUDGE + ".from", encoding="utf-8").read().strip() or None
+    except OSError:
+        return None
+
+
 def judge_version():
     # the judge has no version flag; its identity is its bytes, which is also
     # what the README asks a reviewer to reproduce from the public corpus
@@ -3786,9 +3798,15 @@ def main():
         raise SystemExit(USAGE)
     args = sys.argv[1:]
     if args[0] in ("--version", "-v", "version"):
+        came = judge_from()
         print(json.dumps({"command": "version", "gate": VERSION, "judge": judge_version(),
-                          "python": sys.version.split()[0]}) if "--json" in args
-              else f"gate {VERSION} · judge {judge_version()} (canon v2) · python {sys.version.split()[0]}")
+                          "judge_from": came, "python": sys.version.split()[0]}) if "--json" in args
+              else f"gate {VERSION} · judge {judge_version()} (canon v2) · python {sys.version.split()[0]}"
+              + ("\n  judge built from verification-is-identification " + came[:12]
+                 + " — `bin/build-judge.sh " + came[:12] + "` reproduces these bytes"
+                 if came else
+                 "\n  the revision this judge was built from is not recorded: "
+                 "`bin/build-judge.sh` writes it down"))
         return
     as_json = "--json" in args
     args = [a for a in args if a != "--json"]
