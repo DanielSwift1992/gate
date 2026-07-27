@@ -35,6 +35,10 @@ public enum BenchPalette: Mine {
     public typealias Kind = FormsFile
 }
 extension BenchPalette { public static var typeName: String { "stdlib/bench-palette.swift" } }
+public enum BenchRegisters: Mine {
+    public typealias Kind = FormsFile
+}
+extension BenchRegisters { public static var typeName: String { "stdlib/bench-registers.swift" } }
 
 // The words this tool hands to whoever uses it: they arrive in an operator's
 // repository as the header of whatever gate emits, so they are this world's to

@@ -1670,6 +1670,39 @@ def palette_tokens():
             + ':root[data-theme="dark"] {\n' + block("Dim") + "\n}\n")
 
 
+def register_tokens():
+    # ── THE FACES, READ FROM THE WORLD THAT DECLARES THEM. The page had been
+    # restating a register every time it used one — nineteen font declarations
+    # where four registers stood declared, half of them the same register written
+    # again with the leading a hair different. Sizes live in tenths of a pixel
+    # and leadings in hundredths of their own size, because a world spells its
+    # numbers on its own ladder and 12.5 is not a whole anything. What is served
+    # is what the page rendered before, to the last tenth.
+    vals = _peano(STDLIB.get("bench-registers", ""))
+    text = STDLIB.get("bench-registers", "")
+    faces = dict(re.findall(r"public enum (\w+): Register \{\s*\n\s*public typealias On = (\w+)",
+                            text))
+    rows = []
+    for name, face in sorted(faces.items()):
+        size = vals.get(name + "Size")
+        if size is None:
+            continue
+        lead = vals.get(name + "Lead")
+        stack = ("ui-monospace,Menlo,monospace" if face == "Mono"
+                 else "-apple-system,sans-serif")
+        weight = "600 " if name in ("Brand", "Headline", "Headsmall") else ""
+        px = ("%g" % (size / 10))
+        rows.append(f"  --{name.lower()}: {weight}{px}px"
+                    + (f"/{'%g' % (lead / 100)}" if lead else "") + f" {stack};")
+    # and the two faces on their own, for a rule that changes the face and keeps
+    # whatever size it stands in — still a name, never a stack written by hand
+    for face, stack in (("Mono", "ui-monospace,Menlo,monospace"),
+                        ("Sans", "-apple-system,sans-serif")):
+        if "public enum " + face + ": Face {}" in text:
+            rows.append(f"  --{face.lower()}: {stack};")
+    return ":root {\n" + "\n".join(rows) + "\n}\n"
+
+
 def ladder_tokens():
     # ── THE STEPS, READ FROM THE WORLD THAT DECLARES THEM. The stylesheet had
     # been spelling the multiples itself — `calc(var(--u)*6)` where the shelf
@@ -3744,7 +3777,7 @@ def cmd_serve(a):
                 if u.path == "/ladder.css":
                     # the named steps, emitted from the judged world so the page
                     # can say `var(--apart)` and never a number of its own
-                    body = (palette_tokens() + ladder_tokens()).encode()
+                    body = (palette_tokens() + ladder_tokens() + register_tokens()).encode()
                     self.send_response(200)
                     self.send_header("Content-Type", "text/css; charset=utf-8")
                     self.send_header("Cache-Control", "no-store")

@@ -2223,6 +2223,43 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               # and the leak has not grown
               and len(found & LEAKED) <= len(LEAKED)))
 
+    # ── AND THE FACES COME FROM A WORLD TOO. The stylesheet said "a register is
+    # declared ONCE here; an element only names it" — and then declared a font
+    # thirty-two times, nineteen of them distinct, half of those the same
+    # register written again with the leading a hair different: 11px/1.4 beside
+    # 11px/1.45 beside 11px/1.5. A law stated and not enforced decays into the
+    # habit it replaced. The page names a register now and states none, and the
+    # numbers come from a file that is judged for them.
+    #
+    # That file holds laws rather than a list: the size ladder only goes up, so
+    # `caption` cannot quietly become the size of `speech`, and every leading is
+    # at least as tall as the letters it sets, because a line that overlaps the
+    # next is not a line. Seventeen equalities, probed by breaking one.
+    reg = open(os.path.join(HERE, "stdlib", "bench-registers.swift"), encoding="utf-8").read()
+    served = subprocess.run(
+        [sys.executable, "-c",
+         "import types;src=open(%r,encoding='utf-8').read();g=types.ModuleType('g');"
+         "g.__file__=%r;exec(compile(src,'gate','exec'),g.__dict__);"
+         "print(g.register_tokens())" % (GATE, GATE)],
+        capture_output=True, text=True).stdout
+    style_only = ui.split("<style>", 1)[1].split("</style>", 1)[0]
+    S.append(("the page names a register and states none of its own",
+              # every face in the stylesheet is a name, not a stack
+              not [m for m in re.findall(r"font:\s*([^;}]+)", style_only)
+                   if not m.startswith("var(") and m.strip() != "inherit"]
+              and "ui-monospace" not in style_only and "-apple-system" not in style_only
+              # served from the declared world, faces and registers both
+              and "--fact: 12.5px/1.45 ui-monospace" in served
+              and "--mono: ui-monospace,Menlo,monospace;" in served
+              and "def register_tokens(" in shelf_src
+              # and that world holds a ladder and a floor, not just a list
+              and "public enum Taller<Hi, Lo, Slack>: Close {}" in reg
+              and "public enum AtLeast<Have, Floor, Slack>: Close {}" in reg
+              and "17 equalities" in subprocess.run(
+                  [os.path.join(HERE, "bin", "gate-judge"), "judge", "where",
+                   os.path.join(HERE, "stdlib", "bench-registers.swift")],
+                  capture_output=True, text=True).stdout))
+
     # ── AN EXHIBIT, NOT A WISH. What follows records what a claim written in the
     # head of the file that depends on it does TODAY, line by line, because the
     # answer is the case for the one change everything left is waiting on: the
@@ -3122,9 +3159,10 @@ public enum MyWatch: AccessLedger {
               "if (!said) { run = null; return; }" in ui
               and "run.text += \" \" + said" in ui
               and "function noteProse(" in ui
-              # prose is set as speech and wraps, rather than as preformatted code
+              # prose is set as speech and wraps, rather than as preformatted
+              # code — and it NAMES the register instead of restating a face
               and "#bare .note{display:block;white-space:normal" in ui
-              and "-apple-system,sans-serif" in ui.split("#bare .note{")[1][:140]
+              and "var(--prose)" in ui.split("#bare .note{")[1][:140]
               # the two kinds are told apart, and the attached one has no gap
               and "#bare .note.said{" in ui and "#bare .note.free{" in ui
               and 'class="note said"' in ui and 'class="note free"' in ui

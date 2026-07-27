@@ -61,13 +61,13 @@
    speech); ink tells WHETHER it is judged (ink = judged/primary; muted =
    observed/secondary). Two accents own their colour alone: the verdict (ok/bad)
    and the hand (action). Full is exempt — raw source, all mono, no projection. ── */
-.fact{font:12.5px/1.45 ui-monospace,Menlo,monospace;color:var(--ink)}
-.observed{font:12.5px/1.45 ui-monospace,Menlo,monospace;color:var(--muted)}
-.speech{font:13px/1.45 -apple-system,sans-serif;color:var(--ink)}
-.caption{font:11px/1.4 -apple-system,sans-serif;color:var(--muted)}
+.fact{font:var(--fact);color:var(--ink)}
+.observed{font:var(--fact);color:var(--muted)}
+.speech{font:var(--speech);color:var(--ink)}
+.caption{font:var(--caption);color:var(--muted)}
 .verdict{font-weight:600}.verdict.ok{color:var(--ok)}.verdict.bad{color:var(--bad)}
 .gesture{color:var(--action);cursor:pointer}
-body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);background:var(--paper);display:flex;height:100vh;overflow:hidden}
+body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);display:flex;height:100vh;overflow:hidden}
 #rail{flex:0 0 250px;display:none;flex-direction:column;overflow:auto;min-width:0}
 #rail h3{font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin:0;padding:calc(var(--u)*6) calc(var(--u)*7) calc(var(--u)*4)}
 .file{display:flex;align-items:center;gap:calc(var(--u)*3);padding:calc(var(--u)*2) calc(var(--u)*7);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -111,11 +111,11 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
    terminal. This bench does not run things: a page that executes in a
    repository holding other people's files is an attack surface we would have
    built ourselves, and what it can promise today is that it breaks nothing. ── */
-#next .run{font-family:ui-monospace,Menlo,monospace;color:var(--action);cursor:pointer;
+#next .run{font-family:var(--mono);color:var(--action);cursor:pointer;
   border-bottom:1px dashed var(--action);padding-bottom:var(--tight)}
 #next .run:hover{background:var(--mist)}
 #next .run.took{color:var(--ok);border-bottom-color:var(--ok)}
-#filter-note,#load-more{padding:calc(var(--u)*2) calc(var(--u)*7);font:11px -apple-system,sans-serif;color:var(--action);cursor:pointer}
+#filter-note,#load-more{padding:calc(var(--u)*2) calc(var(--u)*7);font:var(--captionbare);color:var(--action);cursor:pointer}
 #filter-note:hover,#load-more:hover{text-decoration:underline}
 #rail h3.fold{cursor:pointer;display:flex;flex-wrap:wrap;align-items:flex-start;gap:calc(var(--u)*3);user-select:none}
 #rail h3.fold:hover{color:var(--ink)}
@@ -131,18 +131,18 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
    in the head, and there is nothing here that earns one. ── */
 #judge-row{padding:calc(var(--u)*2) calc(var(--u)*7) 0;text-transform:none;letter-spacing:0}
 #judge-row b{color:var(--ink);font-weight:600}
-#judge-row .at{font-family:ui-monospace,Menlo,monospace;color:var(--seam)}
+#judge-row .at{font-family:var(--mono);color:var(--seam)}
 #rail h3.fold.shut .obs{display:none}
 /* except the revision: it is the one dependency here, and a shut list is
    exactly when an operator wants it stated rather than hunted for */
 .foldable.shut{display:none}
-#keys-btn{border:none;background:transparent;color:var(--muted);font:13px -apple-system,sans-serif;width:20px;height:20px;border-radius:5px;cursor:pointer;padding:0}
+#keys-btn{border:none;background:transparent;color:var(--muted);font:var(--control);width:20px;height:20px;border-radius:5px;cursor:pointer;padding:0}
 #keys-btn:hover{background:var(--mist);color:var(--ink)}
 #keys-panel{position:fixed;top:38px;right:14px;z-index:30;width:min(360px,86vw);background:var(--paper);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 28px color-mix(in srgb,var(--shade) 18%,transparent);padding:calc(var(--u)*6) calc(var(--u)*7)}
-#keys-panel h4{margin:0 0 calc(var(--u)*4);font:600 13px/1 -apple-system,sans-serif}
-#keys-panel p{margin:calc(var(--u)*4) 0 0;font:11px/1.5 -apple-system,sans-serif;color:var(--muted)}
-.krow{display:flex;gap:calc(var(--u)*4);align-items:baseline;padding:var(--u) 0;font:11px/1.45 -apple-system,sans-serif}
-.krow kbd{flex:0 0 5.6em;font:11px ui-monospace,Menlo,monospace;color:var(--ink);background:var(--mist);border-radius:5px;padding:var(--u) calc(var(--u)*2);text-align:center}
+#keys-panel h4{margin:0 0 calc(var(--u)*4);font:var(--headsmall)}
+#keys-panel p{margin:calc(var(--u)*4) 0 0;font:var(--captionloose);color:var(--muted)}
+.krow{display:flex;gap:calc(var(--u)*4);align-items:baseline;padding:var(--u) 0;font:var(--captionline)}
+.krow kbd{flex:0 0 5.6em;font:var(--keycap);color:var(--ink);background:var(--mist);border-radius:5px;padding:var(--u) calc(var(--u)*2);text-align:center}
 .krow span{color:var(--muted)}
 #completion{position:absolute;z-index:32;background:var(--paper);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 22px color-mix(in srgb,var(--shade) 16%,transparent);padding:calc(var(--u)*2);min-width:11em;max-height:15em;overflow:auto}
 .crow{padding:var(--u) calc(var(--u)*4);border-radius:5px;cursor:pointer;white-space:nowrap}
@@ -151,9 +151,9 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .cnote{padding:calc(var(--u)*2) calc(var(--u)*4) var(--u);border-top:0.5px solid var(--line);margin-top:calc(var(--u)*2)}
 #inspect{flex:none;padding:calc(var(--u)*3) calc(var(--u)*8) calc(var(--u)*2);border-bottom:0.5px solid var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #inspect:empty::before{content:"the cursor on a name says what it is";opacity:.5}
-#say{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:31;background:var(--ink);color:var(--paper);font:13px -apple-system,sans-serif;padding:calc(var(--u)*3) calc(var(--u)*7);border-radius:8px;box-shadow:0 6px 20px color-mix(in srgb,var(--shade) 30%,transparent)}
+#say{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:31;background:var(--ink);color:var(--paper);font:var(--control);padding:calc(var(--u)*3) calc(var(--u)*7);border-radius:8px;box-shadow:0 6px 20px color-mix(in srgb,var(--shade) 30%,transparent)}
 #brand{padding:calc(var(--u)*7) calc(var(--u)*7) calc(var(--u)*3)}
-#brand b{display:block;font:600 15px/1.2 -apple-system,sans-serif;letter-spacing:-.01em}
+#brand b{display:block;font:var(--brand);letter-spacing:-.01em}
 #brand span{display:block;margin-top:calc(var(--u)*2)}
 /* an open commit and what it opened are one block, told apart by surface
    alone: a caret says which way it goes, and nothing is drawn around it */
@@ -162,12 +162,12 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .commit .caret{flex:none;width:8px;color:var(--muted);transition:transform .12s;font-style:normal;opacity:.6}
 .commit .caret::before{content:"\203A"}
 .cdiff{flex:0 0 100%;padding:var(--u) 0 calc(var(--u)*5);background:var(--mist)}
-.dwait{padding:calc(var(--u)*2) calc(var(--u)*7);font:11px -apple-system,sans-serif;color:var(--muted)}
-.dfile{padding:calc(var(--u)*2) calc(var(--u)*7) var(--u);font:11px ui-monospace,Menlo,monospace;color:var(--muted)}
-.dfile .dnote{margin-left:calc(var(--u)*3);font:11px -apple-system,sans-serif}
-.dmore{padding:var(--u) calc(var(--u)*7);font:11px -apple-system,sans-serif;color:var(--muted)}
+.dwait{padding:calc(var(--u)*2) calc(var(--u)*7);font:var(--captionbare);color:var(--muted)}
+.dfile{padding:calc(var(--u)*2) calc(var(--u)*7) var(--u);font:var(--keycap);color:var(--muted)}
+.dfile .dnote{margin-left:calc(var(--u)*3);font:var(--captionbare)}
+.dmore{padding:var(--u) calc(var(--u)*7);font:var(--captionbare);color:var(--muted)}
 .factrow{display:flex;align-items:baseline;gap:calc(var(--u)*2);flex-wrap:wrap;padding:var(--u) calc(var(--u)*7)}
-.dline{padding:var(--u) calc(var(--u)*7);font:11px/1.45 ui-monospace,Menlo,monospace;white-space:pre-wrap;word-break:break-word;color:var(--muted)}
+.dline{padding:var(--u) calc(var(--u)*7);font:var(--monoline);white-space:pre-wrap;word-break:break-word;color:var(--muted)}
 .factrow .sep{color:var(--muted)}
 .factrow .own{color:var(--localtype)}
 .factrow .was{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1px}
@@ -180,13 +180,13 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 #bar{display:flex;gap:calc(var(--u)*5);align-items:center;padding:calc(var(--u)*3) calc(var(--u)*6);border-bottom:0.5px solid var(--line);flex:none}
 #bar b{font-weight:600}
 .seg{display:inline-flex;background:var(--mist);border-radius:8px;padding:var(--u);gap:var(--u)}
-.seg button{border:none;border-radius:5px;margin:0;background:transparent;color:var(--muted);font:13px -apple-system,sans-serif;padding:calc(var(--u)*2) calc(var(--u)*6);cursor:pointer}
+.seg button{border:none;border-radius:5px;margin:0;background:transparent;color:var(--muted);font:var(--control);padding:calc(var(--u)*2) calc(var(--u)*6);cursor:pointer}
 .seg button:hover{color:var(--ink)}
 .seg button.on{background:var(--paper);color:var(--ink);box-shadow:0 1px 2px color-mix(in srgb,var(--shade) 12%,transparent)}
 .seg button:disabled{opacity:.3;cursor:default}
 .seg button:disabled:hover{color:var(--muted)}
 #nav-seg button{padding:calc(var(--u)*2) calc(var(--u)*5);font-size:15px;line-height:1}
-#gitstate{font-family:ui-monospace,Menlo,monospace;margin-left:auto;display:flex;align-items:center;gap:calc(var(--u)*3)}
+#gitstate{font-family:var(--mono);margin-left:auto;display:flex;align-items:center;gap:calc(var(--u)*3)}
 #gitstate .g{width:7px;height:7px;border-radius:50%;background:var(--muted)}
 #gitstate.modified{color:var(--law)}#gitstate.modified .g{background:var(--law)}
 #gitstate.committed{color:var(--muted)}#gitstate.committed .g{background:var(--muted)}
@@ -194,7 +194,7 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 #write:disabled{opacity:.4;cursor:default}
 #surface{flex:1;position:relative;min-height:0}
 #editor-host{position:absolute;inset:0}
-.CodeMirror{height:100%;font:12.5px/19px ui-monospace,Menlo,monospace;background:var(--paper);color:var(--ink)}
+.CodeMirror{height:100%;font:var(--source);background:var(--paper);color:var(--ink)}
 /* the code stands off from its index by a named step, not by the four pixels the
    vendored sheet happens to give: the gutter is scaffolding and the text needs
    air from it. Written at the vendor's own weight, or the vendor wins. */
@@ -223,8 +223,8 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 .cm-badname{text-decoration:underline wavy var(--bad);text-underline-offset:3px}.cm-ghost{color:var(--seam)}
 .line-flag-bad{background:color-mix(in srgb,var(--bad) 6%,transparent)}
 .gutter-flag-bad .CodeMirror-linenumber{color:var(--bad);font-weight:700}
-.flag-note{font:11px/1.5 -apple-system,sans-serif;color:var(--bad);background:color-mix(in srgb,var(--bad) 8%,transparent);padding:var(--u) calc(var(--u)*5) var(--u) calc(var(--u)*14)}
-#bare{position:absolute;inset:0;overflow:auto;background:var(--paper);margin:0;padding:calc(var(--u)*6) calc(var(--u)*8) calc(var(--u)*40);display:none;font:12.5px/19px ui-monospace,Menlo,monospace;color:var(--ink);white-space:pre}
+.flag-note{font:var(--captionloose);color:var(--bad);background:color-mix(in srgb,var(--bad) 8%,transparent);padding:var(--u) calc(var(--u)*5) var(--u) calc(var(--u)*14)}
+#bare{position:absolute;inset:0;overflow:auto;background:var(--paper);margin:0;padding:calc(var(--u)*6) calc(var(--u)*8) calc(var(--u)*40);display:none;font:var(--source);color:var(--ink);white-space:pre}
 #bare .conf{color:var(--muted)}
 #bare .decl{color:var(--localtype);font-weight:600;cursor:pointer}
 #bare .jump{color:var(--localtype);cursor:pointer}
@@ -255,7 +255,7 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
    is one paragraph now: speech register, wrapped to the pane, and the air goes
    between paragraphs where it belongs rather than inside one. ── */
 #bare .note{display:block;white-space:normal;max-width:62ch;
-  font:13px/1.5 -apple-system,sans-serif;color:var(--muted)}
+  font:var(--prose);color:var(--muted)}
 /* ── AND EVERY GAP HERE IS A NAMED STEP, which it had not been. Records were
    held apart by a blank line of text — the font's line-height, some eight and a
    fifth units, a number nobody declared and nobody could defend. The law of
@@ -266,8 +266,8 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 #bare .rec{display:block;margin-bottom:var(--apart)}
 #bare .note.said{margin:0 0 var(--near)}
 #bare .note.free{margin:0}
-#bare .note code{font:12px/1.4 ui-monospace,Menlo,monospace;color:var(--ink)}
-#bare .note .known{font:12px/1.4 ui-monospace,Menlo,monospace}
+#bare .note code{font:var(--codeinline);color:var(--ink)}
+#bare .note .known{font:var(--codeinline)}
 #bare .slot{cursor:pointer;border-bottom:1px dashed var(--line)}
 #bare .slot.elsewhere{cursor:default;border-bottom-style:none}
 /* a hole already says it three ways — the word, the dashes, the quiet register —
@@ -302,11 +302,11 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 #bare .bad{text-decoration:underline wavy var(--bad);text-underline-offset:3px}
 #bare .row-bad{background:color-mix(in srgb,var(--bad) 6%,transparent)}
 .empty{max-width:34em;padding:calc(var(--u)*20) 0 0 calc(var(--u)*10);color:var(--ink)}
-.empty h2{font:600 15px/1.3 -apple-system,sans-serif;margin:0 0 calc(var(--u)*4)}
-.empty p{font:13px/1.6 -apple-system,sans-serif;color:var(--muted);margin:0 0 calc(var(--u)*10)}
+.empty h2{font:var(--headline);margin:0 0 calc(var(--u)*4)}
+.empty p{font:var(--proseloose);color:var(--muted);margin:0 0 calc(var(--u)*10)}
 .door{display:flex;flex-direction:column;gap:calc(var(--u)*2);padding:calc(var(--u)*6) calc(var(--u)*7);margin-bottom:calc(var(--u)*5);border:1px solid var(--line);border-radius:8px}
-.door code{font:12.5px ui-monospace,Menlo,monospace;color:var(--action)}
-.door span{font:12.5px -apple-system,sans-serif;color:var(--muted)}
+.door code{font:var(--factbare);color:var(--action)}
+.door span{font:var(--controlsmall);color:var(--muted)}
 #table-host{position:absolute;inset:0;overflow:auto;background:var(--paper);padding:calc(var(--u)*6) calc(var(--u)*8) calc(var(--u)*40);font-size:12.5px;display:none}
 #table-host h3{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:calc(var(--u)*10) 0 calc(var(--u)*3);font-weight:600}
 #table-host h3:first-child{margin-top:calc(var(--u)*2)}
@@ -329,9 +329,9 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 #table-host td.cell-name:hover{text-decoration:underline}
 #table-host td.cell-value{color:var(--knownname)}
 #table-host td.cell-note{white-space:normal;max-width:44ch;color:var(--muted);
-  font:13px/1.5 -apple-system,sans-serif}
-#table-host td.cell-note code{font:12px/1.4 ui-monospace,Menlo,monospace;color:var(--ink)}
-#table-host td.cell-note .known{font:12px/1.4 ui-monospace,Menlo,monospace}
+  font:var(--prose)}
+#table-host td.cell-note code{font:var(--codeinline);color:var(--ink)}
+#table-host td.cell-note .known{font:var(--codeinline)}
 #table-host td.slot{cursor:pointer}
 #table-host td.slot:hover{background:var(--mist)}
 #table-host td.cut{cursor:pointer;color:var(--muted);text-align:right}
@@ -341,7 +341,7 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 #table-host td.cell-bad::after{content:" ✗";color:var(--bad)}
 #verdict-panel{border-top:0.5px solid var(--line);background:var(--paper);flex:none;max-height:34vh;display:flex;flex-direction:column}
 #verdict-head{display:flex;align-items:center;gap:calc(var(--u)*5);padding:calc(var(--u)*4) calc(var(--u)*8) calc(var(--u)*4);flex:none}
-.chip{font-family:ui-monospace,Menlo,monospace;display:inline-block;min-width:4.6em;text-align:center;font-size:11px;font-weight:600;padding:calc(var(--u)*2) calc(var(--u)*5);border-radius:8px;font-variant-numeric:tabular-nums}
+.chip{font-family:var(--mono);display:inline-block;min-width:4.6em;text-align:center;font-size:11px;font-weight:600;padding:calc(var(--u)*2) calc(var(--u)*5);border-radius:8px;font-variant-numeric:tabular-nums}
 .chip.ok{background:color-mix(in srgb,var(--ok) 12%,transparent);color:var(--ok)}
 .chip.bad{background:var(--bad);color:var(--paper)}
 /* the typeface says WHO is speaking. Monospace is the world and everything read
@@ -349,7 +349,7 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
    the state of the git it sits in. The system face is the bench speaking ABOUT
    the world: its captions, its advice, its section names. A measurement set in
    the bench's own voice reads as an opinion; it is a reading. */
-#status{font-family:ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums}#status b{color:var(--ink);font-weight:600}
+#status{font-family:var(--mono);font-variant-numeric:tabular-nums}#status b{color:var(--ink);font-weight:600}
 #verdicts{overflow:auto;padding:var(--u) calc(var(--u)*6) calc(var(--u)*5);display:flex;flex-direction:column;gap:calc(var(--u)*2)}
 /* each refusal is a row you can aim at: it has an edge, a surface, and it
    answers to the pointer, because clicking it goes to the line */
