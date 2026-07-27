@@ -204,7 +204,7 @@ extension TheContract { public static var typeName: String { "api.swift" } }
 rest of your world, by the plain court. `seam` is judged where it meets yours
 and nowhere else. `forms` — the grammar a world is written in, and the
 certificates over it — is judged by the `where` court: invent a word in your own
-fork of a genre, say something true about it and it holds, say something false
+fork of your own forms, say something true about it and it holds, say something false
 and it is refused at the line. `judge` is the court itself, and is the one row
 held by a reproducible build rather than by judgement. A row gate cannot place is
 refused at its own line — never swept quietly into your world, which is what
@@ -228,7 +228,7 @@ block the declaration already carries — nobody types a second copy of a fact.
 **The words a world speaks are not a file at all.** `Department`, `Ranked`,
 `Site` are compiled inside the judge. A world speaks them with no file of that
 name anywhere near it; a copy put beside the world is read by nothing; and a copy
-declared as a world row is refused, because a world is records and a genre is the
+declared as a world row is refused, because a world is records and forms are the
 grammar records are written in. `gate stdlib` prints, and what it prints is a
 printout. `gate --version` names the revision those words were compiled from, and
 that revision — not any file — is what a world depends on.
@@ -313,9 +313,9 @@ head. A refusal points at its address instead.
 - **The cursor on a name says what it is.** A thin line under the bar names
   whatever the cursor rests on: a record and what it conforms to, a value and
   its kind, an axis and what it takes, a gate and its arguments. Every word is
-  read from your world and its genre, so your own domain describes itself with
+  read from your world and its forms, so your own domain describes itself with
   no dictionary of ours to write.
-- **Offers every way to fill a hole, and only those.** Every axis in a genre
+- **Offers every way to fill a hole, and only those.** Every axis in a forms file
   says what it accepts, so an empty slot after `Sex =` offers Male, Female
   *and* `Given.Sex` — an atom of that kind, or a path through an axis this
   record already has whose own axis is of that kind. Type a dot and it offers
@@ -462,19 +462,26 @@ head. A refusal points at its address instead.
   shared world alone. Clear it and it is gone again. Privacy is the
   repository boundary, not a policy; sharing is moving a declaration into
   the shared world and committing it.
-- **A genre is the unit, and it belongs to the judge.** A domain has one
-  vocabulary — the forms and axes a world of that kind is written in — and
-  it ships as a real Swift file in `stdlib/`, judged by the product's own
-  judge in its own battery. But it is not a file *your* world is made of:
-  those words travel compiled inside the judge, so a world speaks them with
-  nothing of that name beside it, and a copy declared as yours is refused —
-  a world is records, a genre is the grammar records are written in. So the
-  language is one command away to *read*: `gate stdlib show
-  genre-organization`, and `materialize` writes the printout out for
-  offline reading. In the bench, hold ⌘ and every name in the file
-  underlines: click one and it opens where it is declared, whether that is
-  your own file or the judge's own page. Nothing a printed world says is
-  left without a home, and a check keeps it that way. Hidden is not secret.
+- **Forms are the unit, and today they arrive by two roads.** A domain has
+  one vocabulary — the forms and axes a world of that kind is written in —
+  and it ships as a real Swift file in `stdlib/`, judged by the product's
+  own judge in its own battery. Where they come from is a fact about this
+  moment, not a principle, and the two roads are said apart. The corpus's
+  forms are **compiled into the judge**: a world speaks `Department` with no
+  file of that name beside it, `gate --version` names the revision they came
+  from, and a copy of the printout declared as a world row is refused —
+  a world is records, forms are the grammar records are written in. Forms of
+  your **own** are presented by file and judged as a `forms` row: invent a
+  word in your fork, say something true about it and it holds, say something
+  false and it is refused at the line. The goal is one road — an empty prism,
+  where every form is presented and nothing is built in — and that is a debt
+  on this project, not a claim about it. So the language is one command away
+  to *read*: `gate stdlib show forms-organization`, and `materialize` writes
+  the printout out for offline reading. In the bench, hold ⌘ and every name
+  in the file underlines: click one and it opens where it is declared,
+  whether that is your own file or the judge's own page. Nothing a printed
+  world says is left without a home, and a check keeps it that way. Hidden
+  is not secret.
 
 ## Carrying gate in your repository
 
@@ -582,7 +589,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 202 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 203 end-to-end checks, the definition of green
 ```
 
 ## Status
@@ -597,4 +604,4 @@ verdict are the ones we most want to hear about: see SECURITY.md.
 Roadmap, next: single-binary Swift CLI (Linux/Windows included) · the
 bare-Swift diff view (`gate diff` shows the stripped form, `--full` the
 whole text) · editable bare view in the bench · apply routing over the
-declared layout · more domain genres.
+declared layout · more domain forms.

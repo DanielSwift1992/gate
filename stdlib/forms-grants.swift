@@ -1,4 +1,4 @@
-// gate stdlib genre-grants v1 — the domain genre, one page
+// gate stdlib forms-grants v1 — the domain genre, one page
 // role: forms
 // (exemplar: theory corpus Sources/Examples/Grants.swift @ 0fd0b38).
 // Realms are declared atoms (the fourth is one line, not a schema change);

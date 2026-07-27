@@ -31,7 +31,7 @@ def read_manifest_rows(d, text=None):
     # (`Mine` / `Theirs`) is one column; which court reads it is another; and
     # for anything taken, the revision it was taken at is a third. Two protocols
     # named for a ROLE — WorldFile, SeamFile — had been carrying all three at
-    # once, which is why a genre fitted nowhere: its source is theirs and its
+    # once, which is why a forms file fitted nowhere: its source is theirs and its
     # role is neither of the two the names allowed.
     #
     # The older spellings are still read. A file on somebody's disk is not
@@ -148,7 +148,7 @@ def world_files():
 
 
 def manifest_guards(rows=None):
-    # layout guards, both directions (the playground manifest's genre):
+    # layout guards, both directions (the playground manifest's forms):
     # a declared file exists; a neighbouring *.swift is declared (no shadows)
     #
     # `rows` overrides what is on disk, so the bench can hold the layout to the
@@ -705,7 +705,7 @@ def cmd_import(a):
     emit("// tables, is the truth. A gate.manifest.swift may split it across")
     emit("// several files, all judged together. git carries the history.")
     emit(f"// seeded by gate import from: {os.path.basename(people_csv)}, {os.path.basename(grants_csv)}")
-    emit("// the language it is written in: `gate stdlib show genre-organization`")
+    emit("// the language it is written in: `gate stdlib show forms-organization`")
     emit("// (`materialize` puts that file beside this one, where it becomes yours)")
     people = list(csv.DictReader(open(people_csv)))
     grants = list(csv.DictReader(open(grants_csv)))
@@ -1757,12 +1757,12 @@ def vendored_guards():
                       "re-run `gate init . --vendor`, or state the one you mean"}]
 
 
-RBAC_GENRE_HEADER = """// printed by gate import rbac — the K8s access world in the domain genre
+RBAC_FORMS_HEADER = """// printed by gate import rbac — the K8s access world in the domain forms
 // (the exemplar: theory corpus Sources/Examples/Grants.swift @ 0fd0b38).
 // Realms are namespaces plus the cluster scope. A role is a room stating its
 // realm; a binding is a keeper stating its post; the gate's equality is the
 // K8s invariant itself: a RoleBinding and its Role live in one namespace.
-// The genre below is the stdlib module genre-grants, printed from the shelf.
+// The forms below are the stdlib module forms-grants, printed from the shelf.
 
 """
 
@@ -1803,7 +1803,7 @@ def cmd_import_rbac(a):
         elif kind == "RoleBinding":
             bindings.append(it)
             namespaces.add(ns)
-    lines = [RBAC_GENRE_HEADER + STDLIB["genre-grants"]]
+    lines = [RBAC_FORMS_HEADER + STDLIB["forms-grants"]]
     srcmap = {}
     for ns in sorted(namespaces):
         lines.append(f"public enum Ns_{sanitize(ns)}: Realm {{}}")
@@ -2304,7 +2304,7 @@ def cmd_declare(a):
         src = a[1]
         mine_too = "--theirs" in a or "--mine" in a
         fields = [f for f in read_contract(src) if f.get("shape")]
-        lines = [DECLARE_HEADER + STDLIB["genre-contract"], ""]
+        lines = [DECLARE_HEADER + STDLIB["forms-contract"], ""]
         for f in fields:
             rec = "F_" + sanitize(f["route"]) + "_" + sanitize(f["field"])
             lines += [f"// {f['route']} · {f['field']}",
@@ -3048,7 +3048,7 @@ def read_carrier(root):
 
 
 REFS_HEADER = """// printed by gate import refs — the citations this code makes to a tracker,
-// written in the reference crystal (`gate stdlib show genre-reference`). A
+// written in the reference crystal (`gate stdlib show forms-reference`). A
 // tracked thing carries its state on an axis, a site is a place in your own
 // file, and a citation holds only while the thing it cites is open.
 //
@@ -3110,7 +3110,7 @@ def cmd_import_refs(a):
                 else os.path.join(tempfile.mkdtemp(prefix="gate-refs-"), "refs-gate.swift"))
     tracked = read_tracker(src)
     cites = read_citations(code)
-    lines = [REFS_HEADER + STDLIB["genre-reference"], ""]
+    lines = [REFS_HEADER + STDLIB["forms-reference"], ""]
     for key in sorted({c["key"] for c in cites} | set(tracked)):
         state = tracked.get(key)
         if state is None:
@@ -3155,7 +3155,7 @@ def cmd_import_refs(a):
 
 
 CODEOWNERS_HEADER = """// printed by gate import codeowners — who owns what in this repository,
-// written in the access crystal (`gate stdlib show genre-grants`). A zone is
+// written in the access crystal (`gate stdlib show forms-grants`). A zone is
 // a top of the tree, a room is a pattern, and an owner keeps a zone: owning
 // is entry at the warden's threshold, judged like any other claim.
 //
@@ -3203,7 +3203,7 @@ def cmd_import_codeowners(a):
             policy.setdefault(row["owner"].lstrip("@"), row["zone"])
     rules = read_codeowners(src)
     zones = sorted({codeowners_zone(r["pattern"]) for r in rules})
-    lines = [CODEOWNERS_HEADER + STDLIB["genre-grants"], ""]
+    lines = [CODEOWNERS_HEADER + STDLIB["forms-grants"], ""]
     for z in sorted(set(zones) | {sanitize(v) for v in policy.values()}):
         lines.append(f"public enum Zone_{z}: Realm {{}}")
     lines.append("")
@@ -3511,7 +3511,7 @@ def cmd_serve(a):
     #                                since the page comes off the disk and the
     #                                answers come out of memory
     #   GET  /files                  {files: [name], personal: name|null}
-    #   GET  /shelf                  {modules: [name]} — the genres on the shelf
+    #   GET  /shelf                  {modules: [name]} — what the shelf carries
     #   GET  /shelf?m=name           the text of one shelf module, to read
     #   GET  /world?f=name           the text of one file from that list
     #   GET  /gitstatus?f=name       {git: committed|modified|untracked}
@@ -3589,7 +3589,7 @@ def cmd_serve(a):
                 if u.path == "/shelf":
                     mod = q.get("m")
                     if not mod:
-                        # the genres on the shelf. The bench reads each one with
+                        # what the shelf carries. The bench reads each one with
                         # the SAME judge that judges and builds its vocabulary
                         # from that parse — the shelf has one reader, not a regex
                         # here beside the judge over there.
@@ -4206,7 +4206,7 @@ def humanize(out):
         # who cannot see the vocabulary cannot know it is theirs to read: the
         # shelf was reachable only by already knowing a name on it.
         #
-        # AND IT IS NOT A SHELF OF FILES. Splitting it into genres and gate's
+        # AND IT IS NOT A SHELF OF FILES. Splitting it into speech and gate's
         # own furniture drew a line that does not matter to anybody using this,
         # and hid the line that does: none of it is yours. Every word here is
         # compiled inside the judge — a world speaks `Department` with no file

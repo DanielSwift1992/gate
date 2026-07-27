@@ -74,8 +74,8 @@ def main():
     c, r = run("import", "tables/people.csv", "tables/grants.csv", "-o", "gate.swift", cwd=repo)
     S.append(("import clean", r["verdict"] == "holds"))
     printed = open(os.path.join(repo, "gate.swift")).read()
-    named = re.search(r"gate stdlib show (genre-[a-z]+)", printed)
-    S.append(("a world names the genre it is written in, and that genre is on the shelf",
+    named = re.search(r"gate stdlib show (forms-[a-z]+)", printed)
+    S.append(("a world names the forms it is written in, and they are on the shelf",
               bool(named) and os.path.exists(
                   os.path.join(HERE, "stdlib", named.group(1) + ".swift"))))
     c, r = run("export", "gate.swift", "-o", "pb.csv", "gb.csv", cwd=repo)
@@ -135,7 +135,7 @@ def main():
         'if(d.axisKinds&&Object.keys(d.axisKinds).length)pa[d.name]=d.axisKinds;'
         'if(d.paramKinds&&d.paramKinds.length)ga[d.name]=d.paramKinds;}'
         'console.log(JSON.stringify({pa,ga}));'
-        % (os.path.join(HERE, "judge.js"), os.path.join(HERE, "stdlib", "genre-organization.swift")))
+        % (os.path.join(HERE, "judge.js"), os.path.join(HERE, "stdlib", "forms-organization.swift")))
     kout = subprocess.run(["node", "-e", kinds_probe], capture_output=True, text=True).stdout
     try:
         kv = json.loads(kout or "{}")
@@ -154,18 +154,18 @@ def main():
     lib = os.path.join(tmp, "lib")
     os.makedirs(lib)
     shutil.copy(os.path.join(repo, "gate.swift"), os.path.join(lib, "gate.swift"))
-    c, r = run("stdlib", "materialize", "genre-grants", cwd=lib)
+    c, r = run("stdlib", "materialize", "forms-grants", cwd=lib)
     c, r = run("status", cwd=lib)
     S.append(("materialized untouched copy holds", r["verdict"] == "holds"))
-    with open(os.path.join(lib, "genre-grants.swift"), "a") as f:
+    with open(os.path.join(lib, "forms-grants.swift"), "a") as f:
         f.write("// edit\n")
     c, r = run("status", cwd=lib)
     S.append(("an edited printout is caught still claiming to be the printout",
               r["verdict"] == "refused"
               and any("no longer matches the words the judge carries" in x["claim"]
                       for x in r["refusals"])))
-    t = open(os.path.join(lib, "genre-grants.swift")).read().replace("// gate stdlib", "// mine:", 1)
-    open(os.path.join(lib, "genre-grants.swift"), "w").write(t)
+    t = open(os.path.join(lib, "forms-grants.swift")).read().replace("// gate stdlib", "// mine:", 1)
+    open(os.path.join(lib, "forms-grants.swift"), "w").write(t)
     c, r = run("status", cwd=lib)
     # dropping the header ends the claim — it does not turn the file into a
     # source. Nothing declares it, so nothing reads it, and the world is what
@@ -216,7 +216,7 @@ def main():
     S.append(("codeowners without a policy claims no judgement it did not make",
               not [x for x in r["refusals"] if "share one zone" in x["claim"]]
               and "trivially" in r["note"]))
-    # the same crystal carries it: the world is written in genre-grants
+    # the same crystal carries it: the world is written in forms-grants
     world = open(os.path.join(tmp, "co-gate.swift")).read()
     S.append(("ownership rides the access crystal, not a genre of its own",
               "Owns<" in world and "public protocol Keeper" in world))
@@ -544,7 +544,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               'r">\\s*\\.self\\s*;?"' in open(GATE, encoding="utf-8").read()))
 
     # an axis says what may stand in it, and the offer says only that
-    genre = open(os.path.join(HERE, "stdlib", "genre-organization.swift")).read()
+    genre = open(os.path.join(HERE, "stdlib", "forms-organization.swift")).read()
     S.append(("every axis in the genre states what it accepts",
               "associatedtype Sex: Sexed" in genre and "associatedtype Rank: Ranked" in genre
               and "associatedtype Home: Department" in genre))
@@ -672,10 +672,10 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # the bench is judged by its own rules: a value on MyBench/MyJournal the genre
     # does not name is a guard line addressed at its own line (a mistyped Scope
     # used to fall silently to a default), read from the same one source
-    S.append(("a bench value outside the genre is named on its line, not silenced",
+    S.append(("a bench value outside its own forms is named on its line, not silenced",
               "function benchGuards(" in ui
               and 'vocabulary[conf] !== "bench-atoms"' in ui
-              and "the bench genre states" in ui))
+              and "the bench's own forms state" in ui))
 
     # ── the palette is one source: the colour the bench RENDERS is the colour
     # the judge HOLDS. Every var's color(xyz-d65 …) carries the very numbers the
@@ -1496,7 +1496,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     shelf_src = open(GATE, encoding="utf-8").read()
     S.append(("the shelf is one list of printouts, and says it is not yours",
               "all of it theirs" in shelf_said
-              and "genre-organization" in shelf_said and "bench-palette" in shelf_said
+              and "forms-organization" in shelf_said and "bench-palette" in shelf_said
               and "these are THEIRS" in shelf_said
               and "editing one adds no word to the language" in shelf_said
               and "gate --version` names the revision" in shelf_said
@@ -1527,8 +1527,8 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # difference: not a genre, and it is what a merge policy is written in.
     roles = run("stdlib", cwd=ent)[1].get("roles") or {}
     S.append(("the shelf says which of it you can speak, and each file says so itself",
-              roles.get("genre-organization") == "forms"
-              and roles.get("genre-contract") == "forms"
+              roles.get("forms-organization") == "forms"
+              and roles.get("forms-contract") == "forms"
               # not a genre by name, and speakable all the same
               and roles.get("git-atoms") == "forms"
               # the tool's own furniture says it is the tool's own
@@ -1558,11 +1558,11 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     world_p = os.path.join(shelf_probe, "gate.swift")
     open(world_p, "w").write("public enum Sales: Department {}\npublic enum Boss: Ranked {}\n")
     bare = run("status", cwd=shelf_probe)[1]
-    run("stdlib", "materialize", "genre-organization", cwd=shelf_probe)
+    run("stdlib", "materialize", "forms-organization", cwd=shelf_probe)
     beside = run("status", cwd=shelf_probe)[1]
-    run("mine", "genre-organization.swift", cwd=shelf_probe)
+    run("mine", "forms-organization.swift", cwd=shelf_probe)
     as_mine = run("status", cwd=shelf_probe)[1]
-    with open(os.path.join(shelf_probe, "genre-organization.swift"), "a") as f:
+    with open(os.path.join(shelf_probe, "forms-organization.swift"), "a") as f:
         f.write("\npublic enum Architect: Ranked {}\n")
     edited = run("status", cwd=shelf_probe)[1]
     S.append(("the words a world speaks are the judge's, and a copy of them is inert",
@@ -2143,7 +2143,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
                 'console.log(JSON.stringify({ glued: all.filter(c => /[{}]/.test(c)),\n'
                 '  documents: [...p.values()].filter(d => (d.conformances||[]).includes("Document")).map(d => d.name) }));'
                 % (os.path.join(HERE, "judge.js"),
-                   os.path.join(HERE, "stdlib", "genre-organization.swift")))
+                   os.path.join(HERE, "stdlib", "forms-organization.swift")))
     kj = os.path.join(tmp, "kinds.js")
     open(kj, "w").write(kinds_js)
     kout = subprocess.run(["node", kj], capture_output=True, text=True).stdout
@@ -2266,7 +2266,7 @@ console.log(JSON.stringify({
     # offers for an axis is accepted, and a name of some OTHER kind is refused by
     # the judge naming where it landed instead. The negative half is the point —
     # an offer that is never refused proves nothing about what it filtered.
-    genre_txt = open(os.path.join(HERE, "stdlib", "genre-organization.swift"), encoding="utf-8").read()
+    genre_txt = open(os.path.join(HERE, "stdlib", "forms-organization.swift"), encoding="utf-8").read()
     slot_js = '''
 const { judge } = require(%r);
 const genre = %s;
@@ -2752,6 +2752,24 @@ public enum MyWatch: AccessLedger {
     S.append(("the licence the README claims is the licence in the tree",
               "MIT licensed" in readme
               and open(os.path.join(HERE, "LICENSE"), encoding="utf-8").read().startswith("MIT License")))
+
+    # ── AND A WORD THAT WAS RETIRED STAYS RETIRED. `genre` named a thing this
+    # tool no longer believes in: a kind of world handed down, belonging to the
+    # judge. What there is instead is forms — the grammar records are written
+    # in — arriving today by two roads that are said apart, one compiled into
+    # the judge and one presented by file. A word carries its old idea back in
+    # with it, so the outward texts are checked rather than trusted to care.
+    rail_and_cli = ui + src + readme
+    S.append(("the retired word does not come back into anything a reader sees",
+              "genre" not in rail_and_cli.lower()
+              # and what replaced it is stated as a fact about now, not a law
+              and "arrive by two roads" in readme
+              and "not a claim about it" in readme
+              # the files carry the living word, and git kept their history
+              and all(os.path.exists(os.path.join(HERE, "stdlib", f"forms-{n}.swift"))
+                      for n in ("contract", "grants", "organization", "reference"))
+              and not any(f.startswith("genre-")
+                          for f in os.listdir(os.path.join(HERE, "stdlib")))))
 
     claimed_n = re.search(r"the battery — (\d+) end-to-end checks", readme)
     S.append(("the README counts these checks correctly",

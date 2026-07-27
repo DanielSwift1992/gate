@@ -568,7 +568,7 @@ async function buildJournal() {
 // it, and a copy declared as a world file is refused. They are compiled inside
 // the judge, and what these pages show is a printout.
 //
-// The earlier split — genres over here, gate's own furniture over there — drew
+// The earlier split — forms files over here, gate's own furniture over there — drew
 // a line nobody using this needs and hid the one they do: none of it is yours,
 // and none of it can be changed by editing a copy. So one list, under the name
 // of the thing it belongs to, with the revision it was compiled from beside it.
@@ -583,7 +583,7 @@ async function buildJournal() {
 // that is supposed to be an account of YOUR repository.
 //
 // The cut is the role, which each file states in its own second line — not the
-// shape of its name. `git-atoms` is here and is not a genre: it is what your
+// shape of its name. `git-atoms` is here and is not a forms file: it is what your
 // merge policy is written in.
 async function buildShelf() {
     const host = document.getElementById("shelf-host");
@@ -611,7 +611,7 @@ async function buildShelf() {
 // MyBench in your personal world overrides it, and the page repaints when either
 // changes. No toggle: a button that duplicates a declaration is forbidden. ──
 const darkMedia = window.matchMedia("(prefers-color-scheme: dark)");
-let declaredTheme = null;               // a theme the genre names, read from MyBench.Theme
+let declaredTheme = null;               // a theme the forms file names, read from MyBench.Theme
 function effectiveTheme() { return declaredTheme || (darkMedia.matches ? "dark" : "light"); }
 function paintTheme() {
     document.documentElement.setAttribute("data-theme", effectiveTheme());
@@ -627,25 +627,25 @@ darkMedia.addEventListener("change", paintTheme);   // the OS flips, and an unde
 function applyMyBench() {
     const d = (active === personalFile && lastParsed ? lastParsed.declarations : layoutDecls).get("MyBench");
     const a = d && d.aliases.get("Theme");
-    // only a value the bench genre names sets the theme; a stranger is the
+    // only a value the bench's own forms names sets the theme; a stranger is the
     // guard's to report, and until then the OS default stands
     declaredTheme = a && (conformers["BenchTheme"] || []).includes(a.target) ? a.target.toLowerCase() : null;
     paintTheme();
 }
 
 // ── the bench is judged by its own rules. A value on a bench declaration
-// (MyBench, MyJournal) that the genre does not name is not silently ignored the
+// (MyBench, MyJournal) that the forms file does not name is not silently ignored the
 // way a mistyped Scope once fell to a default — it is a guard line, addressed at
 // its own line. Guarded, not judged (the theme is not a fact of the world), and
 // read from the one source the completion reads: protoAxes and conformers of
-// the bench's own genre, so a stranger cannot be mistaken for a value. ──
+// the bench's own forms, so a stranger cannot be mistaken for a value. ──
 function benchGuards() {
     const onMine = active === personalFile && lastParsed;
     const decls = onMine ? lastParsed.declarations : layoutDecls;
     const out = [];
     for (const [name, d] of decls) {
         for (const conf of d.conformances) {
-            if (vocabulary[conf] !== "bench-atoms") continue;   // only the bench's own genre, never the world's
+            if (vocabulary[conf] !== "bench-atoms") continue;   // only the bench's own forms, never the world's
             for (const [axis, kind] of Object.entries(protoAxes[conf] || {})) {
                 const a = d.aliases.get(axis);
                 if (a && a.target && !(conformers[kind] || []).includes(a.target))
@@ -843,7 +843,7 @@ function allowedAt(cur) {
 
     if (slot) {
         // a slot is a closed question: only what its kind allows, and if the
-        // genre states no kind for it, nothing — never a name of another kind
+        // forms state no kind for it, nothing — never a name of another kind
         const f = wanted ? fillersFor(wanted, host, slot[1]) : null;
         return { items: f || [], kind: wanted ? "this axis takes " + wanted : "an axis", closed: true };
     }
@@ -1028,7 +1028,7 @@ document.addEventListener("keydown", (e) => {
 // What this file DECLARES, which is not what it mentions. A record it writes is
 // its own; the kinds it conforms to, the axes it answers and the forms it uses
 // are all declared on the shelf, and colouring them as local said the world had
-// authored its own genre. The question (an axis) and the answer (a value) came
+// authored its own forms. The question (an axis) and the answer (a value) came
 // out one colour for that reason: both were "mentioned here".
 function namesOf(parsed) {
     const out = new Set();
@@ -1165,13 +1165,13 @@ async function render() {
     if (guards.length) {
         const head = document.createElement("div");
         head.className = "pending-head caption";
-        head.textContent = "the bench genre";
+        head.textContent = "the bench's own forms";
         v.appendChild(head);
         for (const g of guards) {
             const row = document.createElement("div");
             row.className = "pending";   // guarded, not judged: addressed, calm, never the red a fact earns
             row.innerHTML = '<code class="fact">' + g.file + ":" + g.line + '</code><span class="caption">' + esc(g.decl + "." + g.axis)
-                + " = " + esc(g.value) + " · the bench genre states " + esc(g.allowed) + "</span>";
+                + " = " + esc(g.value) + " · the bench's own forms state " + esc(g.allowed) + "</span>";
             row.onclick = async () => {
                 navFrom = navHere();
                 if (g.file !== active && files.includes(g.file)) await loadFile(g.file);
@@ -1299,7 +1299,7 @@ async function jumpTo(name) {
     if (f && f !== active) await loadFile(f);   // a name in another file opens that file
     const d = layoutOrActive().get(name);
     if (d) return reveal(d.line);
-    const mod = vocabulary[name];               // a name from a genre: open the genre
+    const mod = vocabulary[name];               // a name from a forms file: open the forms file
     if (mod) return openShelf(mod, name);
 }
 
@@ -1591,7 +1591,7 @@ function fillHole(slot, value) {
 }
 
 // ── the combinations the world has actually lived, most travelled first, and
-// the genre's own kinds after them. A new record is offered the shapes its
+// the forms file's own kinds after them. A new record is offered the shapes its
 // neighbours already have before it is offered a shape nobody wears. ──
 function livedCombos() {
     const seen = new Map();
@@ -2042,7 +2042,7 @@ cm.on("cursorActivity", () => { if (!compEl.hidden && !compFrom) hideCompletion(
 
 // ── the cursor on a name says what it is: a declaration here and what it
 // conforms to, a value and its kind, an axis and what it takes, a gate and
-// its arguments. Every word of it is read from the world and the genre, so a
+// its arguments. Every word of it is read from the world and the forms file, so a
 // client's own domain describes itself with no dictionary of ours. ──
 function describeName(name) {
     const d = layoutDecls.get(name);
@@ -2206,7 +2206,7 @@ async function loadVocabulary() {
     for (const mod of (list.modules || [])) {
         const text = await (await fetch("/shelf?m=" + encodeURIComponent(mod))).text();
         // reading the shelf, not judging a world: the extras parse (a truthy
-        // vocabulary turns it on) reads a genre's top-level certificates as
+        // vocabulary turns it on) reads a forms file's top-level certificates as
         // vocabulary instead of refusing them the way the plain world judge
         // must. The world judge stays plain — its parity is with the CLI.
         const READ = { seeds: new Set(), generics: new Set() };

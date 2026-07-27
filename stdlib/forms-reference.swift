@@ -1,4 +1,4 @@
-// gate stdlib genre-reference v1 — a reference and the thing it refers to, as
+// gate stdlib forms-reference v1 — a reference and the thing it refers to, as
 // role: forms
 // one judged world.
 //

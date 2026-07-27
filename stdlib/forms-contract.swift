@@ -1,4 +1,4 @@
-// gate stdlib genre-contract v1 — a contract and the clients that carry it,
+// gate stdlib forms-contract v1 — a contract and the clients that carry it,
 // role: forms
 // as one judged world.
 //

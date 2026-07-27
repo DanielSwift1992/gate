@@ -41,19 +41,19 @@ extension BenchPalette { public static var typeName: String { "stdlib/bench-pale
 public enum FormsContract: Mine {
     public typealias Kind = FormsFile
 }
-extension FormsContract { public static var typeName: String { "stdlib/genre-contract.swift" } }
+extension FormsContract { public static var typeName: String { "stdlib/forms-contract.swift" } }
 public enum FormsGrants: Mine {
     public typealias Kind = FormsFile
 }
-extension FormsGrants { public static var typeName: String { "stdlib/genre-grants.swift" } }
+extension FormsGrants { public static var typeName: String { "stdlib/forms-grants.swift" } }
 public enum FormsOrganization: Mine {
     public typealias Kind = FormsFile
 }
-extension FormsOrganization { public static var typeName: String { "stdlib/genre-organization.swift" } }
+extension FormsOrganization { public static var typeName: String { "stdlib/forms-organization.swift" } }
 public enum FormsReference: Mine {
     public typealias Kind = FormsFile
 }
-extension FormsReference { public static var typeName: String { "stdlib/genre-reference.swift" } }
+extension FormsReference { public static var typeName: String { "stdlib/forms-reference.swift" } }
 public enum GitAtoms: Mine {
     public typealias Kind = FormsFile
 }
