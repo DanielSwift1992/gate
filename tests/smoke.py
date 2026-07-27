@@ -1309,10 +1309,12 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               # feeling, and the same count from either end. No rank appears
               # anywhere: a seam has two ends and neither is above the other.
               and 's.claimed + " of " + s.stated + " held"' in ui
-              # and the rail shows what this repository HAS. A folder with no seam
-              # in it has no seam, and a permanent panel about a thing nobody is
-              # using is an advertisement standing in an account.
-              and "head.hidden = true; host.hidden = true" in ui
+              # and the rail shows what this repository HAS. A folder with no
+              # seam in it has no seam, and a permanent panel about a thing
+              # nobody is using is an advertisement standing in an account. The
+              # HEADING stands regardless, because the judge is always taken:
+              # what comes and goes is the seam rows, not the fact of theirs.
+              and "host.hidden = !seams.length" in ui
               and "seam-empty" not in ui))
 
     # ── ONE SIDE OF A SEAM IS NOT A SHADOW OF THIS WORLD. A repository that
@@ -1502,14 +1504,19 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "gate --version` names the revision" in shelf_said
               and "gate stdlib show" in shelf_said
               and "gate mine FILE` / `gate theirs FILE`" in shelf_said
-              # and the rail says the same three things in the same order
+              # THE RAIL HAS TWO HEADINGS, NOT THREE. The judge had a section of
+              # its own, which said it was a different kind of thing — and under
+              # the claim law it is not: it is theirs, taken at a revision, like
+              # the other side of any seam. A privileged entity in the rail is a
+              # privileged entity in the head, and nothing here earns one.
               and "<i></i>mine</h3>" in ui and "<i></i>theirs</h3>" in ui
-              and "<i></i>the judge<span id=\"judge-rev\"" in ui
               and ui.index("<i></i>mine</h3>") < ui.index("<i></i>theirs</h3>")
-              < ui.index("<i></i>the judge<span")
+              and "the judge<span" not in ui and 'id="shelf-head"' not in ui
+              # the judge is a ROW of what was taken, and it says at what
+              and 'id="judge-row"' in ui
+              and '"took at " + v.judge_from.slice(0, 7)' in ui
+              and '"taken at nothing written down"' in ui
               and "r.onclick = () => openShelf(m);" in ui
-              # the revision is shown where the words are listed, or said missing
-              and 'v.judge_from ? v.judge_from.slice(0, 7) : "revision unrecorded"' in ui
               and '"judge_from": judge_from()' in shelf_src))
 
     # ── AND THE OPERATOR'S RAIL SHOWS WHAT THE OPERATOR CAN SPEAK. The shelf
@@ -2818,6 +2825,21 @@ public enum MyWatch: AccessLedger {
               and '(i.note || "") + i.block.join' in ui
               and "const noteOf = (name) =>" in ui
               and "noteLines" not in ui))
+
+    # ── A TABLE FALLS LEFT. Stretched to the pane, two short words sat at
+    # opposite ends of a wide screen — a name here, its one value eight hundred
+    # pixels away — and reading a row became a journey across empty space. Air
+    # is worth having and a void is not the same thing. Columns take the width
+    # their content needs, the table ends where its content ends, and the page
+    # cascades down the left where the eye already is.
+    S.append(("a table takes the width of what it holds, not the width of the pane",
+              "#table-host table{border-collapse:collapse;width:auto;max-width:100%" in ui
+              and "#table-host td,#table-host th{white-space:nowrap}" in ui
+              # and a note in a table is the same prose in the same register as
+              # everywhere else it is shown — one rendering, not three
+              and 'td.className = "cell-note"' in ui
+              and "td.innerHTML = noteProse(" in ui
+              and "#table-host td.cell-note{white-space:normal;max-width:44ch" in ui))
 
     # ── AND A PAGE THAT FORGETS TO SAY WHICH IT IS GOES RED. The rule that each
     # shelf file states its own role in its own second line replaced a guess

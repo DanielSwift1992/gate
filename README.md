@@ -233,8 +233,10 @@ grammar records are written in. `gate stdlib` prints, and what it prints is a
 printout. `gate --version` names the revision those words were compiled from, and
 that revision — not any file — is what a world depends on.
 
-The rail says the same three things in the same order: **mine**, **theirs**,
-**the judge**, with the revision beside it.
+The rail says two things, because there are two: **mine** and **theirs**. The
+judge is a row of what was taken, at the revision it was taken at, beside the
+words it carries — not a section of its own. It is theirs like anything else,
+and a privileged entity in the rail would be a privileged entity in the head.
 
 ## gate is the first inhabitant
 
@@ -589,7 +591,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 206 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 207 end-to-end checks, the definition of green
 ```
 
 ## Status

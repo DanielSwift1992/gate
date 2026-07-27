@@ -132,11 +132,17 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 #rail h3.fold.shut i{transform:rotate(-90deg)}
 #rail h3.fold .obs{flex:1 1 100%;padding-left:calc(var(--u)*7)}
 /* the revision is a fact, not a heading: it keeps its own case and its own face */
-#judge-rev{font-family:ui-monospace,Menlo,monospace;text-transform:none;letter-spacing:0;opacity:.65;margin-top:var(--u)}
+/* ── ONE LIST OF WHAT WAS TAKEN, and the judge is a row of it. It had a
+   section to itself, which said it was a different kind of thing — and under
+   the claim law it is not: it is theirs, taken at a revision, exactly like the
+   other side of a seam. A privileged entity in the rail is a privileged entity
+   in the head, and there is nothing here that earns one. ── */
+#judge-row{padding:calc(var(--u)*2) calc(var(--u)*7) 0;text-transform:none;letter-spacing:0}
+#judge-row b{color:var(--ink);font-weight:600}
+#judge-row .at{font-family:ui-monospace,Menlo,monospace;color:var(--seam)}
 #rail h3.fold.shut .obs{display:none}
 /* except the revision: it is the one dependency here, and a shut list is
    exactly when an operator wants it stated rather than hunted for */
-#rail h3.fold.shut #judge-rev{display:block}
 .foldable.shut{display:none}
 #keys-btn{border:none;background:transparent;color:var(--muted);font:13px -apple-system,sans-serif;width:20px;height:20px;border-radius:5px;cursor:pointer;padding:0}
 #keys-btn:hover{background:var(--mist);color:var(--ink)}
@@ -312,7 +318,15 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 #table-host{position:absolute;inset:0;overflow:auto;background:var(--paper);padding:calc(var(--u)*6) calc(var(--u)*8) calc(var(--u)*40);font-size:12.5px;display:none}
 #table-host h3{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:calc(var(--u)*10) 0 calc(var(--u)*3);font-weight:600}
 #table-host h3:first-child{margin-top:calc(var(--u)*2)}
-#table-host table{border-collapse:collapse;width:100%}
+/* ── A TABLE FALLS LEFT. Stretched to the pane it put two short words at
+   opposite ends of a wide screen — `Emp9000` here, `Finance` eight hundred
+   pixels away — and reading a row became a journey across empty space. Air is
+   worth having; a void is not the same thing. Columns take the width their
+   content needs and the table ends where its content ends, so a row is read in
+   one glance and the page cascades down the left. The reading measure is the
+   same bound the prose keeps. ── */
+#table-host table{border-collapse:collapse;width:auto;max-width:100%;table-layout:auto}
+#table-host td,#table-host th{white-space:nowrap}
 #table-host th{text-align:left;font-weight:500;padding:calc(var(--u)*2) calc(var(--u)*5) calc(var(--u)*2) calc(var(--u)*3);border-bottom:0.5px solid var(--line);position:sticky;top:0;background:var(--paper);cursor:pointer;user-select:none}
 #table-host th:hover{color:var(--ink)}#table-host th .dir{color:var(--ink)}
 /* the size has to be said: a family ending in the generic `monospace` makes
@@ -322,7 +336,10 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 #table-host td.cell-name{color:var(--localtype);font-weight:600;cursor:pointer}
 #table-host td.cell-name:hover{text-decoration:underline}
 #table-host td.cell-value{color:var(--knownname)}
-#table-host td.cell-note{white-space:normal;max-width:22em}
+#table-host td.cell-note{white-space:normal;max-width:44ch;color:var(--muted);
+  font:13px/1.5 -apple-system,sans-serif}
+#table-host td.cell-note code{font:12px/1.4 ui-monospace,Menlo,monospace;color:var(--ink)}
+#table-host td.cell-note .known{font:12px/1.4 ui-monospace,Menlo,monospace}
 #table-host td.slot{cursor:pointer}
 #table-host td.slot:hover{background:var(--mist)}
 #table-host td.cut{cursor:pointer;color:var(--muted);text-align:right}
@@ -361,9 +378,11 @@ body{font:13px/1.45 -apple-system,sans-serif;margin:0;color:var(--ink);backgroun
 <div id="rail"><div id="brand"><b>gate</b><span id="brandline" class="caption"></span></div>
   <h3 class="fold caption" data-fold="files"><i></i>mine</h3><div id="filelist" class="foldable"></div>
   <h3 class="fold caption" id="seams-head" data-fold="seams"><i></i>theirs</h3>
-  <div id="seam-host" class="foldable"></div>
-  <h3 class="fold caption" id="shelf-head" data-fold="shelf"><i></i>the judge<span id="judge-rev" class="obs"></span></h3>
-  <div id="shelf-host" class="foldable"></div>
+  <div id="theirs-host" class="foldable">
+    <div id="seam-host"></div>
+    <div id="judge-row" class="took-head caption"></div>
+    <div id="shelf-host"></div>
+  </div>
   <h3 class="fold" id="journal-head" data-fold="journal"><i></i>journal <span class="obs caption"></span></h3>
   <div id="journal" class="foldable"></div></div>
 <div class="split" id="split-rail" style="display:none"></div>
@@ -407,8 +426,15 @@ let benchStale = "";
 fetch("/version", { cache: "no-store" }).then(r => r.json()).then(v => {
     // the one dependency that cannot be edited, only re-pinned — so it is named
     // where the words it carries are listed, and said plainly when unrecorded
-    const rev = document.getElementById("judge-rev");
-    if (rev) rev.textContent = v.judge_from ? v.judge_from.slice(0, 7) : "revision unrecorded";
+    const rev = document.getElementById("judge-row");
+    if (rev) {
+        rev.innerHTML = "<b>the judge</b> · <span class='at'>"
+            + esc(v.judge_from ? "took at " + v.judge_from.slice(0, 7) : "taken at nothing written down")
+            + "</span>";
+        rev.title = "The court itself, taken like anything else: `bin/build-judge.sh` clones the "
+            + "corpus at a revision, builds, and writes the revision down beside the binary. "
+            + "It is held by a build anybody can repeat — never by its own verdict.";
+    }
     if (v.gate !== BENCH_FOR) {
         benchStale = " · this page is gate " + BENCH_FOR + ", the bench serving it is "
             + v.gate + " — restart `gate serve`";
@@ -612,7 +638,6 @@ async function buildShelf() {
         mods = (shelf.modules || []).filter(m => (shelf.roles || {})[m] === "forms");
     } catch { mods = []; }
     host.innerHTML = "";
-    document.getElementById("shelf-head").hidden = !mods.length;
     for (const m of mods) {
         const r = document.createElement("div");
         r.className = "commit touches";
@@ -1475,8 +1500,10 @@ function buildTables() {
             tr.append(del);
             if (hasNotes) {
                 const td = document.createElement("td");
-                td.className = "observed cell-note";
-                td.textContent = (notes.get(d.name) || []).join(" ");
+                // the same prose, in the same register, in every view that
+                // shows it — the notation the corpus uses is shown, not spelled
+                td.className = "cell-note";
+                td.innerHTML = noteProse((notes.get(d.name) || []).join(" ").trim());
                 tr.append(td);
             }
             table.append(tr);
@@ -1965,13 +1992,13 @@ async function buildSeams() {
     // an advertisement in the one place that is supposed to be an account. Where
     // seams are declared they appear; where they are not, `gate demo seam` and
     // the readme are where the idea lives.
-    const head = document.getElementById("seams-head");
-    if (!seams.length) {
-        head.hidden = true; host.hidden = true; host.innerHTML = "";
-        return;
-    }
-    head.hidden = false; host.hidden = false;
+    // the heading stands whether or not there is a seam: the judge is always
+    // taken, so this world always has something it took. Only the seam rows
+    // come and go — a folder with no seam has no seam, and a panel explaining
+    // a thing nobody is using is an advertisement in an account.
+    host.hidden = !seams.length;
     host.innerHTML = "";
+    if (!seams.length) return;
     for (const s of seams) {
         const box = document.createElement("div");
         const head = document.createElement("div");
