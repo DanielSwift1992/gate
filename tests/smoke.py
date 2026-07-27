@@ -1886,7 +1886,20 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               # so the tool is not asking of anybody a thing it had not done
               and own_status.get("verdict") == "holds"
               and open(os.path.join(HERE, "bin", "gate-judge.from"),
-                       encoding="utf-8").read().strip().startswith("0fd0b38")))
+                       encoding="utf-8").read().strip().startswith("0fd0b38")
+              # AND THE EDITOR IS ACCOUNTED FOR TOO. It arrived the way anything
+              # of somebody else's should — named, versioned, unchanged, saying
+              # so in its own first line — and it was the one dependency an
+              # operator actually types into that this world had never listed.
+              # Nothing here judges it and nothing here could: it is held by
+              # that name and that version and by a copy anybody can compare.
+              and "public enum TheEditor: Theirs {" in own
+              and "public typealias Kind = CarriedFile" in own
+              and 'public static var typeName: String { "codemirror@5.65.16" }' in own
+              and open(os.path.join(HERE, "codemirror.js"), encoding="utf-8"
+                       ).readline().startswith("// CodeMirror 5.65.16")
+              # a role names a court, and a court that reads nothing says so
+              and "and by no court of this world" in shelf_src))
 
     # ── AND A ROW IS WRITTEN THE WAY EVERY RECORD IN THIS WORLD IS WRITTEN:
     # axes to declared atoms, and exactly one string — the `typeName` literal

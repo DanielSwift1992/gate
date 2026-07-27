@@ -16,6 +16,7 @@ public enum WorldFile: Role {}
 public enum SeamFile: Role {}
 public enum FormsFile: Role {}
 public enum JudgeFile: Role {}
+public enum CarriedFile: Role {}
 
 public protocol Mine {}
 
@@ -79,3 +80,23 @@ public enum TheJudge: Theirs {
     public typealias At = Rev_vi_0fd0b38
 }
 extension TheJudge { public static var typeName: String { "bin/gate-judge" } }
+
+// AND THE EDITOR THIS BENCH IS WRITTEN WITH. It arrived the way anything of
+// somebody else's should: named, versioned, and unchanged — its own first line
+// says CodeMirror 5.65.16, where it came from, its licence, and that it is
+// vendored unmodified. Nothing here judges it and nothing here could: it is
+// held by that name and that version, and by a copy anybody can fetch and
+// compare. Leaving it unlisted would have meant the one dependency an operator
+// actually types into was the one this world never accounted for.
+public enum Rev_codemirror_5_65_16 {}
+extension Rev_codemirror_5_65_16 { public static var typeName: String { "codemirror@5.65.16" } }
+public enum TheEditor: Theirs {
+    public typealias Kind = CarriedFile
+    public typealias At = Rev_codemirror_5_65_16
+}
+extension TheEditor { public static var typeName: String { "codemirror.js" } }
+public enum TheEditorSheet: Theirs {
+    public typealias Kind = CarriedFile
+    public typealias At = Rev_codemirror_5_65_16
+}
+extension TheEditorSheet { public static var typeName: String { "codemirror.css" } }

@@ -23,6 +23,8 @@ ROLES = {
     "seam": "judged where it meets mine, and nowhere else",
     "forms": "grammar and the certificates over it, judged by the where court",
     "judge": "the court itself: held by a reproducible build, not by judgement",
+    "carried": "brought here unchanged: held by its source's name and version, "
+               "and by no court of this world",
 }
 
 
@@ -57,7 +59,7 @@ def read_manifest_rows(d, text=None):
         if f:
             lit[m.group(1)] = f.group(1)
     ROLE_OF = {"WorldFile": "world", "SeamFile": "seam", "FormsFile": "forms",
-               "JudgeFile": "judge", "Seam": "seam"}
+               "JudgeFile": "judge", "CarriedFile": "carried", "Seam": "seam"}
     rows = []
     for m in re.finditer(r"public enum (\w+): (Mine|Theirs|WorldFile|SeamFile) \{", text):
         name, atom = m.group(1), m.group(2)
@@ -2280,7 +2282,7 @@ def declare_side(path, kind, role, frm=None):
     mp = os.path.join(d, "gate.manifest.swift")
     name = sanitize(os.path.splitext(os.path.basename(path))[0]).title().replace("_", "") or "Side"
     ROLE_ATOM = {"world": "WorldFile", "seam": "SeamFile", "forms": "FormsFile",
-                 "judge": "JudgeFile"}
+                 "judge": "JudgeFile", "carried": "CarriedFile"}
     text = open(mp, encoding="utf-8").read() if os.path.exists(mp) else (
         "// ONE LIST, AND THREE COLUMNS. Whose source a file is, what court reads\n"
         "// it, and — for anything taken — the revision it was taken at. gate\n"

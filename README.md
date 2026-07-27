@@ -205,8 +205,11 @@ rest of your world, by the plain court. `seam` is judged where it meets yours
 and nowhere else. `forms` — the grammar a world is written in, and the
 certificates over it — is judged by the `where` court: invent a word in your own
 fork of your own forms, say something true about it and it holds, say something false
-and it is refused at the line. `judge` is the court itself, and is the one row
-held by a reproducible build rather than by judgement. A row gate cannot place is
+and it is refused at the line. `judge` is the court itself, held by a
+reproducible build rather than by judgement. `carried` is anything brought here
+unchanged — a vendored library, an editor — held by its source's name and
+version and by no court of this world; the row exists so that nothing you depend
+on is unaccounted for, including the thing you type into. A row gate cannot place is
 refused at its own line — never swept quietly into your world, which is what
 happened the one time this document was read by guessing.
 
