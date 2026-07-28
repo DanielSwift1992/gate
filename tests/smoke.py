@@ -2824,9 +2824,14 @@ console.log(JSON.stringify(out));
               and "Who.Key: Writes" in (read["Enter"]["whereText"] or "")))
 
     S.append(("bare shows a gate's holes and the condition its verdict turns on",
-              'const holes = (d.params || []).length' in ui
+              # ONE SHAPE FOR ONE THING: a gate's parameter and an
+              # `associatedtype` are the same act written two ways, and this view
+              # showed one with a colon inside angle brackets and the other as a
+              # sentence. Every hole is a line, and the line says what fills it.
+              "...(d.params || []).map((a, i) => [a, (d.paramKinds || [])[i]])" in ui
+              and "...(d.axes || []).map(a => [a, (d.axisKinds || {})[a]])" in ui
               and "const when = d.whereText" in ui
-              and "declSpan(name, d.line, bad) + holes + conf + when" in ui
+              and "declSpan(name, d.line, bad) + conf + when" in ui
               # a hole's label is ink in this view too, the same hole the editor paints
               and ".hole-label{color:var(--ink)}" in ui))
 
@@ -2838,7 +2843,7 @@ console.log(JSON.stringify(out));
     # views promised to show the same file; a view that drops what a form asks
     # is not minimal, it is partial in a way nobody chose.
     S.append(("bare says what a form asks of others, which the parse has always known",
-              "for (const axis of (d.axes || [])) {" in ui
+              "...(d.axes || []).map(a => [a, (d.axisKinds || {})[a]])" in ui
               and 'asks for </span>' in ui
               # the kind is a name and wears a name's hue; an axis with no kind
               # says so rather than looking like an axis with a kind

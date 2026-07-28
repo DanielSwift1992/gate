@@ -2406,13 +2406,6 @@ function bareForm(parsed, text) {
         // the name alone. The parse now carries them for a head written down
         // the page as well as across one, which is how every gate in the shelf
         // is written.
-        const holes = (d.params || []).length
-            ? '<span class="conf">&lt;</span>'
-              + d.params.map((a, i) => '<span class="hole-label">' + esc(a) + "</span>"
-                  + ((d.paramKinds || [])[i] ? '<span class="conf">: </span>'
-                     + nameTokens(d.paramKinds[i]) : "")).join('<span class="conf">, </span>')
-              + '<span class="conf">&gt;</span>'
-            : "";
         const conf = d.conformances.length ? '<span class="conf">: </span>' + nameTokens(d.conformances.join(", ")) : "";
         const cut = (slot, what) => {
             const i = bareSlots.push(slot) - 1;
@@ -2424,7 +2417,7 @@ function bareForm(parsed, text) {
         // one word short of what they are for.
         const when = d.whereText
             ? '<span class="conf"> when </span>' + nameTokens(d.whereText) : "";
-        const block = ['<span class="' + (bad ? "row-bad" : "") + '">' + declSpan(name, d.line, bad) + holes + conf + when
+        const block = ['<span class="' + (bad ? "row-bad" : "") + '">' + declSpan(name, d.line, bad) + conf + when
                 + cut({ kind: "record", line: d.line, host: name }, "record") + "</span>"];
         for (const [k, v] of d.aliases)
             block.push("    " + esc(k) + " = "
@@ -2438,11 +2431,18 @@ function bareForm(parsed, text) {
         // Bare is the record without ceremony, never the record without its
         // content, and a form that asks for two things and appears to ask for
         // none is the emptiest thing this page could have printed.
-        for (const axis of (d.axes || [])) {
-            const kind = (d.axisKinds || {})[axis];
-            block.push("    " + esc(axis) + '<span class="conf"> asks for </span>'
+        // ── ONE SHAPE FOR ONE THING. A gate's parameter and an `associatedtype`
+        // are the same act written two ways — `Enter<Who: Keeper>` opens a hole
+        // and `associatedtype Post: Realm` opens a hole — and this view showed
+        // one with a colon inside angle brackets and the other as a sentence on
+        // its own line. Two notations for one thing is the reader doing work the
+        // page should have done. Every hole is a line, and the line says what
+        // may fill it.
+        for (const [axis, kind] of [...(d.params || []).map((a, i) => [a, (d.paramKinds || [])[i]]),
+                                    ...(d.axes || []).map(a => [a, (d.axisKinds || {})[a]])])
+            block.push("    " + '<span class="hole-label">' + esc(axis) + "</span>"
+                + '<span class="conf"> asks for </span>'
                 + (kind ? nameTokens(kind) : '<span class="caption">anything</span>'));
-        }
         for (const [axis, kind] of holesOf(d)) {
             const i = bareSlots.push({ kind: "hole", line: d.line, host: name, axis, of: kind }) - 1;
             block.push('    ' + esc(axis) + ' = <span class="slot hole caption" data-slot="' + i
