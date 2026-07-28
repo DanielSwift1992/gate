@@ -1124,7 +1124,7 @@ def next_rung(refused):
     hooked = subprocess.run(["git", "config", "--get", "core.hooksPath"], cwd=root,
                             capture_output=True, text=True).stdout.strip()
     if not hooked:
-        return "run `gate init .` to wire the pre-commit hook, so a lie cannot be committed"
+        return "run `gate init .` to wire the pre-commit hook, so what does not hold cannot be committed"
     if not policy_path():
         return "state who may merge: declare an Identity and a MergePolicy in gate.policy.swift"
     ci = os.path.join(root, ".github", "workflows")
@@ -1612,7 +1612,18 @@ def cmd_demo(a):
         os.chdir(here_was)
     return {"command": "demo", "root": root, "asked": "gate check view Emp9001 EngineeringShare",
             "refused": shown,
-            "next": f"cd {os.path.relpath(root)} && gate serve, then break a fact and watch",
+            # ── AND THE WAY BACK, SAID BEFORE THE FIRST PUSH. Trying things is
+            # only free when the way back is known in advance: courage comes from
+            # seeing the retreat, not from being told afterwards that one exists.
+            # This world is committed the moment it is made, so `git checkout .`
+            # has always put it back — and nothing said so, which is a way back
+            # that exists and cannot be found. Said here, beside the invitation,
+            # so it is read before anything is touched rather than looked for
+            # after.
+            "next": f"cd {os.path.relpath(root)} && gate serve, then change a fact and watch",
+            "back": "git checkout . — everything as it was, in one word: this world was "
+                    "committed the moment it was made, so nothing you try here can cost you "
+                    "anything",
             "try": ["gate status — the world holds, in milliseconds",
                     "gate apply revoke Emp9002 FinanceShare — an edit that is judged before it lands",
                     "open gate.swift and change one Home to Engineering — the judge names the line"],
@@ -4951,6 +4962,8 @@ def humanize(out):
         lines.append(f"  next: {out['next']}")
         for t in out["try"]:
             lines.append(f"    {t}")
+        if out.get("back"):
+            lines.append(f"  back: {out['back']}")
     elif cmd == "init":
         lines.append(f"init: {out['root']}" + (f" · created {len(out['created'])} files" if out["created"] else " · already there"))
         if out.get("next"):

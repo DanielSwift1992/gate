@@ -2749,6 +2749,30 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "taken as given" in ui
               and "somebody SUPPLYING the agreement the two sides never derived" in ui))
 
+    # ── THE WAY BACK IS SAID BEFORE THE FIRST PUSH. Trying things is free only
+    # when the retreat is known in advance: courage comes from seeing the way
+    # back, never from being told afterwards that one existed. The demo world is
+    # committed the moment it is made, so `git checkout .` has always restored
+    # it — and nothing said so, which is a way back that exists and cannot be
+    # found, the same blindness as a file served by URL and missing from the
+    # panel. Walked whole: break it as invited, see the address, take it back.
+    bk = os.path.join(tmp, "backworld")
+    said = run("demo", bk)[1]
+    gs = os.path.join(bk, "gate.swift")
+    open(gs, "w").write(open(gs).read().replace(
+        "public typealias Home = Finance", "public typealias Home = Engineering", 1))
+    broke = run("status", cwd=bk)[1]
+    subprocess.run(["git", "checkout", "."], cwd=bk, capture_output=True)
+    healed = run("status", cwd=bk)[1]
+    S.append(("the demo says the way back before it invites you to break anything",
+              "git checkout ." in said.get("back", "")
+              and "cannot cost you" not in said.get("back", "")   # about the world, not a promise about you
+              and broke.get("verdict") == "refused" and healed.get("verdict") == "holds"
+              # and the invitation is a trial, never damage
+              and "change a fact and watch" in said.get("next", "")
+              # nothing shown to a person calls them a liar for a world that does not hold
+              and "a lie cannot be committed" not in open(GATE, encoding="utf-8").read()))
+
     # ── A POLICY MAY NOT REQUIRE A RANK NOBODY HAS. Found by walking a
     # newcomer's path: `gate demo`, then a lie in each file to see which are
     # judged. `Person = Emp9999` refused correctly; `Requires = NoSuchRank`
