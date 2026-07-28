@@ -220,11 +220,16 @@ def forms_guards():
     # judge refuses — and the probe was the wrong shape: `where` does not check
     # bare conformance at all, so a green over nought uses said nothing either
     # way. Given the certificates it does read, it judges them with teeth: the
-    # bench's own palette holds 110 equalities under it.
+    # bench's own palette holds 119 equalities under it.
     #
-    # So the grammar a world is written in is answerable after all, by the court
-    # that fits it, and that court is asked here. It is one stream per row: two
-    # files as two arguments are two canons that never meet.
+    # AND THE SET IT JUDGES IS THE EFFECTIVE ONE. A world you present replaces a
+    # value in a world this tool ships — and for a while nothing then judged the
+    # result: the certificates stayed in the shipped file, the numbers moved to
+    # yours, and the two never met. So an operator could repaint the verdict
+    # channel green and be shown refusals in the colour of agreement, with the
+    # court silent. Freedom to say any number is the point; freedom to escape
+    # the law about it never was. Your line stands where theirs stood, and every
+    # certificate that shipped goes on testing what you put there.
     if not MANIFEST:
         return []
     d = os.path.dirname(MANIFEST["manifest"])
@@ -232,38 +237,51 @@ def forms_guards():
             and os.path.exists(os.path.join(d, r["path"]))]
     if not rows:
         return []
-    # ONE STREAM, IN THE ORDER THE MANIFEST GIVES. Judging each row on its own
-    # is the trap this project already paid for and wrote down: `where` over a
-    # LIST is blind, and its silence is selective by order — a law split across
-    # two files goes green in isolation and refuses the moment they are glued.
-    # I shipped the isolated form because I had not read what was already known.
-    # The glued stream is the proven shape; the order comes from the document
-    # rather than from the folder, so the same repository always reads the same.
-    glued, where, at = [], {}, 0
+    bad = []
+    # ONE STREAM PER SHIPPED WORLD, in the order the manifest gives — `where`
+    # over a LIST is blind, and its silence is selective by order.
+    streams, seen = [], set()
+    for shelf in sorted(STDLIB):
+        text, mine, clash = presented_over(shelf)
+        bad += clash
+        if mine:
+            streams.append((shelf, text, mine))
+            seen |= set(mine)
+    # and whatever a presented world says that overrides nothing still stands on
+    # its own: glued together, as its own stream
+    own = []
     for r in rows:
-        text = open(os.path.join(d, r["path"]), encoding="utf-8", errors="replace").read()
-        for i, line in enumerate(text.split("\n"), 1):
-            m = re.match(r"public (?:typealias|enum|protocol) (\w+)", line)
+        own.append(open(os.path.join(d, r["path"]), encoding="utf-8", errors="replace").read())
+    streams.append((None, "\n".join(own), {}))
+    where = {}
+    for r in rows:
+        for i, line in enumerate(open(os.path.join(d, r["path"]),
+                                      encoding="utf-8", errors="replace").read().split("\n"), 1):
+            m = re.match(r"public (?:typealias|enum|protocol) (\w+)", line.strip())
             if m and m.group(1) not in where:
                 where[m.group(1)] = f"{r['path']}:{i}"
-        glued.append(text)
-        at += text.count("\n")
     tmp = tempfile.mkdtemp(prefix="gate-forms-")
-    p = os.path.join(tmp, "forms.swift")
-    open(p, "w").write("\n".join(glued))
-    out = subprocess.run([JUDGE, "judge", "where", p], capture_output=True, text=True).stdout
+    for shelf, text, mine in streams:
+        fp = os.path.join(tmp, (shelf or "presented") + ".swift")
+        open(fp, "w").write(text)
+        out = subprocess.run([JUDGE, "judge", "where", fp], capture_output=True, text=True).stdout
+        for line in out.split("\n"):
+            if not line.strip().startswith("✗"):
+                continue
+            claim = line.strip()[1:].strip()
+            m = re.match(r"'(\w+)", claim)
+            # the address is the file that SAYS the certificate; where a shipped
+            # law refuses a value you presented, it lands on the line you wrote
+            spot = where.get(m.group(1)) if m else None
+            if not spot and mine:
+                touched = [n for n in mine if n in claim]
+                spot = where.get(touched[0]) if touched else None
+                if not spot and touched:
+                    spot = mine[touched[0]]
+            bad.append({"address": spot or rows[0]["path"], "claim": claim})
     shutil.rmtree(tmp, ignore_errors=True)
-    bad = []
-    for line in out.split("\n"):
-        if not line.strip().startswith("✗"):
-            continue
-        claim = line.strip()[1:].strip()
-        # the address is the file that SAYS the certificate, not the stream it
-        # was read in — a refusal must land where somebody can go and fix it
-        m = re.match(r"'(\w+)", claim)
-        bad.append({"address": where.get(m.group(1)) if m else None
-                    or rows[0]["path"], "claim": claim})
     return bad
+
 
 
 def is_seam_side(path):
@@ -1633,30 +1651,85 @@ def _peano(text):
     return vals
 
 
-def presented_world(shelf_name):
-    # ── WHAT YOU PRESENT OUTRANKS WHAT WE SHIPPED, and no wheel had to be
-    # declared for it. Conforming to a surface only turns what somebody thought
-    # to make turnable — it needs the other side to have expected you. This
-    # needs nothing expected: every number this bench paints and spaces itself
-    # by is read from a declared world, so declare that name yourself and yours
-    # is the one read. Not by shadowing a name inside one stream, which is two
-    # truths and refused, but by being the source the stream is read from.
+def presented_over(shelf_name):
+    # ── PRIORITY IS A PROPERTY OF THE LAYER, NEVER OF POSITION. This read the
+    # presented worlds in the order the manifest listed them and let the first
+    # speaker win — which made reordering a list change what the page paints,
+    # and order carrying truth is the thing this project spent a week burying.
+    # Correctness is order-invariant (§5.25); only efficiency is order-set. So
+    # what overrides what is decided by which LAYER a declaration is in — a world
+    # you presented outranks the one this tool ships — and two declarations
+    # inside ONE layer are two truths about one name, refused with both
+    # addresses rather than settled by whoever was listed first.
     #
-    # Presented first, shipped after, first said wins — so an operator may
-    # replace one number or the whole file, and nothing had to anticipate which.
+    # And the merge is a REPLACEMENT, not an appending: your line stands where
+    # theirs stood, so the certificates that shipped with the shelf go on testing
+    # the value you put there. Freedom to say any number, no freedom to escape
+    # the law about it.
+    shipped = STDLIB.get(shelf_name, "")
     rows = (MANIFEST.get("rows") if MANIFEST else None) or []
     if not rows:
-        return STDLIB.get(shelf_name, "")
+        return shipped, {}, []
     base = os.path.dirname(MANIFEST["manifest"])
-    out = []
+    mine, clash = {}, []
     for r in rows:
         if r["role"] != "forms":
             continue
-        p = os.path.join(base, r["path"])
-        if os.path.exists(p):
-            out.append(open(p, encoding="utf-8", errors="replace").read())
-    out.append(STDLIB.get(shelf_name, ""))
-    return "\n".join(out)
+        # a file that IS this world does not override it. gate presents its own
+        # shelf files as its own forms — that is the point of being the first
+        # inhabitant — and reading them as overrides of themselves made every
+        # name in this repository a second truth about itself.
+        if os.path.basename(r["path"]) in {n + ".swift" for n in STDLIB}:
+            continue
+        fp = os.path.join(base, r["path"])
+        if not os.path.exists(fp):
+            continue
+        for i, line in enumerate(open(fp, encoding="utf-8", errors="replace").read().split("\n"), 1):
+            m = re.match(r"public typealias (\w+) = ", line.strip())
+            if not m:
+                continue
+            name = m.group(1)
+            # ── A VALUE IS YOURS; THE LAW ABOUT IT IS NOT. Moving a number
+            # means restating what still holds of it — the slack is written by
+            # whoever states the value, as the corpus does it — so a presented
+            # certificate is legitimate. Changing its FORM is not: rewriting
+            # `TowardWarm` as `TowardBlue` does not satisfy the law, it deletes
+            # it, and a verdict channel that may declare itself cold is a bench
+            # free to show refusals in the colour of agreement. Same head, your
+            # arguments.
+            head = re.match(r"public typealias \w+ = (\w+)<", line.strip())
+            was = re.search(r"^public typealias " + name + r" = (\w+)<", shipped, re.M)
+            if was and (not head or head.group(1) != was.group(1)):
+                clash.append({"address": f"{r['path']}:{i}",
+                              "claim": f"`{name}` is a law of a world you did not write, and this "
+                                       f"says it is `{head.group(1) if head else 'a value'}` where "
+                                       f"it is `{was.group(1)}`. Restate what holds of your own "
+                                       "numbers as much as you like — the form is not yours to "
+                                       "replace, or the law could be rewritten to permit whatever "
+                                       "broke it"})
+                continue
+            if name in mine and mine[name][0] != r["path"]:
+                clash.append({"address": f"{r['path']}:{i}",
+                              "claim": f"`{name}` is said here and at {mine[name][0]}:"
+                                       f"{mine[name][1]} — two worlds you present, one name, "
+                                       "and nothing but the order they are listed in to choose "
+                                       "between them. One layer, one declaration"})
+                continue
+            mine[name] = (r["path"], i, line)
+    if not mine:
+        # a clash is a refusal even when nothing survived to override: the guard
+        # ran, said its piece, and this used to throw it away on the way out —
+        # the shape of every quiet green there has ever been
+        return shipped, {}, clash
+    kept = [ln for ln in shipped.split("\n")
+            if not (re.match(r"public typealias (\w+) = ", ln.strip())
+                    and re.match(r"public typealias (\w+) = ", ln.strip()).group(1) in mine)]
+    return ("\n".join(v[2] for v in mine.values()) + "\n" + "\n".join(kept),
+            {k: v[0] for k, v in mine.items()}, clash)
+
+
+def presented_world(shelf_name):
+    return presented_over(shelf_name)[0]
 
 
 def palette_tokens():

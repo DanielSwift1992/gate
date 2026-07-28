@@ -2440,9 +2440,58 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "calc(454/1000) calc(419/1000) calc(691/1000)" not in dark_here
               # everything they did not say still comes from what shipped
               and "--action" in dark_here and "--localtype" in dark_here
-              # by reading presented worlds before shipped ones, first said wins
-              and "def presented_world(" in shelf_src
-              and "first said wins: what was presented outranks what shipped" in shelf_src))
+              # by LAYER, never by position: reordering the list may not change
+              # what the page paints, because correctness is order-invariant and
+              # this is exactly where order had crept back in as truth
+              and "def presented_over(" in shelf_src
+              and "PRIORITY IS A PROPERTY OF THE LAYER, NEVER OF POSITION" in shelf_src))
+
+    # ── AND THE EFFECTIVE SET IS JUDGED, or the freedom is a freedom to lie to
+    # yourself. For a while nothing judged the result of an override: the
+    # certificates stayed in the shipped file and the numbers moved to the
+    # operator's, and the two never met — so repainting the verdict channel
+    # green gave a bench that shows refusals in the colour of agreement, with
+    # every court silent. Probed exactly that way.
+    #
+    # The line you write stands where theirs stood, so every certificate that
+    # shipped goes on testing what you put there. Say any number; say what still
+    # holds of it. And the form of a law is not yours to replace — restating
+    # `TowardWarm` as `TowardBlue` does not satisfy a law, it deletes one, and
+    # then any value could be permitted by rewriting what forbade it.
+    guard = tempfile.mkdtemp()
+    open(os.path.join(guard, "gate.swift"), "w").write("public enum Sales: Department {}\n")
+    mineclr = os.path.join(guard, "my-colours.swift")
+
+    def _say(body):
+        open(mineclr, "w").write("// role: forms\n" + body)
+        return run("status", cwd=guard)[1]
+    open(mineclr, "w").write("// role: forms\n")
+    run("mine", "my-colours.swift", "--role", "forms", cwd=guard)
+    # a number moved, and the laws about it restated: this is the whole freedom
+    lawful = _say(
+        "public typealias KnownNameDimZ = Plus<W8, Plus<W16, Plus<W32, Plus<W64,"
+        " Plus<W128, W512>>>>>\n"
+        "public typealias KnownNameChroma_dim = TowardBlue<KnownNameDimY, KnownNameDimZ,"
+        " Plus<Unit, Plus<W2, Plus<W32, Plus<W64, Plus<W1024, Plus<W2048, W4096>>>>>>>\n"
+        "public typealias MineApartTheirs_Z_dim = Apart<KnownNameDimZ, LocalTypeDimZ,"
+        " Plus<Unit, Plus<W2, Plus<W4, Plus<W32, W64>>>>>\n"
+        "public typealias TheirsApartBad_Z_dim = Apart<KnownNameDimZ, BadDimZ,"
+        " Plus<Unit, Plus<W2, Plus<W4, Plus<W16, Plus<W32, Plus<W64, W256>>>>>>>\n")
+    # the verdict channel repainted toward agreement: refused by the law that
+    # says a verdict leans warm, at the operator's own line
+    green = _say("public typealias BadDimZ = Plus<W8, Plus<W32, W128>>\n")
+    # and the law itself rewritten to permit it: refused as a law that is not theirs
+    rewrite = _say("public typealias BadChroma_dim = TowardBlue<BadDimY, BadDimZ, Plus<W2, W4>>\n")
+    S.append(("say any number, say what holds of it, and the form of a law is not yours",
+              lawful.get("verdict") == "holds"
+              and green.get("verdict") == "refused"
+              and any("BadChroma_dim" in r.get("claim", "") or "Apart<BadDimZ" in r.get("claim", "")
+                      for r in green.get("refusals", []))
+              and all((r.get("address") or "").startswith("my-colours.swift")
+                      for r in green.get("refusals", []))
+              and rewrite.get("verdict") == "refused"
+              and any("is not yours to replace" in r.get("claim", "")
+                      for r in rewrite.get("refusals", []))))
 
     # ── AN EXHIBIT, NOT A WISH. What follows records what a claim written in the
     # head of the file that depends on it does TODAY, line by line, because the
