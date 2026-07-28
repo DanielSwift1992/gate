@@ -2749,6 +2749,53 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "taken as given" in ui
               and "somebody SUPPLYING the agreement the two sides never derived" in ui))
 
+    # ── A POLICY MAY NOT REQUIRE A RANK NOBODY HAS. Found by walking a
+    # newcomer's path: `gate demo`, then a lie in each file to see which are
+    # judged. `Person = Emp9999` refused correctly; `Requires = NoSuchRank`
+    # said the world holds. The guard's own comment had promised for weeks that
+    # "every Requires must be a real name", and the code asked only whether the
+    # word LOOKED like one — capitalised was enough.
+    #
+    # The cause was a set that could not contain the answer: a person is
+    # declared in the world, a rank in the FORMS the world is written in, and
+    # `world_files()` returns only the former. The set is gathered from the
+    # world, the forms it presents and the shelf it reads — without this
+    # mechanism learning what a rank is.
+    pol = os.path.join(tmp, "policyworld")
+    run("demo", pol)
+
+    def _requires(rank):
+        # read, THEN write: `open(w)` truncates before the nested read runs, and
+        # a probe that quietly writes an empty policy proves nothing at all
+        pp = os.path.join(pol, "gate.policy.swift")
+        said = re.sub(r"Requires = \w+", "Requires = " + rank, open(pp).read())
+        open(pp, "w").write(said)
+        return run("status", cwd=pol)[1]
+
+    real, unreal = _requires("Manager"), _requires("NoSuchRank")
+    _requires("Manager")
+    # and the file itself is one the bench admits to having. `gate demo` writes
+    # it, it introduces itself in its own first line, its guard judges it and
+    # the server serves it by URL — it was simply missing from the list, so a
+    # newcomer who ran demo, listed the folder and looked at the panel found a
+    # file on disk the tool did not own up to. Being outside the plain judged
+    # stream says which court reads it, never that it should be invisible.
+    listed = [n for n, _ in json.loads(subprocess.run(
+        [sys.executable, "-c",
+         "import types,json;src=open(%r,encoding='utf-8').read();g=types.ModuleType('g');"
+         "g.__file__=%r;exec(compile(src,'gate','exec'),g.__dict__);"
+         "print(json.dumps(g.bench_files()))" % (GATE, GATE)],
+        cwd=pol, capture_output=True, text=True).stdout or "[]")]
+    S.append(("a policy requiring a rank nobody declares is refused, not waved through",
+              real.get("verdict") == "holds"
+              and unreal.get("verdict") == "refused"
+              and any("nobody has" in r.get("claim", "")
+                      for r in unreal.get("refusals", []))
+              and any("gate.policy.swift" in (r.get("address") or "")
+                      for r in unreal.get("refusals", []))
+              # and it is openable, not merely judged
+              and "gate.policy.swift" in listed))
+
     # ── A PIN NAMES A MOMENT, AND THIS TOOL NOW KEEPS THE RULE IT HAD WRITTEN
     # DOWN. `cmd_side` had carried the sentence "nothing in this tool expresses a
     # range, which is exactly why no version solver exists here" for weeks, and

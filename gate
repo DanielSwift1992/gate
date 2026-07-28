@@ -416,6 +416,19 @@ def bench_files():
             p = os.path.join(base, r["path"])
             if os.path.exists(p) and (r["path"], p) not in out:
                 out.append((r["path"], p))
+    # AND THE POLICY, which `gate demo` writes and this bench would not show.
+    # It is a file of facts beside the world — who somebody is, what an action
+    # demands — introduced by its own first line, judged by its own guard, and
+    # served happily by URL; it was simply missing from the list, so a newcomer
+    # who ran `demo`, listed the folder and looked at the panel found one file
+    # on disk that the tool did not admit to having. Not being in the plain
+    # judged stream is a fact about which court reads it, never a reason to be
+    # invisible — the layout is in exactly that position and has always shown.
+    pp = policy_path()
+    if pp and os.path.exists(pp):
+        rel = os.path.relpath(pp, base)
+        if not any(n == rel for n, _ in out):
+            out.append((rel, pp))
     pf = personal_path()
     if pf:   # the slot is always offered; the file may not exist yet
         name = "my.swift" if not any(n == "my.swift" for n, _ in out) else "personal-my.swift"
@@ -1063,9 +1076,26 @@ def policy_guards():
     if not pp:
         return []
     ids, rules, where = read_policy()
+    # ── WHAT THE WORLD DECLARES, AND ITS FORMS WITH IT. A person is declared in
+    # the world; a rank is declared in the forms the world is written in, which
+    # `world_files()` does not return. The guard below therefore could not see a
+    # single rank, and fell back to asking whether the word merely LOOKED like a
+    # name — so `Requires = NoSuchRank` passed, capitalised and meaningless, and
+    # this tool said the world holds. The comment over it had promised for weeks
+    # that every Requires must be a real name.
+    #
+    # The set is gathered without this mechanism learning any world's vocabulary:
+    # it asks what is declared anywhere the world reads, never what a rank is.
     declared = set()
-    for p in world_files():
-        declared |= set(re.findall(r"(?:public\s+)?enum\s+(\w+)\s*:", open(p).read()))
+    texts = [open(p).read() for p in world_files()]
+    base = os.path.dirname(MANIFEST["manifest"]) if MANIFEST else "."
+    for r in ((MANIFEST.get("rows") if MANIFEST else None) or []):
+        if r["role"] == "forms" and os.path.exists(os.path.join(base, r["path"])):
+            texts.append(open(os.path.join(base, r["path"]), encoding="utf-8",
+                              errors="replace").read())
+    texts += list(STDLIB.values())
+    for text in texts:
+        declared |= set(re.findall(r"(?:public\s+)?enum\s+(\w+)\s*:", text))
     bad = []
     for mail, who in ids.items():
         if who not in declared:
@@ -1073,10 +1103,15 @@ def policy_guards():
             bad.append({"address": f"{f}:{ln}",
                         "claim": f"an identity names `{who}`, and the world declares no such person"})
     for action, rank in rules.items():
+        f, ln = where.get("policy:" + action, (os.path.basename(pp), 1))
         if not re.match(r"^[A-Z]\w*$", rank):
-            f, ln = where.get("policy:" + action, (os.path.basename(pp), 1))
             bad.append({"address": f"{f}:{ln}",
                         "claim": f"the {action} policy requires `{rank}`, which is not a name"})
+        elif declared and rank not in declared:
+            bad.append({"address": f"{f}:{ln}",
+                        "claim": f"the {action} policy requires `{rank}`, and nothing this world "
+                                 "reads declares it — a policy naming a rank nobody has is a "
+                                 "policy that can never be met"})
     return bad
 
 
@@ -2091,8 +2126,9 @@ def one_stream(named):
     forms = {r["path"] for r in ((MANIFEST.get("rows") if MANIFEST else None) or [])
              if r["role"] == "forms"}
     layout = MANIFEST["manifest"] if MANIFEST else None
+    apart = {os.path.abspath(x) for x in (layout, policy_path()) if x}
     return [(n, p) for n, p in named
-            if n not in forms and os.path.abspath(p) != os.path.abspath(layout or "")]
+            if n not in forms and os.path.abspath(p) not in apart]
 
 
 def disk_sources():
