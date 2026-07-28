@@ -2790,6 +2790,21 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "taken as given" in ui
               and "somebody SUPPLYING the agreement the two sides never derived" in ui))
 
+    # ── BARE IS THE RECORD WITHOUT CEREMONY, NEVER WITHOUT ITS CONTENT. A
+    # protocol declares axes — `Keeper` opens `Post: Realm` and `Key` — and this
+    # view printed the name alone, `Keeper×`: a form that asks two things of
+    # everybody who conforms, appearing to ask none. The parse had held `axes`
+    # and `axisKinds` all along and nothing read them here. Bare is one of three
+    # views promised to show the same file; a view that drops what a form asks
+    # is not minimal, it is partial in a way nobody chose.
+    S.append(("bare says what a form asks of others, which the parse has always known",
+              "for (const axis of (d.axes || [])) {" in ui
+              and 'asks for </span>' in ui
+              # the kind is a name and wears a name's hue; an axis with no kind
+              # says so rather than looking like an axis with a kind
+              and 'kind ? nameTokens(kind) :' in ui
+              and '>anything</span>' in ui))
+
     # ── A ROW MAY NOT SEND A FILE TO A COURT THAT CANNOT READ IT. The layout's
     # guard asked only whether a role names A court, never whether it names the
     # right one — so `Kind = SeamFile` on a file of forms held, and the row said

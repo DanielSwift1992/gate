@@ -2409,6 +2409,19 @@ function bareForm(parsed, text) {
             block.push("    " + esc(k) + " = "
                 + slotSpan({ kind: "alias", line: v.line, host: name, axis: k }, v.target)
                 + cut({ kind: "axis", line: v.line, host: name, axis: k }, "axis"));
+        // ── AND WHAT THIS RECORD ASKS OF OTHERS. A protocol declares axes —
+        // `Keeper` opens `Post: Realm` and `Key` — and this view showed the
+        // name alone: `Keeper×`, a record with nothing in it, beside a source
+        // line that opens two holes for everybody who conforms. The parse has
+        // held these all along (`axes`, `axisKinds`); nothing read them here.
+        // Bare is the record without ceremony, never the record without its
+        // content, and a form that asks for two things and appears to ask for
+        // none is the emptiest thing this page could have printed.
+        for (const axis of (d.axes || [])) {
+            const kind = (d.axisKinds || {})[axis];
+            block.push("    " + esc(axis) + '<span class="conf"> asks for </span>'
+                + (kind ? nameTokens(kind) : '<span class="caption">anything</span>'));
+        }
         for (const [axis, kind] of holesOf(d)) {
             const i = bareSlots.push({ kind: "hole", line: d.line, host: name, axis, of: kind }) - 1;
             block.push('    ' + esc(axis) + ' = <span class="slot hole caption" data-slot="' + i
