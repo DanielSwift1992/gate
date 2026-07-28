@@ -1231,7 +1231,24 @@ def cmd_guard_deps(a):
     return out
 
 
-def repo_journal(n=200, scope="world"):
+def turned(surface):
+    # ── A WHEEL THE OPERATOR TURNED, read from their own files. The bench read
+    # these and the command line did not, so a declaration that said what your
+    # journal shows only meant anything while a page was open — and when the
+    # journal left the page, it would have meant nothing at all. A surface this
+    # tool offers has to be answered by the thing that still does the showing.
+    out = {}
+    for _, path in bench_files():
+        if not os.path.exists(path):
+            continue
+        text = open(path, encoding="utf-8", errors="replace").read()
+        for m in re.finditer(r"public enum \w+: " + surface + r" \{(.*?)\n\}", text, re.S):
+            for a in re.finditer(r"public typealias (\w+) = (\w+)", m.group(1)):
+                out[a.group(1)] = a.group(2)
+    return out
+
+
+def repo_journal(n=200, scope="world", only_me=False):
     # the journal VIEW — git's own history projected, no translation needed:
     # every clone already carries it (append-only, I3). Observed, NOT judged:
     # a commit is closed iff reachable from the default branch, open otherwise.
@@ -1283,7 +1300,10 @@ def repo_journal(n=200, scope="world"):
         commits.append(cur)
     me = subprocess.run(["git", "config", "user.email"], cwd=base,
                         capture_output=True, text=True).stdout.strip()
+    if only_me and me:
+        commits = [c for c in commits if c["email"] == me]
     return {"command": "log", "default_branch": default, "scope": scope, "limit": n,
+            "mine_only": bool(only_me),
             "next": ("run `gate status` to have the judge read what these commits changed"
                      if world_files() else
                      "run `gate demo` for a world to look at, or drop a table you already export "
@@ -4559,9 +4579,18 @@ def dispatch(cmd, rest):
         return cmd_findings(rest)
     if cmd == "log":
         # gate log [N] — the world's history; gate log all [N] — the repository's
-        scope = "all" if rest and rest[0] in ("all", "--all") else "world"
+        #
+        # AND WHAT YOU DECLARED, when you did not say otherwise here. `MyJournal`
+        # is a wheel this tool offers, and a word typed now is the operator
+        # speaking now: an argument outranks a standing declaration, the way it
+        # does everywhere else.
+        said = turned("Journal")
+        scope = ("all" if rest and rest[0] in ("all", "--all")
+                 else "world" if rest and rest[0] in ("world", "--world")
+                 else "all" if said.get("Scope") == "AllRepo" else "world")
         nums = [x for x in rest if x.isdigit()]
-        return repo_journal(int(nums[0]) if nums else 200, scope)
+        return repo_journal(int(nums[0]) if nums else 200, scope,
+                            only_me=said.get("Author") == "Me")
     if cmd == "stdlib":
         return cmd_stdlib(rest)
     if cmd == "mine":

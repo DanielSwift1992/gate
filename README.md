@@ -149,7 +149,7 @@ cp ~/exports/grants.csv tables/
 gate status                      # first print + first verdict, in ms
 ```
 
-`gate serve` in a repository that has no world yet still opens: the journal
+`gate serve` in a repository that has no world yet still opens, and `gate log`
 reads the repository itself, with nothing to translate.
 
 **Full**, **Bare** and **Table** are three ways to look at one file.
@@ -453,7 +453,7 @@ head. A refusal points at its address instead.
   read from git says so. `--md` prints the same as a note. It needs no
   world, no configuration and no network — which makes it the first useful
   thing gate does in any repository.
-- **A journal, from git itself.** `gate log` (and the bench rail) projects
+- **A journal, from git itself.** `gate log` projects
   the repository's own history — commit, author, open or closed — with no
   translation at all: any clone already carries it. A view is a pure
   function of the clone, so whoever can read the repo sees it; nothing is
@@ -599,7 +599,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 230 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 231 end-to-end checks, the definition of green
 ```
 
 ## Status

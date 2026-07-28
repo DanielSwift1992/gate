@@ -65,7 +65,9 @@
 .observed{font:var(--fact);color:var(--muted)}
 .speech{font:var(--speech);color:var(--ink)}
 .caption{font:var(--caption);color:var(--muted)}
-.verdict{font-weight:600}.verdict.ok{color:var(--ok)}.verdict.bad{color:var(--bad)}
+.verdict{font-weight:600}
+.verdict.ok{color:var(--ok)}
+.verdict.bad{color:var(--bad)}
 .gesture{color:var(--action);cursor:pointer}
 body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);display:flex;height:100vh;overflow:hidden}
 #rail{flex:0 0 250px;display:none;flex-direction:column;overflow:auto;min-width:0}
@@ -76,7 +78,8 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 .file .dot{flex:0 0 var(--apart);width:var(--apart);height:var(--apart);border-radius:50%;background:transparent}
 /* where it hurts, seen without opening: the same wave a name wears when it
    resolves to nothing, on the file that carries the refusal */
-.file.bad{color:var(--bad)}.file.bad .dot{background:var(--bad)}
+.file.bad{color:var(--bad)}
+.file.bad .dot{background:var(--bad)}
 .file.bad .name{text-decoration:underline wavy var(--bad);text-underline-offset:var(--near)}
 /* what a name overrules is answered at the name, in the table of the world that
    declares it — a panel carrying facts about worlds has stopped being a door */
@@ -91,29 +94,6 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 .split:hover,.split.dragging{background:color-mix(in srgb,var(--action) 45%,transparent)}
 .line-flash{background:color-mix(in srgb,var(--action) 22%,transparent)}
 #journal-head .obs{display:block;font:var(--rubricnote);letter-spacing:.03em;text-transform:none;opacity:.75;margin-top:var(--u)}
-/* the row works WITH the space it is given: the subject takes what is there and
-   the meta sits beside it, dropping to its own line only when there is no room.
-   It used to stack always, so a wide rail left a long empty tail; and the subject
-   was cut with nothing to show for it, so a reader could not tell a title from a
-   title that had been shortened. */
-.commit{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;column-gap:calc(var(--u)*3);row-gap:var(--u);padding:calc(var(--u)*3) calc(var(--u)*7);cursor:default}
-.commit:hover{background:var(--mist)}
-.commit.touches{cursor:pointer}
-.commit .subj{flex:1 1 auto;min-width:0;display:flex;gap:calc(var(--u)*3);align-items:baseline;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.commit .subj{text-overflow:ellipsis}
-.commit .meta{flex:0 0 auto;white-space:nowrap;display:flex;align-items:center;gap:calc(var(--u)*3);font-variant-numeric:tabular-nums}
-/* A NAME IS NOT AN ACTION. The blue here belonged to the hand — it is what this
-   bench paints things you press — and an author's name is a fact about a commit,
-   not a button. It reads as one now: ink like every other fact, with the
-   underline arriving under the pointer to say it can be pressed. */
-.commit .who{cursor:pointer;color:var(--ink);text-decoration:underline dotted var(--line);
-  text-underline-offset:var(--near)}
-.commit .who:hover{text-decoration:underline solid var(--ink)}
-.badge{flex:none;padding:0 calc(var(--u)*3);border-radius:8px}
-/* the badge is marked by an EDGE, not by a fill: filled with --mist it vanished
-   the moment the row underneath went --mist too, which is every hover */
-.badge.closed{border:1px solid var(--line);color:var(--muted)}
-.badge.open{border:1px solid var(--line);color:var(--muted)}
 #next{margin-left:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52%}
 /* ── THE LAST MILE. The step was a sentence to read, and a sentence gets
    retyped — with somebody's own path, slightly wrong. The command stands ready
@@ -125,8 +105,6 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
   border-bottom:1px dashed var(--action);padding-bottom:var(--tight)}
 #next .run:hover{background:var(--mist)}
 #next .run.took{color:var(--ok);border-bottom-color:var(--ok)}
-#filter-note,#load-more{padding:calc(var(--u)*2) calc(var(--u)*7);font:var(--captionbare);color:var(--action);cursor:pointer}
-#filter-note:hover,#load-more:hover{text-decoration:underline}
 #rail h3.fold{cursor:pointer;display:flex;flex-wrap:wrap;align-items:flex-start;gap:calc(var(--u)*3);user-select:none}
 #rail h3.fold:hover{color:var(--ink)}
 #rail h3.fold i{flex:none;width:var(--wide);margin-top:var(--u);font-style:normal;transition:transform .12s;line-height:1}
@@ -165,19 +143,7 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 #brand{padding:calc(var(--u)*7) calc(var(--u)*7) calc(var(--u)*3)}
 #brand b{display:block;font:var(--brand);letter-spacing:-.01em}
 #brand span{display:block;margin-top:calc(var(--u)*2)}
-/* an open commit and what it opened are one block, told apart by surface
-   alone: a caret says which way it goes, and nothing is drawn around it */
-.commit.open{background:var(--mist)}
-.commit.open .caret{transform:rotate(90deg)}
-.commit .caret{flex:none;width:var(--wide);color:var(--muted);transition:transform .12s;font-style:normal;opacity:.6}
-.commit .caret::before{content:"\203A"}
-.cdiff{flex:0 0 100%;padding:var(--u) 0 calc(var(--u)*5);background:var(--mist)}
-.dwait{padding:calc(var(--u)*2) calc(var(--u)*7);font:var(--captionbare);color:var(--muted)}
-.dfile{padding:calc(var(--u)*2) calc(var(--u)*7) var(--u);font:var(--keycap);color:var(--muted)}
-.dfile .dnote{margin-left:calc(var(--u)*3);font:var(--captionbare)}
-.dmore{padding:var(--u) calc(var(--u)*7);font:var(--captionbare);color:var(--muted)}
 .factrow{display:flex;align-items:baseline;gap:calc(var(--u)*2);flex-wrap:wrap;padding:var(--u) calc(var(--u)*7)}
-.dline{padding:var(--u) calc(var(--u)*7);font:var(--monoline);white-space:pre-wrap;word-break:break-word;color:var(--muted)}
 .factrow .sep{color:var(--muted)}
 .factrow .own{color:var(--localtype)}
 .factrow .was{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1px}
@@ -198,8 +164,10 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 #nav-seg button{padding:calc(var(--u)*2) calc(var(--u)*5);font-size:15px;line-height:1}
 #gitstate{font-family:var(--mono);margin-left:auto;display:flex;align-items:center;gap:calc(var(--u)*3)}
 #gitstate .g{width:7px;height:7px;border-radius:50%;background:var(--muted)}
-#gitstate.modified{color:var(--law)}#gitstate.modified .g{background:var(--law)}
-#gitstate.committed{color:var(--muted)}#gitstate.committed .g{background:var(--muted)}
+#gitstate.modified{color:var(--law)}
+#gitstate.modified .g{background:var(--law)}
+#gitstate.committed{color:var(--muted)}
+#gitstate.committed .g{background:var(--muted)}
 #write{border:none;background:color-mix(in srgb,var(--action) 12%,transparent);color:var(--action);padding:calc(var(--u)*2) calc(var(--u)*6);border-radius:5px;font:inherit;cursor:pointer}
 #write:disabled{opacity:.4;cursor:default}
 #surface{flex:1;position:relative;min-height:0}
@@ -222,7 +190,8 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 .cm-s-default .cm-keyword,.cm-s-default .cm-attribute{color:var(--seam)}
 .cm-s-default .cm-string{color:var(--knownname)}
 .cm-s-default .cm-comment{color:var(--muted)}
-.cm-localtype{color:var(--localtype)}.cm-knownname{color:var(--knownname)}
+.cm-localtype{color:var(--localtype)}
+.cm-knownname{color:var(--knownname)}
 /* weight says SUBJECT: a declaration line holds two names, the one it declares
    and the one it answers to, and the eye must land on the first. An axis name
    is neither a fact nor a stranger — it is the label of a slot — so it is set
@@ -230,7 +199,8 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 .cm-declname{font-weight:600}
 .cm-axisname{color:var(--ink)}
 .CodeMirror.holding .cm-jumpable{text-decoration:underline;text-underline-offset:2px;cursor:pointer}
-.cm-badname{text-decoration:underline wavy var(--bad);text-underline-offset:3px}.cm-ghost{color:var(--seam)}
+.cm-badname{text-decoration:underline wavy var(--bad);text-underline-offset:3px}
+.cm-ghost{color:var(--seam)}
 .line-flag-bad{background:color-mix(in srgb,var(--bad) 6%,transparent)}
 .gutter-flag-bad .CodeMirror-linenumber{color:var(--bad);font-weight:700}
 .flag-note{font:var(--captionloose);color:var(--bad);background:color-mix(in srgb,var(--bad) 8%,transparent);padding:var(--u) calc(var(--u)*5) var(--u) calc(var(--u)*14)}
@@ -252,15 +222,12 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
    down a narrow column. Nothing new is measured here: the rows are commits'
    rows, so the ladder is the one already judged. */
 #shelf-host{padding-bottom:calc(var(--u)*3)}
-
 /* a seam's state at its claim: the same two poles the verdict uses, and the
    quiet register for everything in between — waiting is a conversation */
-.cell-value.parted{color:var(--bad)}.cell-value.whole{color:var(--ok)}
+.cell-value.parted{color:var(--bad)}
+.cell-value.whole{color:var(--ok)}
 .seam-line td{padding-left:var(--wide)}
-.badge.back{color:var(--law)}
 .seam-where{color:var(--seam)}
-/* the pins hang under the pair they belong to, in the pair's own column */
-.seam-took{padding:0 calc(var(--u)*7);color:var(--seam)}
 .stale{color:var(--law)}
 /* ── PROSE IS READ AS PROSE. A comment is somebody talking, and Bare had been
    setting each source LINE as its own block inside a `pre` — so one paragraph
@@ -300,7 +267,7 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
    padding grows the hit area of an inline mark without touching the rhythm of
    the lines around it. Said plainly, not derived: this bench is driven by a
    mouse, not a finger. */
-#bare .slot,#bare .add,.commit .who{padding-top:var(--u);padding-bottom:var(--u)}
+#bare .slot,#bare .add{padding-top:var(--u);padding-bottom:var(--u)}
 /* a name in Bare stands in a dense column, so its target is the line itself and
    not a padding that would reach into the lines above and below: one more step
    of hit area would overlap its neighbours and make the click ambiguous. The
@@ -334,7 +301,8 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 #table-host table{border-collapse:collapse;width:auto;max-width:100%;table-layout:auto}
 #table-host td,#table-host th{white-space:nowrap}
 #table-host th{text-align:left;font-weight:500;padding:calc(var(--u)*2) calc(var(--u)*5) calc(var(--u)*2) calc(var(--u)*3);border-bottom:0.5px solid var(--line);position:sticky;top:0;background:var(--paper);cursor:pointer;user-select:none}
-#table-host th:hover{color:var(--ink)}#table-host th .dir{color:var(--ink)}
+#table-host th:hover{color:var(--ink)}
+#table-host th .dir{color:var(--ink)}
 /* the size has to be said: a family ending in the generic `monospace` makes
    the browser fall back to its own fixed-width default instead of inheriting */
 #table-host td{padding:calc(var(--u)*2) calc(var(--u)*5) calc(var(--u)*2) calc(var(--u)*3);border-bottom:1px solid var(--line);vertical-align:top;font-variant-numeric:tabular-nums}
@@ -363,7 +331,8 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
    the state of the git it sits in. The system face is the bench speaking ABOUT
    the world: its captions, its advice, its section names. A measurement set in
    the bench's own voice reads as an opinion; it is a reading. */
-#status{font-family:var(--mono);font-variant-numeric:tabular-nums}#status b{color:var(--ink);font-weight:600}
+#status{font-family:var(--mono);font-variant-numeric:tabular-nums}
+#status b{color:var(--ink);font-weight:600}
 #verdicts{overflow:auto;padding:var(--u) calc(var(--u)*6) calc(var(--u)*5);display:flex;flex-direction:column;gap:calc(var(--u)*2)}
 /* each refusal is a row you can aim at: it has an edge, a surface, and it
    answers to the pointer, because clicking it goes to the line */
@@ -389,8 +358,7 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
     <div id="judge-row" class="took-head caption"></div>
     <div id="shelf-host"></div>
   </div>
-  <h3 class="fold" id="journal-head" data-fold="journal"><i></i>journal <span class="obs caption"></span></h3>
-  <div id="journal" class="foldable"></div></div>
+</div>
 <div class="split" id="split-rail" style="display:none"></div>
 <div id="keys-panel" hidden></div>
 <div id="say" hidden></div>
@@ -741,14 +709,22 @@ function buildRail() {
 // ── the journal VIEW: git's own history, projected. A pure function of the
 // clone — no server state, no hosting; whoever can read the repo sees it.
 // Observed, never judged (open/closed is reachability, not a verdict). ──
-let journalCommits = [], authorFilter = null, journalLimit = 60, journalScope = "world";
-let journalMe = "", myJournalKey = "";
+let journalCommits = [], journalWorld = [];
+// ── THE HISTORY IS NOT IN THE PANEL, AND THE PANEL SAYS SO BY NOT HAVING IT.
+// A commit is git's record, not a world's: this page said as much under its own
+// heading — "read from git: the judge has not checked any of this" — which is a
+// permanent zone admitting it shows something nothing here judges. The panel is
+// a door to the worlds this tool answers for. History is reached by asking for
+// it: `gate log`, which a repository with no world is already offered by name.
+//
+// The wheel an operator turns to say what their journal shows did not become a
+// lie when the zone left: it steers that command now, which is the thing that
+// still shows a journal.
 async function buildJournal() {
     try {
-        const j = await (await fetch("/log?n=" + journalLimit + "&scope=" + journalScope)).json();
-        journalCommits = j.commits || []; journalWorld = j.world_files || []; journalMe = j.me || "";
+        const j = await (await fetch("/log?n=1&scope=world")).json();
+        journalCommits = j.commits || []; journalWorld = j.world_files || [];
     } catch { journalCommits = []; }
-    renderJournal();
     buildSeams();
     buildShelf();
 }
@@ -787,9 +763,18 @@ async function buildShelf() {
         mods = shelf.modules || []; roles = shelf.roles || {};
     } catch { mods = []; }
     host.innerHTML = "";
+    // ── AND IT DOES NOT SAY TWICE WHAT THE TREE ABOVE ALREADY SAYS. In this
+    // repository the shelf IS gate's own mine: every bench-* and forms-* file
+    // stands in the tree under `stdlib/`, declared like any other file of mine,
+    // and the list below repeated all nine of them under `theirs` — the same
+    // files, named twice, on one panel. In anybody else's repository there is
+    // nothing to repeat and the list is unchanged.
+    const alreadyMine = new Set(files.map(f => f.split("/").pop().replace(/\.swift$/, "")));
     for (const m of mods) {
+        if (alreadyMine.has(m)) continue;
         const r = document.createElement("div");
-        r.className = "commit touches";
+        // a file row is a file row: the rail has one shape for one thing
+        r.className = "file";
         r.title = (roles[m] === "forms"
             ? "Words the judge carries, printed as Swift — what your world and your policy are "
               + "written in. Your world speaks these with no such file present, and editing a "
@@ -797,7 +782,7 @@ async function buildShelf() {
             : "A judged world this bench itself runs under: the palette it paints with, the "
               + "ladder of lengths it spaces itself on, the atoms its surface is made of. "
               + "Taken with the tool, like everything else here.");
-        r.innerHTML = '<div class="subj fact">' + esc(m) + "</div>";
+        r.innerHTML = '<span class="dot"></span><span class="name">' + esc(m) + "</span>";
         r.onclick = () => openShelf(m);
         host.appendChild(r);
     }
@@ -905,110 +890,10 @@ function benchGuards() {
 // ── the dashboard is a declaration: MyJournal in your personal world says what
 // the journal shows. Edit it in the bench and the journal follows — one truth,
 // judged like everything else (a name that does not exist is refused by line).
-function applyMyJournal() {
-    // while you are editing the personal file, the live parse is the truth;
-    // otherwise the layout's copy, read when the file was loaded
-    const d = wheel("Journal");
-    const scope = d && d.aliases.get("Scope") && d.aliases.get("Scope").target === "AllRepo" ? "all" : "world";
-    const author = d && d.aliases.get("Author") && d.aliases.get("Author").target === "Me" ? "me" : null;
-    const key = scope + "/" + author;
-    if (key === myJournalKey) return;
-    myJournalKey = key;
-    journalScope = scope;
-    authorFilter = author === "me" ? (journalMe || null) : null;
-    buildJournal();
-}
-function renderJournal() {
-    const host = document.getElementById("journal");
-    host.innerHTML = "";
-    // say it in a sentence: shorthand teaches nobody what it means
-    const what = journalScope === "world" && journalWorld.length
-        ? "The commits that changed these files." : "The commits in this repository.";
-    document.querySelector("#journal-head .obs").textContent =
-        what + " Read from git: the judge has not checked any of this.";
-    if (authorFilter) {
-        const note = document.createElement("div");
-        note.id = "filter-note";
-        note.textContent = "showing only " + authorFilter + " · show everyone";
-        note.onclick = () => { authorFilter = null; renderJournal(); };
-        host.appendChild(note);
-    }
-    const shown = journalCommits.filter(c => !authorFilter || c.email === authorFilter);
-    for (const c of shown) {
-        const row = document.createElement("div");
-        row.className = "commit" + (c.touches_world ? " touches" : "");
-        const when = (c.when || "").slice(0, 10);
-        // the badge says reachability, and its title says exactly that — a
-        // squash-merged branch reads open until the branch is deleted
-        const title = c.closed
-            ? "In the default branch: this commit is part of the main line."
-            : "On a branch, and not yet in the default branch. A branch merged by squashing reads as open until it is deleted.";
-        const badge = c.closed === null ? ""
-            : '<span class="badge caption ' + (c.closed ? "closed" : "open") + '" title="' + title + '">' + (c.closed ? "closed" : "open") + "</span>";
-        row.innerHTML = '<div class="subj speech">' + (c.touches_world ? '<i class="caret"></i>' : "")
-            + esc(c.subject) + "</div><div class=\"meta observed\">" + badge +
-            '<span class="who" data-email="' + esc(c.email) + '">' + esc(c.person || c.email) + "</span> · " + when + "</div>";
-        row.querySelector(".who").onclick = (e) => {
-            e.stopPropagation();
-            authorFilter = c.email; renderJournal();
-        };
-        if (c.touches_world) row.onclick = () => toggleDiff(c, row);
-        host.appendChild(row);
-    }
-    if (!shown.length) host.innerHTML += '<div style="padding:.4em 1.1em;color:var(--muted);font-size:11px">no commits</div>';
-    // more may be there: the server was asked for exactly this many
-    if (journalCommits.length >= journalLimit) {
-        const more = document.createElement("div");
-        more.id = "load-more"; more.textContent = "load more";
-        more.onclick = () => { journalLimit += 100; buildJournal(); };
-        host.appendChild(more);
-    }
-}
+
 // what a commit did, read as facts: `Rank: Manager → Lead`, not a wall of
 // git plumbing. It opens UNDER the commit, in the rail — nothing is covered
 // and nothing dims, because a diff is something you glance at.
-async function toggleDiff(c, row) {
-    // each commit opens and closes on its own: several can stand open at once,
-    // and which of them is worth reading together is nobody's business but yours
-    const next = row.nextElementSibling;
-    if (next && next.classList.contains("cdiff")) {
-        next.remove(); row.classList.remove("open"); return;
-    }
-    row.classList.add("open");
-    const box = document.createElement("div");
-    box.className = "cdiff";
-    box.innerHTML = '<div class="dwait">reading…</div>';
-    row.after(box);
-    const f = c.files.find(x => (journalWorld || []).includes(x)) || "";
-    const d = await (await fetch("/show?hash=" + c.hash + "&f=" + encodeURIComponent(f))).json();
-    let body = "";
-    for (const file of d.files) {
-        if (!file.changes.length) continue;
-        const signs = new Set(file.changes.map(x => x.kind === "fact" ? "~" : x.sign));
-        const whole = file.changes.length > 24 && signs.size === 1 && !signs.has("~");
-        body += '<div class="dfile">' + esc(file.name)
-            + (whole ? '<span class="dnote">' + (signs.has("+") ? "written" : "removed")
-                + ", " + file.changes.length + " lines</span>" : "") + "</div>";
-        if (whole) continue;
-        const shown = file.changes.slice(0, 20);
-        for (const ch of shown) {
-            body += ch.kind === "fact"
-                ? '<div class="fact factrow">' + (ch.owner ? '<span class="own">' + esc(ch.owner) + '</span><span class="sep">·</span>' : "")
-                    + '<span class="key">' + esc(ch.key) + '</span><span class="was">' + esc(ch.from)
-                    + '</span><span class="arrow">→</span><span class="now">' + esc(ch.to) + "</span></div>"
-                : '<div class="dline ' + (ch.sign === "+" ? "add" : "del") + '"><span class="sg">'
-                    + ch.sign + "</span>" + esc(ch.text) + "</div>";
-        }
-        if (file.changes.length > shown.length)
-            body += '<div class="dmore">' + (file.changes.length - shown.length) + " more lines</div>";
-    }
-    box.innerHTML = body || '<div class="dmore">no change in these files</div>';
-}
-function closeDiff() {
-    for (const el of document.querySelectorAll(".cdiff")) el.remove();
-    for (const el of document.querySelectorAll(".commit.open")) el.classList.remove("open");
-}
-let journalWorld = [];
 // ── completion: the names this world allows, offered while you type. The
 // pool is not a dictionary of ours — it is what the files themselves declare,
 // so what it offers is what the judge will accept. ──
@@ -1261,7 +1146,7 @@ const KEYS = [
 }
 
 document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") { closeDiff(); document.getElementById("keys-panel").hidden = true; }
+    if (e.key === "Escape") { document.getElementById("keys-panel").hidden = true; }
     // the browser must not offer to save the page when a hand reaches for it
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
         e.preventDefault();
@@ -1352,7 +1237,7 @@ async function render() {
             '<span class="chip" id="chip" style="background:var(--mist);color:var(--muted)">reference</span>';
         document.getElementById("next").textContent = "";
         document.getElementById("verdicts").innerHTML = "";
-        applyMyJournal(); applyMyBench();
+        applyMyBench();
         return;
     }
     let r;
@@ -1448,7 +1333,6 @@ async function render() {
     }
     if (mode === "table") buildTables();
     if (mode === "bare") document.getElementById("bare").innerHTML = bareForm(lastParsed, cm.getValue());
-    applyMyJournal();   // the journal follows the declaration, as you edit it
     applyMyBench();     // and so does the theme
 }
 
@@ -2763,10 +2647,10 @@ function showEmpty() {
     host.style.display = "block";
     // say only what is true HERE: a repository with no commits has no journal
     const lead = journalCommits.length
-        ? "The journal on the left is already reading this repository: every commit, who wrote "
-          + "it, whether it is merged. That needs no translation at all."
-        : "This repository has no commits yet, so there is nothing to read on the left either. "
-          + "A world is the place to start.";
+        ? "There is history here already: `gate log` reads it — every commit, who wrote it, "
+          + "whether it is merged — with no translation at all. What is missing is a world "
+          + "for the judge to read."
+        : "This repository has no commits yet and no world. A world is the place to start.";
     host.innerHTML =
         '<div class="empty"><h2>No world here yet</h2><p>' + lead + "</p>"
         + '<div class="door"><code>gate demo</code><span>Run this in a terminal: it builds a world of people and grants, with a lie already in it. Thirty seconds.</span></div>'

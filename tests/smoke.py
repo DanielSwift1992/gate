@@ -823,16 +823,20 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # and a register carries MATERIAL ALONE. The moment one carries layout too,
     # every element that names it drags that layout in — a table cell named the
     # fact register once and collapsed into a flex box. Layout belongs to the
-    # element's own co-class (the diff row is `fact factrow`).
+    # element's own co-class (a table's name cell is `fact cell-name`).
     reg_rules = {r: ui.split(r, 1)[1].split("}", 1)[0]
                  for r in (".fact{", ".observed{", ".speech{", ".caption{") if r in ui}
     S.append(("the bench's material is a function of its wire: six registers, named by the element",
               all(r in ui for r in (".fact{", ".observed{", ".speech{", ".caption{", ".verdict{", ".gesture{"))
               and '<code class="fact">' in ui and "file fact" in ui
-              and "meta observed" in ui and "subj speech" in ui
+              # the registers are used where facts and readings stand beside each
+              # other: a seam's address is a fact, its state is this bench's
+              # reading of one, and neither is dressed as the other
+              and 'sc.className = "cell-value observed"' in ui
+              and 'a.className = "caption observed"' in ui
               and len(reg_rules) == 4
               and all("display:" not in v and "padding:" not in v for v in reg_rules.values())
-              and "fact factrow" in ui))
+              and "fact cell-name" in ui))
     # ── the editor's tokens obey the same table. The vendored codemirror.css
     # colours keyword/string/comment/attribute with constants of its own, and
     # they win on specificity unless we answer at the same weight — so the
@@ -1397,11 +1401,6 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # filled with --mist disappeared the moment the row under it went --mist too,
     # which is every hover — a fill that matches its own background is not a
     # marker at all.
-    S.append(("an author's name is a fact and not a button, and a badge keeps its edge under the pointer",
-              ".commit .who{cursor:pointer;color:var(--ink)" in ui
-              and "var(--action)" not in ui.split(".commit .who{", 1)[1].split("}", 1)[0]
-              and ".badge.closed{border:1px solid var(--line)" in ui
-              and "background" not in ui.split(".badge.closed{", 1)[1].split("}", 1)[0]))
 
     # ── WHICH SEAMS ARE MINE IS MINE TO SAY. They were found by sniffing the
     # folder for files that looked like seam sides — guessing at somebody's
@@ -2503,6 +2502,67 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "public typealias FactfirmIsFactSized" in registers_src
               and "font:var(--factfirm)" in ui))
 
+    # ── THE PANEL IS A DOOR, AND A DOOR DOES NOT NARRATE. The rail carried a
+    # JOURNAL: every commit, who wrote it, whether it was merged, with a diff
+    # under each — under a heading that admitted, in its own words, that the
+    # judge had not checked any of it. A permanent zone showing what nothing
+    # here judges, beside the list of files this tool answers for. History is
+    # reached by asking: `gate log`, which a repository with no world is already
+    # offered by name.
+    S.append(("the rail is a tree of files and nothing else",
+              "renderJournal" not in ui and "toggleDiff" not in ui
+              and 'id="journal"' not in ui and 'data-fold="journal"' not in ui
+              # and the furniture went with it rather than sitting unused: a
+              # stylesheet full of rules for rows nobody builds is a page keeping
+              # a room for a tenant who left
+              and ".commit{" not in ui and ".cdiff{" not in ui and ".badge{" not in ui
+              # AND THE SHELF DOES NOT SAY TWICE WHAT THE TREE ALREADY SAYS. In
+              # this repository the shelf IS gate's own mine — every bench-* and
+              # forms-* file stands in the tree under stdlib/ — and the list
+              # below repeated all nine under `theirs`, the same files named
+              # twice on one panel.
+              and "const alreadyMine = new Set(files.map(" in ui
+              and "if (alreadyMine.has(m)) continue;" in ui))
+
+    # ── AND THE WHEEL STILL TURNS SOMETHING. `MyJournal` is a surface this tool
+    # offers: an operator declares what their history shows. It steered a panel,
+    # and when the panel went it would have steered nothing — an offer with
+    # nothing behind it, which is worse than never offering. It steers the
+    # command that still shows a journal, and a word typed now outranks it.
+    wj = os.path.join(tmp, "wheelw")
+    os.makedirs(wj)
+    subprocess.run(["git", "init", "-q", "-b", "main", wj])
+    open(os.path.join(wj, "gate.swift"), "w").write("public enum Sales: Department {}\n")
+    subprocess.run(["git", "add", "-A"], cwd=wj)
+    subprocess.run(["git", "-c", "commit.gpgsign=false", "-c", "user.email=a@a",
+                    "-c", "user.name=A", "commit", "-qm", "by a"], cwd=wj)
+    open(os.path.join(wj, "more.swift"), "w").write("public enum Ops: Department {}\n")
+    subprocess.run(["git", "add", "-A"], cwd=wj)
+    subprocess.run(["git", "-c", "commit.gpgsign=false", "-c", "user.email=b@b",
+                    "-c", "user.name=B", "commit", "-qm", "by b"], cwd=wj)
+    subprocess.run(["git", "config", "user.email", "a@a"], cwd=wj)
+    plain = run("log", cwd=wj)[1]
+    open(os.path.join(wj, "my-journal.swift"), "w").write(
+        "public enum MyJournal: Journal {\n    public typealias Scope = AllRepo\n"
+        "    public typealias Author = Me\n}\n")
+    # a wheel is read from a file this world DECLARES, like every other fact
+    # here: writing one beside the world and never saying so leaves it a file
+    # lying about, which is exactly what the mine/theirs mechanism exists to
+    # refuse to guess at
+    undeclared = run("log", cwd=wj)[1]
+    run("mine", "my-journal.swift", cwd=wj)
+    turned_all = run("log", cwd=wj)[1]
+    said_world = run("log", "world", cwd=wj)[1]
+    S.append(("a wheel an operator turned steers the command, and a word typed now outranks it",
+              plain.get("scope") == "world" and not plain.get("mine_only")
+              # declared: the whole repository, and only what I wrote
+              and turned_all.get("scope") == "all" and turned_all.get("mine_only") is True
+              and [c["email"] for c in turned_all.get("commits", [])] == ["a@a"]
+              # and saying otherwise here wins, the way it does everywhere else
+              and said_world.get("scope") == "world"
+              # and a file nobody declared steers nothing
+              and undeclared.get("scope") == "world"))
+
     # ── THE BENCH AND THE COMMAND LINE ANSWER ABOUT THIS REPOSITORY THE SAME WAY.
     # They did not. `gate status` here said `holds` while the bench's own front
     # door showed twenty-one refusals, in red, about gate itself — every one of
@@ -3145,7 +3205,7 @@ console.log(JSON.stringify({ kept: got.get("Kept") || null, cut: got.get("Cut") 
               and '...(hasNotes ? ["note"] : [])' in ui))
 
     # ── and belonging is a shared edge. Every row on the rail — the brand, the
-    # section heads, a file, a commit, a diff line, a fact — begins at ONE step,
+    # section heads, a file — begins at ONE step,
     # so the eye reads a column and not a ragged stack. It was ragged: the edge
     # was written `1.1em` everywhere and the rows set their text at 11, 12.5 and
     # 13px, so one declaration painted 12.1, 13.75, 14.3 and 16.7 pixels. A step
@@ -3162,8 +3222,9 @@ console.log(JSON.stringify({ kept: got.get("Kept") || null, cut: got.get("Cut") 
             m = re.search(r"(?:calc\(var\(--u\)\*(\d+)\)|(var\(--u\)))", side)
             if not m: return None
         return int(m.group(1)) if m.group(1) else 1
-    rail_rows = ["#brand", "#rail h3", ".file", ".commit", ".factrow", ".dline",
-                 ".dfile", ".dmore", ".dwait", "#filter-note,#load-more", "#rail h3.fold .obs"]
+    # the rail is a file tree now: the journal's rows — a commit, a diff line, a
+    # filter note — went with the journal, and the law is over what is there.
+    rail_rows = ["#brand", "#rail h3", ".file", "#rail h3.fold .obs"]
     edges = {sel: _left_u(sel) for sel in rail_rows}
     S.append(("belonging is a shared edge: every row on the rail begins at one step of the reading line",
               all(v is not None for v in edges.values())
