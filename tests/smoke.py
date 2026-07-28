@@ -2790,6 +2790,32 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "taken as given" in ui
               and "somebody SUPPLYING the agreement the two sides never derived" in ui))
 
+    # ── A FILE IS DECLARED ONCE. Two rows about one file are two truths about
+    # one thing — what this whole tool exists to make impossible — and its own
+    # layout document took them silently, under two names, and said `holds`.
+    # Found while opening a world to play in: the demo declares its seam sides,
+    # a person declares them again by hand, and the morning cut then counted
+    # every waiting field four times. Both halves are refused: the act, and a
+    # document that already carries it.
+    dd = os.path.join(tmp, "declaredtwice")
+    run("demo", "seam", dd)
+    twice = run("theirs", "api.swift", "--role", "seam", "--at", "x@1", cwd=dd)[1]
+    dman = os.path.join(dd, "gate.manifest.swift")
+    kept_two = open(dman).read()
+    open(dman, "w").write(kept_two + "\npublic enum Second: Theirs {\n"
+                          "    public typealias Kind = SeamFile\n"
+                          "    public typealias At = Rev_messages_api_a1b2c3d\n}\n"
+                          "extension Second { public static var typeName: String "
+                          "{ \"api.swift\" } }\n")
+    doubled = run("status", cwd=dd)[1]
+    open(dman, "w").write(kept_two)
+    S.append(("a file is declared once, and a second row about it is refused at its line",
+              twice.get("asks") and "already declared" in twice.get("note", "")
+              and run("status", cwd=dd)[1].get("verdict") == "holds"
+              and doubled.get("verdict") == "refused"
+              and any("second row about api.swift" in r.get("claim", "")
+                      for r in doubled.get("refusals", []))))
+
     # ── HOW BIG THE COURT IS, COUNTED RATHER THAN CLAIMED. Somebody who opens
     # the corpus meets nine hundred files and concludes "a large machine I will
     # never read". The court is two of them. That is the strongest thing this

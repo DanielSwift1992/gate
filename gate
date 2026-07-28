@@ -162,6 +162,7 @@ def manifest_guards(rows=None):
     man = os.path.basename(MANIFEST["manifest"])
     d = os.path.dirname(MANIFEST["manifest"])
     live = MANIFEST.get("rows") if rows is None else rows
+    seen_paths = {}
     for r in live or []:
         # A ROLE IS NOT OPTIONAL, because it names the court. Left unsaid it has
         # to be guessed, and the one time this document was read by guessing —
@@ -177,6 +178,12 @@ def manifest_guards(rows=None):
         # own name, not a court. A scaffold with a judged input would be honest;
         # a scaffold calling itself a court would not, and the difference is the
         # whole of what this tool sells.
+        if r["path"] in seen_paths:
+            bad.append({"address": f"{man}:{r['line']}",
+                        "claim": f"`{r['name']}` is a second row about {r['path']}, which "
+                                 f"`{seen_paths[r['path']]}` already speaks for: one file, one "
+                                 "row, or two rows can say different things about it"})
+        seen_paths[r["path"]] = r["name"]
         if not r["role"]:
             bad.append({"address": f"{man}:{r['line']}",
                         "claim": f"`{r['name']}` does not say what it is for. A row names its court: "
@@ -3064,6 +3071,21 @@ def cmd_side(a, kind):
                 "next": "a world is founded where you stand: run this from the directory that "
                         "world is in, or bring the file into this one — a world answers for "
                         "what is in it"}
+    # ── AND A FILE IS DECLARED ONCE. Two rows about one file are two truths
+    # about one thing, which is what this whole tool exists to make impossible —
+    # and its own layout document accepted them silently, under two names, and
+    # said `holds`. Found while opening a world to play in: the demo declares
+    # its seam sides, a person declares them again by hand, and the morning cut
+    # counted every field four times.
+    _, _rows = read_manifest_rows(world_root_for(path))
+    _rel = os.path.relpath(os.path.abspath(path), world_root_for(path))
+    _said = next((r for r in (_rows or []) if r["path"] == _rel), None)
+    if _said:
+        return {"command": word, "asks": True,
+                "note": f"{_rel} is already declared, as `{_said['name']}` "
+                        f"({_said['source']}, {_said['role']})",
+                "next": f"gate {word} {_rel} --forget, then say it again — a file is declared "
+                        "once, or the list stops being an account of anything"}
     try:
         mp = declare_side(path, kind, role, at)
     except ValueError as e:
