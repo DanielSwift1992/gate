@@ -3002,7 +3002,12 @@ console.log(JSON.stringify(out));
               and "cannot cost you" not in said.get("back", "")   # about the world, not a promise about you
               and broke.get("verdict") == "refused" and healed.get("verdict") == "holds"
               # and the invitation is a trial, never damage
-              and "change a fact and watch" in said.get("next", "")
+              and "change one Home in gate.swift and watch the judge name the line" in said.get("next", "")
+              # ONE RUNG for a person: the tool's own law about itself is that a
+              # product listing the whole ladder teaches nothing, and both demos
+              # printed five doors at once to somebody thirty seconds in. The
+              # rest is still there for whoever asked for all of it.
+              and 'lines.append(f"  more: {len(out[\'try\'])} other things to try' in shelf_src
               # nothing shown to a person calls them a liar for a world that does not hold
               and "a lie cannot be committed" not in open(GATE, encoding="utf-8").read()))
 

@@ -76,6 +76,10 @@ git clone https://github.com/you/gate && cd gate      # 1. no install step
 ./gate drift ../api/openapi.json --client ../sdk-js   # 2. what has it been?
 ```
 
+Every command below is written `gate`. Until it is on your path it is `./gate`,
+run from the clone — there is nothing else to install, and nothing else to
+undo.
+
 **This observes; it does not judge.** The library has not entered gate's world,
 and gate holds no court over a world that has not entered — so `drift` prints no
 verdict. What it prints are facts you can re-run: a commit that first wrote a

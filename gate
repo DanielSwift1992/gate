@@ -1672,7 +1672,8 @@ def cmd_demo(a):
             # that exists and cannot be found. Said here, beside the invitation,
             # so it is read before anything is touched rather than looked for
             # after.
-            "next": f"cd {os.path.relpath(root)} && gate serve, then change a fact and watch",
+            "next": f"cd {os.path.relpath(root)} && gate serve — then change one Home in "
+                    "gate.swift and watch the judge name the line",
             "back": "git checkout . — everything as it was, in one word: this world was "
                     "committed the moment it was made, so nothing you try here can cost you "
                     "anything",
@@ -5090,18 +5091,22 @@ def humanize(out):
         for x in out["parted"]:
             lines.append(f"  parted · {x}")
         lines.append(f"  next: {out['next']}")
-        for x in out["try"]:
-            lines.append(f"    {x}")
+        lines.append(f"  more: {len(out['try'])} other things to try — `--json` lists them")
     elif cmd == "demo":
+        # ── ONE RUNG, WHICH IS THIS TOOL'S OWN LAW ABOUT ITSELF: "a reader is on
+        # a rung, and a product that lists the whole ladder teaches nothing."
+        # Both demos printed five doors at once — the one act, then four more —
+        # to somebody who had run their first command thirty seconds earlier.
+        # The list is still there for whoever asked for all of it; `--json` is
+        # where an agent reads, and a person gets a step.
         lines.append(f"demo: a world in {out['root']}")
         for r in out.get("refused", []):
             lines.append(f"  asked `{out['asked']}` for you, and it answers:")
             lines.append(f"    {r}")
         lines.append(f"  next: {out['next']}")
-        for t in out["try"]:
-            lines.append(f"    {t}")
         if out.get("back"):
             lines.append(f"  back: {out['back']}")
+        lines.append(f"  more: {len(out['try'])} other things to try — `--json` lists them")
     elif cmd == "init":
         lines.append(f"init: {out['root']}" + (f" · created {len(out['created'])} files" if out["created"] else " · already there"))
         if out.get("next"):
