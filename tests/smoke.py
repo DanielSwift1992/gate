@@ -2471,7 +2471,12 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               # protocol Scope {}` came out in slot ink while `public protocol
               # Identity {}` two lines above wore the hue of a name — two
               # identical lines, two colours, for a reason about neither.
-              and 'if (!declaring && slotNames.has(word)) return "axisname";' in ui
+              # and only in the two positions a slot can stand in — after a dot,
+              # or in a where clause. The set is every axis of every protocol of
+              # every world in play, so consulting it anywhere let one world's
+              # vocabulary repaint another's: `public enum CommitMessage: Scope
+              # {}` wore slot ink on a plain use of a name declared four lines up.
+              and 'if (!declaring && (dotted || inWhere) && slotNames.has(word)) return "axisname";' in ui
               and "for (const a of (d.params || [])) slotNames.add(a);" in ui
               # and it is the same ink the axis already had, not a third one
               and '.cm-axisname{color:var(--ink)}' in ui
@@ -2565,7 +2570,12 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               # protocol Scope {}` came out in slot ink while `public protocol
               # Identity {}` two lines above wore the hue of a name — two
               # identical lines, two colours, for a reason about neither.
-              and 'if (!declaring && slotNames.has(word)) return "axisname";' in ui
+              # and only in the two positions a slot can stand in — after a dot,
+              # or in a where clause. The set is every axis of every protocol of
+              # every world in play, so consulting it anywhere let one world's
+              # vocabulary repaint another's: `public enum CommitMessage: Scope
+              # {}` wore slot ink on a plain use of a name declared four lines up.
+              and 'if (!declaring && (dotted || inWhere) && slotNames.has(word)) return "axisname";' in ui
               # and the ceremony around it is the seam, never a colour of its own
               and ".cm-s-default .cm-keyword,.cm-s-default .cm-attribute{color:var(--seam)}" in ui
               and ".cm-ghost{color:var(--seam)" in ui))

@@ -546,8 +546,19 @@ CodeMirror.defineMode("gate-swift", () => ({
                 // Position first: what a line DECLARES is settled by that line.
                 const declaring = /\b(?:enum|protocol|struct|extension)\s+$/.test(before);
                 // a name the world uses as a slot label is the label of a slot
-                // here too — read through a dot, or standing in a where clause
-                if (!declaring && slotNames.has(word)) return "axisname";
+                // here too — read through a dot, or standing in a where clause.
+                //
+                // IN THOSE TWO POSITIONS AND NOWHERE ELSE, which is what this
+                // comment said and the code did not: the set is every axis of
+                // every protocol of every world in play, so consulting it at any
+                // position let one world's vocabulary repaint another's. `public
+                // enum CommitMessage: Scope {}` came out with `Scope` in slot
+                // ink — a conformance, a plain use of a name declared four lines
+                // above, wearing the colour of a hole because some other world
+                // writes `associatedtype Scope`.
+                const dotted = before.endsWith(".");
+                const inWhere = /\bwhere\b/.test(before);
+                if (!declaring && (dotted || inWhere) && slotNames.has(word)) return "axisname";
                 const opened = before.lastIndexOf("<"), shut = before.lastIndexOf(">");
                 if (opened > shut && opened >= 0) {
                     // inside a parameter list, and before the colon that says
