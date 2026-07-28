@@ -444,6 +444,14 @@ fetch("/version", { cache: "no-store" }).then(r => r.json()).then(v => {
 const keywordSet = new Set(["public","enum","protocol","typealias","extension","where",
     "static","var","some","associatedtype","import","struct","let","func"]);
 let localNames = new Set(), unresolved = new Set();
+// ── EVERY SLOT LABEL, WHEREVER IT STANDS. A hole is written three ways —
+// `associatedtype Home: Department` declares one, `VerifiedView<Who: Employee>`
+// opens one, `where Who.Home == What.Home` reads two — and only the first was
+// painted as a hole. The other two wore the hue of a name from somewhere else,
+// which told a reader they were answers already given. They are the question.
+// The set is what the bench already parsed: the axes forms declare, and the
+// parameters the declarations in view open.
+let slotNames = new Set();
 // THE LAYOUT IS THE OPERATOR'S OWN DOCUMENT, not a fragment of the world. It
 // declares protocols, which the plain court refuses on sight — so it is opened
 // and written here like any file of theirs, and judged by the guards that are
@@ -487,6 +495,9 @@ CodeMirror.defineMode("gate-swift", () => ({
                 // wearing the hue of a name from elsewhere, which said it was an
                 // answer somebody had already given. Same logic, same ink.
                 if (/\b(?:typealias|associatedtype)\s+$/.test(before)) return "axisname";
+                // a name the world uses as a slot label is the label of a slot
+                // here too — read through a dot, or standing in a where clause
+                if (slotNames.has(word)) return "axisname";
                 const opened = before.lastIndexOf("<"), shut = before.lastIndexOf(">");
                 if (opened > shut && opened >= 0) {
                     // inside a parameter list, and before the colon that says
@@ -1176,6 +1187,12 @@ function applyFlags(refusals) {
 let paintedKey = "";
 function repaintNames(parsed, refusals) {
     localNames = new Set([...namesOf(parsed), ...siblingNames]);
+    slotNames = new Set(Object.keys(axisOf || {}));
+    for (const m of [layoutDecls, parsed && parsed.declarations])
+        for (const [, d] of (m || new Map()))
+            for (const a of (d.params || [])) slotNames.add(a);
+    for (const axes of Object.values(protoAxes || {}))
+        for (const a of Object.keys(axes)) slotNames.add(a);
     jumpable = new Set([...layoutDecls.keys(), ...Object.keys(vocabulary),
                         ...Object.keys(language.names || {})]);
     unresolved = new Set();

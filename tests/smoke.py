@@ -2388,10 +2388,21 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     #
     # Read off the rendered line rather than the rule: `Who` and `What` come
     # back `axisname`, exactly as `Next` does after `associatedtype`.
+    # And the same hole READ is the same hole: `where Who.Home == What.Home`
+    # names two parameters and two axes, and every one of them wore the hue of a
+    # name from somewhere else — the condition that decides the verdict, painted
+    # as if it came from another world. A slot label is ink wherever it stands,
+    # and the set is what the bench already parsed: the axes forms declare and
+    # the parameters the declarations in view open.
     S.append(("a gate's parameter is a hole, and is painted like every other hole",
               # the rule reaches into a parameter list and stops at the colon
               'const opened = before.lastIndexOf("<"), shut = before.lastIndexOf(">")' in ui
               and 'if (!seg.includes(":")) return "axisname";' in ui
+              # and a slot label read anywhere — through a dot, in a where
+              # clause — is the same label
+              and "let slotNames = new Set();" in ui
+              and 'if (slotNames.has(word)) return "axisname";' in ui
+              and "for (const a of (d.params || [])) slotNames.add(a);" in ui
               # and it is the same ink the axis already had, not a third one
               and '.cm-axisname{color:var(--ink)}' in ui
               and '(?:typealias|associatedtype)\\s+$/.test(before)) return "axisname"' in ui))
@@ -2900,6 +2911,10 @@ console.log(JSON.stringify({ kept: got.get("Kept") || null, cut: got.get("Cut") 
         ui.split('CodeMirror.defineMode("gate-swift"', 1)[1].split("}));", 1)[0] + "}));"
     prism_js = r'''
 const CodeMirror = { defineMode: (n, f) => { CodeMirror._mode = f(); } };
+// the page declares these beside the mode; the harness stands them up itself so
+// the mode is exercised exactly as it runs, and a new one added to the page has
+// to be added here — which is how this check noticed `slotNames` at all
+let keywordSet, localNames, unresolved, jumpable, conformers, protoAxes, slotNames;
 class Stream {
     constructor(s) { this.string = s; this.pos = 0; this.start = 0; }
     eol() { return this.pos >= this.string.length; }
@@ -2924,6 +2939,7 @@ function paint(text, world) {
     jumpable = new Set(world.jumpable || []);
     conformers = world.kinds || {};
     protoAxes = {};
+    slotNames = new Set(world.slots || []);
     const tok = CodeMirror._mode.token, st = new Stream(text), out = [];
     while (!st.eol()) { st.start = st.pos; const c = tok(st); out.push([st.current(), c]); }
     return out.filter(([t]) => /\S/.test(t));
