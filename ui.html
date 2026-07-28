@@ -751,8 +751,43 @@ function paintTheme() {
     } catch (e) {}
 }
 darkMedia.addEventListener("change", paintTheme);   // the OS flips, and an undeclared bench follows
+
+// ── HOW A PERSON TURNS A WHEEL. The surface declares what may be turned —
+// `protocol Bench { associatedtype Theme: BenchTheme }` in the bench's own
+// forms, readable in theirs like anything else — and turning one is CONFORMING
+// to it. Any name you like: `public enum Mine: Bench { public typealias Theme
+// = Dark }`. That is the Swift way and it is the only way here.
+//
+// It used to be a magic name. The bench looked up `MyBench` — so the mechanism
+// was a convention nobody had declared, and a reader had no way to learn it
+// except by being told. The catalogue was already there; only the lookup was
+// superstitious.
+//
+// Two conformers is two truths about one wheel, and it is refused with both
+// addresses rather than silently taking one — free names mean the duplicate
+// guard cannot see it, so this is where it must be seen. None at all is the
+// world's own default, which is not a failure and says nothing.
+function wheelTurners(surface) {
+    const out = [];
+    const seen = new Set();
+    for (const [where, decls] of [["your world", layoutDecls],
+                                  ["your personal world", lastParsed && active === personalFile
+                                      ? lastParsed.declarations : null]]) {
+        for (const [name, d] of (decls || new Map())) {
+            if (!(d.conformances || []).includes(surface) || seen.has(name)) continue;
+            seen.add(name);
+            out.push({ name, d, where, line: d.line });
+        }
+    }
+    return out;
+}
+function wheel(surface) {
+    const turners = wheelTurners(surface);
+    return turners.length === 1 ? turners[0].d : null;
+}
+
 function applyMyBench() {
-    const d = (active === personalFile && lastParsed ? lastParsed.declarations : layoutDecls).get("MyBench");
+    const d = wheel("Bench");
     const a = d && d.aliases.get("Theme");
     // only a value the bench's own forms names sets the theme; a stranger is the
     // guard's to report, and until then the OS default stands
@@ -782,6 +817,19 @@ function benchGuards() {
             }
         }
     }
+    // AND ONE WHEEL, ONE HAND. Two conformers of one surface are two truths
+    // about the same wheel, and the duplicate guard cannot see them because
+    // their NAMES differ — a wheel is turned by conforming, so this is the only
+    // place the second hand shows. Named at both, never resolved by taking one.
+    for (const surface of Object.keys(protoAxes || {})) {
+        if (vocabulary[surface] !== "bench-atoms") continue;
+        const turners = wheelTurners(surface);
+        if (turners.length < 2) continue;
+        for (const t of turners)
+            out.push({ file: declFile.get(t.name) || personalFile, line: t.line,
+                       decl: t.name, axis: surface, value: "two hands on one wheel",
+                       allowed: turners.map((x) => x.name).join(", ") });
+    }
     return out;
 }
 
@@ -791,7 +839,7 @@ function benchGuards() {
 function applyMyJournal() {
     // while you are editing the personal file, the live parse is the truth;
     // otherwise the layout's copy, read when the file was loaded
-    const d = (active === personalFile && lastParsed ? lastParsed.declarations : layoutDecls).get("MyJournal");
+    const d = wheel("Journal");
     const scope = d && d.aliases.get("Scope") && d.aliases.get("Scope").target === "AllRepo" ? "all" : "world";
     const author = d && d.aliases.get("Author") && d.aliases.get("Author").target === "Me" ? "me" : null;
     const key = scope + "/" + author;

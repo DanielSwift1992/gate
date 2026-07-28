@@ -2407,6 +2407,43 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and '.cm-axisname{color:var(--ink)}' in ui
               and '(?:typealias|associatedtype)\\s+$/.test(before)) return "axisname"' in ui))
 
+    # ── HOW A PERSON OVERRIDES ANYTHING, WITHOUT ANYBODY HAVING EXPECTED THEM.
+    # Conforming to a surface turns a wheel — but only a wheel somebody thought
+    # to make turnable, which means the other side had to anticipate you. And
+    # redeclaring a name to shadow it is two truths about one name, which this
+    # tool exists to refuse. Both roads are closed, and there is a third that
+    # needs neither: every number this bench paints and spaces itself by is read
+    # from a DECLARED WORLD, so declare that name yourself and yours is the one
+    # read. Not shadowing inside a stream — being the source the stream is read
+    # from. Presented first, shipped after, first said wins.
+    #
+    # The probe is the whole claim: an operator declares two numbers in a file of
+    # their own and the colour the page paints a foreign name with changes, with
+    # nothing in this tool having been built to allow it.
+    ovr = tempfile.mkdtemp()
+    open(os.path.join(ovr, "gate.swift"), "w").write("public enum Sales: Department {}\n")
+    open(os.path.join(ovr, "my-colours.swift"), "w").write(
+        "// role: forms\n"
+        "public typealias KnownNameDimX = Plus<W2, Plus<W4, Plus<W16, W256>>>\n"
+        "public typealias KnownNameDimZ = Plus<W16, Plus<W64, Plus<W128, Plus<W256, W512>>>>\n")
+    run("mine", "my-colours.swift", "--role", "forms", cwd=ovr)
+    served_here = subprocess.run(
+        [sys.executable, "-c",
+         "import types;src=open(%r,encoding='utf-8').read();g=types.ModuleType('g');"
+         "g.__file__=%r;exec(compile(src,'gate','exec'),g.__dict__);print(g.palette_tokens())"
+         % (GATE, GATE)], cwd=ovr, capture_output=True, text=True).stdout
+    dark_here = served_here.split(':root[data-theme="dark"]', 1)[-1]
+    S.append(("a world you present outranks the one this tool ships, with nothing anticipating it",
+              # the operator's two numbers are what the page is served
+              "calc(278/1000)" in dark_here and "calc(976/1000)" in dark_here
+              # and the shipped value for that same name is gone from the dark half
+              and "calc(454/1000) calc(419/1000) calc(691/1000)" not in dark_here
+              # everything they did not say still comes from what shipped
+              and "--action" in dark_here and "--localtype" in dark_here
+              # by reading presented worlds before shipped ones, first said wins
+              and "def presented_world(" in shelf_src
+              and "first said wins: what was presented outranks what shipped" in shelf_src))
+
     # ── AN EXHIBIT, NOT A WISH. What follows records what a claim written in the
     # head of the file that depends on it does TODAY, line by line, because the
     # answer is the case for the one change everything left is waiting on: the

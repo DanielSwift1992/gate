@@ -1624,11 +1624,39 @@ def _peano(text):
         raise ValueError(e)
     for m in re.finditer(r"^public typealias (\w+) = (.+)$", text, re.M):
         name, expr = m.group(1), m.group(2).split("//")[0].strip()
+        if name in vals:
+            continue          # first said wins: what was presented outranks what shipped
         try:
             vals[name] = ev(expr)
         except ValueError:
             continue
     return vals
+
+
+def presented_world(shelf_name):
+    # ── WHAT YOU PRESENT OUTRANKS WHAT WE SHIPPED, and no wheel had to be
+    # declared for it. Conforming to a surface only turns what somebody thought
+    # to make turnable — it needs the other side to have expected you. This
+    # needs nothing expected: every number this bench paints and spaces itself
+    # by is read from a declared world, so declare that name yourself and yours
+    # is the one read. Not by shadowing a name inside one stream, which is two
+    # truths and refused, but by being the source the stream is read from.
+    #
+    # Presented first, shipped after, first said wins — so an operator may
+    # replace one number or the whole file, and nothing had to anticipate which.
+    rows = (MANIFEST.get("rows") if MANIFEST else None) or []
+    if not rows:
+        return STDLIB.get(shelf_name, "")
+    base = os.path.dirname(MANIFEST["manifest"])
+    out = []
+    for r in rows:
+        if r["role"] != "forms":
+            continue
+        p = os.path.join(base, r["path"])
+        if os.path.exists(p):
+            out.append(open(p, encoding="utf-8", errors="replace").read())
+    out.append(STDLIB.get(shelf_name, ""))
+    return "\n".join(out)
 
 
 def palette_tokens():
@@ -1638,10 +1666,10 @@ def palette_tokens():
     # standing between the two copies to keep them equal. A check is what you
     # reach for when a single source is out of reach; here it was not. The page
     # holds no colour of its own now: what it paints with is what the judge holds.
-    vals = _peano(STDLIB.get("bench-palette", ""))
+    vals = _peano(presented_world("bench-palette"))
     names = sorted({m.group(1) for m in
                     re.finditer(r"^public typealias (\w+)(?:Lit|Dim)X = ", 
-                                STDLIB.get("bench-palette", ""), re.M)})
+                                presented_world("bench-palette"), re.M)})
 
     def srgb(x, y, z):
         # a hex fallback for anything that cannot read color(); a rendering of
@@ -1678,8 +1706,8 @@ def register_tokens():
     # and leadings in hundredths of their own size, because a world spells its
     # numbers on its own ladder and 12.5 is not a whole anything. What is served
     # is what the page rendered before, to the last tenth.
-    vals = _peano(STDLIB.get("bench-registers", ""))
-    text = STDLIB.get("bench-registers", "")
+    vals = _peano(presented_world("bench-registers"))
+    text = presented_world("bench-registers")
     faces = dict(re.findall(r"public enum (\w+): Register \{\s*\n\s*public typealias On = (\w+)",
                             text))
     rows = []
@@ -1742,7 +1770,7 @@ def ladder_tokens():
     # together by a check. A check is what you reach for when a single source is
     # out of reach; here it was not. The page names the step now, and the number
     # comes from the file that is judged for it, so the two cannot part.
-    text = STDLIB.get("bench-metrics", "")
+    text = presented_world("bench-metrics")
     vals, out = {}, []
 
     def ev(e):
