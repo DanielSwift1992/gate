@@ -2790,6 +2790,30 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "taken as given" in ui
               and "somebody SUPPLYING the agreement the two sides never derived" in ui))
 
+    # ── A DOCUMENT LISTS WHAT IT HAS. The layout template wrote every role atom
+    # this tool can imagine into every world — so a person opening theirs met
+    # five words of grammar before two facts, two of them naming courts nothing
+    # in that world used. The atom is written when the first row needs it, and a
+    # row whose atom is missing is refused: a column is an axis to a declared
+    # atom, and a name nothing declares names nothing.
+    lean = os.path.join(tmp, "leanlayout")
+    run("demo", lean)
+    lman = os.path.join(lean, "gate.manifest.swift")
+    laid = open(lman).read()
+    stripped = laid.replace("public enum FormsFile: Role {}\n", "")
+    open(lman, "w").write(stripped)
+    orphan = run("status", cwd=lean)[1]
+    open(lman, "w").write(laid)
+    S.append(("the layout declares the atoms it uses, and a row without its atom is refused",
+              "public enum FormsFile: Role {}" in laid
+              # nothing here is a seam or a plain world file, so neither is named
+              and "public enum SeamFile: Role {}" not in laid
+              and "public enum WorldFile: Role {}" not in laid
+              and run("status", cwd=lean)[1].get("verdict") == "holds"
+              and orphan.get("verdict") == "refused"
+              and any("declares no `FormsFile`" in r.get("claim", "")
+                      for r in orphan.get("refusals", []))))
+
     # ── A FILE IS DECLARED ONCE. Two rows about one file are two truths about
     # one thing — what this whole tool exists to make impossible — and its own
     # layout document took them silently, under two names, and said `holds`.

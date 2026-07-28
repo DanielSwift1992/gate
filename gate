@@ -162,6 +162,8 @@ def manifest_guards(rows=None):
     man = os.path.basename(MANIFEST["manifest"])
     d = os.path.dirname(MANIFEST["manifest"])
     live = MANIFEST.get("rows") if rows is None else rows
+    live_text = open(MANIFEST["manifest"], encoding="utf-8").read() \
+        if os.path.exists(MANIFEST["manifest"]) else ""
     seen_paths = {}
     for r in live or []:
         # A ROLE IS NOT OPTIONAL, because it names the court. Left unsaid it has
@@ -178,6 +180,19 @@ def manifest_guards(rows=None):
         # own name, not a court. A scaffold with a judged input would be honest;
         # a scaffold calling itself a court would not, and the difference is the
         # whole of what this tool sells.
+        atom = {"world": "WorldFile", "seam": "SeamFile", "forms": "FormsFile",
+                "judge": "JudgeFile", "carried": "CarriedFile"}.get(r["role"])
+        # only where the row is written as an AXIS to an atom. The older
+        # spelling made the role the protocol itself — `enum GrantsFile:
+        # WorldFile` — and that document has no atom to declare; this tool reads
+        # it on purpose, and a guard that refuses what the reader accepts would
+        # be the two halves disagreeing about one file.
+        if atom and ("public typealias Kind = " + atom) in live_text \
+                and ("public enum " + atom + ": Role {}") not in live_text:
+            bad.append({"address": f"{man}:{r['line']}",
+                        "claim": f"`{r['name']}` is filed under `{r['role']}` and this document "
+                                 f"declares no `{atom}`: a column is an axis to a declared atom, "
+                                 "and a name nothing declares names nothing"})
         if r["path"] in seen_paths:
             bad.append({"address": f"{man}:{r['line']}",
                         "claim": f"`{r['name']}` is a second row about {r['path']}, which "
@@ -1639,6 +1654,7 @@ def cmd_demo(a):
                     "// without a row, and this is that row for the court itself — the\n"
                     "// revision is the dependency, not any file. Yours to edit or drop.\n"
                     "public protocol Theirs {}\n"
+                    "public enum JudgeFile: Role {}\n"
                     f"public enum Rev_vi_{short} {{}}\n"
                     f"extension Rev_vi_{short} {{ public static var typeName: String "
                     f"{{ \"verification-is-identification@{short}\" }} }}\n"
@@ -2823,6 +2839,13 @@ def declare_side(path, kind, role, frm=None):
     name = sanitize(os.path.splitext(rel)[0]).title().replace("_", "").replace("/", "") or "Side"
     ROLE_ATOM = {"world": "WorldFile", "seam": "SeamFile", "forms": "FormsFile",
                  "judge": "JudgeFile", "carried": "CarriedFile"}
+    # ── A DOCUMENT LISTS WHAT IT HAS. The template wrote every role atom this
+    # tool can imagine into every world's layout, so a person opening theirs met
+    # five words before two facts, two of them naming courts nothing here uses.
+    # The atom is written when the first row needs it, like the `Theirs`
+    # protocol already was — one list, of this world.
+    def ensure(text, line):
+        return text if line in text else text.rstrip("\n") + "\n" + line + "\n"
     text = open(mp, encoding="utf-8").read() if os.path.exists(mp) else (
         "// ONE LIST, AND THREE COLUMNS. Whose source a file is, what court reads\n"
         "// it, and — for anything taken — the revision it was taken at. gate\n"
@@ -2832,12 +2855,13 @@ def declare_side(path, kind, role, frm=None):
         "// AXES to declared atoms, and the one string is the `typeName` literal\n"
         "// that spells a name. A revision is an atom of its own, so two rows taken\n"
         "// at the same revision say the same name rather than the same text.\n"
-        "public protocol Role {}\n"
-        "public enum WorldFile: Role {}\n"
-        "public enum SeamFile: Role {}\n"
-        "public enum FormsFile: Role {}\n"
-        "public enum JudgeFile: Role {}\n"
-        "\npublic protocol Mine {}\n")
+        "public protocol Role {}\n")
+    # the role atom this row needs, and only that one
+    atom = ROLE_ATOM[role]
+    if "public enum " + atom + ": Role {}" not in text:
+        text = ensure(text, "public enum " + atom + ": Role {}")
+    if kind == "Mine" and "public protocol Mine {}" not in text:
+        text = ensure(text, "\npublic protocol Mine {}")
     if kind == "Theirs" and "public protocol Theirs {}" not in text:
         text += ("\n// and what this world took from somewhere else. A file is here because\n"
                  "// this side said so, never because it was lying beside the others, and it\n"
