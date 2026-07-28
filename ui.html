@@ -415,9 +415,20 @@ fetch("/version", { cache: "no-store" }).then(r => r.json()).then(v => {
         rev.innerHTML = "<b>the judge</b> · <span class='at'>"
             + esc(v.judge_from ? "took at " + v.judge_from.slice(0, 7) : "taken at nothing written down")
             + "</span>";
+        // ── AND HOW BIG IT IS, WHERE THAT IS KNOWN. Somebody who opens the
+        // corpus meets nine hundred files and concludes "a large machine I will
+        // never read". The court is two of them. That is not a boast to be
+        // written down here — it is counted from the checkout when there is
+        // one, and left unsaid when there is not.
         rev.title = "The court itself, taken like anything else: `bin/build-judge.sh` clones the "
             + "corpus at a revision, builds, and writes the revision down beside the binary. "
-            + "It is held by a build anybody can repeat — never by its own verdict.";
+            + "It is held by a build anybody can repeat — never by its own verdict."
+            + (language.court
+               ? " The court is " + language.court.lines + " lines, in "
+                 + language.court.files.map(f => f.split("/").pop()).join(" and ")
+                 + " — everything else in that repository is worlds it shows itself on, and the "
+                 + "theory it comes from."
+               : "");
         wireJudgeRow();
     }
     if (v.gate !== BENCH_FOR) {

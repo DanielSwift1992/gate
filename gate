@@ -2031,13 +2031,39 @@ LANGUAGE_AT = {
 LANGUAGE_FILE = "Sources/VerificationIsIdentification/Primitive.swift"
 
 
+# ── WHAT THE COURT ITSELF IS, by name and by path. The two files that decide
+# every verdict this tool prints; the rest of the product they are built with is
+# other tools of the corpus, and the rest of the corpus is worlds it shows
+# itself on and the theory it derives from. Naming them here is the same act as
+# naming the language's file: this tool says what it took, and a reader can
+# count it themselves.
+COURT_FILES = ("Sources/Tools/Judge.swift", "Sources/Tools/WhereJudge.swift")
+
+
+def court_shape():
+    # counted from the checkout when there is one, and said to be uncounted when
+    # there is not — never a number written here, which would be a claim about
+    # somebody else's file that nothing checks
+    root = os.environ.get("GATE_CORPUS")
+    if not root:
+        return None
+    lines, seen = 0, []
+    for rel in COURT_FILES:
+        p = os.path.join(root, rel)
+        if not os.path.exists(p):
+            return None
+        lines += sum(1 for _ in open(p, encoding="utf-8", errors="replace"))
+        seen.append(rel)
+    return {"files": seen, "lines": lines}
+
+
 def language_origin():
     # where the corpus sits, if this machine happens to have it: the same
     # checkout `bin/build-judge.sh` would make, named by the pin beside the judge
     came = judge_from()
     root = os.environ.get("GATE_CORPUS")
     here = root and os.path.join(root, LANGUAGE_FILE)
-    return {"names": LANGUAGE_AT, "file": LANGUAGE_FILE,
+    return {"names": LANGUAGE_AT, "file": LANGUAGE_FILE, "court": court_shape(),
             "at": came, "short": (came or "")[:12] or None,
             "present": bool(here and os.path.exists(here)),
             "command": ("git clone https://github.com/DanielSwift1992/"
@@ -5401,6 +5427,11 @@ def main():
         print(json.dumps({"command": "version", "gate": VERSION, "judge": judge_version(),
                           "judge_from": came, "python": sys.version.split()[0]}) if "--json" in args
               else f"gate {VERSION} · judge {judge_version()} (canon v2) · python {sys.version.split()[0]}"
+              + ("\n  the court is " + str(court_shape()["lines"]) + " lines in "
+                 + " and ".join(os.path.basename(f) for f in court_shape()["files"])
+                 + " — the rest of that repository is worlds it shows itself on, and the "
+                   "theory it comes from"
+                 if court_shape() else "")
               + ("\n  judge built from verification-is-identification " + came[:12]
                  + " — `bin/build-judge.sh " + came[:12] + "` reproduces these bytes"
                  if came else

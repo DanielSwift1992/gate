@@ -2790,6 +2790,39 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "taken as given" in ui
               and "somebody SUPPLYING the agreement the two sides never derived" in ui))
 
+    # ── HOW BIG THE COURT IS, COUNTED RATHER THAN CLAIMED. Somebody who opens
+    # the corpus meets nine hundred files and concludes "a large machine I will
+    # never read". The court is two of them. That is the strongest thing this
+    # tool can say about its own judge and it was said nowhere — while the
+    # number, written down here, would be a claim about somebody else's files
+    # that nothing checks. It is counted from the checkout when there is one and
+    # left unsaid when there is not, the same as the revision beside the binary.
+    corpus = os.environ.get("GATE_CORPUS")
+    counted = json.loads(subprocess.run(
+        [sys.executable, "-c",
+         "import types,json;src=open(%r,encoding='utf-8').read();g=types.ModuleType('g');"
+         "g.__file__=%r;exec(compile(src,'gate','exec'),g.__dict__);"
+         "print(json.dumps(g.court_shape()))" % (GATE, GATE)],
+        capture_output=True, text=True,
+        env=dict(os.environ, GATE_CORPUS=corpus) if corpus else os.environ).stdout or "null")
+    silent_court = json.loads(subprocess.run(
+        [sys.executable, "-c",
+         "import types,json;src=open(%r,encoding='utf-8').read();g=types.ModuleType('g');"
+         "g.__file__=%r;exec(compile(src,'gate','exec'),g.__dict__);"
+         "print(json.dumps(g.court_shape()))" % (GATE, GATE)],
+        capture_output=True, text=True,
+        env={k: v for k, v in os.environ.items() if k != "GATE_CORPUS"}).stdout or "null")
+    S.append(("the court's size is counted from the checkout, and unsaid without one",
+              silent_court is None
+              # the two files that decide every verdict are named, not guessed at
+              and 'COURT_FILES = ("Sources/Tools/Judge.swift", "Sources/Tools/WhereJudge.swift")' in shelf_src
+              # no number about somebody else's files is written in this tool
+              and not re.search(r"court[^\n]*\b1021\b", shelf_src)
+              and (counted is None or (counted["lines"] > 0 and len(counted["files"]) == 2))
+              # and it reaches both places a person asks the question
+              and 'the court is " + str(court_shape()["lines"])' in shelf_src
+              and "language.court" in ui))
+
     # ── THE MORNING QUESTION, ASKED OF THE WHOLE WORLD. `attention` needed two
     # files named by hand, so the one thing an owner asks daily — what waits on
     # my word today — could only be asked one pair at a time, by somebody who
