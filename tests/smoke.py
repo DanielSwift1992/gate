@@ -2790,6 +2790,46 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "taken as given" in ui
               and "somebody SUPPLYING the agreement the two sides never derived" in ui))
 
+    # ── A GATED CONFORMANCE IS READ, and this is the check that was missing the
+    # day it stopped being read. A branch added for the one-line `extension X {
+    # typeName }` that gate itself writes swallowed EVERY one-line extension,
+    # including a gate joined from two lines — `extension Enter: Entered where
+    # …` ends in a brace too — so every where-gate in the shelf went unparsed
+    # and nothing anywhere said a word, because no check covered them.
+    gate_src = open(os.path.join(HERE, "stdlib", "forms-grants.swift"), encoding="utf-8").read()
+    open(os.path.join(tmp, "gates.js"), "w").write("""
+const { judge } = require(process.argv[2]);
+const text = require("fs").readFileSync(process.argv[3], "utf8");
+const p = judge("g.swift", text, { seeds: new Set(), generics: new Set() }).parsed;
+const out = {};
+for (const [n, d] of p.declarations)
+    if (d.whereGates || d.whereText || (d.params || []).length)
+        out[n] = { params: d.params, conf: d.conformances,
+                   gates: (d.whereGates || []).length, whereText: d.whereText };
+console.log(JSON.stringify(out));
+""")
+    open(os.path.join(tmp, "grants.swift"), "w").write(gate_src)
+    read = json.loads(subprocess.run(
+        ["node", os.path.join(tmp, "gates.js"), os.path.join(HERE, "judge.js"),
+         os.path.join(tmp, "grants.swift")], capture_output=True, text=True).stdout or "{}")
+    S.append(("a gate is read whole: its holes, what it conforms to, and the clause it turns on",
+              read.get("Enter", {}).get("params") == ["Who", "Into"]
+              # written down the page — the head ends where its angle closes,
+              # not where the line does, which is how every gate here is written
+              and read["Enter"]["conf"] == ["Entered"]
+              and read["Enter"]["gates"] >= 1
+              and "Who.Post == Into.Place" in (read["Enter"]["whereText"] or "")
+              # and the clause as written, not only the part the judge compares:
+              # a reader shown less than was said is shown something else
+              and "Who.Key: Writes" in (read["Enter"]["whereText"] or "")))
+
+    S.append(("bare shows a gate's holes and the condition its verdict turns on",
+              'const holes = (d.params || []).length' in ui
+              and "const when = d.whereText" in ui
+              and "declSpan(name, d.line, bad) + holes + conf + when" in ui
+              # a hole's label is ink in this view too, the same hole the editor paints
+              and ".hole-label{color:var(--ink)}" in ui))
+
     # ── BARE IS THE RECORD WITHOUT CEREMONY, NEVER WITHOUT ITS CONTENT. A
     # protocol declares axes — `Keeper` opens `Post: Realm` and `Key` — and this
     # view printed the name alone, `Keeper×`: a form that asks two things of

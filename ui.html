@@ -192,6 +192,8 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
    in plain ink, the way the bare view has always set it. */
 .cm-declname{font-weight:600}
 .cm-axisname{color:var(--ink)}
+/* a hole's label in the bare view is the same hole the editor paints in ink */
+.hole-label{color:var(--ink)}
 .CodeMirror.holding .cm-jumpable{text-decoration:underline;text-underline-offset:2px;cursor:pointer}
 .cm-badname{text-decoration:underline wavy var(--bad);text-underline-offset:3px}
 .cm-ghost{color:var(--seam)}
@@ -2398,12 +2400,31 @@ function bareForm(parsed, text) {
     const items = [];
     for (const [name, d] of parsed.declarations) {
         const bad = badLines.has(d.line);
+        // ── AND THE HOLES A GATE OPENS, beside the name that opens them. A gate
+        // is the one form whose whole content is its parameters — `Enter<Who:
+        // Keeper, Into: Room>` says nothing else at all — and this view printed
+        // the name alone. The parse now carries them for a head written down
+        // the page as well as across one, which is how every gate in the shelf
+        // is written.
+        const holes = (d.params || []).length
+            ? '<span class="conf">&lt;</span>'
+              + d.params.map((a, i) => '<span class="hole-label">' + esc(a) + "</span>"
+                  + ((d.paramKinds || [])[i] ? '<span class="conf">: </span>'
+                     + nameTokens(d.paramKinds[i]) : "")).join('<span class="conf">, </span>')
+              + '<span class="conf">&gt;</span>'
+            : "";
         const conf = d.conformances.length ? '<span class="conf">: </span>' + nameTokens(d.conformances.join(", ")) : "";
         const cut = (slot, what) => {
             const i = bareSlots.push(slot) - 1;
             return '<span class="cut" data-cut="' + i + '" title="remove this ' + what + '">\u00d7</span>';
         };
-        const block = ['<span class="' + (bad ? "row-bad" : "") + '">' + declSpan(name, d.line, bad) + conf
+        // ── AND THE CONDITION THE WHOLE VERDICT TURNS ON. A gated form conforms
+        // only when its clause holds — that clause is the record's entire
+        // content, and this view showed the name, then the holes, and stopped
+        // one word short of what they are for.
+        const when = d.whereText
+            ? '<span class="conf"> when </span>' + nameTokens(d.whereText) : "";
+        const block = ['<span class="' + (bad ? "row-bad" : "") + '">' + declSpan(name, d.line, bad) + holes + conf + when
                 + cut({ kind: "record", line: d.line, host: name }, "record") + "</span>"];
         for (const [k, v] of d.aliases)
             block.push("    " + esc(k) + " = "

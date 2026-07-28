@@ -141,6 +141,7 @@ function parse(file, text, declarations, order, refusals, extras) {
     const stack = [];
     let bodyOwner = null;
     let extensionOwner = null;
+    let pendingHead = null, pendingHeadLine = null;
     let pendingAlias = null;
     let buffer = "";
     let bufferLine = 0;
@@ -280,8 +281,16 @@ function parse(file, text, declarations, order, refusals, extras) {
             const owner = (colon >= 0 ? head.slice(0, colon) : head).trim();
             const literal = line.slice(open + 1).match(
                 /(?:public )?static var typeName: String \{ "([^"]*)" \}/);
-            if (literal) extras.literals.set(owner, { value: literal[1], line: number });
-            continue;
+            // ── AND ONLY WHEN IT CARRIES ONE. This branch was written for the
+            // one shape gate itself emits and swallowed every one-line extension
+            // it saw, `continue`ing past a gated conformance joined from two
+            // lines — `extension Enter: Entered where …` ends in a brace too.
+            // Every where-gate in the shelf stopped being read the day this was
+            // added, and nothing said a word: no check covered them.
+            if (literal) {
+                extras.literals.set(owner, { value: literal[1], line: number });
+                continue;
+            }
         }
         if (extras && (line.startsWith("extension ") || line.startsWith("public extension "))
             && line.endsWith("{")) {
@@ -320,6 +329,18 @@ function parse(file, text, declarations, order, refusals, extras) {
                     right: piece.slice(equals + 2).trim() });
             }
             const standing = declarations.get(owner);
+            if (standing) {
+                // the conformance this gate is conditional ON. The other
+                // extension branch records one; this one never did, so a gated
+                // form came back conforming to nothing and a view drawing what
+                // it is had nothing to draw.
+                const conf = colon >= 0 ? beforeWhere.slice(colon + 1).trim() : "";
+                if (conf && !standing.conformances.includes(conf)) standing.conformances.push(conf);
+                // and the clause as written, for whoever shows it rather than
+                // checks it: the judge reads the equalities, a reader reads the
+                // sentence, and dropping the rest would show less than was said
+                standing.whereText = head.slice(whereAt + 7).replace(/\s+/g, " ").trim();
+            }
             if (standing && conditions.length > 0) {
                 if (!standing.whereGates) standing.whereGates = [];
                 standing.whereGates.push({ conditions, line: number });
@@ -348,7 +369,34 @@ function parse(file, text, declarations, order, refusals, extras) {
             continue;
         }
 
-        if (line.startsWith("public enum ") || line.startsWith("enum ")) {
+        if (line.startsWith("public enum ") || line.startsWith("enum ")
+            || pendingHead !== null) {
+            // ── A HEAD THAT OPENS AN ANGLE ENDS WHERE THE ANGLE CLOSES, WHICH
+            // NEED NOT BE THIS LINE. A gate written down the page —
+            //
+            //     public enum Enter<
+            //         Who: Keeper,
+            //         Into: Room
+            //     > {}
+            //
+            // was read off its first line alone, so its parameters came back
+            // empty: the two holes it opens were invisible to everything
+            // downstream, and a view that shows what a form asks showed a name
+            // with nothing in it. The file already buffers a multi-line alias
+            // exactly this way; a declaration head had never been given the
+            // same courtesy.
+            let raw = line;
+            if (pendingHead !== null) {
+                raw = pendingHead.text + " " + line;
+                pendingHead = null;
+            }
+            if (angleBalance(raw.replace(/\{[\s\S]*$/, "")) > 0) {
+                pendingHead = { text: raw, line: pendingHeadLine || number };
+                pendingHeadLine = pendingHead.line;
+                continue;
+            }
+            pendingHeadLine = null;
+            line = raw.replace(/\s+/g, " ");
             const afterKeyword = line.replaceAll("public enum ", "").replaceAll("enum ", "");
             // A DECLARATION WHOSE BODY IS ON ITS OWN LINE CLOSES ON THAT LINE.
             // The test asked whether the line ended in an empty `{}` — true for
