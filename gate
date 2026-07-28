@@ -2584,6 +2584,38 @@ def founds_world(path):
                 or os.path.exists(os.path.join(root, "gate.manifest.swift")))
 
 
+MOVING_NAMES = {"latest", "head", "tip", "main", "master", "trunk", "default",
+                "stable", "edge", "dev", "develop", "nightly", "current", "next"}
+
+
+def moving_pin(at):
+    # ── A PIN NAMES A MOMENT, AND THIS IS WHY — not housekeeping, a precondition.
+    # A seam's verdict is a pure function of the two revisions its sides were
+    # taken at. The corpus requires that the facts a comparison reveals be
+    # PRE-EXISTING: COMPARE discloses what is already the case, it does not make
+    # it so (V=I §5.20). A range or a branch name breaks exactly that — the text
+    # on the other side changes under you, so there is nothing fixed for a
+    # verdict to be a function of, and the seam has no determinate state at all.
+    #
+    # The consequence runs the other way too, and it is the whole reason there
+    # is no version solver in here. `^1.2.0` does not make resolution HARD; it
+    # CREATES the problem, by breaking the precondition under which the question
+    # had an answer. This tool had said as much in a comment for weeks and then
+    # written `latest` into a row without a word.
+    a = (at or "").strip()
+    if not a:
+        return "a revision nobody wrote down"
+    if a.lower() in MOVING_NAMES:
+        return (f"`{a}` is a name that moves: whatever it points at today, it points somewhere "
+                "else tomorrow, and a row that says it stops being a fact the moment it is true")
+    if re.search(r"[\^~*]|[<>]=?|,\s*[<>^~]|\|\|", a):
+        return (f"`{a}` is a range, not a revision: it names a SET of revisions, and this world "
+                "took exactly one")
+    if re.fullmatch(r"[\d.]*[xX](\.[\dxX]+)*", a) and re.search(r"\d", a):
+        return f"`{a}` is a range with a wildcard in it, and this world took exactly one revision"
+    return None
+
+
 def declare_side(path, kind, role, frm=None):
     # ONE MOVEMENT, TWO DIRECTIONS, AND NOBODY SPECIAL. Everything here is an
     # emitted view of somebody's source: my world is a view of my facts, their
@@ -2800,6 +2832,12 @@ def cmd_side(a, kind):
                 "note": f"`{role}` is not a court anything here reads",
                 "next": "a row says what it is for: "
                         + " · ".join(f"`{k}` — {v}" for k, v in ROLES.items())}
+    if kind == "Theirs" and at and moving_pin(at):
+        return {"command": word, "asks": True, "note": moving_pin(at),
+                "next": "write down the revision you actually took — a commit, a tag, a release. "
+                        "What holds between two sides is a fact about two fixed texts; name a "
+                        "moving one and there is nothing for it to be a fact about, which is "
+                        "the whole reason nothing here has to be solved"}
     if kind == "Theirs" and not at:
         # THE PIN IS THE POINT. Nothing in this tool expresses a range, which is
         # exactly why no version solver exists here — the problem is not solved,

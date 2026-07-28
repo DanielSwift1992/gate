@@ -2664,6 +2664,46 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               # and a file nobody declared steers nothing
               and undeclared.get("scope") == "world"))
 
+    # ── A PIN NAMES A MOMENT, AND THIS TOOL NOW KEEPS THE RULE IT HAD WRITTEN
+    # DOWN. `cmd_side` had carried the sentence "nothing in this tool expresses a
+    # range, which is exactly why no version solver exists here" for weeks, and
+    # wrote `latest` into a row without a word. Both halves were failing at once:
+    # the claim was false, and the reason it mattered was never enforced.
+    #
+    # The reason is a derivation, not a preference. A seam's verdict is a pure
+    # function of the two revisions its sides were taken at, because the corpus
+    # requires the facts a comparison reveals to be PRE-EXISTING — COMPARE
+    # discloses what is already the case, it does not make it so (V=I §5.20). A
+    # range or a branch name breaks exactly that: the other side's text changes
+    # under you, so there is nothing fixed for a verdict to be a function of.
+    # And the consequence runs backwards — `^1.2.0` does not make resolution
+    # hard, it CREATES the problem by breaking the precondition under which the
+    # question had an answer.
+    pin = tempfile.mkdtemp()
+    open(os.path.join(pin, "gate.swift"), "w").write("public enum Sales: Department {}\n")
+    open(os.path.join(pin, "sdk.swift"), "w").write(
+        "public enum F_x: Declared { public typealias Of = Text }\n")
+
+    def _pin(at):
+        try:
+            os.remove(os.path.join(pin, "gate.manifest.swift"))
+        except OSError:
+            pass
+        return run("theirs", "sdk.swift", "--at", at, cwd=pin)[1]
+
+    moving = {a: _pin(a) for a in ("^1.2.0", ">=1.0,<2.0", "1.2.x", "latest", "main", "HEAD")}
+    fixed = {a: _pin(a) for a in ("0fd0b38", "v1.2.0", "2026-07-28", "release-14")}
+    S.append(("a pin names a moment: a range or a moving name is refused, and says why",
+              all(r.get("asks") for r in moving.values())
+              and all("range" in r.get("note", "") or "moves" in r.get("note", "")
+                      for r in moving.values())
+              # and what a person actually took is taken without ceremony
+              and all(r.get("at") == a and not r.get("asks") for a, r in fixed.items())
+              # the reason travels with the refusal, because it is the reason
+              # there is nothing here to solve
+              and any("nothing here has to be solved" in r.get("next", "")
+                      for r in moving.values())))
+
     # ── AND A COMMENT IS NOT A DECLARATION. `bench-atoms` documents this very
     # wheel by showing one — `///     public enum MyJournal: Journal {` — and
     # the reader took the example for an answer, so `gate log` in this
