@@ -449,6 +449,15 @@ let layoutFile = null;
 // record may be. Their names belong to the vocabulary the bench offers,
 // and their court is `where`, never the plain stream.
 let formsFiles = new Set();
+// ── THE FLOOR EVERY NUMBER STANDS ON. `Twice<Unit>` is written in worlds all
+// over this bench and the names went nowhere: not in the vocabulary, not
+// jumpable, a dead end exactly at the layer everything else rests on. They are
+// the language — the words the mechanism must know to count at all — and they
+// are declared in the corpus, at the revision the judge row names. gate never
+// fetches, so it cannot show the file it does not have; what it can do is say
+// which file, which line, which revision, and hand over the command that brings
+// it. Named and handed over beats a dead end.
+let language = { names: {}, file: "", short: null, present: false, command: "" };
 let jumpable = new Set();      // names with a home: underlined, and clickable
 let vocabulary = {};           // name -> the shelf module that declares it
 let conformers = {}, axisOf = {}, protoAxes = {}, gates = {};
@@ -1105,7 +1114,8 @@ function applyFlags(refusals) {
 let paintedKey = "";
 function repaintNames(parsed, refusals) {
     localNames = new Set([...namesOf(parsed), ...siblingNames]);
-    jumpable = new Set([...layoutDecls.keys(), ...Object.keys(vocabulary)]);
+    jumpable = new Set([...layoutDecls.keys(), ...Object.keys(vocabulary),
+                        ...Object.keys(language.names || {})]);
     unresolved = new Set();
     // nothing in the layout resolves to a world name, and marking it all as
     // unknown would paint the operator's own document as a mistake
@@ -1369,6 +1379,43 @@ async function jumpTo(name) {
     if (d) return reveal(d.line);
     const mod = vocabulary[name];               // a name from a forms file: open the forms file
     if (mod) return openShelf(mod, name);
+    // and the floor: a word of the language, declared in the corpus at the
+    // revision the judge was built from. The file is not here — gate fetches
+    // nothing — so what is said is exactly where it is and how to get it.
+    const at = (language.names || {})[name];
+    if (at) return language.present ? openLanguage(name, at) : sayLanguage(name, at);
+}
+
+// shown, for whoever has the corpus: the declaration itself, read-only, in the
+// register everything of somebody else's wears here
+async function openLanguage(name, line) {
+    const text = await (await fetch("/language?f=" + encodeURIComponent(language.file))).text()
+        .catch(() => null);
+    if (text === null) return sayLanguage(name, line);
+    active = ""; viewingShelf = null;
+    document.getElementById("fname").textContent = language.file.split("/").pop();
+    document.getElementById("fname").style.display = "";
+    setMode("full");
+    cm.setValue(text);
+    cm.setOption("readOnly", true);
+    buildRail();
+    reveal(line);
+    say(esc(name) + " is a word of the language, declared here — "
+        + esc(language.file) + ":" + line + ", in the corpus this judge was built from"
+        + (language.short ? " (" + esc(language.short) + ")" : "")
+        + ". Read-only: nothing of theirs is this world's to edit.");
+}
+
+// a word of the language, named rather than opened: which file, which line,
+// which revision, and the command that brings the corpus to this machine
+function sayLanguage(name, line) {
+    const where = language.file + ":" + line;
+    say(esc(name) + " is a word of the language — the counting forms the judge must know to "
+        + "read a number at all. It is declared in " + esc(where) + ", in the corpus this "
+        + "judge was built from"
+        + (language.short ? " (" + esc(language.short) + ")" : "")
+        + ". That file is not in this repository and gate fetches nothing, so here is the "
+        + "command that brings it: <code>" + esc(language.command) + "</code>");
 }
 
 // the shelf, read-only: where the names your world speaks are declared
@@ -2374,6 +2421,7 @@ async function loadVocabulary() {
     files = fl.files || []; personalFile = fl.personal || null; personalEmpty = !!fl.personal_empty;
     layoutFile = fl.layout || null;
     formsFiles = new Set(fl.forms || []);
+    try { language = await (await fetch("/language")).json(); } catch { }
     await loadVocabulary();
     // the rail carries files AND the journal, so it shows for any clone
     // the line says what is true HERE: with a world, the judge is at work;

@@ -1703,6 +1703,38 @@ def register_tokens():
     return ":root {\n" + "\n".join(rows) + "\n}\n"
 
 
+# ── THE LANGUAGE, AND WHERE IT IS DECLARED. These are the words the mechanism
+# must know as grammar — it cannot count without them — so knowing them here is
+# the one place a name may sit inside a tool by right. Layer 1 in the map;
+# everything else a world says is presented.
+#
+# But an operator reading `Twice<Unit>` in their own file had nowhere to go: the
+# names were not in the bench's vocabulary at all, so the promise that every
+# name opens where it is declared stopped at exactly the floor everything else
+# stands on. gate never fetches, so it cannot produce the file — what it can do
+# is say precisely where the declaration is, at which revision, and hand over
+# the command that brings it. Named and handed over beats a dead end.
+LANGUAGE_AT = {
+    "Unit": 283, "Plus": 287, "Times": 303, "Twice": 299, "Paired": 227,
+    "Close": 88, "Open": 87, "Structure": 86,
+}
+LANGUAGE_FILE = "Sources/VerificationIsIdentification/Primitive.swift"
+
+
+def language_origin():
+    # where the corpus sits, if this machine happens to have it: the same
+    # checkout `bin/build-judge.sh` would make, named by the pin beside the judge
+    came = judge_from()
+    root = os.environ.get("GATE_CORPUS")
+    here = root and os.path.join(root, LANGUAGE_FILE)
+    return {"names": LANGUAGE_AT, "file": LANGUAGE_FILE,
+            "at": came, "short": (came or "")[:12] or None,
+            "present": bool(here and os.path.exists(here)),
+            "command": ("git clone https://github.com/DanielSwift1992/"
+                        "verification-is-identification && cd verification-is-identification"
+                        + (" && git checkout " + came[:12] if came else ""))}
+
+
 def ladder_tokens():
     # ── THE STEPS, READ FROM THE WORLD THAT DECLARES THEM. The stylesheet had
     # been spelling the multiples itself — `calc(var(--u)*6)` where the shelf
@@ -3725,6 +3757,19 @@ def cmd_serve(a):
     # serve [port] [--no-open] — the bench, and the local JSON surface it reads.
     # THE CONTRACT (the bench depends on exactly this, and nothing else):
     #   GET  /  and /ui              the bench itself
+    #   GET  /language               where the language is declared: the counting
+    #                                forms the mechanism knows by right, the file
+    #                                and line in the corpus, the revision, and the
+    #                                command that brings it. With ?f=PATH it reads
+    #                                that file out of GATE_CORPUS if this machine
+    #                                has the checkout, and refuses any path that
+    #                                climbs out of it. gate still fetches nothing.
+    #   GET  /judge.js               the judge this page reads with, served whole
+    #   GET  /codemirror.js  and /codemirror.css
+    #                                the editor, vendored unmodified at the version
+    #                                gate's own manifest carries it at
+    #   GET  /ladder.css             the palette, the steps and the registers,
+    #                                emitted from the worlds that declare them
     #   GET  /version                {gate: VERSION} — what is actually running,
     #                                since the page comes off the disk and the
     #                                answers come out of memory
@@ -3797,6 +3842,28 @@ def cmd_serve(a):
                     if not (want.endswith(".swift") and os.path.exists(want) and is_seam_side(want)):
                         self.send_response(404); self.end_headers(); return
                     return self.send_file(want, "text/plain; charset=utf-8")
+                if u.path == "/language" and q.get("f"):
+                    # SHOWN, NOT ONLY TOLD — for whoever has the corpus. gate
+                    # still fetches nothing: this reads a checkout that is
+                    # already on the machine, named by GATE_CORPUS, and refuses
+                    # anything outside it rather than serving a path it was given.
+                    root = os.environ.get("GATE_CORPUS")
+                    want = os.path.realpath(os.path.join(root or "", q["f"]))
+                    if not (root and want.startswith(os.path.realpath(root) + os.sep)
+                            and os.path.exists(want)):
+                        self.send_response(404); self.end_headers(); return
+                    return self.send_file(want, "text/plain; charset=utf-8")
+                if u.path == "/language":
+                    # the words the mechanism knows by right, and the file that
+                    # declares them — so a name in a world can point at its floor
+                    body = json.dumps(language_origin()).encode()
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Cache-Control", "no-store")
+                    self.send_header("Content-Length", str(len(body)))
+                    self.end_headers()
+                    self.wfile.write(body)
+                    return
                 if u.path == "/version":
                     # WHAT IS ACTUALLY RUNNING. The bench serves its page off the
                     # disk and its answers out of memory, so a gate updated while

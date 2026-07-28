@@ -2260,6 +2260,42 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
                    os.path.join(HERE, "stdlib", "bench-registers.swift")],
                   capture_output=True, text=True).stdout))
 
+    # ── THE FLOOR IS REACHABLE, AND THIS IS THE SCENARIO. Open a forms file,
+    # click `Twice` where it is written, and land on the line that declares it.
+    # It did not work: the counting forms were not in the bench's vocabulary at
+    # all, so the promise that every name opens where it is declared stopped at
+    # exactly the layer everything else stands on. Found by a finger, not by this
+    # battery — which is why the check below walks the same path rather than
+    # reading the source for a string.
+    #
+    # gate fetches nothing, so there are two honest answers and both are here.
+    # With the corpus on the machine the declaration opens, read-only. Without
+    # it, the name is placed exactly — file, line, revision — and the command
+    # that brings it is handed over. Named beats a dead end; shown beats named.
+    lang = subprocess.run(
+        [sys.executable, "-c",
+         "import types;src=open(%r,encoding='utf-8').read();g=types.ModuleType('g');"
+         "g.__file__=%r;exec(compile(src,'gate','exec'),g.__dict__);"
+         "import json;print(json.dumps(g.language_origin()))" % (GATE, GATE)],
+        capture_output=True, text=True).stdout.strip().splitlines()
+    lang = json.loads(lang[-1]) if lang else {}
+    S.append(("a word of the language says where it is declared, and opens if it is here",
+              # the floor is named, with the line each word stands on
+              lang.get("names", {}).get("Twice") == 299
+              and lang.get("names", {}).get("Unit") == 283
+              and lang.get("file", "").endswith("Primitive.swift")
+              # at the revision the judge was built from, not some other one
+              and (lang.get("at") or "").startswith("0fd0b38")
+              # and the way to get it, since this tool will not go and take it
+              and "git clone" in lang.get("command", "")
+              # the bench reaches them: they join what a click can land on
+              and "...Object.keys(language.names || {})" in ui
+              and "function openLanguage(" in ui and "function sayLanguage(" in ui
+              # shown when present, named when not — never a silent nothing
+              and "language.present ? openLanguage(name, at) : sayLanguage(name, at)" in ui
+              # and reading a checkout may not climb out of it
+              and 'want.startswith(os.path.realpath(root) + os.sep)' in shelf_src))
+
     # ── AN EXHIBIT, NOT A WISH. What follows records what a claim written in the
     # head of the file that depends on it does TODAY, line by line, because the
     # answer is the case for the one change everything left is waiting on: the
@@ -3075,12 +3111,16 @@ public enum MyWatch: AccessLedger {
     ghost_verbs = sorted(v for v in claimed_verbs if v not in verbs)
     S.append(("every verb the README lists is a verb the code has", not ghost_verbs))
 
-    routes = set(re.findall(r'u\.path\s*[!=]=\s*"(/[a-z/]*)"', src))   # == and != both route
+    # a route may carry an extension, and this pattern used to stop at the dot —
+    # so `/ladder.css` read as `/ladder` on one side and vanished on the other,
+    # and the two files this bench serves by name were never compared at all.
+    # A check blind to a shape is a check that agrees with anything in it.
+    routes = set(re.findall(r'u\.path\s*[!=]=\s*"(/[a-z/.]*)"', src))   # == and != both route
     for grp in re.findall(r'u\.path\s+in\s+\(([^)]*)\)', src):
-        routes |= set(re.findall(r'"(/[a-z/]*)"', grp))
+        routes |= set(re.findall(r'"(/[a-z/.]*)"', grp))
     contract = set()
     for line in re.findall(r"^\s+#\s+(?:GET|POST|PUT)\s+(.+)$", src, re.M):
-        contract |= set(re.findall(r"(/[a-z/]*)", line.split("  ")[0] + " " + line))
+        contract |= set(re.findall(r"(/[a-z/.]*)", line.split("  ")[0] + " " + line))
     S.append(("the bench's promised routes are the routes the server answers",
               contract == routes))
 
