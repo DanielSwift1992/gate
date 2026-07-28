@@ -2332,6 +2332,46 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and ".file.nested{padding-left:var(--indent)}" in ui
               and '"Wide", "Indent"' in shelf_src))
 
+    # ── THE COURT ABOUT A PERSONAL WORLD ANSWERS WITH THE SAME GUARDS. Declaring
+    # `MyBench` in a personal world when the shared one already declares it is
+    # two truths about one name. `gate status` refused it with both addresses and
+    # `gate my` said holds — the one command a person runs about the very file
+    # that carries the second declaration. And the bench picks whichever it finds
+    # depending on which file is open, so the theme in force could turn on a tab.
+    # A court that answers about a world may not answer with less than the court
+    # standing beside it.
+    twice = tempfile.mkdtemp()
+    open(os.path.join(twice, "gate.swift"), "w").write(
+        "public enum Sales: Department {}\n"
+        "public enum MyBench: Bench { public typealias Theme = Dark }\n")
+    pers = subprocess.run(
+        [sys.executable, "-c",
+         "import types;src=open(%r,encoding='utf-8').read();g=types.ModuleType('g');"
+         "g.__file__=%r;exec(compile(src,'gate','exec'),g.__dict__);print(g.personal_path())"
+         % (GATE, GATE)], cwd=twice, capture_output=True, text=True).stdout.strip()
+    said_my, said_status = {}, {}
+    if pers:
+        os.makedirs(os.path.dirname(pers), exist_ok=True)
+        keep = open(pers).read() if os.path.exists(pers) else None
+        try:
+            open(pers, "w").write(
+                "public enum MyBench: Bench { public typealias Theme = Light }\n")
+            said_my = run("my", cwd=twice)[1]
+            said_status = run("status", cwd=twice)[1]
+        finally:
+            if keep is None:
+                os.path.exists(pers) and os.remove(pers)
+            else:
+                open(pers, "w").write(keep)
+    S.append(("the personal court refuses a second truth the shared court already refuses",
+              said_my.get("verdict") == "refused"
+              and said_status.get("verdict") == "refused"
+              and any("MyBench" in r.get("claim", "") and "declared twice" in r.get("claim", "")
+                      for r in said_my.get("refusals", []))
+              # by running the same guards, not by a second opinion of its own
+              and "A court that answers about a world may" in shelf_src
+              and shelf_src.count("refusals += duplicate_guards_over(sources)") >= 1))
+
     # ── AN EXHIBIT, NOT A WISH. What follows records what a claim written in the
     # head of the file that depends on it does TODAY, line by line, because the
     # answer is the case for the one change everything left is waiting on: the

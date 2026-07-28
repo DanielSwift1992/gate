@@ -430,6 +430,7 @@ fetch("/version", { cache: "no-store" }).then(r => r.json()).then(v => {
         rev.title = "The court itself, taken like anything else: `bin/build-judge.sh` clones the "
             + "corpus at a revision, builds, and writes the revision down beside the binary. "
             + "It is held by a build anybody can repeat — never by its own verdict.";
+        wireJudgeRow();
     }
     if (v.gate !== BENCH_FOR) {
         benchStale = " · this page is gate " + BENCH_FOR + ", the bench serving it is "
@@ -582,6 +583,22 @@ let files = [], active = "", personalFile = null, personalEmpty = false, viewing
 // signed nineteen refusals `gate.swift`, a file that was not even on screen.
 // A view of theirs says whose it is and refuses nothing.
 let refLabel = null;
+
+// ── A ROW THAT LOOKS LIKE A ROW OPENS SOMETHING. The judge sat among rows that
+// all answer a click and answered none — an affordance borrowed and not
+// honoured. What is behind it is the language it was built to read, so that is
+// where it goes: read-only, theirs, and named exactly when this machine has no
+// copy to show. It is wired after the language is known, because the version
+// answer arrives first and would find nothing to point at.
+function wireJudgeRow() {
+    const rev = document.getElementById("judge-row");
+    if (!rev || !language.file) return;
+    rev.title += " Click to read the language it carries.";
+    rev.style.cursor = "pointer";
+    rev.onclick = () => language.present
+        ? openLanguage("Structure", language.names.Structure || 1)
+        : sayLanguage("the language", language.names.Structure || 1);
+}
 let badFiles = new Set(), siblingNames = new Set(), layoutDecls = new Map(), declFile = new Map();
 let lastParsed = null, lastRefusals = [], widgets = [], tableSort = null;
 
@@ -2459,6 +2476,7 @@ async function loadVocabulary() {
     layoutFile = fl.layout || null;
     formsFiles = new Set(fl.forms || []);
     try { language = await (await fetch("/language")).json(); } catch { }
+    wireJudgeRow();
     await loadVocabulary();
     // the rail carries files AND the journal, so it shows for any clone
     // the line says what is true HERE: with a world, the judge is at work;

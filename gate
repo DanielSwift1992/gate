@@ -4317,6 +4317,15 @@ def dispatch(cmd, rest):
         refusals = [{"address": m.group(1), "claim": m.group(2).strip()}
                     for m in re.finditer(r"^\s+(\S+\.swift:\d+)\s+(.+)$", raw, re.M)]
         refusals = attribute_refusals(refusals, [(n, open(q).read()) for n, q in named])
+        # AND THE SAME GUARDS THE SHARED WORLD GETS. Declaring `MyBench` in a
+        # personal world when the shared one already declares it is two truths
+        # about one name — `gate status` refused it with both addresses and this
+        # said `holds`, which is the one command a person runs about the file
+        # that carries the second one. A court that answers about a world may
+        # not answer with less than the court beside it.
+        sources = [(n, open(q).read()) for n, q in named]
+        refusals += duplicate_guards_over(sources)
+        refusals += entry_guards_over(sources)
         return {"command": "my", "personal": p, "repo_key": repo_key(),
                 "shared_repo_untouched": True,
                 "verdict": "holds" if not refusals else "refused", "refusals": refusals}
