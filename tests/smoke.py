@@ -1637,6 +1637,22 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     after = run("status", cwd=two)[1]
     manifest = open(os.path.join(two, "gate.manifest.swift")).read()
     missing = run("theirs", "not-here.swift", cwd=two)[1]
+
+    # ── AND A ROW MAY NOT POINT OUT OF THE WORLD THAT MAKES IT. This is not
+    # hypothetical: an older walk started from the working directory instead of
+    # the file, and the battery's own temporary worlds wrote sixteen rows into
+    # THIS repository's manifest — claims about /var/folders directories deleted
+    # the same minute, sitting in a commit, indistinguishable from real ones.
+    outside = tempfile.mkdtemp()
+    open(os.path.join(outside, "stranger.swift"), "w").write("public enum X {}\n")
+    escape = run("mine", os.path.join(outside, "stranger.swift"), cwd=two)[1]
+    S.append(("a claim about a file outside the world is refused, not written",
+              escape.get("asks") and "not inside the world" in escape.get("note", "")
+              and "stranger" not in open(os.path.join(two, "gate.manifest.swift")).read()))
+    S.append(("and this tool's own manifest holds no row pointing out of itself",
+              not re.search(r'typeName: String \{ "\.\.',
+                            open(os.path.join(HERE, "gate.manifest.swift")).read())))
+
     S.append(("adding a file of mine and a file of theirs is one word each",
               # mine: it joins the judged world, and the count moves
               mine_said.get("command") == "mine" and mine_said.get("file") == "more.swift"
@@ -2445,6 +2461,29 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               # this is exactly where order had crept back in as truth
               and "def presented_over(" in shelf_src
               and "PRIORITY IS A PROPERTY OF THE LAYER, NEVER OF POSITION" in shelf_src))
+
+    # ── AND AN OVERRIDE IS VISIBLE FROM THE LIST. It is judged now — the shipped
+    # laws test whatever number is put in its place — but judged and silent is
+    # still green silence about values: in a month "why is this colour different
+    # here" gets answered by feel, or by grep. The file says how many names it
+    # overrules, in the rail, before it is opened.
+    over_seen = subprocess.run(
+        [sys.executable, "-c",
+         "import types,json;src=open(%r,encoding='utf-8').read();g=types.ModuleType('g');"
+         "g.__file__=%r;exec(compile(src,'gate','exec'),g.__dict__);"
+         "o={}\n"
+         "for s in sorted(g.STDLIB):\n"
+         " for n,p in (g.presented_over(s)[1] or {}).items(): o.setdefault(p,[]).append(n)\n"
+         "print(json.dumps({k:sorted(v) for k,v in o.items()}))"
+         % (GATE, GATE)], cwd=ovr, capture_output=True, text=True).stdout
+    S.append(("a file that overrules what shipped can be named, with what it overrules",
+              "my-colours.swift" in over_seen and "KnownNameDimZ" in over_seen
+              # and the rail asks for exactly that, and paints it in the quiet
+              # register — two questions live in a name's hue and this is neither
+              and '"overrides": {k: sorted(v) for k, v in overrides.items()}' in shelf_src
+              and "let overrides = {};" in ui and ".overrules{margin-left:auto" in ui
+              # and where it hurts is seen without opening the file
+              and ".file.bad .name{text-decoration:underline wavy var(--bad)" in ui))
 
     # ── AND THE EFFECTIVE SET IS JUDGED, or the freedom is a freedom to lie to
     # yourself. For a while nothing judged the result of an override: the

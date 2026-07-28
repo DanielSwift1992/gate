@@ -74,7 +74,13 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 .file:hover{background:var(--mist)}
 .file.on{background:var(--mist);font-weight:600}
 .file .dot{flex:0 0 6px;width:6px;height:6px;border-radius:50%;background:transparent}
+/* where it hurts, seen without opening: the same wave a name wears when it
+   resolves to nothing, on the file that carries the refusal */
 .file.bad{color:var(--bad)}.file.bad .dot{background:var(--bad)}
+.file.bad .name{text-decoration:underline wavy var(--bad);text-underline-offset:3px}
+/* and what this file overrules — a count, in the quiet register, never a colour
+   of its own: two questions live in a name's hue and this is neither */
+.overrules{margin-left:auto;color:var(--seam);flex:none}
 .folder{padding:var(--near) calc(var(--u)*7) 0}
 /* a file in a folder hangs one edge past the heading it sits under —
    `Indent` is what that step is called, and it means exactly this */
@@ -462,6 +468,12 @@ let layoutFile = null;
 // record may be. Their names belong to the vocabulary the bench offers,
 // and their court is `where`, never the plain stream.
 let formsFiles = new Set();
+// ── WHAT THIS FILE OVERRULES. An override is judged now — the shipped laws test
+// the number you put in its place — but it was still silent, and a silent
+// replacement is green silence about values: in a month "why is my colour
+// different" gets answered by feel. The rail says which file overrules and how
+// many names, so a reader learns it from the list rather than from a search.
+let overrides = {};
 // ── THE FLOOR EVERY NUMBER STANDS ON. `Twice<Unit>` is written in worlds all
 // over this bench and the names went nowhere: not in the vocabulary, not
 // jumpable, a dead end exactly at the layer everything else rests on. They are
@@ -655,7 +667,12 @@ function buildRail() {
             + (f === active ? " on" : "") + (badFiles.has(f) ? " bad" : "");
         // your personal world stands apart: it is in your own git, and the
         // shared repository does not have it
-        row.innerHTML = '<span class="dot"></span>' + (cut < 0 ? f : f.slice(cut + 1))
+        const over = (overrides[f] || []).length;
+        row.innerHTML = '<span class="dot"></span><span class="name">'
+            + (cut < 0 ? f : f.slice(cut + 1)) + "</span>"
+            + (over ? '<span class="overrules caption" title="This file overrules ' + over
+                + ' name' + (over === 1 ? "" : "s") + " this tool ships: " + esc((overrides[f] || []).join(", "))
+                + ". The laws that shipped go on judging what you put there.\u0022>\u27f2 " + over + "</span>" : "")
             + (f === personalFile
             // every file under this heading is mine, so the badge must say the
             // thing that is different about this one: it is not in the repository
@@ -2554,6 +2571,7 @@ async function loadVocabulary() {
     files = fl.files || []; personalFile = fl.personal || null; personalEmpty = !!fl.personal_empty;
     layoutFile = fl.layout || null;
     formsFiles = new Set(fl.forms || []);
+    overrides = fl.overrides || {};
     try { language = await (await fetch("/language")).json(); } catch { }
     wireJudgeRow();
     await loadVocabulary();

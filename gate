@@ -2419,6 +2419,35 @@ CARRIER_HEADER = """// printed by gate declare carrier — what a library says i
 """
 
 
+def world_root_for(path):
+    # the world a file belongs to is found the way .git is: walking up from the
+    # FILE — not from wherever the command was typed. Declaring `people/roster`
+    # from the root once wrote a second manifest inside `people/`; walking from
+    # the file finds the one world above it. And a file under no world at all
+    # founds one where it sits, which is how a bench in a fresh directory
+    # begins — the temporary worlds the battery builds are exactly this.
+    d = os.path.dirname(os.path.abspath(path)) or "."
+    walk = d
+    while True:
+        if os.path.exists(os.path.join(walk, "gate.swift")) \
+                or os.path.exists(os.path.join(walk, "gate.manifest.swift")):
+            return walk
+        up = os.path.dirname(walk)
+        if up == walk:
+            return d
+        walk = up
+
+
+def founds_world(path):
+    # TRUE WHEN THIS CLAIM WOULD FOUND A WORLD RATHER THAN JOIN ONE. There is no
+    # world above the file, so the row has nowhere to go but a new manifest, and
+    # where that manifest lands decides whether this is a bench beginning or a
+    # stranger's directory being written in.
+    root = world_root_for(path)
+    return not (os.path.exists(os.path.join(root, "gate.swift"))
+                or os.path.exists(os.path.join(root, "gate.manifest.swift")))
+
+
 def declare_side(path, kind, role, frm=None):
     # ONE MOVEMENT, TWO DIRECTIONS, AND NOBODY SPECIAL. Everything here is an
     # emitted view of somebody's source: my world is a view of my facts, their
@@ -2452,19 +2481,22 @@ def declare_side(path, kind, role, frm=None):
     # where a file is, relative to the world that declares it.
     # the world a file belongs to is found the way .git is: walking up from the
     # file itself, never from wherever the command happened to be typed
-    d = os.path.dirname(os.path.abspath(path)) or "."
-    walk = d
-    while True:
-        if os.path.exists(os.path.join(walk, "gate.swift")) \
-                or os.path.exists(os.path.join(walk, "gate.manifest.swift")):
-            d = walk
-            break
-        up = os.path.dirname(walk)
-        if up == walk:
-            break
-        walk = up
+    d = world_root_for(path)
     mp = os.path.join(d, "gate.manifest.swift")
     rel = os.path.relpath(os.path.abspath(path), d)
+    # ── AND A ROW MAY NOT POINT OUT OF THE WORLD THAT MAKES IT. A row says where
+    # a file is relative to its world; `../../../../var/folders/...` says the
+    # file is somewhere else entirely, and a world cannot answer for what is not
+    # in it. This is the floor that reading already stands on — a checkout may
+    # not be read out of — said for writing, and it was missing: an older walk
+    # started from the working directory instead of the file and put sixteen
+    # such rows in this tool's own manifest, claims about temporary directories
+    # deleted the same minute, and nothing downstream could tell them from real
+    # ones. Walking from the file is what prevents it; this is what catches it
+    # if the walk is ever wrong again.
+    if rel.split(os.sep)[0] == os.pardir:
+        raise ValueError(f"{path} is not inside the world at {d}: a row says where a "
+                         "file is relative to the world that declares it")
     name = sanitize(os.path.splitext(rel)[0]).title().replace("_", "").replace("/", "") or "Side"
     ROLE_ATOM = {"world": "WorldFile", "seam": "SeamFile", "forms": "FormsFile",
                  "judge": "JudgeFile", "carried": "CarriedFile"}
@@ -2641,7 +2673,35 @@ def cmd_side(a, kind):
                 "note": "what is taken is taken at a revision, and this one says none",
                 "next": f"gate theirs {os.path.basename(path)} --at REV — a commit, a tag, a "
                         "release: whatever the source calls the thing you actually took"}
-    mp = declare_side(path, kind, role, at)
+    # ── AND A CLAIM MAY NOT POINT OUT OF THE WORLD THAT MAKES IT. A row says
+    # where a file is relative to its world; a row saying `../../../../var/...`
+    # says the file is somewhere else entirely, and a world cannot answer for
+    # what is not in it. This is the same floor as reading — a checkout may not
+    # be read out of — spelled for writing, and it was missing: an older walk
+    # wrote sixteen such rows into this tool's own manifest and they sat in a
+    # commit, claims about temporary directories that had long since been
+    # deleted. Nothing downstream could tell them from real ones.
+    # ── A WORLD IS FOUNDED WHERE YOU STAND, NOT WHEREVER YOU POINT. With no world
+    # above the file the row has nowhere to go but a new manifest, and that is
+    # how a bench in a fresh directory begins — `gate mine x.swift`, right here.
+    # Pointing at somebody's file elsewhere is a different act wearing the same
+    # word: it founded a whole world around a stranger's file, in a directory
+    # nobody meant as one, and said nothing. Standing in a world and naming a
+    # file outside it is the same mistake from the other end.
+    here = os.path.abspath(".")
+    outside = os.path.relpath(os.path.abspath(path), here).split(os.sep)[0] == os.pardir
+    if outside and founds_world(path):
+        return {"command": word, "asks": True,
+                "note": f"{path} is not inside the world here, and there is no world around it",
+                "next": "a world is founded where you stand: run this from the directory that "
+                        "world is in, or bring the file into this one — a world answers for "
+                        "what is in it"}
+    try:
+        mp = declare_side(path, kind, role, at)
+    except ValueError as e:
+        return {"command": word, "asks": True, "note": str(e),
+                "next": "bring the file into the world first — a world answers for what is "
+                        "in it, and a row that points outside is a claim it cannot keep"}
     out = {"command": word, "file": os.path.basename(path), "declared_in": mp,
            "role": role, "role_means": ROLES[role], "mutates": True}
     if kind == "Mine":
@@ -4036,9 +4096,18 @@ def cmd_serve(a):
                     forms_rows = [r["path"] for r in
                                   ((MANIFEST.get("rows") if MANIFEST else None) or [])
                                   if r["role"] == "forms" and r["path"] in names]
+                    # AND WHICH OF YOUR FILES OVERRULES SOMETHING WE SHIPPED. An
+                    # override that is judged but invisible is still a surprise:
+                    # in a month "why is my colour different" is answered by
+                    # feel. The rail says which file overrules, and how much.
+                    overrides = {}
+                    for shelf in sorted(STDLIB):
+                        for name, path in (presented_over(shelf)[1] or {}).items():
+                            overrides.setdefault(path, set()).add(name)
                     body = json.dumps({"files": names,
                                        "layout": lay if lay in names else None,
                                        "forms": forms_rows,
+                                       "overrides": {k: sorted(v) for k, v in overrides.items()},
                                        "personal": names[-1] if pf else None,
                                        "personal_empty": bool(pf) and not os.path.exists(pf)}).encode()
                     self.send_response(200)
