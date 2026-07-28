@@ -605,10 +605,15 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # moment something broke — which is exactly the moment there is most to
     # decide.
     S.append(("and the chip reddens for disagreements alone, never for empty slots, and neither hides the other",
-              "outerHTML = (broken.length" in ui
+              'document.getElementById("chips").innerHTML = (broken.length' in ui
               and "+ broken.length + '</span>'" in ui
               # the waiting slots are built apart from the verdict and appended to it
               and "const waits = pending.length" in ui and "+ waits;" in ui
+              # INTO A HOLDER, because the verdict is sometimes two chips. Saying
+              # it again used to replace the first and leave the second standing:
+              # thirteen `5 to fill` marching across the bar after thirteen
+              # keystrokes, each a truthful count of the same five slots.
+              and 'id="chip"' not in ui and '<span id="chips"></span>' in ui
               # and they never wear the colour a lie earns
               and "chip bad" not in ui.split("const waits = pending.length", 1)[1].split(";", 1)[0]))
 
@@ -637,7 +642,8 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and 'nav-fwd").onclick = () => navGo(navForward' in ui))
 
     S.append(("the bench shows the shelf as reference, not as the world",
-              'viewingShelf = mod' in ui and 'chip" id="chip" style=' in ui
+              'viewingShelf = mod' in ui
+              and 'document.getElementById("chips").innerHTML =' in ui
               and 'a printout of what the judge carries' in ui and "if (viewingShelf)" in ui))
     S.append(("and returning to a world file resumes judgement",
               'viewingShelf = null' in ui and 'cm.setOption("readOnly", false); viewingShelf = null' in ui))

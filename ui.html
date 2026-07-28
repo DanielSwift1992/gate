@@ -326,8 +326,13 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 #table-host td.cell-bad{background:color-mix(in srgb,var(--bad) 10%,transparent)}
 #table-host td.cell-bad::after{content:" ✗";color:var(--bad)}
 #verdict-panel{border-top:0.5px solid var(--line);background:var(--paper);flex:none;max-height:34vh;display:flex;flex-direction:column}
+#verdict-head{display:flex;align-items:center;gap:calc(var(--u)*5);
+  /* the chips are one group, and they keep their words: a bar that
+     squeezes a verdict until it reads `refuse` is a bar that lies */
+}
+#chips{display:flex;align-items:center;gap:calc(var(--u)*3);flex:none}
 #verdict-head{display:flex;align-items:center;gap:calc(var(--u)*5);padding:calc(var(--u)*4) calc(var(--u)*8) calc(var(--u)*4);flex:none}
-.chip{font-family:var(--mono);display:inline-block;min-width:4.6em;text-align:center;font-size:11px;font-weight:600;padding:calc(var(--u)*2) calc(var(--u)*5);border-radius:8px;font-variant-numeric:tabular-nums}
+.chip{font-family:var(--mono);display:inline-block;flex:none;min-width:4.6em;white-space:nowrap;text-align:center;font-size:11px;font-weight:600;padding:calc(var(--u)*2) calc(var(--u)*5);border-radius:8px;font-variant-numeric:tabular-nums}
 .chip.ok{background:color-mix(in srgb,var(--ok) 12%,transparent);color:var(--ok)}
 .chip.bad{background:var(--bad);color:var(--paper)}
 /* the typeface says WHO is speaking. Monospace is the world and everything read
@@ -385,7 +390,7 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
   </div>
   <div id="verdict-panel">
     <div id="inspect" class="observed" title="the cursor on a name says what it is"></div>
-    <div id="verdict-head"><span id="chip"></span><span id="status" class="caption"></span><span id="next" class="caption"></span></div>
+    <div id="verdict-head"><span id="chips"></span><span id="status" class="caption"></span><span id="next" class="caption"></span></div>
     <div id="verdicts"></div>
   </div>
 </div>
@@ -1240,8 +1245,8 @@ async function render() {
         document.getElementById("status").innerHTML = refLabel
             ? refLabel
             : "<b>" + viewingShelf + ".swift</b> · a printout of what the judge carries — theirs, read-only";
-        document.getElementById("chip").outerHTML =
-            '<span class="chip" id="chip" style="background:var(--mist);color:var(--muted)">reference</span>';
+        document.getElementById("chips").innerHTML =
+            '<span class="chip" style="background:var(--mist);color:var(--muted)">reference</span>';
         document.getElementById("next").textContent = "";
         document.getElementById("verdicts").innerHTML = "";
         applyMyBench();
@@ -1278,11 +1283,18 @@ async function render() {
             + pending.length + ' slots are not filled in yet. Nothing disagrees; the record is just unfinished.">'
             + pending.length + ' to fill</span>'
         : "";
-    document.getElementById("chip").outerHTML = (broken.length
-        ? '<span class="chip bad" id="chip" title="' + broken.length
+    // ── ONE HOLDER, BECAUSE THE VERDICT IS SOMETIMES TWO CHIPS. This replaced
+    // the element with the id by TWO elements and only the first kept the id,
+    // so every later render replaced the verdict and left the previous `to
+    // fill` standing beside it — thirteen of them across the bar after thirteen
+    // keystrokes, each one a truthful count of the same five slots. Writing
+    // into a holder replaces everything that was said, which is what saying it
+    // again should mean.
+    document.getElementById("chips").innerHTML = (broken.length
+        ? '<span class="chip bad" title="' + broken.length
             + ' claims disagree with the rest. Each is listed below, with its line.">refuses '
             + broken.length + '</span>'
-        : '<span class="chip ok" id="chip" title="Every claim in these files agrees with every other one.">holds</span>')
+        : '<span class="chip ok" title="Every claim in these files agrees with every other one.">holds</span>')
         + waits;
     clearFlags(); applyFlags(r.refusals);
     showNext();
