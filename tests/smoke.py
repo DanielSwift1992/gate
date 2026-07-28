@@ -2004,11 +2004,17 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and all(f"public typealias {n} = Apart<" in pal for n in (
                   "MineApartTheirs_X_lit", "MineApartTheirs_X_dim",
                   "MineApartTheirs_Z_lit", "MineApartTheirs_Z_dim",
-                  "TheirsApartBad_Z_lit", "TheirsApartBad_Z_dim"))
+                  "TheirsApartBad_Z_lit", "TheirsApartBad_Z_dim",
+                  # and every crowded pair in the dark half, measured: four of
+                  # them fall inside a box 182 wide where the light half stands
+                  # 100 to 740 apart. The design decision is left open on
+                  # purpose; the drift is not.
+                  "ActionApartTheirs_X_dim", "ActionApartMine_X_dim",
+                  "BadApartLaw_Z_dim"))
               # and the weak one is named as weak rather than buried in a number
               and "THE WEAK ONE, SAID OUT LOUD" in pal
               # the floors are live: the judge counts them among what it holds
-              and "116 equalities" in subprocess.run(
+              and "119 equalities" in subprocess.run(
                   [os.path.join(HERE, "bin", "gate-judge"), "judge", "where",
                    os.path.join(HERE, "stdlib", "bench-palette.swift")],
                   capture_output=True, text=True).stdout))

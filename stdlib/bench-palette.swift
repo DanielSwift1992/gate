@@ -292,3 +292,20 @@ public typealias MineApartTheirs_Z_lit = Apart<KnownNameLitZ, LocalTypeLitZ, Plu
 public typealias MineApartTheirs_Z_dim = Apart<KnownNameDimZ, LocalTypeDimZ, Plus<W2, W32>>
 public typealias TheirsApartBad_Z_lit = Apart<KnownNameLitZ, BadLitZ, Plus<Unit, Plus<W2, Plus<W64, W512>>>>
 public typealias TheirsApartBad_Z_dim = Apart<KnownNameDimZ, BadDimZ, Plus<W2, Plus<W16, Plus<W32, W256>>>>
+
+// ── AND EVERY PAIR OF NAME CHANNELS, MEASURED. All six sit on ONE luminance by
+// the Same chain above, deliberately: only hue is meant to tell them apart. So
+// hue is the whole of the distinction and it had one floor for one pair. The
+// rest, measured across X and Z: in the light half the pairs stand 100 to 740
+// apart; in the dark half four of them fall inside a box 182 wide —
+// Action↔KnownName 56, Bad↔Law 77, Action↔LocalType 154, LocalType↔KnownName
+// 182, where the same pairs in light are 100, 70, 440 and 540.
+//
+// At a luminance of 419 nothing can be saturated, so every channel comes out a
+// pale variant and four of them crowd. That is a design decision about the dark
+// half — moving one channel puts it on top of another, measured three ways —
+// and it is left open ON PURPOSE. What is not left open is drift: these floors
+// are today's distances, so the crowding cannot quietly get worse.
+public typealias ActionApartTheirs_X_dim = Apart<KnownNameDimX, ActionDimX, Plus<Unit, Plus<W8, W32>>>
+public typealias ActionApartMine_X_dim = Apart<ActionDimX, LocalTypeDimX, Plus<W8, Plus<W32, W64>>>
+public typealias BadApartLaw_Z_dim = Apart<BadDimZ, LawDimZ, Plus<Unit, Plus<W4, W64>>>
