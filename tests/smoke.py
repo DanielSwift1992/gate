@@ -2761,6 +2761,30 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "taken as given" in ui
               and "somebody SUPPLYING the agreement the two sides never derived" in ui))
 
+    # ── AND `init` WITH NO PATH MEANS HERE, WHEN HERE IS ALREADY A WORLD. The
+    # default was a new folder called `world`, unconditionally — so `gate init
+    # --vendor`, typed by somebody standing in the world they had just made,
+    # built a SECOND world inside the first and vendored the tool into that. The
+    # success line was true and the files were one directory below where the
+    # person then looked for them. Found by hand, walking the demo path; a
+    # second world inside a world is the two-truths shape in the filesystem.
+    iw = os.path.join(tmp, "initwhere")
+    run("demo", iw)
+    said_here = run("init", "--vendor", cwd=iw)[1]
+    empty = os.path.join(tmp, "initempty")
+    os.makedirs(empty)
+    said_new = run("init", cwd=empty)[1]
+    S.append(("`init` with no path means here when here is a world, and a new folder when it is not",
+              said_here.get("root") == "."
+              and os.path.isdir(os.path.join(iw, ".gate"))
+              and not os.path.isdir(os.path.join(iw, "world"))
+              # and the vendored judge is really there, with what it was built from
+              and os.path.exists(os.path.join(iw, ".gate", "bin", "gate-judge"))
+              and os.path.exists(os.path.join(iw, ".gate", "bin", "gate-judge.from"))
+              # in an empty folder it still scaffolds one, which is the old use
+              and said_new.get("root") == "world"
+              and os.path.isdir(os.path.join(empty, "world"))))
+
     # ── THE WAY BACK IS SAID BEFORE THE FIRST PUSH. Trying things is free only
     # when the retreat is known in advance: courage comes from seeing the way
     # back, never from being told afterwards that one existed. The demo world is

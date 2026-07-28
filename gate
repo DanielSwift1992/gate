@@ -4118,9 +4118,17 @@ def findings_markdown(found):
 
 
 def cmd_init(a):
+    # ── WITH NO PATH, "HERE" MEANS HERE WHEN HERE IS ALREADY A WORLD. The
+    # default was a new folder called `world`, unconditionally — so `gate init
+    # --vendor`, typed by somebody standing in the world they had just made,
+    # built a SECOND world inside the first and vendored the tool into that.
+    # The line printed said `created 8 files` and was true; the files a person
+    # then looked for were one directory further down than they were looking.
+    # A second world inside a world is the two-truths shape, in the filesystem.
     vendor = "--vendor" in a
     a = [x for x in a if x != "--vendor"]
-    root = a[0] if a else "world"
+    here_is_world = os.path.exists("gate.swift") or os.path.exists("gate.manifest.swift")
+    root = a[0] if a else ("." if here_is_world else "world")
     made = []
     for rel, content in INIT_FILES.items():
         p = os.path.join(root, rel)
