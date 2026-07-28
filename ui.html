@@ -692,6 +692,11 @@ let files = [], active = "", personalFile = null, personalEmpty = false, viewing
 // opened in Full reads as code, and a rule about how much prose a file holds
 // would be a guess wearing a threshold — so the author says it, in their file.
 let opensAs = {};
+// the sides of a seam this layout declares. Not bench files — their court is
+// `gate seam`, and one swept into the judged list broke a world once — but they
+// are rows of a document open on this screen, and a name the panel prints and
+// cannot open is a name a reader is asked to take on trust.
+let seamRows = [];
 // ── WHAT IS BEING READ, AND ON WHOSE AUTHORITY. A file of theirs opened here is
 // a reading, and a reading is not a trial: judgement has no jurisdiction outside
 // the gate, which is the same law `drift` lives by. Opening the corpus without
@@ -779,6 +784,24 @@ function buildRail() {
             loadFile(f); recordJump(from); // loadFile sets `active` before it awaits
         };
         list.appendChild(row);
+    }
+    // and the sides of a seam, under their own word: declared by this layout,
+    // judged where they meet this world and nowhere else, opened to READ
+    if (seamRows.length) {
+        const head = document.createElement("div");
+        head.className = "folder caption";
+        head.textContent = "seams";
+        list.appendChild(head);
+        for (const s of seamRows) {
+            const r = document.createElement("div");
+            r.className = "file fact nested" + (viewingShelf === s ? " on" : "");
+            r.title = "One side of a seam, as its own side wrote it. Judged where it meets your "
+                    + "world and nowhere else — `gate seam` is the court over the pair.";
+            r.innerHTML = '<span class="dot"></span><span class="name">'
+                + esc(s.split("/").pop()) + "</span>";
+            r.onclick = () => openSeamSide(s, null);
+            list.appendChild(r);
+        }
     }
 }
 
@@ -1698,6 +1721,7 @@ async function sayValue(name, now, cell) {
             files = fl.files || []; overridden = fl.overridden || {};
             formsFiles = new Set(fl.forms || []);
             opensAs = fl.opens || {};
+            seamRows = fl.seams || [];
         } catch { }
         buildRail();
         await loadFile(said.file);
@@ -2926,6 +2950,7 @@ async function loadVocabulary() {
     layoutFile = fl.layout || null;
     formsFiles = new Set(fl.forms || []);
     opensAs = fl.opens || {};
+    seamRows = fl.seams || [];
     overridden = fl.overridden || {};
     judgeClaimAt = fl.judge_claim || null;
     try { language = await (await fetch("/language")).json(); } catch { }

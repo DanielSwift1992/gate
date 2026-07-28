@@ -177,7 +177,12 @@ gate status                      # first print + first verdict, in ms
 `gate serve` in a repository that has no world yet still opens, and `gate log`
 reads the repository itself, with nothing to translate.
 
-**Full**, **Bare** and **Table** are three ways to look at one file.
+**Full**, **Bare** and **Table** are three ways to look at one file, and a file
+may say which of them it should first be met in — `// opens: bare` in its own
+head line, the same act as `// role:` one line above it. A letter opened in
+Full reads as code; a ledger opened in Bare reads as prose. The bench opens on
+the first row your layout declares, so the front door is whichever file you put
+first.
 
 ## Mine and theirs
 
@@ -633,7 +638,7 @@ judge.js        the browser judge (byte-parity port) for the bench
 ui.html         the workbench
 codemirror.*    the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
-tests/smoke.py   the battery — 272 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 274 end-to-end checks, the definition of green
 ```
 
 ## Status

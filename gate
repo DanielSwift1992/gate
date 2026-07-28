@@ -1719,7 +1719,6 @@ SEAM_DEMO_SDK = {"carrier": "MessagesJS",
 
 
 DEMO_README = """\
-// role: forms
 // opens: bare
 //
 // ── this file is the way in, and it stays the way back ──
@@ -4995,10 +4994,25 @@ def cmd_serve(a):
                     # AND HOW EACH FILE ASKS TO BE FIRST MET, in its own words.
                     opens = {n: opens_as(p)[0] for n, p in named
                              if os.path.exists(p) and opens_as(p)[0]}
+                    # ── AND THE SIDES OF A SEAM, WHICH THE LAYOUT DECLARES AND
+                    # THE RAIL DID NOT SHOW. A seam side is not a fragment of
+                    # this world — its court is `gate seam`, and sweeping one
+                    # into the judged list broke a world once — so it is not a
+                    # bench file. It is still a row of the document open on the
+                    # screen: the bench listed two files by name in the layout
+                    # and offered no way to open either, which is the one thing
+                    # this page must never do. Read-only, by the route that
+                    # already exists for exactly this.
+                    here_root = os.path.dirname(MANIFEST["manifest"]) if MANIFEST else "."
+                    seam_rows = [r["path"] for r in
+                                 ((MANIFEST.get("rows") if MANIFEST else None) or [])
+                                 if r["role"] == "seam"
+                                 and os.path.exists(os.path.join(here_root, r["path"]))]
                     body = json.dumps({"files": names,
                                        "layout": lay if lay in names else None,
                                        "forms": forms_rows,
                                        "opens": opens,
+                                       "seams": seam_rows,
                                        "overridden": overridden,
                                        # WHERE THE COURT WAS TAKEN, so the one
                                        # line a stranger asks about — "why is

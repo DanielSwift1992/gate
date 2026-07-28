@@ -1,17 +1,20 @@
 // gate stdlib readme v1 — every verb this tool answers to, as records
 // role: forms
+// opens: bare
 // written in `gate stdlib show forms-tool`
 //
-// THE REFERENCE IS A WORLD, NOT A PAGE. A list of verbs in prose drifts from
-// the tool the moment either changes, and nothing says when — which is the one
-// failure this whole tool exists against, met in its own documentation. Here
-// each verb is a record: what it touches, which court it calls, and a note in
-// its own words. `gate status` in this repository judges it, and a guard holds
-// it to the dispatch by name, both directions — a verb with no record and a
-// record with no verb are each refused at their line.
+// This is the whole of what gate answers to, and it is a world rather than a
+// page. A list of verbs in prose drifts from the tool the moment either
+// changes and nothing says when — which is the failure this tool exists
+// against, met in its own documentation. So each verb here is a record: what
+// it touches, which court it calls, and a note in its own words. `gate status`
+// in this repository judges them, and a guard holds them to the dispatch by
+// name in both directions: a verb with no record and a record with no verb are
+// each refused at a line.
 //
-// Seeded once from the dispatch, the way a world is seeded from a table. From
-// then on this file is the source: edit it, and the guard answers.
+// Read as far down as your question goes. It was seeded once from the
+// dispatch, the way a world is seeded from a table; from then on this file is
+// the source, and editing it is how the answer changes.
 
 // ── what a person runs first ──
 

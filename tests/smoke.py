@@ -4599,8 +4599,14 @@ public enum MyWatch: AccessLedger {
     S.append(("a law broken in the editor is refused before it is written, in a forms row too",
               # the buffer's own break, named at its line — and the file on disk
               # still says the other thing
-              broke_said and any(r["address"] == "readme.swift:35" for r in broke_said["refusals"])
-              and any("share one zone" in r["claim"] for r in broke_said["refusals"])
+              # named at the line that actually writes the claim, read from the
+              # text rather than from a number typed here: an address a check
+              # keeps in its own head is an address that stops meaning anything
+              broke_said and any(
+                  r["address"] == "readme.swift:" + str(
+                      next(i for i, l in enumerate(typed.split("\n"), 1)
+                           if l.startswith("public typealias Owns_readme")))
+                  and "share one zone" in r["claim"] for r in broke_said["refusals"])
               # the world's own single refusal is still there and is not this one
               and len(broke_said["refusals"]) == 2
               # put the saved text back and only the scene's refusal remains
@@ -4643,6 +4649,55 @@ public enum MyWatch: AccessLedger {
     # dashes in it, and a command lost the line break that made it a command.
     # No register is added for either — two already-declared ones get a second
     # speaker, which is what a word earns its keep by.
+    # ── AND THIS TOOL'S OWN FRONT DOOR IS MET THE SAME WAY. The mechanism was
+    # built for the demo and gate's own reference was left dressed as code —
+    # every verb's note wearing `//`, the table a person is sent to by the
+    # README opening as a source file. The tool that says a reference must not
+    # drift from what it describes may not be the one place it is not applied.
+    ref = open(os.path.join(HERE, "stdlib", "readme.swift"), encoding="utf-8").read()
+    # ── AND A NAME THE PANEL PRINTS IS A NAME THE PANEL OPENS. The seam demo's
+    # bench showed its layout — two seam sides listed by name, right there on
+    # the screen — and offered no way to open either: the whole scene is about
+    # those two declarations and neither was reachable. A seam side is not a
+    # fragment of this world (its court is `gate seam`, and one swept into the
+    # judged list broke a world once), so it is not a bench file; it is a row of
+    # the document open on the screen, and the route to read it already existed.
+    sd = os.path.join(tmp, "seamrail")
+    run("demo", "seam", sd)
+    _s6 = _sock.socket(); _s6.bind(("127.0.0.1", 0)); _sp = _s6.getsockname()[1]; _s6.close()
+    _sb = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_sp)], cwd=sd,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    rail = side_text = None
+    try:
+        for _ in range(60):
+            try:
+                _u.urlopen(f"http://127.0.0.1:{_sp}/files", timeout=1).read(); break
+            except Exception:
+                time.sleep(0.1)
+        rail = json.loads(_u.urlopen(f"http://127.0.0.1:{_sp}/files", timeout=10).read())
+        side_text = _u.urlopen(f"http://127.0.0.1:{_sp}/seamside?f=api.swift",
+                               timeout=10).read().decode()
+    finally:
+        _sb.terminate()
+    S.append(("every name the panel prints is a name the panel opens, seam sides included",
+              rail and sorted(rail.get("seams") or []) == ["api.swift", "sdk.swift"]
+              # and they are NOT bench files: no court of this world reads them,
+              # and nothing may write to one through this page
+              and not (set(rail["seams"]) & set(rail["files"]))
+              and side_text and "one side of a seam" in side_text
+              and "openSeamSide(s, null)" in ui))
+
+    S.append(("gate's own reference is met as a reference, not as source",
+              "// opens: bare" in ref
+              # and it is the first row of this world's layout, so the bench
+              # opens on it
+              and open(os.path.join(HERE, "gate.manifest.swift"),
+                       encoding="utf-8").read().index("stdlib/readme.swift")
+                  < open(os.path.join(HERE, "gate.manifest.swift"),
+                         encoding="utf-8").read().index("stdlib/bench-atoms.swift")
+              # every verb carries the note the reference is made of
+              and ref.count("///") >= 25))
+
     S.append(("bare reads the marks the writer already makes: a section is a heading, a block is set",
               'out.push({ line: i + 1, text: head[1], kind: "head" });' in ui
               and 'kind: "set"' in ui
