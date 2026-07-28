@@ -321,6 +321,16 @@ demo · findings · --version`. A refusal
 exits non-zero, so hooks and CI need no wrappers — and `drift`, which judges
 nothing, exits non-zero only on a threshold you declare yourself.
 
+**The full reference is a world, not a page.** `gate stdlib show readme` prints
+every verb as a record — what it touches, which court it calls, a note in its
+own words — judged with this repository's own world and held to the dispatch by
+name in both directions: a verb with no record and a record with no verb are
+each refused at a line. Eleven of them carry a certificate that they change
+nothing, `Run<V>: Safe where V.Does == Reads`; the judge refuses that line if
+the verb admits to writing, and the battery runs every one of them and holds
+the working copy byte-identical afterwards. A list in prose could promise the
+same thing and drift from it the same afternoon.
+
 Every command ends with the one step that comes next, chosen by what your
 repository already has — the journal before any translation, then the hook,
 then a policy, then CI — so nobody has to hold the whole ladder in their
@@ -623,7 +633,7 @@ judge.js        the browser judge (byte-parity port) for the bench
 ui.html         the workbench
 codemirror.*    the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
-tests/smoke.py   the battery — 262 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 269 end-to-end checks, the definition of green
 ```
 
 ## Status

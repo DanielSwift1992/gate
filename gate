@@ -232,10 +232,27 @@ def manifest_guards(rows=None):
                         "claim": f"`{r['name']}` is theirs and does not say which revision it was "
                                  "taken at. Taken means taken from somewhere, at something: "
                                  "`gate theirs " + r["path"] + " --at REV`"})
-    for p in ([os.path.join(d, r["path"]) for r in live if r["role"] == "world"]
-              if rows is not None else MANIFEST["files"]):
+    # ── A ROW OF ANY ROLE NAMES A FILE, AND A GHOST IS A GHOST WHICHEVER COURT
+    # WOULD HAVE READ IT. The shadow check below was widened to every role and
+    # this one was left at `world`, so a declared forms file could simply vanish
+    # and nothing said a word. This repository is entirely forms rows: deleting
+    # `stdlib/bench-palette.swift` took a hundred and thirty-two equalities out
+    # of the court and `gate status` answered `holds`. The only trace was the
+    # width — the count went from 180 to 48 — and a green that quietly narrows
+    # is the exact failure this tool exists against, standing in its own repo.
+    # A COURT OF THIS WORLD READS world, seam and forms, and their absence
+    # narrows it silently; `judge` and `carried` name a dependency rather than a
+    # file this world judges — the judge's row is provenance held by a
+    # reproducible build, and those two are accounted for by guards of their own.
+    for r in (live or []):
+        if r["role"] not in ("world", "seam", "forms"):
+            continue
+        p = os.path.join(d, r["path"])
         if not os.path.exists(p):
-            bad.append({"address": man, "claim": f"the manifest declares {os.path.relpath(p, d)}, and no such file exists"})
+            bad.append({"address": f"{man}:{r['line']}",
+                        "claim": f"the manifest declares {r['path']}, and no such file exists: "
+                                 "either the file is gone or the row is, and a row for a file "
+                                 "nobody has is a court sitting over nothing"})
     # A SHADOW IS A FILE NOBODY SPOKE FOR, and a row of ANY role has been spoken
     # for. Reading only the world rows here called a declared seam side — and
     # then a declared forms file — a shadow, which is an accusation about
@@ -370,6 +387,95 @@ def forms_guards(size=None):
 
 
 
+ONE_LINE_GATE = re.compile(r"^\s*(?:public )?extension\s+\w+\s*:\s*\w+\b.*\bwhere\b.*\{\s*\}\s*$")
+
+
+def gate_shape_guards():
+    # ── A LAW WRITTEN ON ONE LINE IS NOT A LAW, AND BOTH COURTS GO SILENT
+    # TOGETHER. Found by hand on this tool's own demo world: move a single
+    # newline in the forms file —
+    #
+    #     extension Owns: Owned                        →  extension Owns: Owned
+    #     where Who.Key: Administers, …  {}               where … {}   (one line)
+    #
+    # — and `refused 1` becomes `holds · 0 equalities judged`, in the shipped
+    # binary and in the browser port alike. Every certificate over that law stops
+    # being checked and nothing says a word, which is the exact silence this
+    # tool exists against. Swift accepts both spellings identically, so the
+    # compiler tier would still catch it; the fast tier, which is the one anybody
+    # runs on a keystroke, would not — and that is the tier people trust.
+    #
+    # The judge is the corpus's and pinned; this is not ours to fix there. What
+    # is ours is to refuse the shape rather than let a world be quietly unjudged.
+    bad = []
+    seen = []
+    if MANIFEST:
+        d = os.path.dirname(MANIFEST["manifest"])
+        seen += [(r["path"], os.path.join(d, r["path"]))
+                 for r in (MANIFEST.get("rows") or []) if r["role"] == "forms"]
+    for name, path in seen:
+        if not os.path.exists(path):
+            continue
+        for i, line in enumerate(open(path, encoding="utf-8", errors="replace")
+                                 .read().split("\n"), 1):
+            if ONE_LINE_GATE.match(line):
+                bad.append({"address": f"{name}:{i}",
+                            "claim": "a gated conformance written on one line is read by no court: "
+                                     "break the line before `where` and the law is judged again. "
+                                     "Left as it is, every certificate over it holds without "
+                                     "being checked"})
+    return bad
+
+
+def own_surface_guards():
+    # ── THE TABLE OF VERBS AND THE DISPATCH, HELD TO EACH OTHER BY NAME. gate's
+    # own reference is a world of records rather than a page of prose, and a
+    # world is only worth the guard that holds it to what it is about. A verb
+    # with no record is undocumented; a record with no verb is a promise this
+    # tool no longer keeps. Both are refused at a line.
+    #
+    # Which file a thing is cannot be judged — it is bytes and paths, and no
+    # world speaks about a filesystem. So this is a guard from fact, and it says
+    # so: the reference is judged for what it says about itself, and held here
+    # for whether it is true of this tool.
+    if not MANIFEST:
+        return []
+    d = os.path.dirname(MANIFEST["manifest"])
+    rows = [r for r in (MANIFEST.get("rows") or []) if r["role"] == "forms"
+            and os.path.abspath(os.path.join(d, r["path"])) in SHIPPED_PATHS
+            and os.path.basename(r["path"]) == "readme.swift"]
+    if not rows:
+        return []
+    name = rows[0]["path"]
+    text = open(os.path.join(d, name), encoding="utf-8", errors="replace").read()
+    lines = text.split("\n")
+    said, at = {}, {}
+    for i, line in enumerate(lines, 1):
+        m = re.match(r"public enum (\w+): (Verb|Spelling) \{", line.strip())
+        if m:
+            spelt = re.search("extension " + m.group(1) + r" \{ public static var typeName: "
+                              r'String \{ "([^"]+)" \} \}', text)
+            if spelt:
+                said[spelt.group(1)] = m.group(1)
+                at[spelt.group(1)] = i
+    src = open(os.path.abspath(__file__), encoding="utf-8").read()
+    verbs = set(re.findall(r'cmd\s*==\s*"([a-z-]+)"', src))
+    for grp in re.findall(r'cmd\s+in\s+\(([^)]*)\)', src):
+        verbs |= set(re.findall(r'"([a-z-]+)"', grp))
+    for grp in re.findall(r'args\[0\]\s+in\s+\(([^)]*)\)', src):
+        verbs |= set(x.lstrip("-") for x in re.findall(r'"([a-z-]+)"', grp))
+    bad = []
+    for word in sorted(said.keys() - verbs):
+        bad.append({"address": f"{name}:{at[word]}",
+                    "claim": f"`gate {word}` is a record here and no word the dispatch answers to: "
+                             "a promise this tool no longer keeps"})
+    for word in sorted(verbs - said.keys()):
+        bad.append({"address": name,
+                    "claim": f"`gate {word}` is a word this tool answers to and no record here says "
+                             "so: a verb nobody is told about"})
+    return bad
+
+
 def is_seam_side(path):
     # ONE SIDE OF A SEAM IS NOT A SHADOW OF THIS WORLD. It is a different kind of
     # thing entirely — what somebody said about an agreement — and it says which
@@ -486,12 +592,6 @@ def bench_files():
         return []
     base = os.path.dirname(os.path.abspath(FACTS))
     out = [(os.path.relpath(p, base), p) for p in world_files()]
-    # AND THE DOCUMENT WHERE YOU WRITE WHAT YOU TOOK. It is your file, in your
-    # language, and it was the one file this bench would not open — so a command
-    # that writes a row for you looked like the way in rather than the shortcut
-    # it is. A dependency belongs in code, written by the person who depends.
-    if MANIFEST and os.path.exists(MANIFEST["manifest"]):
-        out.append((os.path.relpath(MANIFEST["manifest"], base), MANIFEST["manifest"]))
     # AND THE FORMS THIS WORLD PRESENTS. They are the operator's own files —
     # what a record may say is written there, in their repository, theirs to
     # change — so the bench opens them and reads the words they declare. Without
@@ -502,6 +602,18 @@ def bench_files():
             p = os.path.join(base, r["path"])
             if os.path.exists(p) and (r["path"], p) not in out:
                 out.append((r["path"], p))
+    # AND THE DOCUMENT WHERE YOU WRITE WHAT YOU TOOK. It is your file, in your
+    # language, and it was the one file this bench would not open — so a command
+    # that writes a row for you looked like the way in rather than the shortcut
+    # it is. A dependency belongs in code, written by the person who depends.
+    #
+    # It comes after the rows it declares, because the bench opens on the first
+    # file in this list and a layout is not a greeting. A world whose whole world
+    # is grammar — this repository, and the first scene — opened on its own
+    # accounting document, which is the last page anybody arriving wants. The
+    # first row a layout declares is the front door, and now it is the door.
+    if MANIFEST and os.path.exists(MANIFEST["manifest"]):
+        out.append((os.path.relpath(MANIFEST["manifest"], base), MANIFEST["manifest"]))
     # AND THE POLICY, which `gate demo` writes and this bench would not show.
     # It is a file of facts beside the world — who somebody is, what an action
     # demands — introduced by its own first line, judged by its own guard, and
@@ -1596,6 +1708,72 @@ SEAM_DEMO_SDK = {"carrier": "MessagesJS",
                              {"route": "/messages", "field": "replyTo", "as": "Text"}]}
 
 
+DEMO_README = """\
+// ── this file is the way in, and it stays the way back ──
+//
+// You are inside a repository this tool made: three source areas, a docs
+// folder, a CODEOWNERS, and a one-line policy saying which zone each owner
+// keeps. Everything here is committed already, so `git checkout .` undoes
+// anything you try. Nothing in this tool ever reaches the network.
+//
+// Read down as far as you need. The first screen is a minute, the middle is
+// an hour, and the tail says where the whole reference lives. Nobody has to
+// read further than their question.
+//
+// ── one: a record ──
+//
+// A record is a name and its axes. Below is a zone of this world's own —
+// yours, in this file, judged with everything else the moment you save.
+
+public enum Zone_readme: Realm {}
+
+// ── two: a claim, and the law over it ──
+//
+// A claim is a name for a fact you assert. `Owns<Who, What>` is one, and it
+// only stands where the owner's zone and the path's zone are the same word.
+// These two hold, so this line is green:
+
+public enum Owner_you: Keeper {
+    public typealias Post = Zone_readme
+    public typealias Key = WardenKey
+}
+public enum Path_readme: Room {
+    public typealias Place = Zone_readme
+}
+public typealias Owns_readme = Owns<Owner_you, Path_readme>
+
+// TRY IT. Change `Zone_readme` on the Path above to `Zone_src` and save.
+// The judge refuses this file at the line you touched and says which two
+// words disagree — in the law's own sentence, written where the law is.
+// Change it back, and it is green again. Nothing else in this world moves:
+// delete this whole file and the world still holds.
+//
+// ── three: the refusal that was here before you ──
+//
+// `gate status` names one right now, and it is not this file. It is in
+// `ownership.swift`, translated from CODEOWNERS, where one rule gives a
+// source directory to somebody whose zone is docs. Two ways to end it:
+// fix the line in the world, or fix CODEOWNERS and run the import again —
+//
+//     gate import codeowners CODEOWNERS --tree . --policy owners.csv \\
+//                            -o ownership.swift
+//
+// The world is the truth here; CODEOWNERS only seeded it once.
+//
+// ── four: where everything else is ──
+//
+//     gate status      what disagrees right now, in milliseconds
+//     gate log         this repository's own history, nothing translated
+//     gate findings    what is true of a clone, before anything is translated
+//     gate serve       this bench, judged as you type
+//
+// Every verb this tool answers to is a record like the ones above, with a
+// note in its own words: `gate stdlib show readme`. That table is judged
+// with gate's own world and held to its dispatch by name, so it cannot fall
+// behind the tool it describes.
+"""
+
+
 def cmd_demo_owners(a):
     # demo — who owns what, in a repository shaped like the reader's own. Three
     # areas, four rules, one owner reaching past their zone: the refusal a
@@ -1627,6 +1805,13 @@ def cmd_demo_owners(a):
         # court. Written into gate.swift instead, the same text earned twenty
         # refusals from the plain court for declaring protocols — a world told
         # its own printout was ungrammatical.
+        # ── AND THE WAY IN IS THE FIRST ROW, because the bench opens on the
+        # first file a layout declares. A person arriving met a translated world
+        # of certificates with nothing saying what any of it was; the greeting
+        # and the reference are one file, permanent, and it is the door.
+        with open("readme.swift", "w") as f:
+            f.write(DEMO_README)
+        declare_side("readme.swift", "Mine", "forms")
         declare_side("ownership.swift", "Mine", "forms")
         subprocess.run(["git", "init", "-q", "-b", "main", "."], capture_output=True)
         subprocess.run(["git", "add", "-A"], capture_output=True)
@@ -2015,9 +2200,21 @@ def presented_over(shelf_name):
         fp = os.path.join(base, r["path"])
         if not os.path.exists(fp):
             continue
+        # ── AND A TYPEALIAS INSIDE A DECLARATION IS AN AXIS, NOT A VALUE. The
+        # duplicate guard learned this and this one never did: `public typealias
+        # Post = Zone_docs` inside a record is what that record says about
+        # itself, and every record of a kind states the same axes. Read at any
+        # depth, two of an operator's own forms files declaring two owners
+        # collided on the word `Post` — a hundred and eleven refusals about
+        # names nobody had presented twice. It stayed invisible only because
+        # until now nobody had written a second forms file with records in it.
+        depth = 0
         for i, line in enumerate(open(fp, encoding="utf-8", errors="replace").read().split("\n"), 1):
+            code = line.split("//")[0]
+            at_top = depth == 0
+            depth += code.count("{") - code.count("}")
             m = re.match(r"public typealias (\w+) = ", line.strip())
-            if not m:
+            if not m or not at_top:
                 continue
             name = m.group(1)
             # ── A VALUE IS YOURS; THE LAW ABOUT IT IS NOT. Moving a number
@@ -5181,6 +5378,7 @@ def dispatch(cmd, rest):
         refusals += forms_guards(where_size)
         refusals += policy_guards()
         refusals += stdlib_guards()
+        refusals += gate_shape_guards() + own_surface_guards()
         refusals += vendored_guards() + taken_judge_guard()
         refusals += duplicate_guards()
         refusals += entry_guards()

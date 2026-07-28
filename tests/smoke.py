@@ -4425,6 +4425,161 @@ public enum MyWatch: AccessLedger {
     ghost_verbs = sorted(v for v in claimed_verbs if v not in verbs)
     S.append(("every verb the README lists is a verb the code has", not ghost_verbs))
 
+    # ── AND THE REFERENCE IS A WORLD, HELD TO THE DISPATCH BOTH WAYS. A list of
+    # verbs in prose drifts from the tool the moment either changes and nothing
+    # says when — the one failure this tool exists against, met in its own
+    # documentation. Each verb is a record in `stdlib/readme.swift` now, judged
+    # with the rest of this repository's world; which file a thing is cannot be
+    # judged (bytes and paths, and no world speaks about a filesystem), so the
+    # correspondence is a guard from fact and says so.
+    kept_readme = open(os.path.join(HERE, "stdlib", "readme.swift"), encoding="utf-8").read()
+    try:
+        open(os.path.join(HERE, "stdlib", "readme.swift"), "w").write(
+            kept_readme.replace('{ "survey" }', '{ "surveyy" }'))
+        renamed = run("status", cwd=HERE)[1]
+        open(os.path.join(HERE, "stdlib", "readme.swift"), "w").write(
+            "\n".join(l for l in kept_readme.split("\n")
+                      if '{ "badge" }' not in l and "public enum Badge: Verb {" not in l))
+        dropped = run("status", cwd=HERE)[1]
+    finally:
+        open(os.path.join(HERE, "stdlib", "readme.swift"), "w").write(kept_readme)
+    S.append(("the table of verbs and the dispatch are held to each other, in both directions",
+              run("status", cwd=HERE)[1]["verdict"] == "holds"
+              # a record for a word this tool does not answer to: a promise it no longer keeps
+              and any("`gate surveyy` is a record here" in r["claim"]
+                      and r["address"].startswith("stdlib/readme.swift:")
+                      for r in renamed["refusals"])
+              # and a word with no record: a verb nobody is told about
+              and any("`gate badge` is a word this tool answers to" in r["claim"]
+                      for r in dropped["refusals"])))
+
+    # ── A LAW WRITTEN ON ONE LINE IS NOT A LAW, AND BOTH COURTS GO SILENT
+    # TOGETHER. Found by hand on this tool's own demo world: move one newline in
+    # the forms file and `refused 1` becomes `holds · 0 equalities judged` — in
+    # the shipped binary and in the browser port alike. Every certificate over
+    # that law stops being checked and nothing says a word. Swift accepts both
+    # spellings identically, so the compiler tier still catches it; the fast
+    # tier, the one anybody runs on a keystroke, does not — and that is the tier
+    # people trust. The judge is the corpus's and pinned, so the shape is
+    # refused here rather than left to unjudge a world quietly.
+    onel = os.path.join(tmp, "oneline")
+    os.makedirs(onel)
+    two = open(os.path.join(HERE, "stdlib", "forms-grants.swift"), encoding="utf-8").read()
+    world_tail = ("\npublic enum Zone_src: Realm {}\npublic enum Zone_docs: Realm {}\n"
+                  "public enum Owner_c: Keeper {\n    public typealias Post = Zone_docs\n"
+                  "    public typealias Key = WardenKey\n}\n"
+                  "public enum Path_db: Room {\n    public typealias Place = Zone_src\n}\n"
+                  "public typealias Owns_c = Owns<Owner_c, Path_db>\n")
+    two_path = os.path.join(onel, "two.swift")
+    one_path = os.path.join(onel, "one.swift")
+    open(two_path, "w").write(two + world_tail)
+    open(one_path, "w").write(
+        two.replace("extension Owns: Owned\nwhere", "extension Owns: Owned where") + world_tail)
+    JUDGE_BIN = os.path.join(HERE, "bin", "gate-judge")
+    said_two = subprocess.run([JUDGE_BIN, "judge", "where", two_path],
+                              capture_output=True, text=True).stdout
+    said_one = subprocess.run([JUDGE_BIN, "judge", "where", one_path],
+                              capture_output=True, text=True).stdout
+    kept_shelf = open(os.path.join(HERE, "stdlib", "forms-grants.swift"), encoding="utf-8").read()
+    try:
+        open(os.path.join(HERE, "stdlib", "forms-grants.swift"), "w").write(
+            kept_shelf.replace("extension Owns: Owned\nwhere", "extension Owns: Owned where"))
+        joined = run("status", cwd=HERE)[1]
+    finally:
+        open(os.path.join(HERE, "stdlib", "forms-grants.swift"), "w").write(kept_shelf)
+    S.append(("a law written on one line is read by no court, and gate refuses the shape",
+              # the finding itself, reproduced: one newline is the whole difference
+              "✗" in said_two and "Owns_c" in said_two
+              and "✗" not in said_one and "0 equalities judged" in said_one
+              # and the guard names it, at the line that writes it
+              and any("read by no court" in r["claim"]
+                      and r["address"].startswith("stdlib/forms-grants.swift:")
+                      for r in joined["refusals"])
+              and run("status", cwd=HERE)[1]["verdict"] == "holds"))
+
+    # ── AND THE HALF NO DECLARATION CAN PROVE. `Run<V>: Safe where V.Does ==
+    # Reads` is judged: a verb that admits to writing cannot be certified safe,
+    # and the judge refuses the line. What the judge cannot know is whether the
+    # verb tells the truth about itself, so every certified verb is run here and
+    # the working copy held byte-identical afterwards. This is the claim CI, the
+    # pre-commit hook and the security posture all rest on.
+    safe = re.findall(r"public typealias \w+IsSafe = Run<(\w+)>", kept_readme)
+    spelt = {m.group(1): m.group(2) for m in re.finditer(
+        r'public enum (\w+): Verb \{.*?extension \1 \{ public static var typeName: '
+        r'String \{ "([^"]+)" \} \}', kept_readme, re.S)}
+    sw = os.path.join(tmp, "safeworld")
+    run("demo", "org", sw)
+    before = subprocess.run(["git", "status", "--porcelain"], cwd=sw,
+                            capture_output=True, text=True).stdout
+    touched = []
+    for rec in safe:
+        word = spelt.get(rec)
+        if not word:
+            touched.append(rec + " (no record)")
+            continue
+        subprocess.run([sys.executable, GATE, word], cwd=sw, capture_output=True, text=True)
+        after = subprocess.run(["git", "status", "--porcelain"], cwd=sw,
+                               capture_output=True, text=True).stdout
+        if after != before:
+            touched.append(word)
+    for args in (["status"], ["log"], ["findings"], ["survey"], ["guard"], ["--version"],
+                 ["check", "view", "Emp9001", "EngineeringShare"]):
+        subprocess.run([sys.executable, GATE, *args], cwd=sw, capture_output=True, text=True)
+    after_all = subprocess.run(["git", "status", "--porcelain"], cwd=sw,
+                               capture_output=True, text=True).stdout
+    S.append(("every verb certified safe leaves the working copy exactly as it was",
+              len(safe) >= 10 and not touched and after_all == before))
+
+    # ── AND A GHOST IS A GHOST WHICHEVER COURT WOULD HAVE READ IT. The shadow
+    # check was widened to every role and this one stayed at `world`, so a
+    # declared forms file could simply vanish and nothing said a word. This
+    # repository is entirely forms rows: deleting `stdlib/bench-palette.swift`
+    # took a hundred and thirty-two equalities out of the court and `gate
+    # status` answered `holds`. The only trace was the width — 180 down to 48 —
+    # which is why a green that will not say how wide it is cannot be trusted.
+    kept_pal = open(os.path.join(HERE, "stdlib", "bench-palette.swift"), "rb").read()
+    try:
+        os.remove(os.path.join(HERE, "stdlib", "bench-palette.swift"))
+        vanished = run("status", cwd=HERE)[1]
+    finally:
+        open(os.path.join(HERE, "stdlib", "bench-palette.swift"), "wb").write(kept_pal)
+    S.append(("a declared file that vanishes is named, whichever court would have read it",
+              vanished["verdict"] == "refused"
+              and any("stdlib/bench-palette.swift" in r["claim"] and "no such file" in r["claim"]
+                      and r["address"].startswith("gate.manifest.swift:")
+                      for r in vanished["refusals"])
+              # and the width says the same thing the verdict does: the court got
+              # narrower, and a green would have hidden exactly that
+              and vanished.get("forms", {}).get("equalities", 0)
+                  < run("status", cwd=HERE)[1]["forms"]["equalities"]
+              # a row that names a dependency rather than a file this world
+              # judges is not a ghost: the judge is held by a reproducible build
+              and run("status", cwd=os.path.join(tmp, "demoworld"))[1]["verdict"] == "holds"))
+
+    # ── AND AN AXIS IS NOT A PRESENTED VALUE. `public typealias Post = Zone_docs`
+    # inside a record is what that record says about itself, and every record of
+    # a kind states the same axes. The duplicate guard learned this and the
+    # presented-values guard never did, so the first world to carry two forms
+    # files with records in them collided on the word `Post` — a hundred and
+    # eleven refusals about names nobody had presented twice. Invisible until
+    # now only because nobody had written a second forms file with records.
+    twoforms = os.path.join(tmp, "twoforms")
+    run("demo", twoforms)
+    S.append(("two forms files of your own may each hold records, and their axes do not collide",
+              run("status", cwd=twoforms)[1]["verdict"] == "refused"
+              and len(run("status", cwd=twoforms)[1]["refusals"]) == 1
+              and os.path.exists(os.path.join(twoforms, "readme.swift"))
+              # the front door is the first row, and the bench opens on the first
+              # row: a layout is not a greeting
+              and open(os.path.join(twoforms, "gate.manifest.swift"),
+                       encoding="utf-8").read().index("readme.swift")
+                  < open(os.path.join(twoforms, "gate.manifest.swift"),
+                         encoding="utf-8").read().index("ownership.swift")
+              # and nothing depends on it: delete the file and its row, and the
+              # world stands exactly as it did
+              and "Owns_readme" in open(os.path.join(twoforms, "readme.swift"),
+                                        encoding="utf-8").read()))
+
     # ── AND THE FRONT DOOR NAMES THEM TOO. The README promises a porcelain and
     # the code has every verb in it; the screen a person meets when they type
     # `gate` and nothing else was checked against neither, and had quietly lost

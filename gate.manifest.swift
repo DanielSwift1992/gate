@@ -20,6 +20,21 @@ public enum CarriedFile: Role {}
 
 public protocol Mine {}
 
+// AND THIS TOOL'S OWN SURFACE, SAID THE WAY IT ASKS EVERYBODY ELSE TO SAY
+// THEIRS. A list of verbs in prose drifts from the dispatch the moment either
+// changes and nothing says when — the one failure this tool exists against, met
+// in its own documentation. Each verb is a record here, judged with the rest,
+// and a guard holds the table to the dispatch by name in both directions. It is
+// the first row so the bench opens on it: the reference is the front door.
+public enum TheReadme: Mine {
+    public typealias Kind = FormsFile
+}
+extension TheReadme { public static var typeName: String { "stdlib/readme.swift" } }
+public enum FormsTool: Mine {
+    public typealias Kind = FormsFile
+}
+extension FormsTool { public static var typeName: String { "stdlib/forms-tool.swift" } }
+
 // The forms this bench is written in, and the certificates over them. Judged by
 // the where court, which reads the equalities: break one and `gate status` in
 // this repository refuses at the line, the same as in yours.
