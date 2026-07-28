@@ -805,9 +805,23 @@ async function buildShelf() {
     // no — each of these files says which it is in its own second line, and the
     // tool has been reading that line all along to no visible end. The panel
     // groups by what they say they are, the way `mine` already groups by folder.
+    // ── AND GATE'S OWN FURNITURE IS OFF THIS PAGE NOW. The decision was written
+    // here and waited on one condition: these belong "in gate's own rail, under
+    // `mine`, the day this tool declares its world the way it asks everybody
+    // else to". It declares it — `gate.manifest.swift` lists every bench-* file
+    // as its own — so the condition was met and the follow-through was not
+    // done. How this page spaces itself answers no question an operator has and
+    // never enters their repository; `gate stdlib` is the verb for whoever
+    // wants to look.
+    //
+    // What is left under `theirs` is the two things that are genuinely somebody
+    // else's and genuinely about YOUR world: the court, and the languages a
+    // world can be written in. The ones you actually speak are in `mine`, as
+    // your own copies — so the panel answers "which of these am I using?" by
+    // which side of the rail they stand on, with nothing added to explain it.
     let shownRole = null;
     for (const m of mods) {
-        if (alreadyMine.has(m)) continue;
+        if (alreadyMine.has(m) || roles[m] === "gate's own") continue;
         const role = roles[m] || "taken";
         if (role !== shownRole) {
             shownRole = role;

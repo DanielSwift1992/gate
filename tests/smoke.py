@@ -2644,7 +2644,12 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               # below repeated all nine under `theirs`, the same files named
               # twice on one panel.
               and "const alreadyMine = new Set(files.map(" in ui
-              and "if (alreadyMine.has(m)) continue;" in ui))
+              # and gate's own furniture is off an operator's page entirely. The
+              # decision was written above this code and waited on one condition
+              # — that this tool declare its world the way it asks everybody else
+              # to — which it has done since; the follow-through had not been.
+              # How this page spaces itself answers no question an operator has.
+              and "if (alreadyMine.has(m) || roles[m] === \"gate's own\") continue;" in ui))
 
     # ── AND THE WHEEL STILL TURNS SOMETHING. `MyJournal` is a surface this tool
     # offers: an operator declares what their history shows. It steered a panel,
