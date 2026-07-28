@@ -251,12 +251,12 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
    always answered `what is this` on demand rather than printing it nine times
    down a narrow column. Nothing new is measured here: the rows are commits'
    rows, so the ladder is the one already judged. */
-#seam-host,#shelf-host{padding-bottom:calc(var(--u)*3)}
-.seam-pair{padding:calc(var(--u)*2) calc(var(--u)*7) 0;display:flex;align-items:baseline;gap:var(--near)}
-/* does it hold, said in the quiet register: green is not a decoration here, it
-   is the same green the verdict wears, and parting wears the same red */
-.seam-state{margin-left:auto;flex:none;color:var(--ok)}
-.seam-state.parted{color:var(--bad)}
+#shelf-host{padding-bottom:calc(var(--u)*3)}
+
+/* a seam's state at its claim: the same two poles the verdict uses, and the
+   quiet register for everything in between — waiting is a conversation */
+.cell-value.parted{color:var(--bad)}.cell-value.whole{color:var(--ok)}
+.seam-line td{padding-left:var(--wide)}
 .badge.back{color:var(--law)}
 .seam-where{color:var(--seam)}
 /* the pins hang under the pair they belong to, in the pair's own column */
@@ -478,7 +478,7 @@ let formsFiles = new Set();
 // is owed AT the value: the table of the world that declares it carries a `was`
 // column. It rode on the file list for one commit, which was a panel telling a
 // world's story for it.
-let overridden = {}, worldAliases = new Map();
+let overridden = {}, worldAliases = new Map(), seams = [], openSeam = null;
 
 // ── READING A NUMBER IS WALKING ITS SPELLING, and there is one walk. These
 // worlds count from Unit in the forms the corpus declares — `Plus`, `Twice`,
@@ -802,7 +802,6 @@ async function buildShelf() {
         host.appendChild(r);
     }
 }
-
 
 // ── the theme is a declaration too. The default follows the operating system;
 // MyBench in your personal world overrides it, and the page repaints when either
@@ -1334,7 +1333,11 @@ async function render() {
     // parse with no names in it at all: the palette's hundred and eighty-three
     // records came back as zero, and every one of them as a refusal nobody saw
     // because a shelf file is read rather than judged.
-    const byWhere = viewingShelf !== null || formsFiles.has(active);
+    // The layout is in the same position: its court is the guards, not the plain
+    // one — it declares protocols, which the plain court refuses on sight — and
+    // reading it plainly threw away the one thing its rows are made of, the
+    // `typeName` string that says which file each claim is about.
+    const byWhere = viewingShelf !== null || formsFiles.has(active) || active === layoutFile;
     const local = judge(active || "gate.swift", text,
                         byWhere ? { seeds: new Set(), generics: new Set() } : undefined);
     lastParsed = local.parsed;
@@ -1819,7 +1822,21 @@ function buildTables() {
         // The hand goes last, and that is the order to want as well: a note is
         // read far more often than a record is removed, and a destructive
         // control had been standing between the facts and the sentence.
-        const columns = ["name", ...group.keys, ...(hasNotes ? ["note"] : []), ""];
+        // ── AND WHETHER A SEAM HOLDS, AT THE CLAIM THAT CONCLUDED IT. A seam is
+        // a file this world took, so it is a row here like any other, and its
+        // state is a fact about that row rather than a zone in a side panel:
+        // `holds`, or `parted at 3` with the three addresses one click below.
+        // The panel had been carrying it, which is a panel telling a world's
+        // story instead of opening the door to it.
+        const seamRow = (d) => {
+            const path = (lastParsed.literals && lastParsed.literals.get(d.name) || {}).value;
+            if (!path) return null;
+            const base = path.split("/").pop();
+            return seams.find(s => s.contract_file === base || s.carrier_file === base) || null;
+        };
+        const hasSeams = group.rows.some(seamRow);
+        const columns = ["name", ...group.keys, ...(hasSeams ? ["seam"] : []),
+                         ...(hasNotes ? ["note"] : []), ""];
         for (const key of columns) {
             const th = document.createElement("th"); th.className = "caption";
             th.innerHTML = key + mark(key);
@@ -1851,6 +1868,31 @@ function buildTables() {
                 nt.className = "cell-note";
                 nt.innerHTML = noteProse((notes.get(d.name) || []).join(" ").trim());
                 cellFor["note"] = nt;
+            }
+            {
+                const sc = document.createElement("td");
+                sc.className = "cell-value observed";
+                const s = seamRow(d);
+                if (s) {
+                    const gone = (s.parted || []).length;
+                    const waits = (s.waits_on_you || []).length + (s.you_wait_on || []).length;
+                    sc.textContent = s.alone ? "waiting for the other side"
+                        : gone ? "parted at " + gone
+                        : waits ? waits + (waits === 1 ? " word" : " words") + " away"
+                        : "holds";
+                    if (gone) sc.classList.add("parted");
+                    else if (!s.alone && !waits) sc.classList.add("whole");
+                    sc.title = s.alone
+                        ? "This side is declared and the other side's declaration is not here yet."
+                        : "Of " + s.stated + " the other side states, " + s.claimed
+                          + " are claimed here. Click to read every field either side is "
+                          + "waiting on, and where it is written.";
+                    if (!s.alone) {
+                        sc.style.cursor = "pointer";
+                        sc.onclick = () => { openSeam = openSeam === d.name ? null : d.name; buildTables(); };
+                    }
+                }
+                cellFor["seam"] = sc;
             }
             {
                 const del = document.createElement("td");
@@ -1888,6 +1930,60 @@ function buildTables() {
             }
             for (const key of columns) tr.append(cellFor[key]);
             table.append(tr);
+            // WHAT THE COUNT COUNTS, one click below it. Not another view and not
+            // a panel: the rows the number is about, under the row that carries
+            // the number, each opening the side that WROTE it — the contract
+            // where the contract stated it, the library where the library
+            // claimed it. Neither side is this world's to edit from here.
+            const s = seamRow(d);
+            if (s && openSeam === d.name && !s.alone) {
+                const items = [
+                    ...(s.expired || []).map(x => [x, "came back"]),
+                    ...(s.parted || []).map(x => [x, "parted"]),
+                    ...(s.waits_on_you || []).map(x => [x, "your word"]),
+                    ...(s.you_wait_on || []).map(x => [x, "their word"]),
+                    ...(s.known || []).map(x => [x, "set aside"]),
+                ];
+                {
+                    // how much of the agreement is actually held, which is what
+                    // being integrated with somebody amounts to — a count, not a
+                    // feeling, and the same count from either end. No rank
+                    // anywhere: a seam has two ends and neither is above the other.
+                    const r = document.createElement("tr");
+                    r.className = "seam-line";
+                    const a = document.createElement("td");
+                    a.className = "caption observed"; a.colSpan = columns.length;
+                    a.textContent = s.claimed + " of " + s.stated + " held";
+                    r.append(a); table.append(r);
+                }
+                for (const [x, kind] of items) {
+                    const r = document.createElement("tr");
+                    r.className = "seam-line";
+                    const a = document.createElement("td");
+                    a.className = "fact"; a.colSpan = Math.max(1, columns.length - 1);
+                    // the field is the thing spoken of and stands in ink; the
+                    // route is where it lives and stands back. The registers say
+                    // which half is which without a word being added.
+                    const cut = x.address.lastIndexOf(" · ");
+                    a.innerHTML = (cut < 0 ? "" :
+                        '<span class="seam-where">' + esc(x.address.slice(0, cut + 3)) + "</span>")
+                        + esc(cut < 0 ? x.address : x.address.slice(cut + 3));
+                    a.style.cursor = "pointer";
+                    a.onclick = () => openSeamSide(kind === "your word" ? s.contract_file : s.carrier_file,
+                                                   x.address.split(" · ").pop());
+                    const k = document.createElement("td");
+                    k.className = "caption observed"; k.textContent = kind;
+                    r.append(a, k); table.append(r);
+                }
+                if (!items.length) {
+                    const r = document.createElement("tr");
+                    r.className = "seam-line";
+                    const a = document.createElement("td");
+                    a.className = "caption observed"; a.colSpan = columns.length;
+                    a.textContent = "nothing waits on either side";
+                    r.append(a); table.append(r);
+                }
+            }
         }
         host.append(table);
         // add row: the form is the group's own signature, so a new row is born
@@ -2374,128 +2470,21 @@ function setMode(m) {
 // set aside on purpose — with the thing they cited, so that when it closes the
 // exception comes back on its own and nobody has to remember.
 async function buildSeams() {
-    const host = document.getElementById("seam-host");
-    let seams = [];
+    // ── A SEAM'S STATE IS A FACT ABOUT A CLAIM, AND IT LIVES AT THE CLAIM. This
+    // used to be a zone in the left panel: a heading, a held count, a row per
+    // waiting field, an empty-state sentence — an instrument, standing beside
+    // the file list and telling a world's story for it. But a seam is a file
+    // this world took, so it is a row in the manifest like every other taken
+    // file, and its state is a column on that row: `holds`, or `parted at 3`
+    // with the three addresses one click below. The panel is a door to worlds;
+    // a door that narrates is a door that has stopped opening.
+    //
+    // What is left here is the reading itself, because the table needs it.
     try { seams = (await (await fetch("/attention")).json()).seams || []; }
     catch { seams = []; }
-    // THE RAIL SHOWS WHAT THIS REPOSITORY HAS. Files, because there are files;
-    // the journal, because there is a history. A folder with no seam in it has
-    // no seam, and a permanent panel explaining a thing somebody is not using is
-    // an advertisement in the one place that is supposed to be an account. Where
-    // seams are declared they appear; where they are not, `gate demo seam` and
-    // the readme are where the idea lives.
-    // the heading stands whether or not there is a seam: the judge is always
-    // taken, so this world always has something it took. Only the seam rows
-    // come and go — a folder with no seam has no seam, and a panel explaining
-    // a thing nobody is using is an advertisement in an account.
-    host.hidden = !seams.length;
-    host.innerHTML = "";
-    if (!seams.length) return;
-    for (const s of seams) {
-        const box = document.createElement("div");
-        const head = document.createElement("div");
-        head.className = "seam-pair caption observed";
-        if (s.alone) {
-            head.textContent = s.carrier + " · declared, waiting for the other side";
-            head.title = "You have said what this side " + s.alone + ". Until the other side's "
-                + "declaration is here there is no pair to read: bring it in, or put yours in "
-                + "their repository and let their own CI hold them to it.";
-            box.appendChild(head); host.appendChild(box); continue;
-        }
-        // HOW MUCH OF THIS AGREEMENT I ACTUALLY HOLD is the measure of being
-        // integrated with somebody, and it is a count rather than a feeling: of
-        // everything the other end states, this many are claimed here. No role,
-        // no rank, no side is above the other — a seam has two ends and mine is
-        // one of them.
-        const held = s.stated ? " · " + s.claimed + " of " + s.stated + " held" : "";
-        // DOES IT HOLD — answered before a single row is read. The rows below say
-        // everything, which is the problem: a seam that has come apart at three
-        // fields looked exactly like a seam waiting on a word, and the reader had
-        // to count. Parting is the one state that is not a conversation — it is
-        // the two sides disagreeing about a field neither has set aside.
-        head.textContent = (s.against ? s.against.replace(/^\S+ · /, "") : s.carrier) + held;
-        const gone = (s.parted || []).length;
-        const state = document.createElement("span");
-        state.className = "seam-state" + (gone ? " parted" : "");
-        state.textContent = gone ? "parted at " + gone : "holds";
-        state.title = gone
-            ? "The two sides disagree about " + gone + " field" + (gone === 1 ? "" : "s")
-              + ", and nobody has said the divergence is meant. Each one is a row below, and "
-              + "each row opens where it is written."
-            : "Nothing here is in disagreement. Rows below are words waiting on somebody, "
-              + "which is a conversation, not a break.";
-        head.appendChild(state);
-        head.title = s.carrier + " says what it carries of " + (s.against || s.contract_file)
-            + ". Read from " + [s.contract_file, s.carrier_file, s.read_known,
-                                s.read_tracker].filter(Boolean).join(", ") + ".";
-        box.appendChild(head);
-        // WHAT YOU TOOK, AND AT WHAT. The line above says what the other side
-        // built against; this says what YOU wrote down when you took each file,
-        // which is the fact you can act on — and until now it was readable only
-        // by opening the manifest in an editor. An owner who cannot see how
-        // fresh a thing is does not own it, they just have it.
-        // WHAT YOU TOOK, AND WHERE YOU SAID SO. This is a view of a claim, and
-        // the claim is a line you wrote — so the row goes there rather than
-        // standing as a thing of its own. Nothing is edited here: you change
-        // the sentence in your own file, and every view of it follows.
-        for (const t of (s.took || [])) {
-            const p = document.createElement("div");
-            p.className = "seam-took caption" + (t.line ? " touches" : "");
-            p.textContent = t.at ? t.file + " · took at " + t.at
-                                 : t.file + " · taken at nothing written down";
-            p.title = (t.at ? "You declared this file taken at " + t.at + ". "
-                            : "This row says no revision. ")
-                + (t.line ? "Click to open the line you wrote it on, in " + t.claim
-                   + " — that sentence is the fact, and this is a reading of it."
-                   : "`gate theirs " + t.file + " --at REV` writes one.");
-            if (t.line) p.onclick = async () => { await loadFile(t.claim); reveal(t.line); };
-            box.appendChild(p);
-        }
-        // EVERY ADDRESS THIS BENCH PRINTS IS REACHABLE. A row that looks like a
-        // row you can click and does nothing is worse than a plain list: the
-        // affordance was borrowed along with the styling and then not honoured.
-        // A line opens the side that SAID it — the contract where the contract
-        // stated it, the library where the library claimed it — read-only,
-        // because neither side is this world's to edit from here.
-        const line = (addr, kind, why, back, side) => {
-            const r = document.createElement("div");
-            r.className = "commit touches";
-            r.title = why + " Click to read where it is written.";
-            r.onclick = () => openSeamSide(side, addr.split(" · ").pop());
-            // the field is the thing; the route is where it lives. Registers say
-            // so without a word: context muted, the fact in ink — the eye reads
-            // `attachments, in /messages` with nothing added to explain a dot.
-            const cut = addr.lastIndexOf(" · ");
-            const where = cut < 0 ? "" : addr.slice(0, cut + 3);
-            const what = cut < 0 ? addr : addr.slice(cut + 3);
-            r.innerHTML = '<div class="subj fact"><span class="seam-where">' + esc(where)
-                + '</span>' + esc(what) + "</div>"
-                + '<div class="meta"><span class="badge caption' + (back ? " back" : "")
-                + '">' + esc(kind) + "</span></div>";
-            box.appendChild(r);
-        };
-        for (const x of s.expired)
-            line(x.address, "came back", "It was set aside for " + x.because + ". "
-                 + x.because + " is closed, so it stands again.", true, s.carrier_file);
-        for (const x of s.waits_on_you)
-            line(x.address, "your word", x.why || "The contract states this field. This side has not "
-                 + "said whether it carries it.", false, s.contract_file);
-        for (const x of s.you_wait_on)
-            line(x.address, "their word", x.why || "This side carries it. The contract has not stated it.",
-                 false, s.carrier_file);
-        for (const x of s.parted) line(x.address, "parted", x.why || "", false, s.carrier_file);
-        for (const x of s.known)
-            line(x.address, "set aside", "Set aside by " + x.declared_by + " for " + x.because
-                 + ", which is " + x.state.toLowerCase() + ".", false, s.carrier_file);
-        if (!s.expired.length && !s.waits_on_you.length && !s.you_wait_on.length
-            && !s.parted.length && !s.known.length) {
-            const q = document.createElement("div");
-            q.className = "seam-pair caption observed";
-            q.textContent = "nothing waits on either side";
-            box.appendChild(q);
-        }
-        host.appendChild(box);
-    }
+    const host = document.getElementById("seam-host");
+    if (host) host.hidden = true;
+    if (mode === "table") buildTables();
 }
 document.querySelectorAll("#view-seg button").forEach(b => b.onclick = () => setMode(b.dataset.m));
 // the bar's arrows are the keyboard jump history made visible — the same navGo,

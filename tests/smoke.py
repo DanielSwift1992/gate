@@ -1296,23 +1296,29 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               # a pair is recognised by what the files say they are
               and r'public enum \w+: Carrier \{\}' in seam_src
               and r'public enum F_\w+: Declared \{' in seam_src
-              # it sits with FILES and JOURNAL, which are the other things that
-              # are about this repository — the Full/Bare/Table switch asks how to
-              # look at ONE FILE, and a seam is not a view of a file at all
-              and 'data-fold="seams"' in ui and 'data-m="seams"' not in ui
+              # AND IT LIVES AT THE CLAIM THAT CONCLUDED IT. This was a zone in
+              # the left panel: a heading, a held count, a row per waiting field.
+              # An instrument, standing beside the file list and telling a
+              # world's story for it. But a seam is a file this world TOOK, so
+              # it is a row in the manifest like every other taken file, and its
+              # state is a column on that row — the panel is a door to worlds,
+              # and a door that narrates has stopped opening.
               and "async function buildSeams()" in ui
+              and 'sc.textContent = s.alone ? "waiting for the other side"' in ui
+              and 'gone ? "parted at " + gone' in ui
+              and 'const hasSeams = group.rows.some(seamRow);' in ui
               # it borrows the rail's own grammar rather than inventing a second
               # one: a row is a commit's row, the address is a fact, the kind is
               # a badge, and WHY it is there lives in the title — answered on
               # demand, the way this bench has always answered `what is this`,
               # instead of printed under every line down a narrow column
-              and 'r.className = "commit touches"' in ui and '"came back"' in ui
+              and '"came back"' in ui and 'r.className = "seam-line"' in ui
               # EVERY ADDRESS THIS BENCH PRINTS IS REACHABLE. A row that looks
               # clickable and does nothing is worse than a plain list — the
               # affordance came along with the styling and was not honoured. A
               # line opens the side that SAID it, read-only, since neither side
               # is this world's to edit from here.
-              and "r.onclick = () => openSeamSide(" in ui
+              and "a.onclick = () => openSeamSide(" in ui
               and "async function openSeamSide(" in ui
               and 'cm.setOption("readOnly", true)' in ui
               and 'u.path == "/seamside"' in seam_src and "#   GET  /seamside" in seam_src
@@ -1329,12 +1335,12 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               # feeling, and the same count from either end. No rank appears
               # anywhere: a seam has two ends and neither is above the other.
               and 's.claimed + " of " + s.stated + " held"' in ui
-              # and the rail shows what this repository HAS. A folder with no
-              # seam in it has no seam, and a permanent panel about a thing
-              # nobody is using is an advertisement standing in an account. The
-              # HEADING stands regardless, because the judge is always taken:
-              # what comes and goes is the seam rows, not the fact of theirs.
-              and "host.hidden = !seams.length" in ui
+              # and the bench shows what this repository HAS. A folder with no
+              # seam in it has no seam, and a permanent zone about a thing nobody
+              # is using is an advertisement standing in an account — which is
+              # what the panel zone had become. The column appears on the rows
+              # that have one and nowhere else; the panel carries no trace.
+              and "host.hidden = true" in ui
               and "seam-empty" not in ui))
 
     # ── ONE SIDE OF A SEAM IS NOT A SHADOW OF THIS WORLD. A repository that
@@ -1477,7 +1483,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "THEIR repository" in mine.get("next", "")
               # having moved first, this side sees that it moved rather than nothing
               and seams_here_probe(sub) == 1
-              and "declared, waiting for the other side" in ui))
+              and "waiting for the other side" in ui))
 
     # ── FRICTION IS NOT EVENLY DESERVED. Saying a true thing should cost
     # nothing; setting a true thing aside should cost a reason that can close,
@@ -1999,9 +2005,14 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               len(took) == 2
               and all(t.get("claim") == "gate.manifest.swift" and t.get("line")
                       for t in took)
-              # and the bench goes there rather than opening a fourth thing
-              and "await loadFile(t.claim); reveal(t.line)" in ui
-              and "that sentence is the fact, and this is a reading of it" in ui))
+              # AND IT IS NO LONGER A READING POINTING AT A PRIMARY — it is the
+              # primary. The row that took the file is a row in the manifest,
+              # with the revision in its own column, and its name goes to its
+              # line. The panel used to carry a copy of this beside the file
+              # list; a fact shown twice is a fact that can drift, and the copy
+              # was the one nobody would have noticed drifting.
+              and 'name.title = "go to line " + d.line' in ui
+              and "name.onclick = () => jumpTo(d.name)" in ui))
 
     # ── A HUE ANSWERS TWO QUESTIONS AND NOTHING HELD THEM APART. Every channel
     # was certified for its SIDE — toward blue, toward warm — and for its
@@ -3666,7 +3677,8 @@ public enum MyWatch: AccessLedger {
               # heading row and the cell row both walk it. A check would have
               # caught this once; a single source makes it unwritable — which is
               # what this tool sells, turned on its own page.
-              and 'const columns = ["name", ...group.keys, ...(hasNotes ? ["note"] : []), ""]' in ui
+              and 'const columns = ["name", ...group.keys, ...(hasSeams ? ["seam"] : []),' in ui
+              and '...(hasNotes ? ["note"] : []), ""];' in ui
               and "for (const key of columns) {" in ui
               and "for (const key of columns) tr.append(cellFor[key]);" in ui
               and ui.count("const columns = [") == 1))

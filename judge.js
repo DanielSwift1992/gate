@@ -266,6 +266,23 @@ function parse(file, text, declarations, order, refusals, extras) {
                 premise: "outside the fragment: `" + line.slice(0, 60) + "`" });
             continue;
         }
+        // AN EXTENSION WRITTEN ON ONE LINE IS AN EXTENSION. The manifest says
+        // `extension TheContract { public static var typeName: String { "…" } }`
+        // on a single line — the shape gate itself writes — and this only ever
+        // looked for a line ENDING in `{`, so the name a row is about was never
+        // read at all. Every record whose subject is a file went unnamed here.
+        if (extras && (line.startsWith("extension ") || line.startsWith("public extension "))
+            && line.endsWith("}")) {
+            const open = line.indexOf("{");
+            const head = line.slice(0, open).replace("public extension ", "")
+                .replace("extension ", "").trim();
+            const colon = head.indexOf(":");
+            const owner = (colon >= 0 ? head.slice(0, colon) : head).trim();
+            const literal = line.slice(open + 1).match(
+                /(?:public )?static var typeName: String \{ "([^"]*)" \}/);
+            if (literal) extras.literals.set(owner, { value: literal[1], line: number });
+            continue;
+        }
         if (extras && (line.startsWith("extension ") || line.startsWith("public extension "))
             && line.endsWith("{")) {
             const head = line.replace("public extension ", "").replace("extension ", "")
