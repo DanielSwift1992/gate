@@ -2857,10 +2857,10 @@ console.log(JSON.stringify(out));
         "public typealias MineApartTheirs_Z_dim = Apart<KnownNameDimZ, LocalTypeDimZ,"
         " Plus<Unit, Plus<W2, Plus<W4, Plus<W32, W64>>>>>\n"
         "public typealias TheirsApartBad_Z_dim = Apart<KnownNameDimZ, BadDimZ,"
-        " Plus<Unit, Plus<W2, Plus<W4, Plus<W16, Plus<W32, Plus<W64, W256>>>>>>>\n")
+        " Plus<Unit, Plus<W2, Plus<W4, Plus<W8, Plus<W64, W512>>>>>>\n")
     # the verdict channel repainted toward agreement: refused by the law that
     # says a verdict leans warm, at the operator's own line
-    green = _say("public typealias BadDimZ = Plus<W8, Plus<W32, W128>>\n")
+    green = _say("public typealias BadDimZ = Plus<W256, W512>\n")
     # and the law itself rewritten to permit it: refused as a law that is not theirs
     rewrite = _say("public typealias BadChroma_dim = TowardBlue<BadDimY, BadDimZ, Plus<W2, W4>>\n")
     S.append(("say any number, say what holds of it, and the form of a law is not yours",

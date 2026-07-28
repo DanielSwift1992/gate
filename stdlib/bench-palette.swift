@@ -176,13 +176,13 @@ public typealias OkDimY = Plus<Unit, Plus<W2, Plus<W32, Plus<W128, W256>>>>
 public typealias OkDimZ = Plus<W8, Plus<W32, W128>>
 public typealias BadDimX = Plus<Unit, Plus<W4, Plus<W8, Plus<W64, Plus<W128, W256>>>>>
 public typealias BadDimY = Plus<Unit, Plus<W2, Plus<W32, Plus<W128, W256>>>>
-public typealias BadDimZ = Plus<W128, W256>
+public typealias BadDimZ = Plus<W8, Plus<W32, W128>>
 public typealias ActionDimX = Plus<W4, Plus<W8, Plus<W16, Plus<W128, W256>>>>
 public typealias ActionDimY = Plus<Unit, Plus<W2, Plus<W32, Plus<W128, W256>>>>
 public typealias ActionDimZ = Plus<Unit, Plus<W64, Plus<W128, W512>>>
 public typealias LawDimX = Plus<W2, Plus<W4, Plus<W64, Plus<W128, W256>>>>
 public typealias LawDimY = Plus<Unit, Plus<W2, Plus<W32, Plus<W128, W256>>>>
-public typealias LawDimZ = Plus<W2, Plus<W8, Plus<W16, Plus<W32, W256>>>>
+public typealias LawDimZ = Plus<W2, Plus<W32, W64>>
 public typealias LocalTypeDimX = Plus<Unit, Plus<W2, Plus<W16, Plus<W32, W256>>>>
 public typealias LocalTypeDimY = Plus<Unit, Plus<W2, Plus<W32, Plus<W128, W256>>>>
 public typealias LocalTypeDimZ = Plus<W16, Plus<W128, W512>>
@@ -260,9 +260,9 @@ public typealias LawChroma_lit = TowardWarm<LawLitY, LawLitZ, Plus<Unit, Plus<W4
 public typealias LocalTypeChroma_lit = TowardBlue<LocalTypeLitY, LocalTypeLitZ, Plus<Unit, Plus<W4, Plus<W8, Plus<W512, W1024>>>>>
 public typealias KnownNameChroma_lit = TowardBlue<KnownNameLitY, KnownNameLitZ, Plus<Unit, Plus<W4, Plus<W8, Plus<W16, Plus<W256, Plus<W1024, Plus<W2048, W8192>>>>>>>>
 public typealias OkChroma_dim = TowardWarm<OkDimY, OkDimZ, Plus<W8, Plus<W64, Plus<W128, Plus<W256, Plus<W512, Plus<W2048, W4096>>>>>>>
-public typealias BadChroma_dim = TowardWarm<BadDimY, BadDimZ, Plus<W16, Plus<W32, Plus<W128, Plus<W512, W1024>>>>>
+public typealias BadChroma_dim = TowardWarm<BadDimY, BadDimZ, Plus<W8, Plus<W64, Plus<W128, Plus<W256, Plus<W512, Plus<W2048, W4096>>>>>>>
 public typealias ActionChroma_dim = TowardBlue<ActionDimY, ActionDimZ, Plus<W4, Plus<W256, Plus<W512, Plus<W1024, W4096>>>>>
-public typealias LawChroma_dim = TowardWarm<LawDimY, LawDimZ, Plus<W2, Plus<W4, Plus<W128, Plus<W256, Plus<W1024, W2048>>>>>>
+public typealias LawChroma_dim = TowardWarm<LawDimY, LawDimZ, Plus<W2, Plus<W4, Plus<W8, Plus<W16, Plus<W128, Plus<W512, W8192>>>>>>>
 public typealias LocalTypeChroma_dim = TowardBlue<LocalTypeDimY, LocalTypeDimZ, Plus<Unit, Plus<W2, Plus<W8, Plus<W16, Plus<W32, Plus<W512, W4096>>>>>>>
 public typealias KnownNameChroma_dim = TowardBlue<KnownNameDimY, KnownNameDimZ, Plus<W2, Plus<W4, Plus<W32, Plus<W128, Plus<W256, Plus<W1024, W4096>>>>>>>
 public typealias VerdictPoles_lit = Opposed<OkLitX, OkLitY, BadLitX, BadLitY, Plus<Unit, Plus<W4, W64>>, Plus<Unit, Plus<W8, Plus<W16, W64>>>>
@@ -291,7 +291,7 @@ public typealias MineApartTheirs_Z_lit = Apart<KnownNameLitZ, LocalTypeLitZ, Plu
 // if that last thread thins too.
 public typealias MineApartTheirs_Z_dim = Apart<KnownNameDimZ, LocalTypeDimZ, Plus<W2, W32>>
 public typealias TheirsApartBad_Z_lit = Apart<KnownNameLitZ, BadLitZ, Plus<Unit, Plus<W2, Plus<W64, W512>>>>
-public typealias TheirsApartBad_Z_dim = Apart<KnownNameDimZ, BadDimZ, Plus<W2, Plus<W16, Plus<W32, W256>>>>
+public typealias TheirsApartBad_Z_dim = Apart<KnownNameDimZ, BadDimZ, Plus<W2, Plus<W8, W512>>>
 
 // ── AND EVERY PAIR OF NAME CHANNELS, MEASURED. All six sit on ONE luminance by
 // the Same chain above, deliberately: only hue is meant to tell them apart. So
