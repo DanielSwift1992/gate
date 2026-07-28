@@ -2378,6 +2378,24 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "A court that answers about a world may" in shelf_src
               and shelf_src.count("refusals += duplicate_guards_over(sources)") >= 1))
 
+    # ── A SLOT IS A SLOT WHEREVER IT IS WRITTEN. `associatedtype Next: Cycle`
+    # opens a hole and `Enter<Who: Keeper, Into: Room>` opens two — the same
+    # thing said in the other notation. The axis stood in plain ink because it
+    # names the question; the gate's parameter wore the hue of a name from
+    # elsewhere, which told a reader it was an answer somebody had already
+    # given. One logic, one ink: the hole is the label, the kind beside it is
+    # what may fill it and keeps its own colour.
+    #
+    # Read off the rendered line rather than the rule: `Who` and `What` come
+    # back `axisname`, exactly as `Next` does after `associatedtype`.
+    S.append(("a gate's parameter is a hole, and is painted like every other hole",
+              # the rule reaches into a parameter list and stops at the colon
+              'const opened = before.lastIndexOf("<"), shut = before.lastIndexOf(">")' in ui
+              and 'if (!seg.includes(":")) return "axisname";' in ui
+              # and it is the same ink the axis already had, not a third one
+              and '.cm-axisname{color:var(--ink)}' in ui
+              and '(?:typealias|associatedtype)\\s+$/.test(before)) return "axisname"' in ui))
+
     # ── AN EXHIBIT, NOT A WISH. What follows records what a claim written in the
     # head of the file that depends on it does TODAY, line by line, because the
     # answer is the case for the one change everything left is waiting on: the

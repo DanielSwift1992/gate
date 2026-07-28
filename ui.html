@@ -478,8 +478,22 @@ CodeMirror.defineMode("gate-swift", () => ({
             if (/^[A-Z]/.test(word)) {
                 if (unresolved.has(word)) return "badname";   // nothing survives: |S| = 0
                 const before = stream.string.slice(0, stream.start);
-                // an axis name is the label of a slot: plain ink, as in Bare
+                // ── A SLOT IS A SLOT WHEREVER IT IS WRITTEN. An axis after
+                // `associatedtype` is the label of a hole to be filled, and it
+                // stands in plain ink because it names the question rather than
+                // an answer. A gate's parameter is the same thing said in the
+                // other notation — `Enter<Who: Keeper, Into: Room>` opens two
+                // holes and `associatedtype Post: Realm` opens one — and it was
+                // wearing the hue of a name from elsewhere, which said it was an
+                // answer somebody had already given. Same logic, same ink.
                 if (/\b(?:typealias|associatedtype)\s+$/.test(before)) return "axisname";
+                const opened = before.lastIndexOf("<"), shut = before.lastIndexOf(">");
+                if (opened > shut && opened >= 0) {
+                    // inside a parameter list, and before the colon that says
+                    // what may fill it: this word is the hole, not the filling
+                    const seg = before.slice(opened + 1).split(",").pop();
+                    if (!seg.includes(":")) return "axisname";
+                }
                 const home = jumpable.has(word) ? " jumpable" : "";
                 // the weight goes to what the line DECLARES, not to what it
                 // inherits. Weighting kinds instead put the accent on the
