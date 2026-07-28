@@ -439,6 +439,18 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     S.append(("and the terms travel with it: a vendored copy carries its licence",
               os.path.exists(os.path.join(ven, ".gate", "LICENSE"))
               and os.path.exists(os.path.join(ven, ".gate", "NOTICE.md"))))
+    # ── AND SO DOES THE ONE FACT THAT IS THE DEPENDENCY. The bytes travelled and
+    # the revision beside them did not: a vendored copy said "the revision this
+    # judge was built from is not recorded", losing what this tool calls the real
+    # dependency, and a world that had written that revision into its own row
+    # could not check its own claim. Silent since vendoring existed, and found
+    # only once a guard was put between the claim and the artifact.
+    S.append(("and the revision travels too: bytes say what a judge is, only the revision says what from",
+              os.path.exists(os.path.join(ven, ".gate", "bin", "gate-judge.from"))
+              and open(os.path.join(ven, ".gate", "bin", "gate-judge.from")).read().strip()
+              and "not recorded" not in subprocess.run(
+                  [os.path.join(ven, "gatew"), "--version"], cwd=ven,
+                  capture_output=True, text=True).stdout))
     subprocess.run(["git", "add", "-A"], cwd=ven)
     subprocess.run(["git", "-c", "commit.gpgsign=false", "-c", "user.email=a@b", "-c",
                     "user.name=A", "commit", "-qm", "world and tool", "--no-verify"], cwd=ven)
@@ -2969,6 +2981,35 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
         _bench.terminate()
     S.append(("the bench and the command line say the same thing about this repository",
               agreed and agreed[0] and agreed[1] == "holds"))
+
+    # AND ABOUT A WORLD THAT HAS THE FILES THIS ONE HAPPENS NOT TO. The fence
+    # above compares gate's own repository, which declares no policy at all —
+    # so the day the policy joined the bench's file list it was also handed to
+    # the plain court, which refuses its extension form on sight, and the bench
+    # refused what the command line held. One repository is not a fence; a
+    # comparison is only as wide as the world it is run on.
+    dw = os.path.join(tmp, "bothsurfaces")
+    run("demo", dw)
+    _s4 = _sock.socket(); _s4.bind(("127.0.0.1", 0)); _dp = _s4.getsockname()[1]; _s4.close()
+    _db = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_dp)], cwd=dw,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    both = None
+    try:
+        for _ in range(60):
+            try:
+                _u.urlopen(f"http://127.0.0.1:{_dp}/files", timeout=1).read(); break
+            except Exception:
+                time.sleep(0.1)
+        man = os.path.join(dw, "gate.manifest.swift")
+        seen = json.loads(_u.urlopen(_u.Request(
+            f"http://127.0.0.1:{_dp}/verdict?f=gate.manifest.swift",
+            data=open(man, "rb").read(), method="POST"), timeout=10).read().decode())
+        both = (seen.get("verdict"), run("status", cwd=dw)[1].get("verdict"),
+                len(seen.get("refusals", [])))
+    finally:
+        _db.terminate()
+    S.append(("and about a world with a policy and forms in it, where they last disagreed",
+              both and both[0] == both[1] == "holds" and both[2] == 0))
     if agreed and not agreed[0]:
         print("   bench says", agreed[1], "with", agreed[2], "refusals; the CLI says", agreed[3])
 

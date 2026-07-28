@@ -747,7 +747,8 @@ def cmd_import(a):
     # stopped, and a reader — a person or the Bare view — has no other way to
     # know. Run together they read as one long sentence that changes subject
     # twice, which is what they did until somebody looked at them set as prose.
-    emit("// the facts world — the source you read and edit, not a generated")
+    emit("// the facts world — yours: the source you read and edit, and the one")
+    emit("// this tool answers for. Not a generated")
     emit("// artifact. The tables only seeded it once (below); the world, not the")
     emit("// tables, is the truth. A gate.manifest.swift may split it across")
     emit("// several files, all judged together. git carries the history.")
@@ -1448,6 +1449,16 @@ def cmd_vendor(root):
         with open(jsrc, "rb") as f:
             digest = hashlib.sha256(f.read()).hexdigest()
         carried.append("bin/gate-judge")
+        # ── AND WHAT IT WAS BUILT FROM, which is the dependency itself. The
+        # bytes travelled and the revision beside them did not, so a vendored
+        # copy said "the revision this judge was built from is not recorded" —
+        # losing the one fact this tool calls the real dependency, and leaving a
+        # world that had written the revision down in its own row unable to
+        # check its own claim. Nothing compared the two until a guard was put
+        # between them; the loss had been silent since vendoring existed.
+        if os.path.exists(jsrc + ".from"):
+            shutil.copy(jsrc + ".from", os.path.join(dst, "bin", "gate-judge.from"))
+            carried.append("bin/gate-judge.from")
     os.chmod(os.path.join(dst, "gate"), 0o755)
     shim = os.path.join(root, "gatew")
     with open(shim, "w") as f:
@@ -1590,8 +1601,35 @@ def cmd_demo(a):
                 "// this tool was born knowing.\n"
                 + "\n".join(body).lstrip("\n"))
     declare_side(forms, "Mine", "forms")
+    # ── AND THE JUDGE'S OWN ROW, WRITTEN IN YOUR NAME. The panel showed `the
+    # judge · took at 0fd0b38` under THEIRS and no row anywhere said so: this
+    # world's own demo broke the rule the whole tool rests on — nothing is here
+    # unless a row says it is. A person asking "why is this already connected, I
+    # took nothing" had no answer to click through to.
+    #
+    # The row is written by the demo, on your behalf and signed as such, so the
+    # answer to that question is always the same one: because here is the claim,
+    # and the claim is yours. Drop the row and what it names goes with it.
+    came = judge_from()
+    if came:
+        short = came[:7]
+        with open(os.path.join(root, "gate.manifest.swift"), "a") as f:
+            f.write("\n// taken at demo setup, in your name. Nothing stands in this world\n"
+                    "// without a row, and this is that row for the court itself — the\n"
+                    "// revision is the dependency, not any file. Yours to edit or drop.\n"
+                    "public protocol Theirs {}\n"
+                    f"public enum Rev_vi_{short} {{}}\n"
+                    f"extension Rev_vi_{short} {{ public static var typeName: String "
+                    f"{{ \"verification-is-identification@{short}\" }} }}\n"
+                    "public enum TheJudge: Theirs {\n"
+                    "    public typealias Kind = JudgeFile\n"
+                    f"    public typealias At = Rev_vi_{short}\n"
+                    "}\n"
+                    "extension TheJudge { public static var typeName: String "
+                    "{ \"gate-judge\" } }\n")
     with open(os.path.join(root, "gate.policy.swift"), "w") as f:
-        f.write('// who someone is, and what an action demands — facts, beside the world\n'
+        f.write('// who someone is, and what an action demands — facts of yours,\n'
+                '// beside the world and yours to change.\n'
                 'public enum MailYou: Identity {\n    public typealias Person = Emp9000\n}\n'
                 'extension MailYou { public static var typeName: String { "you@example.com" } }\n\n'
                 'public enum MergePolicy {\n    public typealias Requires = Manager\n}\n')
@@ -4389,6 +4427,17 @@ def cmd_serve(a):
                                        "layout": lay if lay in names else None,
                                        "forms": forms_rows,
                                        "overridden": overridden,
+                                       # WHERE THE COURT WAS TAKEN, so the one
+                                       # line a stranger asks about — "why is
+                                       # this already here, I took nothing" —
+                                       # can be clicked through to the row that
+                                       # says so, in their own file.
+                                       "judge_claim": next(
+                                           ({"file": os.path.relpath(MANIFEST["manifest"],
+                                                                     os.path.dirname(FACTS)),
+                                             "line": r["line"]}
+                                            for r in ((MANIFEST.get("rows") if MANIFEST else None) or [])
+                                            if r["role"] == "judge"), None),
                                        "personal": names[-1] if pf else None,
                                        "personal_empty": bool(pf) and not os.path.exists(pf)}).encode()
                     self.send_response(200)
@@ -4577,7 +4626,17 @@ def cmd_serve(a):
                 # it declares protocols, which the plain court refuses on sight,
                 # so putting it in this stream turned every row into a refusal.
                 # Its court is the guards, and they answer below.
-                if p != layout and name not in forms_here:
+                # AND THE POLICY IS NOT A FRAGMENT OF THE PLAIN WORLD EITHER.
+                # It declares an extension carrying a typeName, which the plain
+                # court refuses on sight — that is precisely why it has a guard
+                # of its own. Listing it in the bench (so it can be opened) is a
+                # fact about the panel; sending it to this court is a fact about
+                # judgement, and confusing the two made the bench refuse what
+                # the command line held, one day after that disagreement was
+                # fenced. The fence only compared this repository, which has no
+                # policy at all.
+                if p != layout and name not in forms_here \
+                        and os.path.abspath(p) != os.path.abspath(policy_path() or ""):
                     paths.append(tp)
             raw = subprocess.run([JUDGE, "judge", *paths], capture_output=True, text=True).stdout
             refusals = [{"address": m.group(1).replace("__", "/"), "claim": m.group(2).strip()}

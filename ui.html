@@ -654,13 +654,35 @@ let refLabel = null;
 // answer arrives first and would find nothing to point at.
 function wireJudgeRow() {
     const rev = document.getElementById("judge-row");
-    if (!rev || !language.file) return;
+    if (!rev) return;
+    // ── "WHY IS THIS ALREADY CONNECTED? I TOOK NOTHING." The one answer this
+    // tool ever gives is: because here is the row, and the row is yours. So the
+    // judge line opens the claim that took it — the line in your own manifest —
+    // rather than the language it carries. Nothing stands in a world without a
+    // row; a line that could not be clicked through to its row was this tool
+    // breaking its own rule at the one place a stranger looks first.
+    const claim = judgeClaim();
+    if (claim) {
+        rev.title += " Click to read the row that took it — in your own file, yours to drop.";
+        rev.style.cursor = "pointer";
+        rev.onclick = async () => {
+            navFrom = navHere();
+            if (claim.file !== active) await loadFile(claim.file);
+            reveal(claim.line);
+        };
+        return;
+    }
+    if (!language.file) return;
     rev.title += " Click to read the language it carries.";
     rev.style.cursor = "pointer";
     rev.onclick = () => language.present
         ? openLanguage("Structure", language.names.Structure || 1)
         : sayLanguage("the language", language.names.Structure || 1);
 }
+// the row that took the court — read from the same document the tool reads,
+// never guessed at from what happens to be parsed on screen
+let judgeClaimAt = null;
+function judgeClaim() { return judgeClaimAt; }
 let badFiles = new Set(), siblingNames = new Set(), layoutDecls = new Map(), declFile = new Map();
 let lastParsed = null, lastRefusals = [], widgets = [], tableSort = null;
 
@@ -2708,6 +2730,7 @@ async function loadVocabulary() {
     layoutFile = fl.layout || null;
     formsFiles = new Set(fl.forms || []);
     overridden = fl.overridden || {};
+    judgeClaimAt = fl.judge_claim || null;
     try { language = await (await fetch("/language")).json(); } catch { }
     wireJudgeRow();
     await loadVocabulary();
