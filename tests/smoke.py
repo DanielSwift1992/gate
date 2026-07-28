@@ -2502,6 +2502,26 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "public typealias FactfirmIsFactSized" in registers_src
               and "font:var(--factfirm)" in ui))
 
+    # ── THE LINE THAT DECIDES THE VERDICT IS NOT CEREMONY. A `where` clause is
+    # the condition a verdict turns on, and it was set in the same grey as the
+    # brackets around it — read as furniture, skipped by the eye. Measured on
+    # the page: `where` and the reach-through dots stand back in the seam, and
+    # everything that carries meaning is ink — the parameters `Who` and `What`,
+    # the axes they reach through, and the `==` that decides.
+    #
+    # That `==` is ink because it inherits the editor's own colour, which is the
+    # right answer arrived at without anybody saying so. Said here, so it cannot
+    # drift into grey the day somebody restyles the editor.
+    S.append(("the where clause reads as a claim: holes and connective in ink, ceremony in the seam",
+              ".CodeMirror{height:100%;font:var(--source);background:var(--paper);color:var(--ink)}" in ui
+              # a slot label is ink wherever it stands — in the parameter list
+              # and in the clause that reads it back
+              and ".cm-axisname{color:var(--ink)}" in ui
+              and 'if (slotNames.has(word)) return "axisname";' in ui
+              # and the ceremony around it is the seam, never a colour of its own
+              and ".cm-s-default .cm-keyword,.cm-s-default .cm-attribute{color:var(--seam)}" in ui
+              and ".cm-ghost{color:var(--seam)" in ui))
+
     # ── AND A VALUE CAN BE ANSWERED WHERE IT IS SHOWN. The bench could show what
     # a world holds and never let anybody say otherwise: a table you may read
     # and not write in. Saying a different value meant leaving the page, working
