@@ -623,7 +623,7 @@ judge.js        the browser judge (byte-parity port) for the bench
 ui.html         the workbench
 codemirror.*    the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
-tests/smoke.py   the battery — 261 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 262 end-to-end checks, the definition of green
 ```
 
 ## Status

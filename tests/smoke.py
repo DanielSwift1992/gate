@@ -199,6 +199,26 @@ def main():
     ghosts = [x for x in r["refusals"] if "ghost path" in x["claim"]]
     S.append(("codeowners: a rule outside its owner's zone is refused, by their line",
               c == 1 and judged and all("CODEOWNERS:" in x["source"] for x in judged)))
+    # ── ONE FACT, ONE SENTENCE, AND THE WORDS ARE THE LAW'S OWN. The importer
+    # carried its own wording of the law while `gate status` printed the judge's
+    # raw line about the very same refusal — two voices for one fact, and the
+    # readable one lived in the command a person runs once while the unreadable
+    # one lived in the verb they run every day. The sentence is a `///` note on
+    # the law, in the file the law is written in: rename it there and both
+    # surfaces say the new thing, with nothing in this tool to edit.
+    shelf_law = open(os.path.join(HERE, "stdlib", "forms-grants.swift"), encoding="utf-8").read()
+    tool_src = open(GATE, encoding="utf-8").read()
+    S.append(("the sentence a refusal wears is the law's own, read from the file the law is in",
+              "/// an owner and the path they own must share one zone" in shelf_law
+              and all("Zone_" in x["claim"] and "against" in x["claim"]
+                      and "share one zone" in x["claim"] for x in judged)
+              # and the generic parameters of the form are not shown to anybody:
+              # `Who.Post` and `What.Place` belong to the declaration, not to the
+              # reader's file, and naming them was naming nothing they wrote
+              and not any("Who.Post" in x["claim"] or "What.Place" in x["claim"]
+                          for x in judged)
+              # said once: the tool holds no second copy of the law's words
+              and tool_src.count("an owner and the path they own must share one zone") == 0))
     S.append(("codeowners: a pattern the tree has no file for is named",
               len(ghosts) == 1 and ghosts[0]["address"].startswith("CODEOWNERS:")))
     # and the refusal is about the disagreement, not a constant: state that

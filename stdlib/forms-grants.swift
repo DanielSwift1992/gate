@@ -21,6 +21,7 @@ public protocol Keeper {
 public protocol Room {
     associatedtype Place: Realm
 }
+/// whoever enters a place must be posted to it, and carry a key that writes
 public protocol Entered {}
 public enum Enter<
     Who: Keeper,
@@ -33,6 +34,7 @@ where Who.Key: Writes, Who.Post == Into.Place {}
 // owns what stands in it. One gated form, not another crystal — CODEOWNERS,
 // Kubernetes RBAC and an org's grants are the same question about the same
 // atoms: who may do what, where.
+/// an owner and the path they own must share one zone
 public protocol Owned {}
 public enum Owns<
     Who: Keeper,

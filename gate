@@ -250,6 +250,45 @@ def manifest_guards(rows=None):
     return bad
 
 
+def law_notes(*texts):
+    # ── A LAW'S OWN SENTENCE, READ FROM THE FILE THE LAW IS WRITTEN IN. A `///`
+    # note directly above a declaration is what somebody wrote about that record
+    # — the bench has always shown them — and a law is a record like any other.
+    # So the sentence a refusal wears is not a table in this file: it is the
+    # world's, in the world's words, and a fork that renames the law renames what
+    # its refusals say without anyone touching the tool.
+    out = {}
+    for text in texts:
+        lines = (text or "").split("\n")
+        for i, line in enumerate(lines):
+            m = re.match(r"public (?:protocol|enum|typealias) (\w+)", line.strip())
+            if not m or m.group(1) in out:
+                continue
+            said = []
+            for j in range(i - 1, -1, -1):
+                s = lines[j].strip()
+                if not s.startswith("///"):
+                    break
+                said.insert(0, s[3:].strip())
+            if said:
+                out[m.group(1)] = " ".join(said).strip()
+    return out
+
+
+def plainly(claim, notes):
+    # the where court's sentence, said the way the plain court says its own:
+    # `X against Y`, and then the law in the words the law was written in. The
+    # raw line names two GENERIC PARAMETERS — `Who.Post`, `What.Place` — which
+    # belong to the form's declaration and to nothing the reader wrote.
+    m = re.match(r"'(\w+)[^']*' requires the types '[^']*' \(aka '([^']+)'\) and "
+                 r"'[^']*' \(aka '([^']+)'\) be equivalent(?: \[(\w+)\])?", claim)
+    if not m:
+        return claim
+    cert, left, right, law = m.groups()
+    said = notes.get(law or "")
+    return f"{cert} · {left} against {right}" + (f" — {said}" if said else "")
+
+
 def forms_guards(size=None):
     # ── AND HOW WIDE IT WAS. `size`, if given, is filled with what the where
     # court counted. A green with no width is the one thing this tool says it
@@ -319,7 +358,8 @@ def forms_guards(size=None):
                 spot = where.get(touched[0]) if touched else None
                 if not spot and touched:
                     spot = mine[touched[0]]
-            bad.append({"address": spot or rows[0]["path"], "claim": claim})
+            bad.append({"address": spot or rows[0]["path"],
+                        "claim": plainly(claim, law_notes(text))})
         if size is not None:
             m = re.search(r"(\d+) equalities judged across (\d+) uses", out)
             if m:
@@ -1595,7 +1635,11 @@ def cmd_demo_owners(a):
                         "who owns what in this repository", "--no-verify"], capture_output=True)
     finally:
         os.chdir(here_was)
-    shown = [(r.get("source") or r.get("address") or "") + " · " + r.get("claim", "")
+    # the address in CODEOWNERS is what a person recognises, so it leads; the
+    # certificate's name is the same fact's address in the world, and printing
+    # both in one breath says one thing twice
+    shown = [(r.get("source") or r.get("address") or "") + " · "
+             + re.sub(r"^\w+ · ", "", r.get("claim", ""))
              for r in (said.get("refusals") or [])][:2]
     return {"command": "demo", "root": root,
             "asked": "gate import codeowners CODEOWNERS --tree . --policy owners.csv",
@@ -4204,12 +4248,21 @@ def cmd_import_codeowners(a):
     t0 = time.time()
     outp = subprocess.run([JUDGE, "judge", "where", out_path], capture_output=True, text=True).stdout
     ms = round((time.time() - t0) * 1000, 1)
+    # ── ONE FACT, ONE SENTENCE. This carried its own wording of the law while
+    # `gate status` printed the judge's raw line about the very same refusal, so
+    # a person met the readable half first and the unreadable half in the verb
+    # they would use every day. The words belong to the law, in the file the law
+    # is written in; both surfaces read them from there.
+    notes = law_notes(world, STDLIB.get("forms-grants", ""))
     refusals = []
-    for m in re.finditer(r"^✗ '(\w+)[^']*' requires the types '[^']*' \(aka '([^']+)'\) and '[^']*' \(aka '([^']+)'\) be equivalent", outp, re.M):
-        cert, left, right = m.groups()
-        if cert in srcmap:
-            refusals.append({"certificate": cert, "source": srcmap[cert],
-                             "claim": f"the owner keeps {left}, the path lives in {right}: an owner and the path they own must share one zone"})
+    for line in outp.split("\n"):
+        if not line.strip().startswith("✗"):
+            continue
+        claim = line.strip()[1:].strip()
+        m = re.match(r"'(\w+)", claim)
+        if m and m.group(1) in srcmap:
+            refusals.append({"certificate": m.group(1), "source": srcmap[m.group(1)],
+                             "claim": plainly(claim, notes)})
     # a pattern matching no file in the tree: CODEOWNERS says it, the tree does not
     ghosts = []
     if tree:
