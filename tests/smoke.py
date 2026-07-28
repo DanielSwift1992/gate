@@ -2790,6 +2790,46 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "taken as given" in ui
               and "somebody SUPPLYING the agreement the two sides never derived" in ui))
 
+    # ── MAKING SOMETHING YOURS IS THE THIRD VERB, and it had no word. `theirs`
+    # is what I read, `mine` is what I write, and between them sat the act
+    # everybody performs: I saw somebody's and took it as my starting point. The
+    # nearest gesture argued against itself — `stdlib materialize` writes the
+    # file and then says "a printout, not a source… here to be READ" — so the
+    # path from seeing to saying was blocked by this tool's own words. It needs
+    # no new noun: `gate mine bench-palette` says it in the word already learned.
+    tv = os.path.join(tmp, "thirdverb")
+    run("demo", tv)
+    took = run("mine", "bench-palette", cwd=tv)[1]
+    copy = os.path.join(tv, "bench-palette.swift")
+    head = open(copy).read().split("\n")[:3] if os.path.exists(copy) else []
+    again = run("mine", "bench-palette", cwd=tv)[1]
+    took_holds = run("status", cwd=tv)[1].get("verdict")
+    # and a value changed in MY copy is what the page paints, which is the whole
+    # point of having taken it: identity is the path a file has, never the name
+    # it wears, and comparing names took an operator's copy for one of ours.
+    # Read first, then write — `open(w)` truncates before a nested read runs,
+    # and a probe that quietly empties the file it meant to edit proves nothing.
+    said = re.sub(r"public typealias SelectDimZ = .*",
+                  "public typealias SelectDimZ = Plus<W8, W32>", open(copy).read(), count=1)
+    open(copy, "w").write(said)
+    painted = subprocess.run(
+        [sys.executable, "-c",
+         "import types;src=open(%r,encoding='utf-8').read();g=types.ModuleType('g');"
+         "g.__file__=%r;exec(compile(src,'gate','exec'),g.__dict__);print(g.palette_tokens())"
+         % (GATE, GATE)], cwd=tv, capture_output=True, text=True).stdout
+    S.append(("making a shelf world yours is one word, and what you then say is what is painted",
+              took.get("made_mine") == "bench-palette"
+              and took.get("wrote") == "bench-palette.swift"
+              # it says where it came from and at what revision, in its own head
+              and any("taken as your own starting point" in l for l in head)
+              and any(l.startswith("// role: forms") for l in head)
+              and took_holds == "holds"
+              # a second call does not overwrite what you have since written
+              and again.get("asks") and "already here" in again.get("note", "")
+              # and the merge takes it as an override: by path, never by name
+              and "SHIPPED_PATHS" in shelf_src
+              and "calc(38/1000) calc(40/1000) calc(40/1000)" in painted))
+
     # ── AND A REFUSAL IS VISIBLE IN THE VIEW YOU WRITE IN. Bare is a surface
     # you EDIT — slots, add claim, add record — and when what you wrote stopped
     # holding, nothing there said so: the chip counted two, the footer carried

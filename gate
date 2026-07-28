@@ -1848,7 +1848,14 @@ def presented_over(shelf_name):
         # shelf files as its own forms — that is the point of being the first
         # inhabitant — and reading them as overrides of themselves made every
         # name in this repository a second truth about itself.
-        if os.path.basename(r["path"]) in {n + ".swift" for n in STDLIB}:
+        #
+        # BY THE FILE, NEVER BY THE NAME. This compared basenames, so anybody
+        # whose copy of a shelf world kept its name was silently skipped: the
+        # third verb hands you `bench-palette.swift`, declares it, judges it —
+        # and the values you then changed painted nothing, because the merge
+        # took your file for ours on the strength of what it was called. The
+        # shipped file has a path; that is what identity means here.
+        if os.path.abspath(os.path.join(base, r["path"])) in SHIPPED_PATHS:
             continue
         fp = os.path.join(base, r["path"])
         if not os.path.exists(fp):
@@ -2098,6 +2105,10 @@ def load_stdlib():
 
 
 STDLIB = load_stdlib()
+# the files this tool ships, by path: identity is where a thing is, never what
+# it is called — two files may share a name and only one of them is ours
+SHIPPED_PATHS = {os.path.abspath(os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "stdlib", n + ".swift")) for n in STDLIB}
 
 
 def cmd_stdlib(a):
@@ -2933,10 +2944,56 @@ def cmd_side(a, kind):
                         "your list is not throwing it away, and that second act is yours alone",
                 "next": "delete the file too if you meant that — a commit like any other, "
                         "visible and dated"}
+    # ── MAKING SOMETHING YOURS IS THE THIRD VERB, and it had no word. There was
+    # `theirs` — I read it — and `mine` — I write it — and between them the act
+    # everybody actually performs: I saw somebody's and took it as my starting
+    # point. Without it a person could only look at a shelf world; the nearest
+    # gesture, `stdlib materialize`, writes the file and then argues against
+    # itself — "a printout, not a source… here to be READ". So the path from
+    # seeing to saying was blocked by the tool's own words.
+    #
+    # It needs no new noun. `gate mine bench-palette` says what it does in the
+    # word already learned: the copy lands here, carrying where it came from and
+    # at what revision, declared in the same movement, judged from that second.
+    # Everything of ours was once somebody else's — the language, the forms, the
+    # judge — and learning is taking a thing in hand.
+    if kind == "Mine" and not os.path.exists(path) and path in STDLIB:
+        mod = path
+        dest = os.path.abspath(mod + ".swift")
+        if os.path.exists(dest):
+            return {"command": word, "asks": True,
+                    "note": f"{mod}.swift is already here",
+                    "next": f"gate {word} {mod}.swift — declare the copy you have, or move it "
+                            "aside first: nothing here overwrites a file you wrote"}
+        # the court is the one that reads what the file IS, never the label the
+        # shelf wears about itself: `gate's own` says whose furniture it is, and
+        # a copy in somebody's repository is theirs, read by the where court
+        # like every other world of values they present.
+        court = stdlib_role(mod) if stdlib_role(mod) in ROLES else "forms"
+        came = judge_from()
+        body = [ln for ln in STDLIB[mod].split("\n")]
+        while body and body[0].startswith("//"):
+            body.pop(0)
+        with open(dest, "w") as f:
+            f.write(f"// {mod}, taken as your own starting point"
+                    + (f" from the judge at {came[:7]}" if came else "")
+                    + ".\n// role: " + court + "\n"
+                    "// Yours from here: change what it says and your world is judged by what\n"
+                    "// you said. The shelf's copy stays what it was; this one answers to you.\n"
+                    + "\n".join(body).lstrip("\n"))
+        mp = declare_side(dest, "Mine", court)
+        return {"command": word, "made_mine": mod, "wrote": os.path.basename(dest),
+                "declared_in": mp, "from": came, "mutates": True,
+                "note": f"{mod} is yours: a copy is here, declared, and judged from now on. "
+                        "What the shelf ships is unchanged and still shipped — yours simply "
+                        "stands where it stood",
+                "next": "gate status — it is judged with the rest of your world"}
     if not os.path.exists(path):
         return {"command": word, "asks": True, "note": f"no file at {path}",
-                "next": "bring the file here first — gate never fetches: a file of theirs "
-                        "arrives by a checkout, a copy, a vendor step you already trust"}
+                "next": ("bring the file here first, or name one this tool ships — "
+                         + " · ".join(sorted(STDLIB)) if kind == "Mine" else
+                         "bring the file here first — gate never fetches: a file of theirs "
+                         "arrives by a checkout, a copy, a vendor step you already trust")}
     if role not in ROLES:
         return {"command": word, "asks": True,
                 "note": f"`{role}` is not a court anything here reads",
@@ -5059,6 +5116,11 @@ def humanize(out):
             lines.append("  commit it, and every clone has the tool — nothing to install")
             if v.get("judge_sha256"):
                 lines.append(f"  judge sha256: {v['judge_sha256'][:16]}…")
+    elif cmd in ("mine", "theirs") and out.get("made_mine"):
+        lines.append(f"{cmd}: {out['made_mine']} is yours · wrote {out['wrote']}"
+                     + (f" · from the judge at {out['from'][:7]}" if out.get("from") else ""))
+        lines.append(f"  note: {out['note']}")
+        lines.append(f"  next: {out['next']}")
     elif cmd in ("mine", "theirs"):
         # SAID IN ONE LINE, THE SAME LINE BOTH WAYS. The whole difference is the
         # verb: one I write, one I only read — and the operator should be able to
