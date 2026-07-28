@@ -2651,6 +2651,57 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               # and a file nobody declared steers nothing
               and undeclared.get("scope") == "world"))
 
+    # ── AND A COMMENT IS NOT A DECLARATION. `bench-atoms` documents this very
+    # wheel by showing one — `///     public enum MyJournal: Journal {` — and
+    # the reader took the example for an answer, so `gate log` in this
+    # repository quietly obeyed a line written to explain it. Worse than the
+    # wrong scope: the word typed afterwards looked broken, because it was
+    # overriding something nobody had declared. Found by hand, not by a report.
+    open(os.path.join(wj, "my-journal.swift"), "w").write(
+        "// public enum Faker: Journal {\n//     public typealias Scope = AllRepo\n// }\n")
+    only_said = run("log", cwd=wj)[1]
+    S.append(("a wheel shown in a comment turns nothing, including the one this tool documents",
+              only_said.get("scope") == "world"
+              and "if not ln.strip().startswith" in shelf_src
+              # and this repository is the case that proved it: it documents the
+              # wheel and declares none, so its own journal must not be widened
+              and json.loads(subprocess.run(
+                  [sys.executable, GATE, "log", "1", "--json"], cwd=HERE,
+                  capture_output=True, text=True).stdout).get("scope") == "world"))
+
+    # ── A WORD THIS COMMAND DOES NOT KNOW IS A REFUSAL, BY THE WORD. `gate log
+    # --help` ran as a bare `log`: no help, no refusal, the word swallowed. And
+    # a refusal from a command that had never had one printed a traceback,
+    # because every command formatted its own and this one had none — so the
+    # silence had a second floor under it.
+    helped = run("log", "--help", cwd=wj)[1]
+    mistyped = run("log", "--wrold", cwd=wj)[1]
+    S.append(("a word this command does not know is refused by name, not swallowed",
+              helped.get("asks") and "`--help`" in helped.get("note", "")
+              and mistyped.get("asks") and "`--wrold`" in mistyped.get("note", "")
+              and "gate log all" in mistyped.get("next", "")
+              # and it prints, whoever made it: one branch before every command's
+              # own, so a refusal from a command that never had one still speaks
+              and 'if out.get("asks") and out.get("note") and "verdict" not in out:' in shelf_src))
+
+    # ── AND A SCOPE THAT CANNOT BE HONOURED SAYS SO. Asking for the world's
+    # history where no file is declared a world file narrowed nothing and printed
+    # the whole repository under the words `the repository` — true about what was
+    # shown, silent about the word having done nothing. This tool's own
+    # repository is that case: it declares forms and a layout and no world of
+    # facts, so `gate log world` and `gate log` printed the same history and
+    # neither said why.
+    here_log = json.loads(subprocess.run(
+        [sys.executable, GATE, "log", "world", "1", "--json"], cwd=HERE,
+        capture_output=True, text=True).stdout)
+    said_here = subprocess.run([sys.executable, GATE, "log", "world", "1"], cwd=HERE,
+                               capture_output=True, text=True).stdout
+    S.append(("a scope that cannot be honoured says which word did nothing, and why",
+              here_log.get("scope") == "world" and here_log.get("narrowed") is False
+              and "nothing narrower" in said_here
+              # and where it CAN be honoured it simply is, with nothing added
+              and run("log", "world", cwd=wj)[1].get("narrowed") is True))
+
     # ── THE BENCH AND THE COMMAND LINE ANSWER ABOUT THIS REPOSITORY THE SAME WAY.
     # They did not. `gate status` here said `holds` while the bench's own front
     # door showed twenty-one refusals, in red, about gate itself — every one of

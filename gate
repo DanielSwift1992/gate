@@ -1241,7 +1241,15 @@ def turned(surface):
     for _, path in bench_files():
         if not os.path.exists(path):
             continue
-        text = open(path, encoding="utf-8", errors="replace").read()
+        # A COMMENT IS NOT A DECLARATION. `bench-atoms` documents this very wheel
+        # by showing one — `///     public enum MyJournal: Journal {` — and this
+        # read the example as the operator's own answer, so `gate log` in this
+        # repository quietly obeyed a line written to explain it. The word typed
+        # afterwards then looked broken, because it was overriding something
+        # nobody had declared. Comments go before anything is read.
+        text = "\n".join(ln for ln in
+                         open(path, encoding="utf-8", errors="replace").read().split("\n")
+                         if not ln.strip().startswith("//"))
         for m in re.finditer(r"public enum \w+: " + surface + r" \{(.*?)\n\}", text, re.S):
             for a in re.finditer(r"public typealias (\w+) = (\w+)", m.group(1)):
                 out[a.group(1)] = a.group(2)
@@ -1278,6 +1286,14 @@ def repo_journal(n=200, scope="world", only_me=False):
     pp = policy_path()
     if pp:   # the policy is a fact beside the world: its history belongs here
         world.add(os.path.relpath(pp, base))
+    # ── A SCOPE THAT CANNOT BE HONOURED SAYS SO. Asking for the world's history
+    # where no file is declared a world file narrowed nothing and showed the
+    # whole repository under the word `the repository` — true about what was
+    # printed, silent about the word having done nothing. This tool's own
+    # repository is exactly that case: it declares forms and a layout and no
+    # world of facts at all, so `gate log world` and `gate log` printed the same
+    # hundred and ninety-nine commits and neither said why.
+    narrowed = not (scope == "world" and not world)
     args = ["git", "log", "--all", f"-{n}", "--format=%x01%H%x1f%ae%x1f%aI%x1f%s", "--name-only"]
     if scope == "world" and world:
         args += ["--", *sorted(world)]
@@ -1303,7 +1319,7 @@ def repo_journal(n=200, scope="world", only_me=False):
     if only_me and me:
         commits = [c for c in commits if c["email"] == me]
     return {"command": "log", "default_branch": default, "scope": scope, "limit": n,
-            "mine_only": bool(only_me),
+            "mine_only": bool(only_me), "narrowed": narrowed,
             "next": ("run `gate status` to have the judge read what these commits changed"
                      if world_files() else
                      "run `gate demo` for a world to look at, or drop a table you already export "
@@ -4677,6 +4693,19 @@ def dispatch(cmd, rest):
         # is a wheel this tool offers, and a word typed now is the operator
         # speaking now: an argument outranks a standing declaration, the way it
         # does everywhere else.
+        # ── AND A WORD THIS COMMAND DOES NOT KNOW IS A REFUSAL, BY THE WORD.
+        # `gate log --help` ran as a bare `log`: no help, no refusal, the word
+        # swallowed. That is the silence this whole tool exists to replace,
+        # written into its own argument reading — and an operator who mistypes
+        # `--wrold` gets the answer to a question they did not ask.
+        known = {"all", "--all", "world", "--world"}
+        stray = [x for x in rest if x not in known and not x.isdigit()]
+        if stray:
+            return {"command": "log", "asks": True,
+                    "note": "`" + stray[0] + "` is not a word this command knows",
+                    "next": "gate log — the world's history · gate log all — the repository's · "
+                            "gate log N — how many · and `MyJournal` declares what you get "
+                            "when you say none of them"}
         said = turned("Journal")
         scope = ("all" if rest and rest[0] in ("all", "--all")
                  else "world" if rest and rest[0] in ("world", "--world")
@@ -4703,6 +4732,16 @@ def humanize(out):
     # humans get lines, machines get --json (git's porcelain pattern)
     lines = []
     cmd = out.get("command", "")
+    # ── A REFUSAL PRINTS, WHOEVER MADE IT. Every command formatted its own, so a
+    # refusal from one that had never had one before printed nothing at all — or
+    # a traceback, when the formatter reached for a field a refusal does not
+    # carry. That is the same silence this tool sells against, standing in its
+    # own reading of its own arguments. One branch, before any of them.
+    if out.get("asks") and out.get("note") and "verdict" not in out:
+        lines.append("usage: " + out["note"])
+        if out.get("next"):
+            lines.append(f"  next: {out['next']}")
+        return "\n".join(lines)
     if cmd == "badge" and out.get("verdict") != "no world here":
         lines.append("badge: " + out["text"] + (f" · wrote {out['wrote']}" if out.get("wrote") else ""))
         lines.append(f"  note: {out['note']}")
@@ -4917,6 +4956,9 @@ def humanize(out):
         d = out.get("default_branch") or "?"
         what = ("the world's history" if out.get("scope") == "world" and out.get("world_files")
                 else "the repository")
+        # and when the word could not be honoured, the line says which word and why
+        if out.get("narrowed") is False:
+            what += " — no file here is declared a world file, so there is nothing narrower"
         lines.append(f"log: {len(out['commits'])} commits · {what} · observed, not judged · closed = reachable from {d}")
         for c in out["commits"]:
             st = "?" if c["closed"] is None else ("closed" if c["closed"] else "open")
