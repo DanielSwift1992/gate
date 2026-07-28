@@ -169,7 +169,11 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 .CodeMirror pre.CodeMirror-line,.CodeMirror pre.CodeMirror-line-like{padding:0 calc(var(--u)*4)}
 .CodeMirror-linenumber{color:var(--seam)}
 .CodeMirror-cursor{border-left-color:var(--ink)}
-.CodeMirror-gutters{background:var(--paper);border-right-color:var(--line)}
+/* the borrowed sheet draws this one at 1px while every other line on this
+   page is half that — so the divider nearest the reading eye was the
+   heaviest thing on screen. We had overridden its colour and inherited its
+   width, which is the same silence as an unoverridden token colour. */
+.CodeMirror-gutters{background:var(--paper);border-right:0.5px solid var(--line)}
 .CodeMirror-selected,.CodeMirror-focused .CodeMirror-selected{background:var(--select)}
 .CodeMirror-line::selection,.CodeMirror-line>span::selection,.CodeMirror-line>span>span::selection{background:var(--select)}
 /* the editor's tokens speak the same table. Ceremony — public, enum, typealias,
@@ -783,6 +787,8 @@ async function buildShelf() {
     try {
         const shelf = await (await fetch("/shelf")).json();
         mods = shelf.modules || []; roles = shelf.roles || {};
+        mods.sort((a, b) => (roles[a] || "").localeCompare(roles[b] || "")
+                            || a.localeCompare(b));
     } catch { mods = []; }
     host.innerHTML = "";
     // ── AND IT DOES NOT SAY TWICE WHAT THE TREE ABOVE ALREADY SAYS. In this
@@ -792,11 +798,32 @@ async function buildShelf() {
     // files, named twice, on one panel. In anybody else's repository there is
     // nothing to repeat and the list is unchanged.
     const alreadyMine = new Set(files.map(f => f.split("/").pop().replace(/\.swift$/, "")));
+    // ── AND NOT EVERYTHING UNDER `THEIRS` IS THE JUDGE'S. Three different things
+    // stood here under one heading, in one alphabet: the court itself, the forms
+    // a world and a policy are written in, and this bench's own furniture. A
+    // reader asking "is all of this the judge?" got no answer, and the answer is
+    // no — each of these files says which it is in its own second line, and the
+    // tool has been reading that line all along to no visible end. The panel
+    // groups by what they say they are, the way `mine` already groups by folder.
+    let shownRole = null;
     for (const m of mods) {
         if (alreadyMine.has(m)) continue;
+        const role = roles[m] || "taken";
+        if (role !== shownRole) {
+            shownRole = role;
+            const head = document.createElement("div");
+            head.className = "folder caption";
+            // the word is the file's own, never a sentence written here: a lookup
+            // on the two roles this tool happens to know is that tool learning a
+            // vocabulary, and a role it had not heard of would fall through to
+            // nothing. What each group MEANS is on every row's own hover, said
+            // by the file; the heading only has to name the group.
+            head.textContent = role;
+            host.appendChild(head);
+        }
         const r = document.createElement("div");
         // a file row is a file row: the rail has one shape for one thing
-        r.className = "file";
+        r.className = "file nested";
         r.title = (roles[m] === "forms"
             ? "Words the judge carries, printed as Swift — what your world and your policy are "
               + "written in. Your world speaks these with no such file present, and editing a "

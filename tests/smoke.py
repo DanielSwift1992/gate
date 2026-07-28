@@ -2761,6 +2761,34 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "taken as given" in ui
               and "somebody SUPPLYING the agreement the two sides never derived" in ui))
 
+    # ── NOT EVERYTHING UNDER `THEIRS` IS THE JUDGE'S, and the panel says which
+    # is which. Three different things stood there under one heading in one
+    # alphabet: the court, the forms a world and a policy are written in, and
+    # this bench's own furniture. Each file states which it is in its own second
+    # line and the tool had been reading that line to no visible end — so a
+    # reader asking "is all of this the judge?" got no answer, and the answer is
+    # no. `git-atoms` in particular is forms, like the rest of the language.
+    S.append(("the shelf is grouped by what each file says it is, not by one flat alphabet",
+              'const role = roles[m] || "taken";' in ui
+              # and the heading is the file's own word, never a sentence written
+              # in the page: a lookup on the roles this tool happens to know is
+              # the tool learning a vocabulary, and an unknown role gets nothing
+              and "head.textContent = role;" in ui
+              and '"forms — the language a world is written in"' not in ui
+              and "mods.sort((a, b) => (roles[a] || \"\").localeCompare(roles[b] || \"\")" in ui
+              # and the roles come from the files themselves, never from a list here
+              and "def stdlib_role(" in shelf_src
+              and 'm = re.match(r"// role: (.+)", line.strip())' in shelf_src))
+
+    # ── AND ONE LINE ON THE PAGE IS NOT TWICE THE WEIGHT OF THE OTHERS. The
+    # borrowed editor draws the gutter divider at 1px while every line this page
+    # draws is half that, so the rule nearest the reading eye was the heaviest
+    # thing on screen. We had overridden its colour and inherited its width —
+    # the same silence as a token colour left unoverridden.
+    S.append(("every divider on the page is the same weight, including the borrowed one",
+              ".CodeMirror-gutters{background:var(--paper);border-right:0.5px solid var(--line)}" in ui
+              and "border-right-color:var(--line)}" not in ui))
+
     # ── AND `init` WITH NO PATH MEANS HERE, WHEN HERE IS ALREADY A WORLD. The
     # default was a new folder called `world`, unconditionally — so `gate init
     # --vendor`, typed by somebody standing in the world they had just made,
