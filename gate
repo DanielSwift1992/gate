@@ -1394,7 +1394,7 @@ def repo_journal(n=200, scope="world", only_me=False):
             "mine_only": bool(only_me), "narrowed": narrowed,
             "next": ("run `gate status` to have the judge read what these commits changed"
                      if world_files() else
-                     "run `gate demo` for a world to look at, or drop a table you already export "
+                     "run `gate demo` for a repository to look at, or drop a table you already export "
                      "into tables/ and run `gate status`"),
             "me": me, "world_files": sorted(world), "commits": commits}
 
@@ -1531,6 +1531,70 @@ SEAM_DEMO_SDK = {"carrier": "MessagesJS",
                              {"route": "/messages", "field": "sendAt", "as": "Count"},
                              # and it carries one the contract never stated
                              {"route": "/messages", "field": "replyTo", "as": "Text"}]}
+
+
+def cmd_demo_owners(a):
+    # demo — who owns what, in a repository shaped like the reader's own. Three
+    # areas, four rules, one owner reaching past their zone: the refusal a
+    # person recognises before they have learned a single word of this tool,
+    # because it is the mistake their own CODEOWNERS makes silently today.
+    root = os.path.abspath(a[0] if a else "gate-demo")
+    for rel in ("src/api", "src/ui", "src/db", "docs"):
+        os.makedirs(os.path.join(root, rel), exist_ok=True)
+    for rel in ("src/api/handler.ts", "src/ui/view.tsx", "src/db/schema.sql", "docs/readme.md"):
+        with open(os.path.join(root, rel), "w") as f:
+            f.write("// a file of this repository\n")
+    with open(os.path.join(root, "CODEOWNERS"), "w") as f:
+        f.write("# who owns what, the way every repository already writes it\n"
+                "src/api/    @alice\n"
+                "src/ui/     @bob\n"
+                "docs/       @carol\n"
+                "src/db/     @carol\n")
+    with open(os.path.join(root, "owners.csv"), "w") as f:
+        # WHO MAY OWN WHAT is the thing CODEOWNERS cannot say, and without it
+        # every rule is its own authority: a file that answers only to itself
+        f.write("owner,zone\nalice,src\nbob,src\ncarol,docs\n")
+    here_was = os.getcwd()
+    try:
+        os.chdir(root)
+        said = cmd_import_codeowners(["CODEOWNERS", "--tree", ".", "--policy", "owners.csv",
+                                      "-o", "ownership.swift"])
+        # A GRAMMAR AND THE CERTIFICATES OVER IT ARE A FORMS FILE, and saying so
+        # is what lets `gate status` answer here at all: the role names the
+        # court. Written into gate.swift instead, the same text earned twenty
+        # refusals from the plain court for declaring protocols — a world told
+        # its own printout was ungrammatical.
+        declare_side("ownership.swift", "Mine", "forms")
+        subprocess.run(["git", "init", "-q", "-b", "main", "."], capture_output=True)
+        subprocess.run(["git", "add", "-A"], capture_output=True)
+        subprocess.run(["git", "-c", "commit.gpgsign=false", "-c", "user.email=you@example.com",
+                        "-c", "user.name=You", "commit", "-qm",
+                        "who owns what in this repository", "--no-verify"], capture_output=True)
+    finally:
+        os.chdir(here_was)
+    shown = [(r.get("source") or r.get("address") or "") + " · " + r.get("claim", "")
+             for r in (said.get("refusals") or [])][:2]
+    return {"command": "demo", "root": root,
+            "asked": "gate import codeowners CODEOWNERS --tree . --policy owners.csv",
+            "refused": shown,
+            # ── AND THE WAY BACK, SAID BEFORE THE FIRST EDIT. Trying things is
+            # only free when the retreat is visible in advance. This world is
+            # committed the moment it is made, so `git checkout .` has always put
+            # it back; saying so here means it is read before anything is
+            # touched rather than looked for afterwards.
+            "next": f"cd {os.path.relpath(root)} && gate status — the same answer in a "
+                    "millisecond, from the world rather than from CODEOWNERS",
+            "back": "git checkout . — everything as it was, in one word: this world was "
+                    "committed the moment it was made, so nothing you try here can cost you "
+                    "anything",
+            "try": ["open ownership.swift at the line gate status names, and give that room to "
+                    "an owner whose zone matches — the world is the truth here, CODEOWNERS only "
+                    "seeded it",
+                    "or edit CODEOWNERS and run the import again — same command, one line moved",
+                    "gate serve — the bench: the world beside its verdict, judged as you type",
+                    "gate demo org — the same machinery on people and departments, "
+                    "for a domain that has no repository"],
+            "mutates": True}
 
 
 def cmd_demo_seam(a):
@@ -4886,9 +4950,11 @@ USAGE = """usage (the git-shaped porcelain):
   gate declare carrier DECL.json [-o F] you publish, or of what your build says
                                        your library carries — after this it is
                                        what you have SAID, and judged)
-  gate demo | gate demo seam          (thirty seconds each: a world with a
-                                       question already answered, or two sides
-                                       with one disagreement between them)
+  gate demo | gate demo seam | gate demo org
+                                      (thirty seconds each: a repository whose
+                                       CODEOWNERS is judged, two sides with one
+                                       disagreement between them, or people and
+                                       departments for a domain with no repo)
   gate attention CONTRACT.swift CARRIER.swift [--as WHO] [--known K.json]
                  [--tracker T.json]     (what waits for a WORD, not what changed:
                                        who owes whom a sentence, read the same
@@ -4989,9 +5055,9 @@ def dispatch(cmd, rest):
             return {"command": "status", "verdict": "no world here", "refusals": [],
                     "next": ("run `gate log` to read this repository's own history: nothing to translate"
                              if inside and has_past else
-                             "run `gate demo` for a world to look at: people, grants, and one refusal"
+                             "run `gate demo` for a repository to look at: a CODEOWNERS, a policy, and one refusal"
                              if inside else "run `gate init .` to start a world in this folder"),
-                    "then": "drop your CSVs into tables/ and run gate status again, or gate demo to see one",
+                    "then": "drop your CSVs into tables/ and run gate status again, or gate demo to see a world",
                     "mutates": False}
         # what disagrees right now: judgement over the declared file list +
         # layout guards + world metrics (counted, never remembered)
@@ -5030,8 +5096,16 @@ def dispatch(cmd, rest):
         return cmd_survey(rest)
     if cmd == "demo" and rest and rest[0] == "seam":
         return cmd_demo_seam(rest[1:])
+    if cmd == "demo" and rest and rest[0] == "org":
+        return cmd_demo(rest[1:])
     if cmd == "demo":
-        return cmd_demo(rest)
+        # ── THE FIRST SCENE IS THE READER'S OWN WORLD. A developer meeting
+        # departments, ranks and documents reads an HR tool and puts it down;
+        # what they actually keep is who owns which paths, and that is a world
+        # this tool has been able to judge all along. The organization world is
+        # the same machinery on a domain that needs no repository, and it is
+        # one word away for whoever wants to read rather than run.
+        return cmd_demo_owners(rest)
     if cmd == "my":
         # my — your personal world: where it is, and its verdict WITH the shared
         # world (the claims you keep, judged against facts other people own)

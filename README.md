@@ -132,24 +132,30 @@ and the refusal is about two declarations rather than about anybody's code.
 
 ```sh
 gate import codeowners CODEOWNERS --tree .   # your repository's own ownership, judged
+gate demo && cd gate-demo                    # the same thing on a repository we make for you
 gate demo seam                               # two sides, one disagreement, one command
-gate demo && cd gate-demo                    # a world of people and grants, and one refusal
 gate serve                                   # the bench opens: change a fact, watch the judge
 ```
 
 The first line is the one to run in a repository you already have. Who owns
 which paths is a fact you already keep — in a file that cannot say whether an
-owner exists or whether a pattern still matches anything — and it becomes a
-judged world without you writing a line. `gate demo` builds a world of people
-and departments instead: the same machinery on a domain that needs no
-repository, for reading rather than for your own rows.
+owner exists, whether a pattern still matches anything, or whether an owner is
+reaching outside the area they were given — and it becomes a judged world
+without you writing a line.
+
+`gate demo` is that same line with the repository supplied: three source areas,
+a docs folder, a CODEOWNERS, and a one-line policy saying which zone each owner
+keeps. One rule reaches past its zone, and the demo prints the refusal with the
+CODEOWNERS line that makes it before you have chosen anything — the thing this
+is all about, on the screen in the first breath. Everything it made is committed
+the moment it is made, so `git checkout .` is the whole way back.
 
 `gate demo seam` is the shorter road if you came here because a client and a
-contract disagree rather than because of who may read what — it prints what each
+contract disagree rather than because of who owns what — it prints what each
 side owes the other and where they part, and leaves the pieces on disk to drive
-by hand. `gate demo` asks one question of the world it just made and prints the
-answer, so the thing this is all about — a refusal that names the line — is on
-the screen before you have chosen anything.
+by hand. `gate demo org` is the same machinery on people, ranks and departments:
+a domain that needs no repository at all, for reading rather than for your own
+rows.
 
 Or start from your own rows:
 
@@ -611,7 +617,7 @@ ui.html         the workbench
 demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
 judge.js         the browser judge (byte-parity port) for the bench
 codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 257 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 259 end-to-end checks, the definition of green
 ```
 
 ## Status

@@ -430,7 +430,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     ven = os.path.join(tmp, "vendored")
     os.makedirs(ven)
     subprocess.run(["git", "init", "-q", "-b", "main", ven])
-    run("demo", ven)
+    run("demo", "org", ven)
     c, r = run("init", ven, "--vendor")
     S.append(("init --vendor carries the tool and its judge into the repo",
               r.get("vendored") and os.path.exists(os.path.join(ven, "gatew"))
@@ -480,7 +480,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
 
     # ── the first thirty seconds: a demo world, and a bench that opens with none ──
     d = os.path.join(tmp, "demoworld")
-    c, r = run("demo", d)
+    c, r = run("demo", "org", d)
     S.append(("demo builds a world that holds, with a policy and a history",
               os.path.exists(os.path.join(d, "gate.swift"))
               and os.path.exists(os.path.join(d, "gate.policy.swift"))))
@@ -1286,11 +1286,52 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # asks one question for them and prints the answer, in the same breath as the
     # world it is about.
     dm = os.path.join(tmp, "demo-first")
-    _, made = run("demo", dm)
+    _, made = run("demo", "org", dm)
     S.append(("the first thing a newcomer sees is a refusal with an address, not a list of things to try",
               made.get("refused") and ":" in made["refused"][0]
               and "VerifiedView" in made["refused"][0]
               and made.get("asked", "").startswith("gate check view")))
+
+    # ── AND THE FIRST SCENE IS THE READER'S OWN REPOSITORY. Departments, ranks
+    # and grants are a fine domain and they are not the one a developer arrives
+    # carrying: what they own is paths, and CODEOWNERS is where they already
+    # write it down. Meeting an HR world first, a person reads a tool for
+    # somebody else's job and closes it — the machinery never gets read at all.
+    # So bare `gate demo` builds a repository shaped like theirs, and the
+    # organization is one word away for whoever wants it.
+    nat = os.path.join(tmp, "demo-native")
+    _, first = run("demo", nat)
+    nat_status = run("status", cwd=nat)[1]
+    # the fix a person would actually make, in the file they already know
+    co = os.path.join(nat, "CODEOWNERS")
+    open(co, "w").write(open(co).read().replace("src/db/     @carol", "src/db/     @bob"))
+    run("import", "codeowners", "CODEOWNERS", "--tree", ".", "--policy", "owners.csv",
+        "-o", "ownership.swift", cwd=nat)
+    fixed = run("status", cwd=nat)[1]
+    subprocess.run(["git", "checkout", "."], cwd=nat, capture_output=True)
+    again = run("status", cwd=nat)[1]
+    S.append(("the first scene is a repository: CODEOWNERS, a tree, and one owner reaching past their zone",
+              # what a developer opens the box to: their own artefacts, not a roster
+              os.path.exists(co) and os.path.exists(os.path.join(nat, "owners.csv"))
+              and os.path.exists(os.path.join(nat, "src", "db", "schema.sql"))
+              and not os.path.exists(os.path.join(nat, "tables"))
+              # one refusal, named by the CODEOWNERS line that makes it
+              and first.get("refused") and first["refused"][0].startswith("CODEOWNERS:")
+              and "share one zone" in first["refused"][0]
+              # A GRAMMAR AND THE CERTIFICATES OVER IT ARE A FORMS FILE, and the
+              # role is what routes it: written as a plain world file the same
+              # text earned twenty refusals for declaring its own protocols.
+              and nat_status.get("verdict") == "refused"
+              and len(nat_status.get("refusals", [])) == 1
+              and nat_status["refusals"][0]["address"].startswith("ownership.swift:")
+              # and the loop closes: fix the line in the file they know, it holds
+              and fixed.get("verdict") == "holds"
+              # and the way back is one word, as promised before anything was touched
+              and "git checkout ." in first.get("back", "")
+              and again.get("verdict") == "refused"))
+    S.append(("and the organization world is one word away, not gone",
+              made.get("refused") and "Emp9001" in made.get("asked", "")
+              and any("gate demo org" in x for x in first.get("try", []))))
 
     # ── and the other door, for whoever came because a client and a contract
     # disagree rather than because of who may read what. Two sides, each in its
@@ -2142,7 +2183,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # .Edsger`, and fifty-eight names resolved to nothing. Braces balance on a
     # line or they do not.
     par = tempfile.mkdtemp()
-    run("demo", cwd=par)
+    run("demo", "org", cwd=par)
     par_world = os.path.join(par, "gate-demo", "gate.swift")
     probe = os.path.join(par, "parity.mjs")
     open(probe, "w").write(
@@ -2206,7 +2247,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # saying a thing twice. The duplicate guard asks its question inside a
     # stream; widening it to every file on the bench made gate refuse itself.
     pres = tempfile.mkdtemp()
-    run("demo", cwd=pres)
+    run("demo", "org", cwd=pres)
     pres_root = os.path.join(pres, "gate-demo")
     pres_forms = os.path.join(pres_root, "forms-organization.swift")
     pres_man = open(os.path.join(pres_root, "gate.manifest.swift"), encoding="utf-8").read()
@@ -2241,7 +2282,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # surface we would have built for ourselves, and what this bench can promise
     # today is that nothing it shows can change anything.
     mile = tempfile.mkdtemp()
-    run("demo", cwd=mile)
+    run("demo", "org", cwd=mile)
     mile_out = run("status", cwd=os.path.join(mile, "gate-demo"))[1]
     S.append(("the step comes with the command ready, and the running is not ours",
               # the machine half: the command beside the sentence, not inside it
@@ -2797,7 +2838,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # row whose atom is missing is refused: a column is an axis to a declared
     # atom, and a name nothing declares names nothing.
     lean = os.path.join(tmp, "leanlayout")
-    run("demo", lean)
+    run("demo", "org", lean)
     lman = os.path.join(lean, "gate.manifest.swift")
     laid = open(lman).read()
     stripped = laid.replace("public enum FormsFile: Role {}\n", "")
@@ -2884,7 +2925,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
         run("theirs", side, "--role", "seam", "--at", "a1b2c3d", cwd=ms)
     cut = run("attention", cwd=ms)[1]
     hush = os.path.join(tmp, "noseam")
-    run("demo", hush)
+    run("demo", "org", hush)
     quiet = run("attention", cwd=hush)[1]
     S.append(("with no arguments, attention is the morning question over every declared seam",
               isinstance(cut.get("seams"), list) and cut["seams"]
@@ -2902,7 +2943,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # path from seeing to saying was blocked by this tool's own words. It needs
     # no new noun: `gate mine bench-palette` says it in the word already learned.
     tv = os.path.join(tmp, "thirdverb")
-    run("demo", tv)
+    run("demo", "org", tv)
     took = run("mine", "bench-palette", cwd=tv)[1]
     copy = os.path.join(tv, "bench-palette.swift")
     head = open(copy).read().split("\n")[:3] if os.path.exists(copy) else []
@@ -3021,7 +3062,7 @@ console.log(JSON.stringify(out));
     # for a seam it is, since a side states which side it is in its own first
     # lines, and that is already how seams are found at all.
     mw = os.path.join(tmp, "misfiled")
-    run("demo", mw)
+    run("demo", "org", mw)
     mp = os.path.join(mw, "gate.manifest.swift")
     kept_manifest = open(mp).read()
     open(mp, "w").write(kept_manifest.replace(
@@ -3070,7 +3111,7 @@ console.log(JSON.stringify(out));
     # person then looked for them. Found by hand, walking the demo path; a
     # second world inside a world is the two-truths shape in the filesystem.
     iw = os.path.join(tmp, "initwhere")
-    run("demo", iw)
+    run("demo", "org", iw)
     said_here = run("init", "--vendor", cwd=iw)[1]
     empty = os.path.join(tmp, "initempty")
     os.makedirs(empty)
@@ -3094,7 +3135,7 @@ console.log(JSON.stringify(out));
     # found, the same blindness as a file served by URL and missing from the
     # panel. Walked whole: break it as invited, see the address, take it back.
     bk = os.path.join(tmp, "backworld")
-    said = run("demo", bk)[1]
+    said = run("demo", "org", bk)[1]
     gs = os.path.join(bk, "gate.swift")
     open(gs, "w").write(open(gs).read().replace(
         "public typealias Home = Finance", "public typealias Home = Engineering", 1))
@@ -3128,7 +3169,7 @@ console.log(JSON.stringify(out));
     # world, the forms it presents and the shelf it reads — without this
     # mechanism learning what a rank is.
     pol = os.path.join(tmp, "policyworld")
-    run("demo", pol)
+    run("demo", "org", pol)
 
     def _requires(rank):
         # read, THEN write: `open(w)` truncates before the nested read runs, and
@@ -3319,7 +3360,7 @@ console.log(JSON.stringify(out));
     # refused what the command line held. One repository is not a fence; a
     # comparison is only as wide as the world it is run on.
     dw = os.path.join(tmp, "bothsurfaces")
-    run("demo", dw)
+    run("demo", "org", dw)
     _s4 = _sock.socket(); _s4.bind(("127.0.0.1", 0)); _dp = _s4.getsockname()[1]; _s4.close()
     _db = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_dp)], cwd=dw,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
