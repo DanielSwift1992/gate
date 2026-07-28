@@ -181,6 +181,20 @@ def manifest_guards(rows=None):
             bad.append({"address": f"{man}:{r['line']}",
                         "claim": f"`{r['name']}` does not say what it is for. A row names its court: "
                                  + " · ".join(f"`{k}` — {v}" for k, v in ROLES.items())})
+        elif r["role"] == "seam" and os.path.exists(os.path.join(d, r["path"])) \
+                and not is_seam_side(os.path.join(d, r["path"])):
+            # ── AND A ROW MAY NOT SEND A FILE TO A COURT THAT CANNOT READ IT.
+            # The check above asks only whether the role names A court, not
+            # whether it names the right one — so `Kind = SeamFile` on a file of
+            # forms held, and the row said "judge this where it meets somebody
+            # else's world" about a file that meets nobody. For most courts what
+            # "right" means is not readable from the file. For a seam it is: a
+            # side says which side it is, in its own first lines, and that rule
+            # is already how seams are found at all.
+            bad.append({"address": f"{man}:{r['line']}",
+                        "claim": f"`{r['name']}` is filed under `seam`, and {r['path']} does not "
+                                 "say it is one side of one: a side states a contract or claims "
+                                 "to carry one, in its own first lines"})
         elif r["role"] not in ROLES:
             bad.append({"address": f"{man}:{r['line']}",
                         "claim": f"`{r['name']}` is for `{r['role']}`, which no court here reads. "

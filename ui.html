@@ -536,9 +536,18 @@ CodeMirror.defineMode("gate-swift", () => ({
                 // wearing the hue of a name from elsewhere, which said it was an
                 // answer somebody had already given. Same logic, same ink.
                 if (/\b(?:typealias|associatedtype)\s+$/.test(before)) return "axisname";
+                // ── BUT A NAME BEING BORN HERE IS NOT A SLOT LABEL SOMEWHERE
+                // ELSE. This set is every axis label any world in play declares,
+                // and it was consulted before the position: `public protocol
+                // Scope {}` came out in slot ink because some other world writes
+                // `associatedtype Scope`, while `public protocol Identity {}` a
+                // few lines above wore the hue of a name — two identical lines,
+                // two colours, for a reason having nothing to do with either.
+                // Position first: what a line DECLARES is settled by that line.
+                const declaring = /\b(?:enum|protocol|struct|extension)\s+$/.test(before);
                 // a name the world uses as a slot label is the label of a slot
                 // here too — read through a dot, or standing in a where clause
-                if (slotNames.has(word)) return "axisname";
+                if (!declaring && slotNames.has(word)) return "axisname";
                 const opened = before.lastIndexOf("<"), shut = before.lastIndexOf(">");
                 if (opened > shut && opened >= 0) {
                     // inside a parameter list, and before the colon that says
@@ -552,7 +561,7 @@ CodeMirror.defineMode("gate-swift", () => ({
                 // inheritance — `MyBench: Bench` shouted Bench — and the eye
                 // went to the answer rather than the question. Hue still says
                 // where a name is from; the two views agree now.
-                const subject = /\b(?:enum|protocol|struct|extension)\s+$/.test(before) ? " declname" : "";
+                const subject = declaring ? " declname" : "";
                 if (stream.string[stream.start - 1] === ".") return "knownname" + home + subject;
                 if (localNames.has(word)) return "localtype" + home + subject;
                 return "knownname" + home + subject;

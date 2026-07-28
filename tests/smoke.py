@@ -915,7 +915,11 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     S.append(("a hue says where a name is from, the weight says what the line declares, and both views agree",
               "for (const [name] of parsed.declarations) out.add(name);" in ui
               and "for (const c of d.conformances) out.add(c);" not in ui
-              and "(?:enum|protocol|struct|extension)\\s+$/.test(before) ? \" declname\"" in ui
+              # and what a line declares is settled once, by position, and read
+              # by both the weight and the slot rule — so a word that is an axis
+              # in another world cannot recolour a name being born here
+              and "const declaring = /\\b(?:enum|protocol|struct|extension)\\s+$/.test(before);" in ui
+              and 'const subject = declaring ? " declname" : "";' in ui
               and "(?:typealias|associatedtype)\\s+$/.test(before)) return \"axisname\"" in ui
               # the weight carries no hue of its own, and the axis carries no weight
               and ".cm-declname{font-weight:600}" in ui
@@ -2462,7 +2466,12 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               # and a slot label read anywhere — through a dot, in a where
               # clause — is the same label
               and "let slotNames = new Set();" in ui
-              and 'if (slotNames.has(word)) return "axisname";' in ui
+              # POSITION FIRST: a name being born on this line is not a slot label
+              # because some other world uses that word as an axis. `public
+              # protocol Scope {}` came out in slot ink while `public protocol
+              # Identity {}` two lines above wore the hue of a name — two
+              # identical lines, two colours, for a reason about neither.
+              and 'if (!declaring && slotNames.has(word)) return "axisname";' in ui
               and "for (const a of (d.params || [])) slotNames.add(a);" in ui
               # and it is the same ink the axis already had, not a third one
               and '.cm-axisname{color:var(--ink)}' in ui
@@ -2551,7 +2560,12 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               # a slot label is ink wherever it stands — in the parameter list
               # and in the clause that reads it back
               and ".cm-axisname{color:var(--ink)}" in ui
-              and 'if (slotNames.has(word)) return "axisname";' in ui
+              # POSITION FIRST: a name being born on this line is not a slot label
+              # because some other world uses that word as an axis. `public
+              # protocol Scope {}` came out in slot ink while `public protocol
+              # Identity {}` two lines above wore the hue of a name — two
+              # identical lines, two colours, for a reason about neither.
+              and 'if (!declaring && slotNames.has(word)) return "axisname";' in ui
               # and the ceremony around it is the seam, never a colour of its own
               and ".cm-s-default .cm-keyword,.cm-s-default .cm-attribute{color:var(--seam)}" in ui
               and ".cm-ghost{color:var(--seam)" in ui))
@@ -2765,6 +2779,27 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               # premise the theory leaves outside, and the citation is its term
               and "taken as given" in ui
               and "somebody SUPPLYING the agreement the two sides never derived" in ui))
+
+    # ── A ROW MAY NOT SEND A FILE TO A COURT THAT CANNOT READ IT. The layout's
+    # guard asked only whether a role names A court, never whether it names the
+    # right one — so `Kind = SeamFile` on a file of forms held, and the row said
+    # "judge this where it meets somebody else's world" about a file that meets
+    # nobody. For most courts what "right" means is not readable from the file;
+    # for a seam it is, since a side states which side it is in its own first
+    # lines, and that is already how seams are found at all.
+    mw = os.path.join(tmp, "misfiled")
+    run("demo", mw)
+    mp = os.path.join(mw, "gate.manifest.swift")
+    kept_manifest = open(mp).read()
+    open(mp, "w").write(kept_manifest.replace(
+        "public typealias Kind = FormsFile", "public typealias Kind = SeamFile", 1))
+    misfiled = run("status", cwd=mw)[1]
+    open(mp, "w").write(kept_manifest)
+    S.append(("a row filed under a court that cannot read the file is refused at its line",
+              run("status", cwd=mw)[1].get("verdict") == "holds"
+              and misfiled.get("verdict") == "refused"
+              and any("does not say it is one side of one" in r.get("claim", "")
+                      for r in misfiled.get("refusals", []))))
 
     # ── NOT EVERYTHING UNDER `THEIRS` IS THE JUDGE'S, and the panel says which
     # is which. Three different things stood there under one heading in one
