@@ -131,8 +131,8 @@ and the refusal is about two declarations rather than about anybody's code.
 ## Quick start
 
 ```sh
-gate import codeowners CODEOWNERS --tree .   # your repository's own ownership, judged
-gate demo && cd gate-demo                    # the same thing on a repository we make for you
+gate import codeowners CODEOWNERS --tree . --policy owners.csv   # your own ownership, judged
+gate demo && cd gate-demo                                       # the same, on a repo we make
 gate demo seam                               # two sides, one disagreement, one command
 gate serve                                   # the bench opens: change a fact, watch the judge
 ```
@@ -142,6 +142,13 @@ which paths is a fact you already keep — in a file that cannot say whether an
 owner exists, whether a pattern still matches anything, or whether an owner is
 reaching outside the area they were given — and it becomes a judged world
 without you writing a line.
+
+`owners.csv` is two columns, `owner,zone`, and it is the thing CODEOWNERS
+cannot say: which area each person may keep. Without it every rule is its own
+authority, the zone equalities cannot fail, and gate says `observed` rather
+than `holds` — a verdict nobody could have broken is not a verdict, and this
+tool will not print one. Ghost paths are still named either way, because those
+are read from your tree.
 
 `gate demo` is that same line with the repository supplied: three source areas,
 a docs folder, a CODEOWNERS, and a one-line policy saying which zone each owner
@@ -614,10 +621,9 @@ bin/gate-judge  the judge, one static binary (built from the public
 stdlib/         the judge's own words, printed as real Swift files, self-judged
 judge.js        the browser judge (byte-parity port) for the bench
 ui.html         the workbench
-demo/           runnable worlds: CSV org, K8s RBAC with two real breaks
-judge.js         the browser judge (byte-parity port) for the bench
-codemirror.*     the editor (CodeMirror 5, MIT, vendored)
-tests/smoke.py   the battery — 259 end-to-end checks, the definition of green
+codemirror.*    the editor (CodeMirror 5, MIT, vendored)
+demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
+tests/smoke.py   the battery — 261 end-to-end checks, the definition of green
 ```
 
 ## Status

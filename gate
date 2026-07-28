@@ -250,7 +250,12 @@ def manifest_guards(rows=None):
     return bad
 
 
-def forms_guards():
+def forms_guards(size=None):
+    # ── AND HOW WIDE IT WAS. `size`, if given, is filled with what the where
+    # court counted. A green with no width is the one thing this tool says it
+    # will not print — and in its own repository, which is forms only, that is
+    # exactly what `gate status` printed: `holds`, and no number under it. The
+    # court has always counted; nothing read the line.
     # A FORMS ROW IS JUDGED, AND I HAD SIMPLY NOT CALLED THE COURT. It was
     # reported inert on the strength of one probe — a conformance the plain
     # judge refuses — and the probe was the wrong shape: `where` does not check
@@ -315,6 +320,11 @@ def forms_guards():
                 if not spot and touched:
                     spot = mine[touched[0]]
             bad.append({"address": spot or rows[0]["path"], "claim": claim})
+        if size is not None:
+            m = re.search(r"(\d+) equalities judged across (\d+) uses", out)
+            if m:
+                size["equalities"] = size.get("equalities", 0) + int(m.group(1))
+                size["uses"] = size.get("uses", 0) + int(m.group(2))
     shutil.rmtree(tmp, ignore_errors=True)
     return bad
 
@@ -1358,6 +1368,19 @@ def repo_journal(n=200, scope="world", only_me=False):
     pp = policy_path()
     if pp:   # the policy is a fact beside the world: its history belongs here
         world.add(os.path.relpath(pp, base))
+    # ── AND A WORLD OF FORMS IS STILL A WORLD, HERE TOO. `status` learned this
+    # and the journal did not: `world_files()` is the PLAIN court's list and
+    # rightly holds no forms row, so a repository whose whole world is grammar
+    # was told there was nothing narrower than the repository — and then sent to
+    # `gate demo` for a world to look at, by a person standing in one. Whose
+    # history this is does not depend on which court reads the file.
+    if MANIFEST:
+        d = os.path.dirname(MANIFEST["manifest"])
+        for r in (MANIFEST.get("rows") or []):
+            if r["role"] == "forms":
+                fp = os.path.join(d, r["path"])
+                if os.path.exists(fp):
+                    world.add(os.path.relpath(fp, base))
     # ── A SCOPE THAT CANNOT BE HONOURED SAYS SO. Asking for the world's history
     # where no file is declared a world file narrowed nothing and showed the
     # whole repository under the word `the repository` — true about what was
@@ -1393,7 +1416,7 @@ def repo_journal(n=200, scope="world", only_me=False):
     return {"command": "log", "default_branch": default, "scope": scope, "limit": n,
             "mine_only": bool(only_me), "narrowed": narrowed,
             "next": ("run `gate status` to have the judge read what these commits changed"
-                     if world_files() else
+                     if world else
                      "run `gate demo` for a repository to look at, or drop a table you already export "
                      "into tables/ and run `gate status`"),
             "me": me, "world_files": sorted(world), "commits": commits}
@@ -4211,7 +4234,16 @@ def cmd_import_codeowners(a):
         "paths": len(rules),
         "owners": len(keepers),
         "policy": (f"{len(policy)} owners have a stated zone" if policy else None),
-        "verdict": "refused" if (refusals or ghosts) else "holds",
+        # ── A GREEN NOBODY COULD HAVE BROKEN IS NOT A GREEN. Without a policy
+        # every rule is its own authority: the zone equalities cannot fail, so
+        # `holds` would be the verdict of a court that never sat — and the note
+        # under it said as much while the word above it said the opposite. This
+        # is the README's own first line, so the very first thing a person ran
+        # printed a verdict the tool itself calls trivial. `observed` is the word
+        # already used where nothing is judged (`log`, `drift`); a ghost path is
+        # read from the tree either way, so a run with no policy can still refuse.
+        "verdict": ("refused" if (refusals or ghosts)
+                    else "holds" if policy else "observed"),
         "refusals": refusals + ghosts,
         "judge_ms": ms,
         "canon_handshake": "canon v2" in outp,
@@ -4747,7 +4779,18 @@ def cmd_serve(a):
         def pick(self, q):
             # only the judged list is servable or writable: the manifest's files
             # plus your personal world
-            return dict(bench_files()).get(q.get("f", ""), FACTS)
+            # ── AND THE DEFAULT IS A FILE THAT EXISTS. `FACTS` is the path a
+            # world file WOULD have; a world laid out entirely by manifest —
+            # this repository, and now the first scene — has no such file, and
+            # asking without `?f=` then fell through to "yours, and nobody has
+            # written in it" and served the empty personal template as the world.
+            # A door that opens on the wrong room while saying nothing.
+            named = dict(bench_files())
+            if q.get("f", "") in named:
+                return named[q["f"]]
+            if FACTS and os.path.exists(FACTS):
+                return FACTS
+            return next((p for _, p in bench_files() if os.path.exists(p)), FACTS)
 
         def no_world(self):
             self.send_response(404)
@@ -4988,7 +5031,19 @@ USAGE = """usage (the git-shaped porcelain):
   gate library diff a.json b.json     (set operations between crystals; forms, never facts)
   gate survey [N]                     (t0, read-only: unwritten links from your own
                                        history, identity, object candidates, fabric)
-(ask = check, change = diff/apply: old names stay as aliases)"""
+  gate log                            (the repository's own history, with no
+                                       translation at all: any clone has it)
+  gate findings [--md]                (what is true of this clone, in sentences:
+                                       needs no world and no configuration)
+  gate my [clear]                     (your own world: a claim in your git alone)
+  gate stdlib [show|materialize] NAME (the words a world may be written in)
+  gate --version                      (the tool, and the revision its judge was
+                                       built from)
+(ask = check, change = diff/apply: old names stay as aliases)
+
+  ── and if this is the first time: `gate demo` builds a repository with a
+     CODEOWNERS and one owner reaching past their zone, and prints the refusal.
+     Thirty seconds, `git checkout .` is the whole way back."""
 
 
 def dispatch(cmd, rest):
@@ -5069,19 +5124,28 @@ def dispatch(cmd, rest):
         if len(files) > 1:  # one claim, one file: the one that makes it
             refusals = attribute_refusals(refusals, [(os.path.basename(p), open(p).read()) for p in files])
         refusals += manifest_guards()
-        refusals += forms_guards()
+        where_size = {}
+        refusals += forms_guards(where_size)
         refusals += policy_guards()
         refusals += stdlib_guards()
         refusals += vendored_guards() + taken_judge_guard()
         refusals += duplicate_guards()
         refusals += entry_guards()
         times = re.findall(r"([\d.]+) ms", raw)
-        out = {"command": "status", "facts": files if len(files) > 1 else FACTS,
+        # what was judged, and never a name for a file that is not on disk: a
+        # forms-only world has no `gate.swift`, and saying it does is a claim
+        # about something nobody declared — the one thing this tool is against
+        judged = files or sorted({r["path"] for r in ((MANIFEST.get("rows") if MANIFEST else None) or [])
+                                  if r["role"] == "forms"})
+        out = {"command": "status",
+               "facts": judged if len(judged) != 1 else judged[0],
                "verdict": "holds" if not refusals else "refused", "refusals": refusals,
                "judge_ms": float(times[-1]) if times else None, "wall_ms": wall_ms, "mutates": False}
         m = re.search(r"(\d+) declarations · (\d+) lookups · (\d+) premises", raw)
         if m:
             out["world"] = {"declarations": int(m.group(1)), "lookups": int(m.group(2)), "premises": int(m.group(3))}
+        if where_size.get("equalities"):
+            out["forms"] = where_size
         out["next"] = next_rung(bool(refusals))
         return out
     if cmd == "guard" and rest and rest[0] == "deps":
@@ -5205,11 +5269,18 @@ def humanize(out):
         lines.append(f"  then: {out['then']}")
         return "\n".join(lines)
     if "verdict" in out:
-        head = "holds" if out["verdict"] == "holds" else f"refused {len(out.get('refusals', []))}"
+        # a verdict is one of three words, and only one of them is counted:
+        # `refused N` names how many, `holds` and `observed` name none — and
+        # `observed 0` would be a count of the refusals a court that never sat
+        # did not make
+        head = (out["verdict"] if out["verdict"] in ("holds", "observed")
+                else f"refused {len(out.get('refusals', []))}")
         tail = []
         if isinstance(out.get("world"), dict):
             w = out["world"]
             tail.append(f"{w['declarations']} declarations · {w['lookups']} lookups · {w['premises']} premises")
+        if isinstance(out.get("forms"), dict):
+            tail.append(f"{out['forms']['equalities']} equalities")
         if out.get("judge_ms") is not None:
             tail.append(f"{out['judge_ms']} ms")
         if out.get("build_s") is not None:

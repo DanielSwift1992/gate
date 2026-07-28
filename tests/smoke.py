@@ -215,7 +215,21 @@ def main():
                "-o", os.path.join(tmp, "co-bare.swift"))
     S.append(("codeowners without a policy claims no judgement it did not make",
               not [x for x in r["refusals"] if "share one zone" in x["claim"]]
-              and "trivially" in r["note"]))
+              and "trivially" in r["note"]
+              # ── AND THE WORD ABOVE THE NOTE AGREES WITH IT. The note said the
+              # equalities hold trivially and the verdict over it said `holds` —
+              # a green nobody could have broken, printed by the tool whose whole
+              # argument is that a green must say how wide it is. This was the
+              # README's own first line, so it was the first thing anybody ran.
+              # `observed` is the word already used where nothing is judged.
+              and r["verdict"] == "observed"
+              # and a ghost is read from the tree either way, so a run with no
+              # policy can still refuse: the word is about the court, not the run
+              and json.loads(subprocess.run(
+                  [sys.executable, GATE, "import", "codeowners",
+                   os.path.join(DEMO, "CODEOWNERS"), "--tree", co,
+                   "-o", os.path.join(tmp, "co-ghost.swift"), "--json"],
+                  capture_output=True, text=True).stdout)["verdict"] == "refused"))
     # the same crystal carries it: the world is written in forms-grants
     world = open(os.path.join(tmp, "co-gate.swift")).read()
     S.append(("ownership rides the access crystal, not a genre of its own",
@@ -486,6 +500,24 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and os.path.exists(os.path.join(d, "gate.policy.swift"))))
     c, r = run("status", cwd=d)
     S.append(("the demo world holds on the first look", c == 0 and r["verdict"] == "holds"))
+    # ── AND A GREEN SAYS HOW WIDE IT IS, IN EITHER COURT. The where court has
+    # always counted what it judged — `119 equalities judged` on this bench's own
+    # palette — and `status` read the plain court's numbers only, so a world of
+    # forms printed `holds` with no width under it. That world is this repository.
+    here_status = json.loads(subprocess.run(
+        [sys.executable, GATE, "status", "--json"], cwd=HERE,
+        capture_output=True, text=True).stdout)
+    said_status = subprocess.run([sys.executable, GATE, "status"], cwd=HERE,
+                                 capture_output=True, text=True).stdout
+    S.append(("a green says how wide it is in the where court too, not only the plain one",
+              here_status.get("forms", {}).get("equalities", 0) > 0
+              and "equalities" in said_status
+              # and the name it gives what it judged is a file that is there:
+              # a forms-only world has no gate.swift, and saying it does is a
+              # claim about something nobody declared
+              and all(os.path.exists(os.path.join(HERE, f))
+                      for f in ([here_status["facts"]] if isinstance(here_status["facts"], str)
+                                else here_status["facts"]))))
     c, r = run("check", "view", "Emp9001", "EngineeringShare", cwd=d)
     S.append(("and the invitation in it is real: the refusal names both",
               c == 1 and r["refusals"]))
@@ -3279,20 +3311,43 @@ console.log(JSON.stringify(out));
     # ── AND A SCOPE THAT CANNOT BE HONOURED SAYS SO. Asking for the world's
     # history where no file is declared a world file narrowed nothing and printed
     # the whole repository under the words `the repository` — true about what was
-    # shown, silent about the word having done nothing. This tool's own
-    # repository is that case: it declares forms and a layout and no world of
-    # facts, so `gate log world` and `gate log` printed the same history and
-    # neither said why.
+    # shown, silent about the word having done nothing.
+    #
+    # A WORLD OF FORMS IS STILL A WORLD, HERE TOO — the lesson `status` learned
+    # and the journal did not. `world_files()` is the plain court's list and
+    # rightly holds no forms row; the journal asks a wider question, and whose
+    # history a file carries does not depend on which court reads it. This
+    # repository was the case that made the point twice: it declares forms and a
+    # layout and no world of facts, and for a while it was BOTH the example of a
+    # scope that cannot be honoured AND a world whose history was being thrown
+    # away. It narrows now. The un-narrowable case is a repository with tables
+    # and nothing declared at all.
+    seedonly = os.path.join(tmp, "seedonly")
+    os.makedirs(os.path.join(seedonly, "tables"))
+    for f in ("people.csv", "grants.csv"):
+        shutil.copy(os.path.join(DEMO, f), os.path.join(seedonly, "tables", f))
+    subprocess.run(["git", "init", "-q", "-b", "main", seedonly])
+    subprocess.run(["git", "add", "-A"], cwd=seedonly, capture_output=True)
+    subprocess.run(["git", "-c", "user.email=a@b", "-c", "user.name=a",
+                    "-c", "commit.gpgsign=false", "commit", "-qm", "tables"],
+                   cwd=seedonly, capture_output=True)
+    flat_log = run("log", "world", "1", cwd=seedonly)[1]
+    said_flat = subprocess.run([sys.executable, GATE, "log", "world", "1"], cwd=seedonly,
+                               capture_output=True, text=True).stdout
     here_log = json.loads(subprocess.run(
         [sys.executable, GATE, "log", "world", "1", "--json"], cwd=HERE,
         capture_output=True, text=True).stdout)
-    said_here = subprocess.run([sys.executable, GATE, "log", "world", "1"], cwd=HERE,
-                               capture_output=True, text=True).stdout
     S.append(("a scope that cannot be honoured says which word did nothing, and why",
-              here_log.get("scope") == "world" and here_log.get("narrowed") is False
-              and "nothing narrower" in said_here
+              flat_log.get("scope") == "world" and flat_log.get("narrowed") is False
+              and "nothing narrower" in said_flat
               # and where it CAN be honoured it simply is, with nothing added
-              and run("log", "world", cwd=wj)[1].get("narrowed") is True))
+              and run("log", "world", cwd=wj)[1].get("narrowed") is True
+              # including here, where the whole world is grammar: the forms rows
+              # are files of this world and their history is this world's history
+              and here_log.get("narrowed") is True
+              and any(f.startswith("stdlib/") for f in here_log.get("world_files", []))
+              # and nobody standing inside a world is sent to `gate demo` to find one
+              and "gate status" in here_log.get("next", "")))
 
     # ── AND THE ONE ROW THIS DOCUMENT EXISTS TO KEEP HONEST IS KEPT HONEST. The
     # manifest says which revision of the corpus the judge was taken at; the
@@ -4349,6 +4404,24 @@ public enum MyWatch: AccessLedger {
                      (re.findall(r"[a-z-]{2,}", porcelain.group(1)) if porcelain else [])}
     ghost_verbs = sorted(v for v in claimed_verbs if v not in verbs)
     S.append(("every verb the README lists is a verb the code has", not ghost_verbs))
+
+    # ── AND THE FRONT DOOR NAMES THEM TOO. The README promises a porcelain and
+    # the code has every verb in it; the screen a person meets when they type
+    # `gate` and nothing else was checked against neither, and had quietly lost
+    # five: `log`, `findings`, `my`, `stdlib`, `--version` — including the two
+    # the tool itself calls the first useful thing it does in any repository.
+    # Sixty-one lines of usage and no first step among them, in a tool whose own
+    # rule is that every command ends with the one that comes next.
+    ran = subprocess.run([sys.executable, GATE], capture_output=True, text=True)
+    usage = ran.stdout + ran.stderr
+    unlisted = sorted(v for v in claimed_verbs
+                      # spelled beside a sibling on one line, or a flag rather
+                      # than a verb — read both spellings, name neither twice
+                      if v not in ("fsck", "ask", "change", "apply", "export", "verify")
+                      and f"gate {v}" not in usage and f"gate --{v}" not in usage)
+    S.append(("the screen a newcomer meets names every verb the README promises, and one first step",
+              not unlisted and "gate demo" in usage
+              and "first time" in usage))
 
     # a route may carry an extension, and this pattern used to stop at the dot —
     # so `/ladder.css` read as `/ladder` on one side and vanished on the other,
