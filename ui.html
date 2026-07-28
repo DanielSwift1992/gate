@@ -1813,17 +1813,29 @@ function buildTables() {
                 sc.className = "cell-value observed";
                 const s = seamRow(d);
                 if (s) {
-                    const gone = (s.parted || []).length;
-                    const waits = (s.waits_on_you || []).length + (s.you_wait_on || []).length;
-                    sc.textContent = s.alone ? "waiting for the other side"
+                    // ── THE STATE IS COUNTED, NOT CHOSEN. A seam is the premise
+                    // the theory leaves outside itself, asked as a game one level
+                    // up: for each address, how many correspondences between what
+                    // one side states and what the other claims still pass. That
+                    // count is a natural number, and {0, 1, >1} partitions the
+                    // naturals — so there are exactly three answers and no fourth
+                    // to write. This was four hand-written branches that happened
+                    // to agree with the arithmetic; now it IS the arithmetic.
+                    const sizes = Object.values(s.sizes || {});
+                    const gone = sizes.filter(n => n === 0).length;   // nothing passes
+                    const open = sizes.filter(n => n > 1).length;     // nothing distinguishes
+                    sc.textContent = s.alone ? "no second side yet"
                         : gone ? "parted at " + gone
-                        : waits ? waits + (waits === 1 ? " word" : " words") + " away"
+                        : open ? open + (open === 1 ? " word" : " words") + " away"
                         : "holds";
                     sc.title = s.alone
-                        ? "This side is declared and the other side's declaration is not here yet."
+                        ? "This side is declared and the other side's declaration is not here "
+                          + "yet, so there is no pair to read: nothing to agree or disagree about."
                         : "Of " + s.stated + " the other side states, " + s.claimed
-                          + " are claimed here. Click to read every field either side is "
-                          + "waiting on, and where it is written.";
+                          + " are claimed here. Every field is in one of three states and there "
+                          + "is no fourth: both sides spoke and agree, both spoke and nothing "
+                          + "fits, or one has not spoken so anything would fit. Click to read "
+                          + "them, and where each is written.";
                     if (!s.alone) {
                         sc.style.cursor = "pointer";
                         sc.onclick = () => { openSeam = openSeam === d.name ? null : d.name; buildTables(); };
@@ -1874,13 +1886,34 @@ function buildTables() {
             // claimed it. Neither side is this world's to edit from here.
             const s = seamRow(d);
             if (s && openSeam === d.name && !s.alone) {
+                // THREE OF THESE ARE STATES AND TWO ARE NOT. `parted` and the two
+                // words are the three counts an address can have — nothing fits,
+                // one thing fits, anything fits — read from whichever end owes
+                // the sentence. `taken as given` is not a state at all: it is
+                // somebody SUPPLYING the agreement the two sides never derived,
+                // by hand, with the thing they cited standing as its term. And
+                // `came back` is that term expiring — the supplied premise
+                // withdrawn, so the address stands at whatever it always was.
                 const items = [
                     ...(s.expired || []).map(x => [x, "came back"]),
                     ...(s.parted || []).map(x => [x, "parted"]),
                     ...(s.waits_on_you || []).map(x => [x, "your word"]),
                     ...(s.you_wait_on || []).map(x => [x, "their word"]),
-                    ...(s.known || []).map(x => [x, "set aside"]),
+                    ...(s.known || []).map(x => [x, "taken as given"]),
                 ];
+                const WHY = {
+                    "parted": "Both sides spoke about this and nothing fits: no reading of one "
+                        + "matches the other, and nobody has said the difference is meant.",
+                    "your word": "The other side states this. This side has not said whether it "
+                        + "carries it — so anything would still fit, and that is what makes it "
+                        + "open rather than broken.",
+                    "their word": "This side carries this. The other side has never stated it.",
+                    "taken as given": "Neither side changed. Somebody supplied the agreement by "
+                        + "hand and cited something that can close — which is what gives this a "
+                        + "term. When the thing cited closes, the exception is gone.",
+                    "came back": "It was taken as given, and the thing that was cited has "
+                        + "closed. The supplied agreement is withdrawn, so this stands again.",
+                };
                 {
                     // how much of the agreement is actually held, which is what
                     // being integrated with somebody amounts to — a count, not a
@@ -1910,6 +1943,10 @@ function buildTables() {
                                                    x.address.split(" · ").pop());
                     const k = document.createElement("td");
                     k.className = "caption observed"; k.textContent = kind;
+                    k.title = (WHY[kind] || "") + (x.because
+                        ? " Cited: " + x.because + (x.state ? " (" + x.state.toLowerCase() + ")" : "")
+                          + ", said by " + (x.declared_by || "somebody") + "."
+                        : "") + (x.why ? " " + x.why + "." : "");
                     r.append(a, k); table.append(r);
                 }
                 if (!items.length) {

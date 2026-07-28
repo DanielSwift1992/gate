@@ -1792,24 +1792,35 @@ def presented_over(shelf_name):
         # ran, said its piece, and this used to throw it away on the way out —
         # the shape of every quiet green there has ever been
         return shipped, {}, clash
-    # IN PLACE, which is what "your line stands where theirs stood" has to mean
-    # if it is to be worth anything. Hoisting the replacements to the top left
-    # every comment attached to the declaration under it — a sentence about a
-    # number, now standing over a different number — and moved every line in the
-    # file, so a table row and the line it jumps to were describing different
-    # things. A name the shelf never said is an addition, and goes at the end.
-    out, placed = [], set()
+    # IN PLACE, AND ONLY WHAT THIS WORLD SAYS. Two things had to be right here
+    # and only one was.
+    #
+    # In place, because "your line stands where theirs stood" has to mean it:
+    # hoisting the replacements to the top left every comment standing over a
+    # different number than it was written about, and moved every line in the
+    # file, so a table row and the line it jumps to described different things.
+    #
+    # And only this world's names, which is what was wrong. Everything the
+    # operator declares in a forms file was collected and appended to EVERY
+    # shipped world — a length from the metrics world glued onto the end of the
+    # grants forms, the git atoms, the contract forms. Two encodings must not
+    # communicate (V=I §5.24), and this had them all talking at once. It also
+    # made the merged text depend on the ORDER the operator declared their files
+    # in, so two people with identical content got different line numbers for
+    # the same refusal — order leaking into an address, which §5.25 forbids.
+    #
+    # A name this world never said is not an addition to this world. It stands
+    # in the operator's own stream, which `forms_guards` already builds and
+    # judges beside these — that is where a new name of theirs belongs.
+    out, placed = [], {}
     for ln in shipped.split("\n"):
         m = re.match(r"public typealias (\w+) = ", ln.strip())
         if m and m.group(1) in mine:
             out.append(mine[m.group(1)][2])
-            placed.add(m.group(1))
+            placed[m.group(1)] = mine[m.group(1)][0]
         else:
             out.append(ln)
-    for name, v in mine.items():
-        if name not in placed:
-            out.append(v[2])
-    return ("\n".join(out), {k: v[0] for k, v in mine.items()}, clash)
+    return ("\n".join(out), placed, clash)
 
 
 def presented_world(shelf_name):
@@ -3114,11 +3125,33 @@ def cmd_attention(a):
         # here it read as a conflict with a record that does not exist.
         if (route, field) in stated:
             parted[(route, field)] = (want.lower(), got.lower(), mine)
-    # who owes what: the carrier owes an answer on a field the contract stated
-    # and it has not spoken of; the contract owes one on a field the carrier
-    # carries and it never declared — the same shape, pointing the other way
-    owes_carrier = sorted(stated - claimed)
-    owes_contract = sorted(claimed - stated)
+    # ── THE STATE OF EVERY ADDRESS IS |S|, AND THE THREE COLUMNS COME OUT OF IT.
+    # A seam is the premise V=I §5.4 leaves outside itself — that two encodings
+    # are semantics-preserving — and it can be asked as a V=I game one level up
+    # (§5.13 sub-game spawn, §5.15 structural recurrence): the candidates are the
+    # correspondences between what one side STATES and what the other CLAIMS,
+    # and the examples are the addresses both sides spoke about.
+    #
+    # Then the vocabulary is not ours to choose. |S| ∈ ℕ and {0, 1, >1} partition
+    # ℕ (§5 Outcome Classification), so an address is in exactly one of three
+    # states and there is no fourth to write:
+    #
+    #   |S| = 1   both spoke and they agree — the correspondence is identified
+    #   |S| = 0   both spoke and nothing passes — parted
+    #   |S| > 1   one side is silent, so nothing distinguishes; the finer
+    #             distinction that would settle it IS the other side's word
+    #
+    # This used to be three lists computed side by side, each correct, none of
+    # them saying why there were three. The lists come out of the sizes now, so
+    # a fourth column cannot be added without first inventing a fourth size.
+    addresses = sorted(stated | claimed)
+    sizes = {(r, f): (0 if (r, f) in parted else
+                      1 if ((r, f) in stated and (r, f) in claimed) else 2)
+             for (r, f) in addresses}
+    # the carrier owes an answer where the contract stated and it stayed silent;
+    # the contract owes one the other way — the same size, read from two ends
+    owes_carrier = [a for a in addresses if sizes[a] == 2 and a in stated]
+    owes_contract = [a for a in addresses if sizes[a] == 2 and a in claimed]
 
     def excuse(route, field):
         # a declared divergence, and whether the thing it cites is still open
@@ -3154,6 +3187,9 @@ def cmd_attention(a):
         p["why"] = (f"the contract states {want}; {carrier} declares "
                     + (f"its own {mine} as " if mine else "") + got)
     return {"command": "attention", "as": me, "carrier": carrier,
+            # what the game answered, address by address, so a reader of this
+            # payload derives the same three states and cannot invent a fourth
+            "sizes": {f"{r} · {f}": n for (r, f), n in sizes.items()},
             "waits_on_you": waits_on_me, "you_wait_on": i_wait, "parted": parts,
             "known": known_mine + known_theirs + known_part,
             "expired": expired_mine + expired_theirs + expired_part,

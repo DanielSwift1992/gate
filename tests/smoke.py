@@ -1322,8 +1322,17 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               # state is a column on that row — the panel is a door to worlds,
               # and a door that narrates has stopped opening.
               and "async function buildSeams()" in ui
-              and 'sc.textContent = s.alone ? "waiting for the other side"' in ui
+              # AND THE STATE IS COUNTED, NOT CHOSEN. A seam is the premise V=I
+              # §5.4 leaves outside itself, asked as a game one level up: how
+              # many correspondences between what one side states and what the
+              # other claims still pass. |S| ∈ ℕ and {0, 1, >1} partitions ℕ, so
+              # there are three answers and no fourth to write. This was four
+              # hand-written branches that happened to agree with the arithmetic.
+              and 'const sizes = Object.values(s.sizes || {});' in ui
+              and "const gone = sizes.filter(n => n === 0).length;" in ui
+              and "const open = sizes.filter(n => n > 1).length;" in ui
               and 'gone ? "parted at " + gone' in ui
+              and '"sizes": {f"{r} · {f}": n for (r, f), n in sizes.items()},' in seam_src
               and 'const hasSeams = group.rows.some(seamRow);' in ui
               # it borrows the rail's own grammar rather than inventing a second
               # one: a row is a commit's row, the address is a fact, the kind is
@@ -1496,7 +1505,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "THEIR repository" in mine.get("next", "")
               # having moved first, this side sees that it moved rather than nothing
               and seams_here_probe(sub) == 1
-              and "waiting for the other side" in ui))
+              and "no second side yet" in ui))
 
     # ── FRICTION IS NOT EVENLY DESERVED. Saying a true thing should cost
     # nothing; setting a true thing aside should cost a reason that can close,
@@ -2663,6 +2672,82 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and said_world.get("scope") == "world"
               # and a file nobody declared steers nothing
               and undeclared.get("scope") == "world"))
+
+    # ── THE LIBRARY IS THE DOMAIN'S, NOT THE AGENT'S — checked, not believed.
+    # V=I §5.26: "Two agents processing the same domain under the same encoding
+    # produce libraries with identical entries, differing only in the order
+    # entries were added… The library's content is determined by the domain, not
+    # by the agent." Run as an experiment on this tool: two worlds, identical
+    # content, files declared in opposite orders, and everything that is JUDGED
+    # or PAINTED compared byte for byte.
+    #
+    # The first run failed, and found two things at once. Everything an operator
+    # declared in a forms file was appended to EVERY shipped world — a length
+    # from the metrics world glued onto the git atoms, the contract forms, all of
+    # them — which is two encodings communicating (§5.24). And because it was
+    # appended in the order the operator declared their files, two people with
+    # identical content got different line numbers for the same refusal: order
+    # leaking into an address, which §5.25 forbids. Both fell to one fix.
+    lib = {}
+    for who, order in (("A", ("colours.swift", "lengths.swift")),
+                       ("B", ("lengths.swift", "colours.swift"))):
+        w = os.path.join(tmp, "lib526" + who)
+        os.makedirs(w)
+        open(os.path.join(w, "gate.swift"), "w").write("public enum Sales: Department {}\n")
+        open(os.path.join(w, "colours.swift"), "w").write(
+            "// role: forms\npublic typealias KnownNameDimZ = "
+            "Plus<W8, Plus<W16, Plus<W32, Plus<W64, Plus<W128, W512>>>>>\n"
+            "public typealias KnownNameChroma_dim = TowardBlue<KnownNameDimY, KnownNameDimZ,"
+            " Plus<Unit, Plus<W2, Plus<W32, Plus<W64, Plus<W1024, Plus<W2048, W4096>>>>>>>\n"
+            "public typealias MineApartTheirs_Z_dim = Apart<KnownNameDimZ, LocalTypeDimZ,"
+            " Plus<Unit, Plus<W2, Plus<W4, Plus<W32, W64>>>>>\n"
+            "public typealias TheirsApartBad_Z_dim = Apart<KnownNameDimZ, BadDimZ,"
+            " Plus<Unit, Plus<W2, Plus<W4, Plus<W8, Plus<W64, W512>>>>>>\n")
+        open(os.path.join(w, "lengths.swift"), "w").write(
+            "// role: forms\npublic typealias Line = Plus<W2, W8>\n")
+        for f in order:
+            run("mine", f, "--role", "forms", cwd=w)
+        lib[who] = subprocess.run(
+            [sys.executable, "-c",
+             "import types,json;src=open(%r,encoding='utf-8').read();g=types.ModuleType('g');"
+             "g.__file__=%r;exec(compile(src,'gate','exec'),g.__dict__);"
+             "print(json.dumps({'w':{k:g.presented_world(k) for k in sorted(g.STDLIB)},"
+             "'p':g.palette_tokens(),'l':g.ladder_tokens(),'r':g.register_tokens()},"
+             "sort_keys=True))" % (GATE, GATE)],
+            cwd=w, capture_output=True, text=True).stdout
+    S.append(("two agents, one domain, opposite orders: the same library to the byte",
+              lib["A"] and lib["A"] == lib["B"]
+              # and the override still takes — order-invariance that achieved
+              # itself by ignoring the operator would be no result at all
+              and "calc(760/1000)" in lib["A"]
+              # and a world holds only its own names: nothing of the operator's
+              # is appended to a world that never said it
+              and "public typealias Line" not in json.loads(lib["A"])["w"]["git-atoms"]))
+
+    # ── AND THE THREE STATES ARE THREE BECAUSE ℕ HAS THREE PARTS THERE, not
+    # because we picked three words. Probed by asking the game directly: every
+    # address gets a size, sizes are only ever 0, 1 or >1, and each of the three
+    # columns is exactly the addresses of one size. A fourth column would need a
+    # fourth size first, and there is no fourth size.
+    sg = os.path.join(tmp, "seamgame")
+    run("demo", "seam", sg)
+    att = run("attention", os.path.join(sg, "api.swift"), os.path.join(sg, "sdk.swift"),
+              "--as", "MessagesJS", cwd=sg)[1]
+    sz = att.get("sizes") or {}
+    S.append(("a seam's state is |S| of a game, and {0, 1, >1} leaves no fourth column",
+              sz and set(sz.values()) <= {0, 1, 2}
+              # parted is exactly the addresses nothing fits
+              and sorted(x["address"] for x in att.get("parted", []))
+                  == sorted(a for a, n in sz.items() if n == 0)
+              # and the two word-columns together are exactly the open ones —
+              # one state read from whichever end owes the sentence
+              and sorted(x["address"] for x in
+                         att.get("waits_on_you", []) + att.get("you_wait_on", []))
+                  == sorted(a for a, n in sz.items() if n > 1)
+              # `taken as given` is not among them: it is somebody supplying the
+              # premise the theory leaves outside, and the citation is its term
+              and "taken as given" in ui
+              and "somebody SUPPLYING the agreement the two sides never derived" in ui))
 
     # ── A PIN NAMES A MOMENT, AND THIS TOOL NOW KEEPS THE RULE IT HAD WRITTEN
     # DOWN. `cmd_side` had carried the sentence "nothing in this tool expresses a
