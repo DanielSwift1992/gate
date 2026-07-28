@@ -131,10 +131,18 @@ and the refusal is about two declarations rather than about anybody's code.
 ## Quick start
 
 ```sh
-gate demo seam                   # two sides, one disagreement, in one command
-gate demo && cd gate-demo        # a world of people and grants, and one refusal
-gate serve                       # the bench opens: break a fact, watch the judge
+gate import codeowners CODEOWNERS --tree .   # your repository's own ownership, judged
+gate demo seam                               # two sides, one disagreement, one command
+gate demo && cd gate-demo                    # a world of people and grants, and one refusal
+gate serve                                   # the bench opens: change a fact, watch the judge
 ```
+
+The first line is the one to run in a repository you already have. Who owns
+which paths is a fact you already keep — in a file that cannot say whether an
+owner exists or whether a pattern still matches anything — and it becomes a
+judged world without you writing a line. `gate demo` builds a world of people
+and departments instead: the same machinery on a domain that needs no
+repository, for reading rather than for your own rows.
 
 `gate demo seam` is the shorter road if you came here because a client and a
 contract disagree rather than because of who may read what — it prints what each
