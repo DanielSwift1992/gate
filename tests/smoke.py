@@ -3441,11 +3441,17 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
     S.append(("the bench is a prism: worlds one judged fact apart never paint the same",
               len(parted) == 3 and all(row[3] for row in parted)))
 
-    # a refusal is pointed at by its EDGE — a left border and a light backing, two
-    # markers and no more; the address is a fact like any other, and the red is
-    # the verdict's alone (the chip, and the wave under a name resolving to nothing)
-    S.append(("a refusal is marked by its edge, and its address is a fact, not a verdict",
-              "border-left:3px solid var(--bad)" in ui
+    # A REFUSAL IS NOT MARKED AT REST. It wore a red edge and a tinted backing,
+    # and neither said anything: this is the refusals panel, under a chip that
+    # already counts them. Marking every row of a list of refusals as a refusal
+    # is saying the same word on every line. The red is the verdict's alone —
+    # the chip, and the wave under a name that resolves to nothing — and taking
+    # it off these rows keeps that rule instead of loosening it. What remains is
+    # what a row needs to be aimed at: it lights under the pointer.
+    ref_rule = ui.split(".refusal{", 1)[1].split("}", 1)[0] if ".refusal{" in ui else ""
+    S.append(("a refusal carries no mark of its own, and its address is a fact, not a verdict",
+              "border-left" not in ref_rule and "background" not in ref_rule
+              and ".refusal:hover{background:color-mix(in srgb,var(--bad) 10%,transparent)}" in ui
               and ".refusal code{color:var(--bad)" not in ui
               and "border:1px solid color-mix(in srgb,var(--bad) 22%" not in ui))
 

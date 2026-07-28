@@ -340,15 +340,18 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 #verdicts{overflow:auto;padding:var(--u) calc(var(--u)*6) calc(var(--u)*5);display:flex;flex-direction:column;gap:calc(var(--u)*2)}
 /* each refusal is a row you can aim at: it has an edge, a surface, and it
    answers to the pointer, because clicking it goes to the line */
-/* a refusal is marked by its EDGE, not by colouring what it says: a left border
-   and a light backing — two markers, no more. The address is a fact like every
-   other address (mono, ink); the red belongs to the verdict alone — the chip,
-   and the wave under a name that resolves to nothing. */
-.refusal{display:flex;gap:calc(var(--u)*5);padding:calc(var(--u)*4) calc(var(--u)*5);border-left:3px solid var(--bad);
-  border-radius:5px;background:color-mix(in srgb,var(--bad) 6%,transparent);
-  cursor:pointer;align-items:baseline}
-.refusal:hover{background:color-mix(in srgb,var(--bad) 12%,transparent)}
-.refusal:active{background:color-mix(in srgb,var(--bad) 17%,transparent)}
+/* A REFUSAL IS NOT MARKED AT ALL AT REST. It carried two markers — a red edge
+   down its left and a tinted backing — and neither was telling anybody
+   anything: this is the refusals panel, under a chip that already says how
+   many. Marking every row of a list of refusals as a refusal is saying the
+   same word on every line. The red belongs to the verdict alone, which is what
+   the chip and the wave under a name are for, and taking it off these rows is
+   that rule kept rather than loosened. What stays is what a row needs to be
+   aimed at: it lights under the pointer, because clicking it goes to the line. */
+.refusal{display:flex;gap:calc(var(--u)*5);padding:calc(var(--u)*4) calc(var(--u)*5);
+  border-radius:5px;cursor:pointer;align-items:baseline}
+.refusal:hover{background:color-mix(in srgb,var(--bad) 10%,transparent)}
+.refusal:active{background:color-mix(in srgb,var(--bad) 16%,transparent)}
 .refusal code,.pending code{flex:none}
 .pending-head{padding:calc(var(--u)*4) calc(var(--u)*4) calc(var(--u)*2);text-transform:uppercase;letter-spacing:.05em}
 .pending{display:flex;gap:calc(var(--u)*5);padding:calc(var(--u)*3) calc(var(--u)*5);border-radius:5px;cursor:pointer;align-items:baseline}
