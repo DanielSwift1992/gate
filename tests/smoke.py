@@ -2790,6 +2790,25 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "taken as given" in ui
               and "somebody SUPPLYING the agreement the two sides never derived" in ui))
 
+    # ── AND A REFUSAL IS VISIBLE IN THE VIEW YOU WRITE IN. Bare is a surface
+    # you EDIT — slots, add claim, add record — and when what you wrote stopped
+    # holding, nothing there said so: the chip counted two, the footer carried
+    # two addresses, and the claim they were about looked like the ones that
+    # hold. The mark was written and hung on the record's own line, while a
+    # refusal lands on the line of the ARGUMENT that failed, inside a claim
+    # written down the page — so it matched nothing, ever, and appeared once in
+    # no session. Walked: break a fact, and the two claims named are the two
+    # marked, no more.
+    S.append(("bare marks the claim a refusal is about, and only that claim",
+              "const starts = (d.entries || []).map(e => e.line).sort((a, b) => a - b);" in ui
+              and "if (ln < d.line || ln >= ends) continue;" in ui
+              and "function recordEnd(parsed, d) {" in ui
+              # the same wave a file wears in the panel and a name wears when it
+              # resolves to nothing — never the tinted backing taken off the
+              # refusal rows, or the page teaches two words for one state
+              and "#bare .row-bad{text-decoration:underline wavy var(--bad)" in ui
+              and "#bare .row-bad{background" not in ui))
+
     # ── A GATED CONFORMANCE IS READ, and this is the check that was missing the
     # day it stopped being read. A branch added for the one-line `extension X {
     # typeName }` that gate itself writes swallowed EVERY one-line extension,

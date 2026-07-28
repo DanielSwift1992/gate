@@ -279,7 +279,11 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 #bare .namerow{display:flex;gap:var(--u);align-items:baseline;padding:calc(var(--u)*2) 0}
 #bare .namerow input{font:inherit;color:var(--ink);background:var(--mist);border:1px solid var(--line);border-radius:5px;padding:0 calc(var(--u)*2)}
 #bare .bad{text-decoration:underline wavy var(--bad);text-underline-offset:3px}
-#bare .row-bad{background:color-mix(in srgb,var(--bad) 6%,transparent)}
+/* where it hurts, in the view you write in: the same wave a file wears in the
+   panel and a name wears when it resolves to nothing. A tinted backing was
+   the marker we took off the refusal rows this morning — one thing, one
+   mark, or the page teaches two words for one state. */
+#bare .row-bad{text-decoration:underline wavy var(--bad);text-underline-offset:var(--near)}
 .empty{max-width:34em;padding:calc(var(--u)*20) 0 0 calc(var(--u)*10);color:var(--ink)}
 .empty h2{font:var(--headline);margin:0 0 calc(var(--u)*4)}
 .empty p{font:var(--proseloose);color:var(--muted);margin:0 0 calc(var(--u)*10)}
@@ -2370,6 +2374,17 @@ function noteProse(text) {
         .replace(/`([^`]+)`/g, (_, c) => "<code>" + c + "</code>");
 }
 
+// where a record stops: the next declaration begins. Nothing else in the parse
+// says it, and a record that owns the rest of the file owns other people's lines.
+function recordEnd(parsed, d) {
+    let end = Infinity;
+    for (const [, o] of parsed.declarations)
+        if (o.line > d.line && o.line < end) end = o.line;
+    for (const [, a] of (parsed.topAliases || new Map()))
+        if (a.line > d.line && a.line < end) end = a.line;
+    return end;
+}
+
 function bareForm(parsed, text) {
     const badLines = new Set(lastRefusals.map(r => r.line));
     const src = text || "";
@@ -2448,11 +2463,36 @@ function bareForm(parsed, text) {
             block.push('    ' + esc(axis) + ' = <span class="slot hole caption" data-slot="' + i
                 + '" title="choose a value">to fill</span>');
         }
+        // A CLAIM OWNS THE LINES IT IS WRITTEN ON. A claim is written down the
+        // page — its head, then an argument a line — and the judge points at the
+        // line of the argument that failed, never at the head. Matching those
+        // two numbers matched nothing, ever: the mark was written, hung on a
+        // line no refusal names, and never appeared once.
+        const starts = (d.entries || []).map(e => e.line).sort((a, b) => a - b);
+        const hurt = new Set();
+        // and a record owns only its OWN lines: the last claim in a record has
+        // no claim after it, so without this it swallowed every refusal below —
+        // three marks for two refusals, one of them in the next record entirely.
+        const ends = recordEnd(parsed, d);
+        for (const ln of badLines) {
+            if (ln < d.line || ln >= ends) continue;
+            let owner = null;
+            for (const s of starts) if (s <= ln) owner = s; else break;
+            if (owner !== null && ln < (starts.find(s => s > owner) ?? ends)) hurt.add(owner);
+        }
         for (const e of (d.entries || [])) {
             const args = (e.args || []).map((a, i) =>
                 slotSpan({ kind: "arg", line: e.line, host: name, head: e.head, index: i }, a));
-            block.push("    " + nameTokens(e.head) + (args.length ? "&lt;" + args.join(", ") + "&gt;" : "")
-                + cut({ kind: "entry", line: e.line, host: name }, "claim"));
+            // ── AND A REFUSAL IS VISIBLE WHERE THE EDIT WAS MADE. This view is
+            // one you WRITE in — slots, add claim, add record — and when what
+            // you wrote stopped holding, nothing here said so: the chip counted
+            // two, the footer carried two addresses, and the record they were
+            // about looked exactly like the ones that hold. The mark existed
+            // and was hung on the record's own line, while a refusal lands on
+            // the CLAIM inside it, so it never once matched.
+            block.push('<span class="' + (hurt.has(e.line) ? "row-bad" : "") + '">'
+                + "    " + nameTokens(e.head) + (args.length ? "&lt;" + args.join(", ") + "&gt;" : "")
+                + cut({ kind: "entry", line: e.line, host: name }, "claim") + "</span>");
         }
         if ((d.entries || []).length)
             block.push('    <span class="add caption" data-add-claim="' + name + '">+ add claim</span>');
