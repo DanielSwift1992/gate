@@ -69,15 +69,15 @@
 .gesture{color:var(--action);cursor:pointer}
 body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);display:flex;height:100vh;overflow:hidden}
 #rail{flex:0 0 250px;display:none;flex-direction:column;overflow:auto;min-width:0}
-#rail h3{font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin:0;padding:calc(var(--u)*6) calc(var(--u)*7) calc(var(--u)*4)}
+#rail h3{font:var(--rubric);letter-spacing:.08em;text-transform:uppercase;margin:0;padding:calc(var(--u)*6) calc(var(--u)*7) calc(var(--u)*4)}
 .file{display:flex;align-items:center;gap:calc(var(--u)*3);padding:calc(var(--u)*2) calc(var(--u)*7);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .file:hover{background:var(--mist)}
-.file.on{background:var(--mist);font-weight:600}
-.file .dot{flex:0 0 6px;width:6px;height:6px;border-radius:50%;background:transparent}
+.file.on{background:var(--mist);font:var(--factfirm)}
+.file .dot{flex:0 0 var(--apart);width:var(--apart);height:var(--apart);border-radius:50%;background:transparent}
 /* where it hurts, seen without opening: the same wave a name wears when it
    resolves to nothing, on the file that carries the refusal */
 .file.bad{color:var(--bad)}.file.bad .dot{background:var(--bad)}
-.file.bad .name{text-decoration:underline wavy var(--bad);text-underline-offset:3px}
+.file.bad .name{text-decoration:underline wavy var(--bad);text-underline-offset:var(--near)}
 /* and what this file overrules — a count, in the quiet register, never a colour
    of its own: two questions live in a name's hue and this is neither */
 .overrules{margin-left:auto;color:var(--seam);flex:none}
@@ -85,12 +85,12 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 /* a file in a folder hangs one edge past the heading it sits under —
    `Indent` is what that step is called, and it means exactly this */
 .file.nested{padding-left:var(--indent)}
-.file .mine{margin-left:auto;background:var(--mist);border-radius:8px;padding:0 calc(var(--u)*3);flex:none}
+.file .mine{margin-left:auto;background:var(--mist);border-radius:var(--wide);padding:0 calc(var(--u)*3);flex:none}
 .file.on .mine{background:var(--paper)}
 .split{flex:0 0 5px;cursor:col-resize;background:transparent;transition:background .1s}
 .split:hover,.split.dragging{background:color-mix(in srgb,var(--action) 45%,transparent)}
 .line-flash{background:color-mix(in srgb,var(--action) 22%,transparent)}
-#journal-head .obs{display:block;font-weight:500;letter-spacing:.03em;text-transform:none;opacity:.75;margin-top:var(--u)}
+#journal-head .obs{display:block;font:var(--rubricnote);letter-spacing:.03em;text-transform:none;opacity:.75;margin-top:var(--u)}
 /* the row works WITH the space it is given: the subject takes what is there and
    the meta sits beside it, dropping to its own line only when there is no room.
    It used to stack always, so a wide rail left a long empty tail; and the subject
@@ -107,7 +107,7 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
    not a button. It reads as one now: ink like every other fact, with the
    underline arriving under the pointer to say it can be pressed. */
 .commit .who{cursor:pointer;color:var(--ink);text-decoration:underline dotted var(--line);
-  text-underline-offset:3px}
+  text-underline-offset:var(--near)}
 .commit .who:hover{text-decoration:underline solid var(--ink)}
 .badge{flex:none;padding:0 calc(var(--u)*3);border-radius:8px}
 /* the badge is marked by an EDGE, not by a fill: filled with --mist it vanished
@@ -129,7 +129,7 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 #filter-note:hover,#load-more:hover{text-decoration:underline}
 #rail h3.fold{cursor:pointer;display:flex;flex-wrap:wrap;align-items:flex-start;gap:calc(var(--u)*3);user-select:none}
 #rail h3.fold:hover{color:var(--ink)}
-#rail h3.fold i{flex:none;width:8px;margin-top:var(--u);font-style:normal;transition:transform .12s;line-height:1}
+#rail h3.fold i{flex:none;width:var(--wide);margin-top:var(--u);font-style:normal;transition:transform .12s;line-height:1}
 #rail h3.fold i::before{content:"▾"}
 #rail h3.fold.shut i{transform:rotate(-90deg)}
 #rail h3.fold .obs{flex:1 1 100%;padding-left:calc(var(--u)*7)}
@@ -169,7 +169,7 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
    alone: a caret says which way it goes, and nothing is drawn around it */
 .commit.open{background:var(--mist)}
 .commit.open .caret{transform:rotate(90deg)}
-.commit .caret{flex:none;width:8px;color:var(--muted);transition:transform .12s;font-style:normal;opacity:.6}
+.commit .caret{flex:none;width:var(--wide);color:var(--muted);transition:transform .12s;font-style:normal;opacity:.6}
 .commit .caret::before{content:"\203A"}
 .cdiff{flex:0 0 100%;padding:var(--u) 0 calc(var(--u)*5);background:var(--mist)}
 .dwait{padding:calc(var(--u)*2) calc(var(--u)*7);font:var(--captionbare);color:var(--muted)}

@@ -37,111 +37,171 @@ public protocol Face {}
 public enum Mono: Face {}
 public enum Sans: Face {}
 
+// AND HOW HARD A REGISTER IS SET. This was a list of three names inside the
+// tool — `Brand`, `Headline`, `Headsmall` got weight, everything else did not —
+// which is a world's names living in a mechanism, the one thing no layer here
+// is allowed to do. A register that is set firm says so itself, on the same
+// axis as its face, and a name this file never mentions gets no special
+// treatment from anywhere.
+public protocol Stress {}
+public enum Plain: Stress {}
+public enum Half: Stress {}
+public enum Firm: Stress {}
+
 public protocol Register {
     associatedtype On: Face
+    associatedtype Set: Stress
 }
 
 public typealias BrandSize = Plus<W2, Plus<W4, Plus<W16, W128>>>
 public typealias BrandLead = Plus<W8, Plus<W16, Plus<W32, W64>>>
 public enum Brand: Register {
     public typealias On = Sans
+    public typealias Set = Firm
 }
 
 public typealias CaptionSize = Plus<W2, Plus<W4, Plus<W8, Plus<W32, W64>>>>
 public typealias CaptionLead = Plus<W4, Plus<W8, W128>>
 public enum Caption: Register {
     public typealias On = Sans
+    public typealias Set = Plain
 }
 
 public typealias CaptionbareSize = Plus<W2, Plus<W4, Plus<W8, Plus<W32, W64>>>>
 public enum Captionbare: Register {
     public typealias On = Sans
+    public typealias Set = Plain
 }
 
 public typealias CaptionlineSize = Plus<W2, Plus<W4, Plus<W8, Plus<W32, W64>>>>
 public typealias CaptionlineLead = Plus<Unit, Plus<W16, W128>>
 public enum Captionline: Register {
     public typealias On = Sans
+    public typealias Set = Plain
 }
 
 public typealias CaptionlooseSize = Plus<W2, Plus<W4, Plus<W8, Plus<W32, W64>>>>
 public typealias CaptionlooseLead = Plus<W2, Plus<W4, Plus<W16, W128>>>
 public enum Captionloose: Register {
     public typealias On = Sans
+    public typealias Set = Plain
 }
 
 public typealias CodeinlineSize = Plus<W8, Plus<W16, Plus<W32, W64>>>
 public typealias CodeinlineLead = Plus<W4, Plus<W8, W128>>
 public enum Codeinline: Register {
     public typealias On = Mono
+    public typealias Set = Plain
 }
 
 public typealias ControlSize = Plus<W2, W128>
 public enum Control: Register {
     public typealias On = Sans
+    public typealias Set = Plain
 }
 
 public typealias ControlsmallSize = Plus<Unit, Plus<W4, Plus<W8, Plus<W16, Plus<W32, W64>>>>>
 public enum Controlsmall: Register {
     public typealias On = Sans
+    public typealias Set = Plain
 }
 
 public typealias FactSize = Plus<Unit, Plus<W4, Plus<W8, Plus<W16, Plus<W32, W64>>>>>
 public typealias FactLead = Plus<Unit, Plus<W16, W128>>
 public enum Fact: Register {
     public typealias On = Mono
+    public typealias Set = Plain
 }
 
 public typealias FactbareSize = Plus<Unit, Plus<W4, Plus<W8, Plus<W16, Plus<W32, W64>>>>>
 public enum Factbare: Register {
     public typealias On = Mono
+    public typealias Set = Plain
+}
+
+// the same fact, said firm — which is what a selected row in the panel is. The
+// weight had been a number beside a background colour, so nothing stopped it
+// from being given a size of its own, and a list that changes size when you
+// click it is a list that moves under the hand.
+public typealias FactfirmSize = Plus<Unit, Plus<W4, Plus<W8, Plus<W16, Plus<W32, W64>>>>>
+public typealias FactfirmLead = Plus<Unit, Plus<W16, W128>>
+public enum Factfirm: Register {
+    public typealias On = Mono
+    public typealias Set = Firm
 }
 
 public typealias HeadlineSize = Plus<W2, Plus<W4, Plus<W16, W128>>>
 public typealias HeadlineLead = Plus<W2, W128>
 public enum Headline: Register {
     public typealias On = Sans
+    public typealias Set = Firm
 }
 
 public typealias HeadsmallSize = Plus<W2, W128>
 public typealias HeadsmallLead = Plus<W4, Plus<W32, W64>>
 public enum Headsmall: Register {
     public typealias On = Sans
+    public typealias Set = Firm
 }
 
 public typealias KeycapSize = Plus<W2, Plus<W4, Plus<W8, Plus<W32, W64>>>>
 public enum Keycap: Register {
     public typealias On = Mono
+    public typealias Set = Plain
 }
 
 public typealias MonolineSize = Plus<W2, Plus<W4, Plus<W8, Plus<W32, W64>>>>
 public typealias MonolineLead = Plus<Unit, Plus<W16, W128>>
 public enum Monoline: Register {
     public typealias On = Mono
+    public typealias Set = Plain
 }
 
 public typealias ProseSize = Plus<W2, W128>
 public typealias ProseLead = Plus<W2, Plus<W4, Plus<W16, W128>>>
 public enum Prose: Register {
     public typealias On = Sans
+    public typealias Set = Plain
 }
 
 public typealias ProselooseSize = Plus<W2, W128>
 public typealias ProselooseLead = Plus<W32, W128>
 public enum Proseloose: Register {
     public typealias On = Sans
+    public typealias Set = Plain
 }
 
 public typealias SourceSize = Plus<Unit, Plus<W4, Plus<W8, Plus<W16, Plus<W32, W64>>>>>
 public typealias SourceLead = Plus<W8, Plus<W16, W128>>
 public enum Source: Register {
     public typealias On = Mono
+    public typealias Set = Plain
+}
+
+// ── AND THE TWO VOICES THE LEFT PANEL SPEAKS IN, which it had been speaking
+// without either of them being declared anywhere: a section label set firm at
+// caption size, and the line under it set half. Weight 500 in particular was a
+// number in a stylesheet and nothing else — no register named it, so nothing
+// could hold it, and the panel was about to be built out on top of it.
+public typealias RubricSize = Plus<W2, Plus<W4, Plus<W8, Plus<W32, W64>>>>
+public typealias RubricLead = Plus<W4, Plus<W8, W128>>
+public enum Rubric: Register {
+    public typealias On = Sans
+    public typealias Set = Firm
+}
+
+public typealias RubricnoteSize = Plus<W2, Plus<W4, Plus<W8, Plus<W32, W64>>>>
+public typealias RubricnoteLead = Plus<W4, Plus<W8, W128>>
+public enum Rubricnote: Register {
+    public typealias On = Sans
+    public typealias Set = Half
 }
 
 public typealias SpeechSize = Plus<W2, W128>
 public typealias SpeechLead = Plus<Unit, Plus<W16, W128>>
 public enum Speech: Register {
     public typealias On = Sans
+    public typealias Set = Plain
 }
 
 // ── AND THE LAWS. A size ladder that only goes up, so `caption` can never
@@ -166,4 +226,13 @@ public typealias MonolineLeadClearsItsLetters = AtLeast<MonolineLead, Plus<W4, P
 public typealias ProseLeadClearsItsLetters = AtLeast<ProseLead, Plus<W4, Plus<W32, W64>>, Plus<W2, Plus<W16, W32>>>
 public typealias ProselooseLeadClearsItsLetters = AtLeast<ProselooseLead, Plus<W4, Plus<W32, W64>>, Plus<W4, Plus<W8, Plus<W16, W32>>>>
 public typealias SourceLeadClearsItsLetters = AtLeast<SourceLead, Plus<W4, Plus<W32, W64>>, Plus<W4, Plus<W16, W32>>>
+public typealias RubricLeadClearsItsLetters = AtLeast<RubricLead, Plus<W4, Plus<W32, W64>>, Plus<W8, W32>>
+public typealias RubricnoteLeadClearsItsLetters = AtLeast<RubricnoteLead, Plus<W4, Plus<W32, W64>>, Plus<W8, W32>>
+// a label and its note are the page's quiet size, said once: let either drift up
+// and the panel starts shouting in a corner nobody chose to make loud
+public typealias FactfirmIsFactSized = AtLeast<FactfirmSize, FactSize, Never>
+public typealias FactfirmLeadsLikeFact = AtLeast<FactfirmLead, FactLead, Never>
+public typealias FactfirmLeadClearsItsLetters = AtLeast<FactfirmLead, Plus<W4, Plus<W32, W64>>, Plus<Unit, Plus<W4, Plus<W8, W32>>>>
+public typealias RubricIsCaptionSized = AtLeast<RubricSize, CaptionSize, Never>
+public typealias RubricnoteIsCaptionSized = AtLeast<RubricnoteSize, CaptionSize, Never>
 public typealias SpeechLeadClearsItsLetters = AtLeast<SpeechLead, Plus<W4, Plus<W32, W64>>, Plus<Unit, Plus<W4, Plus<W8, W32>>>>

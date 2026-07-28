@@ -1783,6 +1783,14 @@ def register_tokens():
     text = presented_world("bench-registers")
     faces = dict(re.findall(r"public enum (\w+): Register \{\s*\n\s*public typealias On = (\w+)",
                             text))
+    # how hard a register is set, read off the same declaration. This was three
+    # world names written into this function — a world's vocabulary living in a
+    # mechanism, which is the one thing no layer here may do: present a register
+    # of your own and it could never be firm, because the tool had never heard
+    # of it. Now the declaration says, and a name this file never mentions is
+    # treated exactly like the ones it ships.
+    stresses = dict(re.findall(
+        r"public enum (\w+): Register \{[^}]*?public typealias Set = (\w+)", text, re.S))
     rows = []
     for name, face in sorted(faces.items()):
         size = vals.get(name + "Size")
@@ -1791,7 +1799,7 @@ def register_tokens():
         lead = vals.get(name + "Lead")
         stack = ("ui-monospace,Menlo,monospace" if face == "Mono"
                  else "-apple-system,sans-serif")
-        weight = "600 " if name in ("Brand", "Headline", "Headsmall") else ""
+        weight = {"Firm": "600 ", "Half": "500 "}.get(stresses.get(name), "")
         px = ("%g" % (size / 10))
         rows.append(f"  --{name.lower()}: {weight}{px}px"
                     + (f"/{'%g' % (lead / 100)}" if lead else "") + f" {stack};")

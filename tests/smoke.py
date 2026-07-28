@@ -2256,7 +2256,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # That file holds laws rather than a list: the size ladder only goes up, so
     # `caption` cannot quietly become the size of `speech`, and every leading is
     # at least as tall as the letters it sets, because a line that overlaps the
-    # next is not a line. Seventeen equalities, probed by breaking one.
+    # next is not a line. Twenty-four equalities, probed by breaking one.
     reg = open(os.path.join(HERE, "stdlib", "bench-registers.swift"), encoding="utf-8").read()
     served = subprocess.run(
         [sys.executable, "-c",
@@ -2277,7 +2277,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               # and that world holds a ladder and a floor, not just a list
               and "public enum Taller<Hi, Lo, Slack>: Close {}" in reg
               and "public enum AtLeast<Have, Floor, Slack>: Close {}" in reg
-              and "17 equalities" in subprocess.run(
+              and "24 equalities" in subprocess.run(
                   [os.path.join(HERE, "bin", "gate-judge"), "judge", "where",
                    os.path.join(HERE, "stdlib", "bench-registers.swift")],
                   capture_output=True, text=True).stdout))
@@ -2461,6 +2461,46 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               # this is exactly where order had crept back in as truth
               and "def presented_over(" in shelf_src
               and "PRIORITY IS A PROPERTY OF THE LAYER, NEVER OF POSITION" in shelf_src))
+
+    # ── THE LEFT PANEL UNDER THE SAME COURTS AS THE PAGE. Built before this, it
+    # was the one surface that answered to nobody: six lengths written as bare
+    # numbers, two voices — the section label and the line under it — that no
+    # register declared at all, and a weight of 500 that existed only in a
+    # stylesheet. Nothing could have refused any of them. This is checked BEFORE
+    # the panel grows, not after: what is built next is built under judgement.
+    registers_src = open(os.path.join(HERE, "stdlib", "bench-registers.swift"),
+                         encoding="utf-8").read()
+    rail_css = re.search(r"<style>(.*?)</style>", ui, re.S).group(1)
+    rail_rules = [(s.strip(), b) for s, b in re.findall(r"([^{}]+)\{([^}]*)\}", rail_css)
+                  if re.search(r"#rail|\.file|\.group|\.side|overrules|\.commit",
+                               re.sub(r"/\*.*?\*/", "", s, flags=re.S))]
+    bare = [(s, l) for s, b in rail_rules
+            for l in re.findall(r":\s*(-?\d+(?:\.\d+)?px|#[0-9a-fA-F]{3,8})", b)]
+    typed = [(s, b) for s, b in rail_rules
+             if re.search(r"font-size|font-weight|font-family", b)]
+    S.append(("every length and voice in the left panel is a name some world declares",
+              # not one hand-written length or colour left in the panel
+              not bare
+              # and nothing sets type except by naming a register
+              and not typed
+              # the two voices it speaks in are declared, and judged
+              and "public enum Rubric: Register" in registers_src
+              and "public enum Rubricnote: Register" in registers_src
+              and "RubricIsCaptionSized" in registers_src
+              # including the one a click makes: the same fact, said firm — a
+              # list that changes size when you click it moves under the hand
+              and "public typealias FactfirmIsFactSized" in registers_src
+              and "font:var(--factfirm)" in ui))
+
+    # ── AND HOW HARD A REGISTER IS SET IS THE WORLD'S TO SAY. It was three world
+    # names written inside this tool — a vocabulary living in a mechanism, which
+    # is the one thing no layer here may do: present a register of your own and
+    # it could never be firm, because the tool had never heard of it.
+    S.append(("a register says how hard it is set, and the tool only reads it",
+              "public protocol Stress {}" in registers_src
+              and "public typealias Set = Firm" in registers_src
+              and 'weight = {"Firm": "600 ", "Half": "500 "}.get(stresses.get(name), "")' in shelf_src
+              and '"Brand", "Headline", "Headsmall"' not in shelf_src))
 
     # ── AND AN OVERRIDE IS VISIBLE FROM THE LIST. It is judged now — the shipped
     # laws test whatever number is put in its place — but judged and silent is
