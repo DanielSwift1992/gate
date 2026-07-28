@@ -4565,6 +4565,93 @@ public enum MyWatch: AccessLedger {
     # now only because nobody had written a second forms file with records.
     twoforms = os.path.join(tmp, "twoforms")
     run("demo", twoforms)
+    # ── A FORMS ROW IS JUDGED AS YOU TYPE, LIKE EVERYTHING ELSE HERE. The layout
+    # was held to that promise and the forms rows were not: the bench's `/verdict`
+    # ran this court over the SAVED copies while somebody edited an unsaved one,
+    # so a law broken in the editor stayed invisible and the page showed the old
+    # verdict calmly. Walked by hand on the first scene, where the file a person
+    # is invited to break IS a forms row — the whole lesson happened where
+    # nothing was looking, and the bench's judge, reading that file alone, said
+    # HOLDS while the command line on the same text refused at its line.
+    liveworld = os.path.join(tmp, "liveforms")
+    run("demo", liveworld)
+    _s5 = _sock.socket(); _s5.bind(("127.0.0.1", 0)); _lp = _s5.getsockname()[1]; _s5.close()
+    _lb = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_lp)], cwd=liveworld,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    live_said = broke_said = None
+    try:
+        for _ in range(60):
+            try:
+                _u.urlopen(f"http://127.0.0.1:{_lp}/files", timeout=1).read(); break
+            except Exception:
+                time.sleep(0.1)
+        saved = open(os.path.join(liveworld, "readme.swift"), encoding="utf-8").read()
+        typed = saved.replace("public typealias Place = Zone_readme",
+                              "public typealias Place = Zone_src")
+        broke_said = json.loads(_u.urlopen(_u.Request(
+            f"http://127.0.0.1:{_lp}/verdict?f=readme.swift",
+            data=typed.encode(), method="POST"), timeout=10).read())
+        live_said = json.loads(_u.urlopen(_u.Request(
+            f"http://127.0.0.1:{_lp}/verdict?f=readme.swift",
+            data=saved.encode(), method="POST"), timeout=10).read())
+    finally:
+        _lb.terminate()
+    S.append(("a law broken in the editor is refused before it is written, in a forms row too",
+              # the buffer's own break, named at its line — and the file on disk
+              # still says the other thing
+              broke_said and any(r["address"] == "readme.swift:35" for r in broke_said["refusals"])
+              and any("share one zone" in r["claim"] for r in broke_said["refusals"])
+              # the world's own single refusal is still there and is not this one
+              and len(broke_said["refusals"]) == 2
+              # put the saved text back and only the scene's refusal remains
+              and live_said and len(live_said["refusals"]) == 1
+              and open(os.path.join(liveworld, "readme.swift"),
+                       encoding="utf-8").read() == saved
+              # AND WHAT WITHHOLDS A WRITE IS THIS FILE, NEVER THE WHOLE WORLD.
+              # The first scene ships with one refusal on purpose, so a gate over
+              # every refusal froze the bench whole: every edit anywhere answered
+              # `refused: nothing written` and the offer under every value looked
+              # broken.
+              and "lastRefusals.some(r => !r.file || r.file === active)" in ui))
+
+    # ── AND A FILE SAYS HOW IT IS FIRST MET, in the same act as `// role:` one
+    # line above it. A letter opened in Full reads as code — every line wearing
+    # `//`, the greeting dressed as a source file — and a rule about how much
+    # prose a file holds would be the old guess wearing a threshold. A word that
+    # is not a view is refused by name: a preference silently dropped is a
+    # preference the writer thinks they have.
+    opens_kept = open(os.path.join(liveworld, "readme.swift"), encoding="utf-8").read()
+    try:
+        open(os.path.join(liveworld, "readme.swift"), "w").write(
+            opens_kept.replace("// opens: bare", "// opens: sideways"))
+        odd = run("status", cwd=liveworld)[1]
+    finally:
+        open(os.path.join(liveworld, "readme.swift"), "w").write(opens_kept)
+    S.append(("a file says how it is first met, and a word that is not a view is refused by name",
+              "// opens: bare" in opens_kept
+              and any("`sideways` is not a view" in r["claim"] for r in odd["refusals"])
+              # the bench is told, and opens the first row that way
+              and "opensAs[first]" in ui and '"opens": opens' in shelf_src
+              # and the file's own header lines are not read out to the reader as
+              # prose: they are how it speaks to the tool, not to a person
+              and 'if (/^(role|opens):/i.test(said))' in ui))
+
+    # ── AND TWO MARKS THE WRITER ALREADY MAKES. A section rule — `── one ──` —
+    # is a heading everywhere in this repository's own source, and lines the
+    # writer indented inside a comment are set, not flowed. Run through the
+    # paragraph rule both were destroyed: the heading became a sentence with
+    # dashes in it, and a command lost the line break that made it a command.
+    # No register is added for either — two already-declared ones get a second
+    # speaker, which is what a word earns its keep by.
+    S.append(("bare reads the marks the writer already makes: a section is a heading, a block is set",
+              'out.push({ line: i + 1, text: head[1], kind: "head" });' in ui
+              and 'kind: "set"' in ui
+              and "#bare .head{display:block;font:var(--headsmall)" in ui
+              and "#bare .set{display:block;white-space:pre" in ui
+              # and the voices are ones this page already declared, not new words
+              and "public enum Headsmall: Register" in open(
+                  os.path.join(HERE, "stdlib", "bench-registers.swift"), encoding="utf-8").read()))
+
     S.append(("two forms files of your own may each hold records, and their axes do not collide",
               run("status", cwd=twoforms)[1]["verdict"] == "refused"
               and len(run("status", cwd=twoforms)[1]["refusals"]) == 1

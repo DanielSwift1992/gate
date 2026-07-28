@@ -306,7 +306,7 @@ def plainly(claim, notes):
     return f"{cert} · {left} against {right}" + (f" — {said}" if said else "")
 
 
-def forms_guards(size=None):
+def forms_guards(size=None, live=None):
     # ── AND HOW WIDE IT WAS. `size`, if given, is filled with what the where
     # court counted. A green with no width is the one thing this tool says it
     # will not print — and in its own repository, which is forms only, that is
@@ -330,16 +330,27 @@ def forms_guards(size=None):
     if not MANIFEST:
         return []
     d = os.path.dirname(MANIFEST["manifest"])
+    live = live or {}
+    # ── JUDGED AS YOU TYPE, HERE TOO. The layout was held to that promise and
+    # the forms rows were not: this court read the SAVED copy while somebody was
+    # editing an unsaved one, so a law broken in the editor stayed invisible and
+    # the bench showed the old verdict calmly. In the first scene the file a
+    # person is invited to break IS a forms row, so the whole lesson happened
+    # where nothing was looking.
     rows = [r for r in (MANIFEST.get("rows") or []) if r["role"] == "forms"
-            and os.path.exists(os.path.join(d, r["path"]))]
+            and (r["path"] in live or os.path.exists(os.path.join(d, r["path"])))]
     if not rows:
         return []
     bad = []
     # ONE STREAM PER SHIPPED WORLD, in the order the manifest gives — `where`
     # over a LIST is blind, and its silence is selective by order.
+    def body_of(r):
+        return live.get(r["path"]) if r["path"] in live else \
+            open(os.path.join(d, r["path"]), encoding="utf-8", errors="replace").read()
+
     streams, seen = [], set()
     for shelf in sorted(STDLIB):
-        text, mine, clash = presented_over(shelf)
+        text, mine, clash = presented_over(shelf, live)
         bad += clash
         if mine:
             streams.append((shelf, text, mine))
@@ -348,12 +359,11 @@ def forms_guards(size=None):
     # its own: glued together, as its own stream
     own = []
     for r in rows:
-        own.append(open(os.path.join(d, r["path"]), encoding="utf-8", errors="replace").read())
+        own.append(body_of(r))
     streams.append((None, "\n".join(own), {}))
     where = {}
     for r in rows:
-        for i, line in enumerate(open(os.path.join(d, r["path"]),
-                                      encoding="utf-8", errors="replace").read().split("\n"), 1):
+        for i, line in enumerate(body_of(r).split("\n"), 1):
             m = re.match(r"public (?:typealias|enum|protocol) (\w+)", line.strip())
             if m and m.group(1) not in where:
                 where[m.group(1)] = f"{r['path']}:{i}"
@@ -1709,6 +1719,9 @@ SEAM_DEMO_SDK = {"carrier": "MessagesJS",
 
 
 DEMO_README = """\
+// role: forms
+// opens: bare
+//
 // ── this file is the way in, and it stays the way back ──
 //
 // You are inside a repository this tool made: three source areas, a docs
@@ -1742,11 +1755,12 @@ public enum Path_readme: Room {
 }
 public typealias Owns_readme = Owns<Owner_you, Path_readme>
 
-// TRY IT. Change `Zone_readme` on the Path above to `Zone_src` and save.
-// The judge refuses this file at the line you touched and says which two
-// words disagree — in the law's own sentence, written where the law is.
-// Change it back, and it is green again. Nothing else in this world moves:
-// delete this whole file and the world still holds.
+// TRY IT. Change `Zone_readme` on the Path above to `Zone_src`. The judge
+// reads it as you type and refuses at the line you touched, in the law's own
+// sentence — and nothing is written while it refuses: your text stays in the
+// editor until it holds again. Put it back and the file is saved, and green.
+// Nothing else in this world moves: delete this whole file and the world
+// still holds.
 //
 // ── three: the refusal that was here before you ──
 //
@@ -2160,7 +2174,7 @@ def _peano(text):
     return vals
 
 
-def presented_over(shelf_name):
+def presented_over(shelf_name, live=None):
     # ── PRIORITY IS A PROPERTY OF THE LAYER, NEVER OF POSITION. This read the
     # presented worlds in the order the manifest listed them and let the first
     # speaker win — which made reordering a list change what the page paints,
@@ -2198,7 +2212,8 @@ def presented_over(shelf_name):
         if os.path.abspath(os.path.join(base, r["path"])) in SHIPPED_PATHS:
             continue
         fp = os.path.join(base, r["path"])
-        if not os.path.exists(fp):
+        said = (live or {}).get(r["path"])
+        if said is None and not os.path.exists(fp):
             continue
         # ── AND A TYPEALIAS INSIDE A DECLARATION IS AN AXIS, NOT A VALUE. The
         # duplicate guard learned this and this one never did: `public typealias
@@ -2209,7 +2224,9 @@ def presented_over(shelf_name):
         # names nobody had presented twice. It stayed invisible only because
         # until now nobody had written a second forms file with records in it.
         depth = 0
-        for i, line in enumerate(open(fp, encoding="utf-8", errors="replace").read().split("\n"), 1):
+        for i, line in enumerate((said if said is not None
+                                  else open(fp, encoding="utf-8", errors="replace").read())
+                                 .split("\n"), 1):
             code = line.split("//")[0]
             at_top = depth == 0
             depth += code.count("{") - code.count("}")
@@ -2513,6 +2530,46 @@ def cmd_stdlib(a):
             "modules": {k: v.split("\n")[0].replace("// ", "") for k, v in STDLIB.items()},
             "roles": {k: stdlib_role(k) for k in STDLIB},
             "note": "printouts of what the judge already carries — not files your world is made of"}
+
+
+VIEWS = ("full", "bare", "table")
+
+
+def opens_as(path):
+    # ── AND HOW A FILE IS FIRST MET, SAID BY THE FILE. The same act as `// role:`
+    # one line above it: sorting files by the shape of their names was a guess
+    # dressed as a category, and the rule that replaced it was that each file
+    # states what it is in its own words. A letter opened in Full reads as code
+    # — every line wearing `//`, the greeting dressed as a source file — and a
+    # ratio of prose to records would be that same guess again, wearing a
+    # threshold. So the author says it, once, in their own file.
+    #
+    # A word that is not a view is refused by name rather than ignored, because
+    # a preference silently dropped is a preference the writer thinks they have.
+    try:
+        head = open(path, encoding="utf-8", errors="replace").read(2000)
+    except OSError:
+        return None, None
+    for line in head.split("\n")[:6]:
+        m = re.match(r"//\s*opens:\s*(\S+)", line.strip())
+        if m:
+            said = m.group(1).strip().lower()
+            return (said if said in VIEWS else None), said
+    return None, None
+
+
+def opens_guards():
+    bad = []
+    for name, path in bench_files():
+        if not os.path.exists(path):
+            continue
+        view, said = opens_as(path)
+        if said and not view:
+            bad.append({"address": name,
+                        "claim": f"`{said}` is not a view: this file says how it should first be "
+                                 "met and names something the bench cannot open. It is one of "
+                                 + " · ".join(VIEWS)})
+    return bad
 
 
 def stdlib_role(name):
@@ -4935,9 +4992,13 @@ def cmd_serve(a):
                             if was:
                                 overridden[name] = {"file": path, "world": shelf,
                                                     "was": was.group(1).rstrip()}
+                    # AND HOW EACH FILE ASKS TO BE FIRST MET, in its own words.
+                    opens = {n: opens_as(p)[0] for n, p in named
+                             if os.path.exists(p) and opens_as(p)[0]}
                     body = json.dumps({"files": names,
                                        "layout": lay if lay in names else None,
                                        "forms": forms_rows,
+                                       "opens": opens,
                                        "overridden": overridden,
                                        # WHERE THE COURT WAS TAKEN, so the one
                                        # line a stranger asks about — "why is
@@ -5188,7 +5249,10 @@ def cmd_serve(a):
             # the layout is held to the same promise as every other file here:
             # judged as you type, from the editor's text and not the saved copy
             live = read_manifest_rows(base, text)[1] if active == layout else None
-            refusals += (manifest_guards(live) + forms_guards() + policy_guards()
+            # the same promise for a forms row: the text in the editor, not the
+            # copy on disk, is what this court reads
+            typed = {n: text for n, p in bench_files() if p == active and n in forms_here}
+            refusals += (manifest_guards(live) + forms_guards(None, typed) + policy_guards()
                          + stdlib_guards() + vendored_guards() + taken_judge_guard())
             times = re.findall(r"([\d.]+) ms", raw)
             # AND THE WIDTH OF IT. The judge counts what it checked and says so;
@@ -5378,7 +5442,7 @@ def dispatch(cmd, rest):
         refusals += forms_guards(where_size)
         refusals += policy_guards()
         refusals += stdlib_guards()
-        refusals += gate_shape_guards() + own_surface_guards()
+        refusals += gate_shape_guards() + own_surface_guards() + opens_guards()
         refusals += vendored_guards() + taken_judge_guard()
         refusals += duplicate_guards()
         refusals += entry_guards()

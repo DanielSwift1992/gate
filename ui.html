@@ -245,6 +245,15 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 #bare .rec{display:block;margin-bottom:var(--apart)}
 #bare .note.said{margin:0 0 var(--near)}
 #bare .note.free{margin:0}
+/* ── A SECTION AND A BLOCK SET AS WRITTEN, in registers this page already
+   declares. A heading is `headsmall` — the voice the keys panel speaks its own
+   sections in — and a block the writer indented keeps its lines and its face,
+   because a command whose continuation was folded into the paragraph is no
+   longer a command. Neither is a new word: no register is added here, two get
+   a second speaker. ── */
+#bare .head{display:block;font:var(--headsmall);color:var(--ink);margin:0 0 var(--near)}
+#bare .set{display:block;white-space:pre;overflow-x:auto;font:var(--source);
+  color:var(--muted);margin:0}
 #bare .note code{font:var(--codeinline);color:var(--ink)}
 #bare .note .known{font:var(--codeinline)}
 #bare .slot{cursor:pointer;border-bottom:1px dashed var(--line)}
@@ -679,6 +688,10 @@ cm.getWrapperElement().addEventListener("mousedown", (e) => {
     window.addEventListener("blur", () => wrap.classList.remove("holding"));
 }
 let files = [], active = "", personalFile = null, personalEmpty = false, viewingShelf = null;
+// how each file asks to be first met, said in its own head line. A letter
+// opened in Full reads as code, and a rule about how much prose a file holds
+// would be a guess wearing a threshold — so the author says it, in their file.
+let opensAs = {};
 // ── WHAT IS BEING READ, AND ON WHOSE AUTHORITY. A file of theirs opened here is
 // a reading, and a reading is not a trial: judgement has no jurisdiction outside
 // the gate, which is the same law `drift` lives by. Opening the corpus without
@@ -1684,6 +1697,7 @@ async function sayValue(name, now, cell) {
             const fl = await (await fetch("/files")).json();
             files = fl.files || []; overridden = fl.overridden || {};
             formsFiles = new Set(fl.forms || []);
+            opensAs = fl.opens || {};
         } catch { }
         buildRail();
         await loadFile(said.file);
@@ -2357,16 +2371,40 @@ function freeComments(text, notes, parsed) {
     // it through turned a paragraph into a column of fragments. A blank line —
     // or anything that is not a comment — ends the run, because that is where
     // the writer themselves stopped.
+    // AND TWO MARKS THE WRITER ALREADY MAKES. A section rule — `── one ──` —
+    // is a heading everywhere in this repository's own source, and lines the
+    // writer INDENTED inside a comment are set, not flowed: a command with its
+    // continuation, a list of verbs in columns. Run through the paragraph rule
+    // both were destroyed — the heading became a sentence with dashes in it and
+    // the command lost the line break that made it a command. Nothing new is
+    // invented here; the page reads the marks that are on the page.
     let run = null;
     lines.forEach((raw, i) => {
         const t = raw.trim();
         if (t.startsWith("//") && !taken.has(i)) {
-            const said = t.replace(/^\/+/, "").trim();
+            const body = raw.replace(/^\s*\/+/, "");
+            const said = body.trim();
             // a bare `//` is where the writer stopped: it ends the paragraph
             // without ending the comment, and it is the only mark of that
             if (!said) { run = null; return; }
-            if (run) run.text += " " + said;
-            else { run = { line: i + 1, text: said }; out.push(run); }
+            // A FILE'S OWN HEADER IS NOT SOMETHING IT SAYS TO YOU. `role:` and
+            // `opens:` are how a file tells this tool what it is and how it
+            // asks to be met; read out as prose they became the letter's first
+            // sentence — machine words in the reader's face, at the top.
+            if (/^(role|opens):/i.test(said)) { run = null; return; }
+            const head = said.match(/^──+\s*(.+?)\s*──+$/);
+            if (head) {
+                run = null;
+                out.push({ line: i + 1, text: head[1], kind: "head" });
+                return;
+            }
+            if (/^\s{4,}/.test(body)) {
+                if (run && run.kind === "set") run.text += "\n" + body.replace(/^\s{1,4}/, "");
+                else { run = { line: i + 1, text: body.replace(/^\s{1,4}/, ""), kind: "set" }; out.push(run); }
+                return;
+            }
+            if (run && run.kind === "prose") run.text += " " + said;
+            else { run = { line: i + 1, text: said, kind: "prose" }; out.push(run); }
         } else if (run && !t.startsWith("//")) {
             run = null;
         }
@@ -2523,7 +2561,12 @@ function bareForm(parsed, text) {
                      block: [declSpan(name, a.line, false) + " = " + said] });
     }
     for (const c of freeComments(src, notes, parsed))
-        items.push({ line: c.line, note: '<span class="note free">' + noteProse(c.text) + "</span>", block: [] });
+        items.push({ line: c.line, block: [],
+            note: c.kind === "head"
+                ? '<span class="head">' + esc(c.text) + "</span>"
+                : c.kind === "set"
+                ? '<span class="set">' + esc(c.text) + "</span>"
+                : '<span class="note free">' + noteProse(c.text) + "</span>" });
     items.sort((a, b) => a.line - b.line);
     // each item is a block of its own, so the gap between them is a declared
     // length rather than whatever line-height the font happens to carry
@@ -2711,7 +2754,14 @@ function inspect() {
 cm.on("cursorActivity", scheduleInspect);
 async function tick(write) {
     await render();                         // judges the buffer first
-    const holds = lastRefusals.length === 0;
+    // ── AND WHAT STOPS THE WRITE IS THIS FILE, NOT THE WHOLE WORLD. A refusal
+    // in a file you are not editing cannot be caused by what you typed and
+    // cannot be fixed by it either, and blocking on one froze the bench whole:
+    // the first scene ships with exactly one refusal on purpose, so every edit
+    // anywhere in it answered `refused: nothing written` and the offer under
+    // every value looked broken. Your file is judged before it is written; the
+    // rest of the world is judged, and shown, and not held against you.
+    const holds = !lastRefusals.some(r => !r.file || r.file === active);
     if (write && holds) {
         await fetch("/world?f=" + encodeURIComponent(active), { method: "PUT", body: editor.value });
         refreshGit();
@@ -2875,6 +2925,7 @@ async function loadVocabulary() {
     files = fl.files || []; personalFile = fl.personal || null; personalEmpty = !!fl.personal_empty;
     layoutFile = fl.layout || null;
     formsFiles = new Set(fl.forms || []);
+    opensAs = fl.opens || {};
     overridden = fl.overridden || {};
     judgeClaimAt = fl.judge_claim || null;
     try { language = await (await fetch("/language")).json(); } catch { }
@@ -2884,7 +2935,13 @@ async function loadVocabulary() {
     // the line says what is true HERE: with a world, the judge is at work;
     // without one, only the history is being read
     document.getElementById("brandline").textContent = files.length
-        ? "Every claim in these files is judged as you type. A lie cannot be saved."
+        // ── AND IT MAY NOT PROMISE WHAT IT DOES NOT DO. A file that does not
+        // hold saves here perfectly well — the write lands, the verdict goes
+        // red, and that is the point: the working copy is yours and this tool
+        // keeps no state of its own. What cannot happen is a lie being
+        // COMMITTED, and only where somebody wired the hook. The sentence over
+        // it is exactly true and needs no second half.
+        ? "Every claim in these files is judged as you type."
         : "Reading this repository's history. Nothing here is judged yet.";
     document.getElementById("rail").style.display = "flex";
     document.getElementById("split-rail").style.display = "block";
@@ -2892,7 +2949,14 @@ async function loadVocabulary() {
 buildRail();
     await buildJournal();
     if (!files.length) return showEmpty();   // no world here yet
-    await loadFile(files[0] || "gate.swift");
+    const first = files[0] || "gate.swift";
+    if (opensAs[first]) setMode(opensAs[first]);
+    await loadFile(first);
+    // CodeMirror measures itself when it is built, and it is built while the
+    // rail is still hidden and the panes have no width yet. Everything is in
+    // the DOM and the first paint can come out empty until something forces a
+    // re-measure. One frame later the page has a layout to measure against.
+    requestAnimationFrame(() => { if (mode === "full") cm.refresh(); });
 })();
 
 // ── no world yet: the journal on the left is already live, and these are the
