@@ -1721,11 +1721,24 @@ def presented_over(shelf_name):
         # ran, said its piece, and this used to throw it away on the way out —
         # the shape of every quiet green there has ever been
         return shipped, {}, clash
-    kept = [ln for ln in shipped.split("\n")
-            if not (re.match(r"public typealias (\w+) = ", ln.strip())
-                    and re.match(r"public typealias (\w+) = ", ln.strip()).group(1) in mine)]
-    return ("\n".join(v[2] for v in mine.values()) + "\n" + "\n".join(kept),
-            {k: v[0] for k, v in mine.items()}, clash)
+    # IN PLACE, which is what "your line stands where theirs stood" has to mean
+    # if it is to be worth anything. Hoisting the replacements to the top left
+    # every comment attached to the declaration under it — a sentence about a
+    # number, now standing over a different number — and moved every line in the
+    # file, so a table row and the line it jumps to were describing different
+    # things. A name the shelf never said is an addition, and goes at the end.
+    out, placed = [], set()
+    for ln in shipped.split("\n"):
+        m = re.match(r"public typealias (\w+) = ", ln.strip())
+        if m and m.group(1) in mine:
+            out.append(mine[m.group(1)][2])
+            placed.add(m.group(1))
+        else:
+            out.append(ln)
+    for name, v in mine.items():
+        if name not in placed:
+            out.append(v[2])
+    return ("\n".join(out), {k: v[0] for k, v in mine.items()}, clash)
 
 
 def presented_world(shelf_name):
@@ -1979,17 +1992,30 @@ def stdlib_guards():
     return bad
 
 
-def disk_sources():
-    # ONE NAMESPACE IS ONE STREAM. The duplicate guard asks whether two files
-    # declare one name, and that question only means anything inside a stream
-    # judged together. A forms file is its own stream — each spells its own
-    # ladder from Unit, the way the corpus tells every world to — so metrics and
-    # palette both saying `W2` is two worlds each counting for itself, not one
-    # world saying a thing twice.
+def one_stream(named):
+    # ONE NAMESPACE IS ONE STREAM, AND THIS IS THE ONE PLACE THAT SAYS WHICH.
+    # The duplicate guard asks whether two files declare one name, and that
+    # question only means anything inside a stream judged together. A forms file
+    # is its own stream — each spells its own ladder from Unit, the way the
+    # corpus tells every world to — so metrics and palette both saying `W2` is
+    # two worlds each counting for itself, not one world saying a thing twice.
+    # The layout is not a fragment of the world either; its court is the guards.
+    #
+    # This rule lived here and the bench built its own list beside it, without
+    # it. The result was this repository's own bench showing twenty-one
+    # refusals, in red, at the front door, while `gate status` on the same files
+    # at the same moment said `holds` — every one of them two worlds counting.
+    # Nobody saw it because we always opened a sandbox, never gate itself.
     forms = {r["path"] for r in ((MANIFEST.get("rows") if MANIFEST else None) or [])
              if r["role"] == "forms"}
-    return [(n, open(p).read()) for n, p in bench_files()
-            if os.path.exists(p) and n not in forms]
+    layout = MANIFEST["manifest"] if MANIFEST else None
+    return [(n, p) for n, p in named
+            if n not in forms and os.path.abspath(p) != os.path.abspath(layout or "")]
+
+
+def disk_sources():
+    return [(n, open(p).read()) for n, p in one_stream(bench_files())
+            if os.path.exists(p)]
 
 
 def duplicate_guards():
@@ -4087,7 +4113,14 @@ def cmd_serve(a):
                         return
                     if mod not in STDLIB:
                         return self.no_world()
-                    body = STDLIB[mod].encode()
+                    # THE WORLD AS IT STANDS, not the text as it shipped. What
+                    # governs here is the effective world — your declarations put
+                    # where the shelf's stood — and that is what the judge reads
+                    # and what the page paints with. Printing the shipped text
+                    # instead would have shown a value that nothing in this
+                    # repository obeys, and a table built from it would disagree
+                    # with the very row a reader clicked to check.
+                    body = presented_world(mod).encode()
                     self.send_response(200)
                     self.send_header("Content-Type", "text/plain; charset=utf-8")
                     self.send_header("Cache-Control", "no-store")
@@ -4108,14 +4141,29 @@ def cmd_serve(a):
                     # override that is judged but invisible is still a surprise:
                     # in a month "why is my colour different" is answered by
                     # feel. The rail says which file overrules, and how much.
-                    overrides = {}
+                    # ── AND WHAT A NAME WAS BEFORE SOMEBODY SAID OTHERWISE. Keyed
+                    # by NAME, because that is where the fact belongs: the answer
+                    # to "why is this colour different here" is owed at the value,
+                    # in the table of the world that declares it, not as a badge
+                    # on a file in a side panel. A panel that carries facts about
+                    # worlds is a panel that has stopped being a door to them.
+                    overridden = {}
                     for shelf in sorted(STDLIB):
                         for name, path in (presented_over(shelf)[1] or {}).items():
-                            overrides.setdefault(path, set()).add(name)
+                            # the world a name overrides is the one that SAYS it.
+                            # Walking every shelf and writing the row each time
+                            # left the last shelf's name on it and no former
+                            # value at all — a fact about a world, attributed to
+                            # whichever world happened to be read last.
+                            was = re.search(r"^public typealias " + name + r" = (.+)$",
+                                            STDLIB[shelf], re.M)
+                            if was:
+                                overridden[name] = {"file": path, "world": shelf,
+                                                    "was": was.group(1).rstrip()}
                     body = json.dumps({"files": names,
                                        "layout": lay if lay in names else None,
                                        "forms": forms_rows,
-                                       "overrides": {k: sorted(v) for k, v in overrides.items()},
+                                       "overridden": overridden,
                                        "personal": names[-1] if pf else None,
                                        "personal_empty": bool(pf) and not os.path.exists(pf)}).encode()
                     self.send_response(200)
@@ -4261,8 +4309,8 @@ def cmd_serve(a):
                 by_file.setdefault(fname, []).append(ref)
             byname = dict(bench_files())
             sources = [(n, text if p == active else (open(p).read() if os.path.exists(p) else ""))
-                       for n, p in bench_files()
-                       if (p == active or os.path.exists(p)) and p != layout]
+                       for n, p in one_stream(bench_files())
+                       if p == active or os.path.exists(p)]
             if len(sources) > 1:
                 refusals = attribute_refusals(refusals, sources)
             else:
@@ -4501,7 +4549,7 @@ def dispatch(cmd, rest):
         # said `holds`, which is the one command a person runs about the file
         # that carries the second one. A court that answers about a world may
         # not answer with less than the court beside it.
-        sources = [(n, open(q).read()) for n, q in named]
+        sources = [(n, open(q).read()) for n, q in one_stream(named)]
         refusals += duplicate_guards_over(sources)
         refusals += entry_guards_over(sources)
         return {"command": "my", "personal": p, "repo_key": repo_key(),

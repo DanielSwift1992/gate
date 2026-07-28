@@ -78,9 +78,9 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
    resolves to nothing, on the file that carries the refusal */
 .file.bad{color:var(--bad)}.file.bad .dot{background:var(--bad)}
 .file.bad .name{text-decoration:underline wavy var(--bad);text-underline-offset:var(--near)}
-/* and what this file overrules — a count, in the quiet register, never a colour
-   of its own: two questions live in a name's hue and this is neither */
-.overrules{margin-left:auto;color:var(--seam);flex:none}
+/* what a name overrules is answered at the name, in the table of the world that
+   declares it — a panel carrying facts about worlds has stopped being a door */
+.cell-value.observed{color:var(--muted)}
 .folder{padding:var(--near) calc(var(--u)*7) 0}
 /* a file in a folder hangs one edge past the heading it sits under —
    `Indent` is what that step is called, and it means exactly this */
@@ -252,7 +252,11 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
    down a narrow column. Nothing new is measured here: the rows are commits'
    rows, so the ladder is the one already judged. */
 #seam-host,#shelf-host{padding-bottom:calc(var(--u)*3)}
-.seam-pair{padding:calc(var(--u)*2) calc(var(--u)*7) 0}
+.seam-pair{padding:calc(var(--u)*2) calc(var(--u)*7) 0;display:flex;align-items:baseline;gap:var(--near)}
+/* does it hold, said in the quiet register: green is not a decoration here, it
+   is the same green the verdict wears, and parting wears the same red */
+.seam-state{margin-left:auto;flex:none;color:var(--ok)}
+.seam-state.parted{color:var(--bad)}
 .badge.back{color:var(--law)}
 .seam-where{color:var(--seam)}
 /* the pins hang under the pair they belong to, in the pair's own column */
@@ -468,12 +472,65 @@ let layoutFile = null;
 // record may be. Their names belong to the vocabulary the bench offers,
 // and their court is `where`, never the plain stream.
 let formsFiles = new Set();
-// ── WHAT THIS FILE OVERRULES. An override is judged now — the shipped laws test
-// the number you put in its place — but it was still silent, and a silent
-// replacement is green silence about values: in a month "why is my colour
-// different" gets answered by feel. The rail says which file overrules and how
-// many names, so a reader learns it from the list rather than from a search.
-let overrides = {};
+// ── WHAT A NAME WAS BEFORE SOMEBODY SAID OTHERWISE, keyed by name. An override
+// is judged — the shipped laws test whatever number stands in place — but it was
+// silent, and silence about values is answered by feel a month later. The answer
+// is owed AT the value: the table of the world that declares it carries a `was`
+// column. It rode on the file list for one commit, which was a panel telling a
+// world's story for it.
+let overridden = {}, worldAliases = new Map();
+
+// ── READING A NUMBER IS WALKING ITS SPELLING, and there is one walk. These
+// worlds count from Unit in the forms the corpus declares — `Plus`, `Twice`,
+// `Times` — so a value is not a string to be shown, it is a term to be read,
+// and reading it is the same act wherever it is shown. Bare and the table
+// asked different things before: one printed the spelling, the other printed
+// the spelling too, and the answer a person came for — the number — was in
+// neither. A table of `Plus<W8, Plus<W16, …>>` is a table of spellings.
+function countTerm(term, depth) {
+    const t = String(term || "").trim();
+    if (!t || (depth || 0) > 40) return null;
+    if (t === "Unit") return 1;
+    if (t === "Never") return 0;
+    const open = t.indexOf("<");
+    if (open < 0) {
+        const a = (lastParsed && lastParsed.topAliases.get(t)) || worldAliases.get(t);
+        return a ? countTerm(a.target, (depth || 0) + 1) : null;
+    }
+    const head = t.slice(0, open);
+    const names = (language && language.names) || {};
+    if (!(head in names)) return null;
+    const vs = termArgs(t).map(x => countTerm(x, (depth || 0) + 1));
+    if (vs.some(v => v === null)) return null;
+    if (head === "Twice") return 2 * vs[0];
+    if (head === "Plus") return vs.reduce((a, b) => a + b, 0);
+    if (head === "Times") return vs.reduce((a, b) => a * b, 1);
+    return null;
+}
+// the arguments of a term, split where the angles are balanced
+function termArgs(t) {
+    const inner = t.slice(t.indexOf("<") + 1, t.lastIndexOf(">"));
+    const out = []; let d = 0, last = 0;
+    for (let i = 0; i < inner.length; i++) {
+        const c = inner[i];
+        if (c === "<") d++;
+        else if (c === ">") d--;
+        else if (c === "," && d === 0) { out.push(inner.slice(last, i)); last = i + 1; }
+    }
+    out.push(inner.slice(last));
+    return out.map(x => x.trim()).filter(Boolean);
+}
+// WHAT A TERM SHOWS: its number if it counts, and otherwise its own head with
+// every argument shown the same way — so a law reads `Legible<931, 10, 40>`
+// rather than four lines of ladder, and the same rule serves both surfaces.
+function shownTerm(term, depth) {
+    const n = countTerm(term, depth || 0);
+    if (n !== null) return String(n);
+    const t = String(term || "").trim();
+    if (t.indexOf("<") < 0 || (depth || 0) > 12) return t;
+    return t.slice(0, t.indexOf("<")) + "<"
+        + termArgs(t).map(x => shownTerm(x, (depth || 0) + 1)).join(", ") + ">";
+}
 // ── THE FLOOR EVERY NUMBER STANDS ON. `Twice<Unit>` is written in worlds all
 // over this bench and the names went nowhere: not in the vocabulary, not
 // jumpable, a dead end exactly at the layer everything else rests on. They are
@@ -667,12 +724,8 @@ function buildRail() {
             + (f === active ? " on" : "") + (badFiles.has(f) ? " bad" : "");
         // your personal world stands apart: it is in your own git, and the
         // shared repository does not have it
-        const over = (overrides[f] || []).length;
         row.innerHTML = '<span class="dot"></span><span class="name">'
             + (cut < 0 ? f : f.slice(cut + 1)) + "</span>"
-            + (over ? '<span class="overrules caption" title="This file overrules ' + over
-                + ' name' + (over === 1 ? "" : "s") + " this tool ships: " + esc((overrides[f] || []).join(", "))
-                + ". The laws that shipped go on judging what you put there.\u0022>\u27f2 " + over + "</span>" : "")
             + (f === personalFile
             // every file under this heading is mine, so the badge must say the
             // thing that is different about this one: it is not in the repository
@@ -1273,7 +1326,17 @@ function repaintNames(parsed, refusals) {
 
 async function render() {
     const text = editor.value;
-    const local = judge(active || "gate.swift", text);
+    // ── WHICH COURT READS THIS FILE IS WHAT THE ROW SAYS, and the page had one
+    // reading for everything. The plain court reads a world of facts and refuses
+    // a typealias standing outside every declaration — correctly, and the CLI
+    // does the same. The `where` court reads certificates, so top-level names
+    // are its whole subject. Reading a forms file with the plain court gave a
+    // parse with no names in it at all: the palette's hundred and eighty-three
+    // records came back as zero, and every one of them as a refusal nobody saw
+    // because a shelf file is read rather than judged.
+    const byWhere = viewingShelf !== null || formsFiles.has(active);
+    const local = judge(active || "gate.swift", text,
+                        byWhere ? { seeds: new Set(), generics: new Set() } : undefined);
     lastParsed = local.parsed;
     if (viewingShelf) {
         repaintNames(local.parsed, []);          // names highlight; nothing refuses
@@ -1613,7 +1676,80 @@ function buildTables() {
     const badLines = new Set(lastRefusals.map(r => r.line));
     const groups = tableGroups();
     const ledgers = ledgerGroups();
-    if (!groups.length && !ledgers.length) { host.innerHTML = '<h3>no relations to project</h3>'; return; }
+    const values = [...(lastParsed ? lastParsed.topAliases : new Map())];
+    if (!groups.length && !ledgers.length && !values.length) {
+        host.innerHTML = '<h3>no relations to project</h3>'; return;
+    }
+    // ── THE VALUES OF THIS WORLD, WHICH ARE RECORDS LIKE ANY OTHER. A world of
+    // numbers — a palette, a ladder, a set of registers — says them as names at
+    // file scope, and the table had no row for that shape, so opening the
+    // palette said "no relations to project" about a hundred and eighty-three
+    // facts. And the answer to "why is this different here" is owed AT the
+    // value: where somebody's own declaration stands in place of the one that
+    // shipped, the row says what it was and whose shelf it came from. That is a
+    // column on a form that already exists, not a badge somewhere else.
+    if (values.length) {
+        const rowset = values, label = "values";
+        const h = document.createElement("h3");
+        h.textContent = label + " · " + rowset.length;
+        host.append(h);
+        const table = document.createElement("table");
+        const sig = label + ":" + active + viewingShelf;
+        const mark = (k) => tableSort && tableSort.sig === sig && tableSort.key === k
+            ? ' <span class="dir">' + (tableSort.dir > 0 ? "↓" : "↑") + "</span>" : "";
+        const shown = rowset.filter(([n]) => overridden[n]).length;
+        const cols = shown ? ["name", "is", "was"] : ["name", "is"];
+        const head = document.createElement("tr");
+        for (const key of cols) {
+            const th = document.createElement("th");
+            // `was` is not an axis anybody declared — it is this bench reporting
+            // what it read. The observed register says so without a word.
+            th.className = key === "was" ? "caption observed" : "caption";
+            th.innerHTML = key + mark(key);
+            th.onclick = () => {
+                const dir = tableSort && tableSort.sig === sig && tableSort.key === key ? -tableSort.dir : 1;
+                tableSort = { sig, key, dir }; buildTables();
+            };
+            head.append(th);
+        }
+        table.append(head);
+        let rows = rowset;
+        if (tableSort && tableSort.sig === sig) {
+            const val = ([n, a]) => tableSort.key === "name" ? n
+                : tableSort.key === "was" ? ((overridden[n] || {}).was || "") : a.target;
+            rows = [...rows].sort((x, y) => tableSort.dir * val(x).localeCompare(val(y), undefined, { numeric: true }));
+        }
+        for (const [name, a] of rows) {
+            const tr = document.createElement("tr");
+            const nm = document.createElement("td");
+            nm.className = "fact cell-name"; nm.textContent = name;
+            nm.title = "go to line " + a.line; nm.onclick = () => jumpTo(name);
+            tr.append(nm);
+            const iz = document.createElement("td");
+            // A TABLE OF VALUES SHOWS VALUES. These worlds spell a number on
+            // their own ladder from Unit, and a column of `Plus<W8, Plus<W16,
+            // …>>` is a column of spellings — it pushed the answer to "what was
+            // it" clean off the right edge with the spelling of the answer. What
+            // is not a number is a law, and a law's spelling IS its content.
+            const shownIs = shownTerm(a.target);
+            iz.className = "fact cell-value"; iz.textContent = shownIs;
+            if (shownIs !== a.target) iz.title = a.target;
+            if (badLines.has(a.line)) iz.classList.add("cell-bad");
+            tr.append(iz);
+            if (shown) {
+                const wz = document.createElement("td");
+                wz.className = "cell-value observed";
+                const o = overridden[name];
+                wz.textContent = o ? shownTerm(o.was) : "";
+                if (o) wz.title = "This world ships `" + name + "` as " + o.was + ". Your own "
+                    + "declaration in " + o.file + " stands in its place, and the laws that "
+                    + "shipped with " + o.world + " go on judging what you put there.";
+                tr.append(wz);
+            }
+            table.append(tr);
+        }
+        host.append(table);
+    }
     // the ledgers first: who → what, one row per entry
     for (const L of ledgers) {
         const h = document.createElement("h3");
@@ -1726,7 +1862,9 @@ function buildTables() {
             for (const key of group.keys) {
                 const td = document.createElement("td");
                 td.className = "fact cell-value";
-                td.textContent = d.aliases.get(key)?.target ?? "";
+                const raw = d.aliases.get(key)?.target ?? "";
+                td.textContent = shownTerm(raw);
+                if (td.textContent !== raw) td.title = raw;
                 if (badLines.has(d.line)) td.classList.add("cell-bad");
                 // the same closed question the bare view asks, in a cell: the kind
                 // comes from the group's own signature, so a column offers exactly
@@ -2133,8 +2271,19 @@ function bareForm(parsed, text) {
             block.push('    <span class="add caption" data-add-claim="' + name + '">+ add claim</span>');
         items.push({ line: d.line, note: noteOf(name), block });
     }
-    for (const [name, a] of (parsed.topAliases || new Map()))
-        items.push({ line: a.line, note: noteOf(name), block: [declSpan(name, a.line, false) + " = " + nameTokens(a.target)] });
+    // ── AND A VALUE READS AS ITS VALUE HERE TOO. The same walk the table uses:
+    // this surface had been printing the spelling — `Twice<W65536>` — which is
+    // how the number is built and not what it is. Both surfaces show a world;
+    // showing it two different ways was the page having two opinions about one
+    // record. The spelling stays a hover away, because it is still the thing on
+    // the line underneath.
+    for (const [name, a] of (parsed.topAliases || new Map())) {
+        const shown = shownTerm(a.target);
+        const said = shown === a.target ? nameTokens(a.target)
+            : '<span title="' + esc(a.target) + '">' + nameTokens(shown) + "</span>";
+        items.push({ line: a.line, note: noteOf(name),
+                     block: [declSpan(name, a.line, false) + " = " + said] });
+    }
     for (const c of freeComments(src, notes, parsed))
         items.push({ line: c.line, note: '<span class="note free">' + noteProse(c.text) + "</span>", block: [] });
     items.sort((a, b) => a.line - b.line);
@@ -2259,7 +2408,23 @@ async function buildSeams() {
         // no rank, no side is above the other — a seam has two ends and mine is
         // one of them.
         const held = s.stated ? " · " + s.claimed + " of " + s.stated + " held" : "";
+        // DOES IT HOLD — answered before a single row is read. The rows below say
+        // everything, which is the problem: a seam that has come apart at three
+        // fields looked exactly like a seam waiting on a word, and the reader had
+        // to count. Parting is the one state that is not a conversation — it is
+        // the two sides disagreeing about a field neither has set aside.
         head.textContent = (s.against ? s.against.replace(/^\S+ · /, "") : s.carrier) + held;
+        const gone = (s.parted || []).length;
+        const state = document.createElement("span");
+        state.className = "seam-state" + (gone ? " parted" : "");
+        state.textContent = gone ? "parted at " + gone : "holds";
+        state.title = gone
+            ? "The two sides disagree about " + gone + " field" + (gone === 1 ? "" : "s")
+              + ", and nobody has said the divergence is meant. Each one is a row below, and "
+              + "each row opens where it is written."
+            : "Nothing here is in disagreement. Rows below are words waiting on somebody, "
+              + "which is a conversation, not a break.";
+        head.appendChild(state);
         head.title = s.carrier + " says what it carries of " + (s.against || s.contract_file)
             + ". Read from " + [s.contract_file, s.carrier_file, s.read_known,
                                 s.read_tracker].filter(Boolean).join(", ") + ".";
@@ -2541,7 +2706,15 @@ async function loadVocabulary() {
         // vocabulary instead of refusing them the way the plain world judge
         // must. The world judge stays plain — its parity is with the CLI.
         const READ = { seeds: new Set(), generics: new Set() };
-        for (const d of judge(mod + ".swift", text, READ).parsed.declarations.values()) {
+        const read = judge(mod + ".swift", text, READ);
+        // AND THE VALUES THOSE WORLDS HOLD, on the same pass that reads their
+        // words. A number is spelled on its own world's ladder from Unit, so a
+        // file that says `Plus<W8, W16>` is only readable beside the world that
+        // says what W8 is — and my file is judged against worlds it does not
+        // repeat. One walk, one map, no second request.
+        for (const [n, a] of read.parsed.topAliases)
+            if (!worldAliases.has(n)) worldAliases.set(n, a);
+        for (const d of read.parsed.declarations.values()) {
             if (!(d.name in vocabulary)) vocabulary[d.name] = mod;
             if (d.axes) {                                   // a protocol: the axes it owes, and of what kind
                 for (const [axis, kind] of Object.entries(d.axisKinds || {})) {
@@ -2571,7 +2744,7 @@ async function loadVocabulary() {
     files = fl.files || []; personalFile = fl.personal || null; personalEmpty = !!fl.personal_empty;
     layoutFile = fl.layout || null;
     formsFiles = new Set(fl.forms || []);
-    overrides = fl.overrides || {};
+    overridden = fl.overridden || {};
     try { language = await (await fetch("/language")).json(); } catch { }
     wireJudgeRow();
     await loadVocabulary();

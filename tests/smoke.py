@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # The regression battery: every verb, end to end, in a throwaway repo.
 # Run: python3 tests/smoke.py
-import ast, json, os, re, shutil, subprocess, sys, tempfile
+import ast, json, os, re, shutil, subprocess, sys, tempfile, time
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GATE = os.path.join(HERE, "gate")
@@ -2492,6 +2492,96 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "public typealias FactfirmIsFactSized" in registers_src
               and "font:var(--factfirm)" in ui))
 
+    # ── THE BENCH AND THE COMMAND LINE ANSWER ABOUT THIS REPOSITORY THE SAME WAY.
+    # They did not. `gate status` here said `holds` while the bench's own front
+    # door showed twenty-one refusals, in red, about gate itself — every one of
+    # them the duplicate guard fed two worlds at once, each legitimately spelling
+    # its own ladder from Unit. The rule that a forms file is its own stream was
+    # written down and obeyed by the CLI; the bench built its own list of files
+    # beside it and never asked. It went unseen for as long as it did because we
+    # always opened a sandbox to look, never this repository.
+    import socket as _sock
+    _s = _sock.socket(); _s.bind(("127.0.0.1", 0)); _bench_port = _s.getsockname()[1]; _s.close()
+    _bench = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_bench_port)],
+                              cwd=HERE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        agreed = None
+        for _ in range(60):
+            try:
+                _u.urlopen(f"http://127.0.0.1:{_bench_port}/files", timeout=1).read()
+                break
+            except Exception:
+                time.sleep(0.1)
+        man = os.path.join(HERE, "gate.manifest.swift")
+        req = _u.Request(f"http://127.0.0.1:{_bench_port}/verdict?f=gate.manifest.swift",
+                         data=open(man, "rb").read(), method="POST")
+        seen = json.loads(_u.urlopen(req, timeout=10).read().decode())
+        said = run("status", cwd=HERE)[1]
+        agreed = (seen.get("verdict") == said.get("verdict"),
+                  seen.get("verdict"), len(seen.get("refusals", [])), said.get("verdict"))
+    finally:
+        _bench.terminate()
+    S.append(("the bench and the command line say the same thing about this repository",
+              agreed and agreed[0] and agreed[1] == "holds"))
+    if agreed and not agreed[0]:
+        print("   bench says", agreed[1], "with", agreed[2], "refusals; the CLI says", agreed[3])
+
+    # ── ONE READING OF A NUMBER, AND THE PAGE'S IS IT. These worlds spell their
+    # numbers on their own ladder from Unit, so a value is a term to be read and
+    # not a string to be shown — the table and the bare view were both printing
+    # `Plus<W8, Plus<W16, …>>`, which is how a number is built and not what it
+    # is. The page reads it now, with the same walk on both surfaces. That is a
+    # second counter beside the tool's, so it is held to the tool's answer here:
+    # every name in every world this tool ships, counted both ways.
+    harness = os.path.join(tmp, "count-parity.js")
+    open(harness, "w").write("""
+const fs = require("fs");
+const ui = fs.readFileSync(process.argv[2], "utf8");
+const { judge } = require(process.argv[3]);
+const text = fs.readFileSync(process.argv[4], "utf8");
+const grab = (name) => {
+    const at = ui.indexOf("function " + name + "(");
+    if (at < 0) throw new Error("no " + name);
+    let d = 0;
+    for (let j = ui.indexOf("{", at); j < ui.length; j++) {
+        if (ui[j] === "{") d++;
+        else if (ui[j] === "}" && --d === 0) return ui.slice(at, j + 1);
+    }
+};
+const parsed = judge("w.swift", text, { seeds: new Set(), generics: new Set() }).parsed;
+const worldAliases = parsed.topAliases, lastParsed = parsed;
+const language = { names: { Unit: 1, Plus: 1, Times: 1, Twice: 1, Paired: 1 } };
+eval(grab("countTerm") + "\\n" + grab("termArgs") + "\\n" + grab("shownTerm"));
+const out = {};
+for (const [n, a] of parsed.topAliases) {
+    const v = countTerm(a.target, 0);
+    if (v !== null) out[n] = v;
+}
+console.log(JSON.stringify(out));
+""")
+    counted_both, disagree = 0, []
+    for w in sorted(os.listdir(os.path.join(HERE, "stdlib"))):
+        if not w.endswith(".swift"):
+            continue
+        wp = os.path.join(HERE, "stdlib", w)
+        tool = json.loads(subprocess.run(
+            [sys.executable, "-c",
+             "import types,json;src=open(%r,encoding='utf-8').read();g=types.ModuleType('g');"
+             "g.__file__=%r;exec(compile(src,'gate','exec'),g.__dict__);"
+             "print(json.dumps(g._peano(open(%r,encoding='utf-8').read())))"
+             % (GATE, GATE, wp)], capture_output=True, text=True).stdout)
+        page = json.loads(subprocess.run(
+            ["node", harness, os.path.join(HERE, "ui.html"),
+             os.path.join(HERE, "judge.js"), wp], capture_output=True, text=True).stdout or "{}")
+        for k in set(tool) | set(page):
+            counted_both += 1
+            if tool.get(k) != page.get(k):
+                disagree.append((w, k, tool.get(k), page.get(k)))
+    S.append(("the page counts a number exactly as this tool does, in every world it ships",
+              counted_both > 150 and not disagree))
+    if disagree:
+        print("   counters disagree:", disagree[:4])
+
     # ── AND HOW HARD A REGISTER IS SET IS THE WORLD'S TO SAY. It was three world
     # names written inside this tool — a vocabulary living in a mechanism, which
     # is the one thing no layer here may do: present a register of your own and
@@ -2516,12 +2606,15 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
          " for n,p in (g.presented_over(s)[1] or {}).items(): o.setdefault(p,[]).append(n)\n"
          "print(json.dumps({k:sorted(v) for k,v in o.items()}))"
          % (GATE, GATE)], cwd=ovr, capture_output=True, text=True).stdout
-    S.append(("a file that overrules what shipped can be named, with what it overrules",
+    S.append(("what a name was before somebody said otherwise is answerable at the name",
               "my-colours.swift" in over_seen and "KnownNameDimZ" in over_seen
               # and the rail asks for exactly that, and paints it in the quiet
               # register — two questions live in a name's hue and this is neither
-              and '"overrides": {k: sorted(v) for k, v in overrides.items()}' in shelf_src
-              and "let overrides = {};" in ui and ".overrules{margin-left:auto" in ui
+              and '"overridden": overridden,' in shelf_src
+              # keyed by NAME, and carrying what the name was — because the fact
+              # is owed at the value, in the table of the world that declares it,
+              # not as a badge on a file in a side panel
+              and '"was": was.group(1).rstrip()}' in shelf_src
               # and where it hurts is seen without opening the file
               and ".file.bad .name{text-decoration:underline wavy var(--bad)" in ui))
 

@@ -200,6 +200,23 @@ function parse(file, text, declarations, order, refusals, extras) {
         let line = lines[index].trim();
         if (line === "") continue;
         if (line.startsWith("//")) continue;
+        // A TRAILING NOTE IS NOT PART OF A TYPE. `typealias Tight = Unit  // one
+        // mark` was read as the type `Unit  // one mark`, so the alias matched
+        // nothing anywhere: not the ladder it belongs to, not a comparison, not
+        // a reading of its value. It went unnoticed because the names that wear
+        // a note in these worlds happen to be the short ones. Quotes are
+        // respected — a name may hold a `//` inside a string and mean it.
+        {
+            let quoted = false;
+            for (let j = 0; j < line.length - 1; j += 1) {
+                if (line[j] === '"') quoted = !quoted;
+                else if (!quoted && line[j] === "/" && line[j + 1] === "/") {
+                    line = line.slice(0, j).trim();
+                    break;
+                }
+            }
+        }
+        if (line === "") continue;
         if (line.startsWith("import ")) continue;
         if (line.startsWith("@StructureBuilder")) continue;
 
