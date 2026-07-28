@@ -2502,6 +2502,74 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "public typealias FactfirmIsFactSized" in registers_src
               and "font:var(--factfirm)" in ui))
 
+    # ── AND A VALUE CAN BE ANSWERED WHERE IT IS SHOWN. The bench could show what
+    # a world holds and never let anybody say otherwise: a table you may read
+    # and not write in. Saying a different value meant leaving the page, working
+    # out which file of yours the where court reads, and spelling the number on
+    # the world's ladder by hand. The answer goes in a file of MINE — never in
+    # the world that shipped the name, which is not this world's to edit — and
+    # the laws that shipped with it judge it at once. Probed the whole way.
+    import socket as _sock
+    sv = tempfile.mkdtemp()
+    open(os.path.join(sv, "gate.swift"), "w").write("public enum Sales: Department {}\n")
+    open(os.path.join(sv, "my-values.swift"), "w").write("// role: forms\n")
+    no_forms = None
+    _s2 = _sock.socket(); _s2.bind(("127.0.0.1", 0)); _vp = _s2.getsockname()[1]; _s2.close()
+    _vb = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_vp)], cwd=sv,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        for _ in range(60):
+            try:
+                _u.urlopen(f"http://127.0.0.1:{_vp}/files", timeout=1).read(); break
+            except Exception:
+                time.sleep(0.1)
+        # nowhere of mine for an answer to live: it says so instead of guessing
+        try:
+            _u.urlopen(_u.Request(f"http://127.0.0.1:{_vp}/value?name=InkLitX&to=40",
+                                  method="PUT"), timeout=5).read()
+        except Exception as e:
+            no_forms = json.loads(e.read().decode()) if hasattr(e, "read") else {}
+    finally:
+        _vb.terminate()
+    run("mine", "my-values.swift", "--role", "forms", cwd=sv)
+    _s3 = _sock.socket(); _s3.bind(("127.0.0.1", 0)); _vp2 = _s3.getsockname()[1]; _s3.close()
+    _vb2 = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_vp2)], cwd=sv,
+                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    said_value = {}
+    try:
+        for _ in range(60):
+            try:
+                _u.urlopen(f"http://127.0.0.1:{_vp2}/files", timeout=1).read(); break
+            except Exception:
+                time.sleep(0.1)
+        said_value = json.loads(_u.urlopen(
+            _u.Request(f"http://127.0.0.1:{_vp2}/value?name=InkLitX&to=691",
+                       method="PUT"), timeout=5).read().decode())
+    finally:
+        _vb2.terminate()
+    wrote = open(os.path.join(sv, "my-values.swift")).read()
+    read_back = json.loads(subprocess.run(
+        [sys.executable, "-c",
+         "import types,json;src=open(%r,encoding='utf-8').read();g=types.ModuleType('g');"
+         "g.__file__=%r;exec(compile(src,'gate','exec'),g.__dict__);"
+         "print(json.dumps(g._peano(open(%r,encoding='utf-8').read())))"
+         % (GATE, GATE, os.path.join(sv, "my-values.swift"))],
+        capture_output=True, text=True).stdout or "{}")
+    S.append(("saying a value writes it in a file of mine, spelled on the world's own ladder",
+              # with nowhere of mine to put it, it says so and names the command
+              no_forms and no_forms.get("asks")
+              and "gate mine my-values.swift --role forms" in no_forms.get("note", "")
+              # and with somewhere, the declaration lands there and nowhere else
+              and said_value.get("file") == "my-values.swift"
+              and "public typealias InkLitX = Plus<Unit, Plus<W2," in wrote
+              # spelled the way every line already in those worlds is spelled,
+              # so this tool reads back exactly the number that was said
+              and read_back.get("InkLitX") == 691
+              # and the page asks for it from the cell the value stands in
+              and "iz.onclick = () => sayValue(name, asNumber, iz);" in ui
+              and "async function sayValue(" in ui
+              and 'fetch("/value?name="' in ui))
+
     # ── THE PANEL IS A DOOR, AND A DOOR DOES NOT NARRATE. The rail carried a
     # JOURNAL: every commit, who wrote it, whether it was merged, with a diff
     # under each — under a heading that admitted, in its own words, that the
@@ -2571,7 +2639,6 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # written down and obeyed by the CLI; the bench built its own list of files
     # beside it and never asked. It went unseen for as long as it did because we
     # always opened a sandbox to look, never this repository.
-    import socket as _sock
     _s = _sock.socket(); _s.bind(("127.0.0.1", 0)); _bench_port = _s.getsockname()[1]; _s.close()
     _bench = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_bench_port)],
                               cwd=HERE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

@@ -1632,6 +1632,41 @@ def cmd_survey(a):
 
 MATERIALIZED_MARK = "// gate stdlib"
 
+def spell_number(n):
+    # ── SAYING A NUMBER, which is reading one run backwards. These worlds spell
+    # a value on their own ladder from Unit, so writing 760 means writing the
+    # rungs it is made of — the same shape every line already in them has:
+    # ascending, right-nested, `Unit` where the ladder has no name for one.
+    # Without this the bench could show a value and never let anybody say one,
+    # which is a table you may read and not answer.
+    if n <= 0:
+        return "Never"
+    parts, bit = [], 1
+    while bit <= n:
+        if n & bit:
+            parts.append("Unit" if bit == 1 else "W%d" % bit)
+        bit <<= 1
+    out = parts[-1]
+    for piece in reversed(parts[:-1]):
+        out = "Plus<%s, %s>" % (piece, out)
+    return out
+
+
+def my_forms_file():
+    # WHERE A VALUE OF MINE GOES. A row of mine, read by the where court, that is
+    # not one of the files this tool ships — writing into those would be editing
+    # somebody else's world, which is the one thing the whole mine/theirs split
+    # exists to prevent. One such file is an answer; none and several are not,
+    # and both say so rather than picking.
+    rows = (MANIFEST.get("rows") if MANIFEST else None) or []
+    base = os.path.dirname(MANIFEST["manifest"]) if MANIFEST else "."
+    shipped = {n + ".swift" for n in STDLIB}
+    mine = [r["path"] for r in rows
+            if r["role"] == "forms" and r.get("source") == "mine"
+            and os.path.basename(r["path"]) not in shipped]
+    return [os.path.join(base, m) for m in mine]
+
+
 def _peano(text):
     # every number in these worlds is spelled on the file's own ladder from Unit,
     # so reading one is walking that spelling — never a table kept beside it
@@ -4025,6 +4060,8 @@ def cmd_serve(a):
     #                                unsaved text in place of its own
     #   PUT  /world?f=name           write one file (the bench writes only
     #                                when the judge holds)
+    #   PUT  /value?name=N&to=K      say a value: the declaration goes in a file
+    #                                of mine, never in the world that ships it
     # Loopback only, no caching, and no route reaches outside the repository.
     from http.server import BaseHTTPRequestHandler, HTTPServer
     from urllib.parse import urlparse, parse_qs
@@ -4275,6 +4312,54 @@ def cmd_serve(a):
             # (plumbing stays open, judgement stays inevitable)
             u = urlparse(self.path)
             q = {k: v[0] for k, v in parse_qs(u.query).items()}
+            if u.path == "/value":
+                # ── SAYING A VALUE IS WRITING A DECLARATION IN A FILE OF MINE.
+                # The bench could show what a world holds and never let anybody
+                # answer: a table you may read and not write in. Answering does
+                # not edit the world that shipped the name — nothing here may —
+                # it puts your own declaration in your own file, which is what
+                # an override has always been. It is born from the edit instead
+                # of being typed somewhere else and discovered later.
+                name, to = q.get("name", ""), q.get("to", "")
+                mine = my_forms_file()
+                if not re.fullmatch(r"\w+", name) or not re.fullmatch(r"-?\d+", to):
+                    return self.refuse_value("a value is a name and a number")
+                if not mine:
+                    return self.refuse_value(
+                        "no file of yours is read by the where court yet, so there is nowhere "
+                        "for your answer to live. Make one and say so: "
+                        "gate mine my-values.swift --role forms")
+                if len(mine) > 1:
+                    return self.refuse_value(
+                        "you present more than one file to that court — "
+                        + ", ".join(os.path.basename(m) for m in mine)
+                        + " — and this cannot choose between them")
+                path = mine[0]
+                said = "public typealias %s = %s" % (name, spell_number(int(to)))
+                body = open(path, encoding="utf-8").read() if os.path.exists(path) else ""
+                lines = body.split("\n")
+                at = next((i for i, ln in enumerate(lines)
+                           if re.match(r"public typealias " + name + r" = ", ln.strip())), None)
+                if at is None:
+                    if lines and lines[-1] == "":
+                        lines[-1] = said
+                        lines.append("")
+                    else:
+                        lines.append(said)
+                else:
+                    lines[at] = said
+                with open(path, "w", encoding="utf-8") as f:
+                    f.write("\n".join(lines))
+                out = json.dumps({"wrote": said,
+                                  "file": os.path.relpath(path, os.path.dirname(
+                                      MANIFEST["manifest"]) if MANIFEST else "."),
+                                  "line": (at if at is not None else len(lines) - 1) + 1}).encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                self.wfile.write(out)
+                return
             if u.path != "/world":
                 self.send_response(404); self.end_headers(); return
             n = int(self.headers.get("Content-Length", 0))
@@ -4286,6 +4371,14 @@ def cmd_serve(a):
                 with open(p, "wb") as f:
                     f.write(text.encode())
             self.send_response(200); self.end_headers()
+
+        def refuse_value(self, why):
+            out = json.dumps({"asks": True, "note": why}).encode()
+            self.send_response(409)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(out)
 
         def do_POST(self):
             # /verdict?f=rel — judge the WHOLE declared list with the active

@@ -227,6 +227,10 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 .cell-value.parted{color:var(--bad)}
 .cell-value.whole{color:var(--ok)}
 .seam-line td{padding-left:var(--wide)}
+/* the cell becomes the field: same face, same size, no box drawn around an
+   answer that is standing exactly where the value was */
+.cell-input{font:var(--fact);color:var(--ink);background:transparent;border:0;
+  outline:0;width:6ch;padding:0;margin:0}
 .seam-where{color:var(--seam)}
 .stale{color:var(--law)}
 /* ── PROSE IS READ AS PROSE. A comment is somebody talking, and Bare had been
@@ -1557,6 +1561,38 @@ async function openSeamSide(file, name) {
     }
 }
 
+// the answer itself: a closed question with one kind of answer, asked where the
+// value stands. No dialog, no second place to look — the cell becomes the field.
+async function sayValue(name, now, cell) {
+    const box = document.createElement("input");
+    box.type = "text"; box.value = String(now); box.className = "fact cell-input";
+    cell.textContent = ""; cell.appendChild(box); box.focus(); box.select();
+    const done = async (commit) => {
+        const want = box.value.trim();
+        box.remove(); cell.textContent = String(now);
+        if (!commit || want === String(now) || !/^\d+$/.test(want)) return;
+        const r = await fetch("/value?name=" + encodeURIComponent(name) + "&to=" + want,
+                              { method: "PUT" });
+        const said = await r.json().catch(() => ({}));
+        if (!r.ok) { say(said.note || "that value could not be written"); return; }
+        // and it is judged from here, like everything else typed on this page:
+        // the file it was written in opens at the line, with the verdict under it
+        try {
+            const fl = await (await fetch("/files")).json();
+            files = fl.files || []; overridden = fl.overridden || {};
+            formsFiles = new Set(fl.forms || []);
+        } catch { }
+        buildRail();
+        await loadFile(said.file);
+        reveal(said.line);
+    };
+    box.onkeydown = (e) => {
+        if (e.key === "Enter") { e.preventDefault(); done(true); }
+        if (e.key === "Escape") { e.preventDefault(); done(false); }
+    };
+    box.onblur = () => done(false);
+}
+
 function buildTables() {
     const host = document.getElementById("table-host");
     host.innerHTML = "";
@@ -1621,6 +1657,22 @@ function buildTables() {
             const shownIs = shownTerm(a.target);
             iz.className = "fact cell-value"; iz.textContent = shownIs;
             if (shownIs !== a.target) iz.title = a.target;
+            // ── AND A VALUE CAN BE ANSWERED. A table you may read and not write
+            // in is half a table: the value was shown, and saying a different
+            // one meant leaving the bench, finding which file of yours the where
+            // court reads, and spelling the number on the world's ladder by
+            // hand. Answering here writes the declaration in that file — never
+            // in the world that shipped the name, which is not this world's to
+            // edit — and the laws that shipped with it judge the answer before
+            // the keystroke is cold.
+            const asNumber = countTerm(a.target, 0);
+            if (asNumber !== null) {
+                iz.classList.add("slot");
+                iz.title = "say a different value — it goes in a file of yours, and the laws "
+                    + "that shipped with " + (overridden[name] ? overridden[name].world : "this world")
+                    + " judge it at once. Spelled " + a.target;
+                iz.onclick = () => sayValue(name, asNumber, iz);
+            }
             if (badLines.has(a.line)) iz.classList.add("cell-bad");
             tr.append(iz);
             if (shown) {
