@@ -868,16 +868,24 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # muted and struck, a state is its own word. What stays coloured is what
     # earns it — a commit's author is clickable, so it wears the hand's blue,
     # and a record's own name is a name of the world, so it keeps its teal.
-    journal_sels = ("#journal", ".commit", ".badge", ".subj", ".meta", ".cdiff",
-                    ".dfile", ".dline", ".dmore", ".dwait", ".factrow", ".obs", "#gitstate")
+    # The journal has left the panel entirely, and the law outlived it: whatever
+    # is READ speaks in the ladder. A seam is the case that proved the law still
+    # bites — moving its state out of the panel and onto its claim, I painted
+    # `parted` red and `holds` green, which says a court has spoken. None has:
+    # the court over a pair is `gate seam`, and this is an account of what the
+    # two sides have said to each other. Caught by auditing against the theory
+    # rather than against the list of things changed.
+    read_sels = (".obs", "#gitstate", ".seam-line", ".seam-where", ".observed",
+                 "#judge-row", ".cell-value")
     forged = [m.group(1).strip()[:40]
               for m in re.finditer(r"([^{}]+)\{([^{}]*)\}", style)
-              if any(k in m.group(1) for k in journal_sels)
+              if any(k in m.group(1) for k in read_sels)
               and re.search(r"var\(--(ok|bad)\)", m.group(2))]
-    S.append(("what is read speaks in the ladder: the journal never wears the verdict's own colours",
+    S.append(("what is read speaks in the ladder, and never wears the verdict's own colours",
               not forged
-              and ".factrow .was{color:var(--muted)" in style
-              and ".factrow .own{color:var(--localtype)}" in style))
+              and ".cell-value.parted" not in style and ".cell-value.whole" not in style
+              # and a state is still its own word, which is what carries it
+              and 'gone ? "parted at " + gone' in ui))
 
     # ── colour answers one question and weight another, because a reader has two.
     # WHERE a name is from is a hue: teal for what this world DECLARES, violet for
@@ -2272,7 +2280,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # That file holds laws rather than a list: the size ladder only goes up, so
     # `caption` cannot quietly become the size of `speech`, and every leading is
     # at least as tall as the letters it sets, because a line that overlaps the
-    # next is not a line. Twenty-four equalities, probed by breaking one.
+    # next is not a line. Twenty-two equalities, probed by breaking one.
     reg = open(os.path.join(HERE, "stdlib", "bench-registers.swift"), encoding="utf-8").read()
     served = subprocess.run(
         [sys.executable, "-c",
@@ -2293,7 +2301,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               # and that world holds a ladder and a floor, not just a list
               and "public enum Taller<Hi, Lo, Slack>: Close {}" in reg
               and "public enum AtLeast<Have, Floor, Slack>: Close {}" in reg
-              and "24 equalities" in subprocess.run(
+              and "22 equalities" in subprocess.run(
                   [os.path.join(HERE, "bin", "gate-judge"), "judge", "where",
                    os.path.join(HERE, "stdlib", "bench-registers.swift")],
                   capture_output=True, text=True).stdout))
@@ -2501,7 +2509,6 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and not typed
               # the two voices it speaks in are declared, and judged
               and "public enum Rubric: Register" in registers_src
-              and "public enum Rubricnote: Register" in registers_src
               and "RubricIsCaptionSized" in registers_src
               # including the one a click makes: the same fact, said firm — a
               # list that changes size when you click it moves under the hand
@@ -2708,6 +2715,34 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               # and where it CAN be honoured it simply is, with nothing added
               and run("log", "world", cwd=wj)[1].get("narrowed") is True))
 
+    # ── AND THE ONE ROW THIS DOCUMENT EXISTS TO KEEP HONEST IS KEPT HONEST. The
+    # manifest says which revision of the corpus the judge was taken at; the
+    # binary says which revision it was built FROM, written beside it by
+    # `build-judge.sh`. Two statements of one fact, and nothing compared them —
+    # so rebuilding the judge and forgetting the row left the panel showing one
+    # revision and the table another, both calmly, forever. Found by auditing
+    # what is shown twice, which is where a disagreement can hide.
+    #
+    # Not the judge judging itself: arithmetic over two strings other people
+    # wrote down. Self-application is not self-certification, and a row that
+    # accounts for the court is worth nothing if nobody holds it to the court.
+    jm = os.path.join(HERE, "gate.manifest.swift")
+    kept = open(jm, encoding="utf-8").read()
+    try:
+        open(jm, "w", encoding="utf-8").write(
+            kept.replace("verification-is-identification@0fd0b38",
+                         "verification-is-identification@deadbee"))
+        lied = run("status", cwd=HERE)[1]
+    finally:
+        open(jm, "w", encoding="utf-8").write(kept)
+    S.append(("a row that names the court may not disagree with the court",
+              run("status", cwd=HERE)[1].get("verdict") == "holds"
+              and lied.get("verdict") == "refused"
+              and any("may not disagree with the court" in r.get("claim", "")
+                      for r in lied.get("refusals", []))
+              and any(r.get("address") == "gate.manifest.swift"
+                      for r in lied.get("refusals", []))))
+
     # ── THE BENCH AND THE COMMAND LINE ANSWER ABOUT THIS REPOSITORY THE SAME WAY.
     # They did not. `gate status` here said `holds` while the bench's own front
     # door showed twenty-one refusals, in red, about gate itself — every one of
@@ -2804,7 +2839,7 @@ console.log(JSON.stringify(out));
     S.append(("a register says how hard it is set, and the tool only reads it",
               "public protocol Stress {}" in registers_src
               and "public typealias Set = Firm" in registers_src
-              and 'weight = {"Firm": "600 ", "Half": "500 "}.get(stresses.get(name), "")' in shelf_src
+              and 'weight = "600 " if stresses.get(name) == "Firm" else ""' in shelf_src
               and '"Brand", "Headline", "Headsmall"' not in shelf_src))
 
     # ── AND AN OVERRIDE IS VISIBLE FROM THE LIST. It is judged now — the shipped

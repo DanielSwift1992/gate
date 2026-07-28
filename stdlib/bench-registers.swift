@@ -45,7 +45,6 @@ public enum Sans: Face {}
 // treatment from anywhere.
 public protocol Stress {}
 public enum Plain: Stress {}
-public enum Half: Stress {}
 public enum Firm: Stress {}
 
 public protocol Register {
@@ -178,23 +177,18 @@ public enum Source: Register {
     public typealias Set = Plain
 }
 
-// ── AND THE TWO VOICES THE LEFT PANEL SPEAKS IN, which it had been speaking
-// without either of them being declared anywhere: a section label set firm at
-// caption size, and the line under it set half. Weight 500 in particular was a
-// number in a stylesheet and nothing else — no register named it, so nothing
-// could hold it, and the panel was about to be built out on top of it.
+// ── AND THE VOICE THE LEFT PANEL SPEAKS IN, which it had been speaking without
+// being declared anywhere: a section label, set firm at caption size. There was
+// a second — the line under it, set half — declared the same day for the
+// journal's blurb and the judge's caption; the journal left the panel and the
+// last speaker went with it. A register nobody speaks in is a word kept in a
+// vocabulary for its own sake, and three certificates over it look like weight
+// being carried.
 public typealias RubricSize = Plus<W2, Plus<W4, Plus<W8, Plus<W32, W64>>>>
 public typealias RubricLead = Plus<W4, Plus<W8, W128>>
 public enum Rubric: Register {
     public typealias On = Sans
     public typealias Set = Firm
-}
-
-public typealias RubricnoteSize = Plus<W2, Plus<W4, Plus<W8, Plus<W32, W64>>>>
-public typealias RubricnoteLead = Plus<W4, Plus<W8, W128>>
-public enum Rubricnote: Register {
-    public typealias On = Sans
-    public typealias Set = Half
 }
 
 public typealias SpeechSize = Plus<W2, W128>
@@ -227,12 +221,10 @@ public typealias ProseLeadClearsItsLetters = AtLeast<ProseLead, Plus<W4, Plus<W3
 public typealias ProselooseLeadClearsItsLetters = AtLeast<ProselooseLead, Plus<W4, Plus<W32, W64>>, Plus<W4, Plus<W8, Plus<W16, W32>>>>
 public typealias SourceLeadClearsItsLetters = AtLeast<SourceLead, Plus<W4, Plus<W32, W64>>, Plus<W4, Plus<W16, W32>>>
 public typealias RubricLeadClearsItsLetters = AtLeast<RubricLead, Plus<W4, Plus<W32, W64>>, Plus<W8, W32>>
-public typealias RubricnoteLeadClearsItsLetters = AtLeast<RubricnoteLead, Plus<W4, Plus<W32, W64>>, Plus<W8, W32>>
 // a label and its note are the page's quiet size, said once: let either drift up
 // and the panel starts shouting in a corner nobody chose to make loud
 public typealias FactfirmIsFactSized = AtLeast<FactfirmSize, FactSize, Never>
 public typealias FactfirmLeadsLikeFact = AtLeast<FactfirmLead, FactLead, Never>
 public typealias FactfirmLeadClearsItsLetters = AtLeast<FactfirmLead, Plus<W4, Plus<W32, W64>>, Plus<Unit, Plus<W4, Plus<W8, W32>>>>
 public typealias RubricIsCaptionSized = AtLeast<RubricSize, CaptionSize, Never>
-public typealias RubricnoteIsCaptionSized = AtLeast<RubricnoteSize, CaptionSize, Never>
 public typealias SpeechLeadClearsItsLetters = AtLeast<SpeechLead, Plus<W4, Plus<W32, W64>>, Plus<Unit, Plus<W4, Plus<W8, W32>>>>

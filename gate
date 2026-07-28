@@ -1883,7 +1883,7 @@ def register_tokens():
         lead = vals.get(name + "Lead")
         stack = ("ui-monospace,Menlo,monospace" if face == "Mono"
                  else "-apple-system,sans-serif")
-        weight = {"Firm": "600 ", "Half": "500 "}.get(stresses.get(name), "")
+        weight = "600 " if stresses.get(name) == "Firm" else ""
         px = ("%g" % (size / 10))
         rows.append(f"  --{name.lower()}: {weight}{px}px"
                     + (f"/{'%g' % (lead / 100)}" if lead else "") + f" {stack};")
@@ -2186,6 +2186,37 @@ def entry_guards_over(sources):
             else:
                 saw_arg = True
     return bad
+
+
+def taken_judge_guard():
+    # ── THE ONE ROW THIS WHOLE DOCUMENT EXISTS TO KEEP HONEST. The manifest says
+    # which revision of the corpus the judge was taken at; the binary says which
+    # revision it was BUILT from, written down beside it by `build-judge.sh`.
+    # Two statements of one fact, from two places, and nothing compared them —
+    # so rebuilding the judge and forgetting the row would have left the panel
+    # showing one revision and the table another, both calmly, forever.
+    #
+    # This is not the judge judging itself: it is arithmetic over two strings
+    # somebody else wrote down, which is exactly the kind of check that may
+    # stand here. Self-application is not self-certification, and a row that
+    # accounts for the court is worth nothing if nobody holds it to the court.
+    rows = (MANIFEST.get("rows") if MANIFEST else None) or []
+    claimed = next((r.get("from") for r in rows if r["role"] == "judge"), None)
+    if not claimed:
+        return []
+    built = judge_from()
+    if not built:
+        return [{"address": os.path.basename(MANIFEST["manifest"]),
+                 "claim": f"this world says it took the judge at `{claimed}`, and the judge "
+                          "beside it records no revision at all — `bin/build-judge.sh` writes "
+                          "one down, and until it does the row answers for nothing"}]
+    said = claimed.split("@")[-1]
+    if not (built.startswith(said) or said.startswith(built)):
+        return [{"address": os.path.basename(MANIFEST["manifest"]),
+                 "claim": f"this world says it took the judge at `{said}`, and the judge beside "
+                          f"it was built from `{built[:12]}` — one of the two is out of date, "
+                          "and a row that names the court may not disagree with the court"}]
+    return []
 
 
 def vendored_guards():
@@ -4454,7 +4485,8 @@ def cmd_serve(a):
             # the layout is held to the same promise as every other file here:
             # judged as you type, from the editor's text and not the saved copy
             live = read_manifest_rows(base, text)[1] if active == layout else None
-            refusals += manifest_guards(live) + forms_guards() + policy_guards() + stdlib_guards() + vendored_guards()
+            refusals += (manifest_guards(live) + forms_guards() + policy_guards()
+                         + stdlib_guards() + vendored_guards() + taken_judge_guard())
             times = re.findall(r"([\d.]+) ms", raw)
             # AND THE WIDTH OF IT. The judge counts what it checked and says so;
             # dropping that on the way to the bench left a green over several
@@ -4628,7 +4660,7 @@ def dispatch(cmd, rest):
         refusals += forms_guards()
         refusals += policy_guards()
         refusals += stdlib_guards()
-        refusals += vendored_guards()
+        refusals += vendored_guards() + taken_judge_guard()
         refusals += duplicate_guards()
         refusals += entry_guards()
         times = re.findall(r"([\d.]+) ms", raw)

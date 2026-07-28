@@ -93,7 +93,6 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 .split{flex:0 0 5px;cursor:col-resize;background:transparent;transition:background .1s}
 .split:hover,.split.dragging{background:color-mix(in srgb,var(--action) 45%,transparent)}
 .line-flash{background:color-mix(in srgb,var(--action) 22%,transparent)}
-#journal-head .obs{display:block;font:var(--rubricnote);letter-spacing:.03em;text-transform:none;opacity:.75;margin-top:var(--u)}
 #next{margin-left:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52%}
 /* ── THE LAST MILE. The step was a sentence to read, and a sentence gets
    retyped — with somebody's own path, slightly wrong. The command stands ready
@@ -143,15 +142,6 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 #brand{padding:calc(var(--u)*7) calc(var(--u)*7) calc(var(--u)*3)}
 #brand b{display:block;font:var(--brand);letter-spacing:-.01em}
 #brand span{display:block;margin-top:calc(var(--u)*2)}
-.factrow{display:flex;align-items:baseline;gap:calc(var(--u)*2);flex-wrap:wrap;padding:var(--u) calc(var(--u)*7)}
-.factrow .sep{color:var(--muted)}
-.factrow .own{color:var(--localtype)}
-.factrow .was{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1px}
-.factrow .arrow{color:var(--muted)}
-.factrow .now{color:var(--ink)}
-.dline .sg{display:inline-block;width:1.1em;opacity:.6}
-.dline.add{color:var(--ink)}
-.dline.del{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1px}
 #main{flex:1;display:flex;flex-direction:column;min-width:0;border-left:0.5px solid var(--line)}
 #bar{display:flex;gap:calc(var(--u)*5);align-items:center;padding:calc(var(--u)*3) calc(var(--u)*6);border-bottom:0.5px solid var(--line);flex:none}
 #bar b{font-weight:600}
@@ -224,8 +214,6 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 #shelf-host{padding-bottom:calc(var(--u)*3)}
 /* a seam's state at its claim: the same two poles the verdict uses, and the
    quiet register for everything in between — waiting is a conversation */
-.cell-value.parted{color:var(--bad)}
-.cell-value.whole{color:var(--ok)}
 .seam-line td{padding-left:var(--wide)}
 /* the cell becomes the field: same face, same size, no box drawn around an
    answer that is standing exactly where the value was */
@@ -1831,8 +1819,6 @@ function buildTables() {
                         : gone ? "parted at " + gone
                         : waits ? waits + (waits === 1 ? " word" : " words") + " away"
                         : "holds";
-                    if (gone) sc.classList.add("parted");
-                    else if (!s.alone && !waits) sc.classList.add("whole");
                     sc.title = s.alone
                         ? "This side is declared and the other side's declaration is not here yet."
                         : "Of " + s.stated + " the other side states, " + s.claimed
