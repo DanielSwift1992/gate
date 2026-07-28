@@ -3256,9 +3256,23 @@ def cmd_attention(a):
     # item comes back — louder, because the ground it stood on is gone.
     import json as _json
     if len(a) < 2:
+        # ── AND WITH NO ARGUMENTS IT IS THE MORNING QUESTION. `attention` needed
+        # two files named by hand, so the one thing an owner asks daily — what
+        # waits on my word today — could only be asked one pair at a time, by
+        # somebody who already knew which pairs there were. The list is declared;
+        # this world knows its own seams. Same reading, asked of all of them.
+        here = seams_here()
+        if here:
+            return {"command": "attention", "seams": here,
+                    "waiting_on_you": sum(len(s.get("waits_on_you") or []) for s in here),
+                    "you_wait_on": sum(len(s.get("you_wait_on") or []) for s in here),
+                    "parted": sum(len(s.get("parted") or []) for s in here),
+                    "came_back": sum(len(s.get("expired") or []) for s in here),
+                    "next": "gate attention CONTRACT.swift CARRIER.swift — one pair, in full"}
         return {"command": "attention", "asks": True,
-                "note": "attention CONTRACT.swift CARRIER.swift [--as WHO] [--known K.json] [--tracker T.json]",
-                "next": "gate declare contract … and gate declare carrier … first"}
+                "note": "no seam is declared here, so nobody is waiting on anybody",
+                "next": "gate theirs their-side.swift --role seam --at REV — say which pair you "
+                        "are party to, and this becomes the question you ask each morning"}
     left, right = open(a[0], encoding="utf-8").read(), open(a[1], encoding="utf-8").read()
     stated, claims, carrier = seam_read(left, right)
     me = a[a.index("--as") + 1] if "--as" in a else carrier
@@ -5081,6 +5095,25 @@ def humanize(out):
             lines.append(f"  world:  {w}")
         for l in out.get("legacy_says", []):
             lines.append(f"  legacy: {l}")
+    elif cmd == "attention" and "seams" in out:
+        # the morning cut: counted first, because the count is the answer and
+        # the addresses are what you read once the count is not zero
+        n = out.get("waiting_on_you", 0)
+        lines.append("attention: " + (
+            f"{n} await your word" if n else "nothing awaits your word")
+            + f" · {out.get('you_wait_on', 0)} awaiting theirs"
+            + (f" · parted at {out['parted']}" if out.get("parted") else "")
+            + (f" · {out['came_back']} came back" if out.get("came_back") else ""))
+        for s in out["seams"]:
+            who = s.get("against") or s.get("carrier") or "a pair"
+            for x in (s.get("expired") or []):
+                lines.append(f"  came back · {x['address']} · {x.get('because', '')}")
+            for x in (s.get("parted") or []):
+                lines.append(f"  parted · {x['address']} · {who}")
+            for x in (s.get("waits_on_you") or []):
+                lines.append(f"  your word · {x['address']} · {who}")
+        if out.get("next"):
+            lines.append(f"  next: {out['next']}")
     elif cmd == "demo seam":
         lines.append(f"demo seam: two sides in {out['root']} — the contract states "
                      f"{out['declared']['contract']}, the library claims {out['declared']['carrier']}")

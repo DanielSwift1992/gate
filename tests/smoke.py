@@ -2790,6 +2790,27 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "taken as given" in ui
               and "somebody SUPPLYING the agreement the two sides never derived" in ui))
 
+    # ── THE MORNING QUESTION, ASKED OF THE WHOLE WORLD. `attention` needed two
+    # files named by hand, so the one thing an owner asks daily — what waits on
+    # my word today — could only be asked one pair at a time, by somebody who
+    # already knew which pairs existed. The list is declared; a world knows its
+    # own seams. Same reading, asked of all of them at once.
+    ms = os.path.join(tmp, "morning")
+    run("demo", "seam", ms)
+    for side in ("api.swift", "sdk.swift"):
+        run("theirs", side, "--role", "seam", "--at", "a1b2c3d", cwd=ms)
+    cut = run("attention", cwd=ms)[1]
+    hush = os.path.join(tmp, "noseam")
+    run("demo", hush)
+    quiet = run("attention", cwd=hush)[1]
+    S.append(("with no arguments, attention is the morning question over every declared seam",
+              isinstance(cut.get("seams"), list) and cut["seams"]
+              and cut.get("waiting_on_you", 0) + cut.get("you_wait_on", 0)
+                  + cut.get("parted", 0) > 0
+              # and where no seam is declared it says so, rather than printing a
+              # usage line at somebody who asked a reasonable question
+              and quiet.get("asks") and "nobody is waiting on anybody" in quiet.get("note", "")))
+
     # ── MAKING SOMETHING YOURS IS THE THIRD VERB, and it had no word. `theirs`
     # is what I read, `mine` is what I write, and between them sat the act
     # everybody performs: I saw somebody's and took it as my starting point. The
