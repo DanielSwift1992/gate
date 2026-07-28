@@ -1776,7 +1776,7 @@ def ladder_tokens():
             continue
     # `Line` is left out: the page already spends that name on a border colour,
     # and one word may not mean two things in one document
-    for name in ("Tight", "Snug", "Near", "Step", "Room", "Apart", "Edge", "Wide"):
+    for name in ("Tight", "Snug", "Near", "Step", "Room", "Apart", "Edge", "Wide", "Indent"):
         if name in vals:
             out.append(f"  --{name.lower()}: calc(var(--u) * {vals[name]});")
     return ":root {\n" + "\n".join(out) + "\n}\n"
@@ -2343,9 +2343,28 @@ def declare_side(path, kind, role, frm=None):
     # the seam parts on their side, with an address. Unsubscribing is deleting
     # the file, which is a commit like any other — visible, dated, and nobody's
     # to do quietly.
+    # ── THE MANIFEST BELONGS TO THE WORLD, NOT TO THE FOLDER A FILE SITS IN.
+    # Declaring `people/roster.swift` wrote a second manifest inside `people/`
+    # and recorded the row as `roster.swift`, so the world root never learned of
+    # the file and the path to it was thrown away. A world may be laid out in
+    # folders — that is the whole point of a declared layout — and a row says
+    # where a file is, relative to the world that declares it.
+    # the world a file belongs to is found the way .git is: walking up from the
+    # file itself, never from wherever the command happened to be typed
     d = os.path.dirname(os.path.abspath(path)) or "."
+    walk = d
+    while True:
+        if os.path.exists(os.path.join(walk, "gate.swift")) \
+                or os.path.exists(os.path.join(walk, "gate.manifest.swift")):
+            d = walk
+            break
+        up = os.path.dirname(walk)
+        if up == walk:
+            break
+        walk = up
     mp = os.path.join(d, "gate.manifest.swift")
-    name = sanitize(os.path.splitext(os.path.basename(path))[0]).title().replace("_", "") or "Side"
+    rel = os.path.relpath(os.path.abspath(path), d)
+    name = sanitize(os.path.splitext(rel)[0]).title().replace("_", "").replace("/", "") or "Side"
     ROLE_ATOM = {"world": "WorldFile", "seam": "SeamFile", "forms": "FormsFile",
                  "judge": "JudgeFile", "carried": "CarriedFile"}
     text = open(mp, encoding="utf-8").read() if os.path.exists(mp) else (
@@ -2383,7 +2402,7 @@ def declare_side(path, kind, role, frm=None):
                if frm else '')
             + '}\n'
             + 'extension ' + name + ' { public static var typeName: String { "'
-            + os.path.basename(path) + '" } }\n')
+            + rel + '" } }\n')
     if line not in text:
         # KEPT IN ITS OWN GROUP, because this document is read by a person: what
         # I write and what I only read are the one distinction it exists to draw,

@@ -75,6 +75,10 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 .file.on{background:var(--mist);font-weight:600}
 .file .dot{flex:0 0 6px;width:6px;height:6px;border-radius:50%;background:transparent}
 .file.bad{color:var(--bad)}.file.bad .dot{background:var(--bad)}
+.folder{padding:var(--near) calc(var(--u)*7) 0}
+/* a file in a folder hangs one edge past the heading it sits under —
+   `Indent` is what that step is called, and it means exactly this */
+.file.nested{padding-left:var(--indent)}
 .file .mine{margin-left:auto;background:var(--mist);border-radius:8px;padding:0 calc(var(--u)*3);flex:none}
 .file.on .mine{background:var(--paper)}
 .split{flex:0 0 5px;cursor:col-resize;background:transparent;transition:background .1s}
@@ -571,6 +575,13 @@ cm.getWrapperElement().addEventListener("mousedown", (e) => {
     window.addEventListener("blur", () => wrap.classList.remove("holding"));
 }
 let files = [], active = "", personalFile = null, personalEmpty = false, viewingShelf = null;
+// ── WHAT IS BEING READ, AND ON WHOSE AUTHORITY. A file of theirs opened here is
+// a reading, and a reading is not a trial: judgement has no jurisdiction outside
+// the gate, which is the same law `drift` lives by. Opening the corpus without
+// saying so judged somebody else's foundation as if it were this world — and
+// signed nineteen refusals `gate.swift`, a file that was not even on screen.
+// A view of theirs says whose it is and refuses nothing.
+let refLabel = null;
 let badFiles = new Set(), siblingNames = new Set(), layoutDecls = new Map(), declFile = new Map();
 let lastParsed = null, lastRefusals = [], widgets = [], tableSort = null;
 
@@ -578,12 +589,32 @@ let lastParsed = null, lastRefusals = [], widgets = [], tableSort = null;
 function buildRail() {
     const list = document.getElementById("filelist");
     list.innerHTML = "";
+    // ── A WORLD MAY BE LAID OUT IN FOLDERS, and the rail said otherwise. A
+    // declared layout is allowed to put files in directories — that is most of
+    // what declaring a layout is for — and this list showed a flat column of
+    // full paths, so the shape a person gave their own world was invisible in
+    // the one place that is meant to be an account of it. The folder is a
+    // heading; the file keeps its own name under it.
+    let folder = null;
     for (const f of files) {
+        const cut = f.lastIndexOf("/");
+        const dir = cut < 0 ? "" : f.slice(0, cut);
+        if (dir !== folder) {
+            folder = dir;
+            if (dir) {
+                const head = document.createElement("div");
+                head.className = "folder caption";
+                head.textContent = dir + "/";
+                list.appendChild(head);
+            }
+        }
         const row = document.createElement("div");
-        row.className = "file fact" + (f === active ? " on" : "") + (badFiles.has(f) ? " bad" : "");
+        row.className = "file fact" + (cut < 0 ? "" : " nested")
+            + (f === active ? " on" : "") + (badFiles.has(f) ? " bad" : "");
         // your personal world stands apart: it is in your own git, and the
         // shared repository does not have it
-        row.innerHTML = '<span class="dot"></span>' + f + (f === personalFile
+        row.innerHTML = '<span class="dot"></span>' + (cut < 0 ? f : f.slice(cut + 1))
+            + (f === personalFile
             // every file under this heading is mine, so the badge must say the
             // thing that is different about this one: it is not in the repository
             ? '<span class="mine caption" title="Your personal world. It lives in your own git at ~/.gate/me and is never in the shared repository.">not shared</span>' : "");
@@ -1135,8 +1166,9 @@ async function render() {
         repaintNames(local.parsed, []);          // names highlight; nothing refuses
         clearFlags();
         badFiles = new Set(); buildRail();
-        document.getElementById("status").innerHTML =
-            "<b>" + viewingShelf + ".swift</b> · a printout of what the judge carries — theirs, read-only";
+        document.getElementById("status").innerHTML = refLabel
+            ? refLabel
+            : "<b>" + viewingShelf + ".swift</b> · a printout of what the judge carries — theirs, read-only";
         document.getElementById("chip").outerHTML =
             '<span class="chip" id="chip" style="background:var(--mist);color:var(--muted)">reference</span>';
         document.getElementById("next").textContent = "";
@@ -1392,7 +1424,10 @@ async function openLanguage(name, line) {
     const text = await (await fetch("/language?f=" + encodeURIComponent(language.file))).text()
         .catch(() => null);
     if (text === null) return sayLanguage(name, line);
-    active = ""; viewingShelf = null;
+    // read as theirs: nothing here is this world's to be judged for
+    active = ""; viewingShelf = language.file;
+    refLabel = "<b>" + esc(language.file.split("/").pop()) + "</b> · the language, declared in the "
+        + "corpus" + (language.short ? " at " + esc(language.short) : "") + " — theirs, read-only";
     document.getElementById("fname").textContent = language.file.split("/").pop();
     document.getElementById("fname").style.display = "";
     setMode("full");
@@ -1421,7 +1456,7 @@ function sayLanguage(name, line) {
 // the shelf, read-only: where the names your world speaks are declared
 async function openShelf(mod, name) {
     const text = await (await fetch("/shelf?m=" + encodeURIComponent(mod))).text();
-    active = ""; viewingShelf = mod;             // reference, not one of your files
+    active = ""; viewingShelf = mod; refLabel = null;   // reference, not one of your files
     document.getElementById("fname").textContent = mod + ".swift";
     document.getElementById("fname").style.display = "";
     setMode("full");
@@ -1444,6 +1479,8 @@ async function openShelf(mod, name) {
 async function openSeamSide(file, name) {
     const text = await (await fetch("/seamside?f=" + encodeURIComponent(file))).text();
     active = ""; viewingShelf = file;
+    refLabel = "<b>" + esc(file) + "</b> · one side of a seam, as its own side wrote it "
+        + "— theirs, read-only";
     document.getElementById("fname").textContent = file;
     document.getElementById("fname").style.display = "";
     setMode("full");
@@ -2290,7 +2327,7 @@ async function siblings() {
     }
 }
 async function loadFile(name) {
-    cm.setOption("readOnly", false); viewingShelf = null;
+    cm.setOption("readOnly", false); viewingShelf = null; refLabel = null;
     active = name;
     document.getElementById("fname").textContent = name;
     buildRail();

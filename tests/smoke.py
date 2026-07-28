@@ -2296,6 +2296,42 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               # and reading a checkout may not climb out of it
               and 'want.startswith(os.path.realpath(root) + os.sep)' in shelf_src))
 
+    # ── A WORLD MAY BE LAID OUT IN FOLDERS, and it could not be. Declaring
+    # `people/roster.swift` wrote a SECOND manifest inside `people/` and recorded
+    # the row as `roster.swift` — so the world root never learned of the file and
+    # the path to it was thrown away. A declared layout exists to let a person
+    # shape their own world, and the shape was the one thing it could not carry.
+    # Found by looking for it, after the rail was called a fiction.
+    #
+    # The world a file belongs to is found the way .git is: by walking up from
+    # the file, never from wherever the command happened to be typed.
+    fold = tempfile.mkdtemp()
+    os.makedirs(os.path.join(fold, "people"), exist_ok=True)
+    os.makedirs(os.path.join(fold, "access"), exist_ok=True)
+    open(os.path.join(fold, "gate.swift"), "w").write("public enum Sales: Department {}\n")
+    open(os.path.join(fold, "people", "roster.swift"), "w").write("public enum Ann: Department {}\n")
+    open(os.path.join(fold, "access", "shares.swift"), "w").write("public enum Docs: Department {}\n")
+    run("mine", "people/roster.swift", cwd=fold)
+    # and typed from inside the folder, which must land in the same manifest
+    run("mine", "shares.swift", cwd=os.path.join(fold, "access"))
+    fold_rows = run("mine", cwd=fold)[1].get("held") or []
+    fold_status = run("status", cwd=fold)[1]
+    S.append(("a world laid out in folders is one world, and the rail shows its shape",
+              # one manifest, in the world root, and no second one beside a file
+              os.path.exists(os.path.join(fold, "gate.manifest.swift"))
+              and not os.path.exists(os.path.join(fold, "people", "gate.manifest.swift"))
+              and not os.path.exists(os.path.join(fold, "access", "gate.manifest.swift"))
+              # rows carry the path, not just the name at the end of it
+              and sorted(h["file"] for h in fold_rows) == ["access/shares.swift",
+                                                           "people/roster.swift"]
+              # and all of it is judged together
+              and fold_status.get("verdict") == "holds"
+              and fold_status.get("world", {}).get("declarations") == 3
+              # the rail groups by folder and hangs the file one Indent under it
+              and 'head.className = "folder caption"' in ui
+              and ".file.nested{padding-left:var(--indent)}" in ui
+              and '"Wide", "Indent"' in shelf_src))
+
     # ── AN EXHIBIT, NOT A WISH. What follows records what a claim written in the
     # head of the file that depends on it does TODAY, line by line, because the
     # answer is the case for the one change everything left is waiting on: the

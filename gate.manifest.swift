@@ -104,3 +104,39 @@ public enum TheEditorSheet: Theirs {
     public typealias At = Rev_codemirror_5_65_16
 }
 extension TheEditorSheet { public static var typeName: String { "codemirror.css" } }
+public enum VarFolders28Krfcw4517H194R1Z99Mhh8Q80000GnTGateSmokeXwngzrqaVendoredFormsOrganization: Mine {
+    public typealias Kind = FormsFile
+}
+extension VarFolders28Krfcw4517H194R1Z99Mhh8Q80000GnTGateSmokeXwngzrqaVendoredFormsOrganization { public static var typeName: String { "../../../../var/folders/28/krfcw4517h194r1z99mhh8q80000gn/T/gate-smoke-xwngzrqa/vendored/forms-organization.swift" } }
+public enum VarFolders28Krfcw4517H194R1Z99Mhh8Q80000GnTGateSmokeXwngzrqaDemoworldFormsOrganization: Mine {
+    public typealias Kind = FormsFile
+}
+extension VarFolders28Krfcw4517H194R1Z99Mhh8Q80000GnTGateSmokeXwngzrqaDemoworldFormsOrganization { public static var typeName: String { "../../../../var/folders/28/krfcw4517h194r1z99mhh8q80000gn/T/gate-smoke-xwngzrqa/demoworld/forms-organization.swift" } }
+public enum VarFolders28Krfcw4517H194R1Z99Mhh8Q80000GnTGateSmokeXwngzrqaDemoFirstFormsOrganization: Mine {
+    public typealias Kind = FormsFile
+}
+extension VarFolders28Krfcw4517H194R1Z99Mhh8Q80000GnTGateSmokeXwngzrqaDemoFirstFormsOrganization { public static var typeName: String { "../../../../var/folders/28/krfcw4517h194r1z99mhh8q80000gn/T/gate-smoke-xwngzrqa/demo-first/forms-organization.swift" } }
+public enum Rev_a1b2c3d {}
+extension Rev_a1b2c3d { public static var typeName: String { "a1b2c3d" } }
+public enum VarFolders28Krfcw4517H194R1Z99Mhh8Q80000GnTGateSmokeXwngzrqaSubscribeSdk: Theirs {
+    public typealias Kind = SeamFile
+    public typealias At = Rev_a1b2c3d
+}
+extension VarFolders28Krfcw4517H194R1Z99Mhh8Q80000GnTGateSmokeXwngzrqaSubscribeSdk { public static var typeName: String { "../../../../var/folders/28/krfcw4517h194r1z99mhh8q80000gn/T/gate-smoke-xwngzrqa/subscribe/sdk.swift" } }
+public enum VarFolders28Krfcw4517H194R1Z99Mhh8Q80000GnTGateSmokeH2MtncniVendoredFormsOrganization: Mine {
+    public typealias Kind = FormsFile
+}
+extension VarFolders28Krfcw4517H194R1Z99Mhh8Q80000GnTGateSmokeH2MtncniVendoredFormsOrganization { public static var typeName: String { "../../../../var/folders/28/krfcw4517h194r1z99mhh8q80000gn/T/gate-smoke-h2mtncni/vendored/forms-organization.swift" } }
+public enum VarFolders28Krfcw4517H194R1Z99Mhh8Q80000GnTGateSmokeH2MtncniDemoworldFormsOrganization: Mine {
+    public typealias Kind = FormsFile
+}
+extension VarFolders28Krfcw4517H194R1Z99Mhh8Q80000GnTGateSmokeH2MtncniDemoworldFormsOrganization { public static var typeName: String { "../../../../var/folders/28/krfcw4517h194r1z99mhh8q80000gn/T/gate-smoke-h2mtncni/demoworld/forms-organization.swift" } }
+public enum VarFolders28Krfcw4517H194R1Z99Mhh8Q80000GnTGateSmokeH2MtncniDemoFirstFormsOrganization: Mine {
+    public typealias Kind = FormsFile
+}
+extension VarFolders28Krfcw4517H194R1Z99Mhh8Q80000GnTGateSmokeH2MtncniDemoFirstFormsOrganization { public static var typeName: String { "../../../../var/folders/28/krfcw4517h194r1z99mhh8q80000gn/T/gate-smoke-h2mtncni/demo-first/forms-organization.swift" } }
+public enum VarFolders28Krfcw4517H194R1Z99Mhh8Q80000GnTGateSmokeH2MtncniSubscribeSdk: Theirs {
+    public typealias Kind = SeamFile
+    public typealias At = Rev_a1b2c3d
+}
+extension VarFolders28Krfcw4517H194R1Z99Mhh8Q80000GnTGateSmokeH2MtncniSubscribeSdk { public static var typeName: String { "../../../../var/folders/28/krfcw4517h194r1z99mhh8q80000gn/T/gate-smoke-h2mtncni/subscribe/sdk.swift" } }
