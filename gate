@@ -1721,6 +1721,20 @@ SEAM_DEMO_SDK = {"carrier": "MessagesJS",
 DEMO_README = """\
 // opens: bare
 //
+// ── what this is ──
+//
+// git keeps every byte of a repository honest: change one and the hash says
+// so. The WORDS of a repository have no such guarantee. A CODEOWNERS says what
+// was true on the day somebody wrote it, and nothing anywhere says the day it
+// stopped being true. The same goes for a schema, a rota, a list of who may
+// deploy. gate makes those words claims, and a claim is read again every time
+// it is touched.
+//
+// This file is one of them. It is declared in `gate.manifest.swift`, judged
+// with everything else in this folder, and counted in the verdict at the
+// bottom of this bench. A readme that describes a tool goes stale; this one is
+// the tool working.
+//
 // ── this is your copy, and it was made to be taken apart ──
 //
 // A repository with three source areas, a docs folder, and a CODEOWNERS like
@@ -1774,10 +1788,16 @@ public typealias Owns_readme = Owns<Owner_you, Path_readme>
 // ── four: this is where the world tells you what you did not know ──
 //
 // One line already does not hold, and it is not in this file. In
-// `ownership.swift`, a rule out of your CODEOWNERS hands a source directory to
-// somebody whose zone is docs. `gate status` names it in milliseconds, without
-// reading CODEOWNERS again. Two ways to end it: change the line in the world,
-// or change CODEOWNERS and import it once more.
+// `ownership.swift`, a rule out of the CODEOWNERS here hands a source
+// directory to somebody whose zone is docs. `gate status` names it in
+// milliseconds, without reading CODEOWNERS again.
+//
+// In your own CODEOWNERS there is very likely a line like it today, and
+// nothing anywhere will name it. This is where you will hear about that line
+// on the day it stops being true, rather than at the incident.
+//
+// Two ways to end this one: change the line in the world, or change CODEOWNERS
+// and import it once more.
 //
 //     gate import codeowners CODEOWNERS --tree . --policy owners.csv \\
 //                            -o ownership.swift

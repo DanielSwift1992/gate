@@ -4839,7 +4839,23 @@ public enum MyWatch: AccessLedger {
               # somewhere, and the letter never said where.
               and "gate import codeowners` read the CODEOWNERS in this folder" in letter
               and "became a ZONE" in letter and "became a ROOM" in letter
-              and "owners.csv" in letter))
+              and "owners.csv" in letter
+              # ── AND THE FIRST SCREEN ANSWERS THE TWO QUESTIONS A STRANGER
+              # ACTUALLY ARRIVES WITH. The letter answered five of the childish
+              # seven and was silent on the first two: what is this, and what do
+              # I get. The word `gate` appeared nowhere in it, so the invitation
+              # was to take apart a copy of something unnamed; and the one line
+              # carrying the value stood fourth, as a fact of the machinery,
+              # unreached by anybody who had not already read the cover.
+              # Whoever arrives by the README has that answer; whoever arrives
+              # at the bench, which is the road we mean people to take, did not.
+              and "git keeps every byte of a repository honest" in letter
+              and "stopped being true" in letter and "nothing anywhere" in letter
+              # the exhibit: this letter is one of the claims it is about
+              and "A readme that describes a tool goes stale; this one is" in letter
+              # and one line from the demo to the reader's own day
+              and "In your own CODEOWNERS there is very likely a line like it today" in letter
+              and "rather than at the incident" in letter))
 
     S.append(("gate's own reference is met as a reference, not as source",
               "// opens: bare" in ref
