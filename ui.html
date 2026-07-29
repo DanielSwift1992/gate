@@ -2605,8 +2605,14 @@ function bareForm(parsed, text) {
         const shown = shownTerm(a.target);
         const said = shown === a.target ? nameTokens(a.target)
             : '<span title="' + esc(a.target) + '">' + nameTokens(shown) + "</span>";
+        // ── AND A CERTIFICATE SHOWS WHEN IT IS THE ONE THAT BROKE. This passed
+        // `false` for hurt, always. A certificate is a top-level alias and the
+        // where court refuses nothing else, so EVERY refusal that court makes
+        // was invisible in this view: ownership, the palette, a seam. The
+        // letter's own lesson lands on one, in the view the letter opens in,
+        // and the reader was told to look at a line that carried no mark.
         items.push({ line: a.line, note: noteOf(name),
-                     block: [declSpan(name, a.line, false) + " = " + said] });
+                     block: [declSpan(name, a.line, badLines.has(a.line)) + " = " + said] });
     }
     for (const c of freeComments(src, notes, parsed))
         items.push({ line: c.line, block: [],

@@ -4837,6 +4837,17 @@ public enum MyWatch: AccessLedger {
               and re.search(r"public typealias \w+ = Taller<", open(
                   os.path.join(HERE, "stdlib", "bench-registers.swift"), encoding="utf-8").read())))
 
+    # ── AND A CERTIFICATE SHOWS WHEN IT IS THE ONE THAT BROKE. Bare passed
+    # `false` for hurt on every top-level alias, always. A certificate IS a
+    # top-level alias and the where court refuses nothing else, so every refusal
+    # that court makes was invisible in this view: ownership, the palette, a
+    # seam. The letter's own lesson lands on one, in the view the letter opens
+    # in, and the reader was told to look at a line carrying no mark.
+    S.append(("a certificate wears the wave in bare when it is the one that broke",
+              "declSpan(name, a.line, badLines.has(a.line))" in ui
+              and "declSpan(name, a.line, false)" not in ui
+              and "#bare .bad{text-decoration:underline wavy var(--bad)" in ui))
+
     S.append(("bare reads the marks the writer already makes: a section is a heading, a block is set",
               'out.push({ line: i + 1, text: head[1], kind: "head" });' in ui
               and 'kind: "set"' in ui
