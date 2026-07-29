@@ -5193,7 +5193,19 @@ def cmd_serve(a):
                 self.send_response(404); self.end_headers(); return
             n = int(self.headers.get("Content-Length", 0))
             text = self.rfile.read(n).decode()
-            p = self.pick(q)
+            # ── A WRITE NAMES ITS FILE OR IT DOES NOT HAPPEN. Reading may fall
+            # back to something sensible; writing may not, and `pick` fell back
+            # for both. In a world laid out entirely by manifest the fallback is
+            # the FIRST file that exists, which is the manifest, so a PUT that
+            # arrived without a name overwrote the document that says what the
+            # world is. That is how a seam world lost its layout to the text of
+            # an unwritten personal page: one request with an empty `?f=`.
+            #
+            # The list of writable names is the bench's own list and nothing
+            # else. A name outside it is refused rather than routed anywhere.
+            p = dict(bench_files()).get(q.get("f", ""))
+            if not p:
+                self.send_response(404); self.end_headers(); return
             if p == personal_path():
                 write_personal(text)     # empty means gone, not an empty file
             else:

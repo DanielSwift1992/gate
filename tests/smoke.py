@@ -4763,6 +4763,43 @@ public enum MyWatch: AccessLedger {
               and ui.index('requestAnimationFrame(() => { if (mode === "full") cm.refresh(); })')
                   > ui.index("if (!readable.length && seamRows.length)")))
 
+    # ── A WRITE NAMES ITS FILE OR IT DOES NOT HAPPEN. Reading may fall back to
+    # something sensible; writing may not, and one function did both. In a world
+    # laid out entirely by manifest the read fallback is the first file that
+    # exists, which IS the manifest, so a PUT arriving without a name overwrote
+    # the document that says what the world is. Found on a live bench: a seam
+    # world whose layout had become the text of an unwritten personal page, and
+    # every symptom that follows from it — files gone from the rail, edits to
+    # the layout doing nothing, a world reporting `no world here`.
+    putw = os.path.join(tmp, "putguard")
+    run("demo", "seam", putw)
+    kept_man = open(os.path.join(putw, "gate.manifest.swift"), encoding="utf-8").read()
+    _s7 = _sock.socket(); _s7.bind(("127.0.0.1", 0)); _pp = _s7.getsockname()[1]; _s7.close()
+    _pb = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_pp)], cwd=putw,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    codes = []
+    try:
+        for _ in range(60):
+            try:
+                _u.urlopen(f"http://127.0.0.1:{_pp}/files", timeout=1).read(); break
+            except Exception:
+                time.sleep(0.1)
+        for name in ("", "nosuch.swift", "../escape.swift"):
+            try:
+                codes.append(_u.urlopen(_u.Request(
+                    f"http://127.0.0.1:{_pp}/world?f={name}", data=b"DESTROYED",
+                    method="PUT"), timeout=10).status)
+            except Exception as e:
+                codes.append(getattr(e, "code", "err"))
+    finally:
+        _pb.terminate()
+    S.append(("a write that does not name a file of this world does not land anywhere",
+              codes == [404, 404, 404]
+              and open(os.path.join(putw, "gate.manifest.swift"),
+                       encoding="utf-8").read() == kept_man
+              # and the writable set is the bench's own list, never a fallback
+              and 'p = dict(bench_files()).get(q.get("f", ""))' in shelf_src))
+
     S.append(("every name the panel prints is a name the panel opens, seam sides included",
               rail and sorted(rail.get("seams") or []) == ["api.swift", "sdk.swift"]
               # and they are NOT bench files: no court of this world reads them,
