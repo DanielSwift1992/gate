@@ -4761,6 +4761,24 @@ public enum MyWatch: AccessLedger {
               # every verb carries the note the reference is made of
               and ref.count("///") >= 25))
 
+    # ── A DECLARATION'S ANGLES HOLD HOLES; A USE'S HOLD NAMES. The painter read
+    # every word inside `<…>` as a hole, so `Carries<MessagesJS, …>` — a claim
+    # ABOUT a name declared three lines above in the same file — came out in the
+    # ink of an empty slot while `Carries` beside it was lit. Every argument of
+    # every certificate in every world went grey the same way: the one place a
+    # reader looks to see whose names a claim is made of. Found by eye on the
+    # seam bench. The difference is on the line: a declaration introduces its
+    # parameters, and a use fills them after an `=`.
+    S.append(("a name used inside angles is a name, and only a declaration's angles hold holes",
+              'const head = opened >= 0 ? before.slice(0, opened) : "";' in ui
+              and 'if (opened > shut && opened >= 0 && !head.includes("=")) {' in ui
+              # the two shapes this decides between, both live in this repository:
+              # a form declaring its parameters, and a certificate filling them
+              and "public enum Owns<" in open(
+                  os.path.join(HERE, "stdlib", "forms-grants.swift"), encoding="utf-8").read()
+              and re.search(r"public typealias \w+ = Taller<", open(
+                  os.path.join(HERE, "stdlib", "bench-registers.swift"), encoding="utf-8").read())))
+
     S.append(("bare reads the marks the writer already makes: a section is a heading, a block is set",
               'out.push({ line: i + 1, text: head[1], kind: "head" });' in ui
               and 'kind: "set"' in ui

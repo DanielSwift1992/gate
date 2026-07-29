@@ -586,7 +586,18 @@ CodeMirror.defineMode("gate-swift", () => ({
                 const inWhere = /\bwhere\b/.test(before);
                 if (!declaring && (dotted || inWhere) && slotNames.has(word)) return "axisname";
                 const opened = before.lastIndexOf("<"), shut = before.lastIndexOf(">");
-                if (opened > shut && opened >= 0) {
+                // ── A DECLARATION'S ANGLES HOLD HOLES; A USE'S HOLD NAMES, and
+                // this painted both as holes. `Carries<MessagesJS, …>` is a
+                // claim ABOUT MessagesJS — a name declared three lines above in
+                // the same file — and it came out in the ink of an empty slot,
+                // while `Carries` beside it was lit. Every argument of every
+                // certificate in every world went grey the same way: the one
+                // place a reader looks to see whose names a claim is made of.
+                // The difference is on the line: a declaration introduces its
+                // parameters (`enum Owns<Who: Keeper, What: Room>`), and a use
+                // fills them after an `=`.
+                const head = opened >= 0 ? before.slice(0, opened) : "";
+                if (opened > shut && opened >= 0 && !head.includes("=")) {
                     // inside a parameter list, and before the colon that says
                     // what may fill it: this word is the hole, not the filling
                     const seg = before.slice(opened + 1).split(",").pop();
