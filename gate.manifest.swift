@@ -41,7 +41,7 @@ extension FormsTool { public static var typeName: String { "stdlib/forms-tool.sw
 public enum BenchAtoms: Mine {
     public typealias Kind = FormsFile
 }
-// extension BenchAtoms { public static var typeName: String { "stdlib/bench-atoms.swift" } }
+extension BenchAtoms { public static var typeName: String { "stdlib/bench-atoms.swift" } }
 public enum BenchMetrics: Mine {
     public typealias Kind = FormsFile
 }

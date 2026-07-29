@@ -28,6 +28,22 @@ ROLES = {
 }
 
 
+def uncommented(text):
+    # ── A COMMENT IS NOT A DECLARATION, AND THIS DOCUMENT HAD NO WAY OF SAYING
+    # SO. The layout was read by looking for `extension X { … typeName … }`
+    # anywhere in the text, and two slashes in front of it changed nothing: a row
+    # switched off the way anybody switches a line off went on being declared,
+    # judged and counted. The document said one thing to the person reading it
+    # and another to the tool reading it, which is the one failure this tool
+    # exists against, sitting in the file whose whole job is to say what the
+    # layout is. Found by hand in gate's own manifest, where a forms row had been
+    # commented out for a day and the file it names was judged the whole time.
+    #
+    # The comment text goes and the newlines stay, so every line number a
+    # refusal carries is still the line it is on in the file.
+    return re.sub(r"//[^\n]*", "", text)
+
+
 def read_manifest_rows(d, text=None):
     # ONE LIST, AND THE COLUMNS THAT MAKE IT ONE. Whose source a file is
     # (`Mine` / `Theirs`) is one column; which court reads it is another; and
@@ -43,6 +59,7 @@ def read_manifest_rows(d, text=None):
         if not os.path.exists(mp):
             return None, None
         text = open(mp, encoding="utf-8", errors="replace").read()
+    code = uncommented(text)
     # WHAT A RECORD MAY SAY, IN THE SHAPE EVERY OTHER RECORD USES. An atom
     # carries its facts as AXES — `typealias Kind = Seam` — and exactly one
     # string is allowed, the `typeName` literal that gives a name its spelling.
@@ -54,20 +71,20 @@ def read_manifest_rows(d, text=None):
     # the tool learned a better word for it.
     lit = {}
     for m in re.finditer(r"extension (\w+)\b[^{]*\{(.*?)\n(?=public |extension |\Z)",
-                         text + "\n", re.S):
+                         code + "\n", re.S):
         f = re.search(r'typeName:\s*String\s*\{\s*"([^"]*)"\s*\}', m.group(2))
         if f:
             lit[m.group(1)] = f.group(1)
     ROLE_OF = {"WorldFile": "world", "SeamFile": "seam", "FormsFile": "forms",
                "JudgeFile": "judge", "CarriedFile": "carried", "Seam": "seam"}
     rows = []
-    for m in re.finditer(r"public enum (\w+): (Mine|Theirs|WorldFile|SeamFile) \{", text):
+    for m in re.finditer(r"public enum (\w+): (Mine|Theirs|WorldFile|SeamFile) \{", code):
         name, atom = m.group(1), m.group(2)
         body = re.search("public enum " + name + r"\b[^{]*\{(.*?)\n\}",
-                         text + "\n", re.S)
+                         code + "\n", re.S)
         inner = body.group(1) if body else ""
         ext = re.search("extension " + name + r"\b[^{]*\{(.*?)\n(?=public |extension |\Z)",
-                        text + "\n", re.S)
+                        code + "\n", re.S)
         outer = ext.group(1) if ext else ""
 
         def field(k, b=inner + outer):
@@ -90,12 +107,12 @@ def read_manifest_rows(d, text=None):
                               or ("world" if atom == "WorldFile" else
                                   "seam" if atom == "SeamFile" else None)),
                      "from": (lit.get(at) if at else None) or field("from"),
-                     "line": text[:m.start()].count("\n") + 1})
-    if not rows and "Mine" not in text and "WorldFile" not in text:
+                     "line": code[:m.start()].count("\n") + 1})
+    if not rows and "Mine" not in code and "WorldFile" not in code:
         # older layouts: a bare list of paths, every one of them a world file
         rows = [{"name": None, "source": "mine", "path": p, "role": "world",
                  "from": None, "line": 0}
-                for p in re.findall(r'typeName:\s*String\s*\{\s*"([^"]+)"\s*\}', text)]
+                for p in re.findall(r'typeName:\s*String\s*\{\s*"([^"]+)"\s*\}', code)]
     return mp, rows
 
 
@@ -149,21 +166,27 @@ def world_files():
     return files
 
 
-def manifest_guards(rows=None):
+def manifest_guards(rows=None, text=None):
     # layout guards, both directions (the playground manifest's forms):
     # a declared file exists; a neighbouring *.swift is declared (no shadows)
     #
     # `rows` overrides what is on disk, so the bench can hold the layout to the
     # same promise as every other file it opens: judged as you type. Reading the
     # saved copy while somebody edits an unsaved one shows green over a lie.
+    # `text` is the document those rows were read from, and it comes with them for
+    # the same reason: two of the checks below ask what the DOCUMENT says, and
+    # asking the saved copy about rows parsed from an unsaved one is the same
+    # green over the same lie, one step further in.
     if not MANIFEST:
         return []
     bad = []
     man = os.path.basename(MANIFEST["manifest"])
     d = os.path.dirname(MANIFEST["manifest"])
     live = MANIFEST.get("rows") if rows is None else rows
-    live_text = open(MANIFEST["manifest"], encoding="utf-8").read() \
-        if os.path.exists(MANIFEST["manifest"]) else ""
+    if text is None:
+        text = open(MANIFEST["manifest"], encoding="utf-8").read() \
+            if os.path.exists(MANIFEST["manifest"]) else ""
+    live_text = uncommented(text)
     seen_paths = {}
     for r in live or []:
         # A ROLE IS NOT OPTIONAL, because it names the court. Left unsaid it has
@@ -232,6 +255,22 @@ def manifest_guards(rows=None):
                         "claim": f"`{r['name']}` is theirs and does not say which revision it was "
                                  "taken at. Taken means taken from somewhere, at something: "
                                  "`gate theirs " + r["path"] + " --at REV`"})
+    # ── AND A ROW THAT NAMES NO FILE NAMES NOTHING. Every check above judges a
+    # row the reader built, and the reader builds one only where a `typeName` says
+    # which file the row is about. So a record with a role and no name at all was
+    # not refused, it was invisible: the document carried a column about nothing
+    # and nothing said a word. This is the law the writing verbs already keep —
+    # a write names its file or it does not happen — read from the other end.
+    named = {r["name"] for r in (live or [])}
+    for m in re.finditer(r"public enum (\w+): (?:Mine|Theirs|WorldFile|SeamFile) \{",
+                         live_text):
+        if m.group(1) in named:
+            continue
+        at = live_text[:m.start()].count("\n") + 1
+        bad.append({"address": f"{man}:{at}",
+                    "claim": f"`{m.group(1)}` is a row and names no file: a row is about one file, "
+                             f"said as `extension {m.group(1)} {{ public static var typeName: "
+                             "String { \"path\" } }`. Give it one or take the row out"})
     # ── A ROW OF ANY ROLE NAMES A FILE, AND A GHOST IS A GHOST WHICHEVER COURT
     # WOULD HAVE READ IT. The shadow check below was widened to every role and
     # this one was left at `world`, so a declared forms file could simply vanish
@@ -260,10 +299,22 @@ def manifest_guards(rows=None):
     declared = ({os.path.join(d, r["path"]) for r in (live or [])}
                 | {MANIFEST["manifest"], os.path.join(d, "gate.swift"),
                    os.path.join(d, "gate.policy.swift")})  # meta, like the manifest itself
-    for f in sorted(os.listdir(d)):
-        p = os.path.join(d, f)
-        if f.endswith(".swift") and p not in declared and not is_seam_side(p):
-            bad.append({"address": f, "claim": "a world file the manifest never declares: a shadow outside the judged list"})
+    # AND A SHADOW IS A SHADOW WHEREVER THE WORLD KEEPS ITS FILES. This walked the
+    # manifest's own directory alone, so «no shadows» was a promise about one
+    # folder while the world lived in another: an undeclared file beside eleven
+    # declared ones in `stdlib/` was nobody's shadow, and this repository keeps
+    # every one of its worlds there. The walk goes wherever a row points, which is
+    # the only set of directories this document speaks about at all.
+    spoken = {d} | {os.path.dirname(os.path.join(d, r["path"]))
+                    for r in (live or []) if r.get("path")}
+    for dd in sorted(spoken):
+        if not os.path.isdir(dd):
+            continue
+        for f in sorted(os.listdir(dd)):
+            p = os.path.join(dd, f)
+            if f.endswith(".swift") and p not in declared and not is_seam_side(p):
+                bad.append({"address": os.path.relpath(p, d),
+                            "claim": "a world file the manifest never declares: a shadow outside the judged list"})
     return bad
 
 
@@ -5346,7 +5397,8 @@ def cmd_serve(a):
             # the same promise for a forms row: the text in the editor, not the
             # copy on disk, is what this court reads
             typed = {n: text for n, p in bench_files() if p == active and n in forms_here}
-            refusals += (manifest_guards(live) + forms_guards(None, typed) + policy_guards()
+            refusals += (manifest_guards(live, text if active == layout else None)
+                         + forms_guards(None, typed) + policy_guards()
                          + stdlib_guards() + vendored_guards() + taken_judge_guard())
             times = re.findall(r"([\d.]+) ms", raw)
             # AND THE WIDTH OF IT. The judge counts what it checked and says so;

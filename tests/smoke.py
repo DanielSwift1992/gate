@@ -115,6 +115,51 @@ def main():
     open(os.path.join(split, "stray.swift"), "w").write("// stray\n")
     c, r = run("status", cwd=split)
     S.append(("manifest: shadow file named", c == 1 and any("shadow" in x["claim"] for x in r["refusals"])))
+    os.remove(os.path.join(split, "stray.swift"))
+
+    # A COMMENT IS NOT A DECLARATION, AND A ROW THAT NAMES NO FILE NAMES NOTHING.
+    # Switching a row off the way anybody switches a line off left it declared,
+    # judged and counted: the document said one thing to the person reading it and
+    # another to the tool reading it. Found by hand in this tool's own manifest,
+    # where a forms row sat commented out for a day and its file was judged the
+    # whole time. Both halves are here, because the fix has two: the row stops
+    # being read, and the file it named stops being spoken for.
+    doc = open(os.path.join(split, "gate.manifest.swift")).read()
+    open(os.path.join(split, "gate.manifest.swift"), "w").write(
+        doc.replace("extension GrantsFile", "// extension GrantsFile"))
+    c, r = run("status", cwd=split)
+    S.append(("manifest: a row commented out is a row no longer, and its file is a shadow",
+              c == 1 and any("shadow" in x["claim"] and "grants.swift" in x.get("address", "")
+                             for x in r["refusals"])))
+    S.append(("manifest: a row that names no file is refused at its own line",
+              any("names no file" in x["claim"]
+                  and x.get("address", "").startswith("gate.manifest.swift:")
+                  for x in r["refusals"])))
+    open(os.path.join(split, "gate.manifest.swift"), "w").write(doc)
+    c, r = run("status", cwd=split)
+    S.append(("manifest: and the same document with the line back holds again",
+              c == 0 and r["verdict"] == "holds"))
+
+    # AND A SHADOW IS A SHADOW WHEREVER THE WORLD KEEPS ITS FILES: the walk
+    # follows the rows, not the folder the manifest happens to sit in. Held one
+    # directory deep because that is where this repository keeps every world it
+    # has, and where an undeclared file was nobody's shadow.
+    deep = os.path.join(tmp, "deep")
+    os.makedirs(os.path.join(deep, "worlds"))
+    shutil.copy(os.path.join(split, "gate.swift"), os.path.join(deep, "gate.swift"))
+    shutil.copy(os.path.join(split, "grants.swift"), os.path.join(deep, "worlds", "grants.swift"))
+    open(os.path.join(deep, "gate.manifest.swift"), "w").write(
+        'public protocol WorldFile {}\npublic enum GrantsFile: WorldFile {}\n'
+        'extension GrantsFile { public static var typeName: String { "worlds/grants.swift" } }\n')
+    c, r = run("status", cwd=deep)
+    S.append(("manifest: a world one directory down is judged from there",
+              c == 0 and r["verdict"] == "holds"))
+    open(os.path.join(deep, "worlds", "stray.swift"), "w").write("// stray\n")
+    c, r = run("status", cwd=deep)
+    S.append(("manifest: a shadow beside a declared file one directory down is named",
+              c == 1 and any("shadow" in x["claim"]
+                             and x.get("address") == os.path.join("worlds", "stray.swift")
+                             for x in r["refusals"])))
 
     # self-hosted shelf: the product's own stdlib files are judged by its own judge
     import glob as _glob
