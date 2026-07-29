@@ -48,6 +48,38 @@ def main():
 
     c, r = run("init", repo)
     S.append(("init + hook wired", r.get("hooks") is not None))
+    # ENTERING SOMEBODY'S REPOSITORY LEAVES THE HOOK AND A LETTER, AND NOTHING
+    # ELSE. It used to leave eight files: a personnel domain's empty tables, a
+    # README announcing a single source of truth, an AGENT.md with one reference
+    # world's vocabulary as though it were the vocabulary, and a workflow in their
+    # .github. Tables are theirs and arrive by `import`; the letter arrives by the
+    # verb everything of ours arrives by, carrying the revision it came from.
+    S.append(("entry leaves the hook and the letter, and nothing else",
+              sorted(r.get("created") or []) == [".githooks/pre-commit", "readme.swift"]
+              and not os.path.exists(os.path.join(repo, "README.md"))
+              and not os.path.exists(os.path.join(repo, "AGENT.md"))
+              and not os.path.isdir(os.path.join(repo, ".github"))))
+    S.append(("the letter is declared in the same movement, and says where it came from",
+              "readme.swift" in open(os.path.join(repo, "gate.manifest.swift")).read()
+              and "taken as your own starting point"
+              in open(os.path.join(repo, "readme.swift")).read()))
+    # AND IT KEEPS ITS OWN WORD ABOUT HOW IT IS MET. The head lines of a shelf page
+    # are dropped when it is taken, and `// opens: bare` was going with them: a
+    # letter that asks to be read as prose arrived as code with slashes down the
+    # margin, on the one screen that is somebody's first.
+    S.append(("and a letter taken keeps its own word about how it is met",
+              any(ln.strip() == "// opens: bare" for ln in
+                  open(os.path.join(repo, "readme.swift")).read().split("\n")[:6])))
+    # A GREEN OVER NOTHING SAYS SO. This is the first verdict a newcomer sees, and
+    # `holds` with no width under it is the one green this tool says it will not
+    # print — least of all where the number is nought.
+    c, r = run("status", cwd=repo)
+    S.append(("the first verdict says how wide it is, even at nought",
+              r.get("verdict") == "holds" and r.get("forms", {}).get("equalities") == 0
+              and "nothing claimed here yet" in say("status", cwd=repo)))
+    S.append(("and the rung after entry is the letter, not a merge policy",
+              "readme.swift" in r.get("next", "")))
+    os.makedirs(os.path.join(repo, "tables"), exist_ok=True)
     shutil.copy(os.path.join(DEMO, "people.csv"), os.path.join(repo, "tables", "people.csv"))
     shutil.copy(os.path.join(DEMO, "grants.csv"), os.path.join(repo, "tables", "grants.csv"))
 

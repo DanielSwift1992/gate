@@ -1196,94 +1196,24 @@ def cmd_verify(a):
     return {"command": "verify", "seeds": rows, "translation_holes": len(holes)}
 
 
+# ── WHAT LANDS IN SOMEBODY ELSE'S REPOSITORY, AND WHAT NO LONGER DOES. This wrote
+# eight files: four empty tables of a personnel domain nobody asked for, a
+# README.md announcing that "gate.swift is the single source" — the one sentence
+# this tool spent a month arguing against, since there is no privileged copy and
+# the world is a view — an AGENT.md handing a translator the fixed vocabulary of
+# one reference world as though it were the vocabulary, and a CI workflow in their
+# .github. All of it was furniture from the epoch before any of that was decided,
+# and all of it was somebody else's repository being decorated by a tool that says
+# it does not decorate.
+#
+# What is left is the hook, which is the one thing entry is FOR, and it comes with
+# the line that puts it back. The letter arrives the way anything of ours arrives:
+# taken, with its origin written down, through the same verb a person uses for
+# everything else. Tables are theirs and arrive by `gate import`.
 INIT_FILES = {
-    "tables/people.csv": "id,rank,home,given,family,born,site,sex\n",
-    "tables/grants.csv": "who,doc\n",
-    "tables/identities.csv": "email,id\n",
-    "tables/guard.csv": "action,requires_rank\nmerge,Manager\n",
-    "README.md": """# Your world
-
-THE CANON: `gate.swift` is the single source — readable by everything
-(git diff, a human, the judge, the compiler). Tables are INPUTS: drop a
-CSV once, `gate import` prints the world, and from then on the world is
-what you edit (directly, or through the verbs). A table is a VIEW —
-`gate export` prints it back whenever asked; it is never stored as truth.
-
-    gate import tables/people.csv tables/grants.csv -o gate.swift   # once
-    gate status                             # what disagrees right now
-    gate check view WHO DOC                 # may X read Y? (ms)
-    gate diff  transfer WHO DEPT            # what would break (nothing changes)
-    gate apply transfer WHO DEPT            # edits the world, only on holds
-    gate export gate.swift -o p.csv g.csv  # the table, printed on demand
-
-Every change — facts and rules alike — is a working-copy edit of the
-world; git carries the history: commit (the hook judges) → PR → required
-check. `git diff` is always a Swift diff. A refusal names the line and
-exits non-zero (CI-ready).
-To let your AI assistant do the translation, point it at AGENT.md.
-`.githooks/pre-commit` guards every commit: `git config core.hooksPath .githooks`
-""",
     ".githooks/pre-commit": """#!/bin/sh
 # the world must hold before it is committed (it is judged, never reprinted)
 gate status
-""",
-    "AGENT.md": """# Instruction for the translating agent
-
-You are translating the client's tables into a typed facts world.
-You do not need to be trusted: your output is verified mechanically.
-
-## The forms (all of them)
-
-- A record:  `public enum <Id>: Employee, Person { ... }` with one
-  `public typealias <Axis> = <Atom>` per column
-  (axes: Rank, Home, Given, Family, Born, Site, Sex = Given.Sex).
-- Pool atoms: every distinct given/family/born value is declared once:
-  `public enum <Name>: GivenNameCycle { Next = <next in ring>, Sex = <M/F> }`
-  (families: FamilyNameCycle, years: BirthYearCycle; Next closes a ring).
-- Team entries: `VerifiedInDepartment<Id, Home>` / `VerifiedAtRank<Id, Rank>` /
-  `VerifiedAtWorkplace<Id, Site>` inside a `Team` body.
-- Grants: `VerifiedView<Who, Doc>` inside an `AccessLedger` body.
-
-## The world's fixed vocabularies (do not invent alternatives)
-
-- Rank: IndividualContributor, Lead, Manager
-- Home: Finance, Engineering, Sales, People
-- Site: OnSite, Hybrid, Remote
-- Sex: Male, Female
-- Doc: FinanceShare, EngineeringShare, SalesShare, PeopleShare
-Map the client's own vocabulary onto these and record every decision in
-tables/MAPPING.md. Ids must be valid Swift identifiers and must not
-collide with pool atoms (prefix them if logins repeat given names).
-
-## The rules of the world
-
-- One fact, one line. A link between two facts is an equality in a type.
-- Every name must be declared: an unknown atom is a refusal, not a warning.
-- The base must be clean before you seed or extend.
-- Translate faithfully: a suspicious grant is translated as-is, never
-  fixed or dropped — judging it is the gate's job, not yours.
-
-## How your work is checked (so do not improvise)
-
-1. `gate export` prints the tables back: the diff against the client's
-   originals must be EMPTY, byte for byte.
-2. `gate verify --against <old checker>` seeds violations: every legacy
-   rule must refuse in the world too, or the hole is named to the client.
-""",
-    ".github/workflows/gate.yml": """name: gate
-on: [push, pull_request]
-jobs:
-  judge:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      # put the released `gate` binary on PATH (release artifact, one file)
-      - run: gate status
-      # the world is the source; a refusal exits red and names the line
-      - run: gate guard merge
-      # repo policy by the same gates: the HEAD author, mapped through
-      # an identity declared in the world, must hold the rank the world states.
-      # make this job a required check and the policy becomes law.
 """,
 }
 
@@ -1391,6 +1321,16 @@ def next_rung(refused):
                             capture_output=True, text=True).stdout.strip()
     if not hooked:
         return "run `gate init .` to wire the hook: from here on, what you commit is what holds"
+    # ── AND THE RUNG AFTER ENTRY IS THE LETTER THAT JUST ARRIVED. Straight from
+    # the hook to `who may merge` skips the only thing standing in the repository
+    # at that moment: a page of ours, now theirs, with the lesson in it. A ladder
+    # is only useful while it names the step the reader is actually on.
+    rows = [r for r in ((MANIFEST.get("rows") if MANIFEST else None) or []) if r.get("path")]
+    said_something = FACTS and os.path.exists(FACTS)
+    if rows and not said_something \
+            and all(os.path.basename(r["path"]) == "readme.swift" for r in rows):
+        return ("run `gate serve` and read readme.swift: it is yours now, and the first fact you "
+                "change in it is the first thing this repository holds")
     if not policy_path():
         return ("say who may merge, in gate.policy.swift: a law of yours with a date on it, "
                 "instead of a convention somebody has to remember")
@@ -3432,6 +3372,46 @@ def declare_mine(path, argv):
     return declare_side(path, "Theirs", "seam", at)
 
 
+def take_shelf(mod, into="."):
+    # ── ONE ACT OF TAKING, AND EVERY DOOR USES IT. Making a shelf world your own
+    # is the third verb, and the act of entry is the same act performed once for
+    # somebody who has not typed anything yet: a copy lands where they stand,
+    # carrying where it came from, declared in the same movement, judged from that
+    # second. Written twice, it would be the tool keeping two accounts of its own
+    # most-used gesture, which is the shape it exists to refuse.
+    dest = os.path.abspath(os.path.join(into, mod + ".swift"))
+    if os.path.exists(dest):
+        return None, dest
+    # the court is the one that reads what the file IS, never the label the
+    # shelf wears about itself: `gate's own` says whose furniture it is, and
+    # a copy in somebody's repository is theirs, read by the where court
+    # like every other world of values they present.
+    court = stdlib_role(mod) if stdlib_role(mod) in ROLES else "forms"
+    came = judge_from()
+    body = STDLIB[mod].split("\n")
+    # ── AND THE FILE'S OWN WORD ABOUT HOW IT IS MET TRAVELS WITH IT. The head
+    # lines of a shelf page are the shelf's identity and are dropped on purpose,
+    # and `// opens: bare` was going with them — so a letter whose own first lines
+    # say «meet me as prose» arrived in somebody's repository as code, every line
+    # wearing slashes, and that is the first thing they see. Role already survived
+    # the copy for exactly this reason; this is the same law, one line down.
+    opens = next((ln.strip() for ln in body[:8] if ln.strip().startswith("// opens:")), None)
+    while body and body[0].startswith("//"):
+        body.pop(0)
+    os.makedirs(os.path.dirname(dest), exist_ok=True)
+    with open(dest, "w") as f:
+        f.write(f"// {mod}, taken as your own starting point"
+                + (f" from the judge at {came[:7]}" if came else "")
+                + ".\n// role: " + court + "\n"
+                + (opens + "\n" if opens else "")
+                + "// Yours from here: change what it says and your world is judged by what\n"
+                "// you said. The shelf's copy stays what it was; this one answers to you.\n"
+                + "\n".join(body).lstrip("\n"))
+    mp = declare_side(dest, "Mine", court)
+    return {"wrote": os.path.relpath(dest, os.path.abspath(into)),
+            "declared_in": mp, "from": came, "court": court}, dest
+
+
 def cmd_side(a, kind):
     # gate mine PATH [--role R] · gate theirs PATH --at REV [--role R]
     #
@@ -3493,31 +3473,14 @@ def cmd_side(a, kind):
     # judge — and learning is taking a thing in hand.
     if kind == "Mine" and not os.path.exists(path) and path in STDLIB:
         mod = path
-        dest = os.path.abspath(mod + ".swift")
-        if os.path.exists(dest):
+        took, dest = take_shelf(mod)
+        if took is None:
             return {"command": word, "asks": True,
                     "note": f"{mod}.swift is already here",
                     "next": f"gate {word} {mod}.swift — declare the copy you have, or move it "
                             "aside first: nothing here overwrites a file you wrote"}
-        # the court is the one that reads what the file IS, never the label the
-        # shelf wears about itself: `gate's own` says whose furniture it is, and
-        # a copy in somebody's repository is theirs, read by the where court
-        # like every other world of values they present.
-        court = stdlib_role(mod) if stdlib_role(mod) in ROLES else "forms"
-        came = judge_from()
-        body = [ln for ln in STDLIB[mod].split("\n")]
-        while body and body[0].startswith("//"):
-            body.pop(0)
-        with open(dest, "w") as f:
-            f.write(f"// {mod}, taken as your own starting point"
-                    + (f" from the judge at {came[:7]}" if came else "")
-                    + ".\n// role: " + court + "\n"
-                    "// Yours from here: change what it says and your world is judged by what\n"
-                    "// you said. The shelf's copy stays what it was; this one answers to you.\n"
-                    + "\n".join(body).lstrip("\n"))
-        mp = declare_side(dest, "Mine", court)
         return {"command": word, "made_mine": mod, "wrote": os.path.basename(dest),
-                "declared_in": mp, "from": came, "mutates": True,
+                "declared_in": took["declared_in"], "from": took["from"], "mutates": True,
                 "note": f"{mod} is yours: a copy is here, declared, and judged from now on. "
                         "What the shelf ships is unchanged and still shipped — yours simply "
                         "stands where it stood",
@@ -4769,6 +4732,20 @@ def findings_markdown(found):
     return "\n".join(lines)
 
 
+def relearn_world(root):
+    # ── AND A COMMAND THAT MAKES A WORLD KNOWS THE WORLD IT MADE. Discovery runs
+    # once, when the process starts, so `init` ended by printing the rung for the
+    # repository as it stood BEFORE it ran: it had just put a letter in somebody's
+    # hands and told them to go declare a merge policy. The same law the panel
+    # already keeps — the layout is read from disk, never remembered — said for a
+    # command that writes one.
+    m = read_manifest(root)
+    globals()["MANIFEST"] = m
+    w = os.path.join(root, "gate.swift")
+    if os.path.exists(w) or m:
+        globals()["FACTS"] = w
+
+
 def cmd_init(a):
     # ── WITH NO PATH, "HERE" MEANS HERE WHEN HERE IS ALREADY A WORLD. The
     # default was a new folder called `world`, unconditionally — so `gate init
@@ -4777,10 +4754,16 @@ def cmd_init(a):
     # The line printed said `created 8 files` and was true; the files a person
     # then looked for were one directory further down than they were looking.
     # A second world inside a world is the two-truths shape, in the filesystem.
+    # ── AND A GIT REPOSITORY IS ALREADY THE PLACE. Without a world here the
+    # default was a new folder called `world`, so entering somebody's repository
+    # began by making a room inside it — the same nesting shape, one step earlier,
+    # and against what this tool is: it deploys on top of git, and git is already
+    # there. Where there is neither a world nor a `.git`, a folder is still the
+    # kind thing to make: nobody is standing anywhere yet.
     vendor = "--vendor" in a
     a = [x for x in a if x != "--vendor"]
     here_is_world = os.path.exists("gate.swift") or os.path.exists("gate.manifest.swift")
-    root = a[0] if a else ("." if here_is_world else "world")
+    root = a[0] if a else ("." if here_is_world or os.path.isdir(".git") else "world")
     made = []
     for rel, content in INIT_FILES.items():
         p = os.path.join(root, rel)
@@ -4792,6 +4775,20 @@ def cmd_init(a):
     hook = os.path.join(root, ".githooks", "pre-commit")
     if os.path.exists(hook):
         os.chmod(hook, 0o755)
+    # ── AND THE LETTER ARRIVES BY THE VERB EVERYTHING ARRIVES BY. There is one act
+    # of taking in this tool and entry is that act, performed once for somebody who
+    # has not typed anything yet: the copy lands here with the revision it came
+    # from written into its first line, declared in the same movement, judged from
+    # that second. So the first screen is never empty and nothing on it appeared
+    # without a row saying whose it is — which is the law the rest of the product
+    # is built on, kept at the one moment it would have been easiest to break.
+    letter = None
+    if "readme" in STDLIB:
+        took, _dest = take_shelf("readme", root)
+        if took:
+            letter = took["wrote"]
+            made.append(letter)
+    relearn_world(root)
     vendored = cmd_vendor(root) if vendor else None
     hooks_note, undo, prior = None, None, None
     if os.path.isdir(os.path.join(root, ".git")):  # seamless: the hook wires itself
@@ -4805,7 +4802,7 @@ def cmd_init(a):
         if prior:
             hooks_note += f" — it was {prior}"
     return {"command": "init", "root": root, "created": made, "hooks": hooks_note,
-            "next": next_rung(False),
+            "letter": letter, "next": next_rung(False),
             "undo_hooks": undo, "changed_git_config": bool(hooks_note), "vendored": vendored}
 
 
@@ -5621,7 +5618,14 @@ def dispatch(cmd, rest):
         m = re.search(r"(\d+) declarations · (\d+) lookups · (\d+) premises", raw)
         if m:
             out["world"] = {"declarations": int(m.group(1)), "lookups": int(m.group(2)), "premises": int(m.group(3))}
-        if where_size.get("equalities"):
+        # ── AND A WIDTH OF NOUGHT IS A WIDTH. This was attached only when the
+        # number was truthy, so the one verdict where the number matters most —
+        # the first one a newcomer ever sees, over a letter that claims nothing
+        # yet — printed a bare `holds` with nothing under it. A green nobody
+        # could break is not a green, and it is the entry screen that has to say
+        # so; anywhere else the number is large enough to be reassuring by
+        # accident. `equalities` is in here when the court actually sat.
+        if "equalities" in where_size:
             out["forms"] = where_size
         out["next"] = next_rung(bool(refusals))
         return out
@@ -5757,7 +5761,13 @@ def humanize(out):
             w = out["world"]
             tail.append(f"{w['declarations']} declarations · {w['lookups']} lookups · {w['premises']} premises")
         if isinstance(out.get("forms"), dict):
-            tail.append(f"{out['forms']['equalities']} equalities")
+            n = out["forms"]["equalities"]
+            # nought equalities BESIDE a judged world is a number; nought with
+            # nothing else judged is the whole verdict, and then it is said in
+            # words. Walking the README's own first recipe printed both at once —
+            # eighty-two premises and «nothing was checked» in one line
+            tail.append(f"{n} equalities" if n or out.get("world") else
+                        "nothing claimed here yet, so nothing was checked")
         if out.get("judge_ms") is not None:
             tail.append(f"{out['judge_ms']} ms")
         if out.get("build_s") is not None:

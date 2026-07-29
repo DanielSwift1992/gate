@@ -168,8 +168,9 @@ Or start from your own rows:
 
 ```sh
 git init myworld && cd myworld
-gate init .                      # skeleton; the pre-commit hook wires itself
-cp ~/exports/people.csv tables/  # your own data, any source
+gate init .                      # the hook wires itself, and a letter lands: yours
+mkdir tables                     # your own data, any source, and nothing else
+cp ~/exports/people.csv tables/
 cp ~/exports/grants.csv tables/
 gate status                      # first print + first verdict, in ms
 ```
@@ -638,7 +639,7 @@ judge.js        the browser judge (byte-parity port) for the bench
 ui.html         the workbench
 codemirror.*    the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
-tests/smoke.py   the battery — 290 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 295 end-to-end checks, the definition of green
 ```
 
 ## Status
