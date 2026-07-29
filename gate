@@ -4926,16 +4926,7 @@ def cmd_init(a):
     # without a row saying whose it is — which is the law the rest of the product
     # is built on, kept at the one moment it would have been easiest to break.
     letter = None
-    # ── AND THE REFERENCE COMES WITH THE LETTER. The letter names it and stops
-    # there: it is the promises at that page's foot that make it safe to run any of
-    # this on a clone somebody cares about, and a promise nobody can check is worth
-    # nothing. Held to the dispatch of the tool THIS repository has, it is the one
-    # copy that could lie to them, so it travels.
     layout_was = os.path.exists(os.path.join(root, "gate.manifest.swift"))
-    if "verbs" in STDLIB:
-        took_ref, _rp = take_shelf("verbs", root)
-        if took_ref:
-            made += [took_ref["wrote"]] + took_ref["with"]
     if "readme" in STDLIB:
         # ── AND THE LAYOUT IS ONE OF THE FILES THIS LEAVES. Taking a page declares
         # it, and declaring it writes the document that says so — a file appearing
@@ -4946,8 +4937,19 @@ def cmd_init(a):
         if took:
             letter = took["wrote"]
             made += [letter] + took["with"]
-            if not layout_was and os.path.exists(os.path.join(root, "gate.manifest.swift")):
-                made.append("gate.manifest.swift")
+    # ── AND THE REFERENCE COMES AFTER THE LETTER, IN THAT ORDER. The letter names
+    # it and stops there: it is the promises at that page's foot that make it safe
+    # to run any of this on a clone somebody cares about, and a promise nobody can
+    # check is worth nothing — held to the dispatch of the tool THIS repository has,
+    # it is the one copy that could lie to them, so it travels. Taken first, it also
+    # took the first row, and the bench opens on the first row: the newcomer met a
+    # page of grammar instead of the letter written to them.
+    if "verbs" in STDLIB:
+        took_ref, _rp = take_shelf("verbs", root)
+        if took_ref:
+            made += [took_ref["wrote"]] + took_ref["with"]
+    if not layout_was and os.path.exists(os.path.join(root, "gate.manifest.swift")):
+        made.append("gate.manifest.swift")
     relearn_world(root)
     vendored = cmd_vendor(root) if vendor else None
     hooks_note, undo, prior = None, None, None
