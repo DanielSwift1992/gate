@@ -4778,7 +4778,16 @@ def repo_findings(n=400):
     # only read. Nothing here needs a translated world — a repository that
     # has never heard of gate still has findings.
     out = []
-    j = repo_journal(n)
+    # ── AND THIS ONE READS THE REPOSITORY, WHICH IS WHAT IT SAYS IT DOES. It took
+    # the journal's default scope, which is the history OF THE WORLD FILES — right
+    # for a workbench, wrong for the one verb whose whole claim is that a repository
+    # which has never heard of gate still has findings. At entry it was silent for
+    # the worst possible reason: the files that had just arrived were untracked, so
+    # no commit touched the world, so there was no history, so there was nothing to
+    # say — about a repository with four hundred commits and a CODEOWNERS sitting in
+    # it. The comment above this line had said «needs no translated world» all
+    # along, and the code asked for one.
+    j = repo_journal(n, scope="all")
     commits = j["commits"]
     base = os.path.dirname(os.path.abspath(FACTS)) if FACTS else "."
 

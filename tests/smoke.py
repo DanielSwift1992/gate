@@ -120,6 +120,22 @@ def main():
     open(letter_p, "w").write(kept)
     c, r = run("status", cwd=repo)
     S.append(("and putting it back holds again", c == 0 and r["verdict"] == "holds"))
+    # ── AND THE FIRST THING THE LETTER ASKS FOR ANSWERS. It sends a newcomer to
+    # `gate findings` before anything is translated, and at entry that was silent for
+    # the worst possible reason: the journal's default scope is the history of the
+    # WORLD FILES, the files that had just arrived were untracked, so a repository
+    # with a CODEOWNERS in it and history behind it had «nothing to report yet».
+    fresh = os.path.join(tmp, "fresh-entry")
+    os.makedirs(fresh)
+    subprocess.run(["git", "init", "-q", fresh])
+    open(os.path.join(fresh, "CODEOWNERS"), "w").write("/src/  @alice\n/docs/ @bob\n")
+    subprocess.run(["git", "add", "-A"], cwd=fresh, capture_output=True)
+    subprocess.run(["git", "-c", "user.email=a@b", "-c", "user.name=A", "commit", "-qm",
+                    "before gate", "--no-verify"], cwd=fresh, capture_output=True)
+    run("init", ".", cwd=fresh)
+    c, r = run("findings", cwd=fresh)
+    S.append(("what the letter asks for first answers in a repository that just entered",
+              r.get("findings") and any("CODEOWNERS" in f["sentence"] for f in r["findings"])))
     # A GREEN OVER NOTHING SAYS SO, in the one case where that is what happened: a
     # world of atoms alone, with no certificate over them for any court to read.
     bare = os.path.join(tmp, "bare")
