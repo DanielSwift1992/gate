@@ -1,11 +1,11 @@
-// gate stdlib readme v1 — every verb this tool answers to, as records
+// gate stdlib readme v1: every verb this tool answers to, as records
 // role: forms
 // opens: bare
 // written in `gate stdlib show forms-tool`
 //
 // This is the whole of what gate answers to, and it is a world rather than a
 // page. A list of verbs in prose drifts from the tool the moment either
-// changes and nothing says when — which is the failure this tool exists
+// changes and nothing says when, which is the failure this tool exists
 // against, met in its own documentation. So each verb here is a record: what
 // it touches, which court it calls, and a note in its own words. `gate status`
 // in this repository judges them, and a guard holds them to the dispatch by
@@ -85,7 +85,7 @@ extension Drift { public static var typeName: String { "drift" } }
 
 // ── asking a world ──
 
-/// may this person read this document — answered against the file itself
+/// may this person read this document, answered against the file itself
 public enum Check: Verb {
     public typealias Does = Reads
     public typealias Under = PlainCourt
@@ -98,7 +98,7 @@ public enum Ask: Spelling {
 }
 extension Ask { public static var typeName: String { "ask" } }
 
-/// what would break if this happened — and nothing happens
+/// what would break if this happened, and nothing happens
 public enum Diff: Verb {
     public typealias Does = Reads
     public typealias Under = PlainCourt
@@ -111,7 +111,7 @@ public enum Change: Spelling {
 }
 extension Change { public static var typeName: String { "change" } }
 
-/// edits the world, and writes only where the judge holds — like a commit
+/// edits the world, and writes only where the judge holds, like a commit
 public enum Apply: Verb {
     public typealias Does = Writes
     public typealias Under = PlainCourt
@@ -125,7 +125,7 @@ public enum Guard: Verb {
 }
 extension Guard { public static var typeName: String { "guard" } }
 
-/// the domain crystal: forms, axes, seed coverage — and set operations between two
+/// the domain crystal: forms, axes, seed coverage, and set operations between two
 public enum Library: Verb {
     public typealias Does = Asked
     public typealias Under = NoCourt
@@ -178,7 +178,7 @@ public enum Attention: Verb {
 }
 extension Attention { public static var typeName: String { "attention" } }
 
-/// say a divergence is meant, naming what will end it — and it returns by itself
+/// say a divergence is meant, naming what will end it, and it returns by itself
 public enum Aside: Verb {
     public typealias Does = Writes
     public typealias Under = NoCourt
@@ -210,7 +210,7 @@ extension Verify { public static var typeName: String { "verify" } }
 
 // ── what a world says about itself, outward ──
 
-/// claims judged, and how long every commit that touched them has held — replayed
+/// claims judged, and how long every commit that touched them has held, replayed
 public enum Badge: Verb {
     public typealias Does = Asked
     public typealias Under = PlainCourt
@@ -224,7 +224,7 @@ public enum Report: Verb {
 }
 extension Report { public static var typeName: String { "report" } }
 
-/// the words a world may be written in, printed — editing a printout adds no word
+/// the words a world may be written in, printed; editing a printout adds no word
 public enum Stdlib: Verb {
     public typealias Does = Asked
     public typealias Under = NoCourt

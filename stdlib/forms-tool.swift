@@ -1,4 +1,4 @@
-// gate stdlib forms-tool v1 — the words a tool's own surface is written in
+// gate stdlib forms-tool v1: the words a tool's own surface is written in
 // role: forms
 // A verb is a record like any other: what it touches, and which court it calls.
 // These are the axes a reference table needs to be a WORLD rather than a list,
@@ -6,7 +6,7 @@
 // verb which changes nothing may be run on anybody's clone, at any moment.
 
 // WHICH COURT ANSWERS. `plain` reads a world of facts; `where` reads a grammar
-// and the certificates over it; some verbs call none at all and say so — an
+// and the certificates over it; some verbs call none at all and say so. An
 // observation is not a verdict, and a verb that judges nothing may not wear one.
 public protocol Court {}
 public enum PlainCourt: Court {}
@@ -29,7 +29,7 @@ public protocol Verb {
 
 // AN OLDER SPELLING IS NOT A SECOND VERB. A file on somebody's disk is not
 // wrong because the tool learned a better word, so the old name stays and says
-// what it means — one record, pointing at the one it is a spelling of.
+// what it means: one record, pointing at the one it is a spelling of.
 public protocol Spelling {
     associatedtype Means: Verb
 }

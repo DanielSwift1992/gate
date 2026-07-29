@@ -303,7 +303,7 @@ def plainly(claim, notes):
         return claim
     cert, left, right, law = m.groups()
     said = notes.get(law or "")
-    return f"{cert} · {left} against {right}" + (f" — {said}" if said else "")
+    return f"{cert} · {left} against {right}" + (f": {said}" if said else "")
 
 
 def forms_guards(size=None, live=None):
@@ -1734,7 +1734,7 @@ DEMO_README = """\
 //
 // ── one: a record ──
 
-/// A record is a name and its axes. This one is a zone of this world's own —
+/// A record is a name and its axes. This one is a zone of this world's own:
 /// yours, in this file, judged with everything else the moment you save.
 public enum Zone_readme: Realm {}
 
@@ -1757,7 +1757,7 @@ public typealias Owns_readme = Owns<Owner_you, Path_readme>
 
 // TRY IT. Change `Zone_readme` on the Path above to `Zone_src`. The judge
 // reads it as you type and refuses at the line you touched, in the law's own
-// sentence — and nothing is written while it refuses: your text stays in the
+// sentence. Nothing is written while it refuses: your text stays in the
 // editor until it holds again. Put it back and the file is saved, and green.
 // Nothing else in this world moves: delete this whole file and the world
 // still holds.
@@ -1767,7 +1767,7 @@ public typealias Owns_readme = Owns<Owner_you, Path_readme>
 // `gate status` names one right now, and it is not this file. It is in
 // `ownership.swift`, translated from CODEOWNERS, where one rule gives a
 // source directory to somebody whose zone is docs. Two ways to end it:
-// fix the line in the world, or fix CODEOWNERS and run the import again —
+// fix the line in the world, or fix CODEOWNERS and run the import again.
 //
 //     gate import codeowners CODEOWNERS --tree . --policy owners.csv \\
 //                            -o ownership.swift
@@ -1848,17 +1848,18 @@ def cmd_demo_owners(a):
             # committed the moment it is made, so `git checkout .` has always put
             # it back; saying so here means it is read before anything is
             # touched rather than looked for afterwards.
-            "next": f"cd {os.path.relpath(root)} && gate status — the same answer in a "
+            "next": f"cd {os.path.relpath(root)} && gate status, for the same answer in a "
                     "millisecond, from the world rather than from CODEOWNERS",
-            "back": "git checkout . — everything as it was, in one word: this world was "
+            "back": "git checkout . puts everything back, in one word: this world was "
                     "committed the moment it was made, so nothing you try here can cost you "
                     "anything",
             "try": ["open ownership.swift at the line gate status names, and give that room to "
-                    "an owner whose zone matches — the world is the truth here, CODEOWNERS only "
+                    "an owner whose zone matches. The world is the truth here; CODEOWNERS only "
                     "seeded it",
-                    "or edit CODEOWNERS and run the import again — same command, one line moved",
-                    "gate serve — the bench: the world beside its verdict, judged as you type",
-                    "gate demo org — the same machinery on people and departments, "
+                    "or edit CODEOWNERS and run the import again: same command, one line moved",
+                    "gate serve opens the bench, with the world beside its verdict, judged as "
+                    "you type",
+                    "gate demo org is the same machinery on people and departments, "
                     "for a domain that has no repository"],
             "mutates": True}
 
@@ -5694,7 +5695,7 @@ def humanize(out):
         for x in out["parted"]:
             lines.append(f"  parted · {x}")
         lines.append(f"  next: {out['next']}")
-        lines.append(f"  more: {len(out['try'])} other things to try — `--json` lists them")
+        lines.append(f"  more: {len(out['try'])} other things to try; `--json` lists them")
     elif cmd == "demo":
         # ── ONE RUNG, WHICH IS THIS TOOL'S OWN LAW ABOUT ITSELF: "a reader is on
         # a rung, and a product that lists the whole ladder teaches nothing."
@@ -5709,7 +5710,7 @@ def humanize(out):
         lines.append(f"  next: {out['next']}")
         if out.get("back"):
             lines.append(f"  back: {out['back']}")
-        lines.append(f"  more: {len(out['try'])} other things to try — `--json` lists them")
+        lines.append(f"  more: {len(out['try'])} other things to try; `--json` lists them")
     elif cmd == "init":
         lines.append(f"init: {out['root']}" + (f" · created {len(out['created'])} files" if out["created"] else " · already there"))
         if out.get("next"):

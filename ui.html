@@ -106,9 +106,14 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 #next .run.took{color:var(--ok);border-bottom-color:var(--ok)}
 #rail h3.fold{cursor:pointer;display:flex;flex-wrap:wrap;align-items:flex-start;gap:calc(var(--u)*3);user-select:none}
 #rail h3.fold:hover{color:var(--ink)}
-#rail h3.fold i{flex:none;width:var(--wide);margin-top:var(--u);font-style:normal;transition:transform .12s;line-height:1}
+/* open or shut is two marks, not one mark turned. Rotating a triangle spins it
+   about the middle of its box while the glyph's own weight sits low, so it
+   wobbles off its line for the length of the animation and lands somewhere
+   slightly else. There is a character for each state; the state is what the
+   reader is being told. */
+#rail h3.fold i{flex:none;width:var(--wide);margin-top:var(--u);font-style:normal;line-height:1}
 #rail h3.fold i::before{content:"▾"}
-#rail h3.fold.shut i{transform:rotate(-90deg)}
+#rail h3.fold.shut i::before{content:"▸"}
 #rail h3.fold .obs{flex:1 1 100%;padding-left:calc(var(--u)*7)}
 /* the revision is a fact, not a heading: it keeps its own case and its own face */
 /* ── ONE LIST OF WHAT WAS TAKEN, and the judge is a row of it. It had a
@@ -330,8 +335,12 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 #table-host td.cut{cursor:pointer;color:var(--muted);text-align:right}
 #table-host .add{cursor:pointer;color:var(--muted);padding:calc(var(--u)*2) 0}
 #table-host .add:hover{color:var(--ink)}
-#table-host td.cell-bad{background:color-mix(in srgb,var(--bad) 10%,transparent)}
-#table-host td.cell-bad::after{content:" ✗";color:var(--bad)}
+/* the same wave a name wears in the editor, in the rail and in Bare. A glyph
+   was a fifth way of saying one thing, in a page whose whole argument is that
+   there is one way to say each thing, and a drawn cross is not a word this
+   world has. */
+#table-host td.cell-bad{background:color-mix(in srgb,var(--bad) 10%,transparent);
+  text-decoration:underline wavy var(--bad);text-underline-offset:var(--near)}
 #verdict-panel{border-top:0.5px solid var(--line);background:var(--paper);flex:none;max-height:34vh;display:flex;flex-direction:column}
 #verdict-head{display:flex;align-items:center;gap:calc(var(--u)*5);
   /* the chips are one group, and they keep their words: a bar that
@@ -341,7 +350,11 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 #verdict-head{display:flex;align-items:center;gap:calc(var(--u)*5);padding:calc(var(--u)*4) calc(var(--u)*8) calc(var(--u)*4);flex:none}
 .chip{font-family:var(--mono);display:inline-block;flex:none;min-width:4.6em;white-space:nowrap;text-align:center;font-size:11px;font-weight:600;padding:calc(var(--u)*2) calc(var(--u)*5);border-radius:8px;font-variant-numeric:tabular-nums}
 .chip.ok{background:color-mix(in srgb,var(--ok) 12%,transparent);color:var(--ok)}
-.chip.bad{background:var(--bad);color:var(--paper)}
+/* a refusal wears its colour the way a green does: the WORD carries it, over a
+   backing of the same hue at a tenth. A solid fill made one chip a block of
+   paint beside a chip of text, so the two verdicts were not the same kind of
+   thing on the bar, and the louder one shouted before it was read. */
+.chip.bad{background:color-mix(in srgb,var(--bad) 12%,transparent);color:var(--bad)}
 /* the typeface says WHO is speaking. Monospace is the world and everything read
    or measured from it — a file's name, a verdict, a count of files, a duration,
    the state of the git it sits in. The system face is the bench speaking ABOUT
@@ -352,18 +365,18 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 #verdicts{overflow:auto;padding:var(--u) calc(var(--u)*6) calc(var(--u)*5);display:flex;flex-direction:column;gap:calc(var(--u)*2)}
 /* each refusal is a row you can aim at: it has an edge, a surface, and it
    answers to the pointer, because clicking it goes to the line */
-/* A REFUSAL IS NOT MARKED AT ALL AT REST. It carried two markers — a red edge
-   down its left and a tinted backing — and neither was telling anybody
-   anything: this is the refusals panel, under a chip that already says how
-   many. Marking every row of a list of refusals as a refusal is saying the
-   same word on every line. The red belongs to the verdict alone, which is what
-   the chip and the wave under a name are for, and taking it off these rows is
-   that rule kept rather than loosened. What stays is what a row needs to be
-   aimed at: it lights under the pointer, because clicking it goes to the line. */
+/* A ROW IS A SURFACE AT REST, and it had none: bare text on the panel's own
+   paper, lighting only under the pointer, so the list read as a paragraph and
+   the boundary between one refusal and the next had to be found by eye. This
+   panel once carried a red edge AND a fill, which was the same word said twice
+   and was rightly cut; the correction went one step too far and took the
+   surface with it. The backing is what makes a row a row. The pointer still
+   answers, a step above it, because clicking goes to the line. */
 .refusal{display:flex;gap:calc(var(--u)*5);padding:calc(var(--u)*4) calc(var(--u)*5);
-  border-radius:5px;cursor:pointer;align-items:baseline}
-.refusal:hover{background:color-mix(in srgb,var(--bad) 10%,transparent)}
-.refusal:active{background:color-mix(in srgb,var(--bad) 16%,transparent)}
+  border-radius:5px;cursor:pointer;align-items:baseline;
+  background:color-mix(in srgb,var(--bad) 7%,transparent)}
+.refusal:hover{background:color-mix(in srgb,var(--bad) 15%,transparent)}
+.refusal:active{background:color-mix(in srgb,var(--bad) 22%,transparent)}
 .refusal code,.pending code{flex:none}
 .pending-head{padding:calc(var(--u)*4) calc(var(--u)*4) calc(var(--u)*2);text-transform:uppercase;letter-spacing:.05em}
 .pending{display:flex;gap:calc(var(--u)*5);padding:calc(var(--u)*3) calc(var(--u)*5);border-radius:5px;cursor:pointer;align-items:baseline}

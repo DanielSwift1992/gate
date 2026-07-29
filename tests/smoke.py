@@ -4186,19 +4186,40 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
     S.append(("the bench is a prism: worlds one judged fact apart never paint the same",
               len(parted) == 3 and all(row[3] for row in parted)))
 
-    # A REFUSAL IS NOT MARKED AT REST. It wore a red edge and a tinted backing,
-    # and neither said anything: this is the refusals panel, under a chip that
-    # already counts them. Marking every row of a list of refusals as a refusal
-    # is saying the same word on every line. The red is the verdict's alone —
-    # the chip, and the wave under a name that resolves to nothing — and taking
-    # it off these rows keeps that rule instead of loosening it. What remains is
-    # what a row needs to be aimed at: it lights under the pointer.
+    # A ROW IS A SURFACE AT REST, AND ONE WORD IS SAID ONCE. This panel once wore
+    # a red edge AND a fill, which was the same word twice, and the correction
+    # took the surface away with the repetition: bare text on the panel's own
+    # paper, lighting only under the pointer, so the list read as a paragraph
+    # and the boundary between one refusal and the next had to be found by eye.
+    # The backing is what makes a row a row. One marker, not two, and the
+    # pointer answers a step above it because clicking goes to the line.
     ref_rule = ui.split(".refusal{", 1)[1].split("}", 1)[0] if ".refusal{" in ui else ""
-    S.append(("a refusal carries no mark of its own, and its address is a fact, not a verdict",
-              "border-left" not in ref_rule and "background" not in ref_rule
-              and ".refusal:hover{background:color-mix(in srgb,var(--bad) 10%,transparent)}" in ui
+    S.append(("a refusal is a row at rest and answers the pointer, and says its one word once",
+              # the surface is there, and it is the only marker: no second edge
+              "background:color-mix(in srgb,var(--bad) 7%,transparent)" in ref_rule
+              and "border-left" not in ref_rule and "border:" not in ref_rule
+              # and the pointer is a step above rest, not the first sign of a row
+              and ".refusal:hover{background:color-mix(in srgb,var(--bad) 15%,transparent)}" in ui
               and ".refusal code{color:var(--bad)" not in ui
-              and "border:1px solid color-mix(in srgb,var(--bad) 22%" not in ui))
+              # AND A VERDICT WEARS ITS COLOUR THE WAY THE OTHER ONE DOES: the
+              # word carries it over a tint of the same hue. A solid fill made
+              # one chip a block of paint beside a chip of text, so the two
+              # verdicts were not the same kind of thing on the same bar.
+              and ".chip.bad{background:color-mix(in srgb,var(--bad) 12%,transparent);color:var(--bad)}" in ui
+              and ".chip.ok{background:color-mix(in srgb,var(--ok) 12%,transparent);color:var(--ok)}" in ui))
+
+    # AND A CELL IS MARKED THE WAY EVERY OTHER NAME IS. A drawn cross was a
+    # fifth way of saying one thing, on a page whose argument is that there is
+    # one way to say each thing, and it is not a word this world has.
+    S.append(("what hurts wears the same wave everywhere, and no glyph anywhere",
+              "✗" not in ui and "❌" not in ui
+              and ui.count("text-decoration:underline wavy var(--bad)") >= 5
+              # open or shut is two marks, never one mark turned: rotating a
+              # triangle spins it about the middle of its box while the glyph's
+              # weight sits low, so it wobbles off its line and lands elsewhere
+              and '#rail h3.fold i::before{content:"▾"}' in ui
+              and '#rail h3.fold.shut i::before{content:"▸"}' in ui
+              and "transition:transform" not in ui))
 
     S.append(("the verdict holds still: tabular numbers, a chip that reserves its width, no motion on a change",
               "font-variant-numeric:tabular-nums" in ui
