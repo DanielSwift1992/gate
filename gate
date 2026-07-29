@@ -1733,25 +1733,26 @@ DEMO_README = """\
 // read further than their question.
 //
 // ── one: a record ──
-//
-// A record is a name and its axes. Below is a zone of this world's own —
-// yours, in this file, judged with everything else the moment you save.
 
+/// A record is a name and its axes. This one is a zone of this world's own —
+/// yours, in this file, judged with everything else the moment you save.
 public enum Zone_readme: Realm {}
 
 // ── two: a claim, and the law over it ──
 //
 // A claim is a name for a fact you assert. `Owns<Who, What>` is one, and it
 // only stands where the owner's zone and the path's zone are the same word.
-// These two hold, so this line is green:
 
+/// an owner, posted to the zone above and carrying a key that administers
 public enum Owner_you: Keeper {
     public typealias Post = Zone_readme
     public typealias Key = WardenKey
 }
+/// a path, standing in that same zone
 public enum Path_readme: Room {
     public typealias Place = Zone_readme
 }
+/// and the claim over the two of them, which holds because the zones agree
 public typealias Owns_readme = Owns<Owner_you, Path_readme>
 
 // TRY IT. Change `Zone_readme` on the Path above to `Zone_src`. The judge
