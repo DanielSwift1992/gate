@@ -28,9 +28,13 @@ public protocol Mine {}
 // the first row so the bench opens on it: the reference is the front door.
 public enum TheReadme: Mine {
     public typealias Kind = FormsFile
-    public typealias Written = FormsTool
 }
 extension TheReadme { public static var typeName: String { "stdlib/readme.swift" } }
+public enum TheVerbs: Mine {
+    public typealias Kind = FormsFile
+    public typealias Written = FormsTool
+}
+extension TheVerbs { public static var typeName: String { "stdlib/verbs.swift" } }
 public enum FormsTool: Mine {
     public typealias Kind = FormsFile
 }

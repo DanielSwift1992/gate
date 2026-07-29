@@ -99,13 +99,13 @@ def main():
               "readme.swift" in r.get("next", "")))
     # BREAK IT, ON THE FIRST FILE, IN A REPOSITORY THAT DECLARED NOTHING ELSE: the
     # lesson the letter offers has to be true where it is read.
-    letter_p = os.path.join(repo, "readme.swift")
+    letter_p = os.path.join(repo, "verbs.swift")
     kept = open(letter_p).read()
     open(letter_p, "w").write(kept.replace("public typealias LogIsSafe = Run<Log>",
                                            "public typealias LogIsSafe = Run<Apply>"))
     c, r = run("status", cwd=repo)
-    S.append(("breaking a promise in the letter refuses at its own line",
-              c == 1 and any(x.get("address", "").startswith("readme.swift:")
+    S.append(("breaking a promise in the reference beside the letter refuses at its own line",
+              c == 1 and any(x.get("address", "").startswith("verbs.swift:")
                              and "LogIsSafe" in x["claim"] for x in r["refusals"])))
     open(letter_p, "w").write(kept)
     c, r = run("status", cwd=repo)
@@ -4631,26 +4631,26 @@ public enum MyWatch: AccessLedger {
     # ── AND THE REFERENCE IS A WORLD, HELD TO THE DISPATCH BOTH WAYS. A list of
     # verbs in prose drifts from the tool the moment either changes and nothing
     # says when — the one failure this tool exists against, met in its own
-    # documentation. Each verb is a record in `stdlib/readme.swift` now, judged
+    # documentation. Each verb is a record in `stdlib/verbs.swift` now, judged
     # with the rest of this repository's world; which file a thing is cannot be
     # judged (bytes and paths, and no world speaks about a filesystem), so the
     # correspondence is a guard from fact and says so.
-    kept_readme = open(os.path.join(HERE, "stdlib", "readme.swift"), encoding="utf-8").read()
+    kept_readme = open(os.path.join(HERE, "stdlib", "verbs.swift"), encoding="utf-8").read()
     try:
-        open(os.path.join(HERE, "stdlib", "readme.swift"), "w").write(
+        open(os.path.join(HERE, "stdlib", "verbs.swift"), "w").write(
             kept_readme.replace('{ "survey" }', '{ "surveyy" }'))
         renamed = run("status", cwd=HERE)[1]
-        open(os.path.join(HERE, "stdlib", "readme.swift"), "w").write(
+        open(os.path.join(HERE, "stdlib", "verbs.swift"), "w").write(
             "\n".join(l for l in kept_readme.split("\n")
                       if '{ "badge" }' not in l and "public enum Badge: Verb {" not in l))
         dropped = run("status", cwd=HERE)[1]
     finally:
-        open(os.path.join(HERE, "stdlib", "readme.swift"), "w").write(kept_readme)
+        open(os.path.join(HERE, "stdlib", "verbs.swift"), "w").write(kept_readme)
     S.append(("the table of verbs and the dispatch are held to each other, in both directions",
               run("status", cwd=HERE)[1]["verdict"] == "holds"
               # a record for a word this tool does not answer to: a promise it no longer keeps
               and any("`gate surveyy` is a record here" in r["claim"]
-                      and r["address"].startswith("stdlib/readme.swift:")
+                      and r["address"].startswith("stdlib/verbs.swift:")
                       for r in renamed["refusals"])
               # and a word with no record: a verb nobody is told about
               and any("`gate badge` is a word this tool answers to" in r["claim"]
@@ -4883,7 +4883,7 @@ public enum MyWatch: AccessLedger {
     # every verb's note wearing `//`, the table a person is sent to by the
     # README opening as a source file. The tool that says a reference must not
     # drift from what it describes may not be the one place it is not applied.
-    ref = open(os.path.join(HERE, "stdlib", "readme.swift"), encoding="utf-8").read()
+    ref = open(os.path.join(HERE, "stdlib", "verbs.swift"), encoding="utf-8").read()
     # ── AND A NAME THE PANEL PRINTS IS A NAME THE PANEL OPENS. The seam demo's
     # bench showed its layout — two seam sides listed by name, right there on
     # the screen — and offered no way to open either: the whole scene is about
@@ -5023,7 +5023,7 @@ public enum MyWatch: AccessLedger {
               # and it is the first row of this world's layout, so the bench
               # opens on it
               and open(os.path.join(HERE, "gate.manifest.swift"),
-                       encoding="utf-8").read().index("stdlib/readme.swift")
+                       encoding="utf-8").read().index("stdlib/verbs.swift")
                   < open(os.path.join(HERE, "gate.manifest.swift"),
                          encoding="utf-8").read().index("stdlib/bench-atoms.swift")
               # every verb carries the note the reference is made of

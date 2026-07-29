@@ -557,7 +557,14 @@ def own_surface_guards():
     d = os.path.dirname(MANIFEST["manifest"])
     rows = [r for r in (MANIFEST.get("rows") or []) if r["role"] == "forms"
             and os.path.abspath(os.path.join(d, r["path"])) in SHIPPED_PATHS
-            and os.path.basename(r["path"]) == "readme.swift"]
+            # ── THE TABLE OF VERBS LIVES IN THE PAGE THAT IS THE TABLE. It used to
+            # be the second half of the letter, and a letter carrying sixty-eight
+            # records of somebody else's content is a letter with ballast: the
+            # records subtract a real second truth (a doc claiming a verb is safe
+            # beside a tool where it writes) and they do not do it on a first
+            # screen. Split, they are held in their own world and the guard follows
+            # the table rather than the name of a page.
+            and os.path.basename(r["path"]) == "verbs.swift"]
     if not rows:
         return []
     name = rows[0]["path"]
@@ -4919,13 +4926,22 @@ def cmd_init(a):
     # without a row saying whose it is — which is the law the rest of the product
     # is built on, kept at the one moment it would have been easiest to break.
     letter = None
+    # ── AND THE REFERENCE COMES WITH THE LETTER. The letter names it and stops
+    # there: it is the promises at that page's foot that make it safe to run any of
+    # this on a clone somebody cares about, and a promise nobody can check is worth
+    # nothing. Held to the dispatch of the tool THIS repository has, it is the one
+    # copy that could lie to them, so it travels.
+    layout_was = os.path.exists(os.path.join(root, "gate.manifest.swift"))
+    if "verbs" in STDLIB:
+        took_ref, _rp = take_shelf("verbs", root)
+        if took_ref:
+            made += [took_ref["wrote"]] + took_ref["with"]
     if "readme" in STDLIB:
         # ── AND THE LAYOUT IS ONE OF THE FILES THIS LEAVES. Taking a page declares
         # it, and declaring it writes the document that says so — a file appearing
         # in somebody's repository, counted by nobody: `created 3 files` while four
         # were there. What a tool writes in a repository that is not its own, it
         # names, and the count is part of the naming.
-        layout_was = os.path.exists(os.path.join(root, "gate.manifest.swift"))
         took, _dest = take_shelf("readme", root)
         if took:
             letter = took["wrote"]
