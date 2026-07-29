@@ -1721,70 +1721,80 @@ SEAM_DEMO_SDK = {"carrier": "MessagesJS",
 DEMO_README = """\
 // opens: bare
 //
-// ── this file is the way in, and it stays the way back ──
+// ── this is your copy, and it was made to be taken apart ──
 //
-// You are inside a repository this tool made: three source areas, a docs
-// folder, a CODEOWNERS, and a one-line policy saying which zone each owner
-// keeps. Everything here is committed already, so `git checkout .` undoes
-// anything you try. Nothing in this tool ever reaches the network.
+// A repository with three source areas, a docs folder, and a CODEOWNERS like
+// the one you already keep. All of it was committed the moment it was made, so
+// `git checkout .` puts every word of it back. Nothing here reaches the
+// network, at any time, for any reason.
 //
-// Read down as far as you need. The first screen is a minute, the middle is
-// an hour, and the tail says where the whole reference lives. Nobody has to
-// read further than their question.
+// Read as far down as your question goes. The first screen is a minute; the
+// tail says where the whole reference lives.
 //
-// ── one: a record ──
+// ── one: this is what was done for you before you arrived ──
+//
+// `gate import codeowners` read the CODEOWNERS in this folder and wrote
+// `ownership.swift` beside this file. Three words came out of it: a top of the
+// tree became a ZONE, a pattern became a ROOM, and a person became an OWNER
+// who keeps one zone. Which zone each of them may keep is the one thing
+// CODEOWNERS cannot say, so it is written next to it, in `owners.csv`.
+//
+// ── two: this is where you say what is yours ──
 
-/// A record is a name and its axes. This one is a zone of this world's own:
-/// yours, in this file, judged with everything else the moment you save.
+/// A zone of your own, declared here rather than imported from anywhere. You
+/// wrote it, you answer for it, and it cannot quietly rot: the judge reads it
+/// again every time this file is touched.
 public enum Zone_readme: Realm {}
 
-// ── two: a claim, and the law over it ──
+// ── three: this is where your word is held ──
 //
-// A claim is a name for a fact you assert. `Owns<Who, What>` is one, and it
-// only stands where the owner's zone and the path's zone are the same word.
+// A claim is a fact you assert out loud. `Owns` is one, and it stands only
+// where the owner's zone and the path's zone are the same word.
 
-/// an owner, posted to the zone above and carrying a key that administers
+/// an owner of your own, posted to the zone above, carrying a key that
+/// administers
 public enum Owner_you: Keeper {
     public typealias Post = Zone_readme
     public typealias Key = WardenKey
 }
-/// a path, standing in that same zone
+/// a path of your own, standing in that same zone
 public enum Path_readme: Room {
     public typealias Place = Zone_readme
 }
-/// and the claim over the two of them, which holds because the zones agree
+/// and your word over the two of them, which holds because the zones agree
 public typealias Owns_readme = Owns<Owner_you, Path_readme>
 
-// TRY IT. Change `Zone_readme` on the Path above to `Zone_src`. The judge
-// reads it as you type and refuses at the line you touched, in the law's own
-// sentence. Nothing is written while it refuses: your text stays in the
-// editor until it holds again. Put it back and the file is saved, and green.
-// Nothing else in this world moves: delete this whole file and the world
-// still holds.
+// BREAK IT. Change `Zone_readme` on the path above to `Zone_src` and watch the
+// line get named, in the law's own sentence, before anything reaches the file:
+// your text waits in the editor until it holds again. Put it back and it is
+// saved, and green. Here nobody blames you, and you get a line number. This
+// whole file can go without anything else moving, which is what makes it safe
+// to touch.
 //
-// ── three: the refusal that was here before you ──
+// ── four: this is where the world tells you what you did not know ──
 //
-// `gate status` names one right now, and it is not this file. It is in
-// `ownership.swift`, translated from CODEOWNERS, where one rule gives a
-// source directory to somebody whose zone is docs. Two ways to end it:
-// fix the line in the world, or fix CODEOWNERS and run the import again.
+// One line already does not hold, and it is not in this file. In
+// `ownership.swift`, a rule out of your CODEOWNERS hands a source directory to
+// somebody whose zone is docs. `gate status` names it in milliseconds, without
+// reading CODEOWNERS again. Two ways to end it: change the line in the world,
+// or change CODEOWNERS and import it once more.
 //
 //     gate import codeowners CODEOWNERS --tree . --policy owners.csv \\
 //                            -o ownership.swift
 //
-// The world is the truth here; CODEOWNERS only seeded it once.
+// The world is the truth from here; CODEOWNERS only seeded it once.
 //
-// ── four: where everything else is ──
+// ── five: this is where you will come back ──
 //
 //     gate status      what disagrees right now, in milliseconds
 //     gate log         this repository's own history, nothing translated
 //     gate findings    what is true of a clone, before anything is translated
 //     gate serve       this bench, judged as you type
 //
-// Every verb this tool answers to is a record like the ones above, with a
-// note in its own words: `gate stdlib show readme`. That table is judged
-// with gate's own world and held to its dispatch by name, so it cannot fall
-// behind the tool it describes.
+// Every verb answers to a record like the ones above, with a note in its own
+// words: `gate stdlib show readme`. That table is judged with gate's own world
+// and held to its dispatch by name, so it cannot fall behind the tool it
+// describes.
 """
 
 

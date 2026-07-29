@@ -4808,6 +4808,39 @@ public enum MyWatch: AccessLedger {
               and side_text and "one side of a seam" in side_text
               and "openSeamSide(s, null)" in ui))
 
+    # ── A GREETING HOLDS, IT DOES NOT THREATEN, AND EVERY LINE OF THE LETTER
+    # CARRIES A FEELING. `A lie cannot be saved` was true of nothing and wrong
+    # about everything: a file that does not hold saves here perfectly well, and
+    # what cannot happen is a lie being COMMITTED, only where somebody wired the
+    # hook. The two words a stranger met first were `lie` and `cannot`, which is
+    # the voice of supervision. What is said first is what is being kept; the
+    # mechanism follows as an event with an address and no blame in it.
+    lw = os.path.join(tmp, "letterworld")
+    run("demo", lw)
+    letter = open(os.path.join(lw, "readme.swift"), encoding="utf-8").read()
+    S.append(("the greeting holds rather than threatens, and the letter speaks in scenes",
+              '"Your word, held as you type. A claim that breaks is named by its line."' in ui
+              # gone from everything the page SAYS. It survives once in the
+              # comment that explains why, which is the record of the decision
+              # and not a thing anybody reads on screen.
+              and '"Every claim in these files is judged as you type."' not in ui
+              and ui.count("cannot be saved") == 1
+              # a refusal is about the world and never about the writer: the
+              # letter says so in the canon's own words, wrapped as prose wraps
+              and "nobody blames you" in letter and "get a line number" in letter
+              # and every section names a room and a future act, second person
+              and letter.count("── ") >= 6
+              and "this is where you say what is yours" in letter
+              and "this is where your word is held" in letter
+              and "this is where you will come back" in letter
+              # AND THE BRIDGE IS SAID. A stranger meets `Zone_readme`,
+              # `Owner_you`, `Path_readme` and has no way to know these are
+              # their own CODEOWNERS in another form: the words came from
+              # somewhere, and the letter never said where.
+              and "gate import codeowners` read the CODEOWNERS in this folder" in letter
+              and "became a ZONE" in letter and "became a ROOM" in letter
+              and "owners.csv" in letter))
+
     S.append(("gate's own reference is met as a reference, not as source",
               "// opens: bare" in ref
               # and it is the first row of this world's layout, so the bench

@@ -213,6 +213,9 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 #bare .jump{color:var(--localtype);cursor:pointer}
 #bare .decl:hover,#bare .jump:hover{text-decoration:underline}
 #bare .known{color:var(--knownname)}
+/* the one string a record is allowed: it spells a name, so it is set as the
+   text it is rather than as a value of some axis */
+#bare .lit{color:var(--muted)}
 /* THE SEAMS THIS WORLD IS PARTY TO. Same registers as everywhere: an address is
    a fact and set in mono, what it means is speech and set in the system face,
    the category of the line is a caption. Nothing here is a verdict — a seam is a
@@ -2548,6 +2551,13 @@ function bareForm(parsed, text) {
             ? '<span class="conf"> when </span>' + nameTokens(d.whereText) : "";
         const block = ['<span class="' + (bad ? "row-bad" : "") + '">' + declSpan(name, d.line, bad) + conf + when
                 + cut({ kind: "record", line: d.line, host: name }, "record") + "</span>"];
+        // ── AND THE ONE STRING A RECORD IS ALLOWED. `typeName` is what spells a
+        // name — which file a layout row is about, which revision a take was
+        // taken at — and this view dropped it, so the manifest showed rows with
+        // their columns and nothing saying what any row was ABOUT. The document
+        // says so in its own second paragraph, and the view of it disagreed.
+        const lit = parsed.literals && parsed.literals.get(name);
+        if (lit) block.push('    <span class="lit">"' + esc(lit.value) + '"</span>');
         for (const [k, v] of d.aliases)
             block.push("    " + esc(k) + " = "
                 + slotSpan({ kind: "alias", line: v.line, host: name, axis: k }, v.target)
@@ -3025,13 +3035,15 @@ async function readFiles() {
     // the line says what is true HERE: with a world, the judge is at work;
     // without one, only the history is being read
     document.getElementById("brandline").textContent = files.length
-        // ── AND IT MAY NOT PROMISE WHAT IT DOES NOT DO. A file that does not
-        // hold saves here perfectly well — the write lands, the verdict goes
-        // red, and that is the point: the working copy is yours and this tool
-        // keeps no state of its own. What cannot happen is a lie being
-        // COMMITTED, and only where somebody wired the hook. The sentence over
-        // it is exactly true and needs no second half.
-        ? "Every claim in these files is judged as you type."
+        // ── A GREETING HOLDS, IT DOES NOT THREATEN. `A lie cannot be saved`
+        // was true of nothing and wrong about everything: a file that does not
+        // hold saves here perfectly well, and what cannot happen is a lie being
+        // COMMITTED, only where somebody wired the hook. Worse, the two words a
+        // stranger met first were `lie` and `cannot`, which is the voice of
+        // supervision, and this is not that. What is said first is what is
+        // being kept; the mechanism comes second, as an event with an address
+        // and no blame in it.
+        ? "Your word, held as you type. A claim that breaks is named by its line."
         : "Reading this repository's history. Nothing here is judged yet.";
     document.getElementById("rail").style.display = "flex";
     document.getElementById("split-rail").style.display = "block";
