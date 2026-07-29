@@ -4920,10 +4920,18 @@ def cmd_init(a):
     # is built on, kept at the one moment it would have been easiest to break.
     letter = None
     if "readme" in STDLIB:
+        # ── AND THE LAYOUT IS ONE OF THE FILES THIS LEAVES. Taking a page declares
+        # it, and declaring it writes the document that says so — a file appearing
+        # in somebody's repository, counted by nobody: `created 3 files` while four
+        # were there. What a tool writes in a repository that is not its own, it
+        # names, and the count is part of the naming.
+        layout_was = os.path.exists(os.path.join(root, "gate.manifest.swift"))
         took, _dest = take_shelf("readme", root)
         if took:
             letter = took["wrote"]
             made += [letter] + took["with"]
+            if not layout_was and os.path.exists(os.path.join(root, "gate.manifest.swift")):
+                made.append("gate.manifest.swift")
     relearn_world(root)
     vendored = cmd_vendor(root) if vendor else None
     hooks_note, undo, prior = None, None, None

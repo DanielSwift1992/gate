@@ -32,11 +32,11 @@
 //
 // ── what entry touched ──
 //
-// Entering a repository leaves three files and one git setting, and names all
-// four: this letter, the forms it is written in, a pre-commit hook, and
-// `core.hooksPath`, with the line that puts it back printed at the time.
-// Nothing else was read for its meaning, moved, or rewritten. Nothing here
-// reaches the network, at any time, for any reason.
+// Entering a repository leaves four files and one git setting, and names all
+// five: this letter, the forms it is written in, the layout that declares them
+// both, a pre-commit hook, and `core.hooksPath`, with the line that puts it
+// back printed at the time. Nothing else was read for its meaning, moved, or
+// rewritten. Nothing here reaches the network, at any time, for any reason.
 //
 // ── this is where you say your first word ──
 //

@@ -54,9 +54,15 @@ def main():
     # world's vocabulary as though it were the vocabulary, and a workflow in their
     # .github. Tables are theirs and arrive by `import`; the letter arrives by the
     # verb everything of ours arrives by, carrying the revision it came from.
-    S.append(("entry leaves the hook, the letter and the forms it is written in, and nothing else",
-              sorted(r.get("created") or []) == [".githooks/pre-commit", "forms-tool.swift",
-                                                 "readme.swift"]
+    # AND IT NAMES EVERY ONE OF THEM. Declaring the letter writes the layout that
+    # says so, and that file appeared in somebody's repository counted by nobody:
+    # `created 3 files` while four were there. So the list is held to the disk
+    # rather than to a list somebody remembered to update.
+    landed = sorted(os.path.relpath(os.path.join(dp, f), repo)
+                    for dp, _dn, fn in os.walk(repo) for f in fn
+                    if ".git/" not in os.path.relpath(os.path.join(dp, f), repo) + "/")
+    S.append(("entry names every file it leaves, and leaves nothing of the old furniture",
+              sorted(r.get("created") or []) == landed
               and not os.path.exists(os.path.join(repo, "README.md"))
               and not os.path.exists(os.path.join(repo, "AGENT.md"))
               and not os.path.isdir(os.path.join(repo, ".github"))))
