@@ -1327,19 +1327,28 @@ def policy_guards():
 def next_rung(refused):
     # ONE next step, chosen by what the repository already has: a reader is on
     # a rung, and a product that lists the whole ladder teaches nothing.
+    #
+    # ── AND EACH RUNG SAYS WHAT YOU GET, NOT WHAT YOU WILL BE STOPPED FROM.
+    # `so what does not hold cannot be committed` is the same act said as a
+    # prohibition: true, and it leaves a person hearing that they will be
+    # refused rather than that their word will start standing. Every line here
+    # names the thing that becomes yours once the step is taken.
     if refused:
-        return "open the file at the address above, or run gate serve to fix it with the judge watching"
+        return "open the address above, or run `gate serve` and watch the verdict move as you type"
     root = os.path.dirname(os.path.abspath(FACTS)) if FACTS else "."
     hooked = subprocess.run(["git", "config", "--get", "core.hooksPath"], cwd=root,
                             capture_output=True, text=True).stdout.strip()
     if not hooked:
-        return "run `gate init .` to wire the pre-commit hook, so what does not hold cannot be committed"
+        return "run `gate init .` to wire the hook: from here on, what you commit is what holds"
     if not policy_path():
-        return "state who may merge: declare an Identity and a MergePolicy in gate.policy.swift"
+        return ("say who may merge, in gate.policy.swift: a law of yours with a date on it, "
+                "instead of a convention somebody has to remember")
     ci = os.path.join(root, ".github", "workflows")
     if not os.path.isdir(ci):
-        return "put `gate status` in CI: a red verdict already exits non-zero"
-    return "run `gate serve` for the bench, with the journal and your own world beside it"
+        return ("put `gate status` in the CI you already run: from then on nobody reads a diff "
+                "to know the claims still hold")
+    return ("run `gate serve` for the bench: your world on the left, the verdict on the right, "
+            "and a page of your own beside them")
 
 
 def cmd_guard(a):
@@ -5370,7 +5379,12 @@ def cmd_serve(a):
     HTTPServer(("127.0.0.1", port), H).serve_forever()
 
 
-USAGE = """usage (the git-shaped porcelain):
+USAGE = """git keeps every byte of your repository honest. The words it runs on have no
+such guarantee: a CODEOWNERS, a schema, a list of who may deploy say what was
+true the day somebody wrote them, and nothing says the day that stopped. gate
+makes those words claims, read again every time they are touched.
+
+usage (the git-shaped porcelain):
   gate init [dir]                     · gate status | fsck
   gate mine FILE [--role R]           (a file you emit: judged with your world,
                                        and changing it changes the verdict)

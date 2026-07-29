@@ -4960,7 +4960,43 @@ public enum MyWatch: AccessLedger {
                       and f"gate {v}" not in usage and f"gate --{v}" not in usage)
     S.append(("the screen a newcomer meets names every verb the README promises, and one first step",
               not unlisted and "gate demo" in usage
-              and "first time" in usage))
+              and "first time" in usage
+              # ── AND IT SAYS WHAT THIS IS BEFORE IT SAYS WHAT TO TYPE. Sixty
+              # lines of verbs opened on the word `usage`, so a person who typed
+              # the name of an unfamiliar tool to find out what it was got a
+              # list of things to do with it instead of an answer.
+              and usage.startswith("git keeps every byte of your repository honest")
+              and "nothing says the day that stopped" in usage))
+
+    # ── AND EVERY RUNG SAYS WHAT YOU GET, NEVER WHAT YOU WILL BE STOPPED FROM.
+    # `wire the pre-commit hook, so what does not hold cannot be committed` is
+    # one act said as a prohibition: true, and it leaves a person hearing that
+    # they will be refused rather than that their word starts standing. The tone
+    # canon is that a greeting holds and does not threaten, and a rung is a
+    # greeting to whatever comes next.
+    next_src = shelf_src.split("def next_rung(", 1)[1].split("\ndef ", 1)[0]
+    # ── AND AN EMPTY BENCH SAYS WHAT THIS PLACE IS FOR, NOT WHAT IT LACKS. `No
+    # world here yet` names an absence and hands over two commands, which is a
+    # form to fill in. The same screen can say the thing this repository is
+    # missing in its own terms, and each door can name a room and a future act
+    # rather than a flag. A backtick means the same here as everywhere else on
+    # the page: written raw it was punctuation in the reader's face.
+    S.append(("an empty bench says what the place is for, and its doors are scenes",
+              "<h2>Your words are not held here yet</h2>" in ui
+              # gone from the page; it survives once in the comment that
+              # records why, which is the decision and not a thing on screen
+              and ui.count("No world here yet") == 1
+              and "This is where you will see it happen to somebody else first" in ui
+              and "This is where your own repository starts answering" in ui
+              and "noteProse(lead)" in ui))
+
+    S.append(("a rung names what becomes yours, not what will be refused",
+              "from here on, what you commit is what holds" in next_src
+              # it survives once in the comment that records why it went, which
+              # is the decision and not a thing anybody reads on a terminal
+              and next_src.count("cannot be committed") == 1
+              and "a law of yours with a date on it" in next_src
+              and "nobody reads a diff" in next_src))
 
     # a route may carry an extension, and this pattern used to stop at the dot —
     # so `/ladder.css` read as `/ladder` on one side and vanished on the other,

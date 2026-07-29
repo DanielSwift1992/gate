@@ -3084,16 +3084,31 @@ function showEmpty() {
     document.querySelector("#rail h3").style.display = "none";   // no files, no heading
     const host = document.getElementById("table-host");
     host.style.display = "block";
-    // say only what is true HERE: a repository with no commits has no journal
+    // ── AND AN EMPTY BENCH SAYS WHAT THIS PLACE IS FOR, NOT WHAT IT LACKS.
+    // `No world here yet` names an absence and hands over two commands, which
+    // is a form to fill in; the same screen can say the thing this repository
+    // is missing in its own terms. git keeps its bytes honest and nobody keeps
+    // its words honest: that sentence is true of every clone on earth and it is
+    // true of this one, and it is what the two doors are for.
     const lead = journalCommits.length
-        ? "There is history here already: `gate log` reads it — every commit, who wrote it, "
-          + "whether it is merged — with no translation at all. What is missing is a world "
-          + "for the judge to read."
-        : "This repository has no commits yet and no world. A world is the place to start.";
+        ? "This repository's history is already readable: `gate log` gives every commit, who "
+          + "wrote it and whether it is merged, with nothing translated. What no clone has "
+          + "yet is a world: the words this repository runs on, said where they can be read "
+          + "again every time they are touched."
+        : "Nothing has been committed here yet, so there is neither a history to read nor a "
+          + "world to judge. Both start the same way.";
+    // a backtick means the same thing here as everywhere else on this page: the
+    // word inside it is a thing you type. Written raw it was punctuation.
     host.innerHTML =
-        '<div class="empty"><h2>No world here yet</h2><p>' + lead + "</p>"
-        + '<div class="door"><code>gate demo</code><span>Run this in a terminal: it builds a repository with a CODEOWNERS and one owner reaching past their zone. Thirty seconds.</span></div>'
-        + '<div class="door"><code>cp your.csv tables/ &amp;&amp; gate status</code><span>Drop a table you already export into tables/, and your own rows become a world the judge can read.</span></div>'
+        '<div class="empty"><h2>Your words are not held here yet</h2><p>' + noteProse(lead) + "</p>"
+        + '<div class="door"><code>gate demo</code>'
+        + "<span>" + noteProse("This is where you will see it happen to somebody else first: a "
+        + "repository with a CODEOWNERS, one owner reaching past their zone, and the line named "
+        + "for it. Thirty seconds, and `git checkout .` is the whole way back.") + "</span></div>"
+        + '<div class="door"><code>gate import codeowners CODEOWNERS --tree .</code>'
+        + "<span>" + noteProse("This is where your own repository starts answering. Who owns "
+        + "which paths is a fact you already keep, in a file that cannot say whether an owner "
+        + "still exists or whether a pattern still matches anything.") + "</span></div>"
         + "</div>";
 }
 </script>
