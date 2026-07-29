@@ -16,6 +16,66 @@
 // dispatch, the way a world is seeded from a table; from then on this file is
 // the source, and editing it is how the answer changes.
 
+// ── what this is ──
+//
+// git keeps every byte of a repository honest: change one and the hash says so.
+// The WORDS of a repository have no such guarantee. A CODEOWNERS says what was
+// true on the day somebody wrote it, and nothing anywhere says the day it
+// stopped being true. The same goes for a schema, a rota, a list of who may
+// deploy. gate makes those words claims, and a claim is read again every time
+// it is touched.
+//
+// This file is one of them. A row for it stands in `gate.manifest.swift`
+// beside it, the promises at the bottom are judged every time anything here is
+// touched, and the verdict counts them. A readme that describes a tool goes
+// stale. This one is the tool working.
+//
+// ── what entry touched ──
+//
+// Entering a repository leaves three files and one git setting, and names all
+// four: this letter, the forms it is written in, a pre-commit hook, and
+// `core.hooksPath`, with the line that puts it back printed at the time.
+// Nothing else was read for its meaning, moved, or rewritten. Nothing here
+// reaches the network, at any time, for any reason.
+//
+// ── this is where you say your first word ──
+//
+// `gate serve` opens the bench, and beside this file it shows `my.swift`: your
+// own world, kept in your own git on this machine and never in the repository
+// you share. Until you write in it there is no such file, and that is an open
+// place rather than something missing. Write one claim there and it is judged
+// beside the shared world on every keystroke; clear it and it is gone again.
+//
+// BREAK IT. That is the safest place to learn what a claim is, because nothing
+// written there reaches anybody. Or break this letter: say `Does = Writes` on
+// any verb below that promises to change nothing, and the certificate under it
+// refuses at its line, in the law's own words. A refusal names a line and
+// never a person.
+//
+// ── this is what is already true here, before anything is translated ──
+//
+// `gate log` reads this repository's own history and `gate findings` says what
+// is true of it in sentences. Both are marked read, never judged: no court
+// sat, so there is no verdict, and a sentence you can check yourself is worth
+// more than one you cannot.
+//
+// ── this is where your own words come in ──
+//
+// If this repository keeps a CODEOWNERS, `gate import codeowners CODEOWNERS
+// --tree .` turns it into records, and what it usually prints first is a line
+// that stopped being true months ago. Tables arrive the same way: a column is
+// an axis, a row is a record, and `gate export` prints them back byte for
+// byte. Rules are the one thing translated by hand, once, because they are
+// small and they are yours to read.
+//
+// ── and the rest of this file is the reference ──
+//
+// Every verb this tool answers to, as a record: what it touches, which court
+// it calls, and a note in its own words. A guard holds the records to the
+// dispatch by name in both directions, so a verb with no record and a record
+// with no verb are each refused at a line. Read as far down as your question
+// goes.
+
 // ── what a person runs first ──
 
 /// what disagrees right now: judgement over your declared files, in milliseconds
@@ -39,7 +99,7 @@ public enum Demo: Verb {
 }
 extension Demo { public static var typeName: String { "demo" } }
 
-/// a skeleton, and the pre-commit hook wires itself
+/// the act of entry: the hook wires itself, and this letter lands, yours
 public enum Init: Verb {
     public typealias Does = Writes
     public typealias Under = NoCourt

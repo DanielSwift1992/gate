@@ -1327,8 +1327,19 @@ def next_rung(refused):
     # is only useful while it names the step the reader is actually on.
     rows = [r for r in ((MANIFEST.get("rows") if MANIFEST else None) or []) if r.get("path")]
     said_something = FACTS and os.path.exists(FACTS)
-    if rows and not said_something \
-            and all(os.path.basename(r["path"]) == "readme.swift" for r in rows):
+
+    def arrived_by_taking(rel):
+        # a taken page says so in its own first line, which is where the revision
+        # it came from is written: so «has this person said anything of their own
+        # yet» is read from the files rather than from a list of names in here
+        p = os.path.join(root, rel)
+        try:
+            return "taken as your own starting point" in open(p, errors="replace").readline()
+        except OSError:
+            return False
+
+    if rows and not said_something and all(arrived_by_taking(r["path"]) for r in rows) \
+            and any(os.path.basename(r["path"]) == "readme.swift" for r in rows):
         return ("run `gate serve` and read readme.swift: it is yours now, and the first fact you "
                 "change in it is the first thing this repository holds")
     if not policy_path():
@@ -3396,6 +3407,14 @@ def take_shelf(mod, into="."):
     # wearing slashes, and that is the first thing they see. Role already survived
     # the copy for exactly this reason; this is the same law, one line down.
     opens = next((ln.strip() for ln in body[:8] if ln.strip().startswith("// opens:")), None)
+    # ── AND A PAGE ARRIVES WITH THE FORMS IT IS WRITTEN IN. Its own head line
+    # names them, and taken without them its certificates are read by nobody:
+    # eleven promises in the very first file a newcomer is handed, judged over
+    # nought equalities, because the words that give `Run<V>` its meaning stayed
+    # on the shelf. A world names the forms it is written in — the battery has
+    # held that of printed worlds for weeks — so taking one page is taking both.
+    written = next((ln.strip() for ln in body[:8] if "written in" in ln and ln.startswith("//")), None)
+    grammar = re.search(r"stdlib show ([\w-]+)", written or "")
     while body and body[0].startswith("//"):
         body.pop(0)
     os.makedirs(os.path.dirname(dest), exist_ok=True)
@@ -3404,11 +3423,19 @@ def take_shelf(mod, into="."):
                 + (f" from the judge at {came[:7]}" if came else "")
                 + ".\n// role: " + court + "\n"
                 + (opens + "\n" if opens else "")
+                + (written + "\n" if written else "")
                 + "// Yours from here: change what it says and your world is judged by what\n"
                 "// you said. The shelf's copy stays what it was; this one answers to you.\n"
-                + "\n".join(body).lstrip("\n"))
+                # one blank line, so the head this tool wrote and the page the
+                # reader came for are not one wall of slashes
+                + "\n" + "\n".join(body).lstrip("\n"))
     mp = declare_side(dest, "Mine", court)
-    return {"wrote": os.path.relpath(dest, os.path.abspath(into)),
+    with_it = []
+    if grammar and grammar.group(1) != mod and grammar.group(1) in STDLIB:
+        also, _ = take_shelf(grammar.group(1), into)
+        if also:
+            with_it.append(also["wrote"])
+    return {"wrote": os.path.relpath(dest, os.path.abspath(into)), "with": with_it,
             "declared_in": mp, "from": came, "court": court}, dest
 
 
@@ -3480,6 +3507,7 @@ def cmd_side(a, kind):
                     "next": f"gate {word} {mod}.swift — declare the copy you have, or move it "
                             "aside first: nothing here overwrites a file you wrote"}
         return {"command": word, "made_mine": mod, "wrote": os.path.basename(dest),
+                "with": took["with"],
                 "declared_in": took["declared_in"], "from": took["from"], "mutates": True,
                 "note": f"{mod} is yours: a copy is here, declared, and judged from now on. "
                         "What the shelf ships is unchanged and still shipped — yours simply "
@@ -4787,7 +4815,7 @@ def cmd_init(a):
         took, _dest = take_shelf("readme", root)
         if took:
             letter = took["wrote"]
-            made.append(letter)
+            made += [letter] + took["with"]
     relearn_world(root)
     vendored = cmd_vendor(root) if vendor else None
     hooks_note, undo, prior = None, None, None
@@ -4801,8 +4829,20 @@ def cmd_init(a):
                 else "git config --unset core.hooksPath")
         if prior:
             hooks_note += f" — it was {prior}"
+    # ── AND THE ONE THING MISSING IS NAMED WITHOUT BEING GUESSED. The world that
+    # arrives is ours; the only thing nobody has said yet is who is keeping it, and
+    # this repository's own git already carries a name. So the name is OFFERED, as
+    # a thing read and not a thing judged: writing it for them would be the tool
+    # legislating on a guess, which is the failure it exists against, and silence
+    # here is not a mistake but an open place with a known shape.
+    observed = None
+    signed = subprocess.run(["git", "config", "user.name"], cwd=root,
+                            capture_output=True, text=True).stdout.strip() if hooks_note else ""
+    if signed:
+        observed = (f"read from git, and not judged: commits in this clone are signed {signed}. "
+                    "If that is you, say so in my.swift; nothing here writes your name for you")
     return {"command": "init", "root": root, "created": made, "hooks": hooks_note,
-            "letter": letter, "next": next_rung(False),
+            "letter": letter, "observed": observed, "next": next_rung(False),
             "undo_hooks": undo, "changed_git_config": bool(hooks_note), "vendored": vendored}
 
 
@@ -5761,13 +5801,18 @@ def humanize(out):
             w = out["world"]
             tail.append(f"{w['declarations']} declarations · {w['lookups']} lookups · {w['premises']} premises")
         if isinstance(out.get("forms"), dict):
+            # NOUGHT IS THREE DIFFERENT FACTS AND ONLY ONE OF THEM IS WORDS. Beside
+            # a judged world it is a number. Beside a refusal it is nothing at all:
+            # a stream that refuses is not counted, and printing «nothing was
+            # checked» next to a named refusal says the opposite of what happened.
+            # Alone it is the whole verdict, and then it is said in words. Walking
+            # the README's own first recipe printed the first of these wrongly, and
+            # breaking the letter on a fresh entry printed the second.
             n = out["forms"]["equalities"]
-            # nought equalities BESIDE a judged world is a number; nought with
-            # nothing else judged is the whole verdict, and then it is said in
-            # words. Walking the README's own first recipe printed both at once —
-            # eighty-two premises and «nothing was checked» in one line
-            tail.append(f"{n} equalities" if n or out.get("world") else
-                        "nothing claimed here yet, so nothing was checked")
+            if n:
+                tail.append(f"{n} equalities")
+            elif not out.get("refusals") and not out.get("world"):
+                tail.append("nothing claimed here yet, so nothing was checked")
         if out.get("judge_ms") is not None:
             tail.append(f"{out['judge_ms']} ms")
         if out.get("build_s") is not None:
@@ -5852,6 +5897,8 @@ def humanize(out):
             lines.append(f"  {out['hooks']}")
         if out.get("undo_hooks"):
             lines.append(f"  to undo that one git setting: {out['undo_hooks']}")
+        if out.get("observed"):
+            lines.append(f"  {out['observed']}")
         if out.get("vendored"):
             v = out["vendored"]
             lines.append(f"  gate now travels with this repository: .gate/ + {v['shim']}")
@@ -5860,6 +5907,9 @@ def humanize(out):
                 lines.append(f"  judge sha256: {v['judge_sha256'][:16]}…")
     elif cmd in ("mine", "theirs") and out.get("made_mine"):
         lines.append(f"{cmd}: {out['made_mine']} is yours · wrote {out['wrote']}"
+                     # nothing lands unmentioned: a page that names the forms it is
+                     # written in arrives with them, and both are said out loud
+                     + (" and " + " and ".join(out["with"]) if out.get("with") else "")
                      + (f" · from the judge at {out['from'][:7]}" if out.get("from") else ""))
         lines.append(f"  note: {out['note']}")
         lines.append(f"  next: {out['next']}")

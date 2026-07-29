@@ -54,11 +54,23 @@ def main():
     # world's vocabulary as though it were the vocabulary, and a workflow in their
     # .github. Tables are theirs and arrive by `import`; the letter arrives by the
     # verb everything of ours arrives by, carrying the revision it came from.
-    S.append(("entry leaves the hook and the letter, and nothing else",
-              sorted(r.get("created") or []) == [".githooks/pre-commit", "readme.swift"]
+    S.append(("entry leaves the hook, the letter and the forms it is written in, and nothing else",
+              sorted(r.get("created") or []) == [".githooks/pre-commit", "forms-tool.swift",
+                                                 "readme.swift"]
               and not os.path.exists(os.path.join(repo, "README.md"))
               and not os.path.exists(os.path.join(repo, "AGENT.md"))
               and not os.path.isdir(os.path.join(repo, ".github"))))
+    # THE NAME NOBODY SAID IS OFFERED, NOT WRITTEN. The one thing missing after
+    # entry is who is keeping this, and git already carries a name — so it is read
+    # aloud and left there. Writing it would be the tool legislating on a guess.
+    signed = subprocess.run(["git", "config", "user.name"], cwd=repo,
+                            capture_output=True, text=True).stdout.strip()
+    entry_text = "".join(open(os.path.join(repo, f)).read()
+                         for f in ("readme.swift", "gate.manifest.swift", "forms-tool.swift"))
+    S.append(("the name in git is offered as read, and written into nothing",
+              bool(signed) and "not judged" in (r.get("observed") or "")
+              and signed in r["observed"] and "my.swift" in r["observed"]
+              and signed not in entry_text))
     S.append(("the letter is declared in the same movement, and says where it came from",
               "readme.swift" in open(os.path.join(repo, "gate.manifest.swift")).read()
               and "taken as your own starting point"
@@ -70,15 +82,36 @@ def main():
     S.append(("and a letter taken keeps its own word about how it is met",
               any(ln.strip() == "// opens: bare" for ln in
                   open(os.path.join(repo, "readme.swift")).read().split("\n")[:6])))
-    # A GREEN OVER NOTHING SAYS SO. This is the first verdict a newcomer sees, and
-    # `holds` with no width under it is the one green this tool says it will not
-    # print — least of all where the number is nought.
+    # AND THE FIRST VERDICT IS OVER SOMETHING. A page taken without the forms it is
+    # written in carries certificates no court can read: eleven promises in the
+    # first file a newcomer is handed, judged over nought equalities, silently.
     c, r = run("status", cwd=repo)
-    S.append(("the first verdict says how wide it is, even at nought",
-              r.get("verdict") == "holds" and r.get("forms", {}).get("equalities") == 0
-              and "nothing claimed here yet" in say("status", cwd=repo)))
+    S.append(("the world entry leaves is judged, and the verdict says how wide",
+              c == 0 and r.get("verdict") == "holds"
+              and r.get("forms", {}).get("equalities", 0) > 0))
     S.append(("and the rung after entry is the letter, not a merge policy",
               "readme.swift" in r.get("next", "")))
+    # BREAK IT, ON THE FIRST FILE, IN A REPOSITORY THAT DECLARED NOTHING ELSE: the
+    # lesson the letter offers has to be true where it is read.
+    letter_p = os.path.join(repo, "readme.swift")
+    kept = open(letter_p).read()
+    open(letter_p, "w").write(kept.replace("public typealias LogIsSafe = Run<Log>",
+                                           "public typealias LogIsSafe = Run<Apply>"))
+    c, r = run("status", cwd=repo)
+    S.append(("breaking a promise in the letter refuses at its own line",
+              c == 1 and any(x.get("address", "").startswith("readme.swift:")
+                             and "LogIsSafe" in x["claim"] for x in r["refusals"])))
+    open(letter_p, "w").write(kept)
+    c, r = run("status", cwd=repo)
+    S.append(("and putting it back holds again", c == 0 and r["verdict"] == "holds"))
+    # A GREEN OVER NOTHING SAYS SO, in the one case where that is what happened: a
+    # world of atoms alone, with no certificate over them for any court to read.
+    bare = os.path.join(tmp, "bare")
+    os.makedirs(bare)
+    subprocess.run(["git", "init", "-q", bare])
+    run("mine", "bench-atoms", cwd=bare)
+    S.append(("a green over nothing says so, in words",
+              "nothing claimed here yet" in say("status", cwd=bare)))
     os.makedirs(os.path.join(repo, "tables"), exist_ok=True)
     shutil.copy(os.path.join(DEMO, "people.csv"), os.path.join(repo, "tables", "people.csv"))
     shutil.copy(os.path.join(DEMO, "grants.csv"), os.path.join(repo, "tables", "grants.csv"))
