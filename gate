@@ -107,6 +107,14 @@ def read_manifest_rows(d, text=None):
                               or ("world" if atom == "WorldFile" else
                                   "seam" if atom == "SeamFile" else None)),
                      "from": (lit.get(at) if at else None) or field("from"),
+                     # ── AND WHOSE WORDS IT IS WRITTEN IN, WHICH IS AN AXIS LIKE
+                     # ANY OTHER. This lived in a comment in the page's own head,
+                     # and a comment is not a declaration: the fact that decides
+                     # WHICH LAWS a page's certificates are judged under was the one
+                     # fact in this document nothing could judge. It points at
+                     # another row of this same document, the way `At` points at a
+                     # declared revision.
+                     "written": axis("Written"),
                      "line": code[:m.start()].count("\n") + 1})
     if not rows and "Mine" not in code and "WorldFile" not in code:
         # older layouts: a bare list of paths, every one of them a world file
@@ -292,6 +300,39 @@ def manifest_guards(rows=None, text=None):
                         "claim": f"the manifest declares {r['path']}, and no such file exists: "
                                  "either the file is gone or the row is, and a row for a file "
                                  "nobody has is a court sitting over nothing"})
+    # ── AND A PAGE MAY NOT SAY IN PROSE WHAT ITS ROW DOES NOT DECLARE. Whose words
+    # a page is written in decides which laws its certificates are judged under, and
+    # it lived in a comment in the page's own head — the one fact in this document
+    # nothing could judge, doing a declaration's work. The comment may stay as
+    # prose; it may not be the only place the fact is said.
+    for r in (live or []):
+        if r["role"] != "forms" or not r.get("path"):
+            continue
+        p = os.path.join(d, r["path"])
+        if not os.path.exists(p):
+            continue
+        head = open(p, encoding="utf-8", errors="replace").read(1200).split("\n")[:8]
+        said = next((re.search(r"stdlib show ([\w-]+)", ln) for ln in head
+                     if ln.startswith("//") and "written in" in ln), None)
+        if not said:
+            continue
+        want = said.group(1) + ".swift"
+        # ── AND A PAGE THAT CARRIES THE WORDS NEEDS NO ROW FOR THEM. An emitted
+        # world glues the forms it is written in INTO itself — the importer prints
+        # both on one page — and there the head line is provenance, not a boundary:
+        # the names are right here. The column is owed only where the words are
+        # somewhere else, which is the whole of what it is for.
+        mine_names = {n for n, _ in top_names(open(p, encoding="utf-8", errors="replace").read())}
+        theirs = {n for n, _ in top_names(STDLIB.get(said.group(1), ""))}
+        if theirs & mine_names:
+            continue
+        row = next((x for x in (live or []) if x.get("name") == r.get("written")), None)
+        if not row or os.path.basename(row["path"]) != want:
+            bad.append({"address": f"{man}:{r['line']}",
+                        "claim": f"`{r['name']}` says in its own head that it is written in "
+                                 f"{want}, and this row does not declare it: add "
+                                 f"`public typealias Written = <the row for {want}>`. Which laws a "
+                                 "page is judged under is a column, not a comment"})
     # A SHADOW IS A FILE NOBODY SPOKE FOR, and a row of ANY role has been spoken
     # for. Reading only the world rows here called a declared seam side — and
     # then a declared forms file — a shadow, which is an accusation about
@@ -404,22 +445,34 @@ def forms_guards(size=None, live=None):
         text, mine, clash = presented_over(shelf, live)
         bad += clash
         if mine:
-            streams.append((shelf, text, mine))
+            streams.append((shelf, text, mine, {}, None))
             seen |= set(mine)
-    # and whatever a presented world says that overrides nothing still stands on
-    # its own: glued together, as its own stream
+    # ONE WORLD, ONE ENCODING: the forms rows of one layout are one world laid out
+    # in files, so they are glued and judged together, in the order the manifest
+    # gives. A law split across two of them is judged rather than skipped, and that
+    # guarantee is older than this note and stands on its own vector.
+    #
+    # WHAT I TRIED HERE AND TOOK BACK OUT: judging each row as its own encoding, to
+    # stop a law two pages both declare from being counted twice. It does stop that,
+    # and it breaks the guarantee above, and the duplicate it was working around is
+    # not a fact of the design — it is a defect of THIS repository's own shelf, which
+    # is exempt from the very check that refuses it in anybody else's (see
+    # `presented_over`: shipped paths are skipped). Thirteen of the equalities this
+    # repository printed were one law counted a second time, and the fix is to stop
+    # declaring one law twice, not to regroup the court.
     own = []
     for r in rows:
         own.append(body_of(r))
-    streams.append((None, "\n".join(own), {}))
+    streams.append((None, "\n".join(own), {}, {}, None))
     where = {}
     for r in rows:
         for i, line in enumerate(body_of(r).split("\n"), 1):
             m = re.match(r"public (?:typealias|enum|protocol) (\w+)", line.strip())
             if m and m.group(1) not in where:
                 where[m.group(1)] = f"{r['path']}:{i}"
+    streams = [(s, t, mi, (w or where), h) for s, t, mi, w, h in streams]
     tmp = tempfile.mkdtemp(prefix="gate-forms-")
-    for shelf, text, mine in streams:
+    for shelf, text, mine, where, home in streams:
         fp = os.path.join(tmp, (shelf or "presented") + ".swift")
         open(fp, "w").write(text)
         out = subprocess.run([JUDGE, "judge", "where", fp], capture_output=True, text=True).stdout
@@ -436,7 +489,7 @@ def forms_guards(size=None, live=None):
                 spot = where.get(touched[0]) if touched else None
                 if not spot and touched:
                     spot = mine[touched[0]]
-            bad.append({"address": spot or rows[0]["path"],
+            bad.append({"address": spot or home or rows[0]["path"],
                         "claim": plainly(claim, law_notes(text))})
         if size is not None:
             m = re.search(r"(\d+) equalities judged across (\d+) uses", out)
@@ -2698,23 +2751,63 @@ def duplicate_guards():
     return duplicate_guards_over(disk_sources())
 
 
+def top_names(text):
+    # THE NAMES A FILE GIVES, AT THE TOP OF IT AND NOWHERE ELSE. A typealias inside
+    # a declaration is an AXIS — what that record says about itself — and every
+    # record of a kind states the same ones. One reading of that rule, used by the
+    # guard that refuses two declarations of a name and by the one that asks whether
+    # a law's carrier is inside the encoding that carries it.
+    out, depth = [], 0
+    for i, line in enumerate(text.split("\n"), 1):
+        code = line.split("//")[0]
+        m = re.match(r"\s*(?:public\s+)?(enum|protocol|struct|typealias)\s+(\w+)", code)
+        if m and depth == 0:
+            # a LIST, not a map: a name declared twice in one file is the very thing
+            # the duplicate guard is for, and a map would have swallowed it
+            out.append((m.group(2), i))
+        depth += code.count("{") - code.count("}")
+    return out
+
+
+def laws_of(text):
+    # every top-level certificate and the names it leans on: `X = Form<A, B>` and a
+    # gated conformance's premise are the two shapes a law is written in here.
+    #
+    # TWO KINDS OF WORD ARE NOT REFERENCES, and reading them as such makes this
+    # accuse a file of leaning on a world it never named. A NAME INSIDE ANGLES IS A
+    # NAME, NOT A HOLE — `Legible<Bright, Dark, Slack>` binds `Dark`, and another
+    # world's atom happening to be spelled `Dark` has nothing to do with it (a law
+    # this project wrote down once already, and I walked into it again). AND AN AXIS
+    # IS NOT A TOP-LEVEL NAME — `Who.Site` says what that record states about
+    # itself; `Site` is read off `Who`, never out of the document.
+    def refs(expr, bound):
+        return set(re.findall(r"\b([A-Z]\w*)", re.sub(r"\.\w+", "", expr))) - bound
+
+    def params(name):
+        m = re.search(r"(?:public )?enum " + name + r"\s*<([^>]*)>", text)
+        if not m:
+            return set()
+        return {p.split(":")[0].strip() for p in m.group(1).split(",") if p.strip()}
+
+    for m in re.finditer(r"^public typealias (\w+)\s*=\s*(.+)$", text, re.M):
+        yield m.group(1), refs(m.group(2), set()), text[:m.start()].count("\n") + 1
+    for m in re.finditer(r"^(?:public )?extension (\w+): (\w+)\n\s*where (.+?)\{", text, re.M | re.S):
+        yield (m.group(1), refs(m.group(3), params(m.group(1))),
+               text[:m.start()].count("\n") + 1)
+
+
 def duplicate_guards_over(sources):
     seen, bad = {}, []
     for name, text in sources:
-        depth = 0
-        for i, line in enumerate(text.split("\n"), 1):
-            code = line.split("//")[0]
-            m = re.match(r"\s*(?:public\s+)?(enum|protocol|struct|typealias)\s+(\w+)", code)
-            if m and depth == 0:
-                who, here = m.group(2), f"{name}:{i}"
-                if who in seen:
-                    bad.append({"address": here,
-                                "claim": f"`{who}` is declared twice: once at {seen[who]} and again "
-                                         "here. One name, one declaration: two of them are two truths "
-                                         "about it, and only one can be read"})
-                else:
-                    seen[who] = here
-            depth += code.count("{") - code.count("}")
+        for who, i in top_names(text):
+            here = f"{name}:{i}"
+            if who in seen:
+                bad.append({"address": here,
+                            "claim": f"`{who}` is declared twice: once at {seen[who]} and again "
+                                     "here. One name, one declaration: two of them are two truths "
+                                     "about it, and only one can be read"})
+            else:
+                seen[who] = here
     return bad
 
 
@@ -3214,7 +3307,14 @@ def moving_pin(at):
     return None
 
 
-def declare_side(path, kind, role, frm=None):
+def row_atom(rel):
+    # ONE RULE FOR THE NAME A ROW WEARS, IN ONE PLACE. A row that points at another
+    # row has to spell that row's name exactly, and spelling it a second time
+    # somewhere else is how two spellings of one name begin.
+    return sanitize(os.path.splitext(rel)[0]).title().replace("_", "").replace("/", "") or "Side"
+
+
+def declare_side(path, kind, role, frm=None, written=None):
     # ONE MOVEMENT, TWO DIRECTIONS, AND NOBODY SPECIAL. Everything here is an
     # emitted view of somebody's source: my world is a view of my facts, their
     # spec is a view of theirs, and the judge in bin/ is a view of the corpus —
@@ -3263,7 +3363,7 @@ def declare_side(path, kind, role, frm=None):
     if rel.split(os.sep)[0] == os.pardir:
         raise ValueError(f"{path} is not inside the world at {d}: a row says where a "
                          "file is relative to the world that declares it")
-    name = sanitize(os.path.splitext(rel)[0]).title().replace("_", "").replace("/", "") or "Side"
+    name = row_atom(rel)
     ROLE_ATOM = {"world": "WorldFile", "seam": "SeamFile", "forms": "FormsFile",
                  "judge": "JudgeFile", "carried": "CarriedFile"}
     # ── A DOCUMENT LISTS WHAT IT HAS. The template wrote every role atom this
@@ -3307,6 +3407,11 @@ def declare_side(path, kind, role, frm=None):
             + '    public typealias Kind = ' + ROLE_ATOM[role] + '\n'
             + ('    public typealias At = Rev_' + re.sub(r"\W+", "_", frm).strip("_") + '\n'
                if frm else '')
+            # ── AND WHOSE WORDS IT IS WRITTEN IN, WHERE THE OTHER COLUMNS ARE. The
+            # page carried this in a comment in its own head, and the fact decides
+            # which laws its certificates are judged under: the encoding boundary,
+            # written where nothing could judge it.
+            + ('    public typealias Written = ' + written + '\n' if written else '')
             + '}\n'
             + 'extension ' + name + ' { public static var typeName: String { "'
             + rel + '" } }\n')
@@ -3429,12 +3534,15 @@ def take_shelf(mod, into="."):
                 # one blank line, so the head this tool wrote and the page the
                 # reader came for are not one wall of slashes
                 + "\n" + "\n".join(body).lstrip("\n"))
-    mp = declare_side(dest, "Mine", court)
-    with_it = []
+    # the grammar arrives FIRST, so the row for this page can point at its row:
+    # whose words a page is written in is a column of the record, not a comment
+    with_it, grammar_atom = [], None
     if grammar and grammar.group(1) != mod and grammar.group(1) in STDLIB:
-        also, _ = take_shelf(grammar.group(1), into)
+        also, adest = take_shelf(grammar.group(1), into)
+        grammar_atom = row_atom(os.path.relpath(adest, os.path.abspath(into)))
         if also:
             with_it.append(also["wrote"])
+    mp = declare_side(dest, "Mine", court, written=grammar_atom)
     return {"wrote": os.path.relpath(dest, os.path.abspath(into)), "with": with_it,
             "declared_in": mp, "from": came, "court": court}, dest
 

@@ -226,6 +226,51 @@ def main():
                              and x.get("address") == os.path.join("worlds", "stray.swift")
                              for x in r["refusals"])))
 
+    layout = ('public protocol Role {}\npublic enum FormsFile: Role {}\npublic protocol Mine {}\n'
+              'public enum One: Mine {\n    public typealias Kind = FormsFile\n%s}\n'
+              'extension One { public static var typeName: String { "one.swift" } }\n'
+              'public enum Two: Mine {\n    public typealias Kind = FormsFile\n}\n'
+              'extension Two { public static var typeName: String { "two.swift" } }\n')
+    # ── AND A PAGE MAY NOT SAY IN PROSE WHAT ITS ROW DOES NOT DECLARE. Which laws a
+    # page is judged under is a column; it spent a day in a comment in the page's
+    # own head, where nothing could judge it.
+    orig = os.path.join(tmp, "origin")
+    os.makedirs(orig)
+    subprocess.run(["git", "init", "-q", orig])
+    open(os.path.join(orig, "one.swift"), "w").write(
+        "// role: forms\n// written in `gate stdlib show two`\npublic enum Sole {}\n")
+    open(os.path.join(orig, "two.swift"), "w").write("// role: forms\npublic enum Other {}\n")
+    open(os.path.join(orig, "gate.manifest.swift"), "w").write(layout % "")
+    c, r = run("status", cwd=orig)
+    S.append(("a page whose head names its grammar and whose row does not is refused",
+              c == 1 and any("written in two.swift" in x["claim"]
+                             and x.get("address", "").startswith("gate.manifest.swift:")
+                             for x in r["refusals"])))
+    open(os.path.join(orig, "gate.manifest.swift"), "w").write(
+        layout % "    public typealias Written = Two\n")
+    c, r = run("status", cwd=orig)
+    S.append(("and holds once the row says it", c == 0 and r["verdict"] == "holds"))
+
+    # THE WHERE COURT JUDGES THE FIRST FILE IT IS HANDED AND DROPS THE REST — it
+    # reads the others (an unreadable second path is refused) and then says nothing
+    # about them: palette then metrics reports 119, the same two reversed 14.
+    # Nothing here passes more than one, and the day something does, a verdict
+    # would quietly narrow instead of refusing.
+    def wide(*paths):
+        raw = subprocess.run([os.path.join(HERE, "bin", "gate-judge"), "judge", "where", *paths],
+                             capture_output=True, text=True).stdout
+        m = re.search(r"(\d+) equalities judged", raw)
+        return int(m.group(1)) if m else None
+    pal = os.path.join(HERE, "stdlib", "bench-palette.swift")
+    met = os.path.join(HERE, "stdlib", "bench-metrics.swift")
+    S.append(("the where court judges the first file it is given and drops the rest",
+              wide(pal) == wide(pal, met) and wide(met) == wide(met, pal)
+              and wide(pal) != wide(met)))
+    gate_src = open(GATE).read()
+    S.append(("and nothing here hands it more than one",
+              all("," not in seg and "*" not in seg for seg in
+                  re.findall(r'"judge",\s*"where",\s*([^\]]+)\]', gate_src))))
+
     # self-hosted shelf: the product's own stdlib files are judged by its own judge
     import glob as _glob
     for sf in sorted(_glob.glob(os.path.join(HERE, "stdlib", "*.swift"))):
