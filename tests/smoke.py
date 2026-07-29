@@ -77,10 +77,20 @@ def main():
               bool(signed) and "not judged" in (r.get("observed") or "")
               and signed in r["observed"] and "my.swift" in r["observed"]
               and signed not in entry_text))
+    # AND THE FIRST LINE OF IT BELONGS TO WHOEVER OPENS IT. It used to read «taken
+    # as your own starting point from the judge at 0fd0b38»: a word nobody had
+    # introduced, a revision nobody had asked for, and a service announcing itself,
+    # all before the page said anything. Where it came from and how to get back are
+    # facts about the copy, and they sit at its foot.
+    letter_text = open(os.path.join(repo, "readme.swift")).read()
     S.append(("the letter is declared in the same movement, and says where it came from",
               "readme.swift" in open(os.path.join(repo, "gate.manifest.swift")).read()
-              and "taken as your own starting point"
-              in open(os.path.join(repo, "readme.swift")).read()))
+              and "copied from gate's own shelf" in letter_text
+              and "This copy is yours" in letter_text.split("\n")[0]
+              and "judge" not in letter_text.split("\n")[0]
+              # and the way back is said where the provenance is
+              and "prints what shipped" in letter_text
+              and "removes it with no trace" in letter_text))
     # AND IT KEEPS ITS OWN WORD ABOUT HOW IT IS MET. The head lines of a shelf page
     # are dropped when it is taken, and `// opens: bare` was going with them: a
     # letter that asks to be read as prose arrived as code with slashes down the
@@ -3200,7 +3210,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               took.get("made_mine") == "bench-palette"
               and took.get("wrote") == "bench-palette.swift"
               # it says where it came from and at what revision, in its own head
-              and any("taken as your own starting point" in l for l in head)
+              and any("This copy is yours" in l for l in head)
               and any(l.startswith("// role: forms") for l in head)
               and took_holds == "holds"
               # a second call does not overwrite what you have since written

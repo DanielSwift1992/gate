@@ -1394,7 +1394,7 @@ def next_rung(refused):
         # yet» is read from the files rather than from a list of names in here
         p = os.path.join(root, rel)
         try:
-            return "taken as your own starting point" in open(p, errors="replace").readline()
+            return "copied from gate's own shelf" in open(p, errors="replace").read()
         except OSError:
             return False
 
@@ -3530,17 +3530,27 @@ def take_shelf(mod, into="."):
     while body and body[0].startswith("//"):
         body.pop(0)
     os.makedirs(os.path.dirname(dest), exist_ok=True)
+    # ── AND THE FIRST LINE OF A PAGE IS FOR WHOEVER OPENS IT. This one said
+    # «taken as your own starting point from the judge at 0fd0b38» — a word nobody
+    # had introduced yet, a revision nobody had asked for, and the tone of a service
+    # announcing itself, all before the page said anything at all. Ownership is the
+    # only thing that belongs there. Where it came from and how to get it back are
+    # facts about this copy, and facts about a copy go at its foot, where somebody
+    # who wants them looks.
     with open(dest, "w") as f:
-        f.write(f"// {mod}, taken as your own starting point"
-                + (f" from the judge at {came[:7]}" if came else "")
-                + ".\n// role: " + court + "\n"
+        f.write("// This copy is yours: read it, change it, break it, delete it when you are\n"
+                "// done. Nothing in it answers to anybody but you.\n"
+                "// role: " + court + "\n"
                 + (opens + "\n" if opens else "")
                 + (written + "\n" if written else "")
-                + "// Yours from here: change what it says and your world is judged by what\n"
-                "// you said. The shelf's copy stays what it was; this one answers to you.\n"
                 # one blank line, so the head this tool wrote and the page the
                 # reader came for are not one wall of slashes
-                + "\n" + "\n".join(body).lstrip("\n"))
+                + "\n" + "\n".join(body).rstrip("\n").lstrip("\n") + "\n"
+                + "\n// Where this came from, and the way back: copied from gate's own shelf"
+                + (f", built from {came[:7]}" if came else "")
+                + f".\n// `gate stdlib show {mod}` prints what shipped, unchanged, so anything you\n"
+                "// break here can be compared against it or replaced from it. Deleting this file\n"
+                "// and its row in `gate.manifest.swift` removes it with no trace left behind.\n")
     # the grammar arrives FIRST, so the row for this page can point at its row:
     # whose words a page is written in is a column of the record, not a comment
     with_it, grammar_atom = [], None
