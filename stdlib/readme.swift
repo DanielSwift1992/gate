@@ -42,9 +42,11 @@
 //
 // `gate serve` opens the bench, and beside this file it shows `my.swift`: your
 // own world, kept in your own git on this machine and never in the repository
-// you share. Until you write in it there is no such file, and that is an open
-// place rather than something missing. Write one claim there and it is judged
-// beside the shared world on every keystroke; clear it and it is gone again.
+// you share. Until you write in it there is no such file: nothing is kept for
+// somebody who has not said anything. Nothing is waiting on you either, because
+// nothing has been declared here yet for anybody to wait about. Write one claim
+// and it is judged beside the shared world on every keystroke; clear it and it
+// is gone again.
 //
 // BREAK IT. That is the safest place to learn what a claim is, because nothing
 // written there reaches anybody. Or break this letter: say `Does = Writes` on
