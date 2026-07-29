@@ -2972,9 +2972,9 @@ async function loadVocabulary() {
     }
 }
 
-(async () => {
-    // what this world presents has to be known before the vocabulary is built,
-    // or the bench reads the shelf and misses the file sitting next to the world
+// what a world is made of, read from the one place that says: the layout. One
+// reader, used at load and again whenever the layout itself is saved.
+async function readFiles() {
     const fl = await (await fetch("/files")).json().catch(() => ({ files: [] }));
     files = fl.files || []; personalFile = fl.personal || null; personalEmpty = !!fl.personal_empty;
     layoutFile = fl.layout || null;
@@ -2983,6 +2983,14 @@ async function loadVocabulary() {
     seamRows = fl.seams || [];
     overridden = fl.overridden || {};
     judgeClaimAt = fl.judge_claim || null;
+    buildRail();
+    return fl;
+}
+
+(async () => {
+    // what this world presents has to be known before the vocabulary is built,
+    // or the bench reads the shelf and misses the file sitting next to the world
+    const fl = await readFiles();
     try { language = await (await fetch("/language")).json(); } catch { }
     wireJudgeRow();
     await loadVocabulary();

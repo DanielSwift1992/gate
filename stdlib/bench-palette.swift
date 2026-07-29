@@ -142,9 +142,9 @@ public typealias ActionLitZ = Plus<W2, Plus<W32, Plus<W64, W512>>>
 public typealias LawLitX = Plus<W8, Plus<W64, W128>>
 public typealias LawLitY = Plus<W2, Plus<W4, Plus<W16, W128>>>
 public typealias LawLitZ = Plus<W4, W16>
-public typealias LocalTypeLitX = Plus<W2, Plus<W4, Plus<W8, Plus<W32, W64>>>>
+public typealias LocalTypeLitX = Plus<W4, Plus<W8, Plus<W16, Plus<W32, W64>>>>
 public typealias LocalTypeLitY = Plus<W2, Plus<W4, Plus<W16, W128>>>
-public typealias LocalTypeLitZ = Plus<W2, Plus<W4, Plus<W32, Plus<W64, W128>>>>
+public typealias LocalTypeLitZ = Plus<W2, Plus<W8, Plus<W16, Plus<W64, W256>>>>
 public typealias KnownNameLitX = Plus<W2, Plus<W8, Plus<W16, Plus<W32, Plus<W64, W128>>>>>
 public typealias KnownNameLitY = Plus<W2, Plus<W4, Plus<W16, W128>>>
 public typealias KnownNameLitZ = Plus<W2, Plus<W4, Plus<W16, Plus<W32, Plus<W64, W512>>>>>
@@ -257,7 +257,7 @@ public typealias OkChroma_lit = TowardWarm<OkLitY, OkLitZ, Plus<Unit, Plus<W4, P
 public typealias BadChroma_lit = TowardWarm<BadLitY, BadLitZ, Plus<Unit, Plus<W2, Plus<W4, Plus<W8, Plus<W32, Plus<W64, Plus<W128, Plus<W512, W2048>>>>>>>>>
 public typealias ActionChroma_lit = TowardBlue<ActionLitY, ActionLitZ, Plus<Unit, Plus<W8, Plus<W32, Plus<W256, Plus<W512, Plus<W2048, W8192>>>>>>>
 public typealias LawChroma_lit = TowardWarm<LawLitY, LawLitZ, Plus<Unit, Plus<W4, Plus<W8, Plus<W16, Plus<W64, Plus<W128, Plus<W256, Plus<W1024, W2048>>>>>>>>>
-public typealias LocalTypeChroma_lit = TowardBlue<LocalTypeLitY, LocalTypeLitZ, Plus<Unit, Plus<W4, Plus<W8, Plus<W512, W1024>>>>>
+public typealias LocalTypeChroma_lit = TowardBlue<LocalTypeLitY, LocalTypeLitZ, Plus<Unit, Plus<W32, Plus<W64, Plus<W256, W4096>>>>>
 public typealias KnownNameChroma_lit = TowardBlue<KnownNameLitY, KnownNameLitZ, Plus<Unit, Plus<W4, Plus<W8, Plus<W16, Plus<W256, Plus<W1024, Plus<W2048, W8192>>>>>>>>
 public typealias OkChroma_dim = TowardWarm<OkDimY, OkDimZ, Plus<W8, Plus<W64, Plus<W128, Plus<W256, Plus<W512, Plus<W2048, W4096>>>>>>>
 public typealias BadChroma_dim = TowardWarm<BadDimY, BadDimZ, Plus<W8, Plus<W64, Plus<W128, Plus<W256, Plus<W512, Plus<W2048, W4096>>>>>>>
@@ -283,9 +283,9 @@ public typealias SelectOverMist_dim = Brighter<SelectDimY, MistDimY, Plus<Unit, 
 // these are the pairs a reader must never confuse, so they are the pairs the
 // world states a floor for. The floors are today's distances: a drift below any
 // of them turns this repository red at the line rather than in somebody's eye.
-public typealias MineApartTheirs_X_lit = Apart<KnownNameLitX, LocalTypeLitX, Plus<Unit, Plus<W2, Plus<W8, W128>>>>
+public typealias MineApartTheirs_X_lit = Apart<KnownNameLitX, LocalTypeLitX, Plus<Unit, Plus<W4, Plus<W8, Plus<W16, Plus<W32, W64>>>>>>
 public typealias MineApartTheirs_X_dim = Apart<KnownNameDimX, LocalTypeDimX, Plus<W2, Plus<W16, W128>>>
-public typealias MineApartTheirs_Z_lit = Apart<KnownNameLitZ, LocalTypeLitZ, Plus<Unit, Plus<W2, Plus<W4, Plus<W8, Plus<W128, W256>>>>>>
+public typealias MineApartTheirs_Z_lit = Apart<KnownNameLitZ, LocalTypeLitZ, Plus<Unit, Plus<W2, Plus<W8, Plus<W16, W256>>>>>
 // THE WEAK ONE, SAID OUT LOUD RATHER THAN LEFT UNSAID: 35 where its twin is 400.
 // The distinction survives here on X alone, and this line is what will notice
 // if that last thread thins too.

@@ -4874,7 +4874,20 @@ def cmd_serve(a):
             self.end_headers()
             self.wfile.write(body)
 
+        def fresh_layout(self):
+            # ── THE LAYOUT IS READ FROM DISK, NOT REMEMBERED. This process took
+            # it once at start and held it for its whole life, so a row added to
+            # the manifest changed nothing anybody could see: the file was on
+            # disk, judged, and absent from the panel until the server itself
+            # was restarted. A tool whose canon is that it keeps no state of its
+            # own may not keep the one document that says what a world is.
+            if not FACTS:
+                return
+            d = os.path.dirname(os.path.abspath(FACTS))
+            globals()["MANIFEST"] = read_manifest(d)
+
         def do_GET(self):
+            self.fresh_layout()
             u = urlparse(self.path)
             q = {k: v[0] for k, v in parse_qs(u.query).items()}
             try:
@@ -5139,6 +5152,7 @@ def cmd_serve(a):
         def do_PUT(self):
             # the single writing handle: world files — they ARE the source
             # (plumbing stays open, judgement stays inevitable)
+            self.fresh_layout()
             u = urlparse(self.path)
             q = {k: v[0] for k, v in parse_qs(u.query).items()}
             if u.path == "/value":
@@ -5224,6 +5238,7 @@ def cmd_serve(a):
         def do_POST(self):
             # /verdict?f=rel — judge the WHOLE declared list with the active
             # file replaced by the editor's unsaved text (cross-file, server-side)
+            self.fresh_layout()
             u = urlparse(self.path)
             q = {k: v[0] for k, v in parse_qs(u.query).items()}
             if u.path != "/verdict":
