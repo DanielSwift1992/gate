@@ -118,15 +118,15 @@ where AY == Plus<AX, Plus<Unit, Aslack>>,
 public typealias InkLitX = Plus<W2, W8>
 public typealias InkLitY = Plus<W2, W8>
 public typealias InkLitZ = Plus<Unit, Plus<W2, W8>>
-public typealias PaperLitX = Plus<Unit, Plus<W2, Plus<W32, Plus<W128, Plus<W256, W512>>>>>
-public typealias PaperLitY = Plus<W4, Plus<W16, Plus<W64, Plus<W128, Plus<W256, W512>>>>>
-public typealias PaperLitZ = Plus<Unit, Plus<W2, Plus<W8, Plus<W32, W1024>>>>
-public typealias MistLitX = Plus<Unit, Plus<W2, Plus<W4, Plus<W16, Plus<W64, Plus<W256, W512>>>>>>
-public typealias MistLitY = Plus<W4, Plus<W128, Plus<W256, W512>>>
-public typealias MistLitZ = Plus<W4, Plus<W16, Plus<W64, Plus<W128, Plus<W256, W512>>>>>
-public typealias LineLitX = Plus<W2, Plus<W4, Plus<W128, W512>>>
-public typealias LineLitY = Plus<W8, Plus<W32, Plus<W128, W512>>>
-public typealias LineLitZ = Plus<W4, Plus<W32, Plus<W64, Plus<W128, W512>>>>
+public typealias PaperLitX = Plus<W2, Plus<W128, Plus<W256, W512>>>
+public typealias PaperLitY = Plus<Unit, Plus<W16, Plus<W32, Plus<W128, Plus<W256, W512>>>>>
+public typealias PaperLitZ = Plus<Unit, Plus<W4, W1024>>
+public typealias MistLitX = Plus<W2, Plus<W4, Plus<W16, Plus<W32, Plus<W256, W512>>>>>
+public typealias MistLitY = Plus<Unit, Plus<W32, Plus<W64, Plus<W256, W512>>>>
+public typealias MistLitZ = Plus<W2, Plus<W4, Plus<W8, Plus<W32, Plus<W128, Plus<W256, W512>>>>>>
+public typealias LineLitX = Plus<Unit, Plus<W4, Plus<W32, Plus<W64, W512>>>>
+public typealias LineLitY = Plus<Unit, Plus<W4, Plus<W128, W512>>>
+public typealias LineLitZ = Plus<W2, Plus<W4, Plus<W8, Plus<W16, Plus<W32, Plus<W128, W512>>>>>>
 public typealias MutedLitX = Plus<W4, Plus<W32, Plus<W64, W128>>>
 public typealias MutedLitY = Plus<W16, Plus<W32, Plus<W64, W128>>>
 public typealias MutedLitZ = Plus<Unit, Plus<W4, W256>>
@@ -148,9 +148,9 @@ public typealias LocalTypeLitZ = Plus<W2, Plus<W4, Plus<W32, Plus<W64, W128>>>>
 public typealias KnownNameLitX = Plus<W2, Plus<W8, Plus<W16, Plus<W32, Plus<W64, W128>>>>>
 public typealias KnownNameLitY = Plus<W2, Plus<W4, Plus<W16, W128>>>
 public typealias KnownNameLitZ = Plus<W2, Plus<W4, Plus<W16, Plus<W32, Plus<W64, W512>>>>>
-public typealias SeamLitX = Plus<W4, Plus<W16, W256>>
-public typealias SeamLitY = Plus<W2, Plus<W32, W256>>
-public typealias SeamLitZ = Plus<W4, Plus<W8, Plus<W16, Plus<W32, W256>>>>
+public typealias SeamLitX = Plus<W8, W256>
+public typealias SeamLitY = Plus<W2, Plus<W4, Plus<W16, W256>>>
+public typealias SeamLitZ = Plus<Unit, Plus<W2, Plus<W4, Plus<W8, Plus<W32, W256>>>>>
 public typealias SelectLitX = Plus<W2, Plus<W4, Plus<W128, W512>>>
 public typealias SelectLitY = Plus<W8, Plus<W32, Plus<W128, W512>>>
 public typealias SelectLitZ = Plus<W4, Plus<W32, Plus<W64, Plus<W128, W512>>>>
@@ -199,16 +199,16 @@ public typealias SelectDimZ = Plus<W4, Plus<W8, W32>>
 // ── the ladder is monotone, the pairs clear their bound, the semantic step is level ──
 public typealias PaperOverMist_lit = Brighter<PaperLitY, MistLitY, Plus<Unit, Plus<W2, Plus<W4, Plus<W8, W64>>>>>
 public typealias MistOverLine_lit = Brighter<MistLitY, LineLitY, Plus<Unit, Plus<W2, Plus<W8, Plus<W16, Plus<W64, W128>>>>>>
-public typealias LineOverMuted_lit = Brighter<LineLitY, MutedLitY, Plus<Unit, Plus<W2, Plus<W4, Plus<W16, Plus<W32, Plus<W128, W256>>>>>>>
+public typealias LineOverMuted_lit = Brighter<LineLitY, MutedLitY, Plus<W4, Plus<W16, Plus<W128, W256>>>>
 public typealias MutedOverInk_lit = Brighter<MutedLitY, InkLitY, Plus<Unit, Plus<W4, Plus<W32, Plus<W64, W128>>>>>
-public typealias Paper_Ink_lit = Legible<PaperLitY, InkLitY, Plus<W2, Plus<W32, Plus<W64, W512>>>>
-public typealias Paper_Muted_lit = Readable<PaperLitY, MutedLitY, Plus<W32, W128>>
-public typealias Paper_Ok_lit = ReadableAA<PaperLitY, OkLitY, Plus<W4, W256>>
-public typealias Paper_Bad_lit = ReadableAA<PaperLitY, BadLitY, Plus<W4, W256>>
-public typealias Paper_Action_lit = ReadableAA<PaperLitY, ActionLitY, Plus<W4, W256>>
-public typealias Paper_Law_lit = ReadableAA<PaperLitY, LawLitY, Plus<W4, W256>>
-public typealias Paper_LocalType_lit = ReadableAA<PaperLitY, LocalTypeLitY, Plus<W4, W256>>
-public typealias Paper_KnownName_lit = ReadableAA<PaperLitY, KnownNameLitY, Plus<W4, W256>>
+public typealias Paper_Ink_lit = Legible<PaperLitY, InkLitY, Plus<Unit, Plus<W2, Plus<W4, Plus<W8, Plus<W16, Plus<W32, W512>>>>>>>
+public typealias Paper_Muted_lit = Readable<PaperLitY, MutedLitY, Plus<Unit, Plus<W4, Plus<W8, Plus<W16, Plus<W32, W64>>>>>>
+public typealias Paper_Ok_lit = ReadableAA<PaperLitY, OkLitY, Plus<W2, Plus<W4, Plus<W8, Plus<W16, Plus<W32, W128>>>>>>
+public typealias Paper_Bad_lit = ReadableAA<PaperLitY, BadLitY, Plus<W2, Plus<W4, Plus<W8, Plus<W16, Plus<W32, W128>>>>>>
+public typealias Paper_Action_lit = ReadableAA<PaperLitY, ActionLitY, Plus<W2, Plus<W4, Plus<W8, Plus<W16, Plus<W32, W128>>>>>>
+public typealias Paper_Law_lit = ReadableAA<PaperLitY, LawLitY, Plus<W2, Plus<W4, Plus<W8, Plus<W16, Plus<W32, W128>>>>>>
+public typealias Paper_LocalType_lit = ReadableAA<PaperLitY, LocalTypeLitY, Plus<W2, Plus<W4, Plus<W8, Plus<W16, Plus<W32, W128>>>>>>
+public typealias Paper_KnownName_lit = ReadableAA<PaperLitY, KnownNameLitY, Plus<W2, Plus<W4, Plus<W8, Plus<W16, Plus<W32, W128>>>>>>
 public typealias OkEqBad_lit = Same<OkLitY, BadLitY>
 public typealias BadEqAction_lit = Same<BadLitY, ActionLitY>
 public typealias ActionEqLaw_lit = Same<ActionLitY, LawLitY>
@@ -236,11 +236,11 @@ public typealias LocalTypeEqKnownName_dim = Same<LocalTypeDimY, KnownNameDimY>
 // line, so neither a blue nor a warm tint can creep back; at the floor of
 // the scale one step is the whole resolution, and that is said, not hidden ──
 public typealias InkGrey_lit = GreyFloor<InkLitX, InkLitY, InkLitZ, Plus<Unit, W4>, Plus<Unit, W4>>
-public typealias PaperGrey_lit = Grey<PaperLitX, PaperLitY, PaperLitZ, Plus<Unit, Plus<W2, Plus<W4, Plus<W16, Plus<W64, W128>>>>>, Plus<Unit, Plus<W4, Plus<W8, Plus<W16, Plus<W32, Plus<W64, Plus<W128, W512>>>>>>>, Plus<Unit, Plus<W2, Plus<W4, Plus<W8, Plus<W16, Plus<W64, Plus<W128, W512>>>>>>>, Plus<Unit, Plus<W4, Plus<W16, Plus<W32, Plus<W64, W128>>>>>>
-public typealias MistGrey_lit = Grey<MistLitX, MistLitY, MistLitZ, Plus<W8, Plus<W64, W128>>, Plus<W4, Plus<W8, Plus<W16, Plus<W32, Plus<W128, W512>>>>>, Plus<Unit, Plus<W2, Plus<W32, Plus<W128, W512>>>>, Plus<Unit, Plus<W32, Plus<W64, W128>>>>
-public typealias LineGrey_lit = Grey<LineLitX, LineLitY, LineLitZ, Plus<W4, Plus<W8, W128>>, Plus<W4, Plus<W8, Plus<W16, W512>>>, Plus<W2, Plus<W4, Plus<W8, Plus<W16, Plus<W32, Plus<W64, Plus<W128, W256>>>>>>>, Plus<W2, Plus<W8, Plus<W32, W128>>>>
+public typealias PaperGrey_lit = Grey<PaperLitX, PaperLitY, PaperLitZ, Plus<W2, Plus<W16, Plus<W64, W128>>>, Plus<Unit, Plus<W2, Plus<W4, Plus<W8, Plus<W16, Plus<W64, Plus<W128, W512>>>>>>>, Plus<Unit, Plus<W2, Plus<W8, Plus<W64, Plus<W128, W512>>>>>, Plus<W2, Plus<W4, Plus<W32, Plus<W64, W128>>>>>
+public typealias MistGrey_lit = Grey<MistLitX, MistLitY, MistLitZ, Plus<Unit, Plus<W2, Plus<W64, W128>>>, Plus<W2, Plus<W4, Plus<W8, Plus<W16, Plus<W128, W512>>>>>, Plus<Unit, Plus<W2, Plus<W4, Plus<W8, Plus<W128, W512>>>>>, Plus<W2, Plus<W16, Plus<W64, W128>>>>
+public typealias LineGrey_lit = Grey<LineLitX, LineLitY, LineLitZ, Plus<Unit, Plus<W2, Plus<W4, W128>>>, Plus<W2, Plus<W4, Plus<W8, Plus<W16, Plus<W32, Plus<W64, Plus<W128, W256>>>>>>>, Plus<W2, Plus<W8, Plus<W32, Plus<W64, Plus<W128, W256>>>>>, Plus<Unit, Plus<W2, Plus<W8, Plus<W16, W128>>>>>
 public typealias MutedGrey_lit = Grey<MutedLitX, MutedLitY, MutedLitZ, Plus<Unit, Plus<W4, Plus<W8, W32>>>, Plus<Unit, Plus<W2, Plus<W64, W128>>>, Plus<W4, Plus<W16, Plus<W32, W128>>>, Plus<W4, Plus<W8, Plus<W16, W32>>>>
-public typealias SeamGrey_lit = Grey<SeamLitX, SeamLitY, SeamLitZ, Plus<W2, Plus<W4, W64>>, Plus<W4, Plus<W8, Plus<W16, Plus<W64, W128>>>>, Plus<W2, Plus<W4, Plus<W32, Plus<W64, W128>>>>, Plus<W4, Plus<W8, Plus<W16, W32>>>>
+public typealias SeamGrey_lit = Grey<SeamLitX, SeamLitY, SeamLitZ, Plus<Unit, Plus<W4, W64>>, Plus<Unit, Plus<W16, Plus<W64, W128>>>, Plus<W2, Plus<W4, Plus<W8, Plus<W64, W128>>>>, Plus<W8, W64>>
 public typealias SelectGrey_lit = Grey<SelectLitX, SelectLitY, SelectLitZ, Plus<W4, Plus<W8, W128>>, Plus<W4, Plus<W8, Plus<W16, W512>>>, Plus<W2, Plus<W4, Plus<W8, Plus<W16, Plus<W32, Plus<W64, Plus<W128, W256>>>>>>>, Plus<W2, Plus<W8, Plus<W32, W128>>>>
 public typealias InkGrey_dim = Grey<InkDimX, InkDimY, InkDimZ, Plus<Unit, Plus<W4, W128>>, Plus<W8, Plus<W32, Plus<W64, Plus<W128, W256>>>>, Plus<Unit, Plus<W2, Plus<W16, Plus<W64, Plus<W128, W256>>>>>, Plus<W2, Plus<W8, Plus<W16, W128>>>>
 public typealias PaperGrey_dim = GreyFloor<PaperDimX, PaperDimY, PaperDimZ, Plus<Unit, W4>, Plus<Unit, W4>>
@@ -271,11 +271,11 @@ public typealias VerdictPoles_dim = Opposed<OkDimX, OkDimY, BadDimX, BadDimY, Pl
 // ── the seam is read, so it clears the bound П1 declares for secondary
 // text, and stays quieter than speech; the selection is a surface, so it
 // stands on the grey line and is more present than a hover ──
-public typealias Paper_Seam_lit = Readable<PaperLitY, SeamLitY, Plus<W2, W8>>
+public typealias Paper_Seam_lit = Readable<PaperLitY, SeamLitY, Plus<Unit, Plus<W2, W8>>>
 public typealias Seam_Paper_dim = Readable<SeamDimY, PaperDimY, Plus<Unit, W16>>
-public typealias SeamUnderMuted_lit = Brighter<SeamLitY, MutedLitY, Plus<Unit, Plus<W16, W32>>>
+public typealias SeamUnderMuted_lit = Brighter<SeamLitY, MutedLitY, Plus<Unit, Plus<W4, W32>>>
 public typealias SeamUnderMuted_dim = Brighter<MutedDimY, SeamDimY, Plus<W32, W64>>
-public typealias SelectOverMist_lit = Brighter<MistLitY, SelectLitY, Plus<Unit, Plus<W2, Plus<W8, Plus<W16, Plus<W64, W128>>>>>>
+public typealias SelectOverMist_lit = Brighter<MistLitY, SelectLitY, Plus<W8, Plus<W16, Plus<W32, W128>>>>
 public typealias SelectOverMist_dim = Brighter<SelectDimY, MistDimY, Plus<Unit, W8>>
 
 // ── the two questions a name's hue answers, held apart by name. Whose source it
