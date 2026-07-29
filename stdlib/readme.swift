@@ -251,6 +251,12 @@ extension V { public static var typeName: String { "v" } }
 // cannot be listed among the safe ones and admit to writing in the same file.
 // The battery runs every one of them in a world and holds the working copy
 // byte-identical afterwards, which is the half no declaration can prove.
+//
+// `Asked` is the third class and it carries the same promise with one word
+// added: nothing is written unless you name a file with `-o`. The battery runs
+// those without one and holds the working copy byte-identical too, so the
+// difference between `Reads` and `Asked` is what you typed and never what the
+// verb decided.
 public typealias CheckIsSafe = Run<Check>
 public typealias DiffIsSafe = Run<Diff>
 public typealias LogIsSafe = Run<Log>

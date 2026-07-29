@@ -2974,13 +2974,27 @@ async function loadVocabulary() {
 buildRail();
     await buildJournal();
     if (!files.length) return showEmpty();   // no world here yet
-    const first = files[0] || "gate.swift";
-    if (opensAs[first]) setMode(opensAs[first]);
-    await loadFile(first);
-    // CodeMirror measures itself when it is built, and it is built while the
-    // rail is still hidden and the panes have no width yet. Everything is in
-    // the DOM and the first paint can come out empty until something forces a
-    // re-measure. One frame later the page has a layout to measure against.
+    // ── AND A LAYOUT IS NOT A GREETING, EVEN WHEN IT IS ALL THERE IS. A world
+    // whose every declared row is a seam side has no bench file but the layout
+    // and your own empty page, so the bench opened on the accounting document —
+    // in the one scene that is entirely about two declarations, neither of them
+    // shown. The first thing the layout declares that a reader can read is the
+    // door; here that is a side of the seam, opened to READ like any other.
+    const readable = files.filter(f => f !== layoutFile && f !== personalFile);
+    if (!readable.length && seamRows.length) await openSeamSide(seamRows[0], null);
+    else {
+        const first = files[0] || "gate.swift";
+        if (opensAs[first]) setMode(opensAs[first]);
+        await loadFile(first);
+    }
+    // ── AND THE EDITOR IS MEASURED ONCE THE PAGE HAS A LAYOUT. CodeMirror
+    // measures itself when it is built, and it is built while the rail is still
+    // hidden and the panes have no width: everything lands in the DOM and the
+    // first paint comes out EMPTY until something forces a re-measure. Seen on
+    // the seam bench, which opens straight into Full — a full document, a
+    // selected file, a verdict bar, and a blank pane. One frame later there is a
+    // layout to measure against, and this runs on every way in rather than on
+    // the one that happened to be walked.
     requestAnimationFrame(() => { if (mode === "full") cm.refresh(); });
 })();
 

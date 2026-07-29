@@ -4530,6 +4530,32 @@ public enum MyWatch: AccessLedger {
     S.append(("every verb certified safe leaves the working copy exactly as it was",
               len(safe) >= 10 and not touched and after_all == before))
 
+    # ── AND `Asked` CARRIES THE SAME PROMISE WITH ONE WORD ADDED: nothing is
+    # written unless you name a file with `-o`. The README says exactly that —
+    # "unless you ask for it by name with `-o`, your repository is left as it
+    # was" — and nothing held it, so the difference between a verb that reads
+    # and a verb that writes when asked lived in prose. Run each without one and
+    # the working copy is byte-identical, which is what makes `Asked` a class
+    # rather than an intention.
+    asked = {m.group(2) for m in re.finditer(
+        r'public enum (\w+): Verb \{\s*public typealias Does = Asked.*?'
+        r'extension \1 \{ public static var typeName: String \{ "([^"]+)" \} \}',
+        kept_readme, re.S)}
+    aw = os.path.join(tmp, "askedworld")
+    run("demo", "org", aw)
+    a_before = subprocess.run(["git", "status", "--porcelain"], cwd=aw,
+                              capture_output=True, text=True).stdout
+    wrote_anyway = []
+    for word in sorted(asked):
+        subprocess.run([sys.executable, GATE, word], cwd=aw, capture_output=True, text=True)
+        if subprocess.run(["git", "status", "--porcelain"], cwd=aw,
+                          capture_output=True, text=True).stdout != a_before:
+            wrote_anyway.append(word)
+    S.append(("a verb that writes only when asked writes nothing when it is not",
+              len(asked) >= 5 and not wrote_anyway
+              # and the promise is stated where the class is, not only in prose
+              and "nothing is written unless you name a file with `-o`" in kept_readme))
+
     # ── AND A GHOST IS A GHOST WHICHEVER COURT WOULD HAVE READ IT. The shadow
     # check was widened to every role and this one stayed at `world`, so a
     # declared forms file could simply vanish and nothing said a word. This
@@ -4679,6 +4705,22 @@ public enum MyWatch: AccessLedger {
                                timeout=10).read().decode()
     finally:
         _sb.terminate()
+    # ── AND THE BLANK FIRST PAINT, REPRODUCED AND CURED. A world whose every
+    # declared row is a seam side has no bench file but the layout and your own
+    # empty page, so the bench opened on the accounting document — in the one
+    # scene that is entirely about two declarations, neither of them shown.
+    # Opening on the side instead surfaced the older glitch at once: CodeMirror
+    # measures itself when it is built, and it is built while the rail is hidden
+    # and the panes have no width, so a full document, a selected file and a
+    # verdict bar came up over a BLANK pane. The re-measure was on the path that
+    # happened to be walked; it is on every way in now.
+    S.append(("the bench opens on something a reader can read, and measures itself once it can",
+              "if (!readable.length && seamRows.length) await openSeamSide(seamRows[0], null);" in ui
+              # not inside one branch: every way in reaches it
+              and ui.count('requestAnimationFrame(() => { if (mode === "full") cm.refresh(); })') == 1
+              and ui.index('requestAnimationFrame(() => { if (mode === "full") cm.refresh(); })')
+                  > ui.index("if (!readable.length && seamRows.length)")))
+
     S.append(("every name the panel prints is a name the panel opens, seam sides included",
               rail and sorted(rail.get("seams") or []) == ["api.swift", "sdk.swift"]
               # and they are NOT bench files: no court of this world reads them,
