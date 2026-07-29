@@ -4848,6 +4848,29 @@ public enum MyWatch: AccessLedger {
               and "declSpan(name, a.line, false)" not in ui
               and "#bare .bad{text-decoration:underline wavy var(--bad)" in ui))
 
+    # ── AND NOTHING SHOWS THE WRONG WORLD FIRST. Three flashes, one shape: the
+    # page painted an answer it did not have yet and corrected itself a beat
+    # later. CodeMirror tokenises the moment a value is set and the name set it
+    # consulted still belonged to the file you had just left, so every name of
+    # the new file fell through to `theirs` and the document came up purple. The
+    # offer list said its names in one flat colour while each has a register the
+    # moment it lands. And the theme, remembered from what the world last
+    # declared, was cleared by a read that happened before the world was parsed:
+    # silence taken for an answer, and the page flipped twice.
+    S.append(("nothing paints an answer the page does not have yet",
+              # the names are known before the text is painted
+              "const early = judge(name, t, formsFiles.has(name) || name === layoutFile" in ui
+              and ui.index("repaintNames(early.parsed, []);") < ui.index("editor.value = t;")
+              # an offer wears the ink the name will have, and the selection
+              # tints the row rather than overpainting the word
+              and '.crow .cmine{color:var(--localtype)}' in ui
+              and '.crow.on{background:color-mix(in srgb,var(--action) 14%,transparent)}' in ui
+              and 'localNames.has(n) ? "cmine" : "ctheirs"' in ui
+              # and what is remembered stands until the world has been read
+              and "if (!worldRead) return;" in ui
+              and ui.index("worldRead = true;") < ui.index("function applyMyBench")
+                  or "worldRead = true;" in ui))
+
     S.append(("bare reads the marks the writer already makes: a section is a heading, a block is set",
               'out.push({ line: i + 1, text: head[1], kind: "head" });' in ui
               and 'kind: "set"' in ui

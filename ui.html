@@ -138,7 +138,9 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 .krow span{color:var(--muted)}
 #completion{position:absolute;z-index:32;background:var(--paper);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 22px color-mix(in srgb,var(--shade) 16%,transparent);padding:calc(var(--u)*2);min-width:11em;max-height:15em;overflow:auto}
 .crow{padding:var(--u) calc(var(--u)*4);border-radius:5px;cursor:pointer;white-space:nowrap}
-.crow.on{background:color-mix(in srgb,var(--action) 14%,transparent);color:var(--action)}
+.crow.on{background:color-mix(in srgb,var(--action) 14%,transparent)}
+.crow .cmine{color:var(--localtype)}
+.crow .ctheirs{color:var(--knownname)}
 .crow:hover{background:var(--mist)}
 .cnote{padding:calc(var(--u)*2) calc(var(--u)*4) var(--u);border-top:0.5px solid var(--line);margin-top:calc(var(--u)*2)}
 #inspect{flex:none;padding:calc(var(--u)*3) calc(var(--u)*8) calc(var(--u)*2);border-bottom:0.5px solid var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1000,7 +1002,16 @@ function wheel(surface) {
     return turners.length === 1 ? turners[0].d : null;
 }
 
+let worldRead = false;   // has this page read the world once, layout and all
 function applyMyBench() {
+    // ── AND A REMEMBERED DECLARATION IS NOT DROPPED BEFORE THE WORLD IS READ.
+    // The first paint uses what this machine remembers the world declaring, so
+    // a dark bench never flashes white — and then this ran before the layout
+    // had been parsed, found no `MyBench`, concluded nothing was declared and
+    // repainted to whatever the operating system says. The world answered a
+    // beat later and it flipped back. Silence is not an answer here: until the
+    // world has been read, what is remembered stands.
+    if (!worldRead) return;
     const d = wheel("Bench");
     const a = d && d.aliases.get("Theme");
     // only a value the bench's own forms names sets the theme; a stranger is the
@@ -1194,8 +1205,14 @@ function hideCompletion() {
 }
 
 function drawCompletion(reposition) {
+    // ── AND AN OFFER WEARS THE INK THE NAME WILL HAVE. What the bench suggests
+    // is what the judge will accept, and the list said it in one flat colour
+    // while every one of those names has a register the moment it lands: mine,
+    // or a word the judge carries. Reading the offer told you nothing about
+    // which you were choosing, and the selected row overpainted even that.
     compEl.innerHTML = compItems.map((n, i) =>
-        '<div class="crow fact' + (i === compChosen ? " on" : "") + '" data-i="' + i + '">' + esc(n) + "</div>").join("")
+        '<div class="crow fact' + (i === compChosen ? " on" : "") + '" data-i="' + i + '"><span class="'
+        + (localNames.has(n) ? "cmine" : "ctheirs") + '">' + esc(n) + "</span></div>").join("")
         + (compEl.dataset.kind ? '<div class="cnote caption">' + esc(compEl.dataset.kind) + "</div>" : "");
     // anchored to the start of the word, set when the offer opens and held:
     // arrowing through it or a verdict landing must not shift it a pixel
@@ -2845,8 +2862,18 @@ async function loadFile(name) {
     document.getElementById("fname").textContent = name;
     buildRail();
     const t = await (await fetch("/world?f=" + encodeURIComponent(name))).text();
+    // ── AND THE NAMES ARE KNOWN BEFORE THE TEXT IS PAINTED. CodeMirror
+    // tokenises the moment the value is set, and the name set it consulted
+    // still belonged to the file you just left: every name of the new file fell
+    // through to `theirs` and the whole document came up purple, then repainted
+    // a beat later when the parse arrived. A view that shows the wrong world
+    // first and corrects itself is a view you cannot read at a glance.
+    const early = judge(name, t, formsFiles.has(name) || name === layoutFile
+                                ? { seeds: new Set(), generics: new Set() } : undefined);
+    repaintNames(early.parsed, []);
     editor.value = t;   // setValue: judged, not written
     await siblings();
+    worldRead = true;
     render();
     refreshGit();
 }
