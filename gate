@@ -5453,7 +5453,17 @@ def dispatch(cmd, rest):
                              if inside and has_past else
                              "run `gate demo` for a repository to look at: a CODEOWNERS, a policy, and one refusal"
                              if inside else "run `gate init .` to start a world in this folder"),
-                    "then": "drop your CSVs into tables/ and run gate status again, or gate demo to see a world",
+                    # ── AND THE SECOND RUNG IS THE ONE THIS REPOSITORY CAN
+                    # ACTUALLY TAKE. `drop your CSVs into tables/` was the org
+                    # world's path and stayed here after the first scene became
+                    # a repository's own ownership: a person standing in a clone
+                    # with a CODEOWNERS was told to go find spreadsheets.
+                    "then": ("run `gate import codeowners CODEOWNERS --tree . --policy owners.csv` "
+                             "— this repository already has the file, and two columns of "
+                             "`owner,zone` are the rest"
+                             if os.path.exists("CODEOWNERS") else
+                             "run `gate demo` for a repository with one, or drop your own tables "
+                             "into tables/ and run gate status again"),
                     "mutates": False}
         # what disagrees right now: judgement over the declared file list +
         # layout guards + world metrics (counted, never remembered)

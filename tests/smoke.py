@@ -545,6 +545,27 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     os.makedirs(empty)
     subprocess.run(["git", "init", "-q", "-b", "main", empty])
     c, r = run("log", cwd=empty)
+    # ── AND THE SECOND RUNG IS ONE THIS REPOSITORY CAN ACTUALLY TAKE. `drop your
+    # CSVs into tables/` was the organization world's path and it stayed here
+    # after the first scene became a repository's own ownership: somebody
+    # standing in a clone that has a CODEOWNERS was sent to go find spreadsheets.
+    rung = os.path.join(tmp, "rungrepo")
+    os.makedirs(rung)
+    subprocess.run(["git", "init", "-q", "-b", "main", rung])
+    open(os.path.join(rung, "a.txt"), "w").write("x\n")
+    subprocess.run(["git", "add", "-A"], cwd=rung, capture_output=True)
+    subprocess.run(["git", "-c", "user.email=a@b", "-c", "user.name=a",
+                    "-c", "commit.gpgsign=false", "commit", "-qm", "one"],
+                   cwd=rung, capture_output=True)
+    without = run("status", cwd=rung)[1]
+    open(os.path.join(rung, "CODEOWNERS"), "w").write("src/ @alice\n")
+    withco = run("status", cwd=rung)[1]
+    S.append(("the step offered to a repository with no world is one that repository can take",
+              without["verdict"] == "no world here"
+              and "gate demo" in without["then"] and "CODEOWNERS" not in without["then"]
+              # and where the file is already there, the command that reads it is named
+              and "gate import codeowners CODEOWNERS" in withco["then"]))
+
     S.append(("a repo with no world still has a journal, and says so honestly",
               r.get("scope") == "world" and r.get("world_files") == []))
 
