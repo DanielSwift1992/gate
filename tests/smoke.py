@@ -123,6 +123,21 @@ def main():
               # and the way back is said where the provenance is
               and "prints what shipped" in letter_text
               and "removes it with no trace" in letter_text))
+    # ── AND TWO OUTWARD TEXTS MAY NOT SAY OPPOSITE THINGS. The cover carried the
+    # cure this whole tool exists against, in its own voice: "gate makes one of
+    # those copies the source and judges it", six lines from a letter whose third
+    # paragraph says there is no source. Both are read by the same stranger, and
+    # whichever they read second tells them the first was a sales line. It lived
+    # for a month because the two texts were held apart and nothing compared them.
+    _cover = open(os.path.join(HERE, "README.md"), encoding="utf-8").read()
+    S.append(("the cover and the letter say the same thing about a source of truth",
+              "there is no source" in _cover and "there is no source" in letter_text
+              # and neither crowns one anywhere: the word survives only where the
+              # cure is being named and refused
+              and "single source" not in _cover
+              and not re.search(r"\bis the source\b", _cover)
+              and not re.search(r"\bis the source\b", letter_text)))
+
     # AND IT KEEPS ITS OWN WORD ABOUT HOW IT IS MET. The head lines of a shelf page
     # are dropped when it is taken, and `// opens: bare` was going with them: a
     # letter that asks to be read as prose arrived as code with slashes down the
@@ -5670,6 +5685,20 @@ public enum MyWatch: AccessLedger {
     # is worth having and a void is not the same thing. Columns take the width
     # their content needs, the table ends where its content ends, and the page
     # cascades down the left where the eye already is.
+    # ── AND NOTHING SCROLLS ABOVE A HEADING THAT STAYS. A sticky cell holds at the
+    # scroll box's padding edge, so a top padding on the table pane left a band
+    # over the frozen header with the rows still sliding through it. Found by eye,
+    # by scrolling. The space above the first table belongs to the first heading
+    # now, which is margin and not part of the box that scrolls.
+    _tblpane = _block("#table-host{", ui)
+    _tblhead = _block("#table-host th{text-align:left", ui)
+    S.append(("nothing passes above the row of names that stays while the table scrolls",
+              "position:sticky" in _tblhead and "top:0" in _tblhead
+              # no padding over the scroll box: the first heading carries that space,
+              # and a margin is not part of the box the header sticks inside
+              and _tblpane.startswith("position:absolute") and "padding:0 " in _tblpane
+              and "margin-top:calc(var(--u)*8)" in _block("#table-host h3:first-child{", ui)))
+
     S.append(("a table takes the width of what it holds, not the width of the pane",
               "#table-host table{border-collapse:collapse;width:auto;max-width:100%" in ui
               and "#table-host td,#table-host th{white-space:nowrap}" in ui

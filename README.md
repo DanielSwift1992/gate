@@ -9,10 +9,16 @@ wiki page, CODEOWNERS, an IAM console, somebody's memory — and every copy
 drifts from the others quietly. Nothing checks them against each other, so
 the drift is found by an audit, or by an incident.
 
-gate makes one of those copies the source and judges it. The facts become a
-typed world in your own git repository, where an inconsistency is
-impossible to express: the judge re-reads every claim in milliseconds, and
-a refusal names the exact line of your own file.
+The usual cure is to crown one of those copies the source of truth. It goes
+stale like the rest, because a file everyone must keep current is a chore for
+everyone, so it is a chore for nobody. gate starts from the opposite fact:
+there is no source. Each side declares what it already owns, once, in a file
+of its own, and two declarations about one thing cannot differ in silence.
+They are equal, or you get the line and both names.
+
+The facts become a typed world in your own git repository, where an
+inconsistency is impossible to express: every claim is re-read in
+milliseconds, and a refusal names the exact line of your own file.
 
 No server. No runtime. No new formats. Nothing leaves your repository.
 
@@ -49,9 +55,10 @@ where each new question is new work.
 
 ## How it works
 
-Your facts become one Swift file — `gate.swift` — the **single source**,
-readable by everything at once: `git diff`, a human, the judge, and the
-Swift compiler. There is no DSL: what you write is **bare Swift** — the
+Your facts become Swift declarations in your repository: one file to start
+with, `gate.swift`, and as many as you name in a manifest, all judged
+together. One text, and everything reads it at once: `git diff`, a person,
+the judge, and the Swift compiler. There is no DSL: what you write is **bare Swift** — the
 same language with the ceremony stripped (write only the differences,
 printing restores the full form), and **full Swift** is always one view
 away, sitting right there in the file. Rules are type constraints in the same text, so a record
@@ -612,7 +619,7 @@ gate adds no process of its own. It sits inside the four you already have:
 
 ## Layout and ownership
 
-- `gate.swift` is the source. Declare a multi-file layout in
+- `gate.swift` is where a world starts. Declare a multi-file layout in
   `gate.manifest.swift` and gate obeys it: judgement runs the declared
   list, a ghost file and a shadow file are both named.
 - Tables are inputs and views, never truth: a later CSV edit cannot
@@ -639,7 +646,7 @@ judge.js        the browser judge (byte-parity port) for the bench
 ui.html         the workbench
 codemirror.*    the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
-tests/smoke.py   the battery — 329 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 331 end-to-end checks, the definition of green
 ```
 
 ## Status

@@ -317,9 +317,16 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 .door{display:flex;flex-direction:column;gap:calc(var(--u)*2);padding:calc(var(--u)*6) calc(var(--u)*7);margin-bottom:calc(var(--u)*5);border:1px solid var(--line);border-radius:8px}
 .door code{font:var(--factbare);color:var(--action)}
 .door span{font:var(--controlsmall);color:var(--muted)}
-#table-host{position:absolute;inset:0;overflow:auto;background:var(--paper);padding:calc(var(--u)*6) calc(var(--u)*8) calc(var(--u)*40);font-size:12.5px;display:none}
+/* ── AND A HEADING THAT STAYS MUST STAY AT THE TOP OF WHAT IT HEADS. A sticky
+   cell holds at the scroll box's PADDING edge, so a top padding here left a
+   band above the frozen header where the rows kept scrolling in plain view:
+   half a line of somebody's note, sliding along above the words naming its
+   columns. The space over the first table is the first heading's own margin
+   now, which is not part of the scroll box, so there is nothing above the
+   header to see. */
+#table-host{position:absolute;inset:0;overflow:auto;background:var(--paper);padding:0 calc(var(--u)*8) calc(var(--u)*40);font-size:12.5px;display:none}
 #table-host h3{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:calc(var(--u)*10) 0 calc(var(--u)*3);font-weight:600}
-#table-host h3:first-child{margin-top:calc(var(--u)*2)}
+#table-host h3:first-child{margin-top:calc(var(--u)*8)}
 /* ── A TABLE FALLS LEFT. Stretched to the pane it put two short words at
    opposite ends of a wide screen — `Emp9000` here, `Finance` eight hundred
    pixels away — and reading a row became a journey across empty space. Air is
