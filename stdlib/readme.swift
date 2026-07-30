@@ -3,7 +3,7 @@
 // opens: bare
 //
 // Rule for this page: a line either subtracts a piece of drift, or it is cut.
-// The page says what stops being possible here, not what the tool is like.
+// Each line says what stops being possible in the repository holding it.
 // A word is introduced where it is first used. No line explains the reader to
 // themselves.
 
@@ -27,23 +27,22 @@
 // touched by three people over five hundred commits; none of those edits was
 // checked.» A repository with little history has little to say, and the output
 // says that instead. Every sentence is marked read, not judged: no court sat on
-// it. This is the reading nobody had time for, without the judging nobody asked
-// for.
+// it. It gives you the reading, and leaves the judging to a world you declare.
 //
-// ── nothing appears here that nobody said ──
+// ── everything here is here because a row says so ──
 //
 // Entry left five files and one git setting, all six named: this letter, the
 // words it is written in, the reference beside it, the layout that declares
 // them, a pre-commit hook, and `core.hooksPath`, which points git at that hook.
 // The hook re-reads the claims before each commit, so a claim that stopped
-// holding does not enter history. The line that restores the setting was
-// printed when it changed. Entry read nothing else for its meaning, moved
-// nothing, and rewrote nothing. No part of this tool touches the network.
+// holding stays out of history. The line that restores the setting was printed
+// when it changed. Everything else in the repository was left exactly as it
+// was, and this tool has no network access at all.
 //
-// A file with nobody's name on it cannot appear here: a file is here because a
-// row in the layout names it, and deleting the row deletes it. Nobody has to
-// agree to any of this. Nothing is shared until you commit it, and the personal
-// world below is never shared.
+// Each of those files is here because a row in the layout names it, and deleting
+// the row deletes it. You can do all of this alone: what you write reaches your
+// colleagues when you commit it, and the personal world below stays on this
+// machine either way.
 //
 // ── a first word costs nothing here ──
 //

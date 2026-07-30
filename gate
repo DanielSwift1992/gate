@@ -1540,9 +1540,10 @@ def cmd_guard_deps(a):
             {"address": os.path.basename(lock_p), "claim": f"pin {o}@{pins[o]} is required by nothing: a leftover after removal"}
             for o in orphans
         ]
-    out["note"] = ("SKETCH, not a product path: only orphan pins are detected; a missing pin "
-                   "currently yields a FALSE holds (the judge resolves no axis without a reading "
-                   "premise). Native ecosystem lockfile checkers already cover this class")
+    out["note"] = ("a sketch, and not a product path: only orphan pins are detected. A missing "
+                   "pin yields a holds that means nothing, because the judge resolves no axis "
+                   "without a reading premise. Native ecosystem lockfile checkers already cover "
+                   "this class")
     return out
 
 
@@ -3399,7 +3400,7 @@ def declare_side(path, kind, role, frm=None, written=None):
         text = ensure(text, "\npublic protocol Mine {}")
     if kind == "Theirs" and "public protocol Theirs {}" not in text:
         text += ("\n// What this world took from somewhere else. A file is listed because this\n"
-                 "// side said so, not because it sits in the same directory, and every taken\n"
+                 "// side said so, and a row here says which file and whose it is. Every taken\n"
                  "// row names the revision it was taken at. This tool has no ranges, so\n"
                  "// nothing here needs a solver.\n"
                  "public protocol Theirs {}\n")
@@ -5663,7 +5664,7 @@ usage (the git-shaped porcelain):
                                        disagreement between them, or people and
                                        departments for a domain with no repo)
   gate attention CONTRACT.swift CARRIER.swift [--as WHO] [--known K.json]
-                 [--tracker T.json]     (what waits for a WORD, not what changed:
+                 [--tracker T.json]     (what waits for a word, not what changed:
                                        who owes whom a sentence, read the same
                                        from either side. A declared divergence
                                        is set aside while what it cites is open,
