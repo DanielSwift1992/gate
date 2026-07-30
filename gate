@@ -1419,8 +1419,10 @@ def next_rung(refused):
 
     if rows and not said_something and all(arrived_by_taking(r["path"]) for r in rows) \
             and any(os.path.basename(r["path"]) == "readme.swift" for r in rows):
-        return ("run `gate serve` and read readme.swift: it is yours now, and the first fact you "
-                "change in it is the first thing this repository holds")
+        # ── AND THE RUNG STOPS ANNOUNCING WHAT THE NEXT SCREEN ALREADY SAYS. The
+        # bench opens on the letter, so a rung describing the letter spends a line on
+        # a thing the reader is about to be looking at. Two words is the whole step.
+        return "gate serve"
     if not policy_path():
         return ("say who may merge, in gate.policy.swift: a law of yours with a date on it, "
                 "instead of a convention somebody has to remember")
@@ -5016,7 +5018,7 @@ def cmd_init(a):
         undo = (f"git config core.hooksPath {prior}" if prior
                 else "git config --unset core.hooksPath")
         if prior:
-            hooks_note += f" — it was {prior}"
+            hooks_note += f"; it was {prior}"
     # ── AND THE ONE THING MISSING IS NAMED WITHOUT BEING GUESSED. The world that
     # arrives is ours; the only thing nobody has said yet is who is keeping it, and
     # this repository's own git already carries a name. So the name is OFFERED, as

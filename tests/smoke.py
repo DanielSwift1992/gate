@@ -55,6 +55,12 @@ def main():
     S = []
     S.append(("the battery keeps its personal worlds inside its own temp dir",
               os.environ.get("GATE_ME", "").startswith(tmp)))
+    # and every fixture directory too, so a run leaves the machine as it found it
+    # matched by a pattern rather than by the literal, which this check would
+    # otherwise find in itself and fail on
+    S.append(("and every fixture it makes is rooted in that directory",
+              not re.search(r"tempfile\.mkdtemp\(\s*\)",
+                            open(__file__, encoding="utf-8").read())))
 
     c, r = run("init", repo)
     S.append(("init + hook wired", r.get("hooks") is not None))
@@ -131,8 +137,10 @@ def main():
     S.append(("the world entry leaves is judged, and the verdict says how wide",
               c == 0 and r.get("verdict") == "holds"
               and r.get("forms", {}).get("equalities", 0) > 0))
-    S.append(("and the rung after entry is the letter, not a merge policy",
-              "readme.swift" in r.get("next", "")))
+    # the rung after entry is two words, because the bench opens on the letter and a
+    # rung that describes the next screen spends a line on it
+    S.append(("and the rung after entry is the bench itself, not a merge policy",
+              r.get("next") == "gate serve"))
     # BREAK IT, ON THE FIRST FILE, IN A REPOSITORY THAT DECLARED NOTHING ELSE: the
     # lesson the letter offers has to be true where it is read.
     letter_p = os.path.join(repo, "verbs.swift")
@@ -1963,7 +1971,12 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # nothing; and declaring it as a file of mine is refused outright, because a
     # world is records and a genre is the grammar records are written in. Three
     # ways of finding out it is not a source — the invitation was the lie.
-    shelf_probe = tempfile.mkdtemp()
+    # ── AND EVERY FIXTURE THIS BATTERY MAKES IS REMOVED WITH IT. Twenty-one of
+    # them were made straight in the system temp directory and never taken away:
+    # 10595 of those were sitting there, and each one that wrote a personal world
+    # left a keyed world in the real `~/.gate/me` too. Rooted here, they go when the
+    # run's own directory goes.
+    shelf_probe = tempfile.mkdtemp(dir=tmp)
     world_p = os.path.join(shelf_probe, "gate.swift")
     open(world_p, "w").write("public enum Sales: Department {}\npublic enum Boss: Ranked {}\n")
     bare = run("status", cwd=shelf_probe)[1]
@@ -2001,7 +2014,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # says what I am answerable for. Both are one word now, both write the same
     # document, and the document is mine either way: it is where I say which
     # files I write and which I only read.
-    two = tempfile.mkdtemp()
+    two = tempfile.mkdtemp(dir=tmp)
     two_src = open(GATE, encoding="utf-8").read()
     open(os.path.join(two, "gate.swift"), "w").write("public enum Sales: Department {}\n")
     open(os.path.join(two, "more.swift"), "w").write("public enum Ops: Department {}\n")
@@ -2018,7 +2031,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # the file, and the battery's own temporary worlds wrote sixteen rows into
     # THIS repository's manifest — claims about /var/folders directories deleted
     # the same minute, sitting in a commit, indistinguishable from real ones.
-    outside = tempfile.mkdtemp()
+    outside = tempfile.mkdtemp(dir=tmp)
     open(os.path.join(outside, "stranger.swift"), "w").write("public enum X {}\n")
     escape = run("mine", os.path.join(outside, "stranger.swift"), cwd=two)[1]
     S.append(("a claim about a file outside the world is refused, not written",
@@ -2051,7 +2064,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # so the reader carried on and simply lost the row it had swallowed. An
     # account that quietly stops being true is the one failure this tool exists
     # to make impossible, and it was mine, in this file, for a day.
-    many = tempfile.mkdtemp()
+    many = tempfile.mkdtemp(dir=tmp)
     open(os.path.join(many, "gate.swift"), "w").write("public enum Sales: Department {}\n")
     open(os.path.join(many, "w.swift"), "w").write("public enum Ops: Department {}\n")
     for who in "abc":
@@ -2095,7 +2108,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # somebody's braces; the removal matched a one-line pattern, reported the
     # row gone, and left it there. Both lied without saying so, in the list that
     # accounts for everything else. Nothing here reads a shape any more.
-    keeps = tempfile.mkdtemp()
+    keeps = tempfile.mkdtemp(dir=tmp)
     open(os.path.join(keeps, "gate.swift"), "w").write("public enum Sales: Department {}\n")
     for who in "ab":
         open(os.path.join(keeps, f"{who}.swift"), "w").write(
@@ -2131,7 +2144,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     pinned = run("theirs", "api.swift", "--at", "openapi@3f2a1c9", cwd=two)[1]
     with_pin = open(os.path.join(two, "gate.manifest.swift")).read()
     # and the same is refused when the operator wrote the row by hand
-    hand = tempfile.mkdtemp()
+    hand = tempfile.mkdtemp(dir=tmp)
     open(os.path.join(hand, "gate.swift"), "w").write("public enum Sales: Department {}\n")
     open(os.path.join(hand, "b.swift"), "w").write("// contract\npublic enum F_y: Declared { public typealias Of = Text }\n")
     open(os.path.join(hand, "gate.manifest.swift"), "w").write(
@@ -2175,7 +2188,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # probe, and the probe was the wrong shape: `where` does not check bare
     # conformance, so a green over nought uses said nothing either way. Given
     # certificates it reads them with teeth. The court was simply never called.
-    frm = tempfile.mkdtemp()
+    frm = tempfile.mkdtemp(dir=tmp)
     open(os.path.join(frm, "gate.swift"), "w").write("public enum Sales: Department {}\n")
     shutil.copy(os.path.join(HERE, "stdlib", "bench-metrics.swift"),
                 os.path.join(frm, "vendor-forms.swift"))
@@ -2216,7 +2229,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # the manifest, so the same repository always reads the same way, and the
     # address lands in the file that SAYS the certificate rather than in the
     # stream it was read in.
-    split = tempfile.mkdtemp()
+    split = tempfile.mkdtemp(dir=tmp)
     open(os.path.join(split, "gate.swift"), "w").write("public enum Sales: Department {}\n")
     whole = open(os.path.join(HERE, "stdlib", "bench-metrics.swift"), encoding="utf-8").read()
     cut = whole.index("public typealias AirIsTwoLines")
@@ -2303,7 +2316,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     #
     # Both older spellings are still read. A file on somebody's disk is not
     # wrong because the tool learned a better word for it.
-    old = tempfile.mkdtemp()
+    old = tempfile.mkdtemp(dir=tmp)
     open(os.path.join(old, "gate.swift"), "w").write("public enum Sales: Department {}\n")
     open(os.path.join(old, "a.swift"), "w").write("public enum Ops: Department {}\n")
     open(os.path.join(old, "b.swift"), "w").write(
@@ -2350,7 +2363,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # taken carries the address of the sentence that took it, and clicking it
     # goes there rather than opening a thing of its own. The one editable
     # surface is my own files; everything else is a reading of them.
-    demo_pair = tempfile.mkdtemp()
+    demo_pair = tempfile.mkdtemp(dir=tmp)
     run("demo", "seam", os.path.join(demo_pair, "d"), cwd=demo_pair)
     pair_at = os.path.join(demo_pair, "d")
     if not os.path.isdir(pair_at):
@@ -2472,7 +2485,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # it nested inside, `FinanceShare.EngineeringShare.SalesShare.PeopleShare
     # .Edsger`, and fifty-eight names resolved to nothing. Braces balance on a
     # line or they do not.
-    par = tempfile.mkdtemp()
+    par = tempfile.mkdtemp(dir=tmp)
     run("demo", "org", cwd=par)
     par_world = os.path.join(par, "gate-demo", "gate.swift")
     probe = os.path.join(par, "parity.mjs")
@@ -2536,7 +2549,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # saying `W2` is two worlds each counting for itself rather than one world
     # saying a thing twice. The duplicate guard asks its question inside a
     # stream; widening it to every file on the bench made gate refuse itself.
-    pres = tempfile.mkdtemp()
+    pres = tempfile.mkdtemp(dir=tmp)
     run("demo", "org", cwd=pres)
     pres_root = os.path.join(pres, "gate-demo")
     pres_forms = os.path.join(pres_root, "forms-organization.swift")
@@ -2571,7 +2584,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # that executes inside a repository holding other people's files is an attack
     # surface we would have built for ourselves, and what this bench can promise
     # today is that nothing it shows can change anything.
-    mile = tempfile.mkdtemp()
+    mile = tempfile.mkdtemp(dir=tmp)
     run("demo", "org", cwd=mile)
     mile_out = run("status", cwd=os.path.join(mile, "gate-demo"))[1]
     S.append(("the step comes with the command ready, and the running is not ours",
@@ -2707,7 +2720,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     #
     # The world a file belongs to is found the way .git is: by walking up from
     # the file, never from wherever the command happened to be typed.
-    fold = tempfile.mkdtemp()
+    fold = tempfile.mkdtemp(dir=tmp)
     os.makedirs(os.path.join(fold, "people"), exist_ok=True)
     os.makedirs(os.path.join(fold, "access"), exist_ok=True)
     open(os.path.join(fold, "gate.swift"), "w").write("public enum Sales: Department {}\n")
@@ -2742,7 +2755,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # depending on which file is open, so the theme in force could turn on a tab.
     # A court that answers about a world may not answer with less than the court
     # standing beside it.
-    twice = tempfile.mkdtemp()
+    twice = tempfile.mkdtemp(dir=tmp)
     open(os.path.join(twice, "gate.swift"), "w").write(
         "public enum Sales: Department {}\n"
         "public enum MyBench: Bench { public typealias Theme = Dark }\n")
@@ -2826,7 +2839,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # The probe is the whole claim: an operator declares two numbers in a file of
     # their own and the colour the page paints a foreign name with changes, with
     # nothing in this tool having been built to allow it.
-    ovr = tempfile.mkdtemp()
+    ovr = tempfile.mkdtemp(dir=tmp)
     open(os.path.join(ovr, "gate.swift"), "w").write("public enum Sales: Department {}\n")
     open(os.path.join(ovr, "my-colours.swift"), "w").write(
         "// role: forms\n"
@@ -2919,7 +2932,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # the world that shipped the name, which is not this world's to edit — and
     # the laws that shipped with it judge it at once. Probed the whole way.
     import socket as _sock
-    sv = tempfile.mkdtemp()
+    sv = tempfile.mkdtemp(dir=tmp)
     open(os.path.join(sv, "gate.swift"), "w").write("public enum Sales: Department {}\n")
     open(os.path.join(sv, "my-values.swift"), "w").write("// role: forms\n")
     no_forms = None
@@ -3508,7 +3521,7 @@ console.log(JSON.stringify(out));
     # And the consequence runs backwards — `^1.2.0` does not make resolution
     # hard, it CREATES the problem by breaking the precondition under which the
     # question had an answer.
-    pin = tempfile.mkdtemp()
+    pin = tempfile.mkdtemp(dir=tmp)
     open(os.path.join(pin, "gate.swift"), "w").write("public enum Sales: Department {}\n")
     open(os.path.join(pin, "sdk.swift"), "w").write(
         "public enum F_x: Declared { public typealias Of = Text }\n")
@@ -3801,7 +3814,7 @@ console.log(JSON.stringify(out));
     # holds of it. And the form of a law is not yours to replace — restating
     # `TowardWarm` as `TowardBlue` does not satisfy a law, it deletes one, and
     # then any value could be permitted by rewriting what forbade it.
-    guard = tempfile.mkdtemp()
+    guard = tempfile.mkdtemp(dir=tmp)
     open(os.path.join(guard, "gate.swift"), "w").write("public enum Sales: Department {}\n")
     mineclr = os.path.join(guard, "my-colours.swift")
 
@@ -3855,7 +3868,7 @@ console.log(JSON.stringify(out));
     # in one line, a presented foreign world refuses a lie at the line — "the
     # name Nonexistent resolves to nothing", on a domain no judge has heard of.
     # The empty prism is ours to build and does not need the corpus.
-    claim_probe = tempfile.mkdtemp()
+    claim_probe = tempfile.mkdtemp(dir=tmp)
     open(os.path.join(claim_probe, "world.swift"), "w").write(
         "// ── what this file took ──\n"
         "public protocol Role {}\n"
@@ -3888,7 +3901,7 @@ console.log(JSON.stringify(out));
     # and that is refused with BOTH addresses rather than resolved by a rule
     # nobody can read. No solver exists here because no range can be written;
     # what a conflict gets instead is a sentence and two places to look.
-    dia = tempfile.mkdtemp()
+    dia = tempfile.mkdtemp(dir=tmp)
     open(os.path.join(dia, "gate.swift"), "w").write("public enum Sales: Department {}\n")
     for who in "ab":
         open(os.path.join(dia, f"{who}.swift"), "w").write(

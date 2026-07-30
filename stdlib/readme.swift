@@ -22,20 +22,29 @@
 // That gap has a name: drift. A sentence that was true, quietly stopped being
 // true, and still gets obeyed.
 //
-// gate reads sentences like that as claims and re-reads them whenever a file
-// changes. When one stops being true you get the file and the line, at once.
+// The usual cure is to pick one place and call it the source of truth. But the
+// folder was renamed in a pull request that never read CODEOWNERS; a file everyone
+// must keep current is a chore that belongs to everyone, so it belongs to nobody;
+// and the chosen file goes stale like any other. gate starts from the opposite
+// fact: there is no source. The team that owns the folders declares them, once.
+// The review rule declares the folder it points at. Two declarations about one
+// folder cannot differ in silence: they are equal, or you get the line and both
+// names.
 //
-// What changes is how two sides stay in sync. Today that takes attention:
-// somebody notices a change on the other side and updates their own, or nobody
-// does. Here each side declares what it holds, once, and the difference is
-// checked whenever anybody asks: by hand, on a commit, in CI. You stop keeping
-// track of who might break what, because a break says where it is.
+// That changes who has to notice. Today you learn about the rename when reviews
+// start landing on the wrong person, and the renaming team learns about your rule
+// at the audit, if ever. Here the difference is checked whenever anybody asks: by
+// hand, on a commit, in CI. A break names its line and both names, so the map of
+// who might break what leaves your head. And the rename that would break your rule
+// meets your rule inside the pull request that makes the rename. They can still
+// merge it, but not without knowing. Being forgotten is what stops being possible
+// here.
 //
 // The check is one lookup per claim and nothing else: no search, no solver, no
 // build. It takes milliseconds on a real repository, and it still takes
 // milliseconds when the repository is ten times the size.
 //
-// ── what it put in your repository, and how to take it out ──
+// ── what gate put in your repository, and how to take it out ──
 //
 // Five files and one git setting. Nothing else was read, moved or rewritten, and
 // this tool has no network access at all.
@@ -50,7 +59,8 @@
 //     core.hooksPath        the git setting pointing at that hook; the line that
 //                           restores it was printed the moment it changed
 //
-// Delete a file and its row and it is gone, with nothing left behind. None of
+// Delete a file and its row and it is gone, with nothing left behind. Commit the
+// five and the entry is part of this repository's history. None of
 // this needed anybody's permission, and nothing you write reaches your
 // colleagues until you commit it.
 //
@@ -61,7 +71,7 @@
 // screen already. Beside this file it lists `my.swift`, your own world, kept in a
 // separate git on this machine and never in the repository you share. That file
 // does not exist until you write in it; nothing is stored for somebody who said
-// nothing. Write one claim and it is judged beside the shared world on every
+// nothing. Write one claim and it is judged, with everything else here, on every
 // keystroke. Clear it and it is gone.
 //
 // BREAK IT. Trying costs nothing here: a claim that does not hold is never written
