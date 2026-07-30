@@ -5428,6 +5428,20 @@ public enum MyWatch: AccessLedger {
               # it counts EDITS, which is the number selections never touch
               and "cm.historySize().undo" in ui
               and "cm.undo(); render();" not in ui))
+    # ── AND THE VIEW IS THE READER'S. Opening somebody's page threw the reader back
+    # to Full whatever they had been reading in: pick Bare or Table, click a shelf
+    # page or a seam side, and the choice was gone. Following a name still takes
+    # Full, because a line is what was asked for, and the way back restores the view
+    # along with the place.
+    S.append(("opening a page keeps the view you are reading in",
+              'setMode(opensAs[mod] || opensAs[mod + ".swift"] || mode);' in ui
+              and "setMode(opensAs[file] || mode);" in ui
+              # exactly one path still takes Full on purpose, and it shows a line
+              and ui.count('setMode("full")') == 1
+              and 'setMode("full");' in ui.split("function reveal")[1][:400]
+              # and the way back brings the view with the place
+              and 'setMode(there.mode || "full");' in ui))
+
     # ── THE PAGE SPEAKS FROM PLACES THAT STAY. A floating bar lived 3.2 seconds and
     # carried four different things: an answer to a keystroke, a 500-character
     # paragraph with a shell command in it, a label about the view you were looking

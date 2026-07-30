@@ -1717,11 +1717,10 @@ async function openLanguage(name, line) {
         + "corpus" + (language.short ? " at " + esc(language.short) : "") + " · theirs, read-only";
     document.getElementById("fname").textContent = language.file.split("/").pop();
     document.getElementById("fname").style.display = "";
-    setMode("full");
     cm.setValue(text);
     cm.setOption("readOnly", true);
     buildRail();
-    reveal(line);
+    reveal(line);   // a line was asked for, so this one takes Full and says so
     say(esc(name) + " is a word of the language, declared here: "
         + esc(language.file) + ":" + line + ", in the corpus this judge was built from"
         + (language.short ? " (" + esc(language.short) + ")" : "")
@@ -1759,7 +1758,13 @@ async function openShelf(mod, name) {
     active = ""; viewingShelf = mod; refLabel = null;   // reference, not one of your files
     document.getElementById("fname").textContent = mod + ".swift";
     document.getElementById("fname").style.display = "";
-    setMode("full");
+    // ── AND THE VIEW IS THE READER'S. Opening somebody's page threw the reader back
+    // to Full whatever they had been reading in: pick Bare or Table, click a shelf
+    // page or a seam side, and the choice was gone. The page keeps whatever view is
+    // open, and a page that states its own first view still gets it. Only following
+    // a name to a line takes Full, because a line is what was asked for, and the way
+    // back restores the view with the place.
+    setMode(opensAs[mod] || opensAs[mod + ".swift"] || mode);
     cm.setValue(text);
     cm.setOption("readOnly", true);
     buildRail();
@@ -1783,7 +1788,7 @@ async function openSeamSide(file, name) {
         + "· theirs, read-only";
     document.getElementById("fname").textContent = file;
     document.getElementById("fname").style.display = "";
-    setMode("full");
+    setMode(opensAs[file] || mode);
     cm.setValue(text);
     cm.setOption("readOnly", true);
     buildRail();
