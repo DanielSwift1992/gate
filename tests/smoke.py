@@ -5550,6 +5550,39 @@ public enum MyWatch: AccessLedger {
     # page or a seam side, and the choice was gone. Following a name still takes
     # Full, because a line is what was asked for, and the way back restores the view
     # along with the place.
+    # ── AND THE VIEW SHOWS THE PAGE ITS NAME SAYS. The branch that answers for a
+    # page of somebody else's returned before the projections were drawn, so Table
+    # and Bare went on holding the file you came from: the name over the pane said
+    # one page and the pane showed another, and in Bare it could be a third. Found
+    # by clicking through the shelf in Table, which is what a person does.
+    _shelfview = ui.split("if (viewingShelf) {", 1)[1].split("\n    }", 1)[0]
+    S.append(("a page of theirs is drawn in the view you are in, not left as the file before it",
+              "if (mode === \"table\") buildTables();" in _shelfview
+              and 'if (mode === "bare") document.getElementById("bare").innerHTML' in _shelfview))
+
+    # and a page nobody may edit offers nothing to edit: an offer that answers
+    # nothing is worse than no offer, and the projections draw it like any file
+    S.append(("and it offers nothing to edit, in one reading rather than four",
+              "function reading() { return !!viewingShelf; }" in ui
+              and ui.count("reading()") >= 6
+              and "if (reading()) return \"\";" in ui
+              and "asNumber !== null && !reading()" in ui))
+
+    # ── AND THE FILE YOU ARE IN ANSWERS FROM WHAT YOU HAVE TYPED. The world is
+    # parsed when a file opens, and that snapshot was read first, so a declaration
+    # changed under your hands was answered from the copy on disk. The theme was
+    # where it showed, and a special case for the personal file was the only thing
+    # papering over it: change the word and the page kept the old colour until you
+    # opened some other file.
+    _inview = ui.split("function declsInView()", 1)[1].split("\n}", 1)[0] if "function declsInView()" in ui else ""
+    S.append(("the file you are in is read from what you have typed, and the world from the rest",
+              # the buffer goes in FIRST and the world only fills what it did not
+              # name: the other order is the defect, and it reads as working code
+              bool(_inview) and 0 <= _inview.index("lastParsed.declarations") < _inview.index("layoutDecls")
+              and "if (!out.has(name))" in _inview.split("layoutDecls", 1)[1]
+              # and no reader of the wheels keeps a special case for that one file
+              and "active === personalFile" not in ui.split("function declsInView()", 1)[1][:3000]))
+
     S.append(("opening a page keeps the view you are reading in",
               'setMode(opensAs[mod] || opensAs[mod + ".swift"] || mode);' in ui
               and "setMode(opensAs[file] || mode);" in ui

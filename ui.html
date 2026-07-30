@@ -1107,18 +1107,30 @@ darkMedia.addEventListener("change", paintTheme);   // the OS flips, and an unde
 // addresses rather than silently taking one — free names mean the duplicate
 // guard cannot see it, so this is where it must be seen. None at all is the
 // world's own default, which is not a failure and says nothing.
+// ── AND THE FILE YOU ARE IN IS READ FROM WHAT YOU HAVE TYPED. Two readings of
+// one file existed and the older one won. The world is parsed when a file opens,
+// so a declaration you had just changed in the file under your hands was still
+// answered from the copy that was on disk at the time. The theme is where it
+// showed: change `Theme` and the page went on wearing the old one until you
+// opened some other file, which is when the snapshot was taken again, and it
+// looked like a fault of the personal file because a special case for the
+// personal file was the only thing papering over it. One reading now, and the
+// rule is the plain one: the buffer answers for its own file, the world answers
+// for the rest.
+function declsInView() {
+    const out = new Map();                       // name -> { d, file }
+    if (active && lastParsed)
+        for (const [name, d] of lastParsed.declarations) out.set(name, { d, file: active });
+    for (const [name, d] of layoutDecls)
+        if (!out.has(name)) out.set(name, { d, file: declFile.get(name) || active });
+    return out;
+}
+
 function wheelTurners(surface) {
     const out = [];
-    const seen = new Set();
-    for (const [where, decls] of [["your world", layoutDecls],
-                                  ["your personal world", lastParsed && active === personalFile
-                                      ? lastParsed.declarations : null]]) {
-        for (const [name, d] of (decls || new Map())) {
-            if (!(d.conformances || []).includes(surface) || seen.has(name)) continue;
-            seen.add(name);
-            out.push({ name, d, where, line: d.line });
-        }
-    }
+    for (const [name, { d, file }] of declsInView())
+        if ((d.conformances || []).includes(surface))
+            out.push({ name, d, file, line: d.line });
     return out;
 }
 function wheel(surface) {
@@ -1151,16 +1163,14 @@ function applyMyBench() {
 // read from the one source the completion reads: protoAxes and conformers of
 // the bench's own forms, so a stranger cannot be mistaken for a value. ──
 function benchGuards() {
-    const onMine = active === personalFile && lastParsed;
-    const decls = onMine ? lastParsed.declarations : layoutDecls;
     const out = [];
-    for (const [name, d] of decls) {
+    for (const [name, { d, file }] of declsInView()) {
         for (const conf of d.conformances) {
             if (vocabulary[conf] !== "bench-atoms") continue;   // only the bench's own forms, never the world's
             for (const [axis, kind] of Object.entries(protoAxes[conf] || {})) {
                 const a = d.aliases.get(axis);
                 if (a && a.target && !(conformers[kind] || []).includes(a.target))
-                    out.push({ file: onMine ? personalFile : (declFile.get(name) || personalFile),
+                    out.push({ file: file || personalFile,
                                line: a.line, decl: name, axis, value: a.target,
                                allowed: (conformers[kind] || []).join(", ") });
             }
@@ -1175,7 +1185,7 @@ function benchGuards() {
         const turners = wheelTurners(surface);
         if (turners.length < 2) continue;
         for (const t of turners)
-            out.push({ file: declFile.get(t.name) || personalFile, line: t.line,
+            out.push({ file: t.file || personalFile, line: t.line,
                        decl: t.name, axis: surface, value: "two hands on one wheel",
                        allowed: turners.map((x) => x.name).join(", ") });
     }
@@ -1544,6 +1554,16 @@ async function render() {
             + (undeclaredView ? "not declared" : "reference") + "</span>";
         document.getElementById("next").textContent = "";
         document.getElementById("verdicts").innerHTML = "";
+        // ── AND A VIEW DOES NOT GO ON SHOWING THE FILE BEFORE IT. This branch
+        // answers everything a page of somebody else's needs and returned before
+        // the two projections were drawn, so Table and Bare kept whatever had
+        // been built for the file you came from: the name over the pane said one
+        // page while the pane showed another, and in Bare it could be a third,
+        // older still. A projection of a page nobody may edit is still that
+        // page's projection, and it is drawn from the same parse as everything
+        // else here.
+        if (mode === "table") buildTables();
+        if (mode === "bare") document.getElementById("bare").innerHTML = bareForm(lastParsed, cm.getValue());
         applyMyBench();
         return;
     }
@@ -1898,6 +1918,12 @@ async function openSeamSide(file, name) {
     }
 }
 
+// ── A PAGE NOBODY MAY EDIT OFFERS NOTHING TO EDIT. A shelf page and a seam side
+// belong to whoever wrote them, and both projections draw them like any other
+// file, so what differs is the offers: they are absent, said once here rather
+// than remembered at each of the four places that make one.
+function reading() { return !!viewingShelf; }
+
 // the answer itself: a closed question with one kind of answer, asked where the
 // value stands. No dialog, no second place to look — the cell becomes the field.
 async function sayValue(name, now, cell) {
@@ -2008,7 +2034,7 @@ function buildTables() {
             // edit — and the laws that shipped with it judge the answer before
             // the keystroke is cold.
             const asNumber = countTerm(a.target, 0);
-            if (asNumber !== null) {
+            if (asNumber !== null && !reading()) {
                 iz.classList.add("slot");
                 iz.title = "say a different value: it goes in a file of yours, and the laws "
                     + "that shipped with " + (overridden[name] ? overridden[name].world : "this world")
@@ -2185,9 +2211,12 @@ function buildTables() {
             }
             {
                 const del = document.createElement("td");
-                del.className = "cut caption"; del.textContent = "\u00d7";
-                del.title = "remove this record";
-                del.onclick = () => removeUnit({ kind: "record", line: d.line, host: d.name });
+                del.className = "cut caption";
+                if (!reading()) {
+                    del.textContent = "\u00d7";
+                    del.title = "remove this record";
+                    del.onclick = () => removeUnit({ kind: "record", line: d.line, host: d.name });
+                }
                 cellFor[""] = del;
             }
             for (const key of group.keys) {
@@ -2201,7 +2230,7 @@ function buildTables() {
                 // comes from the group's own signature, so a column offers exactly
                 // what may stand in it and a stranger is never among the choices
                 const a = d.aliases.get(key);
-                if (a) {
+                if (a && !reading()) {
                     td.classList.add("slot");
                     td.onclick = () => {
                         const host = (lastParsed && lastParsed.declarations.get(d.name)) || d;
@@ -2698,6 +2727,7 @@ function bareForm(parsed, text) {
         // is written.
         const conf = d.conformances.length ? '<span class="conf">: </span>' + nameTokens(d.conformances.join(", ")) : "";
         const cut = (slot, what) => {
+            if (reading()) return "";
             const i = bareSlots.push(slot) - 1;
             return '<span class="cut" data-cut="' + i + '" title="remove this ' + what + '">\u00d7</span>';
         };
@@ -2776,7 +2806,7 @@ function bareForm(parsed, text) {
                 + "    " + nameTokens(e.head) + (args.length ? "&lt;" + args.join(", ") + "&gt;" : "")
                 + cut({ kind: "entry", line: e.line, host: name }, "claim") + "</span>");
         }
-        if ((d.entries || []).length)
+        if ((d.entries || []).length && !reading())
             block.push('    <span class="add caption" data-add-claim="' + name + '">+ add claim</span>');
         items.push({ line: d.line, note: noteOf(name), block });
     }
@@ -2810,10 +2840,17 @@ function bareForm(parsed, text) {
     // each item is a block of its own, so the gap between them is a declared
     // length rather than whatever line-height the font happens to carry
     return items.map(i => '<span class="rec">' + (i.note || "") + i.block.join("\n") + "</span>").join("")
-        + '<span class="add caption" data-add-record="1">+ add record</span>';
+        + (reading() ? "" : '<span class="add caption" data-add-record="1">+ add record</span>');
 }
 // one delegated handler: a name in the bare view jumps to its declaration
 document.getElementById("bare").addEventListener("click", (e) => {
+    // on a page of theirs the only thing a press may do is walk: every offer
+    // below writes, and none of it is this world's to write
+    if (reading()) {
+        const j = e.target.closest("[data-jump]");
+        if (j) jumpTo(j.dataset.jump);
+        return;
+    }
     // a slot is a closed question: the same offer the editor uses, anchored to
     // the slot's own box, and it asks the grammar what may stand there
     const sl = e.target.closest("[data-slot]");
