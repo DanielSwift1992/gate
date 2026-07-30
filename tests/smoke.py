@@ -48,6 +48,22 @@ def main():
 
     c, r = run("init", repo)
     S.append(("init + hook wired", r.get("hooks") is not None))
+    # ── AND THE HOOK FINDS THE TOOL, OR SAYS SO AND STOPS. It ran `gate status`
+    # flat, which fails with `gate: command not found` for anybody who has not
+    # installed it, including anybody following this project's own README. Entry
+    # broke the next commit of the repository it had just entered, with a message
+    # about a shell. Found by making that commit.
+    hook_text = open(os.path.join(repo, ".githooks", "pre-commit")).read()
+    subprocess.run(["git", "add", "-A"], cwd=repo, capture_output=True)
+    bare_env = dict(os.environ, PATH="/usr/bin:/bin")
+    made = subprocess.run(["git", "-c", "user.email=a@b", "-c", "user.name=A",
+                           "commit", "-m", "with no gate on PATH"],
+                          cwd=repo, capture_output=True, text=True, env=bare_env)
+    S.append(("the hook says plainly when it cannot find the tool, and stops the commit",
+              "./gatew" in hook_text and "command -v gate" in hook_text
+              and made.returncode != 0
+              and "is not on PATH" in made.stdout + made.stderr
+              and "command not found" not in made.stdout + made.stderr))
     # ENTERING SOMEBODY'S REPOSITORY LEAVES THE HOOK AND A LETTER, AND NOTHING
     # ELSE. It used to leave eight files: a personnel domain's empty tables, a
     # README announcing a single source of truth, an AGENT.md with one reference

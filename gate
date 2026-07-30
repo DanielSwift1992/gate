@@ -1271,9 +1271,24 @@ def cmd_verify(a):
 # taken, with its origin written down, through the same verb a person uses for
 # everything else. Tables are theirs and arrive by `gate import`.
 INIT_FILES = {
+    # ── AND THE HOOK FINDS THE TOOL, OR SAYS SO AND STOPS. It ran `gate status`,
+    # which works for whoever has gate on their PATH and fails with
+    # `gate: command not found` for everybody else — including anybody following
+    # this project's own README, which says to run it as `./gate` from a clone until
+    # it is installed. Entry then broke the next commit of the repository it had
+    # just entered, with a message about a shell. A vendored copy is looked for
+    # first, because a repository that carries the tool is the case where this
+    # cannot go wrong; and where neither is found the hook refuses rather than
+    # passing, since a commit that slipped through unchecked is the one thing a
+    # hook exists to make impossible.
     ".githooks/pre-commit": """#!/bin/sh
-# the world must hold before it is committed (it is judged, never reprinted)
-gate status
+# the claims must hold before a commit is made (they are judged, never reprinted)
+if [ -x ./gatew ]; then exec ./gatew status; fi
+if command -v gate >/dev/null 2>&1; then exec gate status; fi
+echo "pre-commit: gate is not on PATH and there is no ./gatew here, so nothing"
+echo "checked the claims in this repository. Put gate on PATH, run"
+echo "gate init . --vendor to carry it here, or delete .githooks/pre-commit."
+exit 1
 """,
 }
 
