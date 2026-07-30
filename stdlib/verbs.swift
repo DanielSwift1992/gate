@@ -3,18 +3,17 @@
 // opens: bare
 // written in `gate stdlib show forms-tool`
 //
-// WHY THIS IS A WORLD AND NOT A PAGE OF PROSE. A list of verbs in prose drifts
-// from the tool the moment either changes, and nothing says when: a document
-// claiming a verb touches nothing, beside a tool where it writes, is the same
-// second copy of one truth this whole thing exists against, met in its own
-// documentation. So each verb is a record here, judged with the rest, and a guard
-// holds the records to the dispatch by name in both directions: a verb with no
-// record and a record with no verb are each refused at a line. In your clone it is
-// held to the tool YOUR clone has, which is the only copy that can lie to you.
+// A prose list of verbs drifts from the dispatch the moment either changes,
+// and nothing says when. That is a second copy of one truth, met in this
+// tool's own documentation. So each verb is a record, judged with the rest,
+// and a guard compares the records to the dispatch by name, in both
+// directions: a verb with no record is refused, and a record with no verb is
+// refused, each at a line. In your clone the guard reads your clone's
+// dispatch, the only copy that can lie to you.
 //
-// It was seeded once from the dispatch, the way a world is seeded from a table;
-// from then on this file is the source, and editing it is how the answer changes.
-// Read as far down as your question goes.
+// It was seeded once from the dispatch, the way a world is seeded from a
+// table. From then on this file is the source, and editing it is how the
+// answer changes. Read as far down as your question goes.
 
 // ── what a person runs first ──
 

@@ -1,4 +1,4 @@
-// gate stdlib forms-organization v1 — people, the places they work, and the
+// gate stdlib forms-organization v1: people, the places they work, and the
 // role: forms
 // documents those places own. This is the vocabulary `gate import` prints a
 // world in: the forms and the axes, with no facts of anyone's in it.
@@ -72,10 +72,10 @@ public enum Female: Sexed {}
 /// The gates. A claim of one of these forms is what the judge reads: it holds
 /// when the two sides agree, and refuses with both names when they do not.
 ///
-///     VerifiedView<Emp9001, FinanceShare>     — may this person read this?
-///     VerifiedInDepartment<Emp9001, Finance>  — do they work there?
-///     VerifiedAtRank<Emp9001, Manager>        — do they hold that rank?
-///     VerifiedAtWorkplace<Emp9001, OnSite>    — do they work there?
+///     VerifiedView<Emp9001, FinanceShare>       may this person read this?
+///     VerifiedInDepartment<Emp9001, Finance>    do they work there?
+///     VerifiedAtRank<Emp9001, Manager>          do they hold that rank?
+///     VerifiedAtWorkplace<Emp9001, OnSite>      do they work at that site?
 ///
 /// An access ledger is a list of such claims, and a team is a list of the
 /// people in it: one file, judged whole.

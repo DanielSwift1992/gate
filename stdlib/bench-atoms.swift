@@ -1,9 +1,9 @@
-// gate stdlib bench-atoms v1 — the bench's own surface, as declarations.
+// gate stdlib bench-atoms v1: the bench's own surface, as declarations.
 // role: gate's own
 // The bench is not configured by a toggle but by a claim in your personal world:
 // MyBench says which theme the page wears, MyJournal says what the history
 // shows. The values live here, and a value from nowhere else is named on its
-// line the way any other claim is — the bench judged by its own rules.
+// line the way any other claim is: the bench judged by its own rules.
 
 /// A theme the page can wear. Chosen by declaration, never by a button.
 public protocol BenchTheme {}

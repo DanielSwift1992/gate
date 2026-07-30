@@ -1,4 +1,4 @@
-// gate stdlib forms-grants v1 — the domain genre, one page
+// gate stdlib forms-grants v1: the domain genre, one page
 // role: forms
 // (exemplar: theory corpus Sources/Examples/Grants.swift @ 0fd0b38).
 // Realms are declared atoms (the fourth is one line, not a schema change);
@@ -31,7 +31,7 @@ extension Enter: Entered
 where Who.Key: Writes, Who.Post == Into.Place {}
 
 // Ownership is entry at the warden's threshold: whoever may administer a place
-// owns what stands in it. One gated form, not another crystal — CODEOWNERS,
+// owns what stands in it. One gated form, not another crystal: CODEOWNERS,
 // Kubernetes RBAC and an org's grants are the same question about the same
 // atoms: who may do what, where.
 /// an owner and the path they own must share one zone

@@ -1,12 +1,12 @@
-// gate stdlib bench-palette v1 — the palette as a judged world.
+// gate stdlib bench-palette v1: the palette as a judged world.
 // role: gate's own
 // Levels of light on a 0..1000 scale (a tenth of a percent), spelled on this
-// file's own ladder from Unit — the built-in U stay symbolic, so a world
+// file's own ladder from Unit: the built-in U stay symbolic, so a world
 // spells its own ladder. The scale is a tenth of a percent and not a percent
 // because at a percent the darkest nodes cannot land on the grey line at all:
 // the nearest integer sat in the warm corner and the canvas came out pink.
 //
-// JUDGED HERE: the ladder is monotone; text clears a contrast bound — ink and
+// Judged here: the ladder is monotone; text clears a contrast bound, ink and
 // the names at 4.5:1, the secondary registers (muted, and the seam the
 // ceremony is set in) at the 3:1 bound П1 declares; a neutral is neutral, its
 // X and Z held within two percent of the D65 grey line, so neither a blue nor
@@ -19,15 +19,15 @@
 // resolution, and 0.95 of one step is not a number. Those nodes state X == Y
 // and hold the same band on Z. It is the scale's floor, not a chosen colour.
 //
-// AND ACROSS THE TWO THEMES: a role stands as loud on one canvas as on the
+// And across the two themes: a role stands as loud on one canvas as on the
 // other. The light theme's contrast is the bound its dark rung answers to,
-// so neither canvas can drift into shouting while the other whispers — the
+// so neither canvas can drift into shouting while the other whispers. The
 // dark ladder used to be a plain inversion, and inversion is not a relation.
 //
 // NOT JUDGED, and said plainly rather than dressed as a result: the exact
 // angle of the teal, the violet, the blue and the warm yellow is chosen by eye
 // inside the box those rules leave, and perceptual equality of chroma between
-// them is not judged at all — XYZ is not perceptually uniform, and a number
+// them is not judged at all: XYZ is not perceptually uniform, and a number
 // that looked like a certificate without being one would be worse than none.
 
 public typealias W2 = Twice<Unit>
@@ -97,7 +97,7 @@ public enum TowardWarm<Y, Z, Margin>: Close {}
 extension TowardWarm: Chromatic
 where Times<N27, Y> == Plus<Times<N25, Z>, Plus<Unit, Margin>> {}
 // ── AND TWO CHANNELS THAT MUST BE TOLD APART STAND APART. Every hue here was
-// certified for its SIDE — toward blue, toward warm — and for its lightness,
+// certified for its side (toward blue, toward warm) and for its lightness,
 // and nothing ever certified the DISTANCE between two of them. So a channel
 // could drift until it nearly met another and no certificate would say a word:
 // mine and theirs are 400 apart on Z in the lit half and 35 in the dim one, an
@@ -252,7 +252,7 @@ public typealias SelectGrey_dim = Grey<SelectDimX, SelectDimY, SelectDimZ, Plus<
 
 // ── and colour is spent only where it means: every semantic atom stands
 // OUTSIDE that same band, on the side it leans, while every neutral stands
-// inside it — and the verdict's own two poles stand apart on red-green ──
+// inside it, and the verdict's own two poles stand apart on red-green ──
 public typealias OkChroma_lit = TowardWarm<OkLitY, OkLitZ, Plus<Unit, Plus<W4, Plus<W16, Plus<W32, Plus<W64, Plus<W128, Plus<W256, W2048>>>>>>>>
 public typealias BadChroma_lit = TowardWarm<BadLitY, BadLitZ, Plus<Unit, Plus<W2, Plus<W4, Plus<W8, Plus<W32, Plus<W64, Plus<W128, Plus<W512, W2048>>>>>>>>>
 public typealias ActionChroma_lit = TowardBlue<ActionLitY, ActionLitZ, Plus<Unit, Plus<W8, Plus<W32, Plus<W256, Plus<W512, Plus<W2048, W8192>>>>>>>
@@ -279,14 +279,14 @@ public typealias SelectOverMist_lit = Brighter<MistLitY, SelectLitY, Plus<W8, Pl
 public typealias SelectOverMist_dim = Brighter<SelectDimY, MistDimY, Plus<Unit, W8>>
 
 // ── the two questions a name's hue answers, held apart by name. Whose source it
-// is (mine against theirs) and, where a verdict speaks, that against theirs —
+// is (mine against theirs) and, where a verdict speaks, that against theirs:
 // these are the pairs a reader must never confuse, so they are the pairs the
 // world states a floor for. The floors are today's distances: a drift below any
 // of them turns this repository red at the line rather than in somebody's eye.
 public typealias MineApartTheirs_X_lit = Apart<KnownNameLitX, LocalTypeLitX, Plus<Unit, Plus<W4, Plus<W8, Plus<W16, Plus<W32, W64>>>>>>
 public typealias MineApartTheirs_X_dim = Apart<KnownNameDimX, LocalTypeDimX, Plus<W2, Plus<W16, W128>>>
 public typealias MineApartTheirs_Z_lit = Apart<KnownNameLitZ, LocalTypeLitZ, Plus<Unit, Plus<W2, Plus<W8, Plus<W16, W256>>>>>
-// THE WEAK ONE, SAID OUT LOUD RATHER THAN LEFT UNSAID: 35 where its twin is 400.
+// The weak one, said out loud rather than left unsaid: 35 where its twin is 400.
 // The distinction survives here on X alone, and this line is what will notice
 // if that last thread thins too.
 public typealias MineApartTheirs_Z_dim = Apart<KnownNameDimZ, LocalTypeDimZ, Plus<W2, W32>>
@@ -297,13 +297,13 @@ public typealias TheirsApartBad_Z_dim = Apart<KnownNameDimZ, BadDimZ, Plus<W2, P
 // the Same chain above, deliberately: only hue is meant to tell them apart. So
 // hue is the whole of the distinction and it had one floor for one pair. The
 // rest, measured across X and Z: in the light half the pairs stand 100 to 740
-// apart; in the dark half four of them fall inside a box 182 wide —
+// apart; in the dark half four of them fall inside a box 182 wide,
 // Action↔KnownName 56, Bad↔Law 77, Action↔LocalType 154, LocalType↔KnownName
 // 182, where the same pairs in light are 100, 70, 440 and 540.
 //
 // At a luminance of 419 nothing can be saturated, so every channel comes out a
 // pale variant and four of them crowd. That is a design decision about the dark
-// half — moving one channel puts it on top of another, measured three ways —
+// half: moving one channel puts it on top of another, measured three ways,
 // and it is left open ON PURPOSE. What is not left open is drift: these floors
 // are today's distances, so the crowding cannot quietly get worse.
 public typealias ActionApartTheirs_X_dim = Apart<KnownNameDimX, ActionDimX, Plus<Unit, Plus<W8, W32>>>

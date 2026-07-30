@@ -541,7 +541,9 @@ public enum MyWatch: AccessLedger {{
     src_gate = open(GATE, encoding="utf-8").read()
     tpl = src_gate.split('PERSONAL_TEMPLATE = """')[1].split('"""')[0]
     S.append(("the comment says the world is kept on this machine alone",
-              "THIS machine" in tpl and "goes nowhere else" in tpl))
+              # in plain words: emphasis by capitals is not this voice
+              "on this machine, in a git of its own" in tpl and "goes nowhere else" in tpl
+              and "THIS machine" not in tpl))
     S.append(("the world you have not written reads as a comment that says what it is",
               tpl.lstrip("\\\n ").startswith("// Yours.") and "shared repository" in tpl
               and "not stored" in tpl))
@@ -1864,7 +1866,9 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     S.append(("the shelf is one list of printouts, and says it is not yours",
               "all of it theirs" in shelf_said
               and "forms-organization" in shelf_said and "bench-palette" in shelf_said
-              and "these are THEIRS" in shelf_said
+              # said in plain words rather than in capitals: the shelf page keeps
+              # the same voice as the letter and the front door
+              and "these are theirs" in shelf_said and "THEIRS" not in shelf_said
               and "editing one adds no word to the language" in shelf_said
               and "gate --version` names the revision" in shelf_said
               and "gate stdlib show" in shelf_said
@@ -2378,7 +2382,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
                   "ActionApartTheirs_X_dim", "ActionApartMine_X_dim",
                   "BadApartLaw_Z_dim"))
               # and the weak one is named as weak rather than buried in a number
-              and "THE WEAK ONE, SAID OUT LOUD" in pal
+              and "The weak one, said out loud" in pal
               # the floors are live: the judge counts them among what it holds
               and "119 equalities" in subprocess.run(
                   [os.path.join(HERE, "bin", "gate-judge"), "judge", "where",
@@ -5152,8 +5156,11 @@ public enum MyWatch: AccessLedger {
               # lines of verbs opened on the word `usage`, so a person who typed
               # the name of an unfamiliar tool to find out what it was got a
               # list of things to do with it instead of an answer.
-              and usage.startswith("git keeps every byte of your repository honest")
-              and "nothing says the day that stopped" in usage))
+              # and in the same voice the letter is written in: short declarative
+              # sentences, direct order, no word standing in for a machine
+              and usage.startswith("git verifies bytes")
+              and "the day that stopped is recorded nowhere" in usage
+              and "keeps every byte" not in usage))
 
     # ── AND EVERY RUNG SAYS WHAT YOU GET, NEVER WHAT YOU WILL BE STOPPED FROM.
     # `wire the pre-commit hook, so what does not hold cannot be committed` is
@@ -5229,7 +5236,7 @@ public enum MyWatch: AccessLedger {
     # you see is what is judged.
     S.append(("the bench says so when the page and the process are not the same gate",
               'const BENCH_FOR = "' + re.search(r'^VERSION = "([^"]+)"', src, re.M).group(1) + '";' in ui
-              and 'fetch("/version"' in ui and "restart `gate serve`" in ui
+              and 'fetch("/version"' in ui and "Restart `gate serve`" in ui
               and '"gate": VERSION' in src))
 
     # ── A BAR THAT EXPIRES MAY ANSWER AN ACTION; IT MAY NEVER REPORT A STATE.

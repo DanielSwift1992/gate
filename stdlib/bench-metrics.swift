@@ -1,11 +1,11 @@
-// gate stdlib bench-metrics v1 — distance as a judged relation.
+// gate stdlib bench-metrics v1: distance as a judged relation.
 // role: gate's own
 // The base is the reading line: an instrument for reading measures its
 // spacing in the letter it sets. One step is a tenth of that line, and every
-// gap on the page is a WHOLE number of steps — so a length is spelled the way
+// gap on the page is a whole number of steps, so a length is spelled the way
 // a number is, on this file's own ladder from Unit, and can be judged like one.
 //
-// JUDGED HERE: the ladder is monotone; the law of proximity — what belongs
+// Judged here: the ladder is monotone; the law of proximity, what belongs
 // together stands closer than what does not, and the deeper the kinship the
 // tighter the gap; the air is whole reading lines; and the indent is the sum
 // of the steps it is made of, not a number of its own.
@@ -74,7 +74,7 @@ public typealias LineOverWide = Wider<Line, Wide, Unit>
 
 // ── the law of proximity: kinship is nearness, and it tightens with depth.
 // A group stands off from a group by more than a row stands off from a row,
-// and a row by more than the parts inside it — each with its slack declared,
+// and a row by more than the parts inside it, each with its slack declared,
 // so narrowing one below the other stops the settling and the judge says so ──
 public typealias GroupsStandOffFurtherThanRows = Wider<Apart, Step, Unit>
 public typealias RowsStandOffFurtherThanParts = Wider<Step, Near, Never>

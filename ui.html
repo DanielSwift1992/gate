@@ -449,7 +449,7 @@ fetch("/version", { cache: "no-store" }).then(r => r.json()).then(v => {
         // one, and left unsaid when there is not.
         rev.title = "The court itself, taken like anything else: `bin/build-judge.sh` clones the "
             + "corpus at a revision, builds, and writes the revision down beside the binary. "
-            + "It is held by a build anybody can repeat — never by its own verdict."
+            + "It is held by a build anybody can repeat, never by its own verdict."
             + (language.court
                ? " The court is " + language.court.lines + " lines, in "
                  + language.court.files.map(f => f.split("/").pop()).join(" and ")
@@ -460,7 +460,7 @@ fetch("/version", { cache: "no-store" }).then(r => r.json()).then(v => {
     }
     if (v.gate !== BENCH_FOR) {
         benchStale = " · this page is gate " + BENCH_FOR + ", the bench serving it is "
-            + v.gate + " — restart `gate serve`";
+            + v.gate + ". Restart `gate serve`";
         const el = document.getElementById("status");
         if (el && !el.textContent.includes("restart")) el.innerHTML += '<span class="stale">'
             + benchStale + "</span>";
@@ -751,7 +751,7 @@ function wireJudgeRow() {
     // breaking its own rule at the one place a stranger looks first.
     const claim = judgeClaim();
     if (claim) {
-        rev.title += " Click to read the row that took it — in your own file, yours to drop.";
+        rev.title += " Click to read the row that took it, in your own file, yours to drop.";
         rev.style.cursor = "pointer";
         rev.onclick = async () => {
             navFrom = navHere();
@@ -825,7 +825,7 @@ function buildRail() {
             const r = document.createElement("div");
             r.className = "file fact nested" + (viewingShelf === s ? " on" : "");
             r.title = "One side of a seam, as its own side wrote it. Judged where it meets your "
-                    + "world and nowhere else — `gate seam` is the court over the pair.";
+                    + "world and nowhere else: `gate seam` is the court over the pair.";
             r.innerHTML = '<span class="dot"></span><span class="name">'
                 + esc(s.split("/").pop()) + "</span>";
             r.onclick = () => openSeamSide(s, null);
@@ -910,7 +910,7 @@ async function buildShelf() {
     // ── AND GATE'S OWN FURNITURE IS OFF THIS PAGE NOW. The decision was written
     // here and waited on one condition: these belong "in gate's own rail, under
     // `mine`, the day this tool declares its world the way it asks everybody
-    // else to". It declares it — `gate.manifest.swift` lists every bench-* file
+    // else to". It declares it: `gate.manifest.swift` lists every bench-* file
     // as its own — so the condition was met and the follow-through was not
     // done. How this page spaces itself answers no question an operator has and
     // never enters their repository; `gate stdlib` is the verb for whoever
@@ -941,7 +941,7 @@ async function buildShelf() {
         // a file row is a file row: the rail has one shape for one thing
         r.className = "file nested";
         r.title = (roles[m] === "forms"
-            ? "Words the judge carries, printed as Swift — what your world and your policy are "
+            ? "Words the judge carries, printed as Swift: what your world and your policy are "
               + "written in. Your world speaks these with no such file present, and editing a "
               + "copy adds no word to the language."
             : "A judged world this bench itself runs under: the palette it paints with, the "
@@ -1412,7 +1412,7 @@ async function render() {
         badFiles = new Set(); buildRail();
         document.getElementById("status").innerHTML = refLabel
             ? refLabel
-            : "<b>" + viewingShelf + ".swift</b> · a printout of what the judge carries — theirs, read-only";
+            : "<b>" + viewingShelf + ".swift</b> · a printout of what the judge carries, theirs, read-only";
         document.getElementById("chips").innerHTML =
             '<span class="chip" style="background:var(--mist);color:var(--muted)">reference</span>';
         document.getElementById("next").textContent = "";
@@ -1547,7 +1547,7 @@ async function showNext() {
         host.textContent = before;
         const chip = document.createElement("span");
         chip.className = "run"; chip.textContent = ready;
-        chip.title = "Copy this. It runs in your terminal, not here — the bench "
+        chip.title = "Copy this. It runs in your terminal, not here: the bench "
             + "reads and judges, and nothing it shows you can change your repository.";
         chip.onclick = async () => {
             try { await navigator.clipboard.writeText(ready); } catch { return; }
@@ -1677,7 +1677,7 @@ async function openLanguage(name, line) {
     // read as theirs: nothing here is this world's to be judged for
     active = ""; viewingShelf = language.file;
     refLabel = "<b>" + esc(language.file.split("/").pop()) + "</b> · the language, declared in the "
-        + "corpus" + (language.short ? " at " + esc(language.short) : "") + " — theirs, read-only";
+        + "corpus" + (language.short ? " at " + esc(language.short) : "") + " · theirs, read-only";
     document.getElementById("fname").textContent = language.file.split("/").pop();
     document.getElementById("fname").style.display = "";
     setMode("full");
@@ -1685,7 +1685,7 @@ async function openLanguage(name, line) {
     cm.setOption("readOnly", true);
     buildRail();
     reveal(line);
-    say(esc(name) + " is a word of the language, declared here — "
+    say(esc(name) + " is a word of the language, declared here: "
         + esc(language.file) + ":" + line + ", in the corpus this judge was built from"
         + (language.short ? " (" + esc(language.short) + ")" : "")
         + ". Read-only: nothing of theirs is this world's to edit.");
@@ -1695,7 +1695,7 @@ async function openLanguage(name, line) {
 // which revision, and the command that brings the corpus to this machine
 function sayLanguage(name, line) {
     const where = language.file + ":" + line;
-    say(esc(name) + " is a word of the language — the counting forms the judge must know to "
+    say(esc(name) + " is a word of the language: the counting forms the judge must know to "
         + "read a number at all. It is declared in " + esc(where) + ", in the corpus this "
         + "judge was built from"
         + (language.short ? " (" + esc(language.short) + ")" : "")
@@ -1730,7 +1730,7 @@ async function openSeamSide(file, name) {
     const text = await (await fetch("/seamside?f=" + encodeURIComponent(file))).text();
     active = ""; viewingShelf = file;
     refLabel = "<b>" + esc(file) + "</b> · one side of a seam, as its own side wrote it "
-        + "— theirs, read-only";
+        + "· theirs, read-only";
     document.getElementById("fname").textContent = file;
     document.getElementById("fname").style.display = "";
     setMode("full");
@@ -1836,7 +1836,7 @@ function buildTables() {
             const iz = document.createElement("td");
             // A TABLE OF VALUES SHOWS VALUES. These worlds spell a number on
             // their own ladder from Unit, and a column of `Plus<W8, Plus<W16,
-            // …>>` is a column of spellings — it pushed the answer to "what was
+            // …>>` is a column of spellings, and it pushed the answer to "what was
             // it" clean off the right edge with the spelling of the answer. What
             // is not a number is a law, and a law's spelling IS its content.
             const shownIs = shownTerm(a.target);
@@ -1853,7 +1853,7 @@ function buildTables() {
             const asNumber = countTerm(a.target, 0);
             if (asNumber !== null) {
                 iz.classList.add("slot");
-                iz.title = "say a different value — it goes in a file of yours, and the laws "
+                iz.title = "say a different value: it goes in a file of yours, and the laws "
                     + "that shipped with " + (overridden[name] ? overridden[name].world : "this world")
                     + " judge it at once. Spelled " + a.target;
                 iz.onclick = () => sayValue(name, asNumber, iz);
@@ -2087,11 +2087,11 @@ function buildTables() {
                     "parted": "Both sides spoke about this and nothing fits: no reading of one "
                         + "matches the other, and nobody has said the difference is meant.",
                     "your word": "The other side states this. This side has not said whether it "
-                        + "carries it — so anything would still fit, and that is what makes it "
+                        + "carries it, so anything would still fit, and that is what makes it "
                         + "open rather than broken.",
                     "their word": "This side carries this. The other side has never stated it.",
                     "taken as given": "Neither side changed. Somebody supplied the agreement by "
-                        + "hand and cited something that can close — which is what gives this a "
+                        + "hand and cited something that can close, which is what gives this a "
                         + "term. When the thing cited closes, the exception is gone.",
                     "came back": "It was taken as given, and the thing that was cited has "
                         + "closed. The supplied agreement is withdrawn, so this stands again.",
@@ -2398,7 +2398,7 @@ function fillSlot(slot, value) {
 // ── A note belongs to a record, not to a line. Consecutive /// lines standing
 // directly above a declaration, with no blank line between, are what you wrote
 // about that record; anything else breaks the run. Read off the text by the
-// parse's OWN line numbers — the port's parse is not touched, so the judge's
+// parse's own line numbers: the port's parse is not touched, so the judge's
 // reading of the file and the bench's stay one reading. A note is read and not
 // judged, so it wears the register that means exactly that. ──
 function attachNotes(text, parsed) {

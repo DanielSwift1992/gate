@@ -1,11 +1,11 @@
-// gate stdlib forms-reference v1 — a reference and the thing it refers to, as
+// gate stdlib forms-reference v1: a reference and the thing it refers to, as
 // role: forms
 // one judged world.
 //
 // The drift here is the one everybody has and nobody checks: code cites a
 // ticket, a ticket is closed, and the citation stays. Nothing in either system
-// can see the other — the tracker does not read the repository, and the
-// repository does not read the tracker — so the two copies of "this is still
+// can see the other: the tracker does not read the repository, and the
+// repository does not read the tracker, so the two copies of "this is still
 // open" pull apart quietly, and a reader of the code is told something that
 // stopped being true months ago.
 //
@@ -27,7 +27,7 @@ public protocol Tracked {
     associatedtype State: Standing
 }
 
-// where in the code the citation stands — one per site, so a refusal has an
+// where in the code the citation stands, one per site, so a refusal has an
 // address in the reader's own file rather than in a generated one
 public protocol Site {}
 

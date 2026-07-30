@@ -1,7 +1,7 @@
-// gate stdlib bench-registers v1 — the faces this page speaks in.
+// gate stdlib bench-registers v1: the faces this page speaks in.
 // role: gate's own
 // A register is what a thing IS, said once: a face, a size, and how far one
-// line stands from the next. The page had been restating them instead —
+// line stands from the next. The page had been restating them instead:
 // nineteen font declarations where four registers were declared, half of them
 // the same register written again with the line-height a hair different. A
 // second statement of a thing either drifts or coarsens; these drifted.
@@ -37,8 +37,8 @@ public protocol Face {}
 public enum Mono: Face {}
 public enum Sans: Face {}
 
-// AND HOW HARD A REGISTER IS SET. This was a list of three names inside the
-// tool — `Brand`, `Headline`, `Headsmall` got weight, everything else did not —
+// And how hard a register is set. This was a list of three names inside the
+// tool: `Brand`, `Headline`, `Headsmall` got weight, everything else did not,
 // which is a world's names living in a mechanism, the one thing no layer here
 // is allowed to do. A register that is set firm says so itself, on the same
 // axis as its face, and a name this file never mentions gets no special
@@ -118,7 +118,7 @@ public enum Factbare: Register {
     public typealias Set = Plain
 }
 
-// the same fact, said firm — which is what a selected row in the panel is. The
+// the same fact, said firm, which is what a selected row in the panel is. The
 // weight had been a number beside a background colour, so nothing stopped it
 // from being given a size of its own, and a list that changes size when you
 // click it is a list that moves under the hand.
@@ -179,7 +179,7 @@ public enum Source: Register {
 
 // ── AND THE VOICE THE LEFT PANEL SPEAKS IN, which it had been speaking without
 // being declared anywhere: a section label, set firm at caption size. There was
-// a second — the line under it, set half — declared the same day for the
+// a second (the line under it, set half) declared the same day for the
 // journal's blurb and the judge's caption; the journal left the panel and the
 // last speaker went with it. A register nobody speaks in is a word kept in a
 // vocabulary for its own sake, and three certificates over it look like weight
