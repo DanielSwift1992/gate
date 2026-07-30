@@ -25,20 +25,31 @@
 // gate reads sentences like that as claims and re-reads them whenever a file
 // changes. When one stops being true you get the file and the line, at once.
 //
-// ── everything here is here because a row says so ──
+// The mechanism, in one breath: those sentences become typed declarations in a
+// Swift file, and a rule becomes a constraint between them, so a disagreement is
+// not reported, it fails to compile. Your compiler already does this for your
+// code; nothing did it for the file that says who owns your code. Nothing
+// executes here, and no build is needed: the judge answers by lookup, which is
+// why it can answer on a keystroke.
 //
-// Entry left five files and one git setting, all six named: this letter, the
-// words it is written in, the reference beside it, the layout that declares
-// them, a pre-commit hook, and `core.hooksPath`, which points git at that hook.
-// The hook re-reads the claims before each commit, so a claim that stopped
-// holding stays out of history. The line that restores the setting was printed
-// when it changed. Everything else in the repository was left exactly as it
-// was, and this tool has no network access at all.
+// ── what it put in your repository, and how to take it out ──
 //
-// Each of those files is here because a row in the layout names it, and deleting
-// the row deletes it. You can do all of this alone: what you write reaches your
-// colleagues when you commit it, and the personal world below stays on this
-// machine either way.
+// Five files and one git setting. Nothing else was read, moved or rewritten, and
+// this tool has no network access at all.
+//
+//     readme.swift          this letter
+//     verbs.swift           every verb, and what each one touches
+//     forms-tool.swift      the words those two are written in
+//     gate.manifest.swift   the layout: one row per file, and nothing is here
+//                           without a row
+//     .githooks/pre-commit  re-reads the claims before a commit, so one that
+//                           stopped holding stays out of history
+//     core.hooksPath        the git setting pointing at that hook; the line that
+//                           restores it was printed the moment it changed
+//
+// Delete a file and its row and it is gone, with nothing left behind. None of
+// this needed anybody's permission, and nothing you write reaches your
+// colleagues until you commit it.
 //
 // ── a first word costs nothing here ──
 //
