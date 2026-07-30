@@ -337,6 +337,44 @@ def main():
               all("," not in seg and "*" not in seg for seg in
                   re.findall(r'"judge",\s*"where",\s*([^\]]+)\]', gate_src))))
 
+    # ── THE PORT SPEAKS THE SAME WORDS AS THE BINARY, LINE FOR LINE. The judge is
+    # built for one platform, so on any other machine the same court exists and
+    # nothing could reach it: `bin/judge-cli.js` is the reach, and it is only worth
+    # having if its answer is the binary's answer. Held byte for byte here, on a world
+    # that holds and on one that refuses, because a fallback that disagrees quietly is
+    # two courts rather than two views of one.
+    par = os.path.join(tmp, "two-views")
+    os.makedirs(par)
+    run("demo", "org", par)
+    pw = os.path.join(par, "gate.swift")
+    kept_world = open(pw, encoding="utf-8").read()
+
+    def both_ways(path):
+        b = subprocess.run([os.path.join(HERE, "bin", "gate-judge"), "judge", path],
+                           capture_output=True, text=True)
+        p = subprocess.run(["node", os.path.join(HERE, "bin", "judge-cli.js"), "judge", path],
+                           capture_output=True, text=True)
+        strip_ms = lambda s: re.sub(r"[\d.]+ ms", "N ms", s.strip())
+        return strip_ms(b.stdout), strip_ms(p.stdout), b.returncode, p.returncode
+
+    hb, hp, hbc, hpc = both_ways(pw)
+    open(pw, "w").write(kept_world.replace("public typealias Home = Finance",
+                                           "public typealias Home = Engineering", 1))
+    rb, rp, rbc, rpc = both_ways(pw)
+    open(pw, "w").write(kept_world)
+    S.append(("the port and the binary answer a holding world in the same words",
+              hb == hp and hbc == hpc == 0 and "THE JUDGE holds" in hb))
+    S.append(("and a refusing world in the same words, with the same lines",
+              rb == rp and rbc == rpc == 1 and "refuses 2 claim(s)" in rb))
+    # AND THE PORT SAYS WHAT IT CANNOT DO, rather than answering an empty verdict:
+    # the certificate court is the binary's, and a court that did not sit may not look
+    # like one that found nothing.
+    wp = subprocess.run(["node", os.path.join(HERE, "bin", "judge-cli.js"), "judge", "where",
+                         os.path.join(HERE, "stdlib", "bench-metrics.swift")],
+                        capture_output=True, text=True)
+    S.append(("the port refuses to stand in for the certificate court",
+              wp.returncode == 2 and "not in this port" in wp.stderr and not wp.stdout.strip()))
+
     # self-hosted shelf: the product's own stdlib files are judged by its own judge
     import glob as _glob
     for sf in sorted(_glob.glob(os.path.join(HERE, "stdlib", "*.swift"))):
@@ -4020,7 +4058,9 @@ console.log(JSON.stringify(out));
     # retire — a rule that cannot say when it stopped being needed is a rule that
     # outlives its reason.
     gate_src = open(GATE, encoding="utf-8").read()
-    where_calls = re.findall(r"subprocess\.run\(\[JUDGE, \"judge\", \"where\",([^\]]*)\]", gate_src)
+    # the call moved into one place that picks a court (binary or port) and the law
+    # about it is unchanged: no caller hands the certificate court a list
+    where_calls = re.findall(r"judge_call\(\[\"judge\", \"where\",([^\]]*)\]", gate_src)
     one_path = all("*" not in c for c in where_calls)
     pal_text = open(os.path.join(HERE, "stdlib", "bench-palette.swift"), encoding="utf-8").read()
     cut = pal_text.index("// ── the light theme")

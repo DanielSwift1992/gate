@@ -433,6 +433,15 @@ def forms_guards(size=None, live=None):
             and (r["path"] in live or os.path.exists(os.path.join(d, r["path"])))]
     if not rows:
         return []
+    # ── AND A COURT THAT DID NOT SIT DOES NOT LOOK LIKE ONE THAT FOUND NOTHING. The
+    # certificate court is the binary's, and the port does not carry it yet: asked
+    # for it on a machine the binary cannot run on, this returned no refusals, which
+    # reads exactly like a page where every certificate holds. So the rows are named
+    # as unjudged and the verdict carries that instead.
+    if JUDGE_KIND != "binary":
+        if size is not None:
+            size["unjudged"] = [r["path"] for r in rows]
+        return []
     bad = []
     # ONE STREAM PER SHIPPED WORLD, in the order the manifest gives — `where`
     # over a LIST is blind, and its silence is selective by order.
@@ -475,7 +484,7 @@ def forms_guards(size=None, live=None):
     for shelf, text, mine, where, home in streams:
         fp = os.path.join(tmp, (shelf or "presented") + ".swift")
         open(fp, "w").write(text)
-        out = subprocess.run([JUDGE, "judge", "where", fp], capture_output=True, text=True).stdout
+        out = judge_call(["judge", "where", fp]).stdout
         for line in out.split("\n"):
             if not line.strip().startswith("✗"):
                 continue
@@ -772,10 +781,49 @@ def ensure_world():
         cmd_import([os.path.join(TABLES, "people.csv"), os.path.join(TABLES, "grants.csv"), "-o", FACTS])
         return True
     return False
-_PACKAGED = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bin", "gate-judge")
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_PACKAGED = os.path.join(_HERE, "bin", "gate-judge")
 JUDGE = os.environ.get("GATE_JUDGE") or _PACKAGED
-if not os.path.exists(JUDGE):
-    raise SystemExit("gate: no judge binary (bin/gate-judge missing. Build it with bin/build-judge.sh, or set GATE_JUDGE)")
+_PORT_CLI = os.path.join(_HERE, "bin", "judge-cli.js")
+
+
+def _binary_runs(p):
+    # ── RUNNABLE IS TESTED BY RUNNING. The judge is built for one platform and its
+    # bytes say nothing about which: a repository vendored on one machine and cloned
+    # on another carries a file that exists, matches its recorded digest and cannot
+    # execute. So this asks the only question that has an answer here, once.
+    if not p or not os.path.exists(p):
+        return False
+    try:
+        subprocess.run([p, "judge"], capture_output=True, timeout=20)
+        return True
+    except OSError:
+        return False
+
+
+JUDGE_KIND = ("binary" if _binary_runs(JUDGE) else
+              "port" if (shutil.which("node") and os.path.exists(_PORT_CLI)
+                         and os.path.exists(os.path.join(_HERE, "judge.js"))) else None)
+if JUDGE_KIND is None:
+    raise SystemExit(
+        "gate: no court on this machine. The judge is built for one platform and the one "
+        "here does not run"
+        + ("" if os.path.exists(JUDGE) else " (and bin/gate-judge is missing)")
+        + ". Build it with bin/build-judge.sh, set GATE_JUDGE, or install node so the "
+          "port can answer the plain court.")
+# the name of the court that answered, said wherever a verdict is printed: a tool
+# that quietly swapped one arbiter for another would be the second truth it exists
+# against
+JUDGE_SAID = ("the judge" if JUDGE_KIND == "binary" else
+              "the port under node, which answers the plain court only")
+
+
+def judge_call(args, **kw):
+    # ONE PLACE THAT CALLS A COURT, so no caller has to know which one exists here.
+    if JUDGE_KIND == "binary":
+        return subprocess.run([JUDGE, *args], capture_output=True, text=True, **kw)
+    return subprocess.run([shutil.which("node"), _PORT_CLI, *args],
+                          capture_output=True, text=True, **kw)
 
 
 def refine_addresses(text, refusals, fname):
@@ -873,7 +921,7 @@ def attribute_refusals(refusals, sources):
 
 def judge(path):
     t0 = time.time()
-    out = subprocess.run([JUDGE, "judge", path], capture_output=True, text=True).stdout
+    out = judge_call(["judge", path]).stdout
     wall_ms = round((time.time() - t0) * 1000, 1)
     refusals = [
         {"address": m.group(1), "claim": m.group(2).strip()}
@@ -1744,6 +1792,12 @@ def cmd_vendor(root):
     os.makedirs(os.path.join(dst, "bin"), exist_ok=True)
     import hashlib
     carried = []
+    # the port's own front end travels too: a clone on another platform has a court
+    # only if the file that speaks for it is here
+    os.makedirs(os.path.join(dst, "bin"), exist_ok=True)
+    pcli = os.path.join(here, "bin", "judge-cli.js")
+    if os.path.exists(pcli):
+        shutil.copy(pcli, os.path.join(dst, "bin", "judge-cli.js"))
     for rel in ("gate", "judge.js", "ui.html", "codemirror.js", "codemirror.css",
                 "LICENSE", "NOTICE.md"):
         src = os.path.join(here, rel)
@@ -2956,12 +3010,23 @@ def vendored_guards():
     import hashlib
     with open(binp, "rb") as f:
         actual = hashlib.sha256(f.read()).hexdigest()
-    if actual == stated.group(1):
-        return []
-    return [{"address": ".gate/README.md",
-             "claim": "the carried judge is not the judge this repository states: "
-                      f"sha256 {actual[:12]} against {stated.group(1)[:12]} — "
-                      "re-run `gate init . --vendor`, or state the one you mean"}]
+    if actual != stated.group(1):
+        return [{"address": ".gate/README.md",
+                 "claim": "the carried judge is not the judge this repository states: "
+                          f"sha256 {actual[:12]} against {stated.group(1)[:12]}. "
+                          "Re-run `gate init . --vendor`, or state the one you mean"}]
+    # ── AND A DIGEST SAYS WHAT A FILE IS, NEVER WHETHER IT RUNS. The judge is built
+    # for one platform, so a repository vendored on one machine and cloned on another
+    # carries a court that matches its recorded digest to the letter and cannot
+    # execute. Identity checked, runnability not, which is the same green over
+    # nothing this tool exists against, one floor down.
+    if not _binary_runs(binp):
+        return [{"address": ".gate/bin/gate-judge",
+                 "claim": "the carried judge matches its recorded digest and does not run on "
+                          "this machine: it was built for another platform. The port answers "
+                          "the plain court where node is installed, and `bin/build-judge.sh` "
+                          "builds a judge that runs here"}]
+    return []
 
 
 RBAC_FORMS_HEADER = """// printed by gate import rbac: the K8s access world in the domain forms
@@ -3057,7 +3122,7 @@ def cmd_import_rbac(a):
     with open(out_path, "w") as f:
         f.write(world)
     t0 = time.time()
-    outp = subprocess.run([JUDGE, "judge", "where", out_path], capture_output=True, text=True).stdout
+    outp = judge_call(["judge", "where", out_path]).stdout
     ms = round((time.time() - t0) * 1000, 1)
     refusals = []
     for m in re.finditer(r"^✗ '(\w+)[^']*' requires the types '[^']*' \(aka '([^']+)'\) and '[^']*' \(aka '([^']+)'\) be equivalent", outp, re.M):
@@ -3114,7 +3179,7 @@ def cmd_badge(a):
                 "next": "run `gate init .` to start a world in this folder",
                 "then": "then `gate badge -o gate.svg` prints a badge nobody can forge", "mutates": False}
     t0 = time.time()
-    raw = subprocess.run([JUDGE, "judge", *files], capture_output=True, text=True).stdout
+    raw = judge_call(["judge", *files]).stdout
     m = re.search(r"(\d+) declarations · (\d+) lookups · (\d+) premises", raw)
     claims = int(m.group(3)) if m else 0
     holds = "THE JUDGE holds" in raw
@@ -3977,7 +4042,7 @@ def cmd_attention(a):
     d = tempfile.mkdtemp(prefix="gate-att-")
     path = os.path.join(d, "seam.swift")
     open(path, "w").write(left + "\n" + right)
-    outp = subprocess.run([JUDGE, "judge", "where", path], capture_output=True, text=True).stdout
+    outp = judge_call(["judge", "where", path]).stdout
     shutil.rmtree(d, ignore_errors=True)
     claimed = {(r, f) for r, f, _ in claims.values()}
     parted = {}
@@ -4133,7 +4198,7 @@ def cmd_seam(a):
     path = os.path.join(d, "seam.swift")
     open(path, "w").write(left + "\n" + right)
     t0 = time.time()
-    outp = subprocess.run([JUDGE, "judge", "where", path], capture_output=True, text=True).stdout
+    outp = judge_call(["judge", "where", path]).stdout
     ms = round((time.time() - t0) * 1000, 1)
     refusals = []
     for m in re.finditer(r"^✗ '(\w+)[^']*' requires the types '[^']*' \(aka '([^']+)'\) and "
@@ -4638,7 +4703,7 @@ def cmd_import_refs(a):
     with open(out_path, "w") as f:
         f.write(world)
     t0 = time.time()
-    outp = subprocess.run([JUDGE, "judge", "where", out_path], capture_output=True, text=True).stdout
+    outp = judge_call(["judge", "where", out_path]).stdout
     ms = round((time.time() - t0) * 1000, 1)
     refusals = []
     for m in re.finditer(r"^✗ '(\w+)[^']*' requires the types '[^']*' \(aka '([^']+)'\)", outp, re.M):
@@ -4738,7 +4803,7 @@ def cmd_import_codeowners(a):
     with open(out_path, "w") as f:
         f.write(world)
     t0 = time.time()
-    outp = subprocess.run([JUDGE, "judge", "where", out_path], capture_output=True, text=True).stdout
+    outp = judge_call(["judge", "where", out_path]).stdout
     ms = round((time.time() - t0) * 1000, 1)
     # ── ONE FACT, ONE SENTENCE. This carried its own wording of the law while
     # `gate status` printed the judge's raw line about the very same refusal, so
@@ -5594,7 +5659,7 @@ def cmd_serve(a):
                 if p != layout and name not in forms_here \
                         and os.path.abspath(p) != os.path.abspath(policy_path() or ""):
                     paths.append(tp)
-            raw = subprocess.run([JUDGE, "judge", *paths], capture_output=True, text=True).stdout
+            raw = judge_call(["judge", *paths]).stdout
             refusals = [{"address": m.group(1).replace("__", "/"), "claim": m.group(2).strip()}
                         for m in re.finditer(r"^\s+(\S+\.swift:\d+)\s+(.+)$", raw, re.M)]
             # refine each address to the line of its subject, per file (the same
@@ -5821,7 +5886,7 @@ def dispatch(cmd, rest):
         # what disagrees right now: judgement over the declared file list +
         # layout guards + world metrics (counted, never remembered)
         t0 = time.time()
-        raw = subprocess.run([JUDGE, "judge", *files], capture_output=True, text=True).stdout
+        raw = judge_call(["judge", *files]).stdout
         wall_ms = round((time.time() - t0) * 1000, 1)
         refusals = [{"address": m.group(1), "claim": m.group(2).strip()}
                     for m in re.finditer(r"^\s+(\S+\.swift:\d+)\s+(.+)$", raw, re.M)]
@@ -5858,6 +5923,11 @@ def dispatch(cmd, rest):
         # accident. `equalities` is in here when the court actually sat.
         if "equalities" in where_size:
             out["forms"] = where_size
+        # which court answered, and what it could not reach: a verdict that does not
+        # say either is a verdict about a court the reader cannot name
+        out["court"] = JUDGE_SAID
+        if where_size.get("unjudged"):
+            out["unjudged"] = where_size["unjudged"]
         out["next"] = next_rung(bool(refusals))
         return out
     if cmd == "guard" and rest and rest[0] == "deps":
@@ -5896,7 +5966,7 @@ def dispatch(cmd, rest):
                             "shared world, stays out of it, and is kept on this machine alone. "
                             "Clear it again and it is gone."}
         named = [(n, q) for n, q in bench_files() if os.path.exists(q)]
-        raw = subprocess.run([JUDGE, "judge", *[q for _, q in named]], capture_output=True, text=True).stdout
+        raw = judge_call(["judge", *[q for _, q in named]]).stdout
         refusals = [{"address": m.group(1), "claim": m.group(2).strip()}
                     for m in re.finditer(r"^\s+(\S+\.swift:\d+)\s+(.+)$", raw, re.M)]
         refusals = attribute_refusals(refusals, [(n, open(q).read()) for n, q in named])
@@ -6013,6 +6083,15 @@ def humanize(out):
         elif cmd.startswith("change"):
             tail.append("dry-run")
         lines.append(f"{cmd or 'verdict'}: {head}" + (" · " + " · ".join(tail) if tail else ""))
+        if out.get("court") and out["court"] != "the judge":
+            lines[-1] += f" · judged by {out['court']}"
+        if out.get("unjudged"):
+            n = len(out["unjudged"])
+            lines.append(f"  not judged here: {n} forms "
+                         + ("row" if n == 1 else "rows")
+                         + " (" + ", ".join(out["unjudged"][:3])
+                         + (", …" if n > 3 else "") + "). The certificate court is the "
+                         "binary's, and this machine has none that runs")
         for r in out.get("refusals", []):
             src = f"  ({r['source']})" if r.get("source") else ""
             # an address, or the certificate that carries one: an importer names
