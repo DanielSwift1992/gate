@@ -7,18 +7,22 @@
 // A word is introduced where it is first used. No line explains the reader to
 // themselves.
 
-// ── what this is ──
+// ── what this is, and why you are reading it ──
 //
-// git verifies bytes: change one and the hash changes. Nothing verifies the
-// sentences a repository runs on. Your CODEOWNERS (the file that says who owns
-// which paths) was true the day somebody wrote it, and nothing tells you the day
-// it stops. The same goes for a schema, an on-call rota, a list of who may deploy.
+// Your repository is full of sentences nobody checks. CODEOWNERS says who owns
+// which folder. A schema says what a field holds. A rota says who is on call.
+// Each was true the day somebody wrote it, and nothing tells you the day it
+// stopped.
 //
-// What you get: the moment one of them stops being true, you are told which line,
-// in milliseconds, as you type. Today that is found by an audit, or by an
-// incident.
+// One case, to be concrete. CODEOWNERS hands `/src/api` to @alice. The folder was
+// renamed to `/services/api` in the spring. The rule now matches nothing, reviews
+// still go to Alice, and no tool anywhere reports a problem. You find out at an
+// audit, or the day somebody merges what nobody reviewed.
 //
-// ── the one thing worth running first ──
+// gate reads sentences like that as claims and re-reads them whenever a file
+// changes. When one stops being true you get the file and the line, at once.
+//
+// Whether that is worth your time takes one command and no setup:
 //
 //     gate findings
 //
