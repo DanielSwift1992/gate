@@ -335,7 +335,11 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
   font:var(--prose)}
 #table-host td.cell-note code{font:var(--codeinline);color:var(--ink)}
 #table-host td.cell-note .known{font:var(--codeinline)}
-#table-host td.slot{cursor:pointer}
+/* a cell you may answer wears the same mark as a slot in Bare: one language for
+   one act, in every view that shows it. Three behaviours used to hide behind
+   identical text here — answer, jump, nothing — and the only signal was a
+   pointer, which answering and jumping share. */
+#table-host td.slot{cursor:pointer;border-bottom:1px dashed var(--line)}
 #table-host td.slot:hover{background:var(--mist)}
 #table-host td.cut{cursor:pointer;color:var(--muted);text-align:right}
 #table-host .add{cursor:pointer;color:var(--muted);padding:calc(var(--u)*2) 0}

@@ -5083,7 +5083,7 @@ def cmd_init(a):
         undo = (f"git config core.hooksPath {prior}" if prior
                 else "git config --unset core.hooksPath")
         if prior:
-            hooks_note += f"; it was {prior}"
+            hooks_note += f". It was {prior}"
     # ── AND THE ONE THING MISSING IS NAMED WITHOUT BEING GUESSED. The world that
     # arrives is ours; the only thing nobody has said yet is who is keeping it, and
     # this repository's own git already carries a name. So the name is OFFERED, as

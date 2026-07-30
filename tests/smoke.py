@@ -5415,6 +5415,18 @@ public enum MyWatch: AccessLedger {
         blk = ui.split(sel + "{", 1)[1].split("}", 1)[0] if (sel + "{") in ui else ""
         m = re.search(prop + r"[^;}]*?var\(--(\w+)\)", blk)
         return m.group(1) if m else None
+    # ── AND A CELL YOU MAY ANSWER LOOKS LIKE ONE, WITHOUT BEING POINTED AT. Three
+    # behaviours hid behind identical text in the table: a cell that opens the closed
+    # question, a cell that jumps to a declaration in another file, and a cell that
+    # does nothing. The only signal was `cursor:pointer`, which answering and jumping
+    # share, so «did the click stop working» is what a person asks when the click
+    # worked and took them somewhere else. The mark Bare already uses for a slot is
+    # the mark the table uses now: one language for one act, in every view of it.
+    slot_rules = re.findall(r"#(?:bare|table-host)[^{]*\.slot\{([^}]*)\}", ui)
+    S.append(("a cell you may answer wears the same mark as a slot in Bare",
+              len(slot_rules) >= 2 and all("dashed" in r for r in slot_rules)
+              and "#table-host td.slot{cursor:pointer;border-bottom:1px dashed" in ui))
+
     S.append(("the gaps in Bare are the steps the world names for those kinships",
               _named("#bare .rec", "margin-bottom") == "apart"
               and _named("#bare .note.said", "margin") == "near"
