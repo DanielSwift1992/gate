@@ -150,7 +150,10 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 .cnote{padding:calc(var(--u)*2) calc(var(--u)*4) var(--u);border-top:0.5px solid var(--line);margin-top:calc(var(--u)*2)}
 #inspect{flex:none;padding:calc(var(--u)*3) calc(var(--u)*8) calc(var(--u)*2);border-bottom:0.5px solid var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #inspect:empty::before{content:"the cursor on a name says what it is";opacity:.5}
-#say{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:31;background:var(--ink);color:var(--paper);font:var(--control);padding:calc(var(--u)*3) calc(var(--u)*7);border-radius:8px;box-shadow:0 6px 20px color-mix(in srgb,var(--shade) 30%,transparent)}
+/* an answer to something you did is spoken in ink, where the reading of a name
+   under the cursor stays quiet: same line, two voices, neither of them floating */
+#inspect[data-answer]{color:var(--ink)}
+#inspect .run{margin-left:calc(var(--u)*2)}
 #brand{padding:calc(var(--u)*7) calc(var(--u)*7) calc(var(--u)*3)}
 #brand b{display:block;font:var(--brand);letter-spacing:-.01em}
 #brand span{display:block;margin-top:calc(var(--u)*2)}
@@ -413,7 +416,6 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 </div>
 <div class="split" id="split-rail" style="display:none"></div>
 <div id="keys-panel" hidden></div>
-<div id="say" hidden></div>
 <div id="completion" hidden></div>
 <div id="main">
   <div id="bar">
@@ -1318,12 +1320,17 @@ function offerCompletion() {
 }
 
 // a one-line note, for the moments the tool has something to say back
-let sayTimer = null;
+// ── AN ANSWER GOES WHERE THE EYE ALREADY IS, AND STAYS THERE. This was a bar that
+// floated for 3.2 seconds and then took itself away, which is fine for answering a
+// keystroke and was carrying three other things as well: a paragraph with a command
+// in it, a label about the view, and a refusal. Eighty words in three seconds is
+// unreadable by arithmetic. The line under the editor is where this page already
+// says what you are looking at, so an answer to something you did belongs there: it
+// is replaced by the next thing the cursor lands on, never by a timer.
 function say(text) {
-    const el = document.getElementById("say");
-    el.textContent = text; el.hidden = false;
-    clearTimeout(sayTimer);
-    sayTimer = setTimeout(() => { el.hidden = true; }, 3200);
+    const el = document.getElementById("inspect");
+    el.textContent = text;
+    el.dataset.answer = "1";
 }
 
 // ── the shortcuts, behind a quiet ?. Nothing here is new to learn: they are
@@ -1723,14 +1730,27 @@ async function openLanguage(name, line) {
 
 // a word of the language, named rather than opened: which file, which line,
 // which revision, and the command that brings the corpus to this machine
+// ── AND THE ANSWER THAT CARRIES A COMMAND IS NOT AN ANSWER THAT CAN EXPIRE. This
+// was five hundred characters on a three-second timer, with the command escaped as
+// markup into a sink that prints text, so a reader saw `<code>` and had no time to
+// read the rest. The sentence goes where the cursor speaks and stays; the command
+// goes where every other command on this page goes, one click to the clipboard.
 function sayLanguage(name, line) {
-    const where = language.file + ":" + line;
-    say(esc(name) + " is a word of the language: the counting forms the judge must know to "
-        + "read a number at all. It is declared in " + esc(where) + ", in the corpus this "
-        + "judge was built from"
-        + (language.short ? " (" + esc(language.short) + ")" : "")
-        + ". That file is not in this repository and gate fetches nothing, so here is the "
-        + "command that brings it: <code>" + esc(language.command) + "</code>");
+    const el = document.getElementById("inspect");
+    el.textContent = name + " is a word of the language, declared in "
+        + language.file + ":" + line
+        + (language.short ? " of the corpus at " + language.short : " of the corpus")
+        + ". gate fetches nothing, so that file is not here:";
+    el.dataset.answer = "1";
+    const chip = document.createElement("span");
+    chip.className = "run"; chip.textContent = language.command;
+    chip.title = "Copy this. It runs in your terminal, not here.";
+    chip.onclick = async () => {
+        try { await navigator.clipboard.writeText(language.command); } catch { return; }
+        chip.classList.add("took");
+        setTimeout(() => chip.classList.remove("took"), 1200);
+    };
+    el.append(" ", chip);
 }
 
 // the shelf, read-only: where the names your world speaks are declared
@@ -1767,7 +1787,6 @@ async function openSeamSide(file, name) {
     cm.setValue(text);
     cm.setOption("readOnly", true);
     buildRail();
-    say(file + " is one side of a seam: what that side says, read here.");
     if (name) {
         const i = text.split("\n").findIndex(l => new RegExp("· " + name + "$").test(l));
         if (i >= 0) reveal(i + 2);
@@ -1787,7 +1806,17 @@ async function sayValue(name, now, cell) {
         const r = await fetch("/value?name=" + encodeURIComponent(name) + "&to=" + want,
                               { method: "PUT" });
         const said = await r.json().catch(() => ({}));
-        if (!r.ok) { say(said.note || "that value could not be written"); return; }
+        // ── AND A REFUSAL DOES NOT TAKE ITSELF AWAY. This one went into a bar that
+        // vanished after three seconds, in a tool whose whole claim is that a refusal
+        // is an address you can point at and read twice. It goes where every other
+        // refusal on this page goes, and the cell it is about wears the mark.
+        if (!r.ok) {
+            cell.classList.add("cell-bad");
+            const v = document.getElementById("verdicts");
+            v.innerHTML = '<div class="refusal"><code>' + esc(name) + "</code> · "
+                + esc(said.note || "that value could not be written") + "</div>";
+            return;
+        }
         // and it is judged from here, like everything else typed on this page:
         // the file it was written in opens at the line, with the verdict under it
         try {
@@ -2851,6 +2880,9 @@ function scheduleInspect() {
 }
 function inspect() {
     const el = document.getElementById("inspect");
+    // the answer to something you did holds this line until the cursor lands on a
+    // name, which is the next thing you did
+    delete el.dataset.answer;
     const cur = cm.getCursor();
     const tok = cm.getTokenAt(cur, true);
     const name = (tok.string || "").trim();

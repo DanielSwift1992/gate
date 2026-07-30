@@ -5428,6 +5428,29 @@ public enum MyWatch: AccessLedger {
               # it counts EDITS, which is the number selections never touch
               and "cm.historySize().undo" in ui
               and "cm.undo(); render();" not in ui))
+    # ── THE PAGE SPEAKS FROM PLACES THAT STAY. A floating bar lived 3.2 seconds and
+    # carried four different things: an answer to a keystroke, a 500-character
+    # paragraph with a shell command in it, a label about the view you were looking
+    # at, and a REFUSAL. Eighty words at three seconds is unreadable by arithmetic,
+    # not by taste, and a refusal that takes itself away is the opposite of what a
+    # refusal is here: an address you can point at, twice.
+    #
+    # The law was already written: a bar that expires may answer an action and may
+    # never report a state. So the floating element is gone, and what it carried went
+    # to places that stay: the line under the editor, the reference label, and the
+    # verdict. What is left of `say` is an answer to something you did, and it is
+    # held to that shape here, because the shape is what made the other three
+    # possible.
+    says = re.findall(r"\bsay\(\s*(\"[^\"]*\"|'[^']*')\s*\)", ui)
+    bad_says = [s for s in says
+                if len(s) > 92 or "<" in s or "`" in s or re.search(r"\.swift:\d", s)]
+    S.append(("what a disappearing line may carry is one short answer to something you did",
+              'id="say"' not in ui and "#say{" not in ui
+              and not bad_says
+              # and the three that were states now live where the state lives
+              and 'refLabel = "<b>" + esc(file) + "</b> · one side of a seam' in ui
+              and "function sayLanguage" in ui and "#inspect" in ui))
+
     # ── NAMES STAY NAMES, VERBS BECOME MECHANICS. `court`, `judge`, `verdict` are
     # types and belong in the vocabulary; the verbs around them had been theatrical —
     # courts answered and sat, verdicts spoke, pages wore themes. The rule was
