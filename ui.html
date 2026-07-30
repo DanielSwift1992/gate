@@ -335,7 +335,13 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 #table-host tr:hover td{background:color-mix(in srgb,var(--ink) 2%,transparent)}
 #table-host td.cell-name{color:var(--localtype);font-weight:600;cursor:pointer}
 #table-host td.cell-name:hover{text-decoration:underline}
+/* ── ONE NAME, ONE COLOUR, IN EVERY VIEW OF IT. A value here wore one hue whatever
+   it was: the column was painted, not the name. So a name the offer showed as
+   yours, because the offer asks where it comes from, turned somebody else's the
+   moment it landed in the cell, and picking a value looked like changing whose it
+   was. The cell asks the same question the offer asks. */
 #table-host td.cell-value{color:var(--knownname)}
+#table-host td.cell-value.mine{color:var(--localtype)}
 #table-host td.cell-note{white-space:normal;max-width:44ch;color:var(--muted);
   font:var(--prose)}
 #table-host td.cell-note code{font:var(--codeinline);color:var(--ink)}
@@ -1927,7 +1933,8 @@ function buildTables() {
             const tr = document.createElement("tr");
             e.args.forEach((a, c) => {
                 const td = document.createElement("td");
-                td.className = "fact " + (c === 0 ? "cell-name" : "cell-value");
+                td.className = "fact " + (c === 0 ? "cell-name" : "cell-value")
+                    + (c > 0 && localNames.has(a) ? " mine" : "");
                 td.textContent = a;
                 if (badLines.has(e.line)) td.classList.add("cell-bad");
                 if (declFile.has(a)) { td.style.cursor = "pointer"; td.onclick = () => jumpTo(a); }
@@ -2058,8 +2065,8 @@ function buildTables() {
             }
             for (const key of group.keys) {
                 const td = document.createElement("td");
-                td.className = "fact cell-value";
                 const raw = d.aliases.get(key)?.target ?? "";
+                td.className = "fact cell-value" + (localNames.has(raw) ? " mine" : "");
                 td.textContent = shownTerm(raw);
                 if (td.textContent !== raw) td.title = raw;
                 if (badLines.has(d.line)) td.classList.add("cell-bad");

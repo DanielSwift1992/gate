@@ -5428,6 +5428,18 @@ public enum MyWatch: AccessLedger {
               # it counts EDITS, which is the number selections never touch
               and "cm.historySize().undo" in ui
               and "cm.undo(); render();" not in ui))
+    # ── ONE NAME, ONE COLOUR, IN EVERY VIEW OF IT. A table cell wore one hue
+    # whatever stood in it: the column was painted rather than the name. So a value
+    # the offer showed as yours, because the offer asks where a name comes from,
+    # turned somebody else's the moment it landed in the cell, and choosing a value
+    # looked like changing whose it was. Both cells ask the offer's question now.
+    S.append(("a value in a table is coloured by where it comes from, like everywhere else",
+              "#table-host td.cell-value.mine{color:var(--localtype)}" in ui
+              and 'td.className = "fact cell-value" + (localNames.has(raw) ? " mine" : "");' in ui
+              and '+ (c > 0 && localNames.has(a) ? " mine" : "");' in ui
+              # and the offer's own reading is the one they borrow
+              and '(localNames.has(n) ? "cmine" : "ctheirs")' in ui))
+
     # ── AND A GESTURE IS NOT A SOURCE. The chosen row of an offer was washed with the
     # action colour, whose hue sits between `mine` and `theirs` on the same axis, so
     # picking an item looked like the item changing whose it was.
