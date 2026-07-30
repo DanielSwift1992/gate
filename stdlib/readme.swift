@@ -19,19 +19,11 @@
 // still go to Alice, and no tool anywhere reports a problem. You find out at an
 // audit, or the day somebody merges what nobody reviewed.
 //
+// That gap has a name: drift. A sentence that was true, quietly stopped being
+// true, and still gets obeyed.
+//
 // gate reads sentences like that as claims and re-reads them whenever a file
 // changes. When one stops being true you get the file and the line, at once.
-//
-// Whether that is worth your time takes one command and no setup:
-//
-//     gate findings
-//
-// It translates nothing and uploads nothing: it reads this repository's git
-// history and prints what is true of it, in sentences. «Access files were
-// touched by three people over five hundred commits; none of those edits was
-// checked.» A repository with little history has little to say, and the output
-// says that instead. Every sentence is marked read, not judged: no court sat on
-// it. It hands you the reading; the judging waits for facts you declare.
 //
 // ── everything here is here because a row says so ──
 //
@@ -50,19 +42,30 @@
 //
 // ── a first word costs nothing here ──
 //
-// `gate serve` opens the bench: this file on the left, the verdict on the
-// right, re-read as you type. Beside this file it lists `my.swift`: your own
-// world, kept in a separate git on this machine, never in the repository you
-// share. The file does not exist until you write in it; nothing is stored for
-// somebody who said nothing. Write one claim and it is judged beside the shared
-// world on every keystroke. Clear it and it is gone.
+// If you are reading this in the bench (`gate serve`: this file on the left, the
+// verdict on the right, re-read as you type), the cheapest thing to try is on the
+// screen already. Beside this file it lists `my.swift`, your own world, kept in a
+// separate git on this machine and never in the repository you share. That file
+// does not exist until you write in it; nothing is stored for somebody who said
+// nothing. Write one claim and it is judged beside the shared world on every
+// keystroke. Clear it and it is gone.
 //
-// BREAK IT. Trying costs nothing here: a claim that does not hold is never
-// written to disk, and a refusal from the judge (the program that reads the
-// claims) names a line and not a person. The foot of this file says how to
-// restore what shipped. Then break the reference beside
-// this file: set `Does = Writes` on a verb that promises to change nothing, and
-// the certificate under it refuses at its own line.
+// BREAK IT. Trying costs nothing here: a claim that does not hold is never written
+// to disk, and a refusal from the judge (the program that reads the claims) names
+// a line and not a person. The foot of this file says how to restore what shipped.
+// Then break the reference beside this file: set `Does = Writes` on a verb that
+// promises to change nothing, and the certificate under it refuses at its own line.
+//
+// ── what this repository already says, before anything is translated ──
+//
+//     gate findings
+//
+// It translates nothing and uploads nothing: it reads this repository's git
+// history and prints what is true of it, in sentences. «Access files were
+// touched by three people over five hundred commits; none of those edits was
+// checked.» A repository with little history has little to say, and the output
+// says that instead. Every sentence is marked read, not judged: no court sat on
+// it. It hands you the reading; the judging waits for facts you declare.
 //
 // ── the line that has not been true for months ──
 //
