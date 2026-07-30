@@ -138,7 +138,12 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 .krow span{color:var(--muted)}
 #completion{position:absolute;z-index:32;background:var(--paper);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 22px color-mix(in srgb,var(--shade) 16%,transparent);padding:calc(var(--u)*2);min-width:11em;max-height:15em;overflow:auto}
 .crow{padding:var(--u) calc(var(--u)*4);border-radius:5px;cursor:pointer;white-space:nowrap}
-.crow.on{background:color-mix(in srgb,var(--action) 14%,transparent)}
+/* ── A GESTURE IS NOT A SOURCE. The chosen row was washed with the action
+   colour, and that hue sits between `mine` and `theirs` on the same axis, so
+   picking an item looked like the item changing whose it was: the one thing a
+   name's colour answers here. Selection is the ceremony grey the editor
+   already selects text with, and the name keeps saying where it came from. */
+.crow.on{background:var(--select)}
 .crow .cmine{color:var(--localtype)}
 .crow .ctheirs{color:var(--knownname)}
 .crow:hover{background:var(--mist)}
@@ -672,12 +677,27 @@ function noSave(cm) {
     say("There is nothing to save: the file is written whenever the judge holds.");
 }
 
+// `historySize().undo` counts EDITS, never selections, so it is the one number
+// that says whether anything was unwritten. Bounded, because a history of nothing
+// but selections must end the loop rather than spin it.
+function undoEdit() {
+    const edits = cm.historySize().undo;
+    if (!edits) return;
+    for (let guard = 0; guard < 16 && cm.historySize().undo === edits; guard++) cm.undo();
+}
 const cm = CodeMirror(document.getElementById("editor-host"), {
     value: "", mode: "gate-swift", lineNumbers: true, indentUnit: 4,
     viewportMargin: Infinity, dragDrop: false,
     extraKeys: {
         "Cmd-/": toggleComment, "Ctrl-/": toggleComment,
         "Cmd-S": noSave, "Ctrl-S": noSave,
+        // ── UNDO IS FOR EDITS. Moving the cursor puts a selection in the editor's
+        // history, so following a name and pressing undo walked the cursor back
+        // having changed nothing: a key people press to unwrite something answered
+        // by undoing a journey. This pops those steps until an edit is actually
+        // undone, and the way back from a jump stays the one built for it
+        // (⌃⌘← / ⌃⌘→), which is also the one that crosses files.
+        "Cmd-Z": undoEdit, "Ctrl-Z": undoEdit,
         "Tab": (cm) => {
             if (!compEl.hidden) return acceptCompletion();     // the offer, first
             return cm.somethingSelected() ? cm.indentSelection("add")
@@ -2694,7 +2714,7 @@ document.getElementById("bare").addEventListener("click", (e) => {
 // same buffer the editor edits, and the view is drawn again from the judge
 document.addEventListener("keydown", (e) => {
     if (mode !== "bare") return;
-    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") { e.preventDefault(); cm.undo(); render(); }
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") { e.preventDefault(); undoEdit(); render(); }
 });
 
 // ── an offer is a question, and looking away answers it. It closes on a press
@@ -2886,6 +2906,14 @@ async function loadFile(name) {
                                 ? { seeds: new Set(), generics: new Set() } : undefined);
     repaintNames(early.parsed, []);
     editor.value = t;   // setValue: judged, not written
+    // ── AND OPENING A FILE IS NOT SOMETHING TO UNDO. Setting the text is a change
+    // like any other to the editor, so the file you had just opened sat at the
+    // bottom of the undo stack: two presses of the undo key emptied the buffer, and
+    // write-on-holds then saved the emptiness, because a world with nothing in it
+    // has nothing to refuse. Found by doing it, on a fixture, while chasing why undo
+    // walked the cursor back. The loaded text is the floor now: there is nothing
+    // before it to unwrite.
+    cm.clearHistory();
     await siblings();
     worldRead = true;
     render();

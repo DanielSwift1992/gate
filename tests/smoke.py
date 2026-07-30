@@ -5415,6 +5415,27 @@ public enum MyWatch: AccessLedger {
         blk = ui.split(sel + "{", 1)[1].split("}", 1)[0] if (sel + "{") in ui else ""
         m = re.search(prop + r"[^;}]*?var\(--(\w+)\)", blk)
         return m.group(1) if m else None
+    # ── UNDO IS FOR EDITS, AND OPENING A FILE IS NOT ONE. Moving the cursor writes
+    # a selection into the editor's history, so following a name and pressing undo
+    # walked the cursor back having changed nothing. Worse, setting a file's text is
+    # itself a change, so the freshly opened file sat at the bottom of that stack:
+    # two presses emptied the buffer and write-on-holds saved the emptiness, because
+    # a world with nothing in it has nothing to refuse. Found by doing it.
+    S.append(("undo is for edits: a jump is not one, and neither is opening a file",
+              "cm.clearHistory();" in ui
+              and "function undoEdit()" in ui
+              and '"Cmd-Z": undoEdit, "Ctrl-Z": undoEdit,' in ui
+              # it counts EDITS, which is the number selections never touch
+              and "cm.historySize().undo" in ui
+              and "cm.undo(); render();" not in ui))
+    # ── AND A GESTURE IS NOT A SOURCE. The chosen row of an offer was washed with the
+    # action colour, whose hue sits between `mine` and `theirs` on the same axis, so
+    # picking an item looked like the item changing whose it was.
+    S.append(("choosing an item is marked by the ceremony grey, never by a hue",
+              ".crow.on{background:var(--select)}" in ui
+              and ".crow .cmine{color:var(--localtype)}" in ui
+              and ".crow .ctheirs{color:var(--knownname)}" in ui))
+
     # ── AND A CELL YOU MAY ANSWER LOOKS LIKE ONE, WITHOUT BEING POINTED AT. Three
     # behaviours hid behind identical text in the table: a cell that opens the closed
     # question, a cell that jumps to a declaration in another file, and a cell that
