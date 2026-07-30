@@ -6,12 +6,12 @@
 // because at a percent the darkest nodes cannot land on the grey line at all:
 // the nearest integer sat in the warm corner and the canvas came out pink.
 //
-// Judged here: the ladder is monotone; text clears a contrast bound, ink and
+// Judged here: the ladder is monotone, text clears a contrast bound, ink and
 // the names at 4.5:1, the secondary registers (muted, and the seam the
-// ceremony is set in) at the 3:1 bound П1 declares; a neutral is neutral, its
+// ceremony is set in) at the 3:1 bound П1 declares. A neutral is neutral, its
 // X and Z held within two percent of the D65 grey line, so neither a blue nor
-// a warm tint can creep back; every semantic atom stands OUTSIDE that band, on
-// the side it leans; and the verdict's two poles stand on opposite sides of
+// a warm tint can creep back. Every semantic atom stands outside that band, on
+// the side it leans, and the verdict's two poles stand on opposite sides of
 // red-green. Lower any of it and the slack stops settling: the judge names the
 // pair, in numbers.
 //
@@ -233,7 +233,7 @@ public typealias LawEqLocalType_dim = Same<LawDimY, LocalTypeDimY>
 public typealias LocalTypeEqKnownName_dim = Same<LocalTypeDimY, KnownNameDimY>
 
 // ── a neutral is neutral: X and Z stay within two percent of the D65 grey
-// line, so neither a blue nor a warm tint can creep back; at the floor of
+// line, so neither a blue nor a warm tint can creep back. At the floor of
 // the scale one step is the whole resolution, and that is said, not hidden ──
 public typealias InkGrey_lit = GreyFloor<InkLitX, InkLitY, InkLitZ, Plus<Unit, W4>, Plus<Unit, W4>>
 public typealias PaperGrey_lit = Grey<PaperLitX, PaperLitY, PaperLitZ, Plus<W2, Plus<W16, Plus<W64, W128>>>, Plus<Unit, Plus<W2, Plus<W4, Plus<W8, Plus<W16, Plus<W64, Plus<W128, W512>>>>>>>, Plus<Unit, Plus<W2, Plus<W8, Plus<W64, Plus<W128, W512>>>>>, Plus<W2, Plus<W4, Plus<W32, Plus<W64, W128>>>>>
@@ -269,7 +269,7 @@ public typealias VerdictPoles_lit = Opposed<OkLitX, OkLitY, BadLitX, BadLitY, Pl
 public typealias VerdictPoles_dim = Opposed<OkDimX, OkDimY, BadDimX, BadDimY, Plus<W4, Plus<W8, Plus<W16, Plus<W32, W128>>>>, Plus<Unit, Plus<W8, W32>>>
 
 // ── the seam is read, so it clears the bound П1 declares for secondary
-// text, and stays quieter than speech; the selection is a surface, so it
+// text, and stays quieter than speech. The selection is a surface, so it
 // stands on the grey line and is more present than a hover ──
 public typealias Paper_Seam_lit = Readable<PaperLitY, SeamLitY, Plus<Unit, Plus<W2, W8>>>
 public typealias Seam_Paper_dim = Readable<SeamDimY, PaperDimY, Plus<Unit, W16>>
@@ -297,7 +297,7 @@ public typealias TheirsApartBad_Z_dim = Apart<KnownNameDimZ, BadDimZ, Plus<W2, P
 // the Same chain above, deliberately: only hue is meant to tell them apart. So
 // hue is the whole of the distinction and it had one floor for one pair. The
 // rest, measured across X and Z: in the light half the pairs stand 100 to 740
-// apart; in the dark half four of them fall inside a box 182 wide,
+// apart. In the dark half four of them fall inside a box 182 wide,
 // Action↔KnownName 56, Bad↔Law 77, Action↔LocalType 154, LocalType↔KnownName
 // 182, where the same pairs in light are 100, 70, 440 and 540.
 //

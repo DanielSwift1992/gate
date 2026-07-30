@@ -97,7 +97,7 @@ public enum VerifiedAtWorkplace<Who: Employee, At: Workplace> {}
 extension VerifiedAtWorkplace: Verified
 where Who.Site == At {}
 
-/// A ledger is a list of claims; a team is a list of the people in it. One
+/// A ledger is a list of claims, a team is a list of the people in it. One
 /// file, judged whole.
 public protocol AccessLedger {}
 public protocol Team {}

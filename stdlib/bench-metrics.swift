@@ -5,15 +5,15 @@
 // gap on the page is a whole number of steps, so a length is spelled the way
 // a number is, on this file's own ladder from Unit, and can be judged like one.
 //
-// Judged here: the ladder is monotone; the law of proximity, what belongs
+// Judged here: the ladder is monotone, the law of proximity, what belongs
 // together stands closer than what does not, and the deeper the kinship the
-// tighter the gap; the air is whole reading lines; and the indent is the sum
+// tighter the gap. The air is whole reading lines, and the indent is the sum
 // of the steps it is made of, not a number of its own.
 //
 // NOT JUDGED, and said plainly: the price of one step (how dense the page
 // reads) and which step a given seam takes are chosen by eye inside the box
 // these rules leave. The rules say a section must stand further off than a
-// row; they do not say by how much it pleases.
+// row. They do not say by how much it pleases.
 
 public typealias W2 = Twice<Unit>
 public typealias W4 = Twice<W2>

@@ -5,8 +5,8 @@
 // over them: a verb that changes nothing may be run on anybody's clone, at any
 // moment.
 
-// Which court answers: `plain` reads a world of facts; `where` reads a grammar
-// and the certificates over it; some verbs call no court and say so. An
+// Which court answers: `plain` reads a world of facts, `where` reads a grammar
+// and the certificates over it, and some verbs call no court and say so. An
 // observation is not a verdict, and a verb that judges nothing may not wear one.
 public protocol Court {}
 public enum PlainCourt: Court {}

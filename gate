@@ -775,7 +775,7 @@ def ensure_world():
 _PACKAGED = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bin", "gate-judge")
 JUDGE = os.environ.get("GATE_JUDGE") or _PACKAGED
 if not os.path.exists(JUDGE):
-    raise SystemExit("gate: no judge binary (bin/gate-judge missing; build it with bin/build-judge.sh or set GATE_JUDGE)")
+    raise SystemExit("gate: no judge binary (bin/gate-judge missing. Build it with bin/build-judge.sh, or set GATE_JUDGE)")
 
 
 def refine_addresses(text, refusals, fname):
@@ -1029,7 +1029,7 @@ def cmd_change(a):
         who, dept = a[1], a[2]
         new = transfer_text(text, who, dept)
         label = {"command": "change transfer", "who": who, "to": dept,
-                 "note": "roster and team entry moved; view grants are intent, so resolve leftovers with grant/revoke"}
+                 "note": "roster and team entry moved. View grants are intent, so resolve leftovers with grant/revoke"}
     elif a[0] == "grant":
         who, doc = a[1], a[2]
         new = grant_text(text, who, doc)
@@ -1072,14 +1072,14 @@ def cmd_import(a):
     # twice, which is what they did until somebody looked at them set as prose.
     emit("// the facts world, yours: the source you read and edit, and the one")
     emit("// this tool answers for. Not a generated")
-    emit("// artifact. The tables only seeded it once (below); the world, not the")
+    emit("// artifact. The tables only seeded it once, below. The world, not the")
     emit("// tables, is the truth. A gate.manifest.swift may split it across")
     emit("// several files, all judged together. git carries the history.")
     emit("//")
     emit(f"// seeded by gate import from: {os.path.basename(people_csv)}, {os.path.basename(grants_csv)}")
     emit("//")
     emit("// the language it is written in: `gate stdlib show forms-organization`.")
-    emit("// Those words are carried by the judge; `materialize` writes them out")
+    emit("// Those words are carried by the judge, and `materialize` writes them out")
     emit("// beside this file to read: editing that copy adds no word to the language.")
     people = list(csv.DictReader(open(people_csv)))
     grants = list(csv.DictReader(open(grants_csv)))
@@ -1493,7 +1493,7 @@ def cmd_library(a):
             "shared": sorted(A & B),
             "only_first": sorted(A - B),
             "only_second": sorted(B - A),
-            "note": "the union is safe by construction: one domain has one canonical crystal (SAT5); a difference is teachable form, never client data",
+            "note": "the union is safe by construction: one domain has one canonical crystal (SAT5), so a difference is teachable form, never client data",
         }
     out_path = a[a.index("-o") + 1] if "-o" in a else None
     text = open(FACTS).read()
@@ -1977,7 +1977,7 @@ def cmd_demo_owners(a):
                     "committed the moment it was made, so nothing you try here can cost you "
                     "anything",
             "try": ["open ownership.swift at the line gate status names, and give that room to "
-                    "an owner whose zone matches. The world is the truth here; CODEOWNERS only "
+                    "an owner whose zone matches. The world is the truth here, and CODEOWNERS only "
                     "seeded it",
                     "or edit CODEOWNERS and run the import again: same command, one line moved",
                     "gate serve opens the bench, with the world beside its verdict, judged as "
@@ -2967,7 +2967,7 @@ def vendored_guards():
 RBAC_FORMS_HEADER = """// printed by gate import rbac: the K8s access world in the domain forms
 // (the exemplar: theory corpus Sources/Examples/Grants.swift @ 0fd0b38).
 // Realms are namespaces plus the cluster scope. A role is a room stating its
-// realm; a binding is a keeper stating its post; the gate's equality is the
+// realm, a binding is a keeper stating its post, and the gate's equality is the
 // K8s invariant itself: a RoleBinding and its Role live in one namespace.
 // The forms below are the stdlib module forms-grants, printed from the shelf.
 
@@ -3080,7 +3080,7 @@ def cmd_import_rbac(a):
         "refusals": refusals,
         "judge_ms": ms,
         "canon_handshake": canon,
-        "note": "tier one (verb class, Who.Key: Writes) is the compiler's: judged when the world is built as Swift; this run holds the posting equalities (agnostic where-judge)",
+        "note": "tier one (verb class, Who.Key: Writes) is the compiler's, judged when the world is built as Swift. This run holds the posting equalities (agnostic where-judge)",
     }
 
 
@@ -3266,7 +3266,7 @@ DECLARE_HEADER = """// printed by gate declare: one side of a seam, stated rathe
 
 CARRIER_HEADER = """// printed by gate declare carrier: what a library says it carries, emitted from
 // what that library already keeps: its own generated schema, its own types. The
-// emitter lives on its side and belongs to it; this only renders what it said
+// emitter lives on its side and belongs to it. This only renders what it said
 // into the grammar both sides are judged in. Where its own name for a field
 // differs from the contract's, the correspondence is stated too, and only
 // where it does not follow, since a declaration that restates what already
@@ -3683,7 +3683,7 @@ def cmd_side(a, kind):
     if kind == "Theirs" and at and moving_pin(at):
         return {"command": word, "asks": True, "note": moving_pin(at),
                 "next": "write down the revision you actually took: a commit, a tag, a release. "
-                        "What holds between two sides is a fact about two fixed texts; name a "
+                        "What holds between two sides is a fact about two fixed texts. Name a "
                         "moving one and there is nothing for it to be a fact about, which is "
                         "the whole reason nothing here has to be solved"}
     if kind == "Theirs" and not at:
@@ -4061,12 +4061,12 @@ def cmd_attention(a):
             "expired": expired_mine + expired_theirs + expired_part,
             "stated": len(stated), "claimed": len(claims),
             "note": ("a standing account of who owes whom a word. An unanswered axis sits with "
-                     "whoever owes the answer, so this reads the same from either side" + ("; a divergence somebody declared is set aside while the "
+                     "whoever owes the answer, so this reads the same from either side" + (", and a divergence somebody declared is set aside while the "
                      "thing it cites is open, and comes back when that closes" if known else "")),
             "next": ("answer the first line above, or declare the divergence with something that can "
                      "close" if waits_on_me else
                      "nothing waits on you here" if not (i_wait or parts) else
-                     "these wait on the other side; they are listed so you know what you are waiting for"),
+                     "these wait on the other side, and they are listed so you know what you are waiting for"),
             "mutates": False}
 
 
@@ -4189,7 +4189,7 @@ def cmd_drift(a):
                 "note": ("drift CONTRACT --client DIR [--since DATE] [--name N] [--fail-over DAYS]"
                          + ("" if not a or a[0].startswith("-") else
                             f" — no such contract here: {a[0]}")),
-                "next": "the contract is a JSON OpenAPI document in a git checkout; "
+                "next": "the contract is a JSON OpenAPI document in a git checkout, and "
                         "for YAML, `yq -o=json '.' spec.yml > spec.json` first"}
     src = a[0]
     root = a[a.index("--client") + 1] if "--client" in a else "."
@@ -4547,8 +4547,8 @@ def read_carrier(root):
     return "\n".join(text), {
         "files": files, "root": os.path.abspath(root),
         "kinds": " ".join(CARRIER_KINDS),
-        "skipped": "directories named test/example, and .git node_modules target dist build .venv proto; "
-                   "files named test/example; protobuf stubs (_pb2, _pb.js, _pb.ts)",
+        "skipped": "directories named test/example, and .git node_modules target dist build .venv proto, "
+                   "files named test/example, protobuf stubs (_pb2, _pb.js, _pb.ts)",
     }
 
 
@@ -5030,7 +5030,7 @@ def cmd_init(a):
                             capture_output=True, text=True).stdout.strip() if hooks_note else ""
     if signed:
         observed = (f"read from git, and not judged: commits in this clone are signed {signed}. "
-                    "If that is you, say so in my.swift; nothing here writes your name for you")
+                    "If that is you, say so in my.swift. Nothing here writes your name for you")
     return {"command": "init", "root": root, "created": made, "hooks": hooks_note,
             "letter": letter, "observed": observed, "next": next_rung(False),
             "undo_hooks": undo, "changed_git_config": bool(hooks_note), "vendored": vendored}
@@ -5660,7 +5660,7 @@ def cmd_serve(a):
 
 USAGE = """git verifies bytes: change one and the hash changes. Nothing verifies the
 words a repository runs on. A CODEOWNERS, a schema, a list of who may deploy were
-true the day somebody wrote them; the day that stopped is recorded nowhere. Here
+true the day somebody wrote them. The day that stopped is recorded nowhere. Here
 those words are claims, re-read every time a file changes, and a claim that stops
 holding is named at its line.
 
@@ -5673,7 +5673,7 @@ usage (the git-shaped porcelain):
                                        it at. You read it, never rewrite it, and
                                        gate never fetches it: you brought it
                                        here. There are no ranges anywhere in
-                                       this tool, so there is nothing to solve;
+                                       this tool, so there is nothing to solve,
                                        to move, take it again at a newer one.
                                        R is world|seam|forms, which court reads
                                        the row, and a row gate cannot place is
@@ -5716,13 +5716,13 @@ usage (the git-shaped porcelain):
   gate export gate.swift -o people.csv grants.csv
   gate verify people.csv grants.csv --against CMD
   gate serve [port]                   (local read-only JSON surface)
-  gate report [-o report.html]        (printable audit page; nothing is written
+  gate report [-o report.html]        (printable audit page. Nothing is written
                                        unless you name the file)
   gate guard [merge]                  (repo policy by the same gates: HEAD author
                                        via tables/identities.csv must hold the
                                        rank stated in tables/guard.csv)
   gate library [-o lib.json]          (the domain crystal: forms, axes, seed coverage)
-  gate library diff a.json b.json     (set operations between crystals; forms, never facts)
+  gate library diff a.json b.json     (set operations between crystals: forms, never facts)
   gate survey [N]                     (t0, read-only: unwritten links from your own
                                        history, identity, object candidates, fabric)
   gate log                            (the repository's own history, with no
@@ -6148,10 +6148,10 @@ def humanize(out):
                              f"and {x['because']} is closed")
             for x in out["waits_on_you"]:
                 lines.append(f"  waits on you · {x['address']} · "
-                             + (x.get("why") or "stated by the contract; you have not said whether you carry it"))
+                             + (x.get("why") or "stated by the contract, and you have not said whether you carry it"))
             for x in out["you_wait_on"]:
                 lines.append(f"  you are waiting · {x['address']} · "
-                             + (x.get("why") or "you carry it; the contract has not stated it"))
+                             + (x.get("why") or "you carry it, and the contract has not stated it"))
             for x in out["parted"]:
                 lines.append(f"  parted · {x['address']} · {x['why']}")
             for x in out["known"]:

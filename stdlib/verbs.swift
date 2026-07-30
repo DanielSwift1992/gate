@@ -223,7 +223,7 @@ public enum Report: Verb {
 }
 extension Report { public static var typeName: String { "report" } }
 
-/// the words a world may be written in, printed; editing a printout adds no word
+/// the words a world may be written in, printed. Editing a printout adds no word
 public enum Stdlib: Verb {
     public typealias Does = Asked
     public typealias Under = NoCourt

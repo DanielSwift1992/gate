@@ -5198,7 +5198,7 @@ public enum MyWatch: AccessLedger {
               # and in the same voice the letter is written in: short declarative
               # sentences, direct order, no word standing in for a machine
               and usage.startswith("git verifies bytes")
-              and "the day that stopped is recorded nowhere" in usage
+              and "The day that stopped is recorded nowhere" in usage
               and "keeps every byte" not in usage))
 
     # ── AND EVERY RUNG SAYS WHAT YOU GET, NEVER WHAT YOU WILL BE STOPPED FROM.

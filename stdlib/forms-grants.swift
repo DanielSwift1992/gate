@@ -1,8 +1,8 @@
 // gate stdlib forms-grants v1: the domain genre, one page
 // role: forms
 // (exemplar: theory corpus Sources/Examples/Grants.swift @ 0fd0b38).
-// Realms are declared atoms (the fourth is one line, not a schema change);
-// a verb set is a protocol class, containment is conformance; one gate
+// Realms are declared atoms, and the fourth is one line rather than a schema change.
+// A verb set is a protocol class, containment is conformance, and one gate
 // carries two tiers: the compiler holds the key's class, the judge holds
 // the posting equality.
 

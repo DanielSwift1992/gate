@@ -4,7 +4,7 @@
 // line stands from the next. The page had been restating them instead:
 // nineteen font declarations where four registers were declared, half of them
 // the same register written again with the line-height a hair different. A
-// second statement of a thing either drifts or coarsens; these drifted.
+// second statement of a thing either drifts or coarsens, and these drifted.
 //
 // Sizes are spelled in TENTHS of a pixel and leadings in HUNDREDTHS of their
 // own size, because a world spells its numbers on its own ladder from Unit and
@@ -180,7 +180,7 @@ public enum Source: Register {
 // ── AND THE VOICE THE LEFT PANEL SPEAKS IN, which it had been speaking without
 // being declared anywhere: a section label, set firm at caption size. There was
 // a second (the line under it, set half) declared the same day for the
-// journal's blurb and the judge's caption; the journal left the panel and the
+// journal's blurb and the judge's caption. The journal left the panel and the
 // last speaker went with it. A register nobody speaks in is a word kept in a
 // vocabulary for its own sake, and three certificates over it look like weight
 // being carried.
@@ -199,7 +199,7 @@ public enum Speech: Register {
 }
 
 // ── AND THE LAWS. A size ladder that only goes up, so `caption` can never
-// quietly become the size of `speech`; and a leading at least as tall as the
+// quietly become the size of `speech`, and a leading at least as tall as the
 // letters it sets, because a line that overlaps the next is not a line. These
 // are today's numbers as a floor: drift below one and this repository refuses
 // at the line rather than in somebody's eye a week later.

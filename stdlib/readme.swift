@@ -23,9 +23,9 @@
 // true, and still gets obeyed.
 //
 // The usual cure is to pick one place and call it the source of truth. But the
-// folder was renamed in a pull request that never read CODEOWNERS; a file everyone
-// must keep current is a chore that belongs to everyone, so it belongs to nobody;
-// and the chosen file goes stale like any other. gate starts from the opposite
+// folder was renamed in a pull request that never read CODEOWNERS. A file everyone
+// must keep current is a chore for everyone, so it is a chore for nobody, and the
+// chosen file goes stale like any other. gate starts from the opposite
 // fact: there is no source. The team that owns the folders declares them, once.
 // The review rule declares the folder it points at. Two declarations about one
 // folder cannot differ in silence: they are equal, or you get the line and both
@@ -35,10 +35,9 @@
 // start landing on the wrong person, and the renaming team learns about your rule
 // at the audit, if ever. Here the difference is checked whenever anybody asks: by
 // hand, on a commit, in CI. A break names its line and both names, so the map of
-// who might break what leaves your head. And the rename that would break your rule
-// meets your rule inside the pull request that makes the rename. They can still
-// merge it, but not without knowing. Being forgotten is what stops being possible
-// here.
+// who might break what leaves your head. And a rename that breaks your rule is
+// named inside its own pull request. They can still merge it, but not without
+// knowing. Being forgotten is what stops being possible here.
 //
 // The check is one lookup per claim and nothing else: no search, no solver, no
 // build. It takes milliseconds on a real repository, and it still takes
@@ -56,7 +55,7 @@
 //                           without a row
 //     .githooks/pre-commit  re-reads the claims before a commit, so one that
 //                           stopped holding stays out of history
-//     core.hooksPath        the git setting pointing at that hook; the line that
+//     core.hooksPath        the git setting pointing at that hook. The line that
 //                           restores it was printed the moment it changed
 //
 // Delete a file and its row and it is gone, with nothing left behind. Commit the
@@ -66,13 +65,13 @@
 //
 // ── a first word costs nothing here ──
 //
-// If you are reading this in the bench (`gate serve`: this file on the left, the
-// verdict on the right, re-read as you type), the cheapest thing to try is on the
-// screen already. Beside this file it lists `my.swift`, your own world, kept in a
-// separate git on this machine and never in the repository you share. That file
-// does not exist until you write in it; nothing is stored for somebody who said
-// nothing. Write one claim and it is judged, with everything else here, on every
-// keystroke. Clear it and it is gone.
+// `gate serve` opens the bench: this file on the left, the verdict on the right,
+// re-read as you type. If that is where you are reading this, the cheapest thing
+// to try is on the screen already. Beside this file the bench lists `my.swift`:
+// your own world, kept in a separate git on this machine and never in the
+// repository you share. That file does not exist until you write in it. Nothing
+// is stored for somebody who said nothing. Write one claim and it is judged,
+// with everything else here, on every keystroke. Clear it and it is gone.
 //
 // BREAK IT. Trying costs nothing here: a claim that does not hold is never written
 // to disk, and a refusal from the judge (the program that reads the claims) names
@@ -86,10 +85,10 @@
 //
 // It translates nothing and uploads nothing: it reads this repository's git
 // history and prints what is true of it, in sentences. «Access files were
-// touched by three people over five hundred commits; none of those edits was
+// touched by three people over five hundred commits, and none of those edits was
 // checked.» A repository with little history has little to say, and the output
 // says that instead. Every sentence is marked read, not judged: no court sat on
-// it. It hands you the reading; the judging waits for facts you declare.
+// it. It hands you the reading. The judging waits for facts you declare.
 //
 // ── the line that has not been true for months ──
 //
@@ -98,16 +97,16 @@
 // rule that stopped being true long ago and has been quietly obeyed since.
 // Tables arrive the same way: a column is an axis, a row is a record, and
 // `gate export` prints them back byte for byte. Rules are translated by hand,
-// once; they are small, and they are yours to read.
+// once. They are small, and they are yours to read.
 //
-// Those records are Swift declarations, which is why two arbiters can read the
+// Those records are Swift declarations, so two arbiters can read the
 // same file: the judge on every keystroke, and the Swift compiler in your CI when
 // you want the slow, total answer. Neither can be talked round.
 //
 // ── and what this does not touch, said plainly ──
 //
 // Whether a rule should say what it says is not drift, and nothing here rules
-// on it. The judge holds words to each other; it does not know what you meant.
+// on it. The judge holds words to each other and does not know what you meant.
 // The day the two disagree, the disagreement is yours to settle, and nothing
 // here pretends to settle it for you.
 //

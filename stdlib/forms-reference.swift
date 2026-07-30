@@ -9,8 +9,8 @@
 // open" pull apart quietly, and a reader of the code is told something that
 // stopped being true months ago.
 //
-// A tracked thing becomes a RECORD whose state is an axis; a place in the code
-// that cites it becomes a SITE; the citation itself is the seam. It refuses in
+// A tracked thing becomes a record whose state is an axis. A place in the code
+// that cites it becomes a site, and the citation itself is the seam. It refuses in
 // two ways, and both fall out of the grammar rather than a rule written for
 // them: a citation of something CLOSED says which state it found against the
 // one it needed, and a citation of something that does not exist at all cannot

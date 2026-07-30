@@ -11,8 +11,8 @@
 // dictate the shape of the client. This genre ties them the other way, with a
 // seam that refuses, leaving the client hand-written.
 //
-// A field the contract declares becomes a RECORD whose shape is an axis; a
-// client library becomes a CARRIER; carrying is the claim. What is judged here
+// A field the contract declares becomes a record whose shape is an axis. A
+// client library becomes a carrier, and carrying is the claim. What is judged here
 // is agreement of shape: a client that carries `waitFor` as text where the
 // contract calls it a number is refused, and the judge names both shapes.
 //
