@@ -25,12 +25,15 @@
 // gate reads sentences like that as claims and re-reads them whenever a file
 // changes. When one stops being true you get the file and the line, at once.
 //
-// The mechanism, in one breath: those sentences become typed declarations in a
-// Swift file, and a rule becomes a constraint between them, so a disagreement is
-// not reported, it fails to compile. Your compiler already does this for your
-// code; nothing did it for the file that says who owns your code. Nothing
-// executes here, and no build is needed: the judge answers by lookup, which is
-// why it can answer on a keystroke.
+// What changes is how two sides stay in sync. Today that takes attention:
+// somebody notices a change on the other side and updates their own, or nobody
+// does. Here each side declares what it holds, once, and the difference is
+// checked whenever anybody asks: by hand, on a commit, in CI. You stop keeping
+// track of who might break what, because a break says where it is.
+//
+// The check is one lookup per claim and nothing else: no search, no solver, no
+// build. It takes milliseconds on a real repository, and it still takes
+// milliseconds when the repository is ten times the size.
 //
 // ── what it put in your repository, and how to take it out ──
 //
@@ -86,6 +89,10 @@
 // Tables arrive the same way: a column is an axis, a row is a record, and
 // `gate export` prints them back byte for byte. Rules are translated by hand,
 // once; they are small, and they are yours to read.
+//
+// Those records are Swift declarations, which is why two arbiters can read the
+// same file: the judge on every keystroke, and the Swift compiler in your CI when
+// you want the slow, total answer. Neither can be talked round.
 //
 // ── and what this does not touch, said plainly ──
 //
