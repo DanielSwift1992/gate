@@ -4849,6 +4849,7 @@ def repo_findings(n=400):
                                         f"{len(commits)} commits: ownership outlives people, "
                                         "and nothing here notices.",
                             "evidence": ", ".join("@" + q for q in quiet[:4])})
+            them = "it" if len(rules) == 1 else "them"
             out.append({"kind": "offer", "subject": "CODEOWNERS",
                         # a count reads as a count: one rule is not «1 rules», and this
                         # sentence is the first thing the letter sends anybody to
@@ -4856,10 +4857,10 @@ def repo_findings(n=400):
                                     + ("rule" if len(rules) == 1 else "rules")
                                     + f" over {len(owners)} "
                                     + ("owner" if len(owners) == 1 else "owners")
-                                    + ", and no tool checks them. "
-                                    "`gate import codeowners` reads them as a world: a path "
-                                    "no file matches, or an owner outside their zone, is "
-                                    "named by the line it sits on.",
+                                    + f", and nothing checks {them}. "
+                                    + f"`gate import codeowners` reads {them} as a world: a path "
+                                      "no file matches, or an owner outside their zone, is "
+                                      "named by the line it sits on.",
                         "evidence": os.path.relpath(cand, base)})
             break
 

@@ -9,14 +9,14 @@
 
 // ── what this is ──
 //
-// git verifies bytes: change one and the hash changes, and any clone can check
-// it. Nothing verifies the words in a repository. A CODEOWNERS was true on the
-// day it was written; the day it stops being true is recorded nowhere. The same
-// holds for a schema, a rota, a list of who may deploy.
-// Here those words are claims. A program called the judge re-reads every claim
-// when a file changes and answers with a line number; it does nothing else. A
-// claim that stops holding is named at its line the moment it happens, not
-// months later by an audit.
+// git verifies bytes: change one and the hash changes. Nothing verifies the
+// sentences a repository runs on. Your CODEOWNERS (the file that says who owns
+// which paths) was true the day somebody wrote it, and nothing tells you the day
+// it stops. The same goes for a schema, an on-call rota, a list of who may deploy.
+//
+// What you get: the moment one of them stops being true, you are told which line,
+// in milliseconds, as you type. Today that is found by an audit, or by an
+// incident.
 //
 // ── the one thing worth running first ──
 //
@@ -27,7 +27,7 @@
 // touched by three people over five hundred commits; none of those edits was
 // checked.» A repository with little history has little to say, and the output
 // says that instead. Every sentence is marked read, not judged: no court sat on
-// it. It gives you the reading, and leaves the judging to a world you declare.
+// it. It hands you the reading; the judging waits for facts you declare.
 //
 // ── everything here is here because a row says so ──
 //
@@ -54,8 +54,9 @@
 // world on every keystroke. Clear it and it is gone.
 //
 // BREAK IT. Trying costs nothing here: a claim that does not hold is never
-// written to disk, a refusal names a line and not a person, and the foot of
-// this file says how to restore what shipped. Then break the reference beside
+// written to disk, and a refusal from the judge (the program that reads the
+// claims) names a line and not a person. The foot of this file says how to
+// restore what shipped. Then break the reference beside
 // this file: set `Does = Writes` on a verb that promises to change nothing, and
 // the certificate under it refuses at its own line.
 //
