@@ -5428,6 +5428,108 @@ public enum MyWatch: AccessLedger {
               # it counts EDITS, which is the number selections never touch
               and "cm.historySize().undo" in ui
               and "cm.undo(); render();" not in ui))
+    # ── A FILE NOBODY DECLARED IS SHOWN, NOT HIDDEN. Drop a row and the file left
+    # the rail at the very moment the verdict started talking about it: gone from the
+    # place you could click, named in the place you can only read. The rail lists
+    # what is here and undeclared, in its own quiet heading, readable and not judged,
+    # with the one gesture that changes that. The reverse gesture drops the row and
+    # leaves the file where it is, because taking a thing out of your list is not
+    # throwing it away, and the second act is nobody's to do for you.
+    undecl = os.path.join(tmp, "undeclared")
+    os.makedirs(undecl)
+    subprocess.run(["git", "init", "-q", undecl])
+    run("demo", "org", undecl)
+    open(os.path.join(undecl, "extra.swift"), "w").write(
+        "// role: forms\npublic protocol Spare {}\npublic enum Kept: Spare {}\n")
+    c, r = run("status", cwd=undecl)
+    S.append(("an undeclared file beside a declared one is named, not ignored",
+              c == 1 and any("shadow" in x["claim"] and "extra.swift" in x.get("address", "")
+                             for x in r["refusals"])))
+    c, r = run("mine", "extra.swift", "--role", "forms", cwd=undecl)
+    S.append(("declaring it from its own row makes it judged, and the shadow goes",
+              r.get("declared_in") == "gate.manifest.swift"
+              and run("status", cwd=undecl)[1].get("verdict") == "holds"))
+    c, r = run("mine", "extra.swift", "--forget", cwd=undecl)
+    S.append(("dropping the row leaves the file on disk and says so",
+              r.get("forgot") == "extra.swift"
+              and os.path.exists(os.path.join(undecl, "extra.swift"))
+              and "not throwing it away" in r.get("note", "")))
+    # ── AND THE PANEL SHOWS THE SAME DIRECTORY THE VERDICT TALKS ABOUT. The rail
+    # listed exactly the declared files, so the file the verdict was refusing sat
+    # in the directory and nowhere on the page: two answers about one file, and
+    # the friendlier one was the wrong one. Driven through the server, because
+    # what is claimed here is what the page is handed, not what the source says.
+    _s9 = _sock.socket(); _s9.bind(("127.0.0.1", 0)); _up = _s9.getsockname()[1]; _s9.close()
+    _ub = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_up)], cwd=undecl,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    seen = {}
+    try:
+        for _ in range(60):
+            try:
+                seen["before"] = json.loads(_u.urlopen(
+                    f"http://127.0.0.1:{_up}/files", timeout=1).read()); break
+            except Exception:
+                time.sleep(0.1)
+        seen["text"] = _u.urlopen(
+            f"http://127.0.0.1:{_up}/world?f=extra.swift", timeout=5).read().decode()
+        kept = open(os.path.join(undecl, "gate.manifest.swift"), encoding="utf-8").read()
+        def declare(qs):
+            try:
+                return 200, _u.urlopen(_u.Request(f"http://127.0.0.1:{_up}/declare?{qs}",
+                                                  method="PUT"), timeout=5).read()
+            except Exception as e:
+                return getattr(e, "code", "err"), getattr(e, "file", None) and e.read() or b"{}"
+        seen["nameless"] = declare("f=extra.swift")[0]
+        seen["unmoved"] = open(os.path.join(undecl, "gate.manifest.swift"),
+                               encoding="utf-8").read() == kept
+        seen["said"] = json.loads(declare("f=extra.swift&role=forms")[1])
+        seen["after"] = json.loads(_u.urlopen(
+            f"http://127.0.0.1:{_up}/files", timeout=5).read())
+        # ── AND THE WAY BACK IS THE FILE ITSELF. The row went in through a gesture.
+        # Taking it out is deleting four lines in a file open in the editor, which
+        # is the same write every other edit on that page makes. If that did not
+        # put the file back where it started, the gesture would be a one-way door
+        # dressed as a line of text.
+        seen["rows"] = open(os.path.join(undecl, "gate.manifest.swift"),
+                            encoding="utf-8").read().split("\n")
+        man = "\n".join(seen["rows"])
+        cut = man.split("public enum Extra: Mine {")[0] + man.split('{ "extra.swift" } }')[1]
+        _u.urlopen(_u.Request(f"http://127.0.0.1:{_up}/world?f=gate.manifest.swift",
+                              data=cut.encode(), method="PUT"), timeout=10).read()
+        seen["back"] = json.loads(_u.urlopen(
+            f"http://127.0.0.1:{_up}/files", timeout=5).read())
+    finally:
+        _ub.terminate()
+    S.append(("a file nobody declared is on the page, apart from the ones that are",
+              seen.get("before", {}).get("undeclared") == ["extra.swift"]
+              and "extra.swift" not in (seen.get("before", {}).get("files") or [])))
+    S.append(("and it can be read there, because it is on the disk either way",
+              "public protocol Spare" in seen.get("text", "")))
+    S.append(("the row is written only when a court is named, and nothing moves until",
+              seen.get("nameless") == 400 and seen.get("unmoved") is True))
+    lines = seen.get("rows") or [""]
+    S.append(("declaring from the panel writes the row and says which line to look at",
+              seen.get("said", {}).get("wrote_in") == "gate.manifest.swift"
+              and "Extra" in lines[seen.get("said", {}).get("at_line", 0) - 1]
+              and "extra.swift" in (seen.get("after", {}).get("files") or [])
+              and (seen.get("after", {}).get("undeclared") or []) == []))
+    S.append(("deleting the row is the way back, and the file returns to the list of the undeclared",
+              (seen.get("back", {}).get("undeclared") or []) == ["extra.swift"]
+              and "extra.swift" not in (seen.get("back", {}).get("files") or [])
+              and os.path.exists(os.path.join(undecl, "extra.swift"))
+              # and the page reads the list again when the list is what was written,
+              # so the file moves while you watch instead of at the next reload
+              and "if (active === layoutFile) await readFiles();" in ui))
+
+    S.append(("the page offers that gesture where the file is read, in the gesture register",
+              "openUndeclared" in ui and "/declare?f=" in ui
+              # and a page that writes a row says it is writing: reads do not write
+              and 'method: "PUT" });' in ui.split('"/declare?f="')[1][:400]
+              and 'class="gesture declare-as"' in ui
+              # and the reading behind both the refusal and the rail is one reading
+              and "def undeclared_here" in gate_src
+              and gate_src.count("a world file the manifest never declares") == 1))
+
     # ── AND THE VIEW IS THE READER'S. Opening somebody's page threw the reader back
     # to Full whatever they had been reading in: pick Bare or Table, click a shelf
     # page or a seam side, and the choice was gone. Following a name still takes

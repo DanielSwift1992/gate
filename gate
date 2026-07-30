@@ -346,17 +346,37 @@ def manifest_guards(rows=None, text=None):
     # declared ones in `stdlib/` was nobody's shadow, and this repository keeps
     # every one of its worlds there. The walk goes wherever a row points, which is
     # the only set of directories this document speaks about at all.
-    spoken = {d} | {os.path.dirname(os.path.join(d, r["path"]))
-                    for r in (live or []) if r.get("path")}
+    # one reading of what is here and undeclared, shared with the panel: the guard
+    # refuses it, the rail offers the row that would end the refusal
+    for rel in undeclared_here():
+        bad.append({"address": rel,
+                    "claim": "a world file the manifest never declares: a shadow outside the judged list"})
+    return bad
+
+
+def undeclared_here():
+    # ── WHAT IS HERE AND NOBODY DECLARED. The shadow guard already walks exactly this
+    # set to refuse it, and the panel had no way to show it: drop a row and the file
+    # left the rail at the moment the verdict began naming it, gone from the place you
+    # could click and present in the place you can only read. One reading, two uses:
+    # the guard says it is not judged, the rail says it is here and offers the row.
+    if not MANIFEST:
+        return []
+    d = os.path.dirname(MANIFEST["manifest"])
+    rows = MANIFEST.get("rows") or []
+    declared = ({os.path.join(d, r["path"]) for r in rows if r.get("path")}
+                | {MANIFEST["manifest"], os.path.join(d, "gate.swift"),
+                   os.path.join(d, "gate.policy.swift")})
+    spoken = {d} | {os.path.dirname(os.path.join(d, r["path"])) for r in rows if r.get("path")}
+    out = []
     for dd in sorted(spoken):
         if not os.path.isdir(dd):
             continue
         for f in sorted(os.listdir(dd)):
             p = os.path.join(dd, f)
             if f.endswith(".swift") and p not in declared and not is_seam_side(p):
-                bad.append({"address": os.path.relpath(p, d),
-                            "claim": "a world file the manifest never declares: a shadow outside the judged list"})
-    return bad
+                out.append(os.path.relpath(p, d))
+    return out
 
 
 def law_notes(*texts):
@@ -5232,6 +5252,9 @@ def cmd_serve(a):
     #                                when the judge holds)
     #   PUT  /value?name=N&to=K      say a value: the declaration goes in a file
     #                                of mine, never in the world that ships it
+    #   PUT  /declare?f=name&role=R  declare a file that is here and undeclared:
+    #                                the row goes in your manifest, and the answer
+    #                                says which file and line to look at
     # Loopback only, no caching, and no route reaches outside the repository.
     from http.server import BaseHTTPRequestHandler, HTTPServer
     from urllib.parse import urlparse, parse_qs
@@ -5374,6 +5397,7 @@ def cmd_serve(a):
                     lay = (os.path.relpath(MANIFEST["manifest"],
                                            os.path.dirname(os.path.abspath(FACTS)))
                            if MANIFEST and os.path.exists(MANIFEST["manifest"]) else None)
+                    here_undeclared = undeclared_here()
                     forms_rows = [r["path"] for r in
                                   ((MANIFEST.get("rows") if MANIFEST else None) or [])
                                   if r["role"] == "forms" and r["path"] in names]
@@ -5420,6 +5444,13 @@ def cmd_serve(a):
                     body = json.dumps({"files": names,
                                        "layout": lay if lay in names else None,
                                        "forms": forms_rows,
+                                       # here and nobody declared: readable, not
+                                       # judged, and one gesture from being either
+                                       "undeclared": here_undeclared,
+                                       # and the courts a row may name, said once,
+                                       # here, so the page never keeps a second list
+                                       # of them to drift from this one
+                                       "roles": ROLES,
                                        "opens": opens,
                                        "seams": seam_rows,
                                        "overridden": overridden,
@@ -5522,6 +5553,11 @@ def cmd_serve(a):
             named = dict(bench_files())
             if q.get("f", "") in named:
                 return named[q["f"]]
+            # ── AND A FILE NOBODY DECLARED IS STILL A FILE THAT IS HERE. It cannot be
+            # judged, and refusing to show it as well would leave a person reading
+            # about a file in the verdict with no way to look at it.
+            if q.get("f", "") in undeclared_here():
+                return os.path.join(os.path.dirname(MANIFEST["manifest"]), q["f"])
             if FACTS and os.path.exists(FACTS):
                 return FACTS
             return next((p for _, p in bench_files() if os.path.exists(p)), FACTS)
@@ -5537,6 +5573,40 @@ def cmd_serve(a):
             self.fresh_layout()
             u = urlparse(self.path)
             q = {k: v[0] for k, v in parse_qs(u.query).items()}
+            if u.path == "/declare":
+                # ── AND THE GESTURE IS A ROW, WRITTEN WHERE YOU CAN READ IT. This
+                # page may not hold state the files do not hold: what a person
+                # sees here is their repository, and a button that changed the
+                # world through a channel outside it would be exactly the drift
+                # this tool exists against. So declaring is `gate mine PATH
+                # --role R`, the verb already spelled, and the answer says which
+                # file it wrote and at which line, so the panel can put you in
+                # front of the line rather than announce it in a bar that fades.
+                # Taking the row back needs nothing from here: it is a line in a
+                # file open in this editor, and deleting a line is deleting a line.
+                rel, role = q.get("f", ""), q.get("role", "")
+                d = os.path.dirname(MANIFEST["manifest"]) if MANIFEST else "."
+                if rel not in undeclared_here():
+                    out = {"asks": True, "note": f"{rel} is not an undeclared file here"}
+                elif role not in ROLES:
+                    out = {"asks": True, "roles": ROLES,
+                           "note": "a row says which court reads the file, and this says none"}
+                else:
+                    out = cmd_side([os.path.join(d, rel), "--role", role], "Mine")
+                    globals()["MANIFEST"] = read_manifest(d)
+                    mp = out.get("declared_in")
+                    said = next((r for r in ((MANIFEST or {}).get("rows") or [])
+                                 if r["path"] == rel), None)
+                    if mp and said:
+                        out["wrote_in"] = os.path.relpath(mp, d)
+                        out["at_line"] = said["line"]
+                body = json.dumps(out, ensure_ascii=False).encode()
+                self.send_response(200 if out.get("wrote_in") else 400)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                self.wfile.write(body)
+                return
             if u.path == "/value":
                 # ── SAYING A VALUE IS WRITING A DECLARATION IN A FILE OF MINE.
                 # The bench could show what a world holds and never let anybody

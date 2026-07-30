@@ -385,6 +385,12 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
    the bench's own voice reads as an opinion; it is a reading. */
 #status{font-family:var(--mono);font-variant-numeric:tabular-nums}
 #status b{color:var(--ink);font-weight:600}
+/* the courts a row may name, offered where the file is being read. A gesture
+   wears the gesture register and nothing else: the name colours say whose wire a
+   name is, and pressing a word is not a name. */
+#status a.declare-as{color:var(--action);text-decoration:none;
+  border-bottom:1px dashed var(--action);padding-bottom:var(--tight)}
+#status a.declare-as:hover{background:color-mix(in srgb,var(--action) 15%,transparent)}
 #verdicts{overflow:auto;padding:var(--u) calc(var(--u)*6) calc(var(--u)*5);display:flex;flex-direction:column;gap:calc(var(--u)*2)}
 /* each refusal is a row you can aim at: it has an edge, a surface, and it
    answers to the pointer, because clicking it goes to the line */
@@ -758,6 +764,10 @@ let opensAs = {};
 // are rows of a document open on this screen, and a name the panel prints and
 // cannot open is a name a reader is asked to take on trust.
 let seamRows = [];
+// files that are here and no row names: readable, unjudged, one row from either.
+// The courts a row may name come with the list, so this page keeps no second copy
+// of them to drift from the tool's.
+let undeclaredFiles = [], roleWords = {}, undeclaredView = null;
 // ── WHAT IS BEING READ, AND ON WHOSE AUTHORITY. A file of theirs opened here is
 // a reading, and a reading is not a trial: judgement has no jurisdiction outside
 // the gate, which is the same law `drift` lives by. Opening the corpus without
@@ -864,6 +874,78 @@ function buildRail() {
             list.appendChild(r);
         }
     }
+    // ── AND A FILE NOBODY DECLARED IS STILL HERE, so the rail says it is. Until
+    // now the list showed exactly what the manifest declared, which meant a file
+    // you had just written sat in your directory, absent from the one place that
+    // is meant to be an account of the directory, while the verdict named it as a
+    // shadow. Two answers about one file, and the friendlier one was the wrong
+    // one. It is listed apart because that difference is the whole point: it is
+    // here, and no court reads it.
+    if (undeclaredFiles.length) {
+        const head = document.createElement("div");
+        head.className = "folder caption";
+        head.textContent = "not declared";
+        list.appendChild(head);
+        for (const f of undeclaredFiles) {
+            const r = document.createElement("div");
+            r.className = "file fact nested" + (undeclaredView === f ? " on" : "");
+            r.title = "Here in the world, and no row names it. Nothing judges it until one does.";
+            r.innerHTML = '<span class="dot"></span><span class="name">'
+                + esc(f.split("/").pop()) + "</span>";
+            r.onclick = () => { const from = navHere(); openUndeclared(f); recordJump(from); };
+            list.appendChild(r);
+        }
+    }
+}
+
+// ── reading one, and the row that would end the reading. The file opens as what
+// it is: yours, here, and outside every court, so it is shown and not judged. The
+// gesture writes a row into your manifest and then puts you in front of the line
+// it wrote, because a change this page makes to your repository has to be a change
+// you can read, in the file that holds it. Taking it back needs nothing from here:
+// the line is in a file open in this editor, and deleting a line is deleting a line.
+async function openUndeclared(f) {
+    const text = await (await fetch("/world?f=" + encodeURIComponent(f))).text();
+    active = ""; viewingShelf = f; undeclaredView = f;
+    document.getElementById("fname").textContent = f;
+    document.getElementById("fname").style.display = "";
+    setMode(mode);
+    cm.setValue(text);
+    cm.setOption("readOnly", true);
+    refLabel = "<b>" + esc(f) + "</b> \u00b7 here, and no row names it, so nothing reads it. "
+        + "A row says which court does: "
+        + Object.keys(roleWords).map(k => '<a href="#" class="gesture declare-as" data-role="'
+            + esc(k) + '" title="' + esc(roleWords[k]) + '">' + esc(k) + "</a>").join(" \u00b7 ");
+    buildRail();
+    render();
+}
+
+document.getElementById("status").addEventListener("click", (e) => {
+    const a = e.target.closest("a.declare-as");
+    if (!a) return;
+    e.preventDefault(); declareHere(a.dataset.role);
+});
+
+async function declareHere(role) {
+    const f = undeclaredView;
+    if (!f) return;
+    // a row written into your repository is a write, and on this surface writes
+    // go by PUT: a page that changed a file behind a plain read would be one more
+    // thing happening to you without a word
+    const r = await fetch("/declare?f=" + encodeURIComponent(f) + "&role=" + encodeURIComponent(role),
+                          { method: "PUT" });
+    const said = await r.json().catch(() => ({}));
+    if (!r.ok || !said.wrote_in) {
+        document.getElementById("verdicts").innerHTML = '<div class="refusal"><code>'
+            + esc(f) + "</code> \u00b7 " + esc(said.note || "the row was not written") + "</div>";
+        return;
+    }
+    const from = navHere();
+    undeclaredView = null; refLabel = null;
+    await readFiles();
+    await loadFile(said.wrote_in);
+    reveal(said.at_line);
+    recordJump(from);
 }
 
 // ── the journal VIEW: git's own history, projected. A pure function of the
@@ -1451,7 +1533,8 @@ async function render() {
             ? refLabel
             : "<b>" + viewingShelf + ".swift</b> · a printout of what the judge carries, theirs, read-only";
         document.getElementById("chips").innerHTML =
-            '<span class="chip" style="background:var(--mist);color:var(--muted)">reference</span>';
+            '<span class="chip" style="background:var(--mist);color:var(--muted)">'
+            + (undeclaredView ? "not declared" : "reference") + "</span>";
         document.getElementById("next").textContent = "";
         document.getElementById("verdicts").innerHTML = "";
         applyMyBench();
@@ -1464,7 +1547,8 @@ async function render() {
         // nothing until it says over how much
         r.wide = r.premises; r.declarations = files.length + " files";
         r.premises = "judged together"; r.milliseconds = r.judge_ms || 0;
-        r.refusals = r.refusals.map(x => { const [f, line] = x.address.split(":"); return { file: f, line: +line, premise: x.claim }; });
+        r.refusals = r.refusals.map(x => { const [f, line] = x.address.split(":");
+                                           return { file: f, line: line === undefined ? null : +line, premise: x.claim }; });
     } else {
         r = local; r.refusals = r.refusals.map(x => ({ file: active, line: x.line, premise: x.premise }));
     }
@@ -1518,13 +1602,22 @@ async function render() {
         // the address is a fact like any other address; the judge's sentence is
         // speech, and a slot still to fill speaks in the second voice — it is
         // not a disagreement, so it never wears the first
-        row.innerHTML = '<code class="fact">' + (ref.file || active) + ":" + ref.line
+        // ── AND AN ADDRESS WITH NO LINE IS STILL AN ADDRESS. Some refusals are
+        // about a whole file rather than a line in it, and a file no row declares
+        // is the one you meet first. Pasting an absent line onto the name printed
+        // `extra.swift:NaN`, which is the tool making a machine's mistake in front
+        // of a person who came here to be told exactly where to look.
+        const at = Number.isFinite(ref.line) ? ":" + ref.line : "";
+        row.innerHTML = '<code class="fact">' + (ref.file || active) + at
             + '</code><span class="' + (cls === "pending" ? "caption" : "speech") + '">' + label + "</span>";
         row.onclick = async () => {
             navFrom = navHere();
+            // a refusal about an undeclared file opens that file, where the row it
+            // is missing is one press away: the sentence and the answer in one place
+            if (ref.file && undeclaredFiles.includes(ref.file)) { openUndeclared(ref.file); return; }
             const target = ref.file && files.includes(ref.file) ? ref.file : active;
             if (target !== active) await loadFile(target);
-            reveal(ref.line);
+            if (Number.isFinite(ref.line)) reveal(ref.line);
         };
         return row;
     };
@@ -1755,7 +1848,7 @@ function sayLanguage(name, line) {
 // the shelf, read-only: where the names your world speaks are declared
 async function openShelf(mod, name) {
     const text = await (await fetch("/shelf?m=" + encodeURIComponent(mod))).text();
-    active = ""; viewingShelf = mod; refLabel = null;   // reference, not one of your files
+    active = ""; viewingShelf = mod; refLabel = null; undeclaredView = null;   // reference, not one of your files
     document.getElementById("fname").textContent = mod + ".swift";
     document.getElementById("fname").style.display = "";
     // ── AND THE VIEW IS THE READER'S. Opening somebody's page threw the reader back
@@ -1783,7 +1876,7 @@ async function openShelf(mod, name) {
 // world is not the place to edit somebody's word about an agreement
 async function openSeamSide(file, name) {
     const text = await (await fetch("/seamside?f=" + encodeURIComponent(file))).text();
-    active = ""; viewingShelf = file;
+    active = ""; viewingShelf = file; undeclaredView = null;
     refLabel = "<b>" + esc(file) + "</b> · one side of a seam, as its own side wrote it "
         + "· theirs, read-only";
     document.getElementById("fname").textContent = file;
@@ -1824,14 +1917,7 @@ async function sayValue(name, now, cell) {
         }
         // and it is judged from here, like everything else typed on this page:
         // the file it was written in opens at the line, with the verdict under it
-        try {
-            const fl = await (await fetch("/files")).json();
-            files = fl.files || []; overridden = fl.overridden || {};
-            formsFiles = new Set(fl.forms || []);
-            opensAs = fl.opens || {};
-            seamRows = fl.seams || [];
-        } catch { }
-        buildRail();
+        try { await readFiles(); } catch { }
         await loadFile(said.file);
         reveal(said.line);
     };
@@ -2914,6 +3000,13 @@ async function tick(write) {
     if (write && holds) {
         await fetch("/world?f=" + encodeURIComponent(active), { method: "PUT", body: editor.value });
         refreshGit();
+        // ── AND THE LIST IS A FILE, so writing that file can change the list. The
+        // rows say which files are read: delete one here and its file is undeclared
+        // from that keystroke, which the rail now shows while you watch instead of
+        // at the next reload. This is the way back out of the gesture that puts a
+        // row in, and it needed no gesture of its own: deleting a line is deleting
+        // a line.
+        if (active === layoutFile) await readFiles();
     } else if (write) {
         // invalid: withhold the write, say so plainly
         const el = document.getElementById("gitstate");
@@ -2935,7 +3028,7 @@ async function siblings() {
     }
 }
 async function loadFile(name) {
-    cm.setOption("readOnly", false); viewingShelf = null; refLabel = null;
+    cm.setOption("readOnly", false); viewingShelf = null; refLabel = null; undeclaredView = null;
     active = name;
     document.getElementById("fname").textContent = name;
     buildRail();
@@ -3094,6 +3187,7 @@ async function readFiles() {
     formsFiles = new Set(fl.forms || []);
     opensAs = fl.opens || {};
     seamRows = fl.seams || [];
+    undeclaredFiles = fl.undeclared || []; roleWords = fl.roles || {};
     overridden = fl.overridden || {};
     judgeClaimAt = fl.judge_claim || null;
     buildRail();
