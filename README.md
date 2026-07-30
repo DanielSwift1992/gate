@@ -639,7 +639,7 @@ judge.js        the browser judge (byte-parity port) for the bench
 ui.html         the workbench
 codemirror.*    the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
-tests/smoke.py   the battery — 311 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 313 end-to-end checks, the definition of green
 ```
 
 ## Status
@@ -650,6 +650,18 @@ in it is paid. The judge is a native binary with a versioned verdict
 contract (canon v2); the CLI is python and will be rewritten in Swift to
 ship as a single static binary (the way git is one tool). Problems with a
 verdict are the ones we most want to hear about: see SECURITY.md.
+
+**Where it runs, measured rather than assumed.** The CLI is one python3 file and
+the bench is a page, so both go anywhere. The judge is a native binary built for
+one platform: `bin/gate-judge` here is `Mach-O arm64`, and on any other machine
+it does not execute. Where it cannot run and node is installed, the plain court
+is answered by `bin/judge-cli.js`, the same judge ported line for line and held
+to the binary byte for byte by the battery. The certificate court, which
+`judge where` answers, is the binary's alone: on a machine without one, `gate
+status` names the forms rows it could not judge instead of printing a green over
+them, and `gate --version` names the port as the court that sat. macOS is
+measured every run. Linux is the same two pieces and the same port. Windows is
+neither measured nor claimed yet.
 
 Roadmap, next: single-binary Swift CLI (Linux/Windows included) · the
 bare-Swift diff view (`gate diff` shows the stripped form, `--full` the

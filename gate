@@ -6382,9 +6382,20 @@ def judge_from():
 
 
 def judge_version():
-    # the judge has no version flag; its identity is its bytes, which is also
-    # what the README asks a reviewer to reproduce from the public corpus
+    # the judge has no version flag. Its identity is its bytes, which is also what the
+    # README asks a reviewer to reproduce from the public corpus.
+    #
+    # ── AND IT IS THE IDENTITY OF WHATEVER ANSWERS HERE. This printed the binary's
+    # digest on a machine where the binary cannot run and the port was doing the
+    # judging: the one command whose whole job is to say what judges this repository,
+    # naming a file that judged nothing. Bytes of the court that sat, or nothing.
     import hashlib
+    if JUDGE_KIND != "binary":
+        try:
+            with open(os.path.join(_HERE, "judge.js"), "rb") as f:
+                return "port sha256:" + hashlib.sha256(f.read()).hexdigest()[:12]
+        except OSError:
+            return "port"
     try:
         with open(JUDGE, "rb") as f:
             return "sha256:" + hashlib.sha256(f.read()).hexdigest()[:12]
@@ -6432,9 +6443,17 @@ def main():
                  if court_shape() else "")
               + ("\n  judge built from verification-is-identification " + came[:12]
                  + ". `bin/build-judge.sh " + came[:12] + "` reproduces these bytes"
-                 if came else
+                 if came and JUDGE_KIND == "binary" else
                  "\n  the revision this judge was built from is not recorded: "
-                 "`bin/build-judge.sh` writes it down"))
+                 "`bin/build-judge.sh` writes it down" if JUDGE_KIND == "binary" else "")
+              + ("\n  the plain court is answered by the port under node "
+                 + (subprocess.run([shutil.which("node"), "--version"], capture_output=True,
+                                   text=True).stdout.strip() or "")
+                 + ", a line-for-line port of the same judge, held to it by parity on every "
+                   "run of the battery. The certificate court is the binary's, and "
+                 + ("the binary here was built for another platform"
+                    if os.path.exists(JUDGE) else "there is no binary here")
+                 if JUDGE_KIND == "port" else ""))
         return
     as_json = "--json" in args
     args = [a for a in args if a != "--json"]

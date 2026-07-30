@@ -372,6 +372,20 @@ def main():
     wp = subprocess.run(["node", os.path.join(HERE, "bin", "judge-cli.js"), "judge", "where",
                          os.path.join(HERE, "stdlib", "bench-metrics.swift")],
                         capture_output=True, text=True)
+    # AND THE ONE COMMAND WHOSE JOB IS TO SAY WHAT JUDGES THIS REPOSITORY SAYS WHICH
+    # ONE. It printed the binary's digest on a machine where the binary cannot run and
+    # the port was doing the judging: a file that judged nothing, named as the court.
+    vsrc = open(GATE, encoding="utf-8").read()
+    S.append(("the version names the court that sat, not the file beside it",
+              'if JUDGE_KIND != "binary":' in vsrc.split("def judge_version")[1][:600]
+              and "port sha256:" in vsrc
+              and "the plain court is answered by the port under node" in vsrc))
+    # and the README says where this runs, with the unmeasured platform named as such
+    rd = open(os.path.join(HERE, "README.md"), encoding="utf-8").read()
+    S.append(("the cover says where it runs, and calls the unmeasured platform unmeasured",
+              "Where it runs, measured rather than assumed" in rd
+              and "Windows is\nneither measured nor claimed yet" in rd
+              and "judge-cli.js" in rd))
     S.append(("the port refuses to stand in for the certificate court",
               wp.returncode == 2 and "not in this port" in wp.stderr and not wp.stdout.strip()))
 
