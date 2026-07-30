@@ -1,4 +1,4 @@
-// gate stdlib verbs v1: every verb this tool answers to, as records
+// gate stdlib verbs v1: every verb this tool accepts, as records
 // role: forms
 // opens: bare
 // written in `gate stdlib show forms-tool`
@@ -38,7 +38,7 @@ public enum Demo: Verb {
 }
 extension Demo { public static var typeName: String { "demo" } }
 
-/// the act of entry: the hook wires itself, and this letter lands, yours
+/// the hook wires itself, and readme.swift lands, yours
 public enum Init: Verb {
     public typealias Does = Writes
     public typealias Under = NoCourt
@@ -75,7 +75,7 @@ public enum Survey: Verb {
 }
 extension Survey { public static var typeName: String { "survey" } }
 
-/// what a library has been, observed and never judged: no court sat, so no verdict
+/// what a library has been, observed and never judged: no check ran, so no verdict
 public enum Drift: Verb {
     public typealias Does = Reads
     public typealias Under = NoCourt
@@ -84,7 +84,7 @@ extension Drift { public static var typeName: String { "drift" } }
 
 // ── asking a world ──
 
-/// may this person read this document, answered against the file itself
+/// may this person read this document, checked against the file itself
 public enum Check: Verb {
     public typealias Does = Reads
     public typealias Under = PlainCourt
@@ -124,7 +124,7 @@ public enum Guard: Verb {
 }
 extension Guard { public static var typeName: String { "guard" } }
 
-/// the domain crystal: forms, axes, seed coverage, and set operations between two
+/// the forms and axes of a domain, and what two libraries share
 public enum Library: Verb {
     public typealias Does = Asked
     public typealias Under = NoCourt
@@ -156,7 +156,7 @@ extension My { public static var typeName: String { "my" } }
 
 // ── two sides, and the one court over the pair ──
 
-/// the act of entry: a view of what you publish, or of what your build carries
+/// print your side: what you publish, or what your build carries
 public enum Declare: Verb {
     public typealias Does = Asked
     public typealias Under = NoCourt
@@ -170,7 +170,7 @@ public enum Seam: Verb {
 }
 extension Seam { public static var typeName: String { "seam" } }
 
-/// what waits for a WORD, not what changed: who owes whom a sentence
+/// what waits for a word, not what changed: who owes whom a sentence
 public enum Attention: Verb {
     public typealias Does = Reads
     public typealias Under = WhereCourt

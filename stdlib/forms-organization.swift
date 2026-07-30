@@ -1,6 +1,6 @@
-// gate stdlib forms-organization v1: people, the places they work, and the
+// gate stdlib forms-organization v1: people, departments, and who reads what
 // role: forms
-// documents those places own. This is the vocabulary `gate import` prints a
+// This is the vocabulary `gate import` prints a
 // world in: the forms and the axes, with no facts of anyone's in it.
 //
 // A genre is the unit that ships. Everything a world of this kind can say is

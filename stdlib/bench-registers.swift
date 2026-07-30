@@ -1,4 +1,4 @@
-// gate stdlib bench-registers v1: the faces this page speaks in.
+// gate stdlib bench-registers v1: the type sizes the page uses, as declarations
 // role: gate's own
 // A register is what a thing IS, said once: a face, a size, and how far one
 // line stands from the next. The page had been restating them instead:

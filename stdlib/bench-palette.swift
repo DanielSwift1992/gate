@@ -1,4 +1,4 @@
-// gate stdlib bench-palette v1: the palette as a judged world.
+// gate stdlib bench-palette v1: the colours the page may use, with contrast checks
 // role: gate's own
 // Levels of light on a 0..1000 scale (a tenth of a percent), spelled on this
 // file's own ladder from Unit: the built-in U stay symbolic, so a world
@@ -114,7 +114,7 @@ extension Opposed: Opposite
 where AY == Plus<AX, Plus<Unit, Aslack>>,
       BX == Plus<BY, Plus<Unit, Bslack>> {}
 
-// ── the light theme the page wears ──
+// ── the light theme ──
 public typealias InkLitX = Plus<W2, W8>
 public typealias InkLitY = Plus<W2, W8>
 public typealias InkLitZ = Plus<Unit, Plus<W2, W8>>
@@ -155,7 +155,7 @@ public typealias SelectLitX = Plus<W2, Plus<W4, Plus<W128, W512>>>
 public typealias SelectLitY = Plus<W8, Plus<W32, Plus<W128, W512>>>
 public typealias SelectLitZ = Plus<W4, Plus<W32, Plus<W64, Plus<W128, W512>>>>
 
-// ── the dark theme the dark canvas wears ──
+// ── the dark theme ──
 public typealias InkDimX = Plus<W2, Plus<W4, Plus<W8, Plus<W64, W512>>>>
 public typealias InkDimY = Plus<Unit, Plus<W4, Plus<W8, Plus<W32, Plus<W64, W512>>>>>
 public typealias InkDimZ = Plus<W4, Plus<W32, Plus<W128, W512>>>
@@ -278,8 +278,8 @@ public typealias SeamUnderMuted_dim = Brighter<MutedDimY, SeamDimY, Plus<W32, W6
 public typealias SelectOverMist_lit = Brighter<MistLitY, SelectLitY, Plus<W8, Plus<W16, Plus<W32, W128>>>>
 public typealias SelectOverMist_dim = Brighter<SelectDimY, MistDimY, Plus<Unit, W8>>
 
-// ── the two questions a name's hue answers, held apart by name. Whose source it
-// is (mine against theirs) and, where a verdict speaks, that against theirs:
+// ── the two questions a name's hue is read for, held apart by name. Whose source it
+// is (mine against theirs) and, where a verdict is shown, that against theirs:
 // these are the pairs a reader must never confuse, so they are the pairs the
 // world states a floor for. The floors are today's distances: a drift below any
 // of them turns this repository red at the line rather than in somebody's eye.

@@ -299,7 +299,7 @@ def manifest_guards(rows=None, text=None):
             bad.append({"address": f"{man}:{r['line']}",
                         "claim": f"the manifest declares {r['path']}, and no such file exists: "
                                  "either the file is gone or the row is, and a row for a file "
-                                 "nobody has is a court sitting over nothing"})
+                                 "nobody has is a court with nothing to check"})
     # ── AND A PAGE MAY NOT SAY IN PROSE WHAT ITS ROW DOES NOT DECLARE. Whose words
     # a page is written in decides which laws its certificates are judged under, and
     # it lived in a comment in the page's own head — the one fact in this document
@@ -810,12 +810,12 @@ if JUDGE_KIND is None:
         "here does not run"
         + ("" if os.path.exists(JUDGE) else " (and bin/gate-judge is missing)")
         + ". Build it with bin/build-judge.sh, set GATE_JUDGE, or install node so the "
-          "port can answer the plain court.")
+          "port can serve the plain court.")
 # the name of the court that answered, said wherever a verdict is printed: a tool
 # that quietly swapped one arbiter for another would be the second truth it exists
 # against
 JUDGE_SAID = ("the judge" if JUDGE_KIND == "binary" else
-              "the port under node, which answers the plain court only")
+              "the port under node: plain court only")
 
 
 def judge_call(args, **kw):
@@ -2700,7 +2700,7 @@ def cmd_stdlib(a):
             f.write(STDLIB[name])
         return {"command": "stdlib materialize", "wrote": path,
                 "note": "a printout, not a source. These words are carried by the judge we ship: "
-                        "the world can speak them with this file absent, and editing this copy "
+                        "the world uses them with this file absent, and editing this copy "
                         "adds no word to the language. It is here to be READ",
                 "next": "gate --version names the revision they were compiled from. That, and "
                         "not this file, is the thing your world depends on"}
@@ -3023,7 +3023,7 @@ def vendored_guards():
     if not _binary_runs(binp):
         return [{"address": ".gate/bin/gate-judge",
                  "claim": "the carried judge matches its recorded digest and does not run on "
-                          "this machine: it was built for another platform. The port answers "
+                          "this machine: it was built for another platform. The port serves "
                           "the plain court where node is installed, and `bin/build-judge.sh` "
                           "builds a judge that runs here"}]
     return []
@@ -4125,7 +4125,7 @@ def cmd_attention(a):
             "known": known_mine + known_theirs + known_part,
             "expired": expired_mine + expired_theirs + expired_part,
             "stated": len(stated), "claimed": len(claims),
-            "note": ("a standing account of who owes whom a word. An unanswered axis sits with "
+            "note": ("a standing account of who owes whom a word. An unanswered axis stays with "
                      "whoever owes the answer, so this reads the same from either side" + (", and a divergence somebody declared is set aside while the "
                      "thing it cites is open, and comes back when that closes" if known else "")),
             "next": ("answer the first line above, or declare the divergence with something that can "
@@ -6446,7 +6446,7 @@ def main():
                  if came and JUDGE_KIND == "binary" else
                  "\n  the revision this judge was built from is not recorded: "
                  "`bin/build-judge.sh` writes it down" if JUDGE_KIND == "binary" else "")
-              + ("\n  the plain court is answered by the port under node "
+              + ("\n  the plain court is served by the port under node "
                  + (subprocess.run([shutil.which("node"), "--version"], capture_output=True,
                                    text=True).stdout.strip() or "")
                  + ", a line-for-line port of the same judge, held to it by parity on every "

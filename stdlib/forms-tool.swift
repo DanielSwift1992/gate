@@ -1,13 +1,14 @@
-// gate stdlib forms-tool v1: the words a tool's own surface is written in
+// gate stdlib forms-tool v1: the types readme.swift and verbs.swift are written in
 // role: forms
 // A verb is a record like any other: what it touches, and which court it calls.
 // These axes make a reference table a world rather than a list. One law stands
 // over them: a verb that changes nothing may be run on anybody's clone, at any
 // moment.
 
-// Which court answers: `plain` reads a world of facts, `where` reads a grammar
-// and the certificates over it, and some verbs call no court and say so. An
-// observation is not a verdict, and a verb that judges nothing may not wear one.
+// Which court a verb calls. `plain` checks facts in a world file. `where`
+// checks the grammar and its certificates. Some verbs check nothing and say
+// so: an observation is not a verdict, so a verb that judges nothing lists
+// no court.
 public protocol Court {}
 public enum PlainCourt: Court {}
 public enum WhereCourt: Court {}

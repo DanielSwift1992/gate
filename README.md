@@ -168,7 +168,7 @@ Or start from your own rows:
 
 ```sh
 git init myworld && cd myworld
-gate init .                      # the hook wires itself, and a letter lands: yours
+gate init .                      # the hook wires itself, and readme.swift lands: yours
 mkdir tables                     # your own data, any source, and nothing else
 cp ~/exports/people.csv tables/
 cp ~/exports/grants.csv tables/
@@ -180,7 +180,7 @@ reads the repository itself, with nothing to translate.
 
 **Full**, **Bare** and **Table** are three ways to look at one file, and a file
 may say which of them it should first be met in — `// opens: bare` in its own
-head line, the same act as `// role:` one line above it. A letter opened in
+head line, the same act as `// role:` one line above it. A readme opened in
 Full reads as code; a ledger opened in Bare reads as prose. The bench opens on
 the first row your layout declares, so the front door is whichever file you put
 first.
@@ -259,11 +259,11 @@ Nothing appears in the rail because it was lying in the folder. `gate declare
 carrier … --theirs` writes the row for you, taking the pin from the `against`
 block the declaration already carries — nobody types a second copy of a fact.
 
-**The words a world speaks are not a file at all.** `Department`, `Ranked`,
-`Site` are not files your world is made of. A world speaks them with no file of
+**The words a world is written in are not files at all.** `Department`, `Ranked`,
+`Site` are not files your world is made of. A world uses them with no file of
 that name anywhere near it; a copy put beside the world is read by nothing; and
 a copy declared as a world row is refused — not because the words live anywhere
-privileged, but because the judge's FRAGMENT knows five shapes and `public
+privileged, but because the judge's FRAGMENT reads five shapes and `public
 protocol` is not one of them. A world is records; forms are the grammar records
 are written in. `gate stdlib` prints, and what it prints is a
 printout. `gate --version` names the revision those words were compiled from, and
@@ -384,7 +384,7 @@ head. A refusal points at its address instead.
   openapi.json --client ./sdk` measures a world that has not entered: the day
   the contract first declared a name, the day the library first wrote it, the
   names no walked file writes, the routes no walked file spells. It prints no
-  verdict, because no court sat — nothing outside the gate can be judged, since
+  verdict, because no check ran: nothing outside the gate can be judged, since
   nobody there has spoken for anything. Each line says which kind of fact it is:
   a commit is an object and carries its own hash; an absence is a walk and
   carries its bounds. On weaviate's TypeScript client it reads: behind on 24 of
@@ -395,8 +395,8 @@ head. A refusal points at its address instead.
   commit that touched the world back through the same judge until one does not
   hold, so the days on it are earned rather than declared. It will not say "no
   silent error", because that is precisely what nobody saw. It speaks for a
-  world, and for nothing else: a badge over an observation would be a verdict
-  wearing a number, and no court sat.
+  world, and for nothing else: a badge over an observation would be a number
+  with no check behind it.
 - **And judgement begins at the gate.** `gate declare` is the crossing: a
   contract emits a view of the document it publishes, a library emits — from its
   own build, with its own tools — a small declaration of what it carries, and
@@ -419,7 +419,7 @@ head. A refusal points at its address instead.
 - **And what waits for a word is a different question from what changed.** History
   is git's, and anybody can arrange it for themselves; `gate attention` is the
   other cut — a standing account of who owes whom a sentence. It is two-sided by
-  construction rather than by design, since an unanswered axis sits with whoever
+  construction rather than by design, since an unanswered axis stays with whoever
   owes the answer: the same movement shows a client what its contract waits for
   and the contract what the client waits for, and a sensor opens a hole for a
   technologist exactly as a client opens one for a contract.
@@ -482,7 +482,7 @@ head. A refusal points at its address instead.
   where notes do. A blank line ends a note rather than spanning it, and the
   comments that belong to nobody stay where the document put them.
 - **The theme is a declaration, not a toggle.** `MyBench` in your own world
-  states which theme the bench wears, so the choice is a fact in your git with
+  states which theme the bench uses, so the choice is a fact in your git with
   a date on it, not a setting somewhere. With nothing declared the operating
   system decides. There is no switch: a button that duplicates a declaration
   would be a second truth about it.
@@ -518,9 +518,9 @@ head. A refusal points at its address instead.
   forms are carried **by the judge we ship**, which is a differential arbiter
   for one reference world: its own header says the table it holds is that
   world's policy stated a second time, on purpose, so two encodings can check
-  each other. A world speaks `Department` with no file of that name beside it,
+  each other. A world uses `Department` with no file of that name beside it,
   `gate --version` names the revision, and a copy of the printout declared as a
-  world row is refused — because the judge's fragment knows five file shapes and
+  world row is refused — because the judge's fragment reads five file shapes and
   `public protocol` is not one of them. Forms of
   your **own** are presented by file and judged as a `forms` row: invent a
   word in your fork, say something true about it and it holds, say something
@@ -573,7 +573,7 @@ grep -nE "XMLHttpRequest|new WebSocket|fetch\(['\"]https?:" ui.html judge.js
 grep -n 'HTTPServer((' gate                 # 127.0.0.1
 lsof -iTCP -sTCP:LISTEN -P | grep 4744      # while `gate serve` runs
 
-# 4. the judge binary links nothing that speaks a network
+# 4. the judge binary links nothing that opens a socket
 otool -L bin/gate-judge                     # ldd on Linux
 
 # 5. build the judge yourself and compare: it comes from a public corpus
@@ -639,7 +639,7 @@ judge.js        the browser judge (byte-parity port) for the bench
 ui.html         the workbench
 codemirror.*    the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
-tests/smoke.py   the battery — 317 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 318 end-to-end checks, the definition of green
 ```
 
 ## Status
@@ -657,9 +657,9 @@ one platform: `bin/gate-judge` here is `Mach-O arm64`, and on any other machine
 it does not execute. Where it cannot run and node is installed, the plain court
 is answered by `bin/judge-cli.js`, the same judge ported line for line and held
 to the binary byte for byte by the battery. The certificate court, which
-`judge where` answers, is the binary's alone: on a machine without one, `gate
+`judge where` runs, is the binary's alone: on a machine without one, `gate
 status` names the forms rows it could not judge instead of printing a green over
-them, and `gate --version` names the port as the court that sat. macOS is
+them, and `gate --version` names the port as the court that ran. macOS is
 measured every run. Linux is the same two pieces and the same port. Windows is
 neither measured nor claimed yet.
 

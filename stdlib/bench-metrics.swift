@@ -1,4 +1,4 @@
-// gate stdlib bench-metrics v1: distance as a judged relation.
+// gate stdlib bench-metrics v1: the spacing steps, and a check on every gap
 // role: gate's own
 // The base is the reading line: an instrument for reading measures its
 // spacing in the letter it sets. One step is a tenth of that line, and every

@@ -1,4 +1,4 @@
-// gate stdlib forms-grants v1: the domain genre, one page
+// gate stdlib forms-grants v1: who may read which document, as records
 // role: forms
 // (exemplar: theory corpus Sources/Examples/Grants.swift @ 0fd0b38).
 // Realms are declared atoms, and the fourth is one line rather than a schema change.

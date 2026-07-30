@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # The regression battery: every verb, end to end, in a throwaway repo.
 # Run: python3 tests/smoke.py
-import ast, json, os, re, shutil, subprocess, sys, tempfile, time
+import ast, glob, io, json, os, re, shutil, subprocess, sys, tempfile, time, tokenize
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GATE = os.path.join(HERE, "gate")
@@ -376,10 +376,10 @@ def main():
     # ONE. It printed the binary's digest on a machine where the binary cannot run and
     # the port was doing the judging: a file that judged nothing, named as the court.
     vsrc = open(GATE, encoding="utf-8").read()
-    S.append(("the version names the court that sat, not the file beside it",
+    S.append(("the version names the court that ran, not the file beside it",
               'if JUDGE_KIND != "binary":' in vsrc.split("def judge_version")[1][:600]
               and "port sha256:" in vsrc
-              and "the plain court is answered by the port under node" in vsrc))
+              and "the plain court is served by the port under node" in vsrc))
     # and the README says where this runs, with the unmeasured platform named as such
     rd = open(os.path.join(HERE, "README.md"), encoding="utf-8").read()
     S.append(("the cover says where it runs, and calls the unmeasured platform unmeasured",
@@ -5428,6 +5428,50 @@ public enum MyWatch: AccessLedger {
               # it counts EDITS, which is the number selections never touch
               and "cm.historySize().undo" in ui
               and "cm.undo(); render();" not in ui))
+    # ── NAMES STAY NAMES, VERBS BECOME MECHANICS. `court`, `judge`, `verdict` are
+    # types and belong in the vocabulary; the verbs around them had been theatrical —
+    # courts answered and sat, verdicts spoke, pages wore themes. The rule was
+    # written down and swept once by hand, and five new instances appeared in one
+    # night, on the two hands that wrote the rule. A law announced and unchecked
+    # decays into the habit it replaced, so it is checked here.
+    #
+    # PAIRED, because no word is banned: a person answers, a side waits for a word
+    # (V=I's own reading of |S| > 1), a socket listens. What is refused is a
+    # MECHANISM given a voice, in either direction, over the same surfaces the
+    # retired word is held to: the tool's own strings, the shelf, and the cover.
+    AGENT = (r"court|judge|verdict|world|port|row|axis|grammar|register|page|bench|hue|library")
+    THEATRE = (r"answers?(?! for)|answered(?! for)|speaks?|spoke|speaking|sits?|sat|sitting|"
+               r"wears?|wearing|wear\b|waits?|waiting|pretends?|hands you|knows|remembers")
+    FORWARD = re.compile(rf"\b(?:{AGENT})s?\b[^.\n]{{0,28}}?\b(?:{THEATRE})\b", re.I)
+    REVERSE = re.compile(rf"\b(?:{THEATRE})\b[^.\n]{{0,28}}?\bby (?:the |a )?(?:{AGENT})\b", re.I)
+    ALLOW = ("waits for a word", "waiting for a word", "awaiting a word", "both spoke",
+             "sides spoke", "spoke and", "one is silent", "listens on the loopback",
+             "somebody answers", "answers today", "a person answers", "nobody speaks in")
+
+    def theatre_in(text, where):
+        out = []
+        for i, ln in enumerate(text.split("\n"), 1):
+            low = ln.lower()
+            if any(a in low for a in ALLOW):
+                continue
+            if FORWARD.search(ln) or REVERSE.search(ln):
+                out.append(f"{where}:{i}")
+        return out
+
+    theatre = []
+    for sp in sorted(glob.glob(os.path.join(HERE, "stdlib", "*.swift"))):
+        prose = "\n".join(l for l in open(sp, encoding="utf-8").read().split("\n")
+                          if l.strip().startswith("//"))
+        theatre += theatre_in(prose, os.path.basename(sp))
+    for tok in tokenize.generate_tokens(io.StringIO(gate_src).readline):
+        if tok.type == tokenize.STRING and len(tok.string) > 12:
+            theatre += theatre_in(tok.string.replace("\\n", "\n"), f"gate:{tok.start[0]}")
+    theatre += theatre_in(open(os.path.join(HERE, "README.md"), encoding="utf-8").read(), "README.md")
+    if theatre:
+        print("   machinery given a voice:", theatre[:6])
+    S.append(("names stay names and verbs stay mechanics, on every surface a person reads",
+              not theatre))
+
     # ── ONE NAME, ONE COLOUR, IN EVERY VIEW OF IT. A table cell wore one hue
     # whatever stood in it: the column was painted rather than the name. So a value
     # the offer showed as yours, because the offer asks where a name comes from,

@@ -1,6 +1,5 @@
-// gate stdlib forms-reference v1: a reference and the thing it refers to, as
+// gate stdlib forms-reference v1: a reference and its target, judged together
 // role: forms
-// one judged world.
 //
 // The drift here is the one everybody has and nobody checks: code cites a
 // ticket, a ticket is closed, and the citation stays. Nothing in either system

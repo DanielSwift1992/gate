@@ -1,6 +1,5 @@
-// gate stdlib forms-contract v1: a contract and the clients that carry it,
+// gate stdlib forms-contract v1: an API contract and the clients that carry it
 // role: forms
-// as one judged world.
 //
 // A contract is written once and copied into a server and into every client
 // library, and the copies drift apart quietly. Types do not prevent it: they
@@ -23,7 +22,7 @@
 // ownership door already draws: a rule reaching outside its zone is judged, a
 // pattern matching no file is named beside it.
 //
-// Both sides are declared, never read. This grammar waits for an act of
+// Both sides are declared, never read. This grammar needs an act of
 // entry: somebody says, in these words, what their library carries. It was once
 // fed by a reader that went out and inferred the client's side from its source,
 // and that was a court reasoning about a world nobody had spoken for: honest
