@@ -41,10 +41,20 @@ def say(*args, cwd=None):
 
 def main():
     tmp = tempfile.mkdtemp(prefix="gate-smoke-")
+    # ── AND THIS BATTERY DOES NOT WRITE IN THE HOUSE OF WHOEVER RUNS IT. A personal
+    # world lives in `~/.gate/me` unless `GATE_ME` says otherwise, and that was set
+    # for exactly one fixture here: every other run wrote a keyed world into the real
+    # one, four hundred and forty-eight of them by the time anybody counted. Sharing
+    # that git is also how two runs at once collide on `index.lock`, which colours a
+    # check red for a reason that has nothing to do with the code. A battery that can
+    # do that is worse than a red one: the same race can hide a real failure.
+    os.environ["GATE_ME"] = os.path.join(tmp, "me")
     repo = os.path.join(tmp, "client")
     os.makedirs(repo)
     subprocess.run(["git", "init", "-q", repo])
     S = []
+    S.append(("the battery keeps its personal worlds inside its own temp dir",
+              os.environ.get("GATE_ME", "").startswith(tmp)))
 
     c, r = run("init", repo)
     S.append(("init + hook wired", r.get("hooks") is not None))

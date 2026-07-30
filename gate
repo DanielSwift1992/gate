@@ -630,13 +630,17 @@ PERSONAL_TEMPLATE = """\
 // repository will have it, and neither will your other computer, unless you
 // give that repository a remote of your own.
 //
-// The bench itself is configured here, by declaration and not by a toggle.
-// Uncomment the lines below to wear the dark theme — the page follows the
-// declaration at once, and your git remembers the day you chose it:
+// One thing about the page, so it is not a mystery: with nothing declared it
+// follows this machine's own light or dark setting, the way anything else does.
+// Declare it and the choice is yours, and your git keeps the day you made it.
 //
 //     public enum MyBench: Bench {
 //         public typealias Theme = Dark
 //     }
+//
+// Those lines stay commented on purpose. Your first word here should be a fact you
+// care about, not the colour of a screen, and a claim we left behind would be ours
+// standing in your file.
 """
 
 
@@ -3401,11 +3405,17 @@ def declare_side(path, kind, role, frm=None, written=None):
         "// and, for anything taken, the revision it was taken at. gate obeys this\n"
         "// document and never guesses at a row.\n"
         "//\n"
+        "// If you are looking for the import: a row is the import. The judged set is\n"
+        "// what this document lists, so a file is read because it has a line here and\n"
+        "// for no other reason. The words the rows are written in are declared below,\n"
+        "// in this file, which is why nothing is fetched from anywhere.\n"
+        "//\n"
         "// It is written the way every record in this world is written: each column\n"
         "// is an axis to a declared atom, and the one string is the `typeName`\n"
         "// literal that spells a name. A revision is an atom of its own, so two\n"
         "// rows taken at the same revision say the same name, not merely the same\n"
-        "// text.\n"
+        "// text. `Written` names another row: the words a page is written in, so the\n"
+        "// two are read together.\n"
         "public protocol Role {}\n")
     # the role atom this row needs, and only that one
     atom = ROLE_ATOM[role]
