@@ -6598,9 +6598,15 @@ def judge_version():
     # naming a file that judged nothing. Bytes of the court that sat, or nothing.
     import hashlib
     if JUDGE_KIND != "binary":
+        # both courts sit in the port now, so the identity is both files:
+        # a drift in the certificate court may not hide behind an unchanged
+        # plain one
         try:
-            with open(os.path.join(_HERE, "judge.js"), "rb") as f:
-                return "port sha256:" + hashlib.sha256(f.read()).hexdigest()[:12]
+            digest = hashlib.sha256()
+            for piece in ("judge.js", os.path.join("bin", "judge-where.js")):
+                with open(os.path.join(_HERE, piece), "rb") as f:
+                    digest.update(f.read())
+            return "port sha256:" + digest.hexdigest()[:12]
         except OSError:
             return "port"
     try:

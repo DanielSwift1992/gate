@@ -10,8 +10,9 @@ gate is MIT licensed (see LICENSE). Every bundled piece is too:
 - **codemirror.js, codemirror.css**: CodeMirror 5.65.16 (MIT, © Marijn
   Haverbeke and others), vendored unmodified from the minified distribution.
   https://codemirror.net/5/
-- **judge.js**: our own line-for-line port of the corpus's judge, MIT with
-  the rest of gate. Held to the reference binary by the battery's parity
+- **judge.js, bin/judge-where.js**: our own line-for-line ports of the
+  corpus's two courts, the plain judge and WhereJudge, MIT with the rest of
+  gate. Each is held to the reference binary by the battery's parity
   vectors.
 - **stdlib/*.swift**: ours, MIT. Materialize them into your repository and
   they are yours to change; drop the header and gate stops calling them ours.

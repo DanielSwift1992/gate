@@ -23,8 +23,8 @@ the commands to verify it yourself in about a minute, offline.
 ## Scope
 
 In scope: a false verdict (a world that should be refused and holds), a
-refusal pointing at the wrong file or line, the ported browser judge
-disagreeing with the reference binary, a carried judge that is not the one
+refusal pointing at the wrong file or line, either ported court (`judge.js`,
+`bin/judge-where.js`) disagreeing with the reference binary, a carried judge that is not the one
 `.gate/README.md` states, or any outbound connection at all.
 
 Out of scope: what a translated world *means*. gate checks that your facts
