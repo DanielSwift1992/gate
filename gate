@@ -350,7 +350,9 @@ def manifest_guards(rows=None, text=None):
     # refuses it, the rail offers the row that would end the refusal
     for rel in undeclared_here():
         bad.append({"address": rel,
-                    "claim": "a world file the manifest never declares: a shadow outside the judged list"})
+                    "claim": "this file sits beside the judged ones and has no row in the "
+                             "manifest, so it is not judged. `gate mine PATH --role R` adds "
+                             "the row"})
     return bad
 
 
@@ -678,21 +680,70 @@ def personal_root():
     return os.environ.get("GATE_ME") or os.path.join(os.path.expanduser("~"), ".gate", "me")
 
 
+_origin_read = {}
+
+
+def git_home(base):
+    # the directory that holds `.git`, found by walking up the way git does.
+    # Real path, because that is what git itself prints, and this stands in for
+    # `git rev-parse --show-toplevel` where the answer is plainly on disk.
+    d = os.path.realpath(base)
+    while True:
+        g = os.path.join(d, ".git")
+        if os.path.isdir(g):
+            return d
+        if os.path.isfile(g):        # a worktree or a submodule: .git points elsewhere
+            return None
+        parent = os.path.dirname(d)
+        if parent == d:
+            return None
+        d = parent
+
+
+def origin_url(base):
+    # ── AND ASKING GIT COSTS A PROCESS. The answer takes microseconds and
+    # starting git takes ten milliseconds, and this is asked once per file the
+    # bench lists, on every request: opening one file spent most of its time
+    # launching git five times to be told the same URL, which is the pause a
+    # person feels between clicking a name and seeing the page. The URL lives in
+    # .git/config, which is a file. Its bytes are read every time, so a remote
+    # added a second ago is seen; git is asked again only when they differ.
+    home = git_home(base)
+    cfg = os.path.join(home, ".git", "config") if home else None
+    raw = None
+    if cfg and os.path.exists(cfg):
+        try:
+            raw = open(cfg, "rb").read()
+        except OSError:
+            raw = None
+    seen = _origin_read.get(cfg)
+    if raw is not None and seen and seen[0] == raw:
+        return seen[1]
+    url = subprocess.run(["git", "remote", "get-url", "origin"], cwd=base,
+                         capture_output=True, text=True).stdout.strip()
+    if raw is not None:
+        _origin_read[cfg] = (raw, url)
+    return url
+
+
 def repo_key():
     # one personal world per shared repository: the origin URL normalized (two
     # clones of one origin share a personal world), the clone's path when there
     # is no remote yet.
     base = os.path.dirname(os.path.abspath(FACTS)) if FACTS else os.getcwd()
-    url = subprocess.run(["git", "remote", "get-url", "origin"], cwd=base,
-                         capture_output=True, text=True).stdout.strip()
+    url = origin_url(base)
     if url:
         k = re.sub(r"^[a-zA-Z+]+://", "", url)
         k = re.sub(r"^[^@/]+@", "", k)
         k = re.sub(r"\.git$", "", k).replace(":", "/")
         return re.sub(r"[^A-Za-z0-9._-]", "_", k.strip("/"))
     import hashlib
-    top = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=base,
-                         capture_output=True, text=True).stdout.strip() or base
+    # the same walk, and git only where the walk cannot answer: a clone with no
+    # remote asks this for every file the bench lists, and a process to be told
+    # which directory holds the .git beside it is a process spent on nothing
+    top = git_home(base) or subprocess.run(
+        ["git", "rev-parse", "--show-toplevel"], cwd=base,
+        capture_output=True, text=True).stdout.strip() or base
     return re.sub(r"[^A-Za-z0-9._-]", "_", os.path.basename(top)) + "-" + hashlib.sha1(top.encode()).hexdigest()[:8]
 
 
@@ -4856,7 +4907,8 @@ def cmd_import_codeowners(a):
                       for p in paths)
             if not hit:
                 ghosts.append({"address": f"{os.path.basename(src)}:{r['line']}",
-                               "claim": f"a ghost path: CODEOWNERS names `{r['pattern']}`, and the tree has no such file"})
+                               "claim": f"CODEOWNERS names `{r['pattern']}`, and no file in "
+                                        "the tree matches it: the rule matches nothing"})
     return {
         "command": "import codeowners",
         "world": out_path,
@@ -4881,8 +4933,8 @@ def cmd_import_codeowners(a):
                  "when the world is built as Swift, and this run holds the zone equalities"
                  if policy else
                  "no ownership policy given (--policy owner,zone): every rule is its own "
-                 "authority, so the equalities hold trivially. The ghost paths above are "
-                 "read from the tree, not judged."),
+                 "authority, so the equalities hold trivially. The unmatched patterns above "
+                 "are read from the tree, not judged."),
     }
 
 
@@ -5286,9 +5338,23 @@ def cmd_serve(a):
             # disk, judged, and absent from the panel until the server itself
             # was restarted. A tool whose canon is that it keeps no state of its
             # own may not keep the one document that says what a world is.
+            # ── AND READING IT IS NOT PARSING IT AGAIN. This ran on every
+            # request and was most of what a request to this server cost: the
+            # page asks for five files in order to open one, and each of those
+            # answers paid for a parse of a document nobody had touched. The
+            # disk is still the authority every single time — the bytes are read
+            # here — and what is skipped is only the parse of bytes that came
+            # back identical, which cannot say anything different.
             if not FACTS:
                 return
             d = os.path.dirname(os.path.abspath(FACTS))
+            try:
+                raw = open(os.path.join(d, "gate.manifest.swift"), "rb").read()
+            except OSError:
+                raw = None
+            if raw is not None and raw == getattr(H, "_layout_read", None) and MANIFEST:
+                return
+            H._layout_read = raw
             globals()["MANIFEST"] = read_manifest(d)
 
         def do_GET(self):
@@ -6512,7 +6578,9 @@ def main():
                    "theory it comes from"
                  if court_shape() else "")
               + ("\n  judge built from verification-is-identification " + came[:12]
-                 + ". `bin/build-judge.sh " + came[:12] + "` reproduces these bytes"
+                 + ". `bin/build-judge.sh " + came[:12] + "` builds the same judge: check "
+                   "yours by running the battery with GATE_JUDGE pointing at it. The linker "
+                   "is not byte-stable, so the hash names what is here and is not the check"
                  if came and JUDGE_KIND == "binary" else
                  "\n  the revision this judge was built from is not recorded: "
                  "`bin/build-judge.sh` writes it down" if JUDGE_KIND == "binary" else "")

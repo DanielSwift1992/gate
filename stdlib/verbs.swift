@@ -1,4 +1,4 @@
-// gate stdlib verbs v1: every verb this tool accepts, as records
+// gate stdlib verbs v1: every command this tool accepts, as records
 // role: forms
 // opens: bare
 // written in `gate stdlib show forms-tool`

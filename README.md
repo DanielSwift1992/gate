@@ -621,7 +621,8 @@ gate adds no process of its own. It sits inside the four you already have:
 
 - `gate.swift` is where a world starts. Declare a multi-file layout in
   `gate.manifest.swift` and gate obeys it: judgement runs the declared
-  list, a ghost file and a shadow file are both named.
+  list, and both halves are named at their line, a row whose file is not
+  there and a file beside them with no row.
 - Tables are inputs and views, never truth: a later CSV edit cannot
   silently reprint the world.
 - Policy is a fact, so it lives beside the world in `gate.policy.swift`: an
@@ -646,7 +647,7 @@ judge.js        the browser judge (byte-parity port) for the bench
 ui.html         the workbench
 codemirror.*    the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
-tests/smoke.py   the battery — 334 end-to-end checks, the definition of green
+tests/smoke.py   the battery — 337 end-to-end checks, the definition of green
 ```
 
 ## Status

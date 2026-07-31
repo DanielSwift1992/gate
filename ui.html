@@ -1840,6 +1840,7 @@ async function openLanguage(name, line) {
     cm.setValue(text);
     cm.setOption("readOnly", true);
     buildRail();
+    render();
     reveal(line);   // a line was asked for, so this one takes Full and says so
     say(esc(name) + " is a word of the language, declared here: "
         + esc(language.file) + ":" + line + ", in the corpus this judge was built from"
@@ -1888,6 +1889,7 @@ async function openShelf(mod, name) {
     cm.setValue(text);
     cm.setOption("readOnly", true);
     buildRail();
+    render();
     // the bar already says what this is; the line says the one thing the bar
     // cannot fit — that a copy of it is not a source
     say("Your world speaks these words with no file of this name beside it, and editing a "
@@ -1912,6 +1914,7 @@ async function openSeamSide(file, name) {
     cm.setValue(text);
     cm.setOption("readOnly", true);
     buildRail();
+    render();
     if (name) {
         const i = text.split("\n").findIndex(l => new RegExp("· " + name + "$").test(l));
         if (i >= 0) reveal(i + 2);
@@ -2973,6 +2976,13 @@ cm.on("change", (_, change) => {
     if (change.origin === "+input" && /^[\w =.]+$/.test(change.text.join(""))) offerCompletion();
     else if (change.origin === "+delete") offerCompletion();
     else hideCompletion();
+    // ── AND PUTTING A FILE ON THE PAGE IS NOT SOMETHING YOU DID. Opening one
+    // set the text, and setting the text scheduled a judgement of it — while the
+    // opener was already judging it, in the right order, after the world had been
+    // read. So every click on a name paid for two verdicts and two statuses,
+    // and the second was of exactly what the first had just answered. Whoever
+    // puts text here draws it; a keystroke is the only thing this schedules.
+    if (!userEdit && change.origin === "setValue") return;
     timer = setTimeout(() => tick(userEdit), userEdit ? 400 : 150);
 });
 cm.on("blur", () => setTimeout(hideCompletion, 120));
@@ -3063,10 +3073,18 @@ async function tick(write) {
 
 async function siblings() {
     siblingNames = new Set(); layoutDecls = new Map(); declFile = new Map();
-    for (const f of files) {
-        if (f === layoutFile) continue;          // its names are the layout's, not the world's
-        const t = f === active ? editor.value : await (await fetch("/world?f=" + encodeURIComponent(f))).text();
-        const parsed = judge(f, t).parsed;
+    // ── AND THE WORLD IS ASKED FOR ALL AT ONCE. Opening one file read every
+    // other file to learn its names, one after the next, each waiting for the
+    // one before: five files meant five round trips laid end to end, and that
+    // wait was the whole of the pause between clicking a name and seeing the
+    // page. They do not depend on each other, so they are asked together and
+    // read in the order the list has, which is what keeps the answer the same.
+    const want = files.filter(f => f !== layoutFile);   // the layout's names are its own
+    const texts = await Promise.all(want.map(f =>
+        f === active ? Promise.resolve(editor.value)
+                     : fetch("/world?f=" + encodeURIComponent(f)).then(r => r.text())));
+    for (let i = 0; i < want.length; i++) {
+        const f = want[i], parsed = judge(f, texts[i]).parsed;
         if (f !== active) namesOf(parsed).forEach(n => siblingNames.add(n));
         for (const [name, d] of parsed.declarations) if (!layoutDecls.has(name)) { layoutDecls.set(name, d); declFile.set(name, f); }
     }

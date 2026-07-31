@@ -123,6 +123,29 @@ def main():
               # and the way back is said where the provenance is
               and "prints what shipped" in letter_text
               and "removes it with no trace" in letter_text))
+    # ── AND WHERE YOUR OWN WORLD LIVES IS ANSWERED BY THE DISK, NOT BY A PROCESS.
+    # This is asked once per file the bench lists, on every request, and each ask
+    # started git: opening one file spent most of its time launching git to be
+    # told the same thing, which is the pause between clicking a name and seeing
+    # the page. What matters here is that the cheap answer is the SAME answer, so
+    # it is compared against what git itself says, both ways round.
+    import hashlib as _h
+    keyrepo = os.path.join(tmp, "keyrepo")
+    os.makedirs(keyrepo)
+    subprocess.run(["git", "init", "-q", keyrepo])
+    run("demo", "org", keyrepo)
+    _, said = run("my", cwd=keyrepo)
+    top = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=keyrepo,
+                         capture_output=True, text=True).stdout.strip()
+    want = (re.sub(r"[^A-Za-z0-9._-]", "_", os.path.basename(top))
+            + "-" + _h.sha1(top.encode()).hexdigest()[:8])
+    S.append(("a personal world is placed where git says the clone is, without asking git",
+              os.path.basename(os.path.dirname(said.get("personal") or "")) == want))
+    subprocess.run(["git", "remote", "add", "origin", "https://example.com/x/y.git"], cwd=keyrepo)
+    _, moved = run("my", cwd=keyrepo)
+    S.append(("and a remote added a moment ago is seen at once: the config is read every time",
+              os.path.basename(os.path.dirname(moved.get("personal") or "")) == "example.com_x_y"))
+
     # ── AND TWO OUTWARD TEXTS MAY NOT SAY OPPOSITE THINGS. The cover carried the
     # cure this whole tool exists against, in its own voice: "gate makes one of
     # those copies the source and judges it", six lines from a letter whose third
@@ -260,7 +283,7 @@ def main():
     S.append(("manifest: the policy file is meta, not a shadow", c == 0 and r["verdict"] == "holds"))
     open(os.path.join(split, "stray.swift"), "w").write("// stray\n")
     c, r = run("status", cwd=split)
-    S.append(("manifest: shadow file named", c == 1 and any("shadow" in x["claim"] for x in r["refusals"])))
+    S.append(("manifest: an undeclared file beside the world is named", c == 1 and any("no row in the manifest" in x["claim"] for x in r["refusals"])))
     os.remove(os.path.join(split, "stray.swift"))
 
     # A COMMENT IS NOT A DECLARATION, AND A ROW THAT NAMES NO FILE NAMES NOTHING.
@@ -274,8 +297,8 @@ def main():
     open(os.path.join(split, "gate.manifest.swift"), "w").write(
         doc.replace("extension GrantsFile", "// extension GrantsFile"))
     c, r = run("status", cwd=split)
-    S.append(("manifest: a row commented out is a row no longer, and its file is a shadow",
-              c == 1 and any("shadow" in x["claim"] and "grants.swift" in x.get("address", "")
+    S.append(("manifest: a row commented out is a row no longer, and its file is undeclared",
+              c == 1 and any("no row in the manifest" in x["claim"] and "grants.swift" in x.get("address", "")
                              for x in r["refusals"])))
     S.append(("manifest: a row that names no file is refused at its own line",
               any("names no file" in x["claim"]
@@ -302,8 +325,8 @@ def main():
               c == 0 and r["verdict"] == "holds"))
     open(os.path.join(deep, "worlds", "stray.swift"), "w").write("// stray\n")
     c, r = run("status", cwd=deep)
-    S.append(("manifest: a shadow beside a declared file one directory down is named",
-              c == 1 and any("shadow" in x["claim"]
+    S.append(("manifest: an undeclared file beside a declared one a directory down is named",
+              c == 1 and any("no row in the manifest" in x["claim"]
                              and x.get("address") == os.path.join("worlds", "stray.swift")
                              for x in r["refusals"])))
 
@@ -484,7 +507,7 @@ def main():
                "--tree", co, "--policy", os.path.join(DEMO, "owners.csv"),
                "-o", os.path.join(tmp, "co-gate.swift"))
     judged = [x for x in r["refusals"] if "share one zone" in x["claim"]]
-    ghosts = [x for x in r["refusals"] if "ghost path" in x["claim"]]
+    ghosts = [x for x in r["refusals"] if "matches nothing" in x["claim"]]
     S.append(("codeowners: a rule outside its owner's zone is refused, by their line",
               c == 1 and judged and all("CODEOWNERS:" in x["source"] for x in judged)))
     # ── ONE FACT, ONE SENTENCE, AND THE WORDS ARE THE LAW'S OWN. The importer
@@ -1810,14 +1833,14 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     shutil.copy(os.path.join(ent, "api.swift"), os.path.join(bth, "api.swift"))
     shutil.copy(os.path.join(ent, "sdk3.swift"), os.path.join(bth, "sdk.swift"))
     _, together = run("status", cwd=bth)
-    shadows = [r for r in together.get("refusals", []) if "shadow" in r.get("claim", "")]
+    shadows = [r for r in together.get("refusals", []) if "no row in the manifest" in r.get("claim", "")]
     open(os.path.join(bth, "stray.swift"), "w").write("public enum Stray: Ranked {}\n")
     _, with_stray = run("status", cwd=bth)
-    S.append(("a seam declaration beside a declared layout is not a shadow, and a stray world file still is",
+    S.append(("a seam declaration beside a declared layout is not refused, and a stray world file still is",
               together.get("verdict") == "holds" and not shadows
               # and the guard still does its own job
               and [r["address"] for r in with_stray.get("refusals", [])
-                   if "shadow" in r["claim"]] == ["stray.swift"]))
+                   if "no row in the manifest" in r["claim"]] == ["stray.swift"]))
 
     # ── AND THE PAGE HAS TO PARSE. Every check here reads the bench as text and
     # asks whether the right words are in it — which says nothing about whether
@@ -3992,7 +4015,9 @@ console.log(JSON.stringify(out));
     # them, and this pair shares one — a disagreement with the corpus is refused
     # at a keystroke rather than reported. What was missing is provenance, and
     # where it is missing that is said rather than glossed.
-    keep = os.path.join(HERE, "bin", "gate-judge.from")
+    # beside the judge that actually answers: --version reads JUDGE + ".from",
+    # so a battery pointed at a rebuilt judge (GATE_JUDGE=...) fixtures that one
+    keep = (os.environ.get("GATE_JUDGE") or os.path.join(HERE, "bin", "gate-judge")) + ".from"
     had = open(keep).read() if os.path.exists(keep) else None
     try:
         if os.path.exists(keep):
@@ -5458,10 +5483,10 @@ public enum MyWatch: AccessLedger {
         "// role: forms\npublic protocol Spare {}\npublic enum Kept: Spare {}\n")
     c, r = run("status", cwd=undecl)
     S.append(("an undeclared file beside a declared one is named, not ignored",
-              c == 1 and any("shadow" in x["claim"] and "extra.swift" in x.get("address", "")
+              c == 1 and any("no row in the manifest" in x["claim"] and "extra.swift" in x.get("address", "")
                              for x in r["refusals"])))
     c, r = run("mine", "extra.swift", "--role", "forms", cwd=undecl)
-    S.append(("declaring it from its own row makes it judged, and the shadow goes",
+    S.append(("declaring it from its own row makes it judged, and the refusal goes",
               r.get("declared_in") == "gate.manifest.swift"
               and run("status", cwd=undecl)[1].get("verdict") == "holds"))
     c, r = run("mine", "extra.swift", "--forget", cwd=undecl)
@@ -5543,7 +5568,7 @@ public enum MyWatch: AccessLedger {
               and 'class="gesture declare-as"' in ui
               # and the reading behind both the refusal and the rail is one reading
               and "def undeclared_here" in gate_src
-              and gate_src.count("a world file the manifest never declares") == 1))
+              and gate_src.count("sits beside the judged ones") == 1))
 
     # ── AND THE VIEW IS THE READER'S. Opening somebody's page threw the reader back
     # to Full whatever they had been reading in: pick Bare or Table, click a shelf
@@ -5725,6 +5750,18 @@ public enum MyWatch: AccessLedger {
     # now, which is margin and not part of the box that scrolls.
     _tblpane = _block("#table-host{", ui)
     _tblhead = _block("#table-host th{text-align:left", ui)
+    # ── AND OPENING ONE FILE DOES NOT WAIT FOR FOUR. The page reads every other
+    # file to learn its names, and it read them one after the next, each waiting
+    # for the one before. They do not depend on each other. And setting the text
+    # scheduled a judgement of what the opener was already judging, so every click
+    # on a name paid for two verdicts and two statuses.
+    S.append(("the world is asked for all at once, and putting a file on the page judges it once",
+              "await Promise.all(want.map(f =>" in ui
+              and 'if (!userEdit && change.origin === "setValue") return;' in ui
+              # and whoever puts text on the page draws it: every opener that sets
+              # the text now says so itself, in the order the world is read in
+              and ui.count("buildRail();\n    render();") == 4))
+
     S.append(("nothing passes above the row of names that stays while the table scrolls",
               "position:sticky" in _tblhead and "top:0" in _tblhead
               # no padding over the scroll box: the first heading carries that space,
