@@ -3,13 +3,13 @@
 Your repository is full of sentences that must match something, and nobody
 checks the match. The schema must match the service that writes it. The
 rota must match who actually answers. CODEOWNERS must match the tree it
-divides. Each pair held the day somebody wrote it down, and nothing tells
-you the day the two stopped matching.
+divides. Each pair held the day you or a colleague wrote it down, and
+nothing tells you the day the two stopped matching.
 
 One case, to be concrete. CODEOWNERS hands `/src/api` to @alice. The folder
 was renamed to `/services/api` in the spring. The rule now matches nothing,
 reviews still go to Alice, and no tool reports a problem. You find out at
-an audit, or the day somebody merges what nobody reviewed.
+an audit, or the day a colleague merges what nobody reviewed.
 
 That gap has a name: drift. Two records of one fact, coming apart in
 silence, while both still get obeyed.
@@ -50,7 +50,7 @@ No server. No runtime. No new formats. Nothing leaves your repository.
 
 ## What changes
 
-Every question below is one somebody answers today by searching: greping
+Every question below is one you answer today by searching: greping
 repositories, opening tickets, asking whoever remembers. Here each is a
 lookup, answered in milliseconds against the file itself:
 
@@ -154,8 +154,8 @@ check · diff · apply · import/export · verify · guard · library · survey 
 drift · badge · mine · theirs · declare · seam · attention · serve ·
 report · stdlib · my · demo · findings · --version`. A refusal exits
 non-zero, so hooks and CI need no wrappers, and every command ends by
-naming the one step that comes next, so nobody holds the whole ladder in
-their head.
+naming the one step that comes next, so the whole ladder stays out of
+your head.
 
 ## What this does not touch
 
@@ -175,7 +175,7 @@ Every pair you gate is one thing you stop keeping in your head. The
 checking does not pile up: each claim is one lookup, so a hundred pairs
 cost what ten did. Once your pairs are in, the picture is concrete: the
 rename goes red on the renamer's screen, not on yours. The intern's access
-is a one-line diff somebody has to approve. Deleting the old config takes
+is a one-line diff an owner has to approve. Deleting the old config takes
 an afternoon, not a season of asking around, because the readers it still
 has are a list, not a guess. Nothing got faster. What went away is the
 asking.
@@ -183,7 +183,7 @@ asking.
 ## The rest, one page deep
 
 The cover you just read is the product. The pieces below live one file
-away, each where somebody would look for it:
+away, each where you would look for it:
 
 - [docs/DETAILS.md](docs/DETAILS.md): carrying gate vendored in your
   repository, verifying the zero-egress contract yourself, where it plugs

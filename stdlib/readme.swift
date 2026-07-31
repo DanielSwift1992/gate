@@ -11,13 +11,14 @@
 //
 // Your repository is full of sentences that must match something, and nobody
 // checks the match. The schema must match the service that writes it. The
-// rota must match who actually answers. Each pair held the day somebody
-// wrote it down, and nothing tells you the day the two stopped matching.
+// rota must match who actually answers. Each pair held the day you or a
+// colleague wrote it down, and nothing tells you the day the two stopped
+// matching.
 //
 // One case, to be concrete. CODEOWNERS hands `/src/api` to @alice. The folder was
 // renamed to `/services/api` in the spring. The rule now matches nothing, reviews
 // still go to Alice, and no tool reports a problem. You find out at an
-// audit, or the day somebody merges what nobody reviewed.
+// audit, or the day a colleague merges what nobody reviewed.
 //
 // That gap has a name: drift. Two records of one fact, coming apart in
 // silence, while both still get obeyed.
@@ -184,7 +185,7 @@
 // checking does not pile up: each claim is one lookup, so a hundred pairs
 // cost what ten did. Once your pairs are in, the picture is concrete: the
 // rename goes red on the renamer's screen, not on yours. The intern's
-// access is a one-line diff somebody has to approve. Deleting the old
+// access is a one-line diff an owner has to approve. Deleting the old
 // config takes an afternoon, not a season of asking around, because the
 // readers it still has are a list, not a guess. Nothing got faster. What
 // went away is the asking.
