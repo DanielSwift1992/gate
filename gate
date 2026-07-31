@@ -1645,10 +1645,10 @@ def cmd_guard(a):
 
 
 def cmd_library(a):
-    # library [-o lib.json] | library diff a.json b.json — the domain crystal:
+    # library [-o lib.json] | library diff a.json b.json — the domain vocabulary:
     # forms (entry heads + gates), axes, seed coverage. Forms carry no facts:
     # a library is shareable, client data never is (SAT5: a domain has one
-    # canonical crystal; two worlds are subsets of it).
+    # canonical vocabulary; two worlds are subsets of it).
     if a and a[0] == "diff":
         la, lb = json.load(open(a[1])), json.load(open(a[2]))
         A, B = set(la["forms"]), set(lb["forms"])
@@ -1657,7 +1657,7 @@ def cmd_library(a):
             "shared": sorted(A & B),
             "only_first": sorted(A - B),
             "only_second": sorted(B - A),
-            "note": "the union is safe by construction: one domain has one canonical crystal (SAT5), so a difference is teachable form, never client data",
+            "note": "the union is safe by construction: one domain has one canonical vocabulary (SAT5), so a difference is teachable form, never client data",
         }
     out_path = a[a.index("-o") + 1] if "-o" in a else None
     text = open(FACTS).read()
@@ -4753,7 +4753,7 @@ def read_carrier(root):
 
 
 REFS_HEADER = """// printed by gate import refs: the citations this code makes to a tracker,
-// written in the reference crystal (`gate stdlib show forms-reference`). A
+// written in the reference vocabulary (`gate stdlib show forms-reference`). A
 // tracked thing carries its state on an axis, a site is a place in your own
 // file, and a citation holds only while the thing it cites is open.
 //
@@ -4860,9 +4860,9 @@ def cmd_import_refs(a):
 
 
 CODEOWNERS_HEADER = """// printed by gate import codeowners: who owns what in this repository,
-// written in the access crystal (`gate stdlib show forms-grants`). A zone is
+// written in the grants vocabulary (`gate stdlib show forms-grants`). A zone is
 // a top of the tree, a room is a pattern, and an owner keeps a zone: owning
-// is entry at the warden's threshold, judged like any other claim.
+// is entry whose key administers, judged like any other claim.
 //
 """
 
@@ -5996,8 +5996,8 @@ usage (the git-shaped porcelain):
   gate guard [merge]                  (repo policy by the same gates: HEAD author
                                        via tables/identities.csv must hold the
                                        rank stated in tables/guard.csv)
-  gate library [-o lib.json]          (the domain crystal: forms, axes, seed coverage)
-  gate library diff a.json b.json     (set operations between crystals: forms, never facts)
+  gate library [-o lib.json]          (the domain vocabulary: forms, axes, seed coverage)
+  gate library diff a.json b.json     (set operations between vocabularies: forms, never facts)
   gate survey [N]                     (t0, read-only: unwritten links from your own
                                        history, identity, object candidates, fabric)
   gate log                            (the repository's own history, with no

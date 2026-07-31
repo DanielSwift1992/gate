@@ -1,8 +1,5 @@
 # gate · death to drift
 
-**Git gave your code an integrity guarantee. gate gives the same guarantee
-to your facts.**
-
 Your repository is full of sentences that must match something, and nobody
 checks the match. The schema must match the service that writes it. The
 rota must match who actually answers. CODEOWNERS must match the tree it
@@ -44,9 +41,10 @@ The same refusal on the live page (`gate serve`), at the line that makes it:
 ![the bench: the refusal at its line, re-read on every keystroke](docs/bench.png)
 
 The check is one lookup per claim and nothing else: no search, no solver,
-no build. Milliseconds on a real repository, and still milliseconds when
-the repository is ten times the size, which is what lets it run on every
-keystroke, in every commit, and in CI, with nobody waiting on it.
+no build. The cost is linear in the number of claims: milliseconds on a
+real repository, and still milliseconds when the repository is ten times
+the size. That is what lets it run on every keystroke, in every commit,
+and in CI, with nobody waiting on it.
 
 No server. No runtime. No new formats. Nothing leaves your repository.
 
@@ -65,7 +63,7 @@ lookup, answered in milliseconds against the file itself:
 | Is anything inconsistent right now? | an audit, quarterly | `gate status`, on every keystroke |
 
 The names in the examples come from a sandbox this repository can make for
-you; your own commands use your own names. You pay once, per atom:
+you. Your own commands use your own names. You pay once, per atom:
 translating N people and documents is the work. Every question after that
 is a composition of what you already translated, and compositions are
 free. That is the opposite of a reporting tool, where each new question is
@@ -76,7 +74,7 @@ new work.
 ```sh
 git clone https://github.com/DanielSwift1992/gate && cd gate    # no install step
 ./gate import codeowners CODEOWNERS --tree .   # your own ownership, judged
-./gate drift openapi.json --client ../sdk-js   # your contract against your client
+./gate drift ../api/openapi.json --client ../sdk-js   # your contract, your client
 ./gate serve                                   # the same facts as a live page
 ```
 
@@ -145,7 +143,7 @@ does best: history, authorship, review, rollback.
 
 A domain's vocabulary, the forms a world of that kind is written in, is a
 unit of its own, and today forms arrive by two roads: shipped on the shelf
-in `stdlib/` and judged in this repository's own battery, or declared in a
+in `stdlib/` and judged with the rest of this repository, or declared in a
 file of your own beside your world. The goal is one road, an empty prism
 where every form is presented and nothing is built in, and that is a debt
 on this project, not a claim about it. `gate stdlib show forms-organization`
@@ -191,7 +189,7 @@ away, each where somebody would look for it:
   repository, verifying the zero-egress contract yourself, where it plugs
   in (hook, CI, review, editor), layout and ownership.
 - [SECURITY.md](SECURITY.md): what a verdict promises, and where to
-  report one that lied.
+  report a wrong one.
 - [CHANGELOG.md](CHANGELOG.md): what exists, in the order it came to be.
 - After `gate init`, your repository is met by a letter of its own:
   `stdlib/readme.swift`, beside your files and judged with them.
