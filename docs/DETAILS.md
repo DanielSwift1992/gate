@@ -90,11 +90,25 @@ gate adds no process of its own. It sits inside the four you already have:
 - Every change, facts and rules alike, is a working-copy edit; history,
   review and rollback belong to git. gate keeps no state of its own.
 
+## Why the declarations are Swift
+
+The reason is the second reader. A claim language of our own would have
+exactly one reader, the tool it ships with, and every verdict would rest
+on trusting that reader. Swift already has an independent one:
+`swiftc -typecheck` accepts these files as they are, with no project and
+no build, and official Swift toolchains exist for macOS, Linux and
+Windows. The judge reads the same small subset directly, in milliseconds,
+so the same text has two readers, one of them ours and one of them not,
+and a bug in either is visible against the other. Records are
+declarations and rules are type constraints, so a record that breaks a
+rule does not get flagged: it fails to exist. And the subset is small on
+purpose: type declarations only, no functions, no bodies, nothing runs.
+
 ## The picture on the cover
 
 `docs/bench.png` is taken by `bin/shoot-bench.sh`: a fresh `gate demo`
 world, `gate serve` on a free port, one headless Chrome shot of
-`/ui?f=ownership.swift:82`. Beside it, `docs/bench.png.from` records the
+`/ui?f=ownership.swift:84`. Beside it, `docs/bench.png.from` records the
 sha256 of `ui.html` as photographed, and the battery holds that hash to
 the working copy: change the bench and the battery goes red until the
 picture is retaken. CI takes a fresh shot on every run and attaches it as

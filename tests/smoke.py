@@ -626,6 +626,37 @@ def main():
     world = open(os.path.join(tmp, "co-gate.swift")).read()
     S.append(("ownership rides the access crystal, not a set of forms of its own",
               "Owns<" in world and "public protocol Keeper" in world))
+    # ── AND THE NINE LINES ON THE COVER ARE THE DEMO'S OWN PRINT. The cover
+    # shows a pair written out, and a hand-written specimen drifts from the
+    # printer the day the printer changes: the letter's findings quote already
+    # walked that road. Every line of the cover's one swift block must be a
+    # line the demo's own import actually prints.
+    _cover_block = re.search(r"```swift\n(.*?)```", _cover, re.S)
+    _cover_demo = os.path.join(tmp, "cover-demo")
+    run("demo", _cover_demo)
+    _cover_world = open(os.path.join(_cover_demo, "ownership.swift"),
+                        encoding="utf-8").read()
+    S.append(("the cover's written-out pair is the demo's own print, line for line",
+              bool(_cover_block) and all(
+                  ln in _cover_world
+                  for ln in _cover_block.group(1).strip().split("\n"))))
+    # ── AND THE PRINT AND ITS SOURCE ARE A PAIR, HELD FROM BIRTH. The world
+    # names its inputs on its `from:` line, and status re-translates and
+    # compares certificates: silent on a fresh pair, and a rule written into
+    # CODEOWNERS alone is refused at the line that writes it, in their file.
+    _, _pg = run("status", cwd=_cover_demo)
+    S.append(("the printed world and its source hold as a pair at birth",
+              "// from: CODEOWNERS --policy owners.csv" in _cover_world
+              and not any("does not hold it" in (r.get("claim") or "")
+                          or "no longer writes" in (r.get("claim") or "")
+                          for r in (_pg.get("refusals") or []))))
+    with open(os.path.join(_cover_demo, "CODEOWNERS"), "a") as f:
+        f.write("src/api/    @dave\n")
+    _, _pg2 = run("status", cwd=_cover_demo)
+    S.append(("a rule written into their file alone is refused at their line",
+              any("does not hold it" in (r.get("claim") or "")
+                  and (r.get("address") or "").startswith("CODEOWNERS:")
+                  for r in (_pg2.get("refusals") or []))))
     # a human running an importer gets lines, not a traceback
     plain = subprocess.run([sys.executable, GATE, "import", "rbac",
                             os.path.join(DEMO, "rbac.json"), "-o", os.path.join(tmp, "r2.swift")],
@@ -5946,6 +5977,16 @@ public enum MyWatch: AccessLedger {
         print("   the stand-in pronoun:", _standin_hits[:6])
     S.append(("a sentence leads with its verb, not with `the ones`",
               _standin_hits == []))
+
+    # ── AND THE VOICE CARRIES NO LONG DASH. The prose here spells a pause
+    # with a colon or a second sentence; an em dash in a printed line is a
+    # mark this voice never uses, so one that appears is a stowaway.
+    _dashed = [f"gate:{tok.start[0]}"
+               for tok in tokenize.generate_tokens(io.StringIO(gate_src).readline)
+               if tok.type == tokenize.STRING and "—" in tok.string]
+    if _dashed:
+        print("   the long dash:", _dashed[:6])
+    S.append(("no printed line of the CLI carries a long dash", _dashed == []))
 
     # ── ONE NAME, ONE COLOUR, IN EVERY VIEW OF IT. A table cell wore one hue
     # whatever stood in it: the column was painted rather than the name. So a value

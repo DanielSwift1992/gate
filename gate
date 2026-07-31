@@ -884,7 +884,7 @@ if JUDGE_KIND is None:
 # that quietly swapped one arbiter for another would be the second truth it exists
 # against
 JUDGE_SAID = ("the judge" if JUDGE_KIND == "binary" else
-              "the port under node: plain court only")
+              "the port under node")
 
 
 def judge_call(args, **kw):
@@ -1292,6 +1292,13 @@ def cmd_export(a):
     # export gate.swift -o people.csv grants.csv — the world prints the
     # tables back. Round-trip: import → export → empty diff vs the originals
     # ⇒ the fact translation is proven mechanically, no trust in the translator.
+    # A verb meets a person with a sentence, never a stack trace: asked for
+    # nothing, this answered IndexError, the same voice verify once used.
+    if not a or a[0].startswith("-") or "-o" not in a or a.index("-o") + 2 >= len(a):
+        return {"command": "export", "asks": True,
+                "note": "export prints the org tables back from a world, for the round-trip diff",
+                "next": "gate export gate.swift -o people.csv grants.csv, then diff each "
+                        "printed table against the original you imported"}
     world = a[0]
     people_out, grants_out = a[a.index("-o") + 1], a[a.index("-o") + 2]
     text = open(world).read()
@@ -1347,7 +1354,7 @@ def cmd_verify(a):
     if len(a) < 2 or a[0].startswith("-") or a[1].startswith("-"):
         return {"command": "verify", "asks": True,
                 "note": "verify reads two catalogue files and judges their seeds",
-                "next": "gate verify people.csv grants.csv [--against CMD] — the two tables, "
+                "next": "gate verify people.csv grants.csv [--against CMD]: the two tables, "
                         "and the checker you have today if you want the two answers compared "
                         "claim by claim"}
     people_csv, grants_csv = a[0], a[1]
@@ -2078,6 +2085,67 @@ public typealias Owns_readme = Owns<Owner_you, Path_readme>
 """
 
 
+def codeowners_pair_guards():
+    # THE PRINT AND ITS SOURCE ARE A PAIR. `import codeowners` writes into the
+    # world the inputs it read, on the world's own `from:` line, so the pair
+    # is declared where the translation lands, never guessed from what is
+    # lying nearby. From then on the file and the world are two records of
+    # one fact, and this holds them the way every pair here is held: the same
+    # translator prints the world again, and the certificates are compared.
+    # The refusal names the first claim the two no longer share, at the line
+    # that makes it: in their file for a rule the world does not hold, in the
+    # world for a claim their file no longer writes.
+    out = []
+    if not FACTS:
+        return out
+    base = os.path.dirname(os.path.abspath(FACTS))
+    for fn in sorted(os.listdir(base)):
+        if not fn.endswith(".swift"):
+            continue
+        path = os.path.join(base, fn)
+        try:
+            text = open(path, encoding="utf-8").read()
+        except OSError:
+            continue
+        if "printed by gate import codeowners" not in text:
+            continue
+        m = re.search(r"^// from: (\S+)(?: --policy (\S+))?$", text, re.M)
+        if not m:
+            continue
+        name = os.path.basename(path)
+        srcp = os.path.join(base, m.group(1))
+        if not os.path.exists(srcp):
+            out.append({"address": f"{name}:1", "claim":
+                        f"printed from {m.group(1)}, and no file of that name is here now"})
+            continue
+        policy = read_owners_policy(os.path.join(base, m.group(2))) if m.group(2) else {}
+        _, lines, srcmap, _ = codeowners_world_lines(srcp, policy, "")
+        fresh = {l for l in lines if l.startswith("public typealias Owns_")}
+        disk = text.split("\n")
+        held = {l for l in disk if l.startswith("public typealias Owns_")}
+        for lost in sorted(fresh - held):
+            cert = lost.split()[2]
+            spot = srcmap.get(cert, "").split(" · ")[0] or f"{m.group(1)}:1"
+            out.append({"address": spot, "claim":
+                        f"{m.group(1)} writes this rule, and the world does not "
+                        f"hold it: `{lost}`. Run the import again, or take the rule out"})
+        for extra in sorted(held - fresh):
+            out.append({"address": f"{name}:{disk.index(extra) + 1}", "claim":
+                        f"the world holds this claim, and {m.group(1)} no longer "
+                        f"writes it: `{extra}`"})
+    return out
+
+
+def said_path(root):
+    # the way a person will type it: relative where a relative path exists,
+    # and the absolute path where one does not (another drive, on Windows,
+    # is a ValueError rather than a longer path)
+    try:
+        return os.path.relpath(root)
+    except ValueError:
+        return root
+
+
 def cmd_demo_owners(a):
     # demo — who owns what, in a repository shaped like the reader's own. Three
     # areas, four rules, one owner reaching past their zone: the refusal a
@@ -2138,7 +2206,7 @@ def cmd_demo_owners(a):
             # committed the moment it is made, so `git checkout .` has always put
             # it back; saying so here means it is read before anything is
             # touched rather than looked for afterwards.
-            "next": f"cd {os.path.relpath(root)} && gate status, for the same answer in a "
+            "next": f"cd {said_path(root)} && gate status, for the same answer in a "
                     "millisecond, from the world rather than from CODEOWNERS",
             "back": "git checkout . puts everything back, in one word: this world was "
                     "committed the moment it was made, so nothing you try here can cost you "
@@ -2201,7 +2269,7 @@ def cmd_demo_seam(a):
                        "-o", os.path.join(root, "sdk.swift")])
     att = cmd_attention([os.path.join(root, "api.swift"), os.path.join(root, "sdk.swift"),
                          "--as", "MessagesJS"])
-    rel = os.path.relpath(root)
+    rel = said_path(root)
     return {"command": "demo seam", "root": root,
             "declared": {"contract": api["declares"], "carrier": sdk["declares"]},
             "waiting_on_you": [x["address"] for x in att["waits_on_you"]],
@@ -2316,7 +2384,7 @@ def cmd_demo(a):
             # that exists and cannot be found. Said here, beside the invitation,
             # so it is read before anything is touched rather than looked for
             # after.
-            "next": f"cd {os.path.relpath(root)} && gate serve — then change one Home in "
+            "next": f"cd {said_path(root)} && gate serve: then change one Home in "
                     "gate.swift and watch the judge name the line",
             "back": "git checkout .  everything as it was, in one word: this world was "
                     "committed the moment it was made, so nothing you try here can cost you "
@@ -4886,26 +4954,28 @@ def read_codeowners(path):
     return rules
 
 
-def cmd_import_codeowners(a):
-    # import codeowners CODEOWNERS [--tree DIR] [-o out.swift] — a repository's
-    # own ownership, as a judged world. What CODEOWNERS cannot say, this can:
-    # an owner nobody declares is refused, and a pattern matching no file in
-    # the tree is named by the line it sits on.
-    src = a[0]
-    out_path = a[a.index("-o") + 1] if "-o" in a else "codeowners-gate.swift"
-    tree = a[a.index("--tree") + 1] if "--tree" in a else None
+def read_owners_policy(path):
     # WHO MAY OWN WHAT is the thing CODEOWNERS cannot say: without it, every
-    # rule is its own authority and the gate has nothing to hold. A policy —
-    # owner,zone — makes each rule a claim against a stated zone, and a rule
-    # reaching outside it is refused by the line it sits on.
+    # rule is its own authority and the gate has nothing to hold. A policy,
+    # owner and zone, makes each rule a claim against a stated zone, and a
+    # rule reaching outside it is refused by the line it sits on.
     import csv as _csv
     policy = {}
-    if "--policy" in a:
-        for row in _csv.DictReader(open(a[a.index("--policy") + 1])):
-            policy.setdefault(row["owner"].lstrip("@"), row["zone"])
+    for row in _csv.DictReader(open(path)):
+        policy.setdefault(row["owner"].lstrip("@"), row["zone"])
+    return policy
+
+
+def codeowners_world_lines(src, policy, said_from):
+    # ONE TRANSLATOR, WHOEVER ASKS. The import prints a world with this, and
+    # the pair guard prints the same world again to compare: two calls of one
+    # function cannot disagree about what the translation is. The world names
+    # its own inputs on the `from:` line, so the pair is declared where the
+    # translation lands, never guessed from what is lying nearby.
     rules = read_codeowners(src)
     zones = sorted({codeowners_zone(r["pattern"]) for r in rules})
-    lines = [CODEOWNERS_HEADER + STDLIB["forms-grants"], ""]
+    lines = [CODEOWNERS_HEADER + "// from: " + said_from + "\n//\n"
+             + STDLIB["forms-grants"], ""]
     for z in sorted(set(zones) | {sanitize(v) for v in policy.values()}):
         lines.append(f"public enum Zone_{z}: Realm {{}}")
     lines.append("")
@@ -4930,6 +5000,21 @@ def cmd_import_codeowners(a):
             cert = f"Owns_{i}_{sanitize(owner.lstrip('@'))}"
             lines.append(f"public typealias {cert} = Owns<{keeper}, {room}>")
             srcmap[cert] = f"{os.path.basename(src)}:{r['line']} · {r['pattern']} {owner}"
+    return rules, lines, srcmap, keepers
+
+
+def cmd_import_codeowners(a):
+    # import codeowners CODEOWNERS [--tree DIR] [-o out.swift] — a repository's
+    # own ownership, as a judged world. What CODEOWNERS cannot say, this can:
+    # an owner nobody declares is refused, and a pattern matching no file in
+    # the tree is named by the line it sits on.
+    src = a[0]
+    out_path = a[a.index("-o") + 1] if "-o" in a else "codeowners-gate.swift"
+    tree = a[a.index("--tree") + 1] if "--tree" in a else None
+    policy_path = a[a.index("--policy") + 1] if "--policy" in a else None
+    policy = read_owners_policy(policy_path) if policy_path else {}
+    said_from = src + (f" --policy {policy_path}" if policy_path else "")
+    rules, lines, srcmap, keepers = codeowners_world_lines(src, policy, said_from)
     world = "\n".join(lines) + "\n"
     with open(out_path, "w") as f:
         f.write(world)
@@ -4972,7 +5057,7 @@ def cmd_import_codeowners(a):
     return {
         "command": "import codeowners",
         "world": out_path,
-        "zones": len(zones),
+        "zones": len({codeowners_zone(r["pattern"]) for r in rules}),
         "paths": len(rules),
         "owners": len(keepers),
         "policy": (f"{len(policy)} owners have a stated zone" if policy else None),
@@ -5891,7 +5976,8 @@ def cmd_serve(a):
             typed = {n: text for n, p in bench_files() if p == active and n in forms_here}
             refusals += (manifest_guards(live, text if active == layout else None)
                          + forms_guards(None, typed) + policy_guards()
-                         + stdlib_guards() + vendored_guards() + taken_judge_guard())
+                         + stdlib_guards() + vendored_guards() + taken_judge_guard()
+                         + codeowners_pair_guards())
             times = re.findall(r"([\d.]+) ms", raw)
             # AND THE WIDTH OF IT. The judge counts what it checked and says so;
             # dropping that on the way to the bench left a green over several
@@ -6106,6 +6192,7 @@ def dispatch(cmd, rest):
         refusals += stdlib_guards()
         refusals += gate_shape_guards() + own_surface_guards() + opens_guards()
         refusals += vendored_guards() + taken_judge_guard()
+        refusals += codeowners_pair_guards()
         refusals += duplicate_guards()
         refusals += entry_guards()
         times = re.findall(r"([\d.]+) ms", raw)

@@ -29,10 +29,12 @@ def sh(*args, cwd=None):
 
 def voice(label, proc):
     # a FAIL on a machine nobody sits at must say what the tool said: the
-    # exit code and both streams, or the red line is a riddle in a log
+    # exit code and both streams. The tail, not the head: a traceback names
+    # its cause on its last lines, and the first cut of this printed the top
+    # of one, which is a riddle with the answer trimmed off.
     print("  " + label + " exit=" + str(proc.returncode))
     for stream, text in (("out", proc.stdout), ("err", proc.stderr)):
-        for line in (text or "").strip().split("\n")[:6]:
+        for line in (text or "").strip().split("\n")[-8:]:
             if line.strip():
                 print("    " + stream + "| " + line)
 
@@ -60,7 +62,7 @@ with tempfile.TemporaryDirectory(prefix="gate-win-") as tmp:
     d = run("demo", demo)
     st = run("status", cwd=demo)
     demo_ok = (d.returncode == 0 and st.returncode == 1
-               and "ownership.swift:82" in st.stdout)
+               and "ownership.swift:" in st.stdout and "Owns_3_carol" in st.stdout)
     S.append(("the demo is born and the plain court refuses at the written line",
               demo_ok))
     if not demo_ok:

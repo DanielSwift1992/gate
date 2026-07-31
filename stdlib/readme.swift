@@ -146,11 +146,13 @@
 //
 //     gate import codeowners CODEOWNERS --tree .
 //
-// Your file is not touched: it stays the source, and the records are
-// printed from it. To check the translation, run `gate export`: it prints
-// your file back, and the diff against the original is empty. The first
-// refusal is usually a rule that stopped being true long ago and has been
-// quietly obeyed since.
+// Your file stays in place, and whatever read it keeps reading it: what
+// enters gate is a second record of the same fact, the kind of pair this
+// tool exists to hold. A CSV round-trips: `gate export` prints the tables
+// back, and the diff against the originals is empty. A CODEOWNERS is
+// judged against your tree as it lands, and the first refusal is usually
+// a rule that stopped being true long ago and has been quietly obeyed
+// since.
 //
 // If it is not a table, you write it as a file yourself: the same kind of
 // file you are reading right now. Rules are translated by hand, once. They

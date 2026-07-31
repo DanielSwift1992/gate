@@ -27,7 +27,7 @@ silence. Either they are equal, or you get the exact point of contact:
 ```
 $ gate status
 status: refused 1
-  ownership.swift:82 · Owns_3_carol · Zone_docs against Zone_src: an owner and
+  ownership.swift:84 · Owns_3_carol · Zone_docs against Zone_src: an owner and
                        the path they own must share one zone
 ```
 
@@ -133,11 +133,34 @@ change is checked against it, and the other side sees it the next time
 they check.
 
 If your half is already a table (CODEOWNERS, a CSV), one command puts it
-in. Your file stays the source it was. To check the translation,
-run `gate export`: it prints your file back, and the diff against the
-original is empty. If it is not a table, you write it as a file yourself:
-a page of plain declarations, translated by hand, once. The rules are
-small, and they are yours to read. That is the upkeep, all of it.
+in, and your file stays in place: whatever read it keeps reading it. What
+enters gate is a second record of the same fact, the kind of pair this
+tool exists to hold. A CSV round-trips: `gate export` prints the tables
+back, and the diff against the originals is empty. A CODEOWNERS is judged
+against your tree as it lands: the refusal at the top of this page is
+exactly that, a rule reaching outside its zone, and a pattern that
+matches no file is named beside the verdict. If your half is not a table,
+you write it as a file yourself: a page of plain declarations, translated
+by hand, once. The rules are small, and they are yours to read. That is
+the upkeep, all of it.
+
+Written out, a pair is nine lines. From the demo's `ownership.swift`: the
+zone, a path in it, an owner posted to it, and the claim that ties them:
+
+```swift
+public enum Zone_docs: Realm {}
+public enum Path_2_docs_: Room {
+    public typealias Place = Zone_docs
+}
+public enum Owner_carol: Keeper {
+    public typealias Post = Zone_docs
+    public typealias Key = WardenKey
+}
+public typealias Owns_2_carol = Owns<Owner_carol, Path_2_docs_>
+```
+
+Nothing else is in the language: names, claims between names, and the
+rules the claims must satisfy.
 
 The files are bare Swift: the same language with the ceremony stripped,
 and no DSL. Records are declarations, rules are type constraints in the
@@ -207,8 +230,10 @@ away, each where you would look for it:
 LICENSE         MIT · NOTICE.md lists the bundled pieces and their terms
 gate            the CLI (python prototype; the judge does the judging)
 gate.cmd        the same CLI on Windows
-bin/gate-judge  the judge, one static binary (built from the public
-                theory corpus: bin/build-judge.sh [pin])
+bin/gate-judge  the judge, one static binary, built at a pin from the
+                public theory corpus, verification-is-identification:
+                github.com/DanielSwift1992/verification-is-identification
+                (bin/build-judge.sh [pin] rebuilds it)
 bin/judge-cli.js · bin/judge-where.js
                 both courts as a node port, for machines the binary
                 was not built for, held to it line for line
@@ -218,7 +243,7 @@ ui.html         the workbench
 codemirror.*    the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
 docs/           DETAILS.md, and the cover's picture with its provenance
-tests/smoke.py   the battery: 352 end-to-end checks, the definition of green
+tests/smoke.py   the battery: 356 end-to-end checks, the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts
 ```
 

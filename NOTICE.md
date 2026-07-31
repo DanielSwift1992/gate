@@ -2,7 +2,8 @@
 
 gate is MIT licensed (see LICENSE). Every bundled piece is too:
 
-- **bin/gate-judge**: built from the verification-is-identification corpus
+- **bin/gate-judge**: built from the verification-is-identification corpus,
+  https://github.com/DanielSwift1992/verification-is-identification
   (MIT, © Daniil Strizhov), pinned by commit. `bin/build-judge.sh <pin>`
   builds the same judge; the battery checks a build, the hash names it. `.gate/README.md` states its sha256 when the
   tool is vendored, and `gate status` refuses a judge that is not the one
