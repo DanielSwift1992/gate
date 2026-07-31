@@ -32,11 +32,11 @@ status: refused 1
 ```
 
 That is a CODEOWNERS rule, translated once, judged on every change: carol
-keeps `docs`, and one line hands her a folder in `src`. The file that made
-the rule is named, at its line, with both sides of the disagreement. A diff
+keeps `docs`, and one line assigns her a folder in `src`. The refusal
+names the file, the line, and both sides of the disagreement. A diff
 compares two texts. This compares two claims about one thing.
 
-The same refusal on the live page (`gate serve`), at the line that makes it:
+The same refusal on the live page (`gate serve`), at its line:
 
 ![the bench: the refusal at its line, re-read on every keystroke](docs/bench.png)
 
@@ -64,7 +64,7 @@ lookup, answered in milliseconds against the file itself:
 
 The names in the examples come from a sandbox this repository can make for
 you. Your own commands use your own names. You pay once, per name:
-translating N people and documents is the work. Every question after that
+translating your people and documents is the work. Every question after that
 is a composition of what you already translated, and compositions are
 free. That is the opposite of a reporting tool, where each new question is
 new work.
@@ -73,23 +73,25 @@ new work.
 
 ```sh
 git clone https://github.com/DanielSwift1992/gate && cd gate    # no install step
-./gate import codeowners CODEOWNERS --tree .   # your own ownership, judged
+./gate import codeowners CODEOWNERS --tree . --policy owners.csv   # your own ownership, judged
 ./gate drift ../api/openapi.json --client ../sdk-js   # your contract, your client
 ./gate serve                                   # the same facts as a live page
 ```
 
 The first two lines are the ones to run in repositories you already have.
 Ownership is a fact you already keep, in a file that cannot say whether an
-owner exists or whether a pattern still matches anything: it becomes a
-judged world without you writing a line (`owners.csv`, two columns, adds
-the one thing CODEOWNERS cannot express: which zone each owner keeps).
-What the command writes is one small Swift file, `ownership.swift`, and
-no Swift toolchain is involved: the judge reads it directly.
+owner exists or whether a pattern still matches anything. The command
+turns it into a judged world, and you write none of it: it writes one
+small Swift file, `ownership.swift`, and no Swift toolchain is involved,
+because the judge reads it directly. `owners.csv` is two columns, and it
+adds the one thing CODEOWNERS cannot express: which zone each owner
+keeps.
+
 `drift` reads an API contract and a client library out of git on your
-machine, and prints what the copies have been doing to each other: nothing
-is uploaded, nothing is fetched, and it observes rather than judges, so
-its exit code follows a threshold you declare (`--fail-over 30`), never a
-verdict of ours.
+machine, and prints what the copies have been doing to each other.
+Nothing is uploaded and nothing is fetched. It observes rather than
+judges: the exit code follows a threshold you declare (`--fail-over 30`),
+never a verdict of ours.
 
 No repository of your own at hand? `gate demo` makes one: a small tree
 with a CODEOWNERS whose one rule reaches outside its zone, so the first
@@ -129,11 +131,11 @@ change is checked against it, and the other side sees it the next time
 they check.
 
 If your half is already a table (CODEOWNERS, a CSV), one command puts it
-in, your file stays the source it always was, and `gate export` prints it
-back so you can watch the diff against the original come up empty. If it
-is not a table, you write it as a file yourself: a page of plain
-declarations, translated by hand, once. The rules are small, and they are
-yours to read. That is the upkeep, all of it.
+in. Your file stays the source it always was. To check the translation,
+run `gate export`: it prints your file back, and the diff against the
+original is empty. If it is not a table, you write it as a file yourself:
+a page of plain declarations, translated by hand, once. The rules are
+small, and they are yours to read. That is the upkeep, all of it.
 
 The files are bare Swift: the same language with the ceremony stripped,
 and no DSL. Records are declarations, rules are type constraints in the
@@ -143,13 +145,13 @@ exists whenever you want one: `swiftc -typecheck` passes on these files as
 they are, with no project and no build. Git keeps doing what it already
 does best: history, authorship, review, rollback.
 
-A domain's vocabulary, the forms a world of that kind is written in, is a
-unit of its own, and today forms arrive by two roads: shipped on the shelf
-in `stdlib/` and judged with the rest of this repository, or declared in a
-file of your own beside your world. The goal is one road, an empty prism
-where every form is presented and nothing is built in, and that is a debt
-on this project, not a claim about it. `gate stdlib show forms-organization`
-prints any shelf page exactly as it shipped.
+A domain's vocabulary is the forms a world of that kind is written in. It
+is a unit of its own, and today forms arrive by two roads: shipped on the
+shelf in `stdlib/` and judged with the rest of this repository, or
+declared in a file of your own beside your world. The goal is one road, a
+shelf where every form is presented and nothing is built in, and that is
+a debt on this project, not a claim about it. `gate stdlib show
+forms-organization` prints any shelf page exactly as it shipped.
 
 The porcelain is deliberately git-shaped: `init · status/fsck · log ·
 check · diff · apply · import/export · verify · guard · library · survey ·
@@ -185,7 +187,7 @@ asking.
 
 ## The rest, one page deep
 
-The cover you just read is the product. The pieces below live one file
+The cover you just read is the product. The pieces below are one file
 away, each where you would look for it:
 
 - [docs/DETAILS.md](docs/DETAILS.md): carrying gate vendored in your
