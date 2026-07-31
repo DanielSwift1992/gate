@@ -22,12 +22,6 @@ milliseconds, and a refusal names the exact line of your own file.
 
 No server. No runtime. No new formats. Nothing leaves your repository.
 
-The judge is built from a public corpus and says which revision it came from:
-`gate --version` prints the commit, and `bin/build-judge.sh <commit>` builds
-the same judge from it. Check a build of yours by pointing the battery at it
-(`GATE_JUDGE=path tests/smoke.py`): the linker is not byte-stable, so the
-hash names what is here and is not the check.
-
 ```
 $ gate status
 status: refused 1
@@ -559,7 +553,7 @@ git clone your/repo && cd repo
 ```
 
 Three things follow. A security review reads it as what it is: code in
-their own repository, pinned by a commit, reviewed like any other change —
+their own repository, pinned by a commit, reviewed like any other change,
 not a script piped into a shell. The judge is pinned with it, so an old
 commit is judged by the judge it was written with, which is what makes
 `git bisect` over facts exact. And the judge is pinned twice over: `.gate/`
@@ -654,7 +648,7 @@ judge.js        the browser judge (byte-parity port) for the bench
 ui.html         the workbench
 codemirror.*    the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
-tests/smoke.py   the battery: 346 end-to-end checks, the definition of green
+tests/smoke.py   the battery: 347 end-to-end checks, the definition of green
 ```
 
 ## Status
