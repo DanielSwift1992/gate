@@ -503,7 +503,7 @@ def forms_guards(size=None, live=None):
             if m and m.group(1) not in where:
                 where[m.group(1)] = f"{r['path']}:{i}"
     streams = [(s, t, mi, (w or where), h) for s, t, mi, w, h in streams]
-    tmp = tempfile.mkdtemp(prefix="gate-forms-")
+    tmp = scratch("gate-forms-")
     for shelf, text, mine, where, home in streams:
         fp = os.path.join(tmp, (shelf or "presented") + ".swift")
         open(fp, "w").write(text)
@@ -1017,8 +1017,29 @@ def must_sub(text, pattern, repl, what, count=1):
     return re.sub(pattern, repl, text, count=count, flags=re.S)
 
 
+SCRATCH = []
+
+
+def scratch(prefix):
+    # ── AND WHAT THIS TOOL PUTS ON A MACHINE, IT TAKES OFF AGAIN. A probe needs
+    # a directory to write a file into, and nine places made one; four of them
+    # never removed it. On the machine this was found on: 6676 left by the panel,
+    # one per keystroke, and 3586 by `verify`. A tool whose first promise is that
+    # nothing of it stays behind may not grow without bound in somebody's temp.
+    # Made here, and every maker is a caller of this, so the guard has one name
+    # to watch.
+    d = tempfile.mkdtemp(prefix=prefix)
+    SCRATCH.append(d)
+    return d
+
+
+def sweep_scratch():
+    while SCRATCH:
+        shutil.rmtree(SCRATCH.pop(), ignore_errors=True)
+
+
 def with_temp(text):
-    d = tempfile.mkdtemp(prefix="gate-")
+    d = scratch("gate-")
     # the probe carries the real world's filename: addresses read as native
     p = os.path.join(d, os.path.basename(FACTS))
     with open(p, "w") as f:
@@ -1322,11 +1343,21 @@ def cmd_verify(a):
     # verdict split = the address of an untranslated rule (or one the client lacks).
     import csv
 
+    # ── AND A VERB MEETS A PERSON WITH A SENTENCE, NEVER A STACK TRACE. Typed in
+    # a world that keeps no tables, this answered `IndexError: list index out of
+    # range` — the one voice this tool never uses, in the one moment when
+    # somebody is already unsure what they typed.
+    if len(a) < 2 or a[0].startswith("-") or a[1].startswith("-"):
+        return {"command": "verify", "asks": True,
+                "note": "verify reads two catalogue files and judges their seeds",
+                "next": "gate verify people.csv grants.csv [--against CMD] — the two tables, "
+                        "and the checker you have today if you want the two answers compared "
+                        "claim by claim"}
     people_csv, grants_csv = a[0], a[1]
     against = a[a.index("--against") + 1] if "--against" in a else None
     people = list(csv.DictReader(open(people_csv)))
     grants = list(csv.DictReader(open(grants_csv)))
-    d = tempfile.mkdtemp(prefix="gate-verify-")
+    d = scratch("gate-verify-")
 
     # step 0: the base must be clean on BOTH sides — background violations
     # would mask the seeds and "covered" would mean nothing
@@ -1677,7 +1708,7 @@ def cmd_guard_deps(a):
         lines.append("}")
     orphans = sorted(set(pins) - set(deps))
     world = "\n".join(lines) + "\n"
-    d = tempfile.mkdtemp(prefix="gate-deps-")
+    d = scratch("gate-deps-")
     p = os.path.join(d, "deps-gate.swift")
     open(p, "w").write(world)
     r = judge(p)
@@ -3290,7 +3321,7 @@ def cmd_badge(a):
     # the last time this world did not hold
     judged, broke = 0, None
     for sha, when in marks:
-        d = tempfile.mkdtemp(prefix="gate-badge-")
+        d = scratch("gate-badge-")
         wrote = []
         for rel in rels:
             blob = subprocess.run(["git", "-C", root, "show", f"{sha}:{rel}"],
@@ -4142,7 +4173,7 @@ def cmd_attention(a):
     known = _json.load(open(a[a.index("--known") + 1], encoding="utf-8")) if "--known" in a else {}
     tracker = read_tracker(a[a.index("--tracker") + 1]) if "--tracker" in a else {}
 
-    d = tempfile.mkdtemp(prefix="gate-att-")
+    d = scratch("gate-att-")
     path = os.path.join(d, "seam.swift")
     open(path, "w").write(left + "\n" + right)
     outp = judge_call(["judge", "where", path]).stdout
@@ -4297,7 +4328,7 @@ def cmd_seam(a):
     for m in re.finditer(r"^// (\S+) · (\S+)(?: \(it calls it (\S+)\))?\npublic typealias (Carry_\d+)",
                          right, re.M):
         where[m.group(4)] = (m.group(1), m.group(2), m.group(3))
-    d = tempfile.mkdtemp(prefix="gate-seam-")
+    d = scratch("gate-seam-")
     path = os.path.join(d, "seam.swift")
     open(path, "w").write(left + "\n" + right)
     t0 = time.time()
@@ -4781,7 +4812,7 @@ def cmd_import_refs(a):
     # judged, and removed. Ask for it by name and it stays.
     keep = "-o" in a
     out_path = (a[a.index("-o") + 1] if keep
-                else os.path.join(tempfile.mkdtemp(prefix="gate-refs-"), "refs-gate.swift"))
+                else os.path.join(scratch("gate-refs-"), "refs-gate.swift"))
     tracked = read_tracker(src)
     cites = read_citations(code)
     lines = [REFS_HEADER + STDLIB["forms-reference"], ""]
@@ -5801,7 +5832,7 @@ def cmd_serve(a):
             text = self.rfile.read(n).decode()
             base = os.path.dirname(os.path.abspath(FACTS))
             active = self.pick(q)
-            d = tempfile.mkdtemp(prefix="gate-bench-")
+            d = scratch("gate-bench-")
             paths = []
             layout = MANIFEST["manifest"] if MANIFEST else None
             forms_here = {r["path"] for r in ((MANIFEST.get("rows") if MANIFEST else None) or [])
@@ -5880,6 +5911,13 @@ def cmd_serve(a):
             self.send_header("Cache-Control", "no-store")
             self.end_headers()
             self.wfile.write(body)
+            # ── AND THE PANEL DOES NOT GROW ON SOMEBODY'S DISK. This handler makes
+            # a directory to judge the unsaved text in, which is one directory per
+            # keystroke, and it removed none of them: thirty-four thousand were
+            # standing in the temp of the machine this was written on. The server
+            # answers one request at a time, so by this line nothing is still
+            # needed by anything.
+            sweep_scratch()
 
         def log_message(self, *args):
             pass
@@ -6648,4 +6686,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    finally:
+        # whatever a verb made to probe with does not outlive the verb. `main`
+        # leaves through sys.exit, so this is the one place that always runs.
+        sweep_scratch()

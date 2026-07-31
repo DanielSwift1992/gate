@@ -4804,6 +4804,39 @@ public enum MyWatch: AccessLedger {
     S.append(("findings never call read what the judge did not check",
               all(f["kind"] != "judged" for f in r["findings"])))
     _letter_ships = open(os.path.join(HERE, "stdlib", "readme.swift"), encoding="utf-8").read()
+    # ── AND WHAT THIS TOOL PUTS ON A MACHINE, IT TAKES OFF AGAIN. Nine places
+    # make a directory to probe in and four of them removed none: on the machine
+    # this was found on there were thirty-four thousand, six hundred of them left
+    # by `verify` and the rest by the panel, one per keystroke. A tool whose first
+    # promise is that nothing of it stays behind may not grow without bound in
+    # somebody's temp. Measured, not read: the temp directory is listed before and
+    # after each verb.
+    import tempfile as _tf
+    _tmproot = _tf.gettempdir()
+    _here_now = lambda: {n for n in os.listdir(_tmproot) if n.startswith("gate-")}
+    sweepworld = os.path.join(tmp, "sweepworld")
+    os.makedirs(sweepworld)
+    subprocess.run(["git", "init", "-q", sweepworld])
+    run("demo", "org", sweepworld)
+    left_behind = []
+    for verb in (["status"], ["findings"], ["library"], ["survey"], ["badge"],
+                 ["verify", os.path.join(sweepworld, "tables", "people.csv"),
+                  os.path.join(sweepworld, "tables", "grants.csv")]):
+        was = _here_now()
+        run(*verb, cwd=sweepworld)
+        left_behind += sorted(_here_now() - was)
+    S.append(("no verb leaves its scratch on the machine it ran on",
+              left_behind == []
+              # and one place makes it, so the sweep has one thing to watch
+              and gate_src.count("tempfile.mkdtemp") == 1
+              and "def sweep_scratch" in gate_src))
+
+    # a verb typed without what it reads answers in words: a stack trace is the
+    # one voice this tool never uses, and it used it here
+    _, _bare_verify = run("verify", cwd=fr)
+    S.append(("a verb asked for nothing answers with a sentence, never a traceback",
+              _bare_verify.get("asks") is True and "two catalogue files" in _bare_verify.get("note", "")))
+
     # ── AND A QUOTED OUTPUT IS THE OUTPUT. The letter shows what `findings`
     # prints, and the sentence it showed had never been printed by anything: it
     # was written by hand, in the section that teaches a reader to look for two
