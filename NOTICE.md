@@ -1,6 +1,6 @@
-# What travels with gate, and under what terms
+# What is bundled with gate, and under what terms
 
-gate is MIT licensed (see LICENSE). Everything it carries is too:
+gate is MIT licensed (see LICENSE). Every bundled piece is too:
 
 - **bin/gate-judge**: built from the verification-is-identification corpus
   (MIT, © Daniil Strizhov), pinned by commit. `bin/build-judge.sh <pin>`
@@ -16,4 +16,6 @@ gate is MIT licensed (see LICENSE). Everything it carries is too:
 - **stdlib/*.swift**: ours, MIT. Materialize them into your repository and
   they are yours to change; drop the header and gate stops calling them ours.
 
-Nothing else is bundled, and nothing is fetched at runtime.
+Everything else in this repository is ours, under the same MIT. Nothing is
+fetched at runtime, and that is checked rather than promised: the battery
+greps the sources for outbound primitives.

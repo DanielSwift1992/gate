@@ -133,7 +133,7 @@ change is checked against it, and the other side sees it the next time
 they check.
 
 If your half is already a table (CODEOWNERS, a CSV), one command puts it
-in. Your file stays the source it always was. To check the translation,
+in. Your file stays the source it was. To check the translation,
 run `gate export`: it prints your file back, and the diff against the
 original is empty. If it is not a table, you write it as a file yourself:
 a page of plain declarations, translated by hand, once. The rules are
@@ -204,7 +204,7 @@ away, each where you would look for it:
 ## Repository
 
 ```
-LICENSE         MIT · NOTICE.md says what travels with gate
+LICENSE         MIT · NOTICE.md lists the bundled pieces and their terms
 gate            the CLI (python prototype; the judge does the judging)
 bin/gate-judge  the judge, one static binary (built from the public
                 theory corpus: bin/build-judge.sh [pin])
@@ -219,14 +219,14 @@ tests/smoke.py   the battery: 351 end-to-end checks, the definition of green
 ## Status
 
 Working prototype under active development, MIT licensed: see LICENSE,
-and NOTICE.md for what it carries and under what terms. Free, and nothing
+and NOTICE.md for the bundled pieces and their terms. Free, and nothing
 in it is paid. The judge is a native binary with a versioned verdict
 contract (canon v2); the CLI is python and will be rewritten in Swift to
 ship as a single static binary (the way git is one tool). We want to hear
 about a wrong verdict before anything else: see SECURITY.md.
 
 **Where it runs, measured rather than assumed.** The CLI is one python3 file and
-the bench is a page, so both go anywhere. The judge is a native binary built for
+the bench is a page, so both go wherever python3 and a browser go. The judge is a native binary built for
 one platform: `bin/gate-judge` here is `Mach-O arm64`, and on any other machine
 it does not execute. Where it cannot run and node is installed, the plain court
 is answered by `bin/judge-cli.js`, the same judge ported line for line and held

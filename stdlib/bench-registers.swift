@@ -42,7 +42,7 @@ public enum Sans: Face {}
 // which is a world's names living in a mechanism, the one thing no layer here
 // is allowed to do. A register that is set firm says so itself, on the same
 // axis as its face, and a name this file never mentions gets no special
-// treatment from anywhere.
+// treatment.
 public protocol Stress {}
 public enum Plain: Stress {}
 public enum Firm: Stress {}
@@ -178,7 +178,7 @@ public enum Source: Register {
 }
 
 // ── AND THE VOICE THE LEFT PANEL SPEAKS IN, which it had been speaking without
-// being declared anywhere: a section label, set firm at caption size. There was
+// being declared: a section label, set firm at caption size. There was
 // a second (the line under it, set half) declared the same day for the
 // journal's blurb and the judge's caption. The journal left the panel and the
 // last speaker went with it. A register nobody speaks in is a word kept in a

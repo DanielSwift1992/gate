@@ -8,12 +8,15 @@
 # recorded beside the binary; anyone may build at it and compare.
 set -e
 PIN=${1:-main}
+# resolved before any cd: `dirname $0` is relative when the script is
+# called as bin/build-judge.sh, and it stops naming this folder the moment
+# the shell stands in the clone
+OUT="$(cd "$(dirname "$0")" && pwd)"
 TMP=$(mktemp -d)
 git clone --depth 50 https://github.com/DanielSwift1992/verification-is-identification "$TMP/vi"
 cd "$TMP/vi" && git checkout "$PIN"
 REV=$(git rev-parse HEAD)
 swift build -c release --product Tools
-OUT="$(cd "$(dirname "$0")" && pwd)"
 cp .build/release/Tools "$OUT/gate-judge"
 printf '%s\n' "$REV" > "$OUT/gate-judge.from"
 echo "bin/gate-judge built from $PIN ($REV)"

@@ -8,8 +8,8 @@ moved here so the cover stays a cover.
 
 `gate init . --vendor` puts the tool itself into `.gate/` with a `./gatew`
 shim, the way a project carries `./gradlew`. Commit it, and everybody who
-pulls has gate: no installation step to ask anyone to take, nothing
-fetched from anywhere. A security review reads it as what it is: code in
+pulls has gate: no installation step to ask anyone to take, and nothing
+is fetched. A security review reads it as what it is: code in
 their own repository, pinned by a commit, reviewed like any other change,
 not a script piped into a shell. The judge is pinned with it, so an old
 commit is judged by the judge it was written with, which is what makes

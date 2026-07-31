@@ -140,7 +140,7 @@ public enum MineVerb: Verb {
 }
 extension MineVerb { public static var typeName: String { "mine" } }
 
-/// I took it, at the revision I took it at. There are no ranges anywhere here
+/// I took it, at the revision I took it at. There are no ranges here
 public enum TheirsVerb: Verb {
     public typealias Does = Writes
     public typealias Under = NoCourt
