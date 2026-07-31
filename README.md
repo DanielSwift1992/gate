@@ -80,8 +80,8 @@ git clone https://github.com/DanielSwift1992/gate && cd gate    # no install ste
 ./gate serve                                   # the same facts as a live page
 ```
 
-The first two lines are the ones to run in repositories you already have.
-Ownership is a fact you already keep, in a file that cannot say whether an
+Run the first two lines in repositories you already have. Ownership is a
+fact you already keep, in a file that cannot say whether an
 owner exists or whether a pattern still matches anything. The command
 turns it into a judged world, and you write none of it: it writes one
 small Swift file, `ownership.swift`, and no Swift toolchain is involved,
@@ -213,7 +213,7 @@ judge.js        the browser judge (byte-parity port) for the bench
 ui.html         the workbench
 codemirror.*    the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
-tests/smoke.py   the battery: 350 end-to-end checks, the definition of green
+tests/smoke.py   the battery: 351 end-to-end checks, the definition of green
 ```
 
 ## Status
@@ -222,8 +222,8 @@ Working prototype under active development, MIT licensed: see LICENSE,
 and NOTICE.md for what it carries and under what terms. Free, and nothing
 in it is paid. The judge is a native binary with a versioned verdict
 contract (canon v2); the CLI is python and will be rewritten in Swift to
-ship as a single static binary (the way git is one tool). Problems with a
-verdict are the ones we most want to hear about: see SECURITY.md.
+ship as a single static binary (the way git is one tool). We want to hear
+about a wrong verdict before anything else: see SECURITY.md.
 
 **Where it runs, measured rather than assumed.** The CLI is one python3 file and
 the bench is a page, so both go anywhere. The judge is a native binary built for

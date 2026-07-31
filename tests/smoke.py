@@ -5892,6 +5892,34 @@ public enum MyWatch: AccessLedger {
     S.append(("names stay names and verbs stay mechanics, on every surface a person reads",
               not theatre))
 
+    # ── AND A SENTENCE LEADS WITH ITS VERB. `The first two lines are the ones
+    # to run` points at the act instead of performing it: copula, a stand-in
+    # pronoun, then a clause is the long road to a weaker sentence. `the one
+    # thing`, `the one place`: a count, and legal. Fenced here is the stand-in
+    # with a clause behind it, on every surface a person reads.
+    _standin = re.compile(r"\b(?:is|are) the ones\b"
+                          r"|\b(?:is|are) the one (?:to|that|who|we|you|everybody|anybody)\b")
+    _standin_hits = []
+    for _sf in ("README.md", "SECURITY.md", "CHANGELOG.md", "NOTICE.md",
+                os.path.join("docs", "DETAILS.md")):
+        _flat = re.sub(r"\s+", " ", open(os.path.join(HERE, _sf), encoding="utf-8").read())
+        if _standin.search(_flat):
+            _standin_hits.append(_sf)
+    for _sp in sorted(glob.glob(os.path.join(HERE, "stdlib", "*.swift"))):
+        _pr = re.sub(r"\s+", " ", " ".join(
+            l.lstrip("/ ") for l in open(_sp, encoding="utf-8").read().split("\n")
+            if l.strip().startswith("//")))
+        if _standin.search(_pr):
+            _standin_hits.append(os.path.basename(_sp))
+    for tok in tokenize.generate_tokens(io.StringIO(gate_src).readline):
+        if tok.type == tokenize.STRING and len(tok.string) > 12 \
+                and _standin.search(re.sub(r"\s+", " ", tok.string.replace("\\n", " "))):
+            _standin_hits.append(f"gate:{tok.start[0]}")
+    if _standin_hits:
+        print("   the stand-in pronoun:", _standin_hits[:6])
+    S.append(("a sentence leads with its verb, not with `the ones`",
+              _standin_hits == []))
+
     # ── ONE NAME, ONE COLOUR, IN EVERY VIEW OF IT. A table cell wore one hue
     # whatever stood in it: the column was painted rather than the name. So a value
     # the offer showed as yours, because the offer asks where a name comes from,

@@ -1,7 +1,7 @@
 // gate stdlib forms-reference v1: a reference and its target, judged together
 // role: forms
 //
-// The drift here is the one everybody has and nobody checks: code cites a
+// Everybody has this drift and nobody checks it: code cites a
 // ticket, a ticket is closed, and the citation stays. Nothing in either system
 // can see the other: the tracker does not read the repository, and the
 // repository does not read the tracker, so the two copies of "this is still

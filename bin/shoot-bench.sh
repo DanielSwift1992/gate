@@ -44,6 +44,17 @@ mkdir -p "$HERE/docs"
     --screenshot="$HERE/docs/bench.png" \
     "http://127.0.0.1:$PORT/ui?f=ownership.swift:82" 2>/dev/null
 
+# a one-pixel black frame, burned into the file: the cover renders on light
+# and on dark pages, and a dark picture meeting a dark page with no seam
+# reads as a hole. sips ships with macOS, so the frame costs no dependency;
+# the shot is 2x, so two file pixels make one seen pixel.
+if command -v sips >/dev/null; then
+    W=$(sips -g pixelWidth  "$HERE/docs/bench.png" | awk '/pixelWidth/  {print $2}')
+    H=$(sips -g pixelHeight "$HERE/docs/bench.png" | awk '/pixelHeight/ {print $2}')
+    sips --padToHeightWidth $((H + 4)) $((W + 4)) --padColor 000000 \
+        "$HERE/docs/bench.png" >/dev/null
+fi
+
 python3 - "$HERE" <<'EOF'
 import hashlib, sys, os
 here = sys.argv[1]

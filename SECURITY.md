@@ -28,6 +28,6 @@ disagreeing with the reference binary, a carried judge that is not the one
 `.gate/README.md` states, or any outbound connection at all.
 
 Out of scope: what a translated world *means*. gate checks that your facts
-agree with each other and with the rules you wrote; whether those rules are
-the ones you intended is a question for a human reading the file, and the
-file is written to be read.
+agree with each other and with the rules you wrote. Whether the rules say
+what you meant is a question for a human reading the file, and the file is
+written to be read.

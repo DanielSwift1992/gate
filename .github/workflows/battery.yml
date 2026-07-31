@@ -5,7 +5,9 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: swift-actions/setup-swift@v2
+      # the runner's own Xcode swift builds the corpus: a pinned separate
+      # toolchain met an SDK built by a newer one and refused, so no
+      # toolchain is installed here on purpose
       # the judge is rebuilt from the public theory corpus at the pin,
       # so the battery never trusts a stale vendored binary
       - run: bin/build-judge.sh 0fd0b38
