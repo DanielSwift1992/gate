@@ -5142,8 +5142,8 @@ public enum MyWatch: AccessLedger {
     lw = os.path.join(tmp, "letterworld")
     run("demo", lw)
     letter = open(os.path.join(lw, "readme.swift"), encoding="utf-8").read()
-    S.append(("the greeting holds rather than threatens, and the letter speaks in scenes",
-              '"Your word, held as you type. A claim that breaks is named by its line."' in ui
+    S.append(("the first line threatens the enemy and never the reader, and the letter speaks in scenes",
+              '"Death to drift"' in ui
               # gone from everything the page SAYS. It survives once in the
               # comment that explains why, which is the record of the decision
               # and not a thing anybody reads on screen.

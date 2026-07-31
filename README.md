@@ -23,9 +23,10 @@ milliseconds, and a refusal names the exact line of your own file.
 No server. No runtime. No new formats. Nothing leaves your repository.
 
 The judge is built from a public corpus and says which revision it came from:
-`gate --version` prints the commit, and `bin/build-judge.sh <commit>` reproduces
-the same bytes. Bytes say what a thing is; only the revision says what it was
-made from.
+`gate --version` prints the commit, and `bin/build-judge.sh <commit>` builds
+the same judge from it. Check a build of yours by pointing the battery at it
+(`GATE_JUDGE=path tests/smoke.py`): the linker is not byte-stable, so the
+hash names what is here and is not the check.
 
 ```
 $ gate status
@@ -154,8 +155,8 @@ without you writing a line.
 cannot say: which area each person may keep. Without it every rule is its own
 authority, the zone equalities cannot fail, and gate says `observed` rather
 than `holds` — a verdict nobody could have broken is not a verdict, and this
-tool will not print one. Ghost paths are still named either way, because those
-are read from your tree.
+tool will not print one. A pattern that matches no file is still named either
+way, because that is read from your tree.
 
 `gate demo` is that same line with the repository supplied: three source areas,
 a docs folder, a CODEOWNERS, and a one-line policy saying which zone each owner

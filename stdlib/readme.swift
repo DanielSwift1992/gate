@@ -110,26 +110,30 @@
 //
 //     gate findings
 //
-// This is the zero-work look at the problem. It runs on what is already
-// here, the git history this clone carries, and prints what is true of it,
-// in sentences. «Access files were
-// touched by three people over five hundred commits, and none of those edits was
-// checked.» A repository with little history has little to say, and the output
-// says that instead. Every sentence is marked read, not judged: no check ran on
-// it. You get the reading. Judging starts when you declare facts.
+// It reads the git history this clone already carries and prints what is
+// true of it, in sentences. «Access files were touched by three people over
+// five hundred commits, and none of those edits was checked.» Zero setup. A
+// repository with little history has little to say, and the output says that
+// instead. Each sentence is marked read, not judged: no check ran. Judging
+// starts when facts are declared, in the next section.
 //
 // ── the line that has not been true for months ──
 //
-// If this repository keeps a CODEOWNERS, `gate import codeowners CODEOWNERS
-// --tree .` turns it into records, and the first refusal it prints is usually a
-// rule that stopped being true long ago and has been quietly obeyed since.
-// Tables arrive the same way, and `gate export` prints your file back byte for
-// byte, to prove the translation lost nothing. Rules are translated by hand,
-// once. They are small, and they are yours to read.
+// Your CODEOWNERS states rules, and nothing checks them. To put them under
+// the judge, translate the file into records:
 //
-// Those records are Swift declarations, so two arbiters can read the
-// same file: the judge on every keystroke, and the Swift compiler in your CI when
-// you want the slow, total answer. Both answer from the file alone.
+//     gate import codeowners CODEOWNERS --tree .
+//
+// Your file stays the input. The records are printed from it, and `gate
+// export` prints your file back byte for byte, to prove the translation lost
+// nothing. The first refusal is usually a rule that stopped being true long
+// ago and has been quietly obeyed since. Any table arrives the same way.
+// Rules are translated by hand, once. They are small, and they are yours to
+// read.
+//
+// Those records are Swift declarations, so the same file is read by the
+// judge on every keystroke and, in CI, by the Swift compiler. Two independent
+// readers, and both answer from the file alone.
 //
 // ── and what this does not touch, said plainly ──
 //
