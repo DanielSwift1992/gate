@@ -139,7 +139,10 @@ tool exists to hold. A CSV round-trips: `gate export` prints the tables
 back, and the diff against the originals is empty. A CODEOWNERS is judged
 against your tree as it lands: the refusal at the top of this page is
 exactly that, a rule reaching outside its zone, and a pattern that
-matches no file is named beside the verdict. If your half is not a table,
+matches no file is named beside the verdict. And the two stay compared:
+the world names its source on its own `from:` line, every `gate status`
+translates the file again and holds the two together, and a line changed
+on either side alone is named at its line. If your half is not a table,
 you write it as a file yourself: a page of plain declarations, translated
 by hand, once. The rules are small, and they are yours to read. That is
 the upkeep, all of it.

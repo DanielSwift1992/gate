@@ -108,7 +108,9 @@ purpose: type declarations only, no functions, no bodies, nothing runs.
 
 `docs/bench.png` is taken by `bin/shoot-bench.sh`: a fresh `gate demo`
 world, `gate serve` on a free port, one headless Chrome shot of
-`/ui?f=ownership.swift:84`. Beside it, `docs/bench.png.from` records the
+`/ui?f=ownership.swift:84`. That door is not the camera's: any refusal
+address pastes into the browser bar as `?f=file:line`, and the bench
+opens that file at that line. Beside it, `docs/bench.png.from` records the
 sha256 of `ui.html` as photographed, and the battery holds that hash to
 the working copy: change the bench and the battery goes red until the
 picture is retaken. CI takes a fresh shot on every run and attaches it as

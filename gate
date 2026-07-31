@@ -2099,11 +2099,15 @@ def codeowners_pair_guards():
     out = []
     if not FACTS:
         return out
-    base = os.path.dirname(os.path.abspath(FACTS))
-    for fn in sorted(os.listdir(base)):
-        if not fn.endswith(".swift"):
-            continue
-        path = os.path.join(base, fn)
+    # the judged records, not the folder: a pair lives in a judged file, and
+    # the manifest says where those sit, whatever their role, so the walk is
+    # over every declared row rather than over what is lying beside anything
+    judged = set(world_files()) | {os.path.abspath(FACTS)}
+    if MANIFEST:
+        mdir = os.path.dirname(MANIFEST["manifest"])
+        judged |= {os.path.join(mdir, r["path"])
+                   for r in (MANIFEST.get("rows") or [])}
+    for path in sorted(p for p in judged if os.path.exists(p)):
         try:
             text = open(path, encoding="utf-8").read()
         except OSError:
@@ -2114,12 +2118,16 @@ def codeowners_pair_guards():
         if not m:
             continue
         name = os.path.basename(path)
-        srcp = os.path.join(base, m.group(1))
+        # the declaration is read from where it was made: the world names its
+        # source relative to itself
+        srcp = os.path.join(os.path.dirname(os.path.abspath(path)), m.group(1))
         if not os.path.exists(srcp):
             out.append({"address": f"{name}:1", "claim":
                         f"printed from {m.group(1)}, and no file of that name is here now"})
             continue
-        policy = read_owners_policy(os.path.join(base, m.group(2))) if m.group(2) else {}
+        policy = (read_owners_policy(os.path.join(
+            os.path.dirname(os.path.abspath(path)), m.group(2)))
+            if m.group(2) else {})
         _, lines, srcmap, _ = codeowners_world_lines(srcp, policy, "")
         fresh = {l for l in lines if l.startswith("public typealias Owns_")}
         disk = text.split("\n")
@@ -2133,7 +2141,8 @@ def codeowners_pair_guards():
         for extra in sorted(held - fresh):
             out.append({"address": f"{name}:{disk.index(extra) + 1}", "claim":
                         f"the world holds this claim, and {m.group(1)} no longer "
-                        f"writes it: `{extra}`"})
+                        f"writes it: `{extra}`. Run the import again, or put the "
+                        f"line back"})
     return out
 
 
