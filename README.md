@@ -3,24 +3,29 @@
 **Git gave your code an integrity guarantee. gate gives the same guarantee
 to your facts.**
 
-Who may read what, who owns which directory, who reports to whom: the facts
-your company runs on are written down in five places: a spreadsheet, a
-wiki page, CODEOWNERS, an IAM console, somebody's memory. Every copy
-drifts from the others quietly. Nothing checks them against each other, so
-the drift is found by an audit, or by an incident.
+Your repository is full of sentences that must match something, and nobody
+checks the match. The schema must match the service that writes it. The
+rota must match who actually answers. CODEOWNERS must match the tree it
+divides. Each pair held the day somebody wrote it down, and nothing tells
+you the day the two stopped matching.
 
-The usual cure is to name one of those copies the source of truth. It goes
-stale like the rest, because a file everyone must keep current is a chore for
-everyone, so it is a chore for nobody. gate starts from the opposite fact:
-there is no source. Each side declares what it already owns, once, in a file
-of its own, and two declarations about one thing cannot differ in silence.
-They are equal, or you get the line and both names.
+One case, to be concrete. CODEOWNERS hands `/src/api` to @alice. The folder
+was renamed to `/services/api` in the spring. The rule now matches nothing,
+reviews still go to Alice, and no tool reports a problem. You find out at
+an audit, or the day somebody merges what nobody reviewed.
 
-The facts become a typed world in your own git repository, where an
-inconsistency is impossible to express: every claim is re-read in
-milliseconds, and a refusal names the exact line of your own file.
+That gap has a name: drift. Two records of one fact, coming apart in
+silence, while both still get obeyed.
 
-No server. No runtime. No new formats. Nothing leaves your repository.
+The usual cure is to pick one place and call it the source of truth. But a
+source has a direction: everything downstream must watch it, and it watches
+nothing. The folder was renamed in a pull request that never read the file.
+A file everyone must keep current is a chore for everyone, so it is a chore
+for nobody, and the chosen file goes stale like any other. gate starts from
+the opposite fact: there is no source, so there is no direction. The team
+that owns the folders declares them, once. The review rule declares the
+folder it points at. Two declarations about one folder cannot differ in
+silence. Either they are equal, or you get the exact point of contact:
 
 ```
 $ gate status
@@ -29,9 +34,17 @@ status: refused 1
                        the path they own must share one zone
 ```
 
-That is a CODEOWNERS rule, translated once, judged on every keystroke: carol
-keeps `docs`, and one line hands her a folder in `src`. The file that made the
-rule is named, at its line.
+That is a CODEOWNERS rule, translated once, judged on every change: carol
+keeps `docs`, and one line hands her a folder in `src`. The file that made
+the rule is named, at its line, with both sides of the disagreement. A diff
+compares two texts. This compares two claims about one thing.
+
+The check is one lookup per claim and nothing else: no search, no solver,
+no build. Milliseconds on a real repository, and still milliseconds when
+the repository is ten times the size, which is what lets it run on every
+keystroke, in every commit, and in CI, with nobody waiting on it.
+
+No server. No runtime. No new formats. Nothing leaves your repository.
 
 ## What changes
 
@@ -47,526 +60,144 @@ lookup, answered in milliseconds against the file itself:
 | Which commit broke this rule? | bisect by hand, if anyone notices | `git bisect run gate status` |
 | Is anything inconsistent right now? | an audit, quarterly | `gate status`, on every keystroke |
 
-The examples speak the demo org world (`gate demo org`); your own commands
-speak your own atoms.
-
-You pay once, per atom: translating N people and documents is the work.
-Every question after that is a composition of what you already translated,
-and compositions are free. That is the opposite of a reporting tool,
-where each new question is new work.
-
-## How it works
-
-Your facts become Swift declarations in your repository: one file to start
-with, `gate.swift`, and as many as you name in a manifest, all judged
-together. One text, readable by everything at once: `git diff`, a person,
-the judge, a Swift compiler. There is no DSL. What you write is bare
-Swift, the same language with the ceremony stripped; printing restores the
-full form, and full Swift is always one view away in the same file. Rules
-are type constraints in the same text, so a record that violates a rule
-does not get flagged: it fails to exist. The judge checks every claim in
-milliseconds, on every keystroke. The files stay plain Swift, so
-`swiftc -typecheck` is a second, independent reader whenever you want one.
-Git carries what it already carries best:
-history, authorship, review, rollback.
-
-You never migrate your systems. You translate one domain, the tables you
-already export, and everything else keeps talking to the world through
-the verbs below.
-
-## Start with your own drift
-
-If you publish an API and a client library for it, this takes two commands and
-answers a question about your repositories, not ours. Nothing is uploaded and
-nothing is fetched: both sides are read out of git on your machine.
-
-```sh
-git clone https://github.com/you/gate && cd gate      # 1. no install step
-./gate drift ../api/openapi.json --client ../sdk-js   # 2. what has it been?
-```
-
-Every command below is written `gate`. Until it is on your path it is `./gate`,
-run from the clone: there is nothing else to install, and nothing else to
-undo.
-
-**This observes; it does not judge.** The library has not entered gate's world,
-and gate holds no court over a world that has not entered, so `drift` prints no
-verdict. What it prints are facts you can re-run: a commit that first wrote a
-string is named by its own hash, and every absence carries the bounds of the
-walk that found it, so pointing at one file it skipped refutes the claim. That
-is what makes it a claim.
-
-```
-drift: observation of sdk-js against openapi.json · behind on 24 names · median 28 days · worst 77
-  in history · transferType · the contract's earliest revision saying it is 2025-04-29,
-               the library's earliest commit writing it 2025-07-15: 77 days
-  in this walk · includeUsers · the contract declares it; no file walked writes it
-  in this walk · /config · the contract declares this route; no file walked spells its segments
-  note: … absence is a fact about this walk: 214 files under …, kinds .ts .js …, skipping …
-```
-
-Two honest notes. A shallow clone has no past to date anything with and is told
-so rather than credited with a clean one: `git fetch --unshallow` first. And
-the contract is read by a JSON parser; if yours is YAML, one line converts it,
-and gate keeps saying plainly that it does not read YAML itself:
-
-```sh
-yq -o=json '.' openapi.yml > /tmp/openapi.json
-```
-
-In CI, the threshold is **yours**, declared by you, and the exit code carries
-your rule rather than anybody's verdict:
-
-```yaml
-# .github/workflows/drift.yml
-name: drift
-on: [push, pull_request]
-jobs:
-  gate:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
-        with: { repository: you/api,  path: .api  }      # the contract, brought here
-      - uses: actions/checkout@v4
-        with: { repository: you/gate, path: .gate }      # the tool travels too
-      - run: .gate/gate drift .api/openapi.json --client . --fail-over 30
-```
-
-Judgement begins on the other side of the gate: when both sides are **declared**
-into gate's own grammar, a disagreement between them is refused with an address,
-and the refusal is about two declarations rather than about anybody's code.
+The names in the examples come from a sandbox this repository can make for
+you; your own commands use your own names. You pay once, per atom:
+translating N people and documents is the work. Every question after that
+is a composition of what you already translated, and compositions are
+free. That is the opposite of a reporting tool, where each new question is
+new work.
 
 ## Quick start
 
 ```sh
-gate import codeowners CODEOWNERS --tree . --policy owners.csv   # your own ownership, judged
-gate demo && cd gate-demo                                       # the same, on a repo we make
-gate demo seam                               # two sides, one disagreement, one command
-gate serve                                   # the bench opens: change a fact, watch the judge
+git clone https://github.com/DanielSwift1992/gate && cd gate    # no install step
+./gate import codeowners CODEOWNERS --tree .   # your own ownership, judged
+./gate drift openapi.json --client ../sdk-js   # your contract against your client
+./gate serve                                   # the same facts as a live page
 ```
 
-The first line is the one to run in a repository you already have. Who owns
-which paths is a fact you already keep, in a file that cannot say whether an
-owner exists, whether a pattern still matches anything, or whether an owner is
-reaching outside the area they were given. It becomes a judged world
-without you writing a line.
+The first two lines are the ones to run in repositories you already have.
+Ownership is a fact you already keep, in a file that cannot say whether an
+owner exists or whether a pattern still matches anything: it becomes a
+judged world without you writing a line (`owners.csv`, two columns, adds
+the one thing CODEOWNERS cannot express: which zone each owner keeps).
+`drift` reads an API contract and a client library out of git on your
+machine, and prints what the copies have been doing to each other: nothing
+is uploaded, nothing is fetched, and it observes rather than judges, so
+its exit code follows a threshold you declare (`--fail-over 30`), never a
+verdict of ours.
 
-`owners.csv` is two columns, `owner,zone`, and it is the thing CODEOWNERS
-cannot say: which area each person may keep. Without it every rule is its own
-authority, the zone equalities cannot fail, and gate says `observed` rather
-than `holds`: a verdict nobody could have broken is not a verdict, and this
-tool will not print one. A pattern that matches no file is still named either
-way, because that is read from your tree.
+No repository of your own at hand? `gate demo` makes one: a small tree
+with a CODEOWNERS whose one rule reaches outside its zone, so the first
+thing you see is the refusal above. Everything it makes is committed the
+moment it is made, and `git checkout .` is the whole way back.
 
-`gate demo` is that same line with the repository supplied: three source areas,
-a docs folder, a CODEOWNERS, and a one-line policy saying which zone each owner
-keeps. One rule reaches past its zone, and the demo prints the refusal with the
-CODEOWNERS line that makes it before you have chosen anything: the thing this
-is all about, on the screen in the first breath. Everything it made is committed
-the moment it is made, so `git checkout .` is the whole way back.
+Every command here is written `gate`. Until it is on your path it is
+`./gate`, run from the clone: nothing else to install, nothing else to
+undo.
 
-`gate demo seam` is the shorter road if you came here because a client and a
-contract disagree rather than because of who owns what. It prints what each
-side owes the other and where they part, and leaves the pieces on disk to drive
-by hand. `gate demo org` is the same machinery on people, ranks and departments:
-a domain that needs no repository at all, for reading rather than for your own
-rows.
+## Find your drift
 
-Or start from your own rows:
+Yours is wherever two places state one fact. Take a thing you shipped this
+month and ask: where is this written down, and where else? Who checks the
+two against each other, and when did anybody last do it? The pairs you
+cannot answer for are your drift, and every team has them: the schema and
+the service that writes it, the contract and the client, the rota and the
+pager, the config nobody dares delete.
 
-```sh
-git init myworld && cd myworld
-gate init .                      # the hook wires itself, and readme.swift lands: yours
-mkdir tables                     # your own data, any source, and nothing else
-cp ~/exports/people.csv tables/
-cp ~/exports/grants.csv tables/
-gate status                      # first print + first verdict, in ms
-```
+You are looking for pairs, not objects: one fact always has more than one
+record. And the loudest marker is anything that calls itself the source of
+truth: a self-declared source is the record nobody compares to the others
+any more, so that is usually where drift collects.
 
-`gate serve` in a repository that has no world yet still opens, and `gate log`
-reads the repository itself, with nothing to translate.
+The quick first look is one command, over the git history already in your
+clone. `gate findings` prints plain sentences: who changed which facts,
+across how many commits, and whether any hook or workflow checked those
+edits. Nothing to set up, and nothing judged yet: these are readings, not
+verdicts.
 
-**Full**, **Bare** and **Table** are three ways to look at one file, and a file
-may say which of them it should first be met in: `// opens: bare` in its own
-head line, the same act as `// role:` one line above it. A readme opened in
-Full reads as code; a ledger opened in Bare reads as prose. The bench opens on
-the first row your layout declares, so the front door is whichever file you put
-first.
+Something drifts? Gate it.
 
-## Mine and theirs
+## Gate it
 
-Everything here is an emitted view of somebody's source, and nobody is special.
-Your world is a view of your facts. Their spec is a view of theirs. The judge in
-`bin/` is a view of the corpus: `bin/build-judge.sh` clones at a revision,
-builds, and writes the revision down beside the binary, which is the same act
-this page describes, spelled in `sh`.
+To gate a pair: put your half of it in a file, once. From then on every
+change is checked against it, and the other side sees it the next time
+they check.
 
-So there are two verbs, and every node has both:
+If your half is already a table (CODEOWNERS, a CSV), one command puts it
+in, your file stays the source it always was, and `gate export` prints it
+back so you can watch the diff against the original come up empty. If it
+is not a table, you write it as a file yourself: a page of plain
+declarations, translated by hand, once. The rules are small, and they are
+yours to read. That is the upkeep, all of it.
 
-```sh
-gate mine   people.swift                     # I emit it, and I answer for it
-gate theirs api.swift --at openapi@3f2a1c9   # I took it, at what I took it at
-```
+The files are bare Swift: the same language with the ceremony stripped,
+and no DSL. Records are declarations, rules are type constraints in the
+same text, so a record that violates a rule does not get flagged: it fails
+to exist. And because it is plain Swift, a second, independent reader
+exists whenever you want one: `swiftc -typecheck` passes on these files as
+they are, with no project and no build. Git keeps doing what it already
+does best: history, authorship, review, rollback.
 
-Both write one document, and the document is entirely yours. It has three
-columns: **whose source** a file is, **which court** reads it, and, for
-anything taken, **the revision** it was taken at.
+A domain's vocabulary, the forms a world of that kind is written in, is a
+unit of its own, and today forms arrive by two roads: shipped on the shelf
+in `stdlib/` and judged in this repository's own battery, or declared in a
+file of your own beside your world. The goal is one road, an empty prism
+where every form is presented and nothing is built in, and that is a debt
+on this project, not a claim about it. `gate stdlib show forms-organization`
+prints any shelf page exactly as it shipped.
 
-It is written the way every record in this world is written: the columns are
-**axes** to declared atoms, and the one string is the `typeName` literal that
-spells a name. A revision is an atom of its own, so two rows taken at the same
-revision say the same **name**, not the same text.
+The porcelain is deliberately git-shaped: `init · status/fsck · log ·
+check · diff · apply · import/export · verify · guard · library · survey ·
+drift · badge · mine · theirs · declare · seam · attention · serve ·
+report · stdlib · my · demo · findings · --version`. A refusal exits
+non-zero, so hooks and CI need no wrappers. Twelve of these carry a
+certificate that they change no files, which is why you can run them on a
+clone you care about. Every command ends by naming the one step that comes
+next, so nobody holds the whole ladder in their head.
 
-```swift
-// gate.manifest.swift
-public protocol Role {}
-public enum WorldFile: Role {}
-public enum SeamFile: Role {}
+## What this does not touch
 
-public protocol Mine {}
-public enum People: Mine {
-    public typealias Kind = WorldFile
-}
-extension People { public static var typeName: String { "people.swift" } }
+A difference between two records is visible at a glance, text against
+number, and the judge refuses it at a line. A difference in what two
+people mean by one record is another thing: no check turns two readings
+into one. What gate offers there is its one move: each side writes its
+half down separately, and the judge says whether the two match, and where
+they part when they do not. Whether a rule *should* say what it says is a
+claim you can state too: write it as policy, let the other side write
+theirs, and the verdict says if you agree. Agreement here is not assumed.
+It is stated twice, and confirmed.
 
-public protocol Theirs {}
-public enum Rev_openapi_3f2a1c9 {}
-extension Rev_openapi_3f2a1c9 { public static var typeName: String { "openapi@3f2a1c9" } }
-public enum TheContract: Theirs {
-    public typealias Kind = SeamFile
-    public typealias At = Rev_openapi_3f2a1c9
-}
-extension TheContract { public static var typeName: String { "api.swift" } }
-```
+## Death to drift
 
-**The role names a court, so it is not optional.** `world` is judged with the
-rest of your world, by the plain court. `seam` is judged where it meets yours
-and nowhere else. `forms`, the grammar a world is written in and the
-certificates over it, is judged by the `where` court: invent a word in your own
-fork of your own forms, say something true about it and it holds, say something false
-and it is refused at the line. `judge` is the court itself, held by a
-reproducible build rather than by judgement. `carried` is anything brought here
-unchanged (a vendored library, an editor), held by its source's name and
-version and by no court of this world; the row exists so that nothing you depend
-on is unaccounted for, including the thing you type into. A row gate cannot place is
-refused at its own line, never swept quietly into your world, which is what
-happened the one time this document was read by guessing.
-
-**What is taken is taken at a revision, and there are no ranges.** That is the
-whole reason no version solver exists here: the problem is not solved, it cannot
-be stated. To move, take it again at a newer revision. Two takes of the same name
-do not get resolved by a heuristic: they are refused with both addresses:
-
-```
-status: refused 1
-  b-forms.swift:2 · `Thermal` is declared twice: once at a-forms.swift:2 and again
-                    here. One name, one declaration
-```
-
-Nothing appears in the rail because it was lying in the folder. `gate declare
-carrier … --theirs` writes the row for you, taking the pin from the `against`
-block the declaration already carries: nobody types a second copy of a fact.
-
-**The words a world is written in are not files at all.** `Department`, `Ranked`,
-`Site` are not files your world is made of. A world uses them with no file of
-that name anywhere near it; a copy put beside the world is read by nothing; and
-a copy declared as a world row is refused, not because the words live anywhere
-privileged, but because the judge's FRAGMENT reads five shapes and `public
-protocol` is not one of them. A world is records; forms are the grammar records
-are written in. `gate stdlib` prints, and what it prints is a
-printout. `gate --version` names the revision those words were compiled from, and
-that revision, not any file, is what a world depends on.
-
-The rail says two things, because there are two: **mine** and **theirs**. The
-judge is a row of what was taken, at the revision it was taken at, beside the
-words it carries, not a section of its own. It is theirs like anything else,
-and a privileged entity in the rail would be a privileged entity in the head.
-
-## gate is the first inhabitant
-
-This repository has a `gate.manifest.swift` of its own, and it is not a
-demonstration. The tool's facts about its own surface (the palette it paints
-with, the ladder of lengths its page is spaced on, the atoms its bench is made
-of) are its world, declared in the same columns as yours and judged by the same
-judge. Break an equality in `stdlib/bench-metrics.swift` and `gate status` in
-this repository refuses at the line, exactly as it would in yours. Its badge is
-not a sample; it is its life.
-
-**And self-application is not self-certification.** The judge does not judge the
-judge. No self-reference is the floor this whole theory stands on, and a court
-that certified itself would be worth nothing, so the judge's row is accounting,
-not a verdict. What holds it is a build anybody can repeat: take the pin, run
-`bin/build-judge.sh <commit>`, and point the battery at your build
-(`GATE_JUDGE=path tests/smoke.py`). That check lives outside this world on
-purpose.
-
-gate lives under its own court everywhere a court is possible, and names the
-one place where it is not. The judge's own row states the corpus revision it
-was taken at, the same way any taken thing is pinned here.
-
-**How the other side finds out** is a pull request, and nothing else. gate never
-fetches and never sends: the other side's declaration arrives because you brought
-it: a checkout in CI, a copy, whatever you already trust. To let them know
-somebody depends on them, put your file and its two manifest lines in **their**
-repository. From then on their own CI parts the seam the day they touch what you
-carry, with an address, and no registry has to exist for it. Unsubscribing is
-deleting the file: a commit like any other: visible, dated, and nobody's to do
-quietly.
-
-From then on:
-
-```sh
-gate check view Emp0042 FinanceShare   # may X read Y?  answered in ms
-gate diff  transfer Emp0042 Sales      # what would break (changes nothing)
-gate apply transfer Emp0042 Sales      # edits the world; writes only on holds
-gate guard merge                       # repo policy: the HEAD author must hold
-                                       # the rank gate.policy.swift states
-gate survey                            # read-only: unwritten links mined from
-                                       # your own git history, before any
-                                       # translation at all
-```
-
-The porcelain is deliberately git-shaped: `init · status/fsck · log · check ·
-diff · apply · import/export · verify · guard · library · survey · drift ·
-badge · mine · theirs · declare · seam · attention · serve · report · stdlib · my ·
-demo · findings · --version`. A refusal
-exits non-zero, so hooks and CI need no wrappers. `drift`, which judges
-nothing, exits non-zero only on a threshold you declare yourself.
-
-**The full reference is a world, not a page.** `gate stdlib show readme` prints
-every verb as a record (what it touches, which court it calls, a note in its
-own words), judged with this repository's own world and held to the dispatch by
-name in both directions: a verb with no record and a record with no verb are
-each refused at a line. Eleven of them carry a certificate that they change
-nothing, `Run<V>: Safe where V.Does == Reads`; the judge refuses that line if
-the verb admits to writing, and the battery runs every one of them and holds
-the working copy byte-identical afterwards. A list in prose could promise the
-same thing and drift from it the same afternoon.
-
-Every command ends with the one step that comes next, chosen by what your
-repository already has, so nobody holds the whole ladder in their head. A
-refusal points at its address instead.
-
-## What you get
-
-- **The inside of a body is total too.** The judge refuses anything outside
-  its grammar at the top of a file, an unknown form inside a body, and an
-  argument that resolves to nothing. One thing it cannot refuse is an entry
-  that never closes: it swallows what follows and drops those claims without
-  a word. So every line inside a body must belong to a whole entry: a form,
-  its arguments, and the `>.self;` that ends it. A line that does not is
-  named. Comment out one bracket and six claims stop being checked; that now
-  says so instead of holding.
-- **One name, one declaration.** Two declarations of a name are two truths
-  about it, and only one can be read: the fast tier says so at a keystroke,
-  naming both lines, which is what the compiler would say at a build.
-- **Refusals with addresses.** Never "validation failed": always
-  `file:line`, both names, and what must hold: the line you broke, not one
-  near it. On imported data the address points into *your* CSV.
-- **The cursor on a name says what it is.** A thin line under the bar names
-  whatever the cursor rests on: a record and what it conforms to, a value and
-  its kind, an axis and what it takes, a gate and its arguments. Every word is
-  read from your world and its forms, so your own domain describes itself with
-  no dictionary of ours to write.
-- **Offers every way to fill a hole, and only those.** Every axis in a forms file
-  says what it accepts, so an empty slot after `Sex =` offers Male, Female
-  *and* `Given.Sex`: an atom of that kind, or a path through an axis this
-  record already has whose own axis is of that kind. Type a dot and it offers
-  what stands after it. Not Manager, and not a name that merely looks
-  similar: what the bench suggests is what the judge will accept.
-- **Millisecond judgement at any size.** 2 000 records judged in ~100 ms;
-  the merge cycle benches at ~7 merges/s on one queue, thousands of times
-  a CI-gated queue. Judgement is linear and local.
-- **Verification without trust.** Any translator (an engineer, an LLM
-  agent) may produce the world: `export` proves the fact translation
-  byte-for-byte (round-trip diff must be empty) and `verify` seeds
-  violations to prove the rule translation against your old checker.
-- **Git, amplified.** The judge is a `git bisect run` predicate (the
-  breaking commit found automatically), a merge guard (textually clean,
-  semantically broken merges get named), and a free audit journal
-  (`git log` over grants, signed commits as signed grants).
-- **What a library has been, observed and never judged.** `gate drift
-  openapi.json --client ./sdk` measures a world that has not entered: the day
-  the contract first declared a name, the day the library first wrote it, the
-  names no walked file writes, the routes no walked file spells. It prints no
-  verdict, because no check ran: nothing outside the gate can be judged, since
-  nobody there has spoken for anything. Each line says which kind of fact it is:
-  a commit is an object and carries its own hash; an absence is a walk and
-  carries its bounds. On weaviate's TypeScript client it reads: behind on 24 of
-  71 names, median 28 days, and two the library has never written. The exit code
-  is a threshold you declare with `--fail-over`, never a judgement.
-- **A green must say how wide it is.** `gate badge -o gate.svg` counts the
-  claims the judge counted (nothing stores that number) and replays every
-  commit that touched the world back through the same judge until one does not
-  hold, so the days on it are earned rather than declared. It will not say "no
-  silent error", because that is precisely what nobody saw. It speaks for a
-  world, and for nothing else: a badge over an observation would be a number
-  with no check behind it.
-- **And judgement begins at the gate.** `gate declare` is the crossing: a
-  contract emits a view of the document it publishes, a library emits, from its
-  own build with its own tools, a small declaration of what it carries, and
-  states its own name for a field only where that name does not follow. Both are
-  views of what each side already keeps, so neither can drift from its source.
-  `gate seam` is the one court over the pair: a disagreement is refused at an
-  address, naming each side in the words that side used, and a field nobody
-  claimed is named beside the judgement rather than inside it: a claim never
-  made cannot be refused. Nothing is read out of anybody's source: reaching
-  across the gate for a premise is how a court ends up reasoning honestly about
-  an invented world, and the reader that did it is gone.
-
-  ```sh
-  gate declare contract openapi.json -o api.swift        # the API's own word
-  gate declare carrier  sdk.json     -o sdk.swift        # what their build emitted
-  gate seam api.swift sdk.swift
-  # seam: refused 1 · 5.8 ms
-  #   /scrape · waitFor · the contract declares it count; SdkJS declares it text
-  ```
-- **And what waits for a word is a different question from what changed.** History
-  is git's, and anybody can arrange it for themselves; `gate attention` is the
-  other cut: a standing account of who owes whom a sentence. It is two-sided by
-  construction rather than by design, since an unanswered axis stays with whoever
-  owes the answer: the same movement shows a client what its contract waits for
-  and the contract what the client waits for, and a sensor opens a hole for a
-  technologist exactly as a client opens one for a contract.
-
-  Intention is declared, never guessed. A divergence somebody said out loud is a
-  fact with an author; one nobody said is unintended by construction. But a
-  declaration without a term is an amnesty, so a declared divergence **cites
-  something that can close**, and when the tracker says it closed, the exception
-  stops holding and the item comes back first and loudest, its ground gone. The
-  honest path stays the cheap one: fixing costs nothing, and setting something
-  aside costs a name, a reason, and an expiry that arrives on its own.
-- **A citation may not outlive the thing it cites.** `gate import refs
-  tickets.json --code .` reads a tracker's own export and every place your code
-  names a ticket, and judges them as one world: a `TODO(PROJ-42)` whose ticket
-  was closed months ago is refused at the line that writes it, and one naming a
-  ticket the tracker has never heard of is refused too. Neither system reads the
-  other today, which is exactly why the two copies of "this is still open" drift:
-  the tracker does not read your repository, and your repository does not read
-  the tracker. Nothing leaves the machine: the export is a file you already have.
-  It is one line in the CI you already run (the export may sit in another
-  checkout entirely, because nothing is fetched, only read), and it exits
-  non-zero on a stale citation, so no wrapper is needed:
-
-  ```sh
-  gate import refs ../tracker-export.json --code .
-  ```
-
-  What it prints is the check, not a file to keep: unless you ask for it by name
-  with `-o`, it is judged where nothing keeps it and your repository is left as
-  it was.
-- **One question, three doorways.** Grants, Kubernetes RBAC and CODEOWNERS
-  are the same question, who may do what, where, so they share one
-  crystal and differ only in the importer. `gate import rbac` judges the
-  namespace invariant (a stale roleRef and a cross-namespace binding, named
-  by their k8s source). `gate import codeowners` judges the thing CODEOWNERS
-  itself cannot say: state who may own which zone, and a rule reaching
-  outside it is refused at the line of your own CODEOWNERS, while a pattern
-  no file matches is named beside it.
-- **A workbench, not an IDE.** `gate serve` + `/ui` opens a local bench:
-  the world on the left, verdict and live tables on the right, judged on
-  every keystroke. It obeys your declared file layout and judges across
-  files: an unsaved claim in one file is caught against a roster in
-  another.
-- **Three views of one file, and one way to answer.** Full is the Swift you
-  already have; Bare is the same text with the ceremony gone; Table projects
-  it as relations. They are not three editors: every value in every one of
-  them is the same closed question, asked from the grammar: click it and the
-  offer is what that axis accepts, an atom of the kind or a path through an
-  axis this record already has. What a record still owes is a row before it is
-  a line, and nothing is written until a whole line can be: pick a value and
-  the axis, the `=` and the value go in together. A new record is offered the
-  shapes the world has already lived, and the only free step is its name,
-  refused while it is taken. Removal is by whole units, and what it costs is
-  not our guess: the judge reads the file again and names every reader by
-  address. One bridge carries all of it from a parsed fact to a place in the
-  text, so a slot it cannot place says `edit in Full` instead of guessing.
-- **A comment is a note on a fact.** Consecutive `///` lines standing directly
-  above a declaration are what you wrote about that record, and they travel
-  with it: in Bare above the record, in Table as a column that exists only
-  where notes do. A blank line ends a note rather than spanning it, and the
-  comments that belong to nobody stay where the document put them.
-- **The theme is a declaration, not a toggle.** `MyBench` in your own world
-  states which theme the bench uses, so the choice is a fact in your git with
-  a date on it, not a setting somewhere. With nothing declared the operating
-  system decides. There is no switch: a button that duplicates a declaration
-  would be a second truth about it.
-- **Findings, before anything is translated.** `gate findings` reads a
-  clone and says what is true of it in sentences: who changes the facts and
-  whether anything checked those edits, owners CODEOWNERS names that the
-  history has not seen for hundreds of commits, work that lives in one
-  person's head. What the judge checked is marked as checked; what was only
-  read from git says so. `--md` prints the same as a note. It needs no
-  world, no configuration and no network, which makes it the first useful
-  thing gate does in any repository.
-- **A journal, from git itself.** `gate log` projects
-  the repository's own history (commit, author, open or closed) with no
-  translation at all: any clone already carries it. A view is a pure
-  function of the clone, so whoever can read the repo sees it; nothing is
-  hosted, nothing is stored. Observed, never judged: open/closed is
-  reachability from the default branch, not a verdict.
-- **A world of your own, if you want one.** Everybody's bench has one more
-  file, `my.swift`, and until somebody writes in it there is nothing: it
-  reads as a comment saying what it is for, and it is stored nowhere. Write
-  a claim you want to keep true and it becomes a file in *your* git
-  (`~/.gate/me`, one per repository), judged together with the shared world
-  and never in it: when somebody changes a fact your claim depends on, the
-  judge names the line in your file, and their pipeline stays about the
-  shared world alone. Clear it and it is gone again. Privacy is the
-  repository boundary, not a policy; sharing is moving a declaration into
-  the shared world and committing it.
-- **Forms are the unit, and today they arrive by two roads.** A domain has
-  one vocabulary, the forms and axes a world of that kind is written in,
-  and it ships as a real Swift file in `stdlib/`, judged by the product's
-  own judge in its own battery. Where they come from is a fact about this
-  moment, not a principle, and the two roads are said apart. The corpus's
-  forms are carried **by the judge we ship**, which is a differential arbiter
-  for one reference world: its own header says the table it holds is that
-  world's policy stated a second time, on purpose, so two encodings can check
-  each other. A world uses `Department` with no file of that name beside it,
-  `gate --version` names the revision, and a copy of the printout declared as a
-  world row is refused, because the judge's fragment reads five file shapes and
-  `public protocol` is not one of them. Forms of
-  your **own** are presented by file and judged as a `forms` row: invent a
-  word in your fork, say something true about it and it holds, say something
-  false and it is refused at the line. The goal is one road, an empty prism
-  where every form is presented and nothing is built in, and that is a debt
-  on this project, not a claim about it. So the language is one command away
-  to *read*: `gate stdlib show forms-organization`, and `materialize` writes
-  the printout out for offline reading. In the bench, hold ⌘ and every name
-  in the file underlines: click one and it opens where it is declared,
-  whether that is your own file or the judge's own page. Nothing a printed
-  world says is left without a home, and a check keeps it that way. Hidden
-  is not secret.
+Every pair you gate is one thing you stop keeping in your head. The
+checking does not pile up: each claim is one lookup, so a hundred pairs
+cost what ten did. Once your pairs are in, the picture is concrete: the
+rename goes red on the renamer's screen, not on yours. The intern's access
+is a one-line diff somebody has to approve. Deleting the old config takes
+an afternoon, not a season of asking around, because the readers it still
+has are a list, not a guess. Nothing got faster. What went away is the
+asking.
 
 ## Carrying gate in your repository
 
 `gate init . --vendor` puts the tool itself into `.gate/` with a `./gatew`
 shim, the way a project carries `./gradlew`. Commit it, and everybody who
-pulls has gate: there is no installation step to ask anyone to take, and
-nothing is fetched from anywhere:
-
-```sh
-git clone your/repo && cd repo
-./gatew status          # judged, immediately
-```
-
-Three things follow. A security review reads it as what it is: code in
+pulls has gate: no installation step to ask anyone to take, nothing
+fetched from anywhere. A security review reads it as what it is: code in
 their own repository, pinned by a commit, reviewed like any other change,
 not a script piped into a shell. The judge is pinned with it, so an old
 commit is judged by the judge it was written with, which is what makes
-`git bisect` over facts exact. And the judge is pinned twice over: `.gate/`
-carries its `sha256` (what is here) and its corpus revision (what it was made
-from); `bin/build-judge.sh <pin>` builds the same judge from the public
-corpus, checked by the battery rather than by the hash.
+`git bisect` over facts exact. And it is pinned twice over: `.gate/`
+carries its `sha256` (what is here) and its corpus revision (what it was
+made from); `bin/build-judge.sh <pin>` builds the same judge from the
+public corpus, checked by the battery rather than by the hash.
 
-## Security posture
+## Nothing leaves your machine
 
 gate makes no outbound connection, at any time, for any reason: no
 telemetry, no update check, no licence ping. That is a contract, not a
-default, and it is what lets an engineer install it the way they install
-`ripgrep`. Verify it yourself, in about a minute:
+default. Verify it yourself, in about a minute:
 
 ```sh
 # 1. air-gap it: turn off the network and run the whole battery
@@ -587,16 +218,14 @@ otool -L bin/gate-judge                     # ldd on Linux
 bin/build-judge.sh <pin>
 ```
 
-The bench also declares a Content-Security-Policy with `connect-src
-'self'`, so the browser refuses any external request even if one were ever
-written. Everything above is a check in the battery, so it stays true.
-
-There is no server, no account, no telemetry endpoint, and no data of yours
-anywhere but your own repository. What gate reads is your working copy and
-`git`; what it writes is your working copy. The CLI is one file of standard
-library Python and the bench is one file of HTML: small enough that reading
-them is a reasonable afternoon, which is the point: a tool that checks by
-reading should be checkable by reading.
+The bench declares a Content-Security-Policy with `connect-src 'self'`, so
+the browser refuses any external request even if one were ever written.
+Everything above is a check in the battery, so it stays true. What gate
+reads is your working copy and `git`; what it writes is your working copy.
+The CLI is one file of standard-library Python and the bench is one file
+of HTML: small enough that reading them is a reasonable afternoon, which
+is the point. A tool that checks by reading should be checkable by
+reading.
 
 ## Where it plugs in
 
@@ -676,3 +305,5 @@ Roadmap, next: single-binary Swift CLI (Linux/Windows included) · the
 bare-Swift diff view (`gate diff` shows the stripped form, `--full` the
 whole text) · editable bare view in the bench · apply routing over the
 declared layout · more domain forms.
+
+Something drifts? Gate it.

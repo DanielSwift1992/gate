@@ -100,10 +100,6 @@
 // readme.swift, verbs.swift and forms-tool.swift each end with the command
 // that prints what shipped, for comparing or restoring by hand.
 //
-// (Reading this as a plain file instead? Run `gate serve` in this repository:
-// it starts a local page in your browser, this file on the left, the live
-// verdict on the right.)
-//
 // Beside this file the page lists `my.swift`: the one file here that is not
 // part of this repository. You are already half of several pairs: the things
 // you check by hand because nobody else will. my.swift is where your half
