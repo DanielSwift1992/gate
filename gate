@@ -2110,7 +2110,9 @@ def codeowners_pair_guards():
     for path in sorted(p for p in judged if os.path.exists(p)):
         try:
             text = open(path, encoding="utf-8").read()
-        except OSError:
+        except (OSError, UnicodeDecodeError):
+            # a declared row may be a binary, the judge or a carried editor,
+            # and a binary is nobody's half of a printed pair
             continue
         if "printed by gate import codeowners" not in text:
             continue
