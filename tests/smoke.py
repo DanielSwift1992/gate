@@ -3767,9 +3767,24 @@ console.log(JSON.stringify(out));
             except Exception:
                 time.sleep(0.1)
         man = os.path.join(HERE, "gate.manifest.swift")
+        # the panel's sweep is measured here, not read: the CLI's fence below
+        # counts makers and knows the sweeper's name, and both stay true with
+        # the panel's one sweeping line deleted — the exact hole this began as,
+        # one directory per keystroke. So: list temp, judge once, list again.
+        import tempfile as _tf2
+        _tmp2 = _tf2.gettempdir()
+        _pnl_now = lambda: {n for n in os.listdir(_tmp2) if n.startswith("gate-")}
+        _pnl_was = _pnl_now()
         req = _u.Request(f"http://127.0.0.1:{_bench_port}/verdict?f=gate.manifest.swift",
                          data=open(man, "rb").read(), method="POST")
         seen = json.loads(_u.urlopen(req, timeout=10).read().decode())
+        # the response is written before the sweep runs, so give it a breath
+        swept = False
+        for _ in range(20):
+            swept = _pnl_now() - _pnl_was == set()
+            if swept:
+                break
+            time.sleep(0.1)
         said = run("status", cwd=HERE)[1]
         agreed = (seen.get("verdict") == said.get("verdict"),
                   seen.get("verdict"), len(seen.get("refusals", [])), said.get("verdict"))
@@ -3777,6 +3792,7 @@ console.log(JSON.stringify(out));
         _bench.terminate()
     S.append(("the bench and the command line say the same thing about this repository",
               agreed and agreed[0] and agreed[1] == "holds"))
+    S.append(("the panel leaves no scratch behind an answered judgement", swept))
 
     # AND ABOUT A WORLD THAT HAS THE FILES THIS ONE HAPPENS NOT TO. The fence
     # above compares gate's own repository, which declares no policy at all —
