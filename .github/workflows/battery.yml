@@ -10,3 +10,14 @@ jobs:
       # so the battery never trusts a stale vendored binary
       - run: bin/build-judge.sh 0fd0b38
       - run: python3 tests/smoke.py
+      # a fresh shot of the bench on every run, downloadable from the run's
+      # artifacts. The battery holds docs/bench.png.from to ui.html, so a
+      # stale committed picture is already red above; committing the fresh
+      # one stays a human act.
+      - run: bash bin/shoot-bench.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bench-shot
+          path: |
+            docs/bench.png
+            docs/bench.png.from

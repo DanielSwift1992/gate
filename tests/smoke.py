@@ -5220,9 +5220,24 @@ public enum MyWatch: AccessLedger {
     S.append(("the bench opens on something a reader can read, and measures itself once it can",
               "if (!readable.length && seamRows.length) await openSeamSide(seamRows[0], null);" in ui
               # not inside one branch: every way in reaches it
-              and ui.count('requestAnimationFrame(() => { if (mode === "full") cm.refresh(); })') == 1
-              and ui.index('requestAnimationFrame(() => { if (mode === "full") cm.refresh(); })')
-                  > ui.index("if (!readable.length && seamRows.length)")))
+              and ui.count('if (mode === "full") cm.refresh();') == 1
+              and ui.index('if (mode === "full") cm.refresh();')
+                  > ui.index("if (!readable.length && seamRows.length)")
+              # and the door's line jump rides that same measured frame: scrolled
+              # earlier, the editor has no height yet and the line lands short
+              and "if (doorLine) reveal(doorLine);" in ui
+              and ui.index("if (doorLine) reveal(doorLine);")
+                  > ui.index('if (mode === "full") cm.refresh();')))
+
+    # ── AND THE ADDRESS IS A DOOR. The bar reads the address the verdicts
+    # speak, `?f=file` or `?f=file:line`, and opens there; every open file
+    # writes itself back, so the bar always names what is on the bench and a
+    # copied URL lands whoever follows it on the same line. A name the world
+    # does not have falls to the first file, and the address corrects itself.
+    S.append(("the address bar is a door, and it speaks the verdicts' own file:line",
+              'new URLSearchParams(location.search).get("f")' in ui
+              and 'asked.match(/:(\\d+)$/)' in ui
+              and '"?f=" + encodeURIComponent(name)' in ui))
 
     # ── A WRITE NAMES ITS FILE OR IT DOES NOT HAPPEN. Reading may fall back to
     # something sensible; writing may not, and one function did both. In a world
@@ -6054,6 +6069,21 @@ public enum MyWatch: AccessLedger {
                       for n in ("contract", "grants", "organization", "reference"))
               and not any(f.startswith("genre-")
                           for f in os.listdir(os.path.join(HERE, "stdlib")))))
+
+    # ── AND THE COVER'S PICTURE IS OF THIS BENCH, NOT A REMEMBERED ONE. The
+    # README shows docs/bench.png, and bin/shoot-bench.sh writes beside it the
+    # sha256 of ui.html as photographed. Held here to the working copy, so a
+    # bench that moved on goes red until the picture is retaken, which is one
+    # command. The pair is the picture and the page, spelled as a hash of the
+    # page because pixels depend on the camera's fonts and the page does not.
+    _shot_from = os.path.join(HERE, "docs", "bench.png.from")
+    _shot_said = open(_shot_from, encoding="utf-8").read() if os.path.exists(_shot_from) else ""
+    _ui_hash = hashlib.sha256(open(os.path.join(HERE, "ui.html"), "rb").read()).hexdigest()
+    S.append(("the cover's picture shows the bench as it is, not as it was",
+              os.path.exists(os.path.join(HERE, "docs", "bench.png"))
+              and "docs/bench.png" in readme
+              and ("sha256:" + _ui_hash) in _shot_said
+              and "shoot-bench.sh" in _shot_said))
 
     claimed_n = re.search(r"the battery: (\d+) end-to-end checks", readme)
     S.append(("the README counts these checks correctly",

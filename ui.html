@@ -3113,6 +3113,9 @@ async function loadFile(name) {
     cm.setOption("readOnly", false); viewingShelf = null; refLabel = null; undeclaredView = null;
     active = name;
     document.getElementById("fname").textContent = name;
+    // the address names the open file, so a URL is a door: copy it from the
+    // bar and whoever follows it lands on this file, not on the first one
+    try { history.replaceState(null, "", "?f=" + encodeURIComponent(name)); } catch (e) { }
     buildRail();
     const t = await (await fetch("/world?f=" + encodeURIComponent(name))).text();
     // ── AND THE NAMES ARE KNOWN BEFORE THE TEXT IS PAINTED. CodeMirror
@@ -3321,11 +3324,21 @@ buildRail();
     // shown. The first thing the layout declares that a reader can read is the
     // door; here that is a side of the seam, opened to READ like any other.
     const readable = files.filter(f => f !== layoutFile && f !== personalFile);
+    let doorLine = 0;
     if (!readable.length && seamRows.length) await openSeamSide(seamRows[0], null);
     else {
-        const first = files[0] || "gate.swift";
+        // a URL that names a declared file opens on that file: the door the
+        // address bar already is. It reads the address the verdicts speak,
+        // `file` or `file:line`, so a printed refusal pastes straight into the
+        // bar. A name the world does not have falls to the first file, and the
+        // address corrects itself to what actually opened.
+        const asked = new URLSearchParams(location.search).get("f") || "";
+        const askedLine = asked.match(/:(\d+)$/);
+        const askedFile = askedLine ? asked.slice(0, askedLine.index) : asked;
+        const first = files.includes(askedFile) ? askedFile : (files[0] || "gate.swift");
         if (opensAs[first]) setMode(opensAs[first]);
         await loadFile(first);
+        if (first === askedFile && askedLine) doorLine = +askedLine[1];
     }
     // ── AND THE EDITOR IS MEASURED ONCE THE PAGE HAS A LAYOUT. CodeMirror
     // measures itself when it is built, and it is built while the rail is still
@@ -3335,7 +3348,13 @@ buildRail();
     // selected file, a verdict bar, and a blank pane. One frame later there is a
     // layout to measure against, and this runs on every way in rather than on
     // the one that happened to be walked.
-    requestAnimationFrame(() => { if (mode === "full") cm.refresh(); });
+    // the door's line jump waits for that same measure: scrolled before the
+    // editor has a height, the position lands short and the line stays under
+    // the fold
+    requestAnimationFrame(() => {
+        if (mode === "full") cm.refresh();
+        if (doorLine) reveal(doorLine);
+    });
 })();
 
 // ── no world yet: the journal on the left is already live, and these are the

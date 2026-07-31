@@ -1,4 +1,4 @@
-# gate
+# gate · death to drift
 
 **Git gave your code an integrity guarantee. gate gives the same guarantee
 to your facts.**
@@ -38,6 +38,10 @@ That is a CODEOWNERS rule, translated once, judged on every change: carol
 keeps `docs`, and one line hands her a folder in `src`. The file that made
 the rule is named, at its line, with both sides of the disagreement. A diff
 compares two texts. This compares two claims about one thing.
+
+The same refusal on the live page (`gate serve`), at the line that makes it:
+
+![the bench: the refusal at its line, re-read on every keystroke](docs/bench.png)
 
 The check is one lookup per claim and nothing else: no search, no solver,
 no build. Milliseconds on a real repository, and still milliseconds when
@@ -151,10 +155,9 @@ The porcelain is deliberately git-shaped: `init · status/fsck · log ·
 check · diff · apply · import/export · verify · guard · library · survey ·
 drift · badge · mine · theirs · declare · seam · attention · serve ·
 report · stdlib · my · demo · findings · --version`. A refusal exits
-non-zero, so hooks and CI need no wrappers. Twelve of these carry a
-certificate that they change no files, which is why you can run them on a
-clone you care about. Every command ends by naming the one step that comes
-next, so nobody holds the whole ladder in their head.
+non-zero, so hooks and CI need no wrappers, and every command ends by
+naming the one step that comes next, so nobody holds the whole ladder in
+their head.
 
 ## What this does not touch
 
@@ -179,91 +182,19 @@ an afternoon, not a season of asking around, because the readers it still
 has are a list, not a guess. Nothing got faster. What went away is the
 asking.
 
-## Carrying gate in your repository
+## The rest, one page deep
 
-`gate init . --vendor` puts the tool itself into `.gate/` with a `./gatew`
-shim, the way a project carries `./gradlew`. Commit it, and everybody who
-pulls has gate: no installation step to ask anyone to take, nothing
-fetched from anywhere. A security review reads it as what it is: code in
-their own repository, pinned by a commit, reviewed like any other change,
-not a script piped into a shell. The judge is pinned with it, so an old
-commit is judged by the judge it was written with, which is what makes
-`git bisect` over facts exact. And it is pinned twice over: `.gate/`
-carries its `sha256` (what is here) and its corpus revision (what it was
-made from); `bin/build-judge.sh <pin>` builds the same judge from the
-public corpus, checked by the battery rather than by the hash.
+The cover you just read is the product. The pieces below live one file
+away, each where somebody would look for it:
 
-## Nothing leaves your machine
-
-gate makes no outbound connection, at any time, for any reason: no
-telemetry, no update check, no licence ping. That is a contract, not a
-default. Verify it yourself, in about a minute:
-
-```sh
-# 1. air-gap it: turn off the network and run the whole battery
-python3 tests/smoke.py                      # all green, offline
-
-# 2. read the source for outbound primitives; the battery greps for these
-grep -nE "urllib\.request|socket\.socket|http\.client|requests\.(get|post)" gate
-grep -nE "XMLHttpRequest|new WebSocket|fetch\(['\"]https?:" ui.html judge.js
-
-# 3. the server listens on the loopback, and nowhere else
-grep -n 'HTTPServer((' gate                 # 127.0.0.1
-lsof -iTCP -sTCP:LISTEN -P | grep 4744      # while `gate serve` runs
-
-# 4. the judge binary links nothing that opens a socket
-otool -L bin/gate-judge                     # ldd on Linux
-
-# 5. build the judge yourself and compare: it comes from a public corpus
-bin/build-judge.sh <pin>
-```
-
-The bench declares a Content-Security-Policy with `connect-src 'self'`, so
-the browser refuses any external request even if one were ever written.
-Everything above is a check in the battery, so it stays true. What gate
-reads is your working copy and `git`; what it writes is your working copy.
-The CLI is one file of standard-library Python and the bench is one file
-of HTML: small enough that reading them is a reasonable afternoon, which
-is the point. A tool that checks by reading should be checkable by
-reading.
-
-## Where it plugs in
-
-gate adds no process of its own. It sits inside the four you already have:
-
-- **Commit**: `gate init` wires a pre-commit hook, so a claim that stopped
-  holding is not committed. It names the git setting it changed and how to
-  undo it.
-- **CI**: a red verdict exits non-zero, so no wrapper is needed:
-
-  ```yaml
-  - run: ./gatew status          # or: gate status
-  ```
-
-- **Review**: put `gate.swift` and `gate.policy.swift` in `CODEOWNERS`,
-  and changing a fact or who may merge requires the review your host
-  already enforces. No bot, no token, no permissions of ours.
-- **Editor**: refusals are `file:line · claim`, the shape editors already
-  parse, so a VS Code problem matcher underlines them with no extension of
-  ours to install.
-
-## Layout and ownership
-
-- `gate.swift` is where a world starts. Declare a multi-file layout in
-  `gate.manifest.swift` and gate obeys it: judgement runs the declared
-  list, and both halves are named at their line, a row whose file is not
-  there and a file beside them with no row.
-- Tables are inputs and views, never truth: a later CSV edit cannot
-  silently reprint the world.
-- Policy is a fact, so it lives beside the world in `gate.policy.swift`: an
-  identity ties an email to a person, and `MergePolicy` states the rank
-  merging demands. Both go through review and carry a history, and `status`
-  guards the file: an identity that names nobody is refused by line rather
-  than obeyed. The CSVs only seed them. (The file sits beside the judged
-  list, like the manifest: the reference judge does not read its extension
-  form yet, so the guard keeps it.)
-- Every change, facts and rules alike, is a working-copy edit; history,
-  review and rollback belong to git. gate keeps no state of its own.
+- [docs/DETAILS.md](docs/DETAILS.md): carrying gate vendored in your
+  repository, verifying the zero-egress contract yourself, where it plugs
+  in (hook, CI, review, editor), layout and ownership.
+- [SECURITY.md](SECURITY.md): what a verdict promises, and where to
+  report one that lied.
+- [CHANGELOG.md](CHANGELOG.md): what exists, in the order it came to be.
+- After `gate init`, your repository is met by a letter of its own:
+  `stdlib/readme.swift`, beside your files and judged with them.
 
 ## Repository
 
@@ -277,7 +208,7 @@ judge.js        the browser judge (byte-parity port) for the bench
 ui.html         the workbench
 codemirror.*    the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
-tests/smoke.py   the battery: 347 end-to-end checks, the definition of green
+tests/smoke.py   the battery: 349 end-to-end checks, the definition of green
 ```
 
 ## Status
