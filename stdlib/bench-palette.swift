@@ -15,7 +15,7 @@
 // red-green. Lower any of it and the slack stops settling: the judge names the
 // pair, in numbers.
 //
-// THE FLOOR, named: at a tenth of a percent of light one step is the whole
+// The floor, named: at a tenth of a percent of light one step is the whole
 // resolution, and 0.95 of one step is not a number. Those nodes state X == Y
 // and hold the same band on Z. It is the scale's floor, not a chosen colour.
 //
@@ -24,7 +24,7 @@
 // so neither canvas can drift into shouting while the other whispers. The
 // dark ladder used to be a plain inversion, and inversion is not a relation.
 //
-// NOT JUDGED, and said plainly rather than dressed as a result: the exact
+// Not judged, and said plainly rather than dressed as a result: the exact
 // angle of the teal, the violet, the blue and the warm yellow is chosen by eye
 // inside the box those rules leave, and perceptual equality of chroma between
 // them is not judged at all: XYZ is not perceptually uniform, and a number

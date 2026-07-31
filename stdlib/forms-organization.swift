@@ -3,7 +3,7 @@
 // This is the vocabulary `gate import` prints a
 // world in: the forms and the axes, with no facts of anyone's in it.
 //
-// A genre is the unit that ships. Everything a world of this kind can say is
+// A domain's forms are the unit that ships. Everything a world of this kind can say is
 // here, so a reader can see the whole language before reading a single fact,
 // and a translator has something to translate INTO.
 

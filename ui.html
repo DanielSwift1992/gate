@@ -169,7 +169,7 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 .seg button:disabled{opacity:.3;cursor:default}
 .seg button:disabled:hover{color:var(--muted)}
 #nav-seg button{padding:calc(var(--u)*2) calc(var(--u)*5);font-size:15px;line-height:1}
-#gitstate{font-family:var(--mono);margin-left:auto;display:flex;align-items:center;gap:calc(var(--u)*3)}
+#gitstate{font-family:var(--mono);font-size:11px;margin-left:auto;display:flex;align-items:center;gap:calc(var(--u)*3)}
 #gitstate .g{width:7px;height:7px;border-radius:50%;background:var(--muted)}
 #gitstate.modified{color:var(--law)}
 #gitstate.modified .g{background:var(--law)}
@@ -2353,7 +2353,7 @@ function buildTables() {
 
 // ── one row of views over the same file: Full · Bare · Table (· Canvas one
 // day). Not two switches of one state — three views of one truth. ──
-let mode = "full";
+let mode = "bare";
 const esc = (s) => s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
 
 // Bare: the bare form — the facts with the language's ceremony gone. No enum,

@@ -9,7 +9,7 @@
 // and a guard compares the records to the dispatch by name, in both
 // directions: a verb with no record is refused, and a record with no verb is
 // refused, each at a line. In your clone the guard reads your clone's
-// dispatch, the only copy that can lie to you.
+// dispatch, the only copy that could drift from it.
 //
 // It was seeded once from the dispatch, the way a world is seeded from a
 // table. From then on this file is the source, and editing it is how the

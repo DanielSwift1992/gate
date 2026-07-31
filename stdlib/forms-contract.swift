@@ -7,7 +7,7 @@
 // hand-written client can lag a contract for releases while its own type
 // checker stays perfectly happy. The one thing that ties the copies today is a
 // code generator, which means owning a pipeline per language and letting it
-// dictate the shape of the client. This genre ties them the other way, with a
+// dictate the shape of the client. This domain ties them the other way, with a
 // seam that refuses, leaving the client hand-written.
 //
 // A field the contract declares becomes a record whose shape is an axis. A

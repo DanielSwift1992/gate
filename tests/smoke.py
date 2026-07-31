@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # The regression battery: every verb, end to end, in a throwaway repo.
 # Run: python3 tests/smoke.py
-import ast, glob, io, json, os, re, shutil, subprocess, sys, tempfile, time, tokenize
+import ast, glob, hashlib, io, json, os, re, shutil, subprocess, sys, tempfile, time, tokenize
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GATE = os.path.join(HERE, "gate")
@@ -37,6 +37,13 @@ def say(*args, cwd=None):
     # canon of names governs them
     r = subprocess.run([sys.executable, GATE, *args], capture_output=True, text=True, cwd=cwd)
     return r.stdout
+
+
+# the retired word is allowed exactly where its retirement is recorded: this
+# constant, the lines that say what it was, the count itself, and the one that
+# keeps the old name from coming back as a filename. Any other use is the word
+# returning, and the count is what says so.
+GENRE_SAID_HERE = 5
 
 
 def main():
@@ -117,19 +124,19 @@ def main():
     letter_text = open(os.path.join(repo, "readme.swift")).read()
     S.append(("the letter is declared in the same movement, and says where it came from",
               "readme.swift" in open(os.path.join(repo, "gate.manifest.swift")).read()
-              and "copied from gate's own shelf" in letter_text
+              and "Origin: gate's shelf" in letter_text
               and "This copy is yours" in letter_text.split("\n")[0]
               and "judge" not in letter_text.split("\n")[0]
               # and the way back is said where the provenance is
               and "prints what shipped" in letter_text
-              and "removes it with no trace" in letter_text))
+              and "removes it completely" in letter_text))
     # ── AND WHERE YOUR OWN WORLD LIVES IS ANSWERED BY THE DISK, NOT BY A PROCESS.
     # This is asked once per file the bench lists, on every request, and each ask
     # started git: opening one file spent most of its time launching git to be
     # told the same thing, which is the pause between clicking a name and seeing
     # the page. What matters here is that the cheap answer is the SAME answer, so
     # it is compared against what git itself says, both ways round.
-    import hashlib as _h
+    _h = hashlib
     keyrepo = os.path.join(tmp, "keyrepo")
     os.makedirs(keyrepo)
     subprocess.run(["git", "init", "-q", keyrepo])
@@ -161,13 +168,14 @@ def main():
               and not re.search(r"\bis the source\b", _cover)
               and not re.search(r"\bis the source\b", letter_text)))
 
-    # AND IT KEEPS ITS OWN WORD ABOUT HOW IT IS MET. The head lines of a shelf page
-    # are dropped when it is taken, and `// opens: bare` was going with them: a
-    # letter that asks to be read as prose arrived as code with slashes down the
-    # margin, on the one screen that is somebody's first.
+    # AND IT KEEPS ITS OWN WORD ABOUT HOW IT IS MET, AS A COLUMN. How a page is
+    # first met is a fact of its manifest row now (Opens = Bare), not a comment
+    # in its head: the head carries nothing mechanical, so the reader's first
+    # screen has no lines that talk to the tool.
     S.append(("and a letter taken keeps its own word about how it is met",
-              any(ln.strip() == "// opens: bare" for ln in
-                  open(os.path.join(repo, "readme.swift")).read().split("\n")[:6])))
+              "Opens = Bare" in open(os.path.join(repo, "gate.manifest.swift")).read()
+              and not any("// opens:" in ln or "// role:" in ln for ln in
+                          open(os.path.join(repo, "readme.swift")).read().split("\n")[:6])))
     # AND THE FIRST VERDICT IS OVER SOMETHING. A page taken without the forms it is
     # written in carries certificates no court can read: eleven promises in the
     # first file a newcomer is handed, judged over nought equalities, silently.
@@ -461,7 +469,7 @@ def main():
     c, r = run("stdlib")
     shelf = set(r.get("modules", {}))
     on_disk = {f[:-6] for f in os.listdir(os.path.join(HERE, "stdlib")) if f.endswith(".swift")}
-    S.append(("the shelf lists exactly the genres on it", shelf == on_disk and len(shelf) >= 3))
+    S.append(("the shelf lists exactly the pages on it", shelf == on_disk and len(shelf) >= 3))
     lib = os.path.join(tmp, "lib")
     os.makedirs(lib)
     shutil.copy(os.path.join(repo, "gate.swift"), os.path.join(lib, "gate.swift"))
@@ -563,7 +571,7 @@ def main():
                   capture_output=True, text=True).stdout)["verdict"] == "refused"))
     # the same crystal carries it: the world is written in forms-grants
     world = open(os.path.join(tmp, "co-gate.swift")).read()
-    S.append(("ownership rides the access crystal, not a genre of its own",
+    S.append(("ownership rides the access crystal, not a set of forms of its own",
               "Owns<" in world and "public protocol Keeper" in world))
     # a human running an importer gets lines, not a traceback
     plain = subprocess.run([sys.executable, GATE, "import", "rbac",
@@ -922,7 +930,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               r["verdict"] == "refused" and "address" in r.get("next", "")))
 
     ui = open(os.path.join(HERE, "ui.html"), encoding="utf-8").read()
-    # every name a printed world uses has a home: its own file, or the genre
+    # every name a printed world uses has a home: its own file, or the forms
     printed = open(os.path.join(repo, "gate.swift")).read()
     decl_here = set(re.findall(r"^\s*(?:public\s+)?(?:enum|protocol|struct|typealias)\s+(\w+)", printed, re.M))
     shelf_names = set()
@@ -942,10 +950,10 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               'r">\\s*\\.self\\s*;?"' in open(GATE, encoding="utf-8").read()))
 
     # an axis says what may stand in it, and the offer says only that
-    genre = open(os.path.join(HERE, "stdlib", "forms-organization.swift")).read()
-    S.append(("every axis in the genre states what it accepts",
-              "associatedtype Sex: Sexed" in genre and "associatedtype Rank: Ranked" in genre
-              and "associatedtype Home: Department" in genre))
+    forms_page = open(os.path.join(HERE, "stdlib", "forms-organization.swift")).read()
+    S.append(("every axis in the forms states what it accepts",
+              "associatedtype Sex: Sexed" in forms_page and "associatedtype Rank: Ranked" in forms_page
+              and "associatedtype Home: Department" in forms_page))
     S.append(("and the bench offers by that, not by what it saw nearby",
               "function fillersFor(" in ui and "axesOfHost(host)[slot[1]]" in ui))
     S.append(("a recognised slot never falls through to the general pool",
@@ -960,7 +968,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     S.append(("the cursor on a name describes it from the grammar, not a dictionary",
               "function describeName(" in ui and "function inspect(" in ui
               and "protoAxes[name]" in ui and "conformers)" in ui))
-    S.append(("and what it says is read from the world and the genre",
+    S.append(("and what it says is read from the world and the forms",
               "vocabulary[name]" in ui and "gates[name]" in ui
               and "a dictionary of ours" not in ui.split("function describeName")[0][-200:]))
 
@@ -983,7 +991,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "function loadVocabulary(" in ui and "judge(mod" in ui))
 
     # the shelf is reference, read in the bench but never judged as the world:
-    # a genre uses protocol/associatedtype, which the world's judge rejects, so
+    # a forms page uses protocol/associatedtype, which the world's judge rejects, so
     # routing it through world-judgement would paint a wall of false refusals
     S.append(("a record owing axes can be filled as a whole, not one at a time",
               "here.scaffold" in ui and "compScaffold" in ui
@@ -1050,10 +1058,10 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               "if (!here) return hideCompletion()" in ui and "function completionPool" not in ui))
 
     # the bench wears its own theme by declaration, not a toggle: MyBench.Theme
-    # is read from the shelf genre (conformers of BenchTheme), with the OS
+    # is read from the shelf forms (conformers of BenchTheme), with the OS
     # preference as the default when nothing is declared
     bench_atoms = open(os.path.join(HERE, "stdlib", "bench-atoms.swift"), encoding="utf-8").read()
-    S.append(("the theme is a declaration read from the genre, with the OS as default",
+    S.append(("the theme is a declaration read from the forms, with the OS as default",
               "function applyMyBench(" in ui
               and 'conformers["BenchTheme"]' in ui
               and "prefers-color-scheme: dark" in ui
@@ -1073,7 +1081,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and 'localStorage.setItem("gate.theme.declared", declaredTheme)' in ui
               and 'localStorage.removeItem("gate.theme.declared")' in ui))
 
-    # the bench is judged by its own rules: a value on MyBench/MyJournal the genre
+    # the bench is judged by its own rules: a value on MyBench/MyJournal the forms
     # does not name is a guard line addressed at its own line (a mistyped Scope
     # used to fall silently to a default), read from the same one source
     S.append(("a bench value outside its own forms is named on its line, not silenced",
@@ -1288,8 +1296,8 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # ── colour answers one question and weight another, because a reader has two.
     # WHERE a name is from is a hue: teal for what this world DECLARES, violet for
     # what the shelf does. Declares, not mentions — the kinds a record conforms to
-    # and the axes it answers are the genre's, and colouring them local said the
-    # world had authored its own genre, which also made a question (an axis) and
+    # and the axes it answers are the forms', and colouring them local said the
+    # world had authored its own forms, which also made a question (an axis) and
     # an answer (a value) one colour.
     # WHAT THE LINE DECLARES is the weight. A declaration holds two names, the one
     # it declares and the one it answers to, and weighting kinds instead put the
@@ -1980,7 +1988,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # theirs to read, and nobody arrives already knowing.
     # AND THE ONE LINE THAT MATTERS IS MINE AGAINST THEIRS. There are files I
     # write, whose verdict follows what I do to them, and files I only read.
-    # Splitting the shelf instead into genres and gate's own furniture drew a
+    # Splitting the shelf instead into forms and gate's own furniture drew a
     # line nobody using this needs, and hid the one they do: NONE OF THE SHELF
     # IS EITHER. Those words are compiled inside the judge — a world speaks
     # `Department` with no file of that name near it — so a shelf page is a
@@ -2024,12 +2032,12 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # Neither is yours, so this is not the mine/theirs line drawn twice — it is
     # the ROLE column, and each file states its own role in its own second line
     # rather than being sorted by the shape of its name. `git-atoms` proves the
-    # difference: not a genre, and it is what a merge policy is written in.
+    # difference: not a page of forms, and it is what a merge policy is written in.
     roles = run("stdlib", cwd=ent)[1].get("roles") or {}
     S.append(("the shelf says which of it you can speak, and each file says so itself",
               roles.get("forms-organization") == "forms"
               and roles.get("forms-contract") == "forms"
-              # not a genre by name, and speakable all the same
+              # not a page of forms by name, and speakable all the same
               and roles.get("git-atoms") == "forms"
               # the tool's own furniture says it is the tool's own
               and roles.get("bench-palette") == "gate's own"
@@ -2054,12 +2062,12 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "A judged world this bench itself runs under" in ui))
 
     # ── A SHELF PAGE IS A PRINTOUT, AND THIS IS THE PROBE THAT SAYS SO. The tool
-    # invited an operator to materialize a genre and called the copy theirs to
+    # invited an operator to materialize a forms page and called the copy theirs to
     # change, which is a sentence the machinery had never agreed to: the words
     # live compiled inside the judge. A world speaks `Department` with no file of
     # that name anywhere near it; the file put beside the world is read by
     # nothing; and declaring it as a file of mine is refused outright, because a
-    # world is records and a genre is the grammar records are written in. Three
+    # world is records and a forms page is the grammar records are written in. Three
     # ways of finding out it is not a source — the invitation was the lie.
     # ── AND EVERY FIXTURE THIS BATTERY MAKES IS REMOVED WITH IT. Twenty-one of
     # them were made straight in the system temp directory and never taken away:
@@ -2084,7 +2092,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and beside.get("verdict") == "holds"
               and beside.get("world", {}).get("declarations")
               == bare.get("world", {}).get("declarations")
-              # and calling it a file of mine is refused: a genre is not a world
+              # and calling it a file of mine is refused: a forms page is not a world
               and as_mine.get("verdict") == "refused"
               and any("outside the fragment" in r.get("claim", "")
                       for r in as_mine.get("refusals", []))
@@ -3360,7 +3368,8 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and took.get("wrote") == "bench-palette.swift"
               # it says where it came from and at what revision, in its own head
               and any("This copy is yours" in l for l in head)
-              and any(l.startswith("// role: forms") for l in head)
+              and not any("// role:" in l for l in head)
+              and took.get("court") == "forms"
               and took_holds == "holds"
               # a second call does not overwrite what you have since written
               and again.get("asks") and "already here" in again.get("note", "")
@@ -4236,7 +4245,7 @@ console.log(JSON.stringify(out));
     form_js = r'''
 const protoAxes = { Employee: { Rank: "Ranked" }, Person: { Sex: "Sexed" }, Lonely: { X: "Y" } };
 const conformers = { Sexed: ["Male"] };
-const vocabulary = { Employee: "genre", Male: "genre" };
+const vocabulary = { Employee: "forms", Male: "forms" };
 const layoutOrActive = () => new Map([
     ["A", { conformances: ["Employee", "Person"] }],
     ["B", { conformances: ["Employee", "Person"] }],
@@ -4337,11 +4346,11 @@ console.log(JSON.stringify({
     # offers for an axis is accepted, and a name of some OTHER kind is refused by
     # the judge naming where it landed instead. The negative half is the point —
     # an offer that is never refused proves nothing about what it filtered.
-    genre_txt = open(os.path.join(HERE, "stdlib", "forms-organization.swift"), encoding="utf-8").read()
+    forms_txt = open(os.path.join(HERE, "stdlib", "forms-organization.swift"), encoding="utf-8").read()
     slot_js = '''
 const { judge } = require(%r);
-const genre = %s;
-const world = (v) => genre + `
+const forms = %s;
+const world = (v) => forms + `
 public enum P1: Person {
     public typealias Given = G1
     public typealias Family = F1
@@ -4359,7 +4368,7 @@ console.log(JSON.stringify({
     offered: ["Male", "Female"].map(landsIn),     // what the grammar offers: taken
     foreign: ["Manager", "Finance"].map(landsIn), // a name of another kind: refused
 }));
-''' % (os.path.join(HERE, "judge.js"), json.dumps(genre_txt))
+''' % (os.path.join(HERE, "judge.js"), json.dumps(forms_txt))
     sj = os.path.join(tmp, "slotkinds.js")
     open(sj, "w").write(slot_js)
     sout = subprocess.run(["node", sj], capture_output=True, text=True).stdout
@@ -4723,6 +4732,57 @@ public enum MyWatch: AccessLedger {
                       .split("\n")[int(x["address"].split(":")[1]) - 2]
                       or True for x in gates[:1])))
 
+    # ── AND `Reads` IS A CERTIFICATE, NOT A LABEL. Each verb states what it
+    # touches, and one of those words is load-bearing: `Run<V>: Safe where
+    # V.Does == Reads` in the tool's own forms certifies that a verb may be run
+    # on anybody's clone at any moment. The guard over that table held the names
+    # in both directions and never this word, so a verb that started writing
+    # would have gone on being certified safe by the court. Nothing is read here:
+    # every verb whose record says `Reads` is RUN, in a world of its own with a
+    # personal world of its own, and both trees are compared by content before
+    # and after. A word about what something does is checked by doing it.
+    said_reads = sorted(re.findall(r"public enum (\w+): Verb \{\s*\n\s*public typealias Does = Reads",
+                                   open(os.path.join(HERE, "stdlib", "verbs.swift"),
+                                        encoding="utf-8").read()))
+    touch_world = os.path.join(tmp, "touch")
+    os.makedirs(touch_world)
+    subprocess.run(["git", "init", "-q", touch_world])
+    run("demo", "org", touch_world)
+    verbs_src = open(os.path.join(HERE, "stdlib", "verbs.swift"), encoding="utf-8").read()
+
+    def spelt(enum):
+        m = re.search(r'extension %s \{ public static var typeName: String \{ "([^"]+)" \} \}'
+                      % enum, verbs_src)
+        return m.group(1) if m else None
+
+    def fingerprint(root):
+        out = {}
+        for d_, _, fs in os.walk(root):
+            if ".git" in d_.split(os.sep):
+                continue
+            for f in fs:
+                p = os.path.join(d_, f)
+                try:
+                    out[os.path.relpath(p, root)] = hashlib.sha1(open(p, "rb").read()).hexdigest()
+                except OSError:
+                    pass
+        return out
+
+    wrote = []
+    myworld = os.path.join(os.environ["GATE_ME"], "worlds")
+    for enum in said_reads:
+        word = spelt(enum)
+        if not word:
+            continue
+        extra = {"check": ["view", "Emp9002", "FinanceShare"],
+                 "diff": ["transfer", "Emp9002", "Sales"]}.get(word, [])
+        before, mebefore = fingerprint(touch_world), fingerprint(myworld)
+        run(word, *extra, cwd=touch_world)
+        if fingerprint(touch_world) != before or fingerprint(myworld) != mebefore:
+            wrote.append(word)
+    S.append(("every verb this world certifies as safe to run leaves both trees exactly as they were",
+              len(said_reads) >= 10 and wrote == []))
+
     # ── findings: what is true of a repository, in sentences ──
     # The one producer behind the terminal, an audit page and the text of an
     # issue. It must work with no world at all, and never claim as checked
@@ -4743,6 +4803,34 @@ public enum MyWatch: AccessLedger {
               r["findings"] and r["judged"] == 0 and "observed" in kinds))
     S.append(("findings never call read what the judge did not check",
               all(f["kind"] != "judged" for f in r["findings"])))
+    _letter_ships = open(os.path.join(HERE, "stdlib", "readme.swift"), encoding="utf-8").read()
+    # ── AND A QUOTED OUTPUT IS THE OUTPUT. The letter shows what `findings`
+    # prints, and the sentence it showed had never been printed by anything: it
+    # was written by hand, in the section that teaches a reader to look for two
+    # records of one fact that stopped agreeing. Found by generating the output
+    # and reading both. The pair is held here the only way it can be: the tool is
+    # made to print that sentence, and the letter's quote must be that sentence
+    # with other numbers in it.
+    real = next((f["sentence"] for f in r["findings"] if f["subject"] == "unchecked edits"), "")
+    if not real:                      # this fixture has no world, so make one that has
+        fq = os.path.join(tmp, "findings-quote")
+        os.makedirs(fq)
+        subprocess.run(["git", "init", "-q", "-b", "main", fq])
+        run("demo", "org", fq)
+        subprocess.run(["git", "add", "-A"], cwd=fq)
+        for i in range(3):
+            open(os.path.join(fq, "gate.swift"), "a").write(f"// touch {i}\n")
+            subprocess.run(["git", "-c", "commit.gpgsign=false", "-c", f"user.email=a{i}@x",
+                            "-c", "user.name=A", "commit", "-qam", f"w{i}", "--no-verify"], cwd=fq)
+        subprocess.run(["git", "config", "--unset", "core.hooksPath"], cwd=fq)
+        _, fqr = run("findings", cwd=fq)
+        real = next((f["sentence"] for f in fqr.get("findings", [])
+                     if f["subject"] == "unchecked edits"), "")
+    quoted = re.search(r"«([^»]+)»", re.sub(r"(?m)^\s*//\s?", "", _letter_ships))
+    _digits = lambda s: re.sub(r"\d+", "#", " ".join(s.split()))
+    S.append(("the sentence the letter shows is the sentence the tool prints, numbers aside",
+              bool(real) and bool(quoted) and _digits(quoted.group(1)) == _digits(real)))
+
     S.append(("findings notice owners the history has not seen",
               any("owners named in CODEOWNERS" in f["sentence"] for f in r["findings"])))
     c, r = run("findings", "--md", cwd=fr)
@@ -5830,6 +5918,18 @@ public enum MyWatch: AccessLedger {
               and "state X == Y" in open(os.path.join(HERE, "stdlib", "bench-palette.swift"),
                                          encoding="utf-8").read()))
 
+    # ── AND THE LIST OF VIEWS IS TWO LISTS. `VIEWS` in the tool refuses an
+    # `opens:` a file states, and writes the view into somebody's manifest as an
+    # atom of their world; the views themselves are implemented on the page. Two
+    # lists of the same three words, and nothing compared them: rename a view
+    # here and the tool goes on writing the old name into other people's files.
+    _views = set(re.findall(r'"(\w+)"', re.search(r"VIEWS = \(([^)]*)\)", src).group(1)))
+    _seg = set(re.findall(r'data-m="(\w+)"', ui))
+    _shown = set(re.findall(r'm === "(\w+)"', _block("function setMode(m) {", ui)
+                            if "function setMode(m) {" in ui else ui.split("function setMode(m)")[1][:600]))
+    S.append(("the views this tool names are the views the page has, and nobody keeps a second list",
+              _views and _views == _seg and _views == _shown))
+
     S.append(("nothing passes above the row of names that stays while the table scrolls",
               "position:sticky" in _tblhead and "top:0" in _tblhead
               # no padding over the scroll box: the first heading carries that space,
@@ -5894,9 +5994,9 @@ public enum MyWatch: AccessLedger {
     # in — arriving today by two roads that are said apart, one compiled into
     # the judge and one presented by file. A word carries its old idea back in
     # with it, so the outward texts are checked rather than trusted to care.
-    rail_and_cli = ui + src + readme
-    S.append(("the retired word does not come back into anything a reader sees",
-              "genre" not in rail_and_cli.lower()
+    rail_and_cli = ui + src + readme + open(__file__, encoding="utf-8").read()
+    S.append(("the retired word does not come back into anything a reader sees, this file included",
+              rail_and_cli.lower().count("genre") == GENRE_SAID_HERE
               # and what replaced it is stated as a fact about now, not a law
               and "arrive by two roads" in readme
               and "not a claim about it" in readme

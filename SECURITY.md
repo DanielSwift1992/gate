@@ -1,8 +1,8 @@
 # Reporting a problem
 
 If you find a way to make gate say a world holds when it does not, that is
-the bug we care about most: the whole tool is one claim — *a lie is refused
-by line* — and a false green breaks it.
+the bug we care about most: the whole tool is one claim, *what does not hold is refused
+by line*, and a false green breaks it.
 
 Please report it privately first, by opening a
 [security advisory](../../security/advisories/new) on the
@@ -14,8 +14,8 @@ We will confirm what we can reproduce, and say plainly what we cannot.
 
 ## What gate does with your data
 
-Nothing leaves your machine. gate makes no outbound connection at any time —
-no telemetry, no update check, no licence ping — and the bench binds to the
+Nothing leaves your machine. gate makes no outbound connection at any time:
+no telemetry, no update check, no licence ping. The bench binds to the
 loopback alone. That is checked in the battery rather than promised: see
 **Security posture** in the README for the commands to verify it yourself in
 about a minute, offline.

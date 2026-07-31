@@ -115,6 +115,7 @@ def read_manifest_rows(d, text=None):
                      # another row of this same document, the way `At` points at a
                      # declared revision.
                      "written": axis("Written"),
+                     "opens": axis("Opens"),
                      "line": code[:m.start()].count("\n") + 1})
     if not rows and "Mine" not in code and "WorldFile" not in code:
         # older layouts: a bare list of paths, every one of them a world file
@@ -1542,7 +1543,7 @@ def next_rung(refused, serving=False):
         # yet» is read from the files rather than from a list of names in here
         p = os.path.join(root, rel)
         try:
-            return "copied from gate's own shelf" in open(p, errors="replace").read()
+            return "Origin: gate's shelf" in open(p, errors="replace").read()
         except OSError:
             return False
 
@@ -2809,6 +2810,15 @@ def opens_as(path):
     #
     # A word that is not a view is refused by name rather than ignored, because
     # a preference silently dropped is a preference the writer thinks they have.
+    # the manifest row speaks first: how a file is met is a column, not a
+    # comment, the same way Written became one. The head stays as the word of
+    # pages that live outside any manifest (the shelf sources themselves).
+    base = os.path.dirname(os.path.abspath(FACTS)) if FACTS else os.getcwd()
+    for r in (MANIFEST.get("rows") if MANIFEST else None) or []:
+        if os.path.abspath(os.path.join(base, r["path"])) == os.path.abspath(path) \
+                and r.get("opens"):
+            said = r["opens"].lower()
+            return (said if said in VIEWS else None), said
     try:
         head = open(path, encoding="utf-8", errors="replace").read(2000)
     except OSError:
@@ -3493,7 +3503,7 @@ def row_atom(rel):
     return sanitize(os.path.splitext(rel)[0]).title().replace("_", "").replace("/", "") or "Side"
 
 
-def declare_side(path, kind, role, frm=None, written=None):
+def declare_side(path, kind, role, frm=None, written=None, opens=None):
     # ONE MOVEMENT, TWO DIRECTIONS, AND NOBODY SPECIAL. Everything here is an
     # emitted view of somebody's source: my world is a view of my facts, their
     # spec is a view of theirs, and the judge in bin/ is a view of the corpus —
@@ -3573,6 +3583,10 @@ def declare_side(path, kind, role, frm=None, written=None):
     atom = ROLE_ATOM[role]
     if "public enum " + atom + ": Role {}" not in text:
         text = ensure(text, "public enum " + atom + ": Role {}")
+    if opens and "public protocol View {}" not in text:
+        text = ensure(text, "public protocol View {}")
+    if opens and ("public enum " + opens + ": View {}") not in text:
+        text = ensure(text, "public enum " + opens + ": View {}")
     if kind == "Mine" and "public protocol Mine {}" not in text:
         text = ensure(text, "\npublic protocol Mine {}")
     if kind == "Theirs" and "public protocol Theirs {}" not in text:
@@ -3598,6 +3612,7 @@ def declare_side(path, kind, role, frm=None, written=None):
             # which laws its certificates are judged under: the encoding boundary,
             # written where nothing could judge it.
             + ('    public typealias Written = ' + written + '\n' if written else '')
+            + ('    public typealias Opens = ' + opens + '\n' if opens else '')
             + '}\n'
             + 'extension ' + name + ' { public static var typeName: String { "'
             + rel + '" } }\n')
@@ -3718,20 +3733,23 @@ def take_shelf(mod, into="."):
     # who wants them looks. And ownership is ONE sentence: after the first, the
     # reader is already deciding whether to read on, so a second sentence up here
     # is spent before it can work.
+    # ── AND NOTHING MECHANICAL SITS IN THE HEAD. `// role:` and `// opens:`
+    # were the tool talking to itself on the reader's first screen: both facts
+    # are columns of the manifest row now (Kind, Opens), where the judge reads
+    # them. The head keeps the one line that is for the person.
+    view = (re.search(r"opens:\s*(\S+)", opens).group(1).strip().lower()
+            if opens else None)
     with open(dest, "w") as f:
         f.write("// This copy is yours: read it, change it, break it, delete it when you are\n"
                 "// done.\n"
-                "// role: " + court + "\n"
-                + (opens + "\n" if opens else "")
-                + (written + "\n" if written else "")
                 # one blank line, so the head this tool wrote and the page the
                 # reader came for are not one wall of slashes
                 + "\n" + "\n".join(body).rstrip("\n").lstrip("\n") + "\n"
-                + "\n// Where this came from, and the way back: copied from gate's own shelf"
+                + "\n// Origin: gate's shelf"
                 + (f", built from {came[:7]}" if came else "")
-                + f".\n// `gate stdlib show {mod}` prints what shipped, unchanged, so anything you\n"
-                "// break here can be compared against it or replaced from it. Deleting this file\n"
-                "// and its row in `gate.manifest.swift` removes it with no trace left behind.\n")
+                + f". `gate stdlib show {mod}` prints what shipped, unchanged,\n"
+                "// for comparing or restoring by hand. Deleting this file and its row in\n"
+                "// `gate.manifest.swift` removes it completely.\n")
     # the grammar arrives FIRST, so the row for this page can point at its row:
     # whose words a page is written in is a column of the record, not a comment
     with_it, grammar_atom = [], None
@@ -3740,7 +3758,8 @@ def take_shelf(mod, into="."):
         grammar_atom = row_atom(os.path.relpath(adest, os.path.abspath(into)))
         if also:
             with_it.append(also["wrote"])
-    mp = declare_side(dest, "Mine", court, written=grammar_atom)
+    mp = declare_side(dest, "Mine", court, written=grammar_atom,
+                      opens=(view.capitalize() if view else None))
     return {"wrote": os.path.relpath(dest, os.path.abspath(into)), "with": with_it,
             "declared_in": mp, "from": came, "court": court}, dest
 
@@ -3813,7 +3832,7 @@ def cmd_side(a, kind):
                     "next": f"gate {word} {mod}.swift — declare the copy you have, or move it "
                             "aside first: nothing here overwrites a file you wrote"}
         return {"command": word, "made_mine": mod, "wrote": os.path.basename(dest),
-                "with": took["with"],
+                "with": took["with"], "court": took["court"],
                 "declared_in": took["declared_in"], "from": took["from"], "mutates": True,
                 "note": f"{mod} is yours: a copy is here, declared, and judged from now on. "
                         "What the shelf ships is unchanged and still shipped. Yours simply "
@@ -3866,8 +3885,8 @@ def cmd_side(a, kind):
         return {"command": word, "asks": True,
                 "note": f"{path} is not inside the world here, and there is no world around it",
                 "next": "a world is founded where you stand: run this from the directory that "
-                        "world is in, or bring the file into this one. A world answers for "
-                        "what is in it"}
+                        "world is in, or bring the file into this one. A world judges what "
+                        "is in it"}
     # ── AND A FILE IS DECLARED ONCE. Two rows about one file are two truths
     # about one thing, which is what this whole tool exists to make impossible —
     # and its own layout document accepted them silently, under two names, and
@@ -3887,8 +3906,8 @@ def cmd_side(a, kind):
         mp = declare_side(path, kind, role, at)
     except ValueError as e:
         return {"command": word, "asks": True, "note": str(e),
-                "next": "bring the file into the world first. A world answers for what is "
-                        "in it, and a row that points outside is a claim it cannot keep"}
+                "next": "bring the file into the world first. A world judges what is in "
+                        "it, and a row that points outside is a claim it cannot keep"}
     out = {"command": word, "file": os.path.basename(path), "declared_in": mp,
            "role": role, "role_means": ROLES[role], "mutates": True}
     if kind == "Mine":
@@ -5004,9 +5023,10 @@ def repo_findings(n=400):
         unnamed = sorted({c["email"] for c in commits if c["touches_world"] and not c["person"]})
         if unnamed:
             out.append({"kind": "observed", "subject": "unnamed authors",
-                        "sentence": f"{len(unnamed)} of the people who changed these facts are "
-                                    "not tied to anyone in the world: an email is not a person "
-                                    "until something says it is.",
+                        "sentence": f"{len(unnamed)} of the people who changed these facts "
+                                    f"{'is' if len(unnamed) == 1 else 'are'} not tied to anyone "
+                                    "in the world: an email is not a person until something "
+                                    "says it is.",
                         "evidence": ", ".join(unnamed[:4])})
 
     # ownership, if this repository states any: a stale owner is worth a sentence
@@ -5183,7 +5203,7 @@ def cmd_init(a):
         observed = (f"read from git, and not judged: commits in this clone are signed {signed}. "
                     "If that is you, say so in my.swift. Nothing here writes your name for you")
     return {"command": "init", "root": root, "created": made, "hooks": hooks_note,
-            "letter": letter, "observed": observed, "next": next_rung(False),
+            "readme": letter, "observed": observed, "next": next_rung(False),
             "undo_hooks": undo, "changed_git_config": bool(hooks_note), "vendored": vendored}
 
 
@@ -5331,7 +5351,6 @@ def cmd_serve(a):
     open_it = "--no-open" not in a
 
     here = os.path.dirname(os.path.abspath(__file__))
-    playground = os.path.dirname(os.path.dirname(here))  # typed-playground root
 
     class H(BaseHTTPRequestHandler):
         def send_file(self, path, ctype):

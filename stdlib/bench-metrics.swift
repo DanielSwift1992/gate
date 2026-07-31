@@ -10,7 +10,7 @@
 // tighter the gap. The air is whole reading lines, and the indent is the sum
 // of the steps it is made of, not a number of its own.
 //
-// NOT JUDGED, and said plainly: the price of one step (how dense the page
+// Not judged, and said plainly: the price of one step (how dense the page
 // reads) and which step a given seam takes are chosen by eye inside the box
 // these rules leave. The rules say a section must stand further off than a
 // row. They do not say by how much it pleases.
