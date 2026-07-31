@@ -59,6 +59,11 @@ def main():
     repo = os.path.join(tmp, "client")
     os.makedirs(repo)
     subprocess.run(["git", "init", "-q", repo])
+    # the fixture states its own name: the offered-as-read check below is about
+    # the mechanism (a name git has is read aloud, written into nothing), and a
+    # bare machine, a fresh CI runner, has no global user.name for it to lean on
+    subprocess.run(["git", "config", "user.name", "A Fixture"], cwd=repo)
+    subprocess.run(["git", "config", "user.email", "fixture@client"], cwd=repo)
     S = []
     S.append(("the battery keeps its personal worlds inside its own temp dir",
               os.environ.get("GATE_ME", "").startswith(tmp)))
