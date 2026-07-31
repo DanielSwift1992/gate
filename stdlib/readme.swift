@@ -106,7 +106,7 @@
 // separate git on this machine, no clone or colleague ever sees it, and it
 // does not exist until you write in it. Clear it and it is gone.
 //
-// ── ask the repository first ──
+// ── find your drift ──
 //
 //     gate findings
 //
@@ -117,7 +117,7 @@
 // instead. Each sentence is marked read, not judged: no check ran. Judging
 // starts when facts are declared, in the next section.
 //
-// ── the line that has not been true for months ──
+// ── gate it ──
 //
 // Your CODEOWNERS states rules, and nothing checks them. To put them under
 // the judge, translate the file into records:
@@ -129,7 +129,7 @@
 // nothing. The first refusal is usually a rule that stopped being true long
 // ago and has been quietly obeyed since. Any table arrives the same way.
 // Rules are translated by hand, once. They are small, and they are yours to
-// read.
+// read. That is the upkeep, all of it.
 //
 // Those records are Swift declarations, so the same file is read by the
 // judge on every keystroke and, in CI, by the Swift compiler. Two independent

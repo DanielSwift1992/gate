@@ -93,7 +93,7 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 .split{flex:0 0 5px;cursor:col-resize;background:transparent;transition:background .1s}
 .split:hover,.split.dragging{background:color-mix(in srgb,var(--action) 45%,transparent)}
 .line-flash{background:color-mix(in srgb,var(--action) 22%,transparent)}
-#next{margin-left:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52%}
+#next{margin-left:auto;max-width:52%;text-align:right}
 /* ── THE LAST MILE. The step was a sentence to read, and a sentence gets
    retyped — with somebody's own path, slightly wrong. The command stands ready
    as it is, one click to the clipboard, and the Enter is theirs in their own
@@ -154,9 +154,11 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
    under the cursor stays quiet: same line, two voices, neither of them floating */
 #inspect[data-answer]{color:var(--ink)}
 #inspect .run{margin-left:calc(var(--u)*2)}
-#brand{padding:calc(var(--u)*7) calc(var(--u)*7) calc(var(--u)*3)}
-#brand b{display:block;font:var(--brand);letter-spacing:-.01em}
-#brand span{display:block;margin-top:calc(var(--u)*2)}
+#brand{padding:calc(var(--u)*7) calc(var(--u)*7) calc(var(--u)*3);font-family:var(--mono)}
+#brand b{display:inline;font:var(--brand);font-family:var(--mono);letter-spacing:-.01em}
+#brand #brandsep,#brand #brandline{display:inline;margin:0}
+#brand #brandstatus{display:block;margin-top:calc(var(--u)*2)}
+#brand #brandstatus:empty{display:none}
 #main{flex:1;display:flex;flex-direction:column;min-width:0;border-left:0.5px solid var(--line)}
 #bar{display:flex;gap:calc(var(--u)*5);align-items:center;padding:calc(var(--u)*3) calc(var(--u)*6);border-bottom:0.5px solid var(--line);flex:none}
 #bar b{font-weight:600}
@@ -372,12 +374,15 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 #table-host td.cell-bad{background:color-mix(in srgb,var(--bad) 10%,transparent);
   text-decoration:underline wavy var(--bad);text-underline-offset:var(--near)}
 #verdict-panel{border-top:0.5px solid var(--line);background:var(--paper);flex:none;max-height:34vh;display:flex;flex-direction:column}
-#verdict-head{display:flex;align-items:center;gap:calc(var(--u)*5);
-  /* the chips are one group, and they keep their words: a bar that
-     squeezes a verdict until it reads `refuse` is a bar that lies */
-}
+/* the chips are one group, and they keep their words: a bar that squeezes a
+   verdict until it reads `refuse` is a bar that lies. And the step beside them
+   is read to its end: it was one line with an ellipsis, which hands somebody
+   the first half of an instruction. The row hangs its parts from the top, so a
+   step that needs two lines takes two.
+   ── ONE BOX, ONE RULE: this stood declared twice, ten lines apart, and the
+   second quietly answered for the first. */
+#verdict-head{display:flex;align-items:flex-start;gap:calc(var(--u)*5);padding:calc(var(--u)*4) calc(var(--u)*8) calc(var(--u)*4);flex:none}
 #chips{display:flex;align-items:center;gap:calc(var(--u)*3);flex:none}
-#verdict-head{display:flex;align-items:center;gap:calc(var(--u)*5);padding:calc(var(--u)*4) calc(var(--u)*8) calc(var(--u)*4);flex:none}
 .chip{font-family:var(--mono);display:inline-block;flex:none;min-width:4.6em;white-space:nowrap;text-align:center;font-size:11px;font-weight:600;padding:calc(var(--u)*2) calc(var(--u)*5);border-radius:8px;font-variant-numeric:tabular-nums}
 .chip.ok{background:color-mix(in srgb,var(--ok) 12%,transparent);color:var(--ok)}
 /* a refusal wears its colour the way a green does: the WORD carries it, over a
@@ -418,7 +423,7 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 .pending{display:flex;gap:calc(var(--u)*5);padding:calc(var(--u)*3) calc(var(--u)*5);border-radius:5px;cursor:pointer;align-items:baseline}
 .pending:hover{background:var(--mist)}
 </style>
-<div id="rail"><div id="brand"><b>gate</b><span id="brandline" class="caption"></span></div>
+<div id="rail"><div id="brand"><b>gate</b><span id="brandsep" class="caption"> · </span><span id="brandline" class="caption"></span><span id="brandstatus" class="caption"></span></div>
   <h3 class="fold caption" data-fold="files"><i></i>mine</h3><div id="filelist" class="foldable"></div>
   <h3 class="fold caption" id="seams-head" data-fold="seams"><i></i>theirs</h3>
   <div id="theirs-host" class="foldable">
@@ -3266,23 +3271,28 @@ async function readFiles() {
     // the rail carries files AND the journal, so it shows for any clone
     // the line says what is true HERE: with a world, the judge is at work;
     // without one, only the history is being read
-    document.getElementById("brandline").textContent = files.length
-        // ── A GREETING HOLDS, IT DOES NOT THREATEN THE PERSON.
-        // `A lie cannot be saved` was true of nothing and wrong about
-        // everything: a file that does not hold saves here perfectly well, and
-        // what cannot happen is a lie being COMMITTED, only where somebody wired
-        // the hook. Worse, the two words a stranger met first were `lie` and
-        // `cannot`, which is the voice of supervision, and this is not that.
-        //
-        // What stands here now is a slogan, which is not a status line and does
-        // not do a status line's work: it explains nothing and instructs nobody,
-        // it names the enemy. The enemy is drift, and threatening IT is the one
-        // direction the law above allows, because nothing in the sentence is
-        // about the reader. The mechanism is not lost by leaving this line: it
-        // is at the bar under the verdict, where an event belongs, with an
-        // address and no blame in it.
-        ? "Death to drift"
-        : "Reading this repository's history. Nothing here is judged yet.";
+    // ── A GREETING HOLDS, IT DOES NOT THREATEN THE PERSON.
+    // `A lie cannot be saved` was true of nothing and wrong about
+    // everything: a file that does not hold saves here perfectly well, and
+    // what cannot happen is a lie being COMMITTED, only where somebody wired
+    // the hook. Worse, the two words a stranger met first were `lie` and
+    // `cannot`, which is the voice of supervision, and this is not that.
+    //
+    // What stands here now is a slogan, which is not a status line and does
+    // not do a status line's work: it explains nothing and instructs nobody,
+    // it names the enemy. The enemy is drift, and threatening IT is the one
+    // direction the law above allows, because nothing in the sentence is
+    // about the reader. The mechanism is not lost by leaving this line: it
+    // is at the bar under the verdict, where an event belongs, with an
+    // address and no blame in it.
+    //
+    // And the mark does not depend on there being a world: `gate · death to
+    // drift` is one lockup, set in the mono the tool speaks in, with the
+    // interpunct the verdicts already use. Status is a separate line below
+    // it, present only when there is status to tell.
+    document.getElementById("brandline").textContent = "death to drift";
+    document.getElementById("brandstatus").textContent = files.length
+        ? "" : "Reading this repository's history. Nothing here is judged yet.";
     document.getElementById("rail").style.display = "flex";
     document.getElementById("split-rail").style.display = "block";
     document.getElementById("fname").style.display = "none";

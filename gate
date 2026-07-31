@@ -1503,9 +1503,18 @@ def policy_guards():
     return bad
 
 
-def next_rung(refused):
+def next_rung(refused, serving=False):
     # ONE next step, chosen by what the repository already has: a reader is on
     # a rung, and a product that lists the whole ladder teaches nothing.
+    #
+    # ── AND A STEP IS A STEP FROM WHERE THE READER IS STANDING. This ladder is
+    # written for a terminal, and the bench printed it word for word, so a
+    # person who had just opened `gate serve` was told, at the foot of that very
+    # page, to run `gate serve`. A rung that names the room you are already in
+    # is not a step, and it says the tool does not know where you are. The
+    # ladder is the same ladder either way: what `serving` changes is that the
+    # bench counts as taken, which is the same rule the rest of this function
+    # follows, that a rung already taken is not offered.
     #
     # ── AND EACH RUNG SAYS WHAT YOU GET, NOT WHAT YOU WILL BE STOPPED FROM.
     # `so what does not hold cannot be committed` is the same act said as a
@@ -1513,7 +1522,8 @@ def next_rung(refused):
     # refused rather than that their word will start standing. Every line here
     # names the thing that becomes yours once the step is taken.
     if refused:
-        return "open the address above, or run `gate serve` and watch the verdict move as you type"
+        return ("the refusal names its line: click it and the file opens there" if serving else
+                "open the address above, or run `gate serve` and watch the verdict move as you type")
     root = os.path.dirname(os.path.abspath(FACTS)) if FACTS else "."
     hooked = subprocess.run(["git", "config", "--get", "core.hooksPath"], cwd=root,
                             capture_output=True, text=True).stdout.strip()
@@ -1541,7 +1551,8 @@ def next_rung(refused):
         # ── AND THE RUNG STOPS ANNOUNCING WHAT THE NEXT SCREEN ALREADY SAYS. The
         # bench opens on the letter, so a rung describing the letter spends a line on
         # a thing the reader is about to be looking at. Two words is the whole step.
-        return "gate serve"
+        if not serving:
+            return "gate serve"
     if not policy_path():
         return ("say who may merge, in gate.policy.swift: a law of yours with a date on it, "
                 "instead of a convention somebody has to remember")
@@ -1549,7 +1560,10 @@ def next_rung(refused):
     if not os.path.isdir(ci):
         return ("put `gate status` in the CI you already run: from then on nobody reads a diff "
                 "to know the claims still hold")
-    return ("run `gate serve` for the bench: your world on the left, the verdict on the right, "
+    # and on the bench that last rung is the room itself: a ladder whose steps
+    # are all taken says nothing rather than inventing a step
+    return ("" if serving else
+            "run `gate serve` for the bench: your world on the left, the verdict on the right, "
             "and a page of your own beside them")
 
 
@@ -5577,6 +5591,10 @@ def cmd_serve(a):
                     out = commit_change(q.get("hash", ""), q.get("f") or None)
                 elif u.path == "/status":
                     out = dispatch("status", [])
+                    # the ladder, read from this room: whoever is asking is
+                    # looking at the bench, so the rung that opens the bench is
+                    # a rung already taken
+                    out["next"] = next_rung(bool(out.get("refusals")), serving=True)
                     # the bench asks the same question the terminal does, so it
                     # gets the same ready command back rather than re-deriving it
                     ready = command_in(out)

@@ -5143,7 +5143,7 @@ public enum MyWatch: AccessLedger {
     run("demo", lw)
     letter = open(os.path.join(lw, "readme.swift"), encoding="utf-8").read()
     S.append(("the first line threatens the enemy and never the reader, and the letter speaks in scenes",
-              '"Death to drift"' in ui
+              '"death to drift"' in ui
               # gone from everything the page SAYS. It survives once in the
               # comment that explains why, which is the record of the decision
               # and not a thing anybody reads on screen.
@@ -5494,6 +5494,36 @@ public enum MyWatch: AccessLedger {
               r.get("forgot") == "extra.swift"
               and os.path.exists(os.path.join(undecl, "extra.swift"))
               and "not throwing it away" in r.get("note", "")))
+    # ── AND A STEP IS A STEP FROM WHERE THE READER IS STANDING. The ladder is
+    # written for a terminal, and the bench printed it word for word: a person
+    # who had just opened `gate serve` was told, at the foot of that very page,
+    # to run `gate serve`. Both surfaces are asked here, about one repository at
+    # one moment, because the point is not that the bench says something else —
+    # it is that each says the step from its own room.
+    rung = os.path.join(tmp, "rung")
+    os.makedirs(rung)
+    subprocess.run(["git", "init", "-q", rung])
+    run("init", ".", cwd=rung)
+    _, term = run("status", cwd=rung)
+    _s10 = _sock.socket(); _s10.bind(("127.0.0.1", 0)); _rp = _s10.getsockname()[1]; _s10.close()
+    _rb = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_rp)], cwd=rung,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    bench = {}
+    try:
+        for _ in range(60):
+            try:
+                bench = json.loads(_u.urlopen(f"http://127.0.0.1:{_rp}/status", timeout=1).read())
+                break
+            except Exception:
+                time.sleep(0.1)
+    finally:
+        _rb.terminate()
+    S.append(("the terminal is told to open the bench, and the bench is not told to open itself",
+              term.get("next") == "gate serve"
+              and "gate serve" not in (bench.get("next") or "")
+              # and it is a step, not a silence: the ladder simply moved on
+              and len(bench.get("next") or "") > 20))
+
     # ── AND THE PANEL SHOWS THE SAME DIRECTORY THE VERDICT TALKS ABOUT. The rail
     # listed exactly the declared files, so the file the verdict was refusing sat
     # in the directory and nowhere on the page: two answers about one file, and
@@ -5761,6 +5791,14 @@ public enum MyWatch: AccessLedger {
               # and whoever puts text on the page draws it: every opener that sets
               # the text now says so itself, in the order the world is read in
               and ui.count("buildRail();\n    render();") == 4))
+
+    # and the step beside the verdict is read to its end: an ellipsis hands
+    # somebody the first half of an instruction
+    S.append(("the next step is read whole, and the bar it sits in is declared once",
+              "text-overflow:ellipsis" not in _block("#next{", ui)
+              and "white-space:nowrap" not in _block("#next{", ui)
+              and "align-items:flex-start" in _block("#verdict-head{", ui)
+              and ui.count("#verdict-head{") == 1))
 
     S.append(("nothing passes above the row of names that stays while the table scrolls",
               "position:sticky" in _tblhead and "top:0" in _tblhead
