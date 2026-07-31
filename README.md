@@ -36,9 +36,11 @@ keeps `docs`, and one line assigns her a folder in `src`. The refusal
 names the file, the line, and both sides of the disagreement. A diff
 compares two texts. This compares two claims about one thing.
 
-The same refusal on the live page (`gate serve`), at its line:
+The same refusal on the live page (`gate serve`), at its line. The picture
+is a door: it opens this bench in your browser, over the demo, judged as
+you type.
 
-![the bench: the refusal at its line, re-read on every keystroke](docs/bench.png)
+[![the bench: the refusal at its line, re-read on every keystroke](docs/bench.png)](https://danielswift1992.github.io/gate/?f=ownership.swift:84)
 
 The check is one lookup per claim and nothing else: no search, no solver,
 no build. The cost is linear in the number of claims: milliseconds on a

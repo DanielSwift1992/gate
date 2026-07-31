@@ -9,13 +9,16 @@
 // file shares none with judge.js, and a drift in one canon cannot hide
 // behind the other.
 
-const fs = require("fs");
+const fs = typeof require !== "undefined" ? require("fs") : null;
 
 const CANON_VERSION = 2;
 
 function fail(message) {
-    process.stderr.write("✗ THE WHERE: " + message + "\n");
-    process.exit(2);
+    if (typeof process !== "undefined" && process.stderr) {
+        process.stderr.write("✗ THE WHERE: " + message + "\n");
+        process.exit(2);
+    }
+    throw new Error("THE WHERE: " + message);
 }
 
 // ── reading the world ──
@@ -270,24 +273,19 @@ function canon(text, world) {
 }
 
 // ── the judgement ──
+// The core takes texts and returns the verdict's parts; the CLI below reads
+// files and prints. Split so the same court can sit where there is no file
+// system at all, a browser over a published demo, without a second reading
+// of the law.
 
-function runWhere(args) {
-    if (args.length === 0) {
-        fail("usage: judge where <world.swift> [definitions.swift ...]");
-    }
-    let text;
-    try { text = fs.readFileSync(args[0], "utf8"); }
-    catch (e) { fail("cannot read " + args[0]); }
+function judgeWhereTexts(text, extraTexts) {
     const world = readWorld(text);
     const ownAliases = new Map(world.aliases);
     // A name's meaning is its written definition, and the definition may be
-    // written in another file: each extra path contributes its typealiases,
+    // written in another file: each extra text contributes its typealiases,
     // and the world's own spelling wins a collision, the same shadowing the
     // compiler reads.
-    for (const extra of args.slice(1)) {
-        let more;
-        try { more = fs.readFileSync(extra, "utf8"); }
-        catch (e) { fail("cannot read " + extra); }
+    for (const more of extraTexts || []) {
         for (const [name, rule] of readWorld(more).aliases) {
             if (!world.aliases.has(name)) world.aliases.set(name, rule);
         }
@@ -378,9 +376,25 @@ function runWhere(args) {
         }
     }
 
+    return { judged, uses: world.uses.length, refusals };
+}
+
+function runWhere(args) {
+    if (args.length === 0) {
+        fail("usage: judge where <world.swift> [definitions.swift ...]");
+    }
+    let text;
+    try { text = fs.readFileSync(args[0], "utf8"); }
+    catch (e) { fail("cannot read " + args[0]); }
+    const extras = [];
+    for (const extra of args.slice(1)) {
+        try { extras.push(fs.readFileSync(extra, "utf8")); }
+        catch (e) { fail("cannot read " + extra); }
+    }
+    const { judged, uses, refusals } = judgeWhereTexts(text, extras);
     if (refusals.length === 0) {
         console.log("✓ THE WHERE holds: " + judged + " equalities judged across "
-            + world.uses.length + " uses, the certificates, and the gated "
+            + uses + " uses, the certificates, and the gated "
             + "conformers, one canon each side (canon v" + CANON_VERSION + ").");
         return 0;
     }
@@ -388,4 +402,5 @@ function runWhere(args) {
     return 1;
 }
 
-if (typeof module !== "undefined") { module.exports = { runWhere }; }
+if (typeof module !== "undefined") { module.exports = { runWhere, judgeWhereTexts }; }
+if (typeof window !== "undefined") { window.judgeWhereTexts = judgeWhereTexts; }

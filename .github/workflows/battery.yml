@@ -32,3 +32,24 @@ jobs:
       - run: python tests/windows.py
         env:
           PYTHONUTF8: "1"
+  pages:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      # the published bench: the same page, the same browser judges, and the
+      # server's own answers recorded from a live serve at build time. The
+      # build itself is a Linux measure: a demo is born and served under the
+      # node port on this runner before anything is published.
+      - run: python3 bin/build-pages.py _site
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
