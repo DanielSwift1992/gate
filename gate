@@ -6423,8 +6423,8 @@ def humanize(out):
         lines.append(head)
         for w in out.get("worst", []):
             lines.append(f"  in history · {w['field']} · the contract's earliest revision saying it is "
-                         f"{w['contract']}, the library's earliest commit writing it {w['carrier']} "
-                         f"— {w['days']} days")
+                         f"{w['contract']}, the library's earliest commit writing it {w['carrier']}: "
+                         f"{w['days']} days")
         for n in out.get("unwritten", [])[:5]:
             lines.append(f"  in this walk · {n} · the contract declares it; no file walked writes it")
         if len(out.get("unwritten", [])) > 5:

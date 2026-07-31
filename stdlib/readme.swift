@@ -34,14 +34,18 @@
 // line, the folder the rule says, and the folder the tree has. A diff compares
 // two texts. This compares two claims about one thing.
 //
-// That changes who has to notice. Today you learn about the rename when
-// reviews land on the wrong person. The renaming team learns about your rule
-// at the audit, if ever. Here the difference is checked whenever anybody
-// asks: by hand, on a commit, in CI.
+// Today you learn about the rename when reviews land on the wrong person.
+// The renaming team learns about your rule at the audit, if ever. Here the
+// difference is checked whenever anybody asks: by hand, on a commit, in CI.
 //
 // So the map of who might break what leaves your head: a break names its own
 // line and both sides. A rename that breaks your rule is named inside the
 // pull request that renames it. The team can still merge, but knowingly.
+//
+// And CODEOWNERS is the example. The tool itself is general: two files that
+// state one fact, each side declared once, held to each other on every
+// change. That is the whole of it. What varies is which pair you point it
+// at.
 //
 // The check is one lookup per claim and nothing else: no search, no solver, no
 // build. The cost is linear in the number of claims: milliseconds on a real

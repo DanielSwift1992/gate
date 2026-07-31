@@ -5800,6 +5800,36 @@ public enum MyWatch: AccessLedger {
               and "align-items:flex-start" in _block("#verdict-head{", ui)
               and ui.count("#verdict-head{") == 1))
 
+    # ── A MAP MADE OF THE TEXT'S OWN WORDS. A long section read as one thread,
+    # and a reader arriving at it had no way in but the first word. Headings gave
+    # them five doors and took the thread away; a label in the margin drew more
+    # of the eye than the sentence it labelled. What is left is the smallest
+    # thing that works: the writer marks the words that carry the paragraph and
+    # the eye slides down them. It takes no hue, because the colours here answer
+    # whose a name is and how a claim stands, and a mark answers neither.
+    _markrule = _block("#bare .mark{", ui)
+    S.append(("a marked word is a ground under the text, and it borrows no colour that means something",
+              "background:var(--mist)" in _markrule
+              and "border:" not in _markrule
+              and not re.search(r"var\(--(ok|bad|action|localtype|knownname)\)", _markrule)
+              # and the ground is wider than the words without moving them: padding
+              # alone pushed the full stop off the sentence it ends
+              and "margin:0 -" in _markrule))
+
+    # ── AND A MARK MAY NOT EAT A SENTENCE. These pages state equalities in prose,
+    # «Those nodes state X == Y and hold the same band on Z», and two of those in
+    # one paragraph read as one long mark with the words between them inside it.
+    # The pattern under test is the one the page ships, read out of it.
+    _mk = re.search(r"\.replace\(/(==.+?==)/g", ui)
+    _pat = _mk.group(1) if _mk else "$^"
+    _eaten = re.sub(_pat, "MARK", "Those nodes state X == Y and hold the same band on Z == W.")
+    _marked = re.sub(_pat, "MARK", "full of ==sentences nobody checks==. CODEOWNERS says")
+    S.append(("an equality written in prose is left alone, and a marked phrase is not",
+              "MARK" not in _eaten and _marked == "full of MARK. CODEOWNERS says"
+              # and the page still carries the equality it was found in
+              and "state X == Y" in open(os.path.join(HERE, "stdlib", "bench-palette.swift"),
+                                         encoding="utf-8").read()))
+
     S.append(("nothing passes above the row of names that stays while the table scrolls",
               "position:sticky" in _tblhead and "top:0" in _tblhead
               # no padding over the scroll box: the first heading carries that space,
@@ -5876,7 +5906,7 @@ public enum MyWatch: AccessLedger {
               and not any(f.startswith("genre-")
                           for f in os.listdir(os.path.join(HERE, "stdlib")))))
 
-    claimed_n = re.search(r"the battery — (\d+) end-to-end checks", readme)
+    claimed_n = re.search(r"the battery: (\d+) end-to-end checks", readme)
     S.append(("the README counts these checks correctly",
               bool(claimed_n) and int(claimed_n.group(1)) == len(S) + 1))
 

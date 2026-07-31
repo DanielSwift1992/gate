@@ -265,6 +265,11 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 #bare .rec{display:block;margin-bottom:var(--apart)}
 #bare .note.said{margin:0 0 var(--near)}
 #bare .note.free{margin:0}
+/* a marked word is not judged and belongs to nobody, so it takes no hue: the
+   colours here answer whose a name is and how a claim stands, and a mark
+   answers neither. A ground, no edge, no weight. */
+#bare .mark{background:var(--mist);border-radius:3px;
+  padding:.08em .22em;margin:0 -.22em}
 /* ── A SECTION AND A BLOCK SET AS WRITTEN, in registers this page already
    declares. A heading is `headsmall` — the voice the keys panel speaks its own
    sections in — and a block the writer indented keeps its lines and its face,
@@ -2683,7 +2688,17 @@ function freeComments(text, notes, parsed) {
 function noteProse(text) {
     return esc(text)
         .replace(/``([A-Za-z_]\w*)``/g, (_, n) => '<span class="known">' + n + "</span>")
-        .replace(/`([^`]+)`/g, (_, c) => "<code>" + c + "</code>");
+        .replace(/`([^`]+)`/g, (_, c) => "<code>" + c + "</code>")
+        // ── AND THE MAP IS MADE OF THE TEXT'S OWN WORDS. A long section read as
+        // one thread, and a reader arriving at it had no way in but the first
+        // word. Cutting it into headings gave them five doors and took the
+        // thread away; a label in the margin took more attention than the
+        // sentence it labelled. What is left is the smallest thing that works:
+        // the writer marks the words that carry the paragraph, in the notation
+        // a marked word has everywhere else (`==like this==`), and the eye
+        // slides down them by itself. Nothing is added to the text and nothing
+        // is taken out of it.
+        .replace(/==(\S(?:[^=]*\S)?)==/g, (_, m) => '<span class="mark">' + m + "</span>");
 }
 
 // where a record stops: the next declaration begins. Nothing else in the parse
