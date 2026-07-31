@@ -456,15 +456,12 @@ def forms_guards(size=None, live=None):
             and (r["path"] in live or os.path.exists(os.path.join(d, r["path"])))]
     if not rows:
         return []
-    # ── AND A COURT THAT DID NOT SIT DOES NOT LOOK LIKE ONE THAT FOUND NOTHING. The
-    # certificate court is the binary's, and the port does not carry it yet: asked
-    # for it on a machine the binary cannot run on, this returned no refusals, which
-    # reads exactly like a page where every certificate holds. So the rows are named
-    # as unjudged and the verdict carries that instead.
-    if JUDGE_KIND != "binary":
-        if size is not None:
-            size["unjudged"] = [r["path"] for r in rows]
-        return []
+    # The certificate court runs on either judge: the binary answers it as
+    # `judge where`, and the port answers it in bin/judge-where.js with the
+    # same lines, held together by the battery's parity checks. For a stretch
+    # this returned the rows as unjudged wherever the binary could not run,
+    # because a court that did not sit may not look like one that found
+    # nothing; the port now sits.
     bad = []
     # ONE STREAM PER SHIPPED WORLD, in the order the manifest gives — `where`
     # over a LIST is blind, and its silence is selective by order.
@@ -6658,13 +6655,14 @@ def main():
                  if came and JUDGE_KIND == "binary" else
                  "\n  the revision this judge was built from is not recorded: "
                  "`bin/build-judge.sh` writes it down" if JUDGE_KIND == "binary" else "")
-              + ("\n  the plain court is served by the port under node "
+              + ("\n  both courts are served by the port under node "
                  + (subprocess.run([shutil.which("node"), "--version"], capture_output=True,
                                    text=True).stdout.strip() or "")
-                 + ", a line-for-line port of the same judge, held to it by parity on every "
-                   "run of the battery. The certificate court is the binary's, and "
-                 + ("the binary here was built for another platform"
-                    if os.path.exists(JUDGE) else "there is no binary here")
+                 + ": the plain court runs in judge.js and the certificate court in "
+                   "bin/judge-where.js, line-for-line ports of the same judge, held to "
+                   "its lines by the battery's parity checks. "
+                 + ("The binary here was built for another platform"
+                    if os.path.exists(JUDGE) else "There is no binary here")
                  if JUDGE_KIND == "port" else ""))
         return
     as_json = "--json" in args

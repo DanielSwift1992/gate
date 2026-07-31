@@ -213,7 +213,7 @@ judge.js        the browser judge (byte-parity port) for the bench
 ui.html         the workbench
 codemirror.*    the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
-tests/smoke.py   the battery: 351 end-to-end checks, the definition of green
+tests/smoke.py   the battery: 352 end-to-end checks, the definition of green
 ```
 
 ## Status
@@ -228,13 +228,12 @@ about a wrong verdict before anything else: see SECURITY.md.
 **Where it runs, measured rather than assumed.** The CLI is one python3 file and
 the bench is a page, so both go wherever python3 and a browser go. The judge is a native binary built for
 one platform: `bin/gate-judge` here is `Mach-O arm64`, and on any other machine
-it does not execute. Where it cannot run and node is installed, the plain court
-is answered by `bin/judge-cli.js`, the same judge ported line for line and held
-to the binary byte for byte by the battery. The certificate court, which
-`judge where` runs, is the binary's alone: on a machine without one, `gate
-status` names the forms rows it could not judge instead of printing a green over
-them, and `gate --version` names the port as the court that ran. macOS is
-measured every run. Linux is the same two pieces and the same port. Windows is
+it does not execute. Where it cannot run and node is installed, both courts run
+in the port: the plain court in `bin/judge-cli.js`, the certificate court
+in `bin/judge-where.js`, the same judge ported line for line and held to
+the binary's own lines by the battery, and `gate --version` names the port
+as the court that ran. macOS is measured every run. Linux is the same pieces under the
+same port. Windows is
 neither measured nor claimed yet.
 
 Roadmap, next: single-binary Swift CLI (Linux/Windows included) · the

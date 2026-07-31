@@ -4,6 +4,14 @@
 
 The working prototype, end to end:
 
+- The certificate court runs in the port. `bin/judge-where.js` is a
+  line-for-line translation of the corpus's WhereJudge, answering
+  `judge where` wherever the binary cannot run: the same lines out, byte
+  for byte, held to the binary by the battery on every page of the shelf.
+  `gate status` stops naming forms rows as unjudged on such machines,
+  `gate.cmd` runs the CLI on Windows, and `tests/windows.py` walks the
+  reviewer's road there in CI, from entry to a red line.
+
 - What a library has been, observed and never judged. `gate drift` reads an
   OpenAPI document out of git, every revision of it, and walks a client
   library once, and prints two kinds of fact with their kinds named: the day the

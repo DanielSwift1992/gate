@@ -23,3 +23,12 @@ jobs:
           path: |
             docs/bench.png
             docs/bench.png.from
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      # the reviewer's road on the platform the binary does not run on:
+      # both courts through the node port, from entry to a red line
+      - run: python tests/windows.py
+        env:
+          PYTHONUTF8: "1"

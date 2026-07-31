@@ -443,12 +443,36 @@ def main():
               hb == hp and hbc == hpc == 0 and "THE JUDGE holds" in hb))
     S.append(("and a refusing world in the same words, with the same lines",
               rb == rp and rbc == rpc == 1 and "refuses 2 claim(s)" in rb))
-    # AND THE PORT SAYS WHAT IT CANNOT DO, rather than answering an empty verdict:
-    # the certificate court is the binary's, and a court that did not sit may not look
-    # like one that found nothing.
-    wp = subprocess.run(["node", os.path.join(HERE, "bin", "judge-cli.js"), "judge", "where",
-                         os.path.join(HERE, "stdlib", "bench-metrics.swift")],
-                        capture_output=True, text=True)
+    # AND THE CERTIFICATE COURT OF THE PORT, HELD TO THE BINARY PAGE FOR PAGE.
+    # For a stretch the port refused `judge where` outright, and gate named the
+    # forms rows as unjudged wherever the binary could not run; the port sits
+    # now, a line-for-line translation of the corpus's WhereJudge, and the two
+    # courts must print the same lines on every page of the shelf. The where
+    # verdict carries no clock, so the parity here is byte for byte.
+    _where_pages = sorted(glob.glob(os.path.join(HERE, "stdlib", "*.swift")))
+    _where_apart = []
+    for _wpg in _where_pages:
+        _wb = subprocess.run([os.path.join(HERE, "bin", "gate-judge"), "judge", "where", _wpg],
+                             capture_output=True, text=True)
+        _wn = subprocess.run(["node", os.path.join(HERE, "bin", "judge-cli.js"), "judge",
+                              "where", _wpg], capture_output=True, text=True)
+        if (_wb.stdout, _wb.returncode) != (_wn.stdout, _wn.returncode):
+            _where_apart.append(os.path.basename(_wpg))
+    S.append(("the port's certificate court prints the binary's lines, page for page",
+              _where_pages != [] and _where_apart == []))
+    # and a page that refuses: the same refusal, the same canons, the same exit
+    _wbroken = os.path.join(tmp, "where-broken.swift")
+    open(_wbroken, "w").write(
+        open(os.path.join(HERE, "stdlib", "bench-metrics.swift"), encoding="utf-8").read()
+        .replace("public typealias SnugOverTight = Wider<Snug, Tight, Never>",
+                 "public typealias SnugOverTight = Wider<Tight, Snug, Never>", 1))
+    _wb2 = subprocess.run([os.path.join(HERE, "bin", "gate-judge"), "judge", "where", _wbroken],
+                          capture_output=True, text=True)
+    _wn2 = subprocess.run(["node", os.path.join(HERE, "bin", "judge-cli.js"), "judge",
+                           "where", _wbroken], capture_output=True, text=True)
+    S.append(("and a broken certificate refuses through the port in the binary's words",
+              _wb2.returncode == _wn2.returncode == 1 and _wb2.stdout == _wn2.stdout
+              and "be equivalent [Ordered]" in _wn2.stdout))
     # AND THE ONE COMMAND WHOSE JOB IS TO SAY WHAT JUDGES THIS REPOSITORY SAYS WHICH
     # ONE. It printed the binary's digest on a machine where the binary cannot run and
     # the port was doing the judging: a file that judged nothing, named as the court.
@@ -456,15 +480,13 @@ def main():
     S.append(("the version names the court that ran, not the file beside it",
               'if JUDGE_KIND != "binary":' in vsrc.split("def judge_version")[1][:600]
               and "port sha256:" in vsrc
-              and "the plain court is served by the port under node" in vsrc))
+              and "both courts are served by the port under node" in vsrc))
     # and the README says where this runs, with the unmeasured platform named as such
     rd = open(os.path.join(HERE, "README.md"), encoding="utf-8").read()
     S.append(("the cover says where it runs, and calls the unmeasured platform unmeasured",
               "Where it runs, measured rather than assumed" in rd
               and "Windows is\nneither measured nor claimed yet" in rd
-              and "judge-cli.js" in rd))
-    S.append(("the port refuses to stand in for the certificate court",
-              wp.returncode == 2 and "not in this port" in wp.stderr and not wp.stdout.strip()))
+              and "judge-cli.js" in rd and "judge-where.js" in rd))
 
     # self-hosted shelf: the product's own stdlib files are judged by its own judge
     import glob as _glob

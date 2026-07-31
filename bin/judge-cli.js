@@ -7,11 +7,10 @@
 // it: this is the reach. Same arguments in, same lines out, so nothing downstream
 // has to know which of the two answered.
 //
-// It serves the PLAIN court only. The certificate court, which the binary answers
-// under `judge where`, is not in the port yet: the port refuses a page of forms as
-// outside the fragment and never reaches a certificate. Asked for it, this says so
-// on stderr and exits 2 rather than printing an empty verdict, because a court that
-// did not sit may not look like a court that found nothing.
+// It serves BOTH courts. The plain court is judge.js, the line-for-line port
+// of the corpus judge; the certificate court, which the binary answers under
+// `judge where`, is judge-where.js beside this file, the same translation of
+// the corpus's WhereJudge. The battery holds each to the binary's own lines.
 const fs = require("fs");
 const path = require("path");
 const { judge } = require(path.join(__dirname, "..", "judge.js"));
@@ -22,9 +21,8 @@ if (args[0] !== "judge") {
     process.exit(2);
 }
 if (args[1] === "where") {
-    console.error("judge-cli: the certificate court is not in this port. The binary "
-                  + "answers it, and this machine has none that runs.");
-    process.exit(2);
+    const { runWhere } = require(path.join(__dirname, "judge-where.js"));
+    process.exit(runWhere(args.slice(2)));
 }
 
 const files = args.slice(1);
