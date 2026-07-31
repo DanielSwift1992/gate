@@ -1,7 +1,7 @@
 # gate, the details
 
 The cover ([README](../README.md)) is the product in one read. These are
-the pieces you look up when you need them; each was on the cover once and
+the pieces you look up when you need them. Each was on the cover once and
 moved here so the cover stays a cover.
 
 ## Carrying gate in your repository
@@ -15,7 +15,7 @@ not a script piped into a shell. The judge is pinned with it, so an old
 commit is judged by the judge it was written with, which is what makes
 `git bisect` over facts exact. And it is pinned twice over: `.gate/`
 carries its `sha256` (what is here) and its corpus revision (what it was
-made from); `bin/build-judge.sh <pin>` builds the same judge from the
+made from), and `bin/build-judge.sh <pin>` builds the same judge from the
 public corpus, checked by the battery rather than by the hash.
 
 ## Nothing leaves your machine
@@ -46,7 +46,7 @@ bin/build-judge.sh <pin>
 The bench declares a Content-Security-Policy with `connect-src 'self'`, so
 the browser refuses any external request even if one were ever written.
 Everything above is a check in the battery, so it stays true. What gate
-reads is your working copy and `git`; what it writes is your working copy.
+reads is your working copy and `git`. What it writes is your working copy.
 The CLI is one file of standard-library Python and the bench is one file
 of HTML: small enough that reading them is a reasonable afternoon, which
 is the point. A tool that checks by reading should be checkable by
@@ -87,7 +87,7 @@ gate adds no process of its own. It sits inside the four you already have:
   than obeyed. The CSVs only seed them. (The file sits beside the judged
   list, like the manifest: the reference judge does not read its extension
   form yet, so the guard keeps it.)
-- Every change, facts and rules alike, is a working-copy edit; history,
+- Every change, facts and rules alike, is a working-copy edit. History,
   review and rollback belong to git. gate keeps no state of its own.
 
 ## Why the declarations are Swift

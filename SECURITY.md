@@ -1,8 +1,8 @@
 # Reporting a problem
 
-If you find a way to make gate say a world holds when it does not, that is
-the bug we care about most: the whole tool is one claim, *what does not hold is refused
-by line*, and a false green breaks it.
+If you can get `holds` printed over a world that does not hold, that is
+the bug we care about most: the whole tool is one claim, *what does not
+hold is refused by line*, and a false green breaks it.
 
 Please report it privately first, by opening a
 [security advisory](../../security/advisories/new) on the

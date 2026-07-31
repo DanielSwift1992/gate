@@ -481,11 +481,15 @@ def main():
               'if JUDGE_KIND != "binary":' in vsrc.split("def judge_version")[1][:600]
               and "port sha256:" in vsrc
               and "both courts are served by the port under node" in vsrc))
-    # and the README says where this runs, with the unmeasured platform named as such
+    # and the README says where this runs, with the unmeasured platform named
+    # as such. Windows crossed that line the day its CI road went green, so
+    # the unmeasured one is Linux now, and the cover says exactly that.
     rd = open(os.path.join(HERE, "README.md"), encoding="utf-8").read()
     S.append(("the cover says where it runs, and calls the unmeasured platform unmeasured",
               "Where it runs, measured rather than assumed" in rd
-              and "Windows is\nneither measured nor claimed yet" in rd
+              and "Windows is measured on every push" in rd
+              and "tests/windows.py" in rd
+              and "not\nmeasured in CI yet" in rd
               and "judge-cli.js" in rd and "judge-where.js" in rd))
 
     # self-hosted shelf: the product's own stdlib files are judged by its own judge
@@ -5385,9 +5389,14 @@ public enum MyWatch: AccessLedger {
               # and not a thing anybody reads on screen.
               and '"Every claim in these files is judged as you type."' not in ui
               and ui.count("cannot be saved") == 1
-              # a refusal is about the world and never about the writer: the
-              # letter says so in the canon's own words, wrapped as prose wraps
-              and "nobody blames you" in letter and "get a line number" in letter
+              # a refusal is about the world and never about the writer, and the
+              # letter carries that as mechanics, not as reassurance: the law's
+              # own sentence at a named line, and the safety said as a property
+              # of the file. It once said `nobody blames you`, which names the
+              # fear it means to remove; anchoring the mood is the writer's job,
+              # naming the mood is not.
+              and "in the law's own sentence" in letter
+              and "which is what makes it safe to touch" in letter
               # and every section names a room and a future act, second person
               and letter.count("── ") >= 6
               and "this is where you say what is yours" in letter
@@ -5398,7 +5407,7 @@ public enum MyWatch: AccessLedger {
               # their own CODEOWNERS in another form: the words came from
               # somewhere, and the letter never said where.
               and "gate import codeowners` read the CODEOWNERS in this folder" in letter
-              and "became a ZONE" in letter and "became a ROOM" in letter
+              and "became a zone" in letter and "became a room" in letter
               and "owners.csv" in letter
               # ── AND THE FIRST SCREEN ANSWERS THE TWO QUESTIONS A STRANGER
               # ACTUALLY ARRIVES WITH. The letter answered five of the childish
@@ -5410,11 +5419,11 @@ public enum MyWatch: AccessLedger {
               # Whoever arrives by the README has that answer; whoever arrives
               # at the bench, which is the road we mean people to take, did not.
               and "git keeps every byte of a repository honest" in letter
-              and "stopped being true" in letter and "nothing anywhere" in letter
+              and "stopped being true" in letter and "nothing says the day" in letter
               # the exhibit: this letter is one of the claims it is about
-              and "A readme that describes a tool goes stale; this one is" in letter
+              and "A readme that describes a tool goes stale. This one is" in letter
               # and one line from the demo to the reader's own day
-              and "In your own CODEOWNERS there is very likely a line like it today" in letter
+              and "In your own CODEOWNERS a line like it can stand today" in letter
               and "rather than at the incident" in letter))
 
     S.append(("gate's own reference is met as a reference, not as source",

@@ -1210,8 +1210,8 @@ def cmd_import(a):
     # twice, which is what they did until somebody looked at them set as prose.
     emit("// the facts world, yours: the source you read and edit, and the one")
     emit("// this tool answers for. Not a generated")
-    emit("// artifact. The tables only seeded it once, below. The world, not the")
-    emit("// tables, is the truth. A gate.manifest.swift may split it across")
+    emit("// artifact. The tables only seeded it once, below, and from here the")
+    emit("// world is what is edited and judged. A gate.manifest.swift may split it across")
     emit("// several files, all judged together. git carries the history.")
     emit("//")
     emit(f"// seeded by gate import from: {os.path.basename(people_csv)}, {os.path.basename(grants_csv)}")
@@ -1992,14 +1992,14 @@ DEMO_README = """\
 //
 // git keeps every byte of a repository honest: change one and the hash says
 // so. The WORDS of a repository have no such guarantee. A CODEOWNERS says what
-// was true on the day somebody wrote it, and nothing anywhere says the day it
-// stopped being true. The same goes for a schema, a rota, a list of who may
+// was true on the day you or a colleague wrote it, and nothing says the day
+// it stopped being true. The same goes for a schema, a rota, a list of who may
 // deploy. gate makes those words claims, and a claim is read again every time
 // it is touched.
 //
 // This file is one of them. It is declared in `gate.manifest.swift`, judged
 // with everything else in this folder, and counted in the verdict at the
-// bottom of this bench. A readme that describes a tool goes stale; this one is
+// bottom of this bench. A readme that describes a tool goes stale. This one is
 // the tool working.
 //
 // ── this is your copy, and it was made to be taken apart ──
@@ -2016,14 +2016,14 @@ DEMO_README = """\
 //
 // `gate import codeowners` read the CODEOWNERS in this folder and wrote
 // `ownership.swift` beside this file. Three words came out of it: a top of the
-// tree became a ZONE, a pattern became a ROOM, and a person became an OWNER
+// tree became a zone, a pattern became a room, and a person became an owner
 // who keeps one zone. Which zone each of them may keep is the one thing
 // CODEOWNERS cannot say, so it is written next to it, in `owners.csv`.
 //
 // ── two: this is where you say what is yours ──
 
-/// A zone of your own, declared here rather than imported from anywhere. You
-/// wrote it, you answer for it, and it cannot quietly rot: the judge reads it
+/// A zone of your own, declared here rather than imported. You wrote it,
+/// you answer for it, and it cannot go stale in silence: the judge reads it
 /// again every time this file is touched.
 public enum Zone_readme: Realm {}
 
@@ -2047,21 +2047,20 @@ public typealias Owns_readme = Owns<Owner_you, Path_readme>
 
 // BREAK IT. Change `Zone_readme` on the path above to `Zone_src` and watch the
 // line get named, in the law's own sentence, before anything reaches the file:
-// your text waits in the editor until it holds again. Put it back and it is
-// saved, and green. Here nobody blames you, and you get a line number. This
-// whole file can go without anything else moving, which is what makes it safe
-// to touch.
+// your text stays in the editor until it holds again. Put it back and it is
+// saved, and green. This whole file can go without anything else moving,
+// which is what makes it safe to touch.
 //
 // ── four: this is where the world tells you what you did not know ──
 //
 // One line already does not hold, and it is not in this file. In
 // `ownership.swift`, a rule out of the CODEOWNERS here hands a source
-// directory to somebody whose zone is docs. `gate status` names it in
+// directory to an owner whose zone is docs. `gate status` names it in
 // milliseconds, without reading CODEOWNERS again.
 //
-// In your own CODEOWNERS there is very likely a line like it today, and
-// nothing anywhere will name it. This is where you will hear about that line
-// on the day it stops being true, rather than at the incident.
+// In your own CODEOWNERS a line like it can stand today, with nothing set
+// to name it. Here, such a line is named the day it stops being true,
+// rather than at the incident.
 //
 // Two ways to end this one: change the line in the world, or change CODEOWNERS
 // and import it once more.
@@ -2069,7 +2068,9 @@ public typealias Owns_readme = Owns<Owner_you, Path_readme>
 //     gate import codeowners CODEOWNERS --tree . --policy owners.csv \\
 //                            -o ownership.swift
 //
-// The world is the truth from here; CODEOWNERS only seeded it once.
+// The file and the world are a pair from here on: the world names its
+// source on its own `from:` line, and `gate status` compares the two, so
+// the day they part has an address.
 //
 // ── five: this is where you will come back ──
 //
@@ -2212,8 +2213,8 @@ def cmd_demo_owners(a):
                     "committed the moment it was made, so nothing you try here can cost you "
                     "anything",
             "try": ["open ownership.swift at the line gate status names, and give that room to "
-                    "an owner whose zone matches. The world is the truth here, and CODEOWNERS only "
-                    "seeded it",
+                    "an owner whose zone matches. The file and the world are a pair: status "
+                    "compares them on every run",
                     "or edit CODEOWNERS and run the import again: same command, one line moved",
                     "gate serve opens the bench, with the world beside its verdict, judged as "
                     "you type",

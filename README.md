@@ -263,9 +263,11 @@ it does not execute. Where it cannot run and node is installed, both courts run
 in the port: the plain court in `bin/judge-cli.js`, the certificate court
 in `bin/judge-where.js`, the same judge ported line for line and held to
 the binary's own lines by the battery, and `gate --version` names the port
-as the court that ran. macOS is measured every run. Linux is the same pieces under the
-same port. Windows is
-neither measured nor claimed yet.
+as the court that ran. macOS is measured every run: the full battery, on
+every push. Windows is measured on every push too, by its own road: the
+walk in `tests/windows.py`, entry to a red line under the port, on a
+Windows runner in CI. Linux runs the same pieces under the same port, and is not
+measured in CI yet.
 
 Roadmap, next: single-binary Swift CLI (Linux/Windows included) · the
 bare-Swift diff view (`gate diff` shows the stripped form, `--full` the

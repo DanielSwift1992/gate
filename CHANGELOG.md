@@ -54,7 +54,7 @@ The working prototype, end to end:
   place is read-only and says so.
 - A comment is a note on a fact. Consecutive `///` above a declaration belong to
   that record and travel with it into Bare and into Table, where the note column
-  exists only where notes do. A blank line ends a note; comments that belong to
+  exists only where notes do. A blank line ends a note, and comments that belong to
   nobody keep the document's own order.
 - Colour answers one question and weight another. A hue says where a name is
   from, what this world declares against what the shelf does, and the weight
@@ -63,14 +63,14 @@ The working prototype, end to end:
   the bench to parting what the judge parts: two worlds one judged fact apart
   are never painted the same.
 - The palette and the metrics are judged worlds of their own. Every colour is a
-  contrast certificate on a ladder spelled from Unit; every neutral is held
-  within two percent of the achromatic line, so a tint cannot creep back; every
-  gap on the page is a whole step of the reading line, and the rail keeps one
-  edge. The journal gives back the colours that belong to the judge and to the
+  contrast certificate on a ladder spelled from Unit. Every neutral is held
+  within two percent of the achromatic line, so a tint cannot creep back.
+  Every gap on the page is a whole step of the reading line, and the rail
+  keeps one edge. The journal gives back the colours that belong to the judge and to the
   hand: red and green are the verdict's alone.
-- The first paint is the answer rather than a guess: the bench remembers the
-  theme the world declared on this machine, and the world overwrites it on every
-  read.
+- The first paint is the answer rather than a guess: the bench keeps the
+  theme the world declared on this machine, and the world overwrites it on
+  every read.
 - Fixed: a kind declared with its body on one line, `public enum FinanceShare:
   Document { … }`, carried that body into its name, so the shelf knew four
   documents and every offer for a document was empty.
@@ -79,8 +79,8 @@ The working prototype, end to end:
   own git at `~/.gate/me`, one per repository, never in the shared repo:
   colleagues and CI do not have it. It holds what your bench shows you
   (`MyJournal` is a declaration, so editing it changes the journal) and
-  claims you want to keep true, judged against the shared world: when
-  somebody changes a fact you depend on, the judge names the line in your
+  claims you want to keep true, judged against the shared world: when a
+  colleague changes a fact you depend on, the judge names the line in your
   file. Privacy is the repository boundary, not a policy.
 - Policy is a fact: an identity ties an email to a person and `MergePolicy`
   states what merging demands, both declared in `gate.policy.swift` beside
@@ -100,21 +100,21 @@ The working prototype, end to end:
 - The journal view (`gate log`, and the bench rail): the repository's own
   history projected: commit, author, open/closed, and the world files a
   commit touches. A pure function of the clone: no server state, no
-  hosting; whoever can read the repo sees it. Observed, never judged
+  hosting, and whoever can read the repo sees it. Observed, never judged
   (open/closed is reachability from the default branch). A commit that
   touches a world file opens its diff in the bench; clicking an author
   filters the journal. The world file takes the tool's name (`gate.swift`,
   `gate.manifest.swift`), the Dockerfile pattern.
-- The workbench (`ui.html`, served by `gate serve`): CodeMirror editor
-  with declared-name highlighting; three views in one row: Full, Bare
-  (the bare form: no enum/typealias/braces, scope by indentation,
-  read-only but highlighted with jump-to-declaration), Table (the world
-  projected as sortable relations and ledgers); a draggable file rail
-  over the declared layout with a per-file verdict dot; the verdict
-  docked at the bottom, Xcode-style; cross-file judgement over unsaved
-  text, addresses refined to the subject line.
+- The workbench (`ui.html`, served by `gate serve`): a CodeMirror editor
+  with declared-name highlighting. Three views in one row: Full, Bare
+  (no enum/typealias/braces, scope by indentation, read-only, with
+  jump-to-declaration), and Table (the world projected as sortable
+  relations and ledgers). A draggable file rail over the declared layout
+  with a per-file verdict dot. The verdict docked at the bottom,
+  Xcode-style, with cross-file judgement over unsaved text and addresses
+  refined to the subject line.
 - No state of our own, and only a holding world is written: an edit goes
-  to the working-copy file, but the file is written ONLY when the judge
+  to the working-copy file, but the file is written only when the judge
   holds: a refused (invalid) world never reaches the file, so git
   reflects only worlds that hold. The invalid state lives in the editor
   buffer until it holds again. git is the only state: commit or discard
@@ -126,7 +126,7 @@ The working prototype, end to end:
 - Verbs (git-shaped porcelain): init, status/fsck, check, diff, apply
   (transfer/grant/revoke/hire), import/export with round-trip proof,
   verify (differential and --self), guard merge, guard deps (sketch),
-  library with crystal diff, survey, serve, report, stdlib
+  library with vocabulary diff, survey, serve, report, stdlib
   (show/materialize with drift guard).
 - Domain worlds: Kubernetes RBAC via `import rbac` (namespace invariant,
   stale roleRef, cross-namespace binding, named by k8s source).
@@ -135,4 +135,4 @@ The working prototype, end to end:
 - The shelf: `stdlib/*.swift` as real, self-judged source files.
 - The judge: native binary with a versioned verdict contract (canon v2),
   rebuilt from the public theory corpus by pin.
-- The battery: 25 end-to-end checks (`tests/smoke.py`).
+- The battery: `tests/smoke.py`, the end-to-end checks the README counts.
