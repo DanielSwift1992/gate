@@ -2,9 +2,9 @@
 
 Your repository is full of sentences that must match something, and nobody
 checks the match. The schema must match the service that writes it. The
-rota must match who actually answers. CODEOWNERS must match the tree it
-divides. Each pair held the day you or a colleague wrote it down, and
-nothing tells you the day the two stopped matching.
+rota must match who actually answers. Each pair held the day you or a
+colleague wrote it down, and nothing tells you the day the two stopped
+matching.
 
 One case, to be concrete. CODEOWNERS hands `/src/api` to @alice. The folder
 was renamed to `/services/api` in the spring. The rule now matches nothing,
@@ -164,10 +164,11 @@ number, and the judge refuses it at a line. A difference in what two
 people mean by one record is another thing: no check turns two readings
 into one. What gate offers there is its one move: each side writes its
 half down separately, and the judge says whether the two match, and where
-they part when they do not. Whether a rule *should* say what it says is a
-claim you can state too: write it as policy, let the other side write
-theirs, and the verdict says if you agree. Agreement here is not assumed.
-It is stated twice, and confirmed.
+they part when they do not. If CODEOWNERS hands the payments folder to an
+intern, the rule holds and every record agrees with it. Whether it should
+is a claim you can state too: write it as policy, let the other side
+write theirs, and the verdict says if you agree. Agreement here is not
+assumed. It is stated twice, and confirmed.
 
 ## Death to drift
 
@@ -206,7 +207,7 @@ judge.js        the browser judge (byte-parity port) for the bench
 ui.html         the workbench
 codemirror.*    the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
-tests/smoke.py   the battery: 349 end-to-end checks, the definition of green
+tests/smoke.py   the battery: 350 end-to-end checks, the definition of green
 ```
 
 ## Status

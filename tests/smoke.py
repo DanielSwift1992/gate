@@ -160,6 +160,30 @@ def main():
     # whichever they read second tells them the first was a sales line. It lived
     # for a month because the two texts were held apart and nothing compared them.
     _cover = open(os.path.join(HERE, "README.md"), encoding="utf-8").read()
+    # ── AND THE TWO TEXTS SHARE ONE SPINE, WORD FOR WORD. The cover is written
+    # from the letter; each is maintained by hand, so a rewording of one drifts
+    # from the other in silence, which is this tool's own first paragraph. The
+    # spine sentences are held identical in both, comment marks and line breaks
+    # aside. An adaptation that means to differ picks different sentences.
+    _one_line = lambda t: " ".join(
+        l.lstrip("/ ").strip() if l.strip().startswith("//") else l.strip()
+        for l in t.split("\n")).replace("  ", " ")
+    _cover_flat, _letter_flat = _one_line(_cover), _one_line(open(
+        os.path.join(HERE, "stdlib", "readme.swift"), encoding="utf-8").read())
+    _spine = [
+        "Your repository is full of sentences that must match something, and nobody checks the match.",
+        "That gap has a name: drift. Two records of one fact, coming apart in silence, while both still get obeyed.",
+        "Yours is wherever two places state one fact.",
+        "You are looking for pairs, not objects: one fact always has more than one record.",
+        "If CODEOWNERS hands the payments folder to an intern, the rule holds and every record agrees with it.",
+        "Agreement here is not assumed. It is stated twice, and confirmed.",
+        "Every pair you gate is one thing you stop keeping in your head.",
+        "Something drifts? Gate it.",
+    ]
+    _spine_missing = [s for s in _spine
+                      if s not in _cover_flat or s not in _letter_flat]
+    S.append(("the cover and the letter share one spine, word for word",
+              _spine_missing == []))
     S.append(("the cover and the letter say the same thing about a source of truth",
               "there is no source" in _cover and "there is no source" in letter_text
               # and neither crowns one anywhere: the word survives only where the
