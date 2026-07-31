@@ -176,6 +176,8 @@ def main():
         "Yours is wherever two places state one fact.",
         "You are looking for pairs, not objects: one fact always has more than one record.",
         "If CODEOWNERS hands the payments folder to an intern, the rule holds and every record agrees with it.",
+        "What varies is which pair you point it at: a Jira ticket and the TODO that cites it, "
+        "k8s RBAC and the cluster it describes, an API contract and a client in another language.",
         "Agreement here is not assumed. It is stated twice, and confirmed.",
         "Every pair you gate is one thing you stop keeping in your head.",
         "Something drifts? Gate it.",

@@ -63,11 +63,13 @@ lookup, answered in milliseconds against the file itself:
 | Is anything inconsistent right now? | an audit, quarterly | `gate status`, on every keystroke |
 
 The names in the examples come from a sandbox this repository can make for
-you. Your own commands use your own names. You pay once, per name:
-translating your people and documents is the work. Every question after that
-is a composition of what you already translated, and compositions are
-free. That is the opposite of a reporting tool, where each new question is
-new work.
+you. Your own commands use your own names. You pay once, per name you
+translate. Every question after that is a composition of what you already
+translated, and compositions are free. That is the opposite of a
+reporting tool, where each new question is new work. And the table is one
+example. The tool itself is general. What varies is which pair you point
+it at: a Jira ticket and the TODO that cites it, k8s RBAC and the cluster
+it describes, an API contract and a client in another language.
 
 ## Quick start
 
