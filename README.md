@@ -63,7 +63,7 @@ lookup, answered in milliseconds against the file itself:
 | Is anything inconsistent right now? | an audit, quarterly | `gate status`, on every keystroke |
 
 The names in the examples come from a sandbox this repository can make for
-you. Your own commands use your own names. You pay once, per atom:
+you. Your own commands use your own names. You pay once, per name:
 translating N people and documents is the work. Every question after that
 is a composition of what you already translated, and compositions are
 free. That is the opposite of a reporting tool, where each new question is
@@ -83,6 +83,8 @@ Ownership is a fact you already keep, in a file that cannot say whether an
 owner exists or whether a pattern still matches anything: it becomes a
 judged world without you writing a line (`owners.csv`, two columns, adds
 the one thing CODEOWNERS cannot express: which zone each owner keeps).
+What the command writes is one small Swift file, `ownership.swift`, and
+no Swift toolchain is involved: the judge reads it directly.
 `drift` reads an API contract and a client library out of git on your
 machine, and prints what the copies have been doing to each other: nothing
 is uploaded, nothing is fetched, and it observes rather than judges, so
@@ -175,7 +177,7 @@ assumed. It is stated twice, and confirmed.
 Every pair you gate is one thing you stop keeping in your head. The
 checking does not pile up: each claim is one lookup, so a hundred pairs
 cost what ten did. Once your pairs are in, the picture is concrete: the
-rename goes red on the renamer's screen, not on yours. The intern's access
+rename goes red on the renamer's screen, not on yours. A new hire's access
 is a one-line diff an owner has to approve. Deleting the old config takes
 an afternoon, not a season of asking around, because the readers it still
 has are a list, not a guess. Nothing got faster. What went away is the

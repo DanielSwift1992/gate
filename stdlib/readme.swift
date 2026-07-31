@@ -184,7 +184,7 @@
 // Every pair you gate is one thing you stop keeping in your head. The
 // checking does not pile up: each claim is one lookup, so a hundred pairs
 // cost what ten did. Once your pairs are in, the picture is concrete: the
-// rename goes red on the renamer's screen, not on yours. The intern's
+// rename goes red on the renamer's screen, not on yours. A new hire's
 // access is a one-line diff an owner has to approve. Deleting the old
 // config takes an afternoon, not a season of asking around, because the
 // readers it still has are a list, not a guess. Nothing got faster. What
