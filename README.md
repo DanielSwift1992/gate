@@ -65,14 +65,15 @@ where each new question is new work.
 
 Your facts become Swift declarations in your repository: one file to start
 with, `gate.swift`, and as many as you name in a manifest, all judged
-together. One text, and everything reads it at once: `git diff`, a person,
-the judge, and the Swift compiler. There is no DSL. What you write is bare
+together. One text, readable by everything at once: `git diff`, a person,
+the judge, a Swift compiler. There is no DSL. What you write is bare
 Swift, the same language with the ceremony stripped; printing restores the
 full form, and full Swift is always one view away in the same file. Rules
 are type constraints in the same text, so a record that violates a rule
-does not get flagged: it fails to exist. Every claim is checked by two
-independent readers, the judge (milliseconds, on every keystroke) and the
-Swift compiler (seconds, in CI). Git carries what it already carries best:
+does not get flagged: it fails to exist. The judge checks every claim in
+milliseconds, on every keystroke. The files stay plain Swift, so
+`swiftc -typecheck` is a second, independent reader whenever you want one.
+Git carries what it already carries best:
 history, authorship, review, rollback.
 
 You never migrate your systems. You translate one domain, the tables you

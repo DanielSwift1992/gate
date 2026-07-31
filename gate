@@ -1555,8 +1555,7 @@ def next_rung(refused, serving=False):
         if not serving:
             return "gate serve"
     if not policy_path():
-        return ("say who may merge, in gate.policy.swift: a law of yours with a date on it, "
-                "instead of a convention somebody has to remember")
+        return "say who may merge: gate.policy.swift"
     ci = os.path.join(root, ".github", "workflows")
     if not os.path.isdir(ci):
         return ("put `gate status` in the CI you already run: from then on nobody reads a diff "

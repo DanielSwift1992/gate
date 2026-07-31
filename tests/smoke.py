@@ -5410,7 +5410,7 @@ public enum MyWatch: AccessLedger {
               # it survives once in the comment that records why it went, which
               # is the decision and not a thing anybody reads on a terminal
               and next_src.count("cannot be committed") == 1
-              and "a law of yours with a date on it" in next_src
+              and "say who may merge: gate.policy.swift" in next_src
               and "nobody reads a diff" in next_src))
 
     # a route may carry an extension, and this pattern used to stop at the dot —

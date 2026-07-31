@@ -16,7 +16,7 @@
 //
 // One case, to be concrete. CODEOWNERS hands `/src/api` to @alice. The folder was
 // renamed to `/services/api` in the spring. The rule now matches nothing, reviews
-// still go to Alice, and no tool anywhere reports a problem. You find out at an
+// still go to Alice, and no tool reports a problem. You find out at an
 // audit, or the day somebody merges what nobody reviewed.
 //
 // That gap has a name: drift. Two records of one fact, coming apart in
@@ -57,8 +57,8 @@
 // ── what gate put in your repository, and how to take it out ──
 //
 // Five files and one git setting. Nothing else was read, moved or rewritten.
-// The tool has no network access: nothing is uploaded, nothing phones home,
-// ever.
+// The tool has no network access: nothing is uploaded, nothing phones
+// home.
 //
 //     readme.swift          the file you are reading
 //     verbs.swift           every gate command, and whether it changes files
@@ -107,10 +107,10 @@
 // Beside this file the page lists `my.swift`: the one file here that is not
 // part of this repository. You are already half of several pairs: the things
 // you check by hand because nobody else will. my.swift is where your half
-// gets written down, and from then on every change here is checked against
-// it, with nobody's agreement needed. It lives in a
-// separate git on this machine, no clone or colleague ever sees it, and it
-// does not exist until you write in it. Clear it and it is gone.
+// gets written down; from then on the checking is the judge's, not yours,
+// and nobody's agreement is needed. It lives in a separate git on this
+// machine, no clone or colleague sees it, and it does not exist until
+// you write in it. Clear it and it is gone.
 //
 // ── find your drift ──
 //
@@ -121,8 +121,8 @@
 // schema and the service that writes it, the contract and the client, the
 // rota and the pager, the config nobody dares delete.
 //
-// You are never looking for an object, only for pairs: one fact always has
-// more than one record. And the loudest marker is anything that calls itself
+// You are looking for pairs, not objects: one fact always has more than
+// one record. And the loudest marker is anything that calls itself
 // the source of truth: a self-declared source is the record nobody compares
 // to the others any more, so that is usually where drift collects.
 //
@@ -140,39 +140,57 @@
 //
 // ── gate it ──
 //
-// To gate a pair is to state your half of it in records, once, and publish
-// it into the judged set. From then on it is checked against everything
-// else here on every change, and the other side sees it in their own next
-// check.
+// To gate a pair: put your half of it in a file here, once. From then on
+// every change is checked against it, and the other side sees it the next
+// time they check.
 //
-// Where your half already lives in a table, one command translates it. For
-// CODEOWNERS:
+// If your half is already a table (CODEOWNERS, a CSV), one command puts it
+// in. For CODEOWNERS:
 //
 //     gate import codeowners CODEOWNERS --tree .
 //
-// It reads your file and prints records from it. Your file stays what it
-// was, still the input, and `gate export` prints it back byte for byte, so
-// the translation provably dropped nothing. The first refusal is usually
-// a rule that stopped being true long ago and has been quietly obeyed
-// since.
+// Your file is not touched: it stays the source, and the records are
+// printed from it. To check the translation, run `gate export`: it prints
+// your file back, and the diff against the original is empty. The first
+// refusal is usually a rule that stopped being true long ago and has been
+// quietly obeyed since.
 //
-// Where there is no table, you write the records yourself. Rules are
-// translated by hand, once. They are small, and they are yours to read.
-// That is the upkeep, all of it.
+// If it is not a table, you write it as a file yourself: the same kind of
+// file you are reading right now. Rules are translated by hand, once. They
+// are small, and they are yours to read. That is the upkeep, all of it.
 //
-// Those records are Swift declarations, so the same file is read by the
-// judge on every keystroke and, in CI, by the Swift compiler. Two
-// independent readers, and both read the file and nothing else.
+// And because it is plain Swift, a second, independent reader exists
+// whenever you want one: `swiftc -typecheck` passes on these files as they
+// are, with no project and no build.
 //
 // ── what this does not touch ──
 //
-// The judge compares records to each other. It does not know what you
-// meant, and it never rules on whether a rule should say what it says. When
-// a rule and your intention disagree, the disagreement is yours to settle,
-// and nothing here settles it for you.
+// A difference between two records is visible at a glance, text against
+// number, and the judge refuses it at a line. A difference in what two
+// people mean by one record is another thing: no check turns two readings
+// into one. What gate offers there is its one move: each
+// side writes its half down separately, and the judge says whether the
+// two match, and where they part when they do not. If CODEOWNERS hands
+// the payments folder to an intern, the rule holds and every record
+// agrees with it. Whether it should is a claim you can state too: write
+// it as policy, let the other side write theirs, and the verdict says if
+// you agree. Agreement here is not assumed. It is stated twice, and
+// confirmed.
 //
-// Every command this tool accepts, and what each one changes: `verbs.swift`,
-// beside this file, judged with it. The promises at its foot are what let you
-// run any of this on a clone you care about.
+// Every gate command, what it reads and what it writes: `verbs.swift`,
+// beside this file, judged with it. Twelve commands carry a certificate at
+// its foot saying they change no files, which is why you can run them on a
+// clone you care about.
+//
+// ── death to drift ──
+//
+// Every pair you gate is one thing you stop keeping in your head. The
+// checking does not pile up: each claim is one lookup, so a hundred pairs
+// cost what ten did. Once your pairs are in, the picture is concrete: the
+// rename goes red on the renamer's screen, not on yours. The intern's
+// access is a one-line diff somebody has to approve. Deleting the old
+// config takes an afternoon, not a season of asking around, because the
+// readers it still has are a list, not a guess. Nothing got faster. What
+// went away is the asking.
 //
 // Something drifts? Gate it.
