@@ -659,17 +659,17 @@ PERSONAL_TEMPLATE = """\
 // repository will have it, and neither will your other computer, unless you
 // give that repository a remote of your own.
 //
-// One thing about the page, so it is not a mystery: with nothing declared it
-// follows this machine's own light or dark setting, the way anything else does.
-// Declare it and the choice is yours, and your git keeps the day you made it.
-//
-//     public enum MyBench: Bench {
-//         public typealias Theme = Dark
-//     }
-//
-// Those lines stay commented on purpose. Your first word here should be a fact you
-// care about, not the colour of a screen, and a claim we left behind would be ours
-// standing in your file.
+// One thing about the page: the record below names its theme. Change Dark to
+// Light and the page follows on the next keystroke, which is the whole
+// mechanism of this place in one line: the file is the panel. Delete the
+// record and the page follows this machine's own setting instead. For a
+// while these lines were left commented, so that your first word here would
+// be yours; written out they show where changing something lands, and that
+// is worth more.
+
+public enum MyBench: Bench {
+    public typealias Theme = Dark
+}
 """
 
 

@@ -97,6 +97,7 @@ def main():
     const SNAP = __SNAP__;
     const FORMS = new Set(__FORMS__);
     const LAYOUT = __LAYOUT__;
+    const ALL = __ALL__;
     const real = window.fetch.bind(window);
     function reply(body, status) {
         return new Response(body, { status: status || 200,
@@ -109,57 +110,83 @@ def main():
         }
         return 1;
     }
+    /* what holds is kept in this browser: the panel is the arbiter of
+       write-on-holds, exactly as it is over the real server, and a PUT that
+       arrives is a holding file. localStorage stands where the working copy
+       stood; reset below empties it and the demo is back. */
+    function textOf(f) {
+        try {
+            const kept = localStorage.getItem("gate.pages." + f);
+            if (kept !== null) return kept;
+        } catch (e) { }
+        return SNAP["/world?f=" + f] || "";
+    }
+    /* one court for every file, fed the way the server feeds it: forms in
+       one stream per world, plain pages one by one, the layout judged for
+       junk by neither side. The verdict over the world is the sum of this
+       over every file, kept texts included, so the background is never a
+       stale recording. */
+    function refusalsFor(f, text) {
+        const out = [];
+        if (FORMS.has(f)) {
+            let stream = text;
+            for (const other of FORMS) {
+                if (other !== f) stream += "\\n" + textOf(other);
+            }
+            for (const r of judgeWhereTexts(stream, []).refusals) {
+                const m = r.match(/'(\\w+)/);
+                if (!m || !text.includes(m[1])) continue;
+                out.push({ address: f + ":" + lineOf(text, m[1]), claim: r });
+            }
+        } else if (f !== LAYOUT) {
+            for (const r of judge(f, text).refusals) {
+                out.push({ address: f + ":" + r.line, claim: r.premise });
+            }
+        }
+        return out;
+    }
     window.fetch = async function (url, opts) {
         const u = String(url);
         const method = (opts && opts.method) || "GET";
-        if (method === "PUT") {
-            return reply(JSON.stringify({ refused:
-                "the published bench keeps no files: edits live in the editor "
-                + "here, and saving belongs to the clone" }), 403);
+        if (method === "PUT" && u.startsWith("/world")) {
+            const f = decodeURIComponent(u.split("f=")[1] || "");
+            try { localStorage.setItem("gate.pages." + f,
+                                       String((opts && opts.body) || "")); }
+            catch (e) { }
+            return reply("", 200);
         }
+        if (method === "PUT") return reply("", 200);
         if (method === "POST" && u.startsWith("/verdict")) {
-            /* the file judges itself, and the rest of the world stands as the
-               server judged it at build time: the recorded verdict minus the
-               open file's own lines is the background, and the open file's
-               fresh refusals join it. A page the server does not judge for
-               junk, a form's prose, the layout, is not judged for junk here
-               either: the same court, never a stricter or a kinder one. */
             const f = decodeURIComponent(u.split("f=")[1] || "");
             const text = opts && opts.body ? String(opts.body) : "";
             const said = JSON.parse(SNAP["/verdict?f=" + f] || "{}");
-            const background = (said.refusals || []).filter(
-                r => !String(r.address || "").startsWith(f + ":"));
-            let fresh = [];
-            if (FORMS.has(f)) {
-                /* the certificate court reads one stream per world, the way
-                   the server feeds it: a form's gates may be declared on a
-                   sibling page, so the open text is judged together with the
-                   other form pages, and only the refusals whose certificate
-                   is written in the open text are fresh here; the others are
-                   the background's to carry. */
-                let stream = text;
-                for (const other of FORMS) {
-                    if (other !== f) stream += "\\n" + (SNAP["/world?f=" + other] || "");
-                }
-                for (const r of judgeWhereTexts(stream, []).refusals) {
-                    const m = r.match(/'(\\w+)/);
-                    if (!m || !text.includes(m[1])) continue;
-                    fresh.push({ address: f + ":" + lineOf(text, m[1]),
-                                 claim: r });
-                }
-            } else if (f !== LAYOUT) {
-                for (const r of judge(f, text).refusals) {
-                    fresh.push({ address: f + ":" + r.line, claim: r.premise });
-                }
+            let refusals = [];
+            for (const g of ALL) {
+                if (g !== f) refusals = refusals.concat(refusalsFor(g, textOf(g)));
             }
-            const refusals = background.concat(fresh);
+            refusals = refusals.concat(refusalsFor(f, text));
             said.verdict = refusals.length ? "refused" : "holds";
             said.refusals = refusals;
             return reply(JSON.stringify(said));
         }
+        if (u.startsWith("/world?f=") && method === "GET") {
+            const f = decodeURIComponent(u.split("f=")[1] || "");
+            return new Response(textOf(f), { status: 200,
+                headers: { "Content-Type": "text/plain; charset=utf-8" } });
+        }
         if (u.startsWith("/") && SNAP[u] !== undefined) return reply(SNAP[u]);
         if (u.startsWith("/")) return reply("{}", 404);
         return real(url, opts);
+    };
+    window.__resetDemo = function () {
+        try {
+            for (const key of Object.keys(localStorage)) {
+                if (key.startsWith("gate.pages.") || key === "gate.theme.declared") {
+                    localStorage.removeItem(key);
+                }
+            }
+        } catch (e) { }
+        location.reload();
     };
 })();
 </script>
@@ -172,14 +199,18 @@ body { height: calc(100vh - 28px) !important; }
   font: 12px/16px ui-monospace, monospace; padding: 6px 12px;
   background: #101010; color: #9a9a9a; border-top: 1px solid #2a2a2a; }
 #published-note code { color: #c9c9c9; }
+#published-note a { color: #c9c9c9; }
 </style>
 """
     shim = (shim.replace("__SNAP__", json.dumps(snap))
                 .replace("__FORMS__", json.dumps(sorted(forms)))
-                .replace("__LAYOUT__", json.dumps(layout)))
-    note = ('<div id="published-note">the demo, judged in your browser as you '
-            'type · nothing is saved here · the tool: '
-            '<code>git clone https://github.com/DanielSwift1992/gate</code></div>')
+                .replace("__LAYOUT__", json.dumps(layout))
+                .replace("__ALL__", json.dumps(list(dict.fromkeys(everyone)))))
+    note = ('<div id="published-note">judged in your browser as you type · '
+            'what holds is kept in this browser · <a href="#" '
+            'onclick="__resetDemo();return false">reset the demo</a> · '
+            'the tool: <code>git clone '
+            'https://github.com/DanielSwift1992/gate</code></div>')
 
     marker = '<link rel="stylesheet" href="codemirror.css">'
     if marker not in ui:
