@@ -5912,7 +5912,11 @@ public enum MyWatch: AccessLedger {
               and not bad_says
               # and the three that were states now live where the state lives
               and 'refLabel = "<b>" + esc(file) + "</b> · one side of a seam' in ui
-              and "function sayLanguage" in ui and "#inspect" in ui))
+              and "function sayLanguage" in ui and "#inspect" in ui
+              # and the claim under the cursor answers too: a top-level alias
+              # was the one name the line said nothing for, in the file whose
+              # whole scene is such lines
+              and '" · a claim: "' in ui))
 
     # ── NAMES STAY NAMES, VERBS BECOME MECHANICS. `court`, `judge`, `verdict` are
     # types and belong in the vocabulary; the verbs around them had been theatrical —

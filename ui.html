@@ -3052,6 +3052,11 @@ function describeName(name) {
             + (vocabulary[name] ? " (from " + vocabulary[name] + ")" : "");
     if (protoAxes[name]) return name + " · a kind, with " + Object.keys(protoAxes[name]).join(", ")
         + (vocabulary[name] ? " (from " + vocabulary[name] + ")" : "");
+    // a top-level alias is a claim, and the claim under the cursor was the one
+    // name this line answered nothing for: the letter calls every `X = Y` a
+    // claim, so the cursor does too, with the claim's own right side
+    const said = lastParsed && lastParsed.topAliases && lastParsed.topAliases.get(name);
+    if (said) return name + " · a claim: " + esc(said.target);
     if (vocabulary[name]) return name + " · declared in " + vocabulary[name];
     return null;
 }
