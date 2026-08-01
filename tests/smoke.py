@@ -185,7 +185,7 @@ def main():
         "k8s RBAC and the cluster it describes, an API contract and a client in another language.",
         "Agreement here is not assumed. It is stated twice, and confirmed.",
         "Every pair you gate is one thing you stop keeping in your head.",
-        "Something drifts? Gate it.",
+        "Something drifts? Gate it",
     ]
     _spine_missing = [s for s in _spine
                       if s not in _cover_flat or s not in _letter_flat]

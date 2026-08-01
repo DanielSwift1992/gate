@@ -132,7 +132,7 @@
 // workflow in this repository.» Nothing to set up, and nothing judged
 // yet: these are readings, not verdicts.
 //
-// Something drifts? Gate it.
+// Something drifts? Gate it
 //
 // ── gate it ──
 //
@@ -193,7 +193,7 @@
 // readers it still has are a list, not a guess. Nothing got faster. What
 // went away is the asking.
 //
-// Something drifts? Gate it.
+// Something drifts? Gate it
 
 // Each `== phrase` line below lights that phrase where it stands in this
 // page: the words that carry it, for a reader moving fast.
@@ -206,7 +206,7 @@
 // == Nothing here is built to keep you.
 // == half of several pairs
 // == the loudest marker
-// == Something drifts? Gate it.
+// == Something drifts? Gate it
 // == put your half of it in a file here, once
 // == That is the upkeep, all of it.
 // == rename goes red on the renamer's screen, not on yours.

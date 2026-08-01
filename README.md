@@ -127,7 +127,7 @@ across how many commits, and whether any hook or workflow checked those
 edits. Nothing to set up, and nothing judged yet: these are readings, not
 verdicts.
 
-Something drifts? Gate it.
+Something drifts? Gate it
 
 ## gate it
 
@@ -281,4 +281,4 @@ bare-Swift diff view (`gate diff` shows the stripped form, `--full` the
 whole text) · editable bare view in the bench · apply routing over the
 declared layout · more domain forms.
 
-Something drifts? Gate it.
+Something drifts? Gate it
