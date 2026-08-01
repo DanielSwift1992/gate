@@ -486,7 +486,7 @@ def main():
     # the unmeasured one is Linux now, and the cover says exactly that.
     rd = open(os.path.join(HERE, "README.md"), encoding="utf-8").read()
     S.append(("the cover says where it runs, and calls the unmeasured platform unmeasured",
-              "Where it runs, measured rather than assumed" in rd
+              "**Where it runs.**" in rd
               and "Windows is measured on every push" in rd
               and "tests/windows.py" in rd
               and "not\nmeasured in CI yet" in rd

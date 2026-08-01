@@ -88,7 +88,7 @@ The working prototype, end to end:
   identity that names nobody is refused by line. (Beside, not inside: the
   reference judge does not read the extension form within a world, a
   recorded gap, so the guard keeps the file, the way the manifest is kept.)
-- Zero egress, checked rather than asserted: the battery greps the runtime
+- Zero egress: the battery greps the runtime
   sources for outbound primitives, confirms the loopback-only bind, and
   confirms the bench's Content-Security-Policy. The README says how to
   verify all of it without trusting us.

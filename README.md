@@ -262,7 +262,7 @@ python and will be rewritten in Swift to ship as a single static binary
 (the way git is one tool). We want to hear
 about a wrong verdict before anything else: see SECURITY.md.
 
-**Where it runs, measured rather than assumed.** The CLI is one python3
+**Where it runs.** The CLI is one python3
 file and the bench is a page, so both go wherever python3 and a browser
 go. The judge is a native binary built for one platform: `bin/gate-judge`
 here is `Mach-O arm64`, and on any other machine it does not execute. On

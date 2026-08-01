@@ -16,9 +16,9 @@ We will confirm what we can reproduce, and say plainly what we cannot.
 
 Nothing leaves your machine. gate makes no outbound connection at any time:
 no telemetry, no update check, no licence ping. The bench binds to the
-loopback alone. That is checked in the battery rather than promised: see
-**Nothing leaves your machine** in [docs/DETAILS.md](docs/DETAILS.md) for
-the commands to verify it yourself in about a minute, offline.
+loopback alone. The battery checks it, and you can too: **Nothing leaves
+your machine** in [docs/DETAILS.md](docs/DETAILS.md) has the commands,
+about a minute, offline.
 
 ## Scope
 

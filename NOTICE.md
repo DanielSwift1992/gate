@@ -19,5 +19,5 @@ gate is MIT licensed (see LICENSE). Every bundled piece is too:
   they are yours to change; drop the header and gate stops calling them ours.
 
 Everything else in this repository is ours, under the same MIT. Nothing is
-fetched at runtime, and that is checked rather than promised: the battery
-greps the sources for outbound primitives.
+fetched at runtime: the battery greps the sources for outbound
+primitives.

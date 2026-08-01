@@ -2123,8 +2123,7 @@ def cmd_demo_owners(a):
             "next": f"cd {said_path(root)} && gate status, for the same answer in a "
                     "millisecond, from the world rather than from CODEOWNERS",
             "back": "git checkout . puts everything back, in one word: this world was "
-                    "committed the moment it was made, so nothing you try here can cost you "
-                    "anything",
+                    "committed the moment it was made",
             "try": ["open ownership.swift at the line gate status names, and give that room to "
                     "an owner whose zone matches. The file and the world are a pair: status "
                     "compares them on every run",
