@@ -1292,6 +1292,29 @@ function allowedAt(cur) {
         return { items: f || [], kind: wanted ? "this axis takes " + wanted : "an axis", closed: true };
     }
 
+    // an argument of a gate on one line: `X = Owns<Owner_carol, Path_` — the
+    // head names the kinds and the top-level commas count which one this is.
+    // The multi-line spelling below already answered; the one-line spelling,
+    // which is how every claim in an imported world is printed, answered
+    // nothing.
+    const opened = before.lastIndexOf("<");
+    if (opened > 0 && before.indexOf(">", opened) === -1) {
+        const gm = /(\w+)\s*$/.exec(before.slice(0, opened));
+        if (gm && gates[gm[1]]) {
+            const kinds = gates[gm[1]];
+            let depth = 0, nth = 0;
+            for (const c of before.slice(opened + 1)) {
+                if (c === "<") depth += 1;
+                else if (c === ">") depth -= 1;
+                else if (c === "," && depth === 0) nth += 1;
+            }
+            const k = kinds[Math.min(nth, kinds.length - 1)];
+            const f = fillersFor(k, host);
+            if (f && f.length)
+                return { items: f, kind: "this argument takes " + k, closed: true };
+        }
+    }
+
     // the head of a declaration: `public enum Emp9007: `
     const head = /^\s*(?:public\s+)?enum\s+\w+\s*:\s*([\w,\s]*)$/.exec(before);
     if (head) {

@@ -1046,7 +1046,11 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               "function fillersFor(" in ui and "axesOfHost(host)[slot[1]]" in ui))
     S.append(("a recognised slot never falls through to the general pool",
               "a slot is a closed question" in ui and "closed: true }" in ui
-              and "return { items: f || []" in ui))
+              and "return { items: f || []" in ui
+              # and the one-line gate call answers too: `X = Owns<a, b>` is how
+              # every claim in an imported world is printed, and its arguments
+              # offered nothing while the multi-line spelling answered
+              and "an argument of a gate on one line" in ui))
     S.append(("the popup is pinned to the word, not moved by a changing verdict",
               "reposition || compEl.hidden" in ui and "drawCompletion(true)" in ui))
 
