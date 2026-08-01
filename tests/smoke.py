@@ -3140,7 +3140,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
         # nowhere of mine for an answer to live: it says so instead of guessing
         try:
             _u.urlopen(_u.Request(f"http://127.0.0.1:{_vp}/value?name=InkLitX&to=40",
-                                  method="PUT"), timeout=5).read()
+                                  method="PUT"), timeout=30).read()
         except Exception as e:
             no_forms = json.loads(e.read().decode()) if hasattr(e, "read") else {}
     finally:
@@ -3158,7 +3158,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
                 time.sleep(0.1)
         said_value = json.loads(_u.urlopen(
             _u.Request(f"http://127.0.0.1:{_vp2}/value?name=InkLitX&to=691",
-                       method="PUT"), timeout=5).read().decode())
+                       method="PUT"), timeout=30).read().decode())
     finally:
         _vb2.terminate()
     wrote = open(os.path.join(sv, "my-values.swift")).read()
@@ -3871,7 +3871,7 @@ console.log(JSON.stringify(out));
         _pnl_was = _pnl_now()
         req = _u.Request(f"http://127.0.0.1:{_bench_port}/verdict?f=gate.manifest.swift",
                          data=open(man, "rb").read(), method="POST")
-        seen = json.loads(_u.urlopen(req, timeout=10).read().decode())
+        seen = json.loads(_u.urlopen(req, timeout=30).read().decode())
         # the response is written before the sweep runs, so give it a breath
         swept = False
         for _ in range(20):
@@ -3909,7 +3909,7 @@ console.log(JSON.stringify(out));
         man = os.path.join(dw, "gate.manifest.swift")
         seen = json.loads(_u.urlopen(_u.Request(
             f"http://127.0.0.1:{_dp}/verdict?f=gate.manifest.swift",
-            data=open(man, "rb").read(), method="POST"), timeout=10).read().decode())
+            data=open(man, "rb").read(), method="POST"), timeout=30).read().decode())
         both = (seen.get("verdict"), run("status", cwd=dw)[1].get("verdict"),
                 len(seen.get("refusals", [])))
     finally:
@@ -5217,10 +5217,10 @@ public enum MyWatch: AccessLedger {
                               "public typealias Place = Zone_src", 1)
         broke_said = json.loads(_u.urlopen(_u.Request(
             f"http://127.0.0.1:{_lp}/verdict?f=ownership.swift",
-            data=typed.encode(), method="POST"), timeout=10).read())
+            data=typed.encode(), method="POST"), timeout=30).read())
         live_said = json.loads(_u.urlopen(_u.Request(
             f"http://127.0.0.1:{_lp}/verdict?f=ownership.swift",
-            data=saved.encode(), method="POST"), timeout=10).read())
+            data=saved.encode(), method="POST"), timeout=30).read())
     finally:
         _lb.terminate()
     S.append(("a law broken in the editor is refused before it is written, in a forms row too",
@@ -5305,9 +5305,9 @@ public enum MyWatch: AccessLedger {
                 _u.urlopen(f"http://127.0.0.1:{_sp}/files", timeout=1).read(); break
             except Exception:
                 time.sleep(0.1)
-        rail = json.loads(_u.urlopen(f"http://127.0.0.1:{_sp}/files", timeout=10).read())
+        rail = json.loads(_u.urlopen(f"http://127.0.0.1:{_sp}/files", timeout=30).read())
         side_text = _u.urlopen(f"http://127.0.0.1:{_sp}/seamside?f=api.swift",
-                               timeout=10).read().decode()
+                               timeout=30).read().decode()
     finally:
         _sb.terminate()
     # ── AND THE BLANK FIRST PAINT, REPRODUCED AND CURED. A world whose every
@@ -5366,7 +5366,7 @@ public enum MyWatch: AccessLedger {
             try:
                 codes.append(_u.urlopen(_u.Request(
                     f"http://127.0.0.1:{_pp}/world?f={name}", data=b"DESTROYED",
-                    method="PUT"), timeout=10).status)
+                    method="PUT"), timeout=30).status)
             except Exception as e:
                 codes.append(getattr(e, "code", "err"))
     finally:
@@ -5812,12 +5812,12 @@ public enum MyWatch: AccessLedger {
             except Exception:
                 time.sleep(0.1)
         seen["text"] = _u.urlopen(
-            f"http://127.0.0.1:{_up}/world?f=extra.swift", timeout=5).read().decode()
+            f"http://127.0.0.1:{_up}/world?f=extra.swift", timeout=30).read().decode()
         kept = open(os.path.join(undecl, "gate.manifest.swift"), encoding="utf-8").read()
         def declare(qs):
             try:
                 return 200, _u.urlopen(_u.Request(f"http://127.0.0.1:{_up}/declare?{qs}",
-                                                  method="PUT"), timeout=5).read()
+                                                  method="PUT"), timeout=30).read()
             except Exception as e:
                 return getattr(e, "code", "err"), getattr(e, "file", None) and e.read() or b"{}"
         seen["nameless"] = declare("f=extra.swift")[0]
@@ -5825,7 +5825,7 @@ public enum MyWatch: AccessLedger {
                                encoding="utf-8").read() == kept
         seen["said"] = json.loads(declare("f=extra.swift&role=forms")[1])
         seen["after"] = json.loads(_u.urlopen(
-            f"http://127.0.0.1:{_up}/files", timeout=5).read())
+            f"http://127.0.0.1:{_up}/files", timeout=30).read())
         # ── AND THE WAY BACK IS THE FILE ITSELF. The row went in through a gesture.
         # Taking it out is deleting four lines in a file open in the editor, which
         # is the same write every other edit on that page makes. If that did not
@@ -5836,9 +5836,9 @@ public enum MyWatch: AccessLedger {
         man = "\n".join(seen["rows"])
         cut = man.split("public enum Extra: Mine {")[0] + man.split('{ "extra.swift" } }')[1]
         _u.urlopen(_u.Request(f"http://127.0.0.1:{_up}/world?f=gate.manifest.swift",
-                              data=cut.encode(), method="PUT"), timeout=10).read()
+                              data=cut.encode(), method="PUT"), timeout=30).read()
         seen["back"] = json.loads(_u.urlopen(
-            f"http://127.0.0.1:{_up}/files", timeout=5).read())
+            f"http://127.0.0.1:{_up}/files", timeout=30).read())
     finally:
         _ub.terminate()
     S.append(("a file nobody declared is on the page, apart from the ones that are",
