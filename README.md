@@ -51,7 +51,7 @@ and in CI, with nobody waiting on it.
 
 No server. No runtime. No new formats. Nothing leaves your repository.
 
-## What changes
+## the questions you stop answering by hand
 
 Every question below is one you answer today by searching: greping
 repositories, opening tickets, asking whoever remembers. Here each is a
@@ -74,7 +74,7 @@ example. The tool itself is general. What varies is which pair you point
 it at: a Jira ticket and the TODO that cites it, k8s RBAC and the cluster
 it describes, an API contract and a client in another language.
 
-## Quick start
+## try it on your own repository
 
 ```sh
 git clone https://github.com/DanielSwift1992/gate && cd gate    # no install step
@@ -107,7 +107,7 @@ Every command here is written `gate`. Until it is on your path it is
 `./gate`, run from the clone: nothing else to install, nothing else to
 undo.
 
-## Find your drift
+## find your drift
 
 Yours is wherever two places state one fact. Take a thing you shipped this
 month and ask: where is this written down, and where else? Who checks the
@@ -129,7 +129,7 @@ verdicts.
 
 Something drifts? Gate it.
 
-## Gate it
+## gate it
 
 To gate a pair: put your half of it in a file, once. From then on every
 change is checked against it, and the other side sees it the next time
@@ -192,7 +192,7 @@ non-zero, so hooks and CI need no wrappers, and every command ends by
 naming the one step that comes next, so the whole ladder stays out of
 your head.
 
-## What this does not touch
+## what this does not touch
 
 A difference between two records is visible at a glance, text against
 number, and the judge refuses it at a line. A difference in what two
@@ -205,7 +205,7 @@ is a claim you can state too: write it as policy, let the other side
 write theirs, and the verdict says if you agree. Agreement here is not
 assumed. It is stated twice, and confirmed.
 
-## Death to drift
+## death to drift
 
 Every pair you gate is one thing you stop keeping in your head. The
 checking does not pile up: each claim is one lookup, so a hundred pairs
@@ -216,7 +216,7 @@ an afternoon, not a season of asking around, because the readers it still
 has are a list, not a guess. Nothing got faster. What went away is the
 asking.
 
-## The rest, one page deep
+## the rest, one page deep
 
 The cover you just read is the product. The pieces below are one file
 away, each where you would look for it:
@@ -230,7 +230,7 @@ away, each where you would look for it:
 - After `gate init`, your repository is met by a letter of its own:
   `stdlib/readme.swift`, beside your files and judged with them.
 
-## Repository
+## what you just cloned
 
 ```
 LICENSE         MIT · NOTICE.md lists the bundled pieces and their terms
@@ -253,7 +253,7 @@ tests/smoke.py   the battery: 357 end-to-end checks, the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts
 ```
 
-## Status
+## where this stands
 
 Working prototype under active development, MIT licensed: see LICENSE,
 and NOTICE.md for the bundled pieces and their terms. Free, and nothing

@@ -5630,7 +5630,7 @@ public enum MyWatch: AccessLedger {
               and "There is nothing to save" in ui))
 
     listed = set(re.findall(r"^(\S+\.(?:py|js|html|css|sh|md))",
-                            readme.split("## Repository")[-1], re.M)) if "## Repository" in readme else set()
+                            readme.split("## what you just cloned")[-1], re.M)) if "## what you just cloned" in readme else set()
     missing = sorted(f for f in listed if not os.path.exists(os.path.join(HERE, f))
                      and not os.path.exists(os.path.join(HERE, "tests", f)))
     S.append(("every file the README names is a file that exists", not missing))
