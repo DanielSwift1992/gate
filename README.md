@@ -37,8 +37,9 @@ names the file, the line, and both sides of the disagreement. A diff
 compares two texts. This compares two claims about one thing.
 
 The same refusal on the live page (`gate serve`), at its line. The picture
-is a door: it opens this bench in your browser, over the demo, judged as
-you type.
+is a door, and so is this line: [the same bench, live in your
+browser](https://danielswift1992.github.io/gate/?f=ownership.swift:84),
+over the demo, judged as you type.
 
 [![the bench: the refusal at its line, re-read on every keystroke](docs/bench.png)](https://danielswift1992.github.io/gate/?f=ownership.swift:84)
 
