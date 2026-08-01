@@ -262,17 +262,19 @@ python and will be rewritten in Swift to ship as a single static binary
 (the way git is one tool). We want to hear
 about a wrong verdict before anything else: see SECURITY.md.
 
-**Where it runs, measured rather than assumed.** The CLI is one python3 file and
-the bench is a page, so both go wherever python3 and a browser go. The judge is a native binary built for
-one platform: `bin/gate-judge` here is `Mach-O arm64`, and on any other machine
-it does not execute. Where it cannot run and node is installed, both courts run
-in the port: the plain court in `bin/judge-cli.js`, the certificate court
-in `bin/judge-where.js`, the same judge ported line for line and held to
-the binary's own lines by the battery, and `gate --version` names the port
-as the court that ran. macOS is measured every run: the full battery, on
-every push. Windows is measured on every push too, by its own road: the
-walk in `tests/windows.py`, entry to a red line under the port, on a
-Windows runner in CI. Linux runs the same pieces under the same port, and is not
+**Where it runs, measured rather than assumed.** The CLI is one python3
+file and the bench is a page, so both go wherever python3 and a browser
+go. The judge is a native binary built for one platform: `bin/gate-judge`
+here is `Mach-O arm64`, and on any other machine it does not execute. On
+such a machine node runs both courts instead: `bin/judge-cli.js` runs the
+plain court, `bin/judge-where.js` runs the certificate court, both ported
+line for line, and the battery holds the port to the binary's own lines.
+`gate --version` says which court ran on your machine. On macOS, CI runs
+the full battery on every push. On Windows, CI runs `tests/windows.py` on
+every push: it makes the demo, takes the kit, breaks a claim, and the
+break is refused at its line, all under the port. Windows is measured on
+every push. On Linux the same pieces run under the same port, and Linux
+is not
 measured in CI yet.
 
 Roadmap, next: single-binary Swift CLI (Linux/Windows included) · the
