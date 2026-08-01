@@ -118,22 +118,41 @@ def main():
                 + "here, and saving belongs to the clone" }), 403);
         }
         if (method === "POST" && u.startsWith("/verdict")) {
+            /* the file judges itself, and the rest of the world stands as the
+               server judged it at build time: the recorded verdict minus the
+               open file's own lines is the background, and the open file's
+               fresh refusals join it. A page the server does not judge for
+               junk, a form's prose, the layout, is not judged for junk here
+               either: the same court, never a stricter or a kinder one. */
             const f = decodeURIComponent(u.split("f=")[1] || "");
             const text = opts && opts.body ? String(opts.body) : "";
-            if (f === LAYOUT) return reply(SNAP["/verdict?f=" + f] || "{}");
-            let refusals = [];
+            const said = JSON.parse(SNAP["/verdict?f=" + f] || "{}");
+            const background = (said.refusals || []).filter(
+                r => !String(r.address || "").startsWith(f + ":"));
+            let fresh = [];
             if (FORMS.has(f)) {
-                for (const r of judgeWhereTexts(text, []).refusals) {
-                    const m = r.match(/'(\\w+)/);
-                    refusals.push({ address: f + ":" + lineOf(text, m ? m[1] : ""),
-                                    claim: r });
+                /* the certificate court reads one stream per world, the way
+                   the server feeds it: a form's gates may be declared on a
+                   sibling page, so the open text is judged together with the
+                   other form pages, and only the refusals whose certificate
+                   is written in the open text are fresh here; the others are
+                   the background's to carry. */
+                let stream = text;
+                for (const other of FORMS) {
+                    if (other !== f) stream += "\\n" + (SNAP["/world?f=" + other] || "");
                 }
-            } else {
+                for (const r of judgeWhereTexts(stream, []).refusals) {
+                    const m = r.match(/'(\\w+)/);
+                    if (!m || !text.includes(m[1])) continue;
+                    fresh.push({ address: f + ":" + lineOf(text, m[1]),
+                                 claim: r });
+                }
+            } else if (f !== LAYOUT) {
                 for (const r of judge(f, text).refusals) {
-                    refusals.push({ address: f + ":" + r.line, claim: r.premise });
+                    fresh.push({ address: f + ":" + r.line, claim: r.premise });
                 }
             }
-            const said = JSON.parse(SNAP["/verdict?f=" + f] || "{}");
+            const refusals = background.concat(fresh);
             said.verdict = refusals.length ? "refused" : "holds";
             said.refusals = refusals;
             return reply(JSON.stringify(said));
@@ -145,8 +164,12 @@ def main():
 })();
 </script>
 <style>
+/* the note takes its own strip: the body is one viewport high, so it is
+   shortened by the strip's height and nothing of the bench is covered */
+body { height: calc(100vh - 28px) !important; }
 #published-note { position: fixed; bottom: 0; left: 0; right: 0; z-index: 99;
-  font: 12px ui-monospace, monospace; padding: 6px 12px;
+  height: 28px; box-sizing: border-box; overflow: hidden; white-space: nowrap;
+  font: 12px/16px ui-monospace, monospace; padding: 6px 12px;
   background: #101010; color: #9a9a9a; border-top: 1px solid #2a2a2a; }
 #published-note code { color: #c9c9c9; }
 </style>
@@ -154,11 +177,9 @@ def main():
     shim = (shim.replace("__SNAP__", json.dumps(snap))
                 .replace("__FORMS__", json.dumps(sorted(forms)))
                 .replace("__LAYOUT__", json.dumps(layout)))
-    note = ('<div id="published-note">the bench, published over the demo: the '
-            'open file is judged in your browser as you type, and nothing is '
-            'saved here. Your own repository takes the clone: '
-            '<code>git clone https://github.com/DanielSwift1992/gate && cd gate '
-            '&& ./gate demo</code></div>')
+    note = ('<div id="published-note">the demo, judged in your browser as you '
+            'type · nothing is saved here · the tool: '
+            '<code>git clone https://github.com/DanielSwift1992/gate</code></div>')
 
     marker = '<link rel="stylesheet" href="codemirror.css">'
     if marker not in ui:
