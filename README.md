@@ -272,9 +272,8 @@ line for line, and the battery holds the port to the binary's own lines.
 `gate --version` says which court ran on your machine. On macOS, CI runs
 the full battery on every push. On Windows, CI runs `tests/windows.py` on
 every push: it makes the demo, takes the kit, breaks a claim, and the
-break is refused at its line, all under the port. Windows is measured on
-every push. On Linux the same pieces run under the same port, and Linux
-is not
+break is refused at its line, all under the port. So Windows is measured on every push.
+On Linux the same pieces run under the same port, and Linux is not
 measured in CI yet.
 
 Roadmap, next: single-binary Swift CLI (Linux/Windows included) · the
