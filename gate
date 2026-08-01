@@ -44,6 +44,11 @@ def uncommented(text):
     return re.sub(r"//[^\n]*", "", text)
 
 
+# ONE SPELLING OF A ROW. Two places read manifest rows with a regex of their
+# own; the day the row form moves, one spelling moves with it.
+MANIFEST_ROW_RE = r"public enum (\w+): (Mine|Theirs|WorldFile|SeamFile) \{"
+
+
 def read_manifest_rows(d, text=None):
     # ONE LIST, AND THE COLUMNS THAT MAKE IT ONE. Whose source a file is
     # (`Mine` / `Theirs`) is one column; which court reads it is another; and
@@ -78,7 +83,7 @@ def read_manifest_rows(d, text=None):
     ROLE_OF = {"WorldFile": "world", "SeamFile": "seam", "FormsFile": "forms",
                "JudgeFile": "judge", "CarriedFile": "carried", "Seam": "seam"}
     rows = []
-    for m in re.finditer(r"public enum (\w+): (Mine|Theirs|WorldFile|SeamFile) \{", code):
+    for m in re.finditer(MANIFEST_ROW_RE, code):
         name, atom = m.group(1), m.group(2)
         body = re.search("public enum " + name + r"\b[^{]*\{(.*?)\n\}",
                          code + "\n", re.S)
@@ -271,8 +276,7 @@ def manifest_guards(rows=None, text=None):
     # and nothing said a word. This is the law the writing verbs already keep —
     # a write names its file or it does not happen — read from the other end.
     named = {r["name"] for r in (live or [])}
-    for m in re.finditer(r"public enum (\w+): (?:Mine|Theirs|WorldFile|SeamFile) \{",
-                         live_text):
+    for m in re.finditer(MANIFEST_ROW_RE, live_text):
         if m.group(1) in named:
             continue
         at = live_text[:m.start()].count("\n") + 1
@@ -505,14 +509,10 @@ def forms_guards(size=None, live=None):
         fp = os.path.join(tmp, (shelf or "presented") + ".swift")
         open(fp, "w").write(text)
         out = judge_call(["judge", "where", fp]).stdout
-        for line in out.split("\n"):
-            if not line.strip().startswith("✗"):
-                continue
-            claim = line.strip()[1:].strip()
-            m = re.match(r"'(\w+)", claim)
+        for cert, claim in where_refused(out):
             # the address is the file that SAYS the certificate; where a shipped
             # law refuses a value you presented, it lands on the line you wrote
-            spot = where.get(m.group(1)) if m else None
+            spot = where.get(cert) if cert else None
             if not spot and mine:
                 touched = [n for n in mine if n in claim]
                 spot = where.get(touched[0]) if touched else None
@@ -895,6 +895,27 @@ def judge_call(args, **kw):
                           capture_output=True, text=True, **kw)
 
 
+def judged_refusals(out, rename=None):
+    # THE PLAIN VERDICT HAS ONE READER. Four callers had grown this regex
+    # again, each a second reading of one format; a change to the judge's
+    # line would have found some of them and missed the rest.
+    return [{"address": rename(m.group(1)) if rename else m.group(1),
+             "claim": m.group(2).strip()}
+            for m in re.finditer(r"^\s+(\S+\.swift:\d+)\s+(.+)$", out, re.M)]
+
+
+def where_refused(out):
+    # AND THE WHERE VERDICT TOO: the refused lines, each with the certificate
+    # its first quoted word names. Two callers spelled this walk themselves.
+    for line in out.split("\n"):
+        line = line.strip()
+        if not line.startswith("✗"):
+            continue
+        claim = line[1:].strip()
+        m = re.match(r"'(\w+)", claim)
+        yield (m.group(1) if m else None), claim
+
+
 def refine_addresses(text, refusals, fname):
     # the judge pins a refusal to the previous drain's line — refine the
     # address to the line holding the refusal's subject, in a window nearby
@@ -992,10 +1013,7 @@ def judge(path):
     t0 = time.time()
     out = judge_call(["judge", path]).stdout
     wall_ms = round((time.time() - t0) * 1000, 1)
-    refusals = [
-        {"address": m.group(1), "claim": m.group(2).strip()}
-        for m in re.finditer(r"^\s+(\S+\.swift:\d+)\s+(.+)$", out, re.M)
-    ]
+    refusals = judged_refusals(out)
     refusals = refine_addresses(open(path).read(), refusals, os.path.basename(path))
     holds = "THE JUDGE holds" in out
     times = re.findall(r"([\d.]+) ms", out)
@@ -4941,13 +4959,9 @@ def cmd_import_codeowners(a):
     # is written in; both surfaces read them from there.
     notes = law_notes(world, STDLIB.get("forms-grants", ""))
     refusals = []
-    for line in outp.split("\n"):
-        if not line.strip().startswith("✗"):
-            continue
-        claim = line.strip()[1:].strip()
-        m = re.match(r"'(\w+)", claim)
-        if m and m.group(1) in srcmap:
-            refusals.append({"certificate": m.group(1), "source": srcmap[m.group(1)],
+    for cert, claim in where_refused(outp):
+        if cert and cert in srcmap:
+            refusals.append({"certificate": cert, "source": srcmap[cert],
                              "claim": plainly(claim, notes)})
     # a pattern matching no file in the tree: CODEOWNERS says it, the tree does not
     ghosts = []
@@ -5858,8 +5872,7 @@ def cmd_serve(a):
                         and os.path.abspath(p) != os.path.abspath(policy_path() or ""):
                     paths.append(tp)
             raw = judge_call(["judge", *paths]).stdout
-            refusals = [{"address": m.group(1).replace("__", "/"), "claim": m.group(2).strip()}
-                        for m in re.finditer(r"^\s+(\S+\.swift:\d+)\s+(.+)$", raw, re.M)]
+            refusals = judged_refusals(raw, rename=lambda a: a.replace("__", "/"))
             # refine each address to the line of its subject, per file (the same
             # move the CLI makes — the judge pins to the previous drain's line)
             by_file = {}
@@ -6094,8 +6107,7 @@ def dispatch(cmd, rest):
         t0 = time.time()
         raw = judge_call(["judge", *files]).stdout
         wall_ms = round((time.time() - t0) * 1000, 1)
-        refusals = [{"address": m.group(1), "claim": m.group(2).strip()}
-                    for m in re.finditer(r"^\s+(\S+\.swift:\d+)\s+(.+)$", raw, re.M)]
+        refusals = judged_refusals(raw)
         if len(files) > 1:  # one claim, one file: the one that makes it
             refusals = attribute_refusals(refusals, [(os.path.basename(p), open(p).read()) for p in files])
         refusals += manifest_guards()
@@ -6174,8 +6186,7 @@ def dispatch(cmd, rest):
                             "Clear it again and it is gone."}
         named = [(n, q) for n, q in bench_files() if os.path.exists(q)]
         raw = judge_call(["judge", *[q for _, q in named]]).stdout
-        refusals = [{"address": m.group(1), "claim": m.group(2).strip()}
-                    for m in re.finditer(r"^\s+(\S+\.swift:\d+)\s+(.+)$", raw, re.M)]
+        refusals = judged_refusals(raw)
         refusals = attribute_refusals(refusals, [(n, open(q).read()) for n, q in named])
         # AND THE SAME GUARDS THE SHARED WORLD GETS. Declaring `MyBench` in a
         # personal world when the shared one already declares it is two truths
