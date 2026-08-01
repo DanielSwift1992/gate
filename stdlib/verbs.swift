@@ -31,7 +31,7 @@ public enum Fsck: Spelling {
 }
 extension Fsck { public static var typeName: String { "fsck" } }
 
-/// a repository with a CODEOWNERS, a policy, and one owner reaching past their zone
+/// entry plus a translated world: the kit, a CODEOWNERS, and one owner reaching past their zone
 public enum Demo: Verb {
     public typealias Does = Writes
     public typealias Under = WhereCourt

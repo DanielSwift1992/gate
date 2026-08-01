@@ -1208,10 +1208,10 @@ def cmd_import(a):
     # stopped, and a reader — a person or the Bare view — has no other way to
     # know. Run together they read as one long sentence that changes subject
     # twice, which is what they did until somebody looked at them set as prose.
-    emit("// the facts world, yours: the source you read and edit, and the one")
-    emit("// this tool answers for. Not a generated")
-    emit("// artifact. The tables only seeded it once, below, and from here the")
-    emit("// world is what is edited and judged. A gate.manifest.swift may split it across")
+    emit("// the facts world, yours: the source you read and edit, and the")
+    emit("// one this tool answers for. Not a generated artifact. The tables")
+    emit("// only seeded it once, below, and from here the world is what is")
+    emit("// edited and judged. A gate.manifest.swift may split it across")
     emit("// several files, all judged together. git carries the history.")
     emit("//")
     emit(f"// seeded by gate import from: {os.path.basename(people_csv)}, {os.path.basename(grants_csv)}")
@@ -1960,8 +1960,10 @@ def cmd_vendor(root):
                 "the same judge and an old commit is judged by the judge it was written\n"
                 "with.\n\n"
                 f"judge sha256: {digest}\n\n"
-                "The judge is built from a public corpus and is reproducible:\n"
-                "`bin/build-judge.sh <pin>` prints a binary with this hash.\n\n"
+                "The judge is rebuilt from a public corpus: `bin/build-judge.sh <pin>`\n"
+                "builds the same judge, and the battery checks a build,\n"
+                "`GATE_JUDGE=path tests/smoke.py`. The linker is not byte-stable, so\n"
+                "the hash above names what is here and is not the check.\n\n"
                 "MIT licensed: LICENSE and NOTICE.md are here beside it.\n")
     return {"carried": carried, "judge_sha256": digest, "shim": "./gatew"}
 
@@ -3577,7 +3579,7 @@ def declare_side(path, kind, role, frm=None, written=None, opens=None):
         "// If you are looking for the import: a row is the import. The judged set is\n"
         "// what this document lists, so a file is read because it has a line here and\n"
         "// for no other reason. The words the rows are written in are declared below,\n"
-        "// in this file, which is why nothing is fetched from anywhere.\n"
+        "// in this file, which is why nothing is fetched.\n"
         "//\n"
         "// It is written the way every record in this world is written: each column\n"
         "// is an axis to a declared atom, and the one string is the `typeName`\n"
