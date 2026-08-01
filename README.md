@@ -236,6 +236,9 @@ away, each where you would look for it:
 LICENSE         MIT · NOTICE.md lists the bundled pieces and their terms
 gate            the CLI (python prototype; the judge does the judging)
 gate.cmd        the same CLI on Windows
+gate.manifest.swift
+                this repository's own declared layout: its worlds, their
+                roles, and the judge's row, judged like anybody's
 bin/gate-judge  the judge, one static binary, built at a pin from the
                 public theory corpus, verification-is-identification:
                 github.com/DanielSwift1992/verification-is-identification
@@ -249,7 +252,7 @@ ui.html         the workbench
 codemirror.*    the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
 docs/           DETAILS.md, and the cover's picture with its provenance
-tests/smoke.py   the battery: 358 end-to-end checks, the definition of green
+tests/smoke.py   the battery: 361 end-to-end checks, the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts
 ```
 

@@ -5661,6 +5661,50 @@ public enum MyWatch: AccessLedger {
     missing = sorted(f for f in listed if not os.path.exists(os.path.join(HERE, f))
                      and not os.path.exists(os.path.join(HERE, "tests", f)))
     S.append(("every file the README names is a file that exists", not missing))
+    # ── AND THE OTHER DIRECTION: EVERYTHING THAT EXISTS IS NAMED. The map
+    # held only `named → exists`, which is a source with a direction, in the
+    # repository that argues against those: a new file in the root joined
+    # nothing and no check said so.
+    _root_allow = {".github", ".githooks", ".gitignore", "README.md"}
+    _tracked = subprocess.run(["git", "ls-files"], cwd=HERE,
+                              capture_output=True, text=True).stdout.split("\n")
+    _top = sorted({p.split("/")[0] for p in _tracked if p})
+    _unnamed = sorted(e for e in _top
+                      if e not in _root_allow
+                      and e not in readme
+                      and (os.path.splitext(e)[0] + ".*") not in readme)
+    if _unnamed:
+        print("   in the root and not on the cover:", _unnamed)
+    S.append(("everything in the root is named on the cover", _unnamed == []))
+
+    # ── AND A WRITTEN LINK REACHES A FILE. SECURITY once sent its reader to a
+    # section that had moved; the pointer and the page are a pair like any
+    # other, so every relative link in the read surfaces must land.
+    _dead_links = []
+    for _lf in ("README.md", "SECURITY.md", "NOTICE.md", "CHANGELOG.md",
+                os.path.join("docs", "DETAILS.md")):
+        _body = open(os.path.join(HERE, _lf), encoding="utf-8").read()
+        for _t in re.findall(r"\]\(([^)#]+?)\)", _body):
+            if _t.startswith(("http", "mailto")):
+                continue
+            _base = os.path.dirname(os.path.join(HERE, _lf))
+            if not os.path.exists(os.path.join(_base, _t)):
+                _dead_links.append(f"{_lf} -> {_t}")
+    S.append(("every written link on a read surface reaches its file",
+              _dead_links == []))
+
+    # ── AND THE PUBLISHED BENCH COVERS EVERY PATH THE PANEL SPEAKS. The panel
+    # grew its endpoints and the snapshot grew separately; a fetch the shim
+    # does not carry is a silent 404 on the published page. `/declare` is a
+    # write and the shim answers every write; `/seamside` belongs to a seam,
+    # and the published demo has none to click.
+    _panel_paths = set(re.findall(r'fetch\("(/[a-z]+)', ui))
+    _pages_src = open(os.path.join(HERE, "bin", "build-pages.py"), encoding="utf-8").read()
+    _covered = {p for p in _panel_paths if f'"{p[1:]}' in _pages_src or f"{p}?" in _pages_src
+                or f'"{p}"' in _pages_src or p in _pages_src}
+    _uncovered = sorted(_panel_paths - _covered - {"/declare", "/seamside"})
+    S.append(("the published bench carries every path the panel calls",
+              _uncovered == []))
 
     S.append(("the licence the README claims is the licence in the tree",
               "MIT licensed" in readme

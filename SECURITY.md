@@ -5,7 +5,7 @@ the bug we care about most: the whole tool is one claim, *what does not
 hold is refused by line*, and a false green breaks it.
 
 Please report it privately first, by opening a
-[security advisory](../../security/advisories/new) on the
+[security advisory](https://github.com/DanielSwift1992/gate/security/advisories/new) on the
 repository, or by email to the maintainer. Include the world (or a reduced
 one), the command you ran, and what you expected the verdict to be. A
 reproduction that fits in a single file is worth more than a description.

@@ -4,6 +4,25 @@
 
 The working prototype, end to end:
 
+- One letter meets every door. The demo is entry plus a translated world
+  now, the same five files `gate init` leaves anywhere with the folder's
+  CODEOWNERS imported beside them, and the demo's own greeting died: three
+  tellings of one story was the drift this tool exists against. The
+  letter's marks are lines of the file, `== phrase`, lit where the phrase
+  stands in the reading view and printed with the letter everywhere.
+- The print and its source are a pair. An imported world names its inputs
+  on its own `from:` line, and every `status` translates the source again
+  and compares certificates: a rule changed on either side alone is named
+  at its line, in the file that changed.
+- The bench is published over the demo, at danielswift1992.github.io/gate:
+  the server's own answers recorded at build time, both courts judging the
+  open file in the browser, edits kept on green in this browser, and reset
+  puts the demo back. The cover's picture opens it at the refusal's line,
+  and the address bar is a door: `?f=file:line`, the address every refusal
+  prints.
+- The cursor answers on a claim line, `Owns_3_carol · a claim: ...`, and a
+  gate's argument offers its kind from one scan for either spelling, one
+  line or many.
 - The certificate court runs in the port. `bin/judge-where.js` is a
   line-for-line translation of the corpus's WhereJudge, answering
   `judge where` wherever the binary cannot run: the same lines out, byte
