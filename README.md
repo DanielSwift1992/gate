@@ -51,7 +51,7 @@ and in CI, with nobody waiting on it.
 
 No server. No runtime. No new formats. Nothing leaves your repository.
 
-## the questions you stop answering by hand
+## ask the file, not a person
 
 Every question below is one you answer today by searching: greping
 repositories, opening tickets, asking whoever remembers. Here each is a
@@ -253,7 +253,7 @@ tests/smoke.py   the battery: 357 end-to-end checks, the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts
 ```
 
-## where this stands
+## what runs today, and what is next
 
 Working prototype under active development, MIT licensed: see LICENSE,
 and NOTICE.md for the bundled pieces and their terms. Free, and nothing
