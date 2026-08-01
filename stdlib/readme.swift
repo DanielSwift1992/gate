@@ -57,9 +57,8 @@
 //
 // ── what gate put in your repository, and how to take it out ──
 //
-// Five files and one git setting. Nothing else was read, moved or rewritten.
-// The tool has no network access: nothing is uploaded, nothing phones
-// home.
+// Five files and one git setting, and nothing else was read, moved or
+// rewritten. The tool has no network access: no upload, no phoning home.
 //
 //     readme.swift          the file you are reading
 //     verbs.swift           every gate command, and whether it changes files
@@ -82,7 +81,7 @@
 // the verdict, re-read on every keystroke. The file is valid Swift and it
 // compiles, but nothing in it runs: there are no functions here, only type
 // declarations. Each line that says `X = Y` is a claim, and claims refer to
-// each other by name. Everything stays inside a small subset of Swift, and
+// each other by name. Every line stays inside a small subset of Swift, and
 // the judge reads that subset directly, in milliseconds. No compiler runs
 // while you type.
 //
@@ -104,10 +103,10 @@
 // Beside this file the page lists `my.swift`: the one file here that is not
 // part of this repository. You are already half of several pairs: the things
 // you check by hand because nobody else will. my.swift is where your half
-// gets written down; from then on the checking is the judge's, not yours,
-// and nobody's agreement is needed. It lives in a separate git on this
-// machine, no clone or colleague sees it, and it does not exist until
-// you write in it. Clear it and it is gone.
+// gets written down. From then on the checking is the judge's, not yours.
+// It lives in a separate git on this machine, no clone or colleague sees
+// it, and it does not exist until you write in it. Clear it and it is
+// gone.
 //
 // ── find your drift ──
 //
