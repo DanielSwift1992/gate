@@ -256,10 +256,10 @@ tests/windows.py the Windows measure: the reviewer's road as asserts
 ## what runs today, and what is next
 
 Working prototype under active development, MIT licensed: see LICENSE,
-and NOTICE.md for the bundled pieces and their terms. Free, and nothing
-in it is paid. The judge is a native binary with a versioned verdict
-contract (canon v2); the CLI is python and will be rewritten in Swift to
-ship as a single static binary (the way git is one tool). We want to hear
+and NOTICE.md for the bundled pieces and their terms. The judge is a
+native binary with a versioned verdict contract (canon v2). The CLI is
+python and will be rewritten in Swift to ship as a single static binary
+(the way git is one tool). We want to hear
 about a wrong verdict before anything else: see SECURITY.md.
 
 **Where it runs, measured rather than assumed.** The CLI is one python3 file and
