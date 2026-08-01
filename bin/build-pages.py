@@ -110,7 +110,7 @@ def main():
         }
         return 1;
     }
-    /* what holds is kept in this browser: the panel is the arbiter of
+    /* saved on green, in this browser: the panel is the arbiter of
        write-on-holds, exactly as it is over the real server, and a PUT that
        arrives is a holding file. localStorage stands where the working copy
        stood; reset below empties it and the demo is back. */
@@ -207,7 +207,7 @@ body { height: calc(100vh - 28px) !important; }
                 .replace("__LAYOUT__", json.dumps(layout))
                 .replace("__ALL__", json.dumps(list(dict.fromkeys(everyone)))))
     note = ('<div id="published-note">judged in your browser as you type · '
-            'what holds is kept in this browser · <a href="#" '
+            'saved on green, in this browser · <a href="#" '
             'onclick="__resetDemo();return false">reset the demo</a> · '
             'the tool: <code>git clone '
             'https://github.com/DanielSwift1992/gate</code></div>')

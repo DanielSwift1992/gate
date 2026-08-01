@@ -5202,14 +5202,18 @@ public enum MyWatch: AccessLedger {
                 _u.urlopen(f"http://127.0.0.1:{_lp}/files", timeout=1).read(); break
             except Exception:
                 time.sleep(0.1)
-        saved = open(os.path.join(liveworld, "readme.swift"), encoding="utf-8").read()
-        typed = saved.replace("public typealias Place = Zone_readme",
-                              "public typealias Place = Zone_src")
+        saved = open(os.path.join(liveworld, "ownership.swift"), encoding="utf-8").read()
+        # the demo is met by the kit's letter now, so the forms row a person
+        # breaks in the bench is the world itself: docs handed to src on the
+        # one docs room makes carol's second claim part the same way her third
+        # already does
+        typed = saved.replace("public typealias Place = Zone_docs",
+                              "public typealias Place = Zone_src", 1)
         broke_said = json.loads(_u.urlopen(_u.Request(
-            f"http://127.0.0.1:{_lp}/verdict?f=readme.swift",
+            f"http://127.0.0.1:{_lp}/verdict?f=ownership.swift",
             data=typed.encode(), method="POST"), timeout=10).read())
         live_said = json.loads(_u.urlopen(_u.Request(
-            f"http://127.0.0.1:{_lp}/verdict?f=readme.swift",
+            f"http://127.0.0.1:{_lp}/verdict?f=ownership.swift",
             data=saved.encode(), method="POST"), timeout=10).read())
     finally:
         _lb.terminate()
@@ -5220,15 +5224,15 @@ public enum MyWatch: AccessLedger {
               # text rather than from a number typed here: an address a check
               # keeps in its own head is an address that stops meaning anything
               broke_said and any(
-                  r["address"] == "readme.swift:" + str(
+                  r["address"] == "ownership.swift:" + str(
                       next(i for i, l in enumerate(typed.split("\n"), 1)
-                           if l.startswith("public typealias Owns_readme")))
+                           if l.startswith("public typealias Owns_2_carol")))
                   and "share one zone" in r["claim"] for r in broke_said["refusals"])
               # the world's own single refusal is still there and is not this one
               and len(broke_said["refusals"]) == 2
               # put the saved text back and only the scene's refusal remains
               and live_said and len(live_said["refusals"]) == 1
-              and open(os.path.join(liveworld, "readme.swift"),
+              and open(os.path.join(liveworld, "ownership.swift"),
                        encoding="utf-8").read() == saved
               # AND WHAT WITHHOLDS A WRITE IS THIS FILE, NEVER THE WHOLE WORLD.
               # The first scene ships with one refusal on purpose, so a gate over
@@ -5243,15 +5247,19 @@ public enum MyWatch: AccessLedger {
     # prose a file holds would be the old guess wearing a threshold. A word that
     # is not a view is refused by name: a preference silently dropped is a
     # preference the writer thinks they have.
-    opens_kept = open(os.path.join(liveworld, "readme.swift"), encoding="utf-8").read()
+    # the kit's letter carries its opens in the manifest column, so the word
+    # that is not a view is written there now, and refused from there
+    _mf_path = os.path.join(liveworld, "gate.manifest.swift")
+    opens_kept = open(_mf_path, encoding="utf-8").read()
     try:
-        open(os.path.join(liveworld, "readme.swift"), "w").write(
-            opens_kept.replace("// opens: bare", "// opens: sideways"))
+        open(_mf_path, "w").write(opens_kept.replace(
+            "public typealias Opens = Bare",
+            "public typealias Opens = Sideways", 1))
         odd = run("status", cwd=liveworld)[1]
     finally:
-        open(os.path.join(liveworld, "readme.swift"), "w").write(opens_kept)
+        open(_mf_path, "w").write(opens_kept)
     S.append(("a file says how it is first met, and a word that is not a view is refused by name",
-              "// opens: bare" in opens_kept
+              "public typealias Opens = Bare" in opens_kept
               and any("`sideways` is not a view" in r["claim"] for r in odd["refusals"])
               # the bench is told, and opens the first row that way
               and "opensAs[first]" in ui and '"opens": opens' in shelf_src
@@ -5382,49 +5390,24 @@ public enum MyWatch: AccessLedger {
     lw = os.path.join(tmp, "letterworld")
     run("demo", lw)
     letter = open(os.path.join(lw, "readme.swift"), encoding="utf-8").read()
-    S.append(("the first line threatens the enemy and never the reader, and the letter speaks in scenes",
+    # ── ONE LETTER, NOT THREE. The demo carried a greeting of its own for a
+    # while, a third voice beside the cover and the kit, and three tellings of
+    # one story is the drift this tool exists against. The demo is entry plus
+    # one translated world now, so the letter that meets it IS the kit's
+    # letter: every content line of the shelf page, word for word, under the
+    # taken head, with the way back at its foot. The old scene-anchors died
+    # with the third voice, and this pair replaces them.
+    _shelf_lines = open(os.path.join(HERE, "stdlib", "readme.swift"),
+                        encoding="utf-8").read().split("\n")
+    _shelf_body = _shelf_lines[next(i for i, l in enumerate(_shelf_lines)
+                                    if l.startswith("// ── ")):]
+    S.append(("the first line threatens the enemy, and the demo is met by the kit's own letter",
               '"death to drift"' in ui
-              # gone from everything the page SAYS. It survives once in the
-              # comment that explains why, which is the record of the decision
-              # and not a thing anybody reads on screen.
               and '"Every claim in these files is judged as you type."' not in ui
               and ui.count("cannot be saved") == 1
-              # a refusal is about the world and never about the writer, and the
-              # letter carries that as mechanics, not as reassurance: the law's
-              # own sentence at a named line, and the safety said as a property
-              # of the file. It once said `nobody blames you`, which names the
-              # fear it means to remove; anchoring the mood is the writer's job,
-              # naming the mood is not.
-              and "in the law's own sentence" in letter
-              and "which is what makes it safe to touch" in letter
-              # and every section names a room and a future act, second person
-              and letter.count("── ") >= 6
-              and "this is where you say what is yours" in letter
-              and "this is where your word is held" in letter
-              and "this is where you will come back" in letter
-              # AND THE BRIDGE IS SAID. A stranger meets `Zone_readme`,
-              # `Owner_you`, `Path_readme` and has no way to know these are
-              # their own CODEOWNERS in another form: the words came from
-              # somewhere, and the letter never said where.
-              and "gate import codeowners` read the CODEOWNERS in this folder" in letter
-              and "became a zone" in letter and "became a room" in letter
-              and "owners.csv" in letter
-              # ── AND THE FIRST SCREEN ANSWERS THE TWO QUESTIONS A STRANGER
-              # ACTUALLY ARRIVES WITH. The letter answered five of the childish
-              # seven and was silent on the first two: what is this, and what do
-              # I get. The word `gate` appeared nowhere in it, so the invitation
-              # was to take apart a copy of something unnamed; and the one line
-              # carrying the value stood fourth, as a fact of the machinery,
-              # unreached by anybody who had not already read the cover.
-              # Whoever arrives by the README has that answer; whoever arrives
-              # at the bench, which is the road we mean people to take, did not.
-              and "git keeps every byte of a repository honest" in letter
-              and "stopped being true" in letter and "nothing says the day" in letter
-              # the exhibit: this letter is one of the claims it is about
-              and "A readme that describes a tool goes stale. This one is" in letter
-              # and one line from the demo to the reader's own day
-              and "In your own CODEOWNERS a line like it can stand today" in letter
-              and "rather than at the incident" in letter))
+              and all(l in letter for l in _shelf_body if l.strip())
+              and "This copy is yours" in letter
+              and "Origin: gate's shelf" in letter))
 
     S.append(("gate's own reference is met as a reference, not as source",
               "// opens: bare" in ref
@@ -5508,10 +5491,11 @@ public enum MyWatch: AccessLedger {
                        encoding="utf-8").read().index("readme.swift")
                   < open(os.path.join(twoforms, "gate.manifest.swift"),
                          encoding="utf-8").read().index("ownership.swift")
-              # and nothing depends on it: delete the file and its row, and the
-              # world stands exactly as it did
-              and "Owns_readme" in open(os.path.join(twoforms, "readme.swift"),
-                                        encoding="utf-8").read()))
+              # two forms files with records of their own stand side by side:
+              # the kit's verb table and the imported ownership world, their
+              # axes from different vocabularies, judged together
+              and "public enum Log: Verb" in open(os.path.join(twoforms, "verbs.swift"),
+                                                  encoding="utf-8").read()))
 
     # ── AND THE FRONT DOOR NAMES THEM TOO. The README promises a porcelain and
     # the code has every verb in it; the screen a person meets when they type

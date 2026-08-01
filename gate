@@ -1985,105 +1985,6 @@ SEAM_DEMO_SDK = {"carrier": "MessagesJS",
                              {"route": "/messages", "field": "replyTo", "as": "Text"}]}
 
 
-DEMO_README = """\
-// opens: bare
-//
-// ── what this is ──
-//
-// git keeps every byte of a repository honest: change one and the hash says
-// so. The WORDS of a repository have no such guarantee. A CODEOWNERS says what
-// was true on the day you or a colleague wrote it, and nothing says the day
-// it stopped being true. The same goes for a schema, a rota, a list of who may
-// deploy. gate makes those words claims, and a claim is read again every time
-// it is touched.
-//
-// This file is one of them. It is declared in `gate.manifest.swift`, judged
-// with everything else in this folder, and counted in the verdict at the
-// bottom of this bench. A readme that describes a tool goes stale. This one is
-// the tool working.
-//
-// ── this is your copy, and it was made to be taken apart ──
-//
-// A repository with three source areas, a docs folder, and a CODEOWNERS like
-// the one you already keep. All of it was committed the moment it was made, so
-// `git checkout .` puts every word of it back. Nothing here reaches the
-// network, at any time, for any reason.
-//
-// Read as far down as your question goes. The first screen is a minute; the
-// tail says where the whole reference lives.
-//
-// ── one: this is what was done for you before you arrived ──
-//
-// `gate import codeowners` read the CODEOWNERS in this folder and wrote
-// `ownership.swift` beside this file. Three words came out of it: a top of the
-// tree became a zone, a pattern became a room, and a person became an owner
-// who keeps one zone. Which zone each of them may keep is the one thing
-// CODEOWNERS cannot say, so it is written next to it, in `owners.csv`.
-//
-// ── two: this is where you say what is yours ──
-
-/// A zone of your own, declared here rather than imported. You wrote it,
-/// you answer for it, and it cannot go stale in silence: the judge reads it
-/// again every time this file is touched.
-public enum Zone_readme: Realm {}
-
-// ── three: this is where your word is held ──
-//
-// A claim is a fact you assert out loud. `Owns` is one, and it stands only
-// where the owner's zone and the path's zone are the same word.
-
-/// an owner of your own, posted to the zone above, carrying a key that
-/// administers
-public enum Owner_you: Keeper {
-    public typealias Post = Zone_readme
-    public typealias Key = WardenKey
-}
-/// a path of your own, standing in that same zone
-public enum Path_readme: Room {
-    public typealias Place = Zone_readme
-}
-/// and your word over the two of them, which holds because the zones agree
-public typealias Owns_readme = Owns<Owner_you, Path_readme>
-
-// BREAK IT. Change `Zone_readme` on the path above to `Zone_src` and watch the
-// line get named, in the law's own sentence, before anything reaches the file:
-// your text stays in the editor until it holds again. Put it back and it is
-// saved, and green. This whole file can go without anything else moving,
-// which is what makes it safe to touch.
-//
-// ── four: this is where the world tells you what you did not know ──
-//
-// One line already does not hold, and it is not in this file. In
-// `ownership.swift`, a rule out of the CODEOWNERS here hands a source
-// directory to an owner whose zone is docs. `gate status` names it in
-// milliseconds, without reading CODEOWNERS again.
-//
-// In your own CODEOWNERS a line like it can stand today, with nothing set
-// to name it. Here, such a line is named the day it stops being true,
-// rather than at the incident.
-//
-// Two ways to end this one: change the line in the world, or change CODEOWNERS
-// and import it once more.
-//
-//     gate import codeowners CODEOWNERS --tree . --policy owners.csv \\
-//                            -o ownership.swift
-//
-// The file and the world are a pair from here on: the world names its
-// source on its own `from:` line, and `gate status` compares the two, so
-// the day they part has an address.
-//
-// ── five: this is where you will come back ──
-//
-//     gate status      what disagrees right now, in milliseconds
-//     gate log         this repository's own history, nothing translated
-//     gate findings    what is true of a clone, before anything is translated
-//     gate serve       this bench, judged as you type
-//
-// Every verb answers to a record like the ones above, with a note in its own
-// words: `gate stdlib show readme`. That table is judged with gate's own world
-// and held to its dispatch by name, so it cannot fall behind the tool it
-// describes.
-"""
 
 
 def codeowners_pair_guards():
@@ -2182,22 +2083,21 @@ def cmd_demo_owners(a):
     here_was = os.getcwd()
     try:
         os.chdir(root)
+        # THE DEMO IS MET BY THE KIT'S OWN LETTER. For a while it carried a
+        # letter of its own, a third voice beside the cover and the kit, and
+        # three tellings of one story is the drift this tool exists against.
+        # So the demo is entry plus one translated world: the same five files
+        # `gate init` leaves anywhere, and the CODEOWNERS of this folder
+        # imported beside them. Everything the letter says is true here, the
+        # BREAK IT steps included, because the files it points at are present.
+        subprocess.run(["git", "init", "-q", "-b", "main", "."], capture_output=True)
+        cmd_init(["."])
         said = cmd_import_codeowners(["CODEOWNERS", "--tree", ".", "--policy", "owners.csv",
                                       "-o", "ownership.swift"])
-        # A GRAMMAR AND THE CERTIFICATES OVER IT ARE A FORMS FILE, and saying so
-        # is what lets `gate status` answer here at all: the role names the
-        # court. Written into gate.swift instead, the same text earned twenty
-        # refusals from the plain court for declaring protocols — a world told
-        # its own printout was ungrammatical.
-        # ── AND THE WAY IN IS THE FIRST ROW, because the bench opens on the
-        # first file a layout declares. A person arriving met a translated world
-        # of certificates with nothing saying what any of it was; the greeting
-        # and the reference are one file, permanent, and it is the door.
-        with open("readme.swift", "w") as f:
-            f.write(DEMO_README)
-        declare_side("readme.swift", "Mine", "forms")
         declare_side("ownership.swift", "Mine", "forms")
-        subprocess.run(["git", "init", "-q", "-b", "main", "."], capture_output=True)
+        # the world ships with its one refusal on purpose, so the commit walks
+        # past the hook the kit just wired: the hook is for the reader's own
+        # commits, and it stands armed from the first one they make
         subprocess.run(["git", "add", "-A"], capture_output=True)
         subprocess.run(["git", "-c", "commit.gpgsign=false", "-c", "user.email=you@example.com",
                         "-c", "user.name=You", "commit", "-qm",
