@@ -195,3 +195,20 @@
 // went away is the asking.
 //
 // Something drifts? Gate it.
+
+// Each `== phrase` line below lights that phrase where it stands in this
+// page: the words that carry it, for a reader moving fast.
+//
+// == sentences that must match something
+// == That gap has a name: drift.
+// == there is no source, so there is no direction
+// == checked whenever anybody asks
+// == milliseconds on a real
+// == Nothing here is built to keep you.
+// == half of several pairs
+// == the loudest marker
+// == Something drifts? Gate it.
+// == put your half of it in a file here, once
+// == That is the upkeep, all of it.
+// == rename goes red on the renamer's screen, not on yours.
+// == went away is the asking.

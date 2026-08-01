@@ -2660,6 +2660,17 @@ function freeComments(text, notes, parsed) {
             // asks to be met; read out as prose they became the letter's first
             // sentence — machine words in the reader's face, at the top.
             if (/^(role|opens):/i.test(said)) { run = null; return; }
+            // ── A MARK IS A LINE OF ITS OWN NOW. `== phrase` in a comment
+            // line is the writer saying which words carry the page; the
+            // reading view lights the phrase where it stands and does not
+            // read the mark line out as prose. Living in the file, a mark
+            // survives every reprint, which the stand's hand-placed marks
+            // never did.
+            if (said.startsWith("== ")) {
+                run = null;
+                out.push({ line: i + 1, text: said.slice(3).trim(), kind: "mark" });
+                return;
+            }
             const head = said.match(/^──+\s*(.+?)\s*──+$/);
             if (head) {
                 run = null;
@@ -2685,8 +2696,8 @@ function freeComments(text, notes, parsed) {
 // `single` for a literal, ``double`` for a name. Rendering those in the name's
 // own register is not decoration — it is the same fact the prose states, read
 // twice. Nothing else is interpreted: a view may not add what the text lacks.
-function noteProse(text) {
-    return esc(text)
+function noteProse(text, marks) {
+    let html = esc(text)
         .replace(/``([A-Za-z_]\w*)``/g, (_, n) => '<span class="known">' + n + "</span>")
         .replace(/`([^`]+)`/g, (_, c) => "<code>" + c + "</code>")
         // ── AND THE MAP IS MADE OF THE TEXT'S OWN WORDS. A long section read as
@@ -2699,6 +2710,15 @@ function noteProse(text) {
         // slides down them by itself. Nothing is added to the text and nothing
         // is taken out of it.
         .replace(/==(\S(?:[^=]*\S)?)==/g, (_, m) => '<span class="mark">' + m + "</span>");
+    // and the file-level marks: each `== phrase` line lights its phrase in
+    // every paragraph that states it, the first time the paragraph does
+    for (const m of marks || []) {
+        const lit = esc(m);
+        if (html.includes(lit)) {
+            html = html.replace(lit, '<span class="mark">' + lit + "</span>");
+        }
+    }
+    return html;
 }
 
 // where a record stops: the next declaration begins. Nothing else in the parse
@@ -2852,13 +2872,17 @@ function bareForm(parsed, text) {
         items.push({ line: a.line, note: noteOf(name),
                      block: [declSpan(name, a.line, badLines.has(a.line)) + " = " + said] });
     }
-    for (const c of freeComments(src, notes, parsed))
+    const frees = freeComments(src, notes, parsed);
+    const marks = frees.filter(c => c.kind === "mark").map(c => c.text);
+    for (const c of frees) {
+        if (c.kind === "mark") continue;
         items.push({ line: c.line, block: [],
             note: c.kind === "head"
                 ? '<span class="head">' + esc(c.text) + "</span>"
                 : c.kind === "set"
                 ? '<span class="set">' + esc(c.text) + "</span>"
-                : '<span class="note free">' + noteProse(c.text) + "</span>" });
+                : '<span class="note free">' + noteProse(c.text, marks) + "</span>" });
+    }
     items.sort((a, b) => a.line - b.line);
     // each item is a block of its own, so the gap between them is a declared
     // length rather than whatever line-height the font happens to carry

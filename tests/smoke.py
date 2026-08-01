@@ -5409,6 +5409,21 @@ public enum MyWatch: AccessLedger {
               and "This copy is yours" in letter
               and "Origin: gate's shelf" in letter))
 
+    # ── A MARK IS A LINE OF THE FILE, AND A MARK THAT LIGHTS NOTHING IS A
+    # LIE. `== phrase` lines ride the letter itself now, so they survive every
+    # reprint, which the stand's hand-placed marks never did. Each phrase must
+    # stand in the page it claims to light, and the reading view must know the
+    # form: hidden as prose, lit where the phrase is stated.
+    _mark_lines = [l.strip()[len("// == "):].strip() for l in _shelf_lines
+                   if l.strip().startswith("// == ")]
+    _shelf_prose = "\n".join(l for l in _shelf_lines
+                             if not l.strip().startswith("// == "))
+    S.append(("every mark line lights a phrase the letter actually states",
+              len(_mark_lines) >= 10
+              and all(m in _shelf_prose for m in _mark_lines)
+              and 'said.startsWith("== ")' in ui
+              and 'kind: "mark"' in ui))
+
     S.append(("gate's own reference is met as a reference, not as source",
               "// opens: bare" in ref
               # and it is the first row of this world's layout, so the bench
