@@ -1292,26 +1292,41 @@ function allowedAt(cur) {
         return { items: f || [], kind: wanted ? "this axis takes " + wanted : "an axis", closed: true };
     }
 
-    // an argument of a gate on one line: `X = Owns<Owner_carol, Path_` — the
-    // head names the kinds and the top-level commas count which one this is.
-    // The multi-line spelling below already answered; the one-line spelling,
-    // which is how every claim in an imported world is printed, answered
-    // nothing.
-    const opened = before.lastIndexOf("<");
-    if (opened > 0 && before.indexOf(">", opened) === -1) {
-        const gm = /(\w+)\s*$/.exec(before.slice(0, opened));
-        if (gm && gates[gm[1]]) {
-            const kinds = gates[gm[1]];
-            let depth = 0, nth = 0;
-            for (const c of before.slice(opened + 1)) {
+    // an argument of a gate: one mechanism for every spelling. The text from
+    // the cursor back to the nearest unclosed `<` is gathered, across lines
+    // where the writer broke them; the word before that `<` names the gate,
+    // and the top-level commas in between count which argument this is. For a
+    // while the one-line spelling, which is how every claim in an imported
+    // world is printed, had a reading of its own beside the multi-line one:
+    // two readings of one question, in the tool that exists against that.
+    {
+        let gathered = before, at = cur.line;
+        while (at > 0 && cur.line - at < 6) {
+            let depth = 0;
+            for (const c of gathered) {
                 if (c === "<") depth += 1;
                 else if (c === ">") depth -= 1;
-                else if (c === "," && depth === 0) nth += 1;
             }
-            const k = kinds[Math.min(nth, kinds.length - 1)];
-            const f = fillersFor(k, host);
-            if (f && f.length)
-                return { items: f, kind: "this argument takes " + k, closed: true };
+            if (depth > 0) break;
+            at -= 1;
+            gathered = (cm.getLine(at) || "").split("//")[0] + "\n" + gathered;
+        }
+        const opened = gathered.lastIndexOf("<");
+        if (opened > 0 && gathered.indexOf(">", opened) === -1) {
+            const gm = /(\w+)\s*$/.exec(gathered.slice(0, opened));
+            if (gm && gates[gm[1]]) {
+                const kinds = gates[gm[1]];
+                let depth = 0, nth = 0;
+                for (const c of gathered.slice(opened + 1)) {
+                    if (c === "<") depth += 1;
+                    else if (c === ">") depth -= 1;
+                    else if (c === "," && depth === 0) nth += 1;
+                }
+                const k = kinds[Math.min(nth, kinds.length - 1)];
+                const f = fillersFor(k, host);
+                if (f && f.length)
+                    return { items: f, kind: "this argument takes " + k, closed: true };
+            }
         }
     }
 
@@ -1328,20 +1343,6 @@ function allowedAt(cur) {
         const forms = Object.keys(gates);
         return forms.length ? { items: forms, kind: "a claim this body may hold", closed: true } : null;
     }
-    // an argument of a gate: `VerifiedView<\n  Emp9001,\n  ` — the kind is stated
-    if (inBody) {
-        for (let i = cur.line; i >= 0 && i > cur.line - 6; i--) {
-            const m = /(\w+)\s*<\s*$/.exec((cm.getLine(i) || "").split("//")[0]);
-            if (m && gates[m[1]]) {
-                const kinds = gates[m[1]];
-                const nth = cur.line - i - 1;
-                const k = kinds[Math.min(nth, kinds.length - 1)];
-                const f = fillersFor(k, host);
-                return f ? { items: f, kind: "this argument takes " + k, closed: true } : null;
-            }
-        }
-    }
-
     // inside a declaration, at the start of a line: the axes it still owes
     if (host && !inBody && /^\s*(?:p(?:u(?:b(?:l(?:i(?:c)?)?)?)?)?)?$/.test(before)) {
         const stated = new Set();
