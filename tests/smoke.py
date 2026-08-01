@@ -5424,6 +5424,27 @@ public enum MyWatch: AccessLedger {
               and 'said.startsWith("== ")' in ui
               and 'kind: "mark"' in ui))
 
+    # ── THE MAP OF SEAMS IS MEASURED, NOT REMEMBERED. The metrics page prints
+    # a table of how often each step stands on the page, and the table names
+    # its own method: `calc(var(--u)*N)` plus a bare `var(--u)` for one unit,
+    # counted in ui.html. It drifted once, quietly, exactly as its own caption
+    # predicted; counted here the same way, it cannot drift in silence again.
+    _metrics = open(os.path.join(HERE, "stdlib", "bench-metrics.swift"),
+                    encoding="utf-8").read()
+    _map_said = {int(u): int(n) for _, u, n in
+                 re.findall(r"//\s+(\w+)\s+(\d+)u\s+×(\d+)", _metrics)}
+    _page_counts = {}
+    for _m in re.finditer(r"calc\(var\(--u\)\s*\*\s*(\d+)\)", ui):
+        _k = int(_m.group(1))
+        _page_counts[_k] = _page_counts.get(_k, 0) + 1
+    _page_counts[1] = len(re.findall(r"(?<!calc\()var\(--u\)(?!\s*\*)", ui))
+    _map_apart = {u: (n, _page_counts.get(u, 0))
+                  for u, n in _map_said.items() if _page_counts.get(u, 0) != n}
+    if _map_apart:
+        print("   the seam map against the page:", _map_apart)
+    S.append(("the seam map counts what the page holds, step for step",
+              len(_map_said) >= 10 and _map_apart == {}))
+
     S.append(("gate's own reference is met as a reference, not as source",
               "// opens: bare" in ref
               # and it is the first row of this world's layout, so the bench

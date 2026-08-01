@@ -23,7 +23,6 @@ public enum Status: Verb {
     public typealias Under = PlainCourt
 }
 extension Status { public static var typeName: String { "status" } }
-public typealias StatusIsSafe = Run<Status>
 
 /// the older spelling, from git's own vocabulary
 public enum Fsck: Spelling {
@@ -245,17 +244,19 @@ extension V { public static var typeName: String { "v" } }
 
 // ── and the promise everything else rests on ──
 //
-// Each line below is a certificate that the verb above it changes nothing.
-// Say `Does = Writes` on any of them and its line here is refused: a verb
-// cannot be listed among the safe ones and admit to writing in the same file.
-// The battery runs every one of them in a world and holds the working copy
-// byte-identical afterwards, which is the half no declaration can prove.
+// Each `Run` line below is a certificate for the verb it names: that verb
+// changes nothing. Say `Does = Writes` on such a verb and the certificate's
+// line is refused: a verb cannot stand among the safe ones and admit to
+// writing in the same file. The battery runs every certified verb in a world
+// and holds the working copy byte-identical afterwards, which is the half no
+// declaration can prove.
 //
 // `Asked` is the third class and it carries the same promise with one word
 // added: nothing is written unless you name a file with `-o`. The battery runs
 // those without one and holds the working copy byte-identical too, so the
 // difference between `Reads` and `Asked` is what you typed and never what the
 // verb decided.
+public typealias StatusIsSafe = Run<Status>
 public typealias CheckIsSafe = Run<Check>
 public typealias DiffIsSafe = Run<Diff>
 public typealias LogIsSafe = Run<Log>
