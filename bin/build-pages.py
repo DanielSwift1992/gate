@@ -248,6 +248,42 @@ def main():
                 step("a mended world goes green and is kept",
                      document.getElementById("verdicts").textContent === "" ||
                      localStorage.getItem("gate.pages.ownership.swift") !== null);
+                // the offer and the judge, held as a pair, both ways: over
+                // the mended world, every name of it lands in each slot of
+                // the carol claim, and the two readings must agree name by
+                // name. The judge's side of the border is the canon's own
+                // spelling: an axis that did not resolve keeps its dot in
+                // `aka`, so a name of the wrong kind never compiles. The
+                // offer's side is allowedAt. Neither side is trusted alone.
+                const mended = cm.getValue();
+                const lines = mended.split("\\n");
+                const cl = lines.findIndex(l => l.includes("Owns_3_carol"));
+                const claim = lines[cl];
+                const lt = claim.indexOf("<");
+                const args = claim.slice(lt + 1, claim.lastIndexOf(">"))
+                    .split(",").map(s => s.trim());
+                const names = [...new Set(Object.values(conformers).flat())]
+                    .concat(["Wombat"]);
+                let pairOk = true, judged = 0;
+                for (let slot = 0; slot < args.length && pairOk; slot++) {
+                    const here = allowedAt({ line: cl,
+                        ch: claim.indexOf(args[slot], lt) + args[slot].length });
+                    const offered = new Set((here && here.items) || []);
+                    for (const name of names) {
+                        const rebuilt = claim.slice(0, lt + 1) + args.map(
+                            (a, i) => i === slot ? name : a).join(", ") + ">";
+                        const text = lines.map(
+                            (l, i) => i === cl ? rebuilt : l).join("\\n");
+                        const rs = refusalsFor("ownership.swift", text).filter(
+                            r => r.address === "ownership.swift:" + (cl + 1));
+                        const compiles = rs.every(
+                            r => !/\\(aka '[^']*\\.[^']*'\\)/.test(r.claim));
+                        judged += 1;
+                        if (compiles !== offered.has(name)) { pairOk = false; break; }
+                    }
+                }
+                step("the offer and the judge agree at every slot ("
+                     + judged + " names judged)", pairOk && judged > 20);
                 step("reset stands ready", typeof window.__resetDemo === "function");
             } catch (e) {
                 steps.push("ROADFAIL crashed: " + e.message);
