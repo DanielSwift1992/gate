@@ -197,7 +197,7 @@ def main():
         "Gate first the pairs that cross a boundary: two teams, two repositories, two languages.",
         "A fact drifts where it changes hands.",
         "You do not test my API, and I do not mock yours.",
-        "Its one move is to put the agreement in writing before the argument: each side states its half in its own file, the judge does the comparing from then on, and a meeting is what you hold when the verdict says you differ.",
+        "Its one move is to put the agreement in writing before the argument: each side states its half in its own file, the judge compares the halves from then on, and you hold a meeting when the verdict says you differ.",
         "What used to be an integration test is a verdict.",
         "If CODEOWNERS hands the payments folder to an intern, the rule holds and every record agrees with it.",
         "What varies is which pair you point it at: a Jira ticket and the TODO that cites it, "

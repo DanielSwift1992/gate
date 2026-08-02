@@ -177,9 +177,9 @@
 // judge names the line where they part. What two people mean by a record
 // is another problem, and no check turns two readings into one. gate does
 // not try. Its one move is to put the agreement in writing before the
-// argument: each side states its half in its own file, the judge does the
-// comparing from then on, and a meeting is what you hold when the verdict
-// says you differ. If CODEOWNERS hands the payments folder to an intern,
+// argument: each side states its half in its own file, the judge compares the
+// halves from then on, and you hold a meeting when the verdict says you
+// differ. If CODEOWNERS hands the payments folder to an intern,
 // the rule holds and every record agrees with it. Whether it should is a
 // claim you can state too: write it as policy, let the other side write
 // theirs, and the verdict says if you agree. Agreement here is not
