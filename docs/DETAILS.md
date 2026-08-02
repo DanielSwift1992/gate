@@ -30,7 +30,8 @@ python3 tests/smoke.py                      # all green, offline
 
 # 2. read the source for outbound primitives; the battery greps for these
 grep -nE "urllib\.request|socket\.socket|http\.client|requests\.(get|post)" gate
-grep -nE "XMLHttpRequest|new WebSocket|fetch\(['\"]https?:" ui.html judge.js
+grep -nE "XMLHttpRequest|new WebSocket|fetch\(['\"]https?:" ui.html judge.js \
+    bin/judge-where.js bin/judge-cli.js
 
 # 3. the server listens on the loopback, and nowhere else
 grep -n 'HTTPServer((' gate                 # 127.0.0.1
@@ -51,6 +52,16 @@ The CLI is one file of standard-library Python and the bench is one file
 of HTML: small enough that reading them is a reasonable afternoon, which
 is the point. A tool that checks by reading should be checkable by
 reading.
+
+Two more facts a review leans on, both held by the battery. The CLI's
+imports are a white list, named in the battery itself: eighteen modules of
+the standard library, nothing installed, no package manager anywhere in
+the repository. And the one piece that is not text, `bin/gate-judge`, is
+not a dependency: delete it and every court still answers through the node
+ports, which are ordinary files in `bin/` you can read. CI rebuilds the
+binary from the pinned public corpus on every push and runs the whole
+battery on what it built, so the vendored binary is a convenience with a
+warrant, not a thing you are asked to trust.
 
 ## Where it plugs in
 

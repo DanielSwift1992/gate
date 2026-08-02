@@ -4735,12 +4735,28 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                  r"new WebSocket", r"""fetch\(\s*['"`]https?:""",
                  r"""(?:src|href)\s*=\s*['"]https?:"""]
     hits = []
-    for f in ("gate", "ui.html", "judge.js"):
+    for f in ("gate", "ui.html", "judge.js",
+              os.path.join("bin", "judge-where.js"), os.path.join("bin", "judge-cli.js")):
         text = open(os.path.join(HERE, f), encoding="utf-8", errors="replace").read()
         for pat in forbidden:
             for m in re.finditer(pat, text, re.M):
                 hits.append(f + ": " + m.group(0))
     S.append(("zero egress: no outbound primitive in the runtime sources", not hits))
+    # the CLI's imports are a named list, and the list is the whole of it: a
+    # security review reads a white list faster than it reads a file, and a
+    # module appearing outside this list is a decision made visible here
+    _imp = set()
+    for _m in re.finditer(r"^\s*import ([\w ,.]+)", open(GATE).read(), re.M):
+        for _p in _m.group(1).split(","):
+            _imp.add(_p.strip().split(" as ")[0].split(".")[0])
+    for _m in re.finditer(r"^\s*from ([\w.]+) import", open(GATE).read(), re.M):
+        _imp.add(_m.group(1).split(".")[0])
+    S.append(("the CLI imports the standard library alone, from a named list",
+              _imp <= {"json", "os", "re", "shutil", "subprocess", "sys",
+                       "tempfile", "time", "csv", "hashlib", "itertools",
+                       "collections", "fnmatch", "datetime", "webbrowser",
+                       "threading", "http", "urllib"}
+              and {"json", "subprocess", "http"} <= _imp))
     src = open(GATE, encoding="utf-8").read()
     S.append(("the bench binds to the loopback alone", 'HTTPServer(("127.0.0.1"' in src))
     S.append(("nothing served is cacheable: an updated gate is never hidden",
