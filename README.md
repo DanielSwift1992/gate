@@ -202,15 +202,16 @@ your head.
 
 ## what this does not touch
 
-A difference between two records is visible at a glance, text against
-number, and the judge refuses it at a line. A difference in what two
-people mean by one record is another thing: no check turns two readings
-into one. What gate offers there is its one move: each side writes its
-half down separately, and the judge says whether the two match, and where
-they part when they do not. If CODEOWNERS hands the payments folder to an
-intern, the rule holds and every record agrees with it. Whether it should
-is a claim you can state too: write it as policy, let the other side
-write theirs, and the verdict says if you agree. Agreement here is not
+A drifted record is one problem: two spellings of one fact, and the
+judge names the line where they part. What two people mean by a record
+is another problem, and no check turns two readings into one. gate does
+not try. Its one move is to put the agreement in writing before the
+argument: each side states its half in its own file, the judge does the
+comparing from then on, and a meeting is what you hold when the verdict
+says you differ. If CODEOWNERS hands the payments folder to an intern,
+the rule holds and every record agrees with it. Whether it should is a
+claim you can state too: write it as policy, let the other side write
+theirs, and the verdict says if you agree. Agreement here is not
 assumed. It is stated twice, and confirmed.
 
 ## death to drift
