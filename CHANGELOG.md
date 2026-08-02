@@ -4,6 +4,17 @@
 
 The working prototype, end to end:
 
+- The parts that must not drift stop talking through test files and talk
+  through records. The two judges are declared on their own shelf page,
+  stdlib/courts.swift: the canon each court is in, the file each carrier
+  is, and a claim per pair, judged on every keystroke, so a canon raised
+  on one side alone goes red at its line. The grammar the bench walks is
+  a shelf page too, stdlib/grammar.swift: scopes are atoms, nesting is a
+  claim per admitted pair, and a note admits no record because no record
+  says otherwise. The sentence a refusal wears is one sentence on the
+  server and on the published page, held word for word by the road. The
+  cover's death-to-drift is a mirror of the reader, before and after,
+  and its two new sentences are spine, word for word in the letter.
 - The strangler stands: a Swift CLI grows beside the python one, vein by
   vein. The binary alone states what it carries, the python door asks and
   forwards a carried argv whole, so no second list exists to drift. The
