@@ -284,6 +284,24 @@ def main():
                 }
                 step("the offer and the judge agree at every slot ("
                      + judged + " names judged)", pairOk && judged > 20);
+                // a note keeps no grammar in Bare either: a brace spelled in
+                // a comment inside a record must not shorten the record's
+                // span, or removing it through Bare would cut the body in
+                // half and leave the world unparseable
+                const ownerAt = lines.findIndex(
+                    l => l.includes("enum Owner_carol"));
+                cm.replaceRange("    // } a note, not a brace\\n",
+                    { line: ownerAt + 1, ch: 0 },
+                    { line: ownerAt + 1, ch: 0 }, "+input");
+                await settle();
+                const span = locateSlot({ kind: "record", line: ownerAt + 1 });
+                const spanned = span
+                    ? cm.getRange(span.from, span.to) : "";
+                step("a note holds no brace for Bare",
+                     spanned.includes("WardenKey") && spanned.trim().endsWith("}"));
+                cm.replaceRange("", { line: ownerAt + 1, ch: 0 },
+                    { line: ownerAt + 2, ch: 0 }, "+delete");
+                await settle();
                 step("reset stands ready", typeof window.__resetDemo === "function");
             } catch (e) {
                 steps.push("ROADFAIL crashed: " + e.message);

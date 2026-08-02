@@ -2425,7 +2425,7 @@ function locateSlot(slot) {
     const line = slot.line - 1;                       // the parse counts from one
     if (line < 0 || line >= cm.lineCount()) return null;
     if (slot.kind === "alias") {
-        const text = cm.getLine(line), eq = text.indexOf("=");
+        const text = codeOfLine(line), eq = text.indexOf("=");
         if (eq < 0) return null;
         const m = text.slice(eq + 1).match(/^(\s*)([A-Za-z_][\w.]*)/);
         if (!m) return null;                          // no whole value to replace
@@ -2444,20 +2444,20 @@ function locateSlot(slot) {
     if (slot.kind === "record") {
         let depth = 0;
         for (let l = line; l < cm.lineCount(); l++) {
-            for (const c of (cm.getLine(l) || "")) { if (c === "{") depth++; else if (c === "}") depth--; }
+            for (const c of codeOfLine(l)) { if (c === "{") depth++; else if (c === "}") depth--; }
             if (depth <= 0) return wholeLines(line, l);
         }
         return null;
     }
     if (slot.kind === "entry") {
         let l = line;
-        while (l < cm.lineCount() && !/\.self\s*;?\s*$/.test(cm.getLine(l) || "")) l++;
+        while (l < cm.lineCount() && !/\.self\s*;?\s*$/.test(codeOfLine(l))) l++;
         return l < cm.lineCount() ? wholeLines(line, l) : null;
     }
     if (slot.kind === "arg") {
         let seen = -1, depth = 0, open = false;
         for (let l = line; l < cm.lineCount() && l < line + 40; l++) {
-            const str = cm.getLine(l);
+            const str = codeOfLine(l);
             for (let i = 0; i < str.length;) {
                 const c = str[i];
                 if (c === "<") { depth++; open = true; i++; continue; }
@@ -2613,7 +2613,7 @@ function claimStep(chosen) {
     const lastLine = body ? body.to.line - 1 : cm.lineCount() - 1;
     const entries = d.entries || [];
     let at = entries.length ? entries[entries.length - 1].line - 1 : d.line - 1;
-    while (at < lastLine && !/\.self\s*;?\s*$/.test(cm.getLine(at) || "")) at++;
+    while (at < lastLine && !/\.self\s*;?\s*$/.test(codeOfLine(at))) at++;
     if (at >= lastLine) at = Math.max(d.line - 1, lastLine - 1);   // inside, always
     const lead = ((cm.getLine(at) || "").match(/^\s*/) || [""])[0] || "            ";
     const text = "\n" + lead + pending.head + "<" + pending.args.join(", ") + ">.self";
@@ -3125,7 +3125,7 @@ function inspect() {
     const tok = cm.getTokenAt(cur, true);
     const name = (tok.string || "").trim();
     if (!/^[A-Z]\w*$/.test(name)) { el.textContent = ""; return; }
-    const line = cm.getLine(cur.line) || "";
+    const line = codeOfLine(cur.line);
     const isAxis = new RegExp("typealias\\s+" + name + "\\s*=").test(line)
         || new RegExp("associatedtype\\s+" + name + "\\b").test(line);
     const { host } = placeAt(cur);
