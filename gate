@@ -29,6 +29,17 @@ ROLES = {
             "and by no court of this world",
 }
 
+# one spelling of the kind-and-role pairing: the manifest's atoms on one
+# side, the courts' words on the other. Three readers had grown three
+# copies of this table, and the day the tool role landed it had to land
+# three times, which is this file failing its own cover.
+ROLE_OF_KIND = {"WorldFile": "world", "SeamFile": "seam", "FormsFile": "forms",
+                "JudgeFile": "judge", "CarriedFile": "carried",
+                "ToolFile": "tool", "Seam": "seam"}
+KIND_OF_ROLE = {"world": "WorldFile", "seam": "SeamFile", "forms": "FormsFile",
+                "judge": "JudgeFile", "carried": "CarriedFile",
+                "tool": "ToolFile"}
+
 
 def uncommented(text):
     # ── A COMMENT IS NOT A DECLARATION, AND THIS DOCUMENT HAD NO WAY OF SAYING
@@ -82,9 +93,7 @@ def read_manifest_rows(d, text=None):
         f = re.search(r'typeName:\s*String\s*\{\s*"([^"]*)"\s*\}', m.group(2))
         if f:
             lit[m.group(1)] = f.group(1)
-    ROLE_OF = {"WorldFile": "world", "SeamFile": "seam", "FormsFile": "forms",
-               "JudgeFile": "judge", "CarriedFile": "carried", "Seam": "seam",
-               "ToolFile": "tool"}
+    ROLE_OF = ROLE_OF_KIND
     rows = []
     for m in re.finditer(MANIFEST_ROW_RE, code):
         name, atom = m.group(1), m.group(2)
@@ -220,9 +229,7 @@ def manifest_guards(rows=None, text=None):
         # own name, not a court. A scaffold with a judged input would be honest;
         # a scaffold calling itself a court would not, and the difference is the
         # whole of what this tool sells.
-        atom = {"world": "WorldFile", "seam": "SeamFile", "forms": "FormsFile",
-                "judge": "JudgeFile", "carried": "CarriedFile",
-                "tool": "ToolFile"}.get(r["role"])
+        atom = KIND_OF_ROLE.get(r["role"])
         # only where the row is written as an AXIS to an atom. The older
         # spelling made the role the protocol itself — `enum GrantsFile:
         # WorldFile` — and that document has no atom to declare; this tool reads
@@ -3583,9 +3590,7 @@ def declare_side(path, kind, role, frm=None, written=None, opens=None):
         raise ValueError(f"{path} is not inside the world at {d}: a row says where a "
                          "file is relative to the world that declares it")
     name = row_atom(rel)
-    ROLE_ATOM = {"world": "WorldFile", "seam": "SeamFile", "forms": "FormsFile",
-                 "judge": "JudgeFile", "carried": "CarriedFile",
-                 "tool": "ToolFile"}
+    ROLE_ATOM = KIND_OF_ROLE
     # ── A DOCUMENT LISTS WHAT IT HAS. The template wrote every role atom this
     # tool can imagine into every world's layout, so a person opening theirs met
     # five words before two facts, two of them naming courts nothing here uses.
