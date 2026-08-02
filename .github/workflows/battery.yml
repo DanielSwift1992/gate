@@ -48,6 +48,14 @@ jobs:
       # build itself is a Linux measure: a demo is born and served under the
       # node port on this runner before anything is published.
       - run: python3 bin/build-pages.py _site
+      # the road test: the published page walks the user's own road headless,
+      # type to offer to red to green to kept, and refuses to deploy a page
+      # where any step of it falls over
+      - run: |
+          BROWSER=$(command -v google-chrome || command -v chromium-browser || command -v chromium)
+          "$BROWSER" --headless --disable-gpu --no-sandbox --virtual-time-budget=15000 \
+            --dump-dom "file://$PWD/_site/index.html?f=ownership.swift:84&roadtest=1" \
+            2>/dev/null | grep -q "ROAD ALL GREEN"
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

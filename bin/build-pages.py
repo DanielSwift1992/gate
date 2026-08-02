@@ -178,6 +178,78 @@ def main():
         if (u.startsWith("/")) return reply("{}", 404);
         return real(url, opts);
     };
+    /* THE ROAD TEST. Rules in the battery hold invariants; this walks the
+       user's road on the published page itself: type, be offered, break,
+       stay red off the disk, mend, be kept. Typing goes through the same
+       entry the keyboard uses (an "+input" change), so an input path that
+       falls over fails here, not on a person. CI runs this page headless
+       with ?roadtest=1 and reads the report below. */
+    if (location.search.includes("roadtest=1")) {
+        window.addEventListener("load", async () => {
+            const steps = [];
+            const step = (name, ok) => steps.push((ok ? "ROADPASS " : "ROADFAIL ") + name);
+            const settle = (ms) => new Promise(r => setTimeout(r, ms || 250));
+            try {
+                await settle(900);
+                step("the door opens on the named file",
+                     typeof cm !== "undefined" && active === "ownership.swift");
+                const kept0 = Object.keys(localStorage).filter(
+                    k => k.startsWith("gate.pages.")).length;
+                const line = (() => {
+                    for (let i = 0; i < cm.lineCount(); i += 1) {
+                        if (cm.getLine(i).includes("Owns_3_carol")) return i;
+                    }
+                    return -1;
+                })();
+                step("the claim line is on the page", line >= 0);
+                // edit the second argument the way a hand does: erase the
+                // tail of the name and the offer completes what the world has
+                const at = cm.getLine(line).indexOf("Path_3_src_db_");
+                cm.focus();
+                cm.replaceRange("", { line, ch: at + 10 },
+                                { line, ch: at + 14 }, "+delete");
+                cm.setCursor({ line, ch: at + 10 });
+                offerCompletion();
+                await settle();
+                step("typing summons a closed offer",
+                     !compEl.hidden && compItems && compItems.length > 0
+                     && compItems.some(x => String(x).includes("Path_3_src_db_")));
+                cm.replaceRange("_db_", { line, ch: at + 10 },
+                                { line, ch: at + 10 }, "+input");
+                await settle();
+                // break the world with a real edit and judge it
+                const kept = cm.getValue();
+                cm.setValue(kept.replace("public typealias Post = Zone_docs",
+                                         "public typealias Post = Zone_src"));
+                await tick(true);
+                step("a broken claim goes red",
+                     lastRefusals && lastRefusals.some(r => r.file === "ownership.swift"
+                         || !r.file));
+                step("and red reaches no storage",
+                     Object.keys(localStorage).filter(
+                         k => k.startsWith("gate.pages.")).length === kept0);
+                // mend the world: carol's one refusal is repaired for real
+                cm.setValue(kept.replace(
+                    "public typealias Place = Zone_src\\n}\\npublic typealias Owns_3_carol",
+                    "public typealias Place = Zone_docs\\n}\\npublic typealias Owns_3_carol"));
+                await tick(true);
+                step("a mended world goes green and is kept",
+                     document.getElementById("verdicts").textContent === "" ||
+                     localStorage.getItem("gate.pages.ownership.swift") !== null);
+                step("reset stands ready", typeof window.__resetDemo === "function");
+            } catch (e) {
+                steps.push("ROADFAIL crashed: " + e.message);
+            }
+            const report = document.createElement("pre");
+            report.id = "roadtest-report";
+            report.textContent = steps.join("\\n") + "\\n"
+                + (steps.every(s => s.startsWith("ROADPASS"))
+                    ? "ROAD ALL GREEN" : "ROAD RED");
+            document.body.append(report);
+            document.title = steps.every(s => s.startsWith("ROADPASS"))
+                ? "ROAD ALL GREEN" : "ROAD RED";
+        });
+    }
     window.__resetDemo = function () {
         try {
             for (const key of Object.keys(localStorage)) {

@@ -5705,6 +5705,12 @@ public enum MyWatch: AccessLedger {
     _uncovered = sorted(_panel_paths - _covered - {"/declare", "/seamside"})
     S.append(("the published bench carries every path the panel calls",
               _uncovered == []))
+    # and the road itself is written into the page: CI walks it headless on
+    # every push, from typing to the offer to red to green to kept
+    S.append(("the published bench carries the user's road, and CI walks it",
+              "roadtest=1" in _pages_src and "ROAD ALL GREEN" in _pages_src
+              and "roadtest=1" in open(os.path.join(HERE, ".github", "workflows",
+                                                    "battery.yml")).read()))
 
     S.append(("the licence the README claims is the licence in the tree",
               "MIT licensed" in readme
