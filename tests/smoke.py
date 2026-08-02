@@ -39,6 +39,20 @@ def say(*args, cwd=None):
     return r.stdout
 
 
+def wait_serve(port, path="/files"):
+    # one spelling of "the bench is up": poll until the server answers, and
+    # hand back the reply for callers that read it. Eight probes each grew
+    # this loop by hand, eight copies of one truth in the file that exists
+    # against that.
+    import urllib.request as _u
+    for _ in range(60):
+        try:
+            return _u.urlopen(f"http://127.0.0.1:{port}{path}", timeout=1).read()
+        except Exception:
+            time.sleep(0.1)
+    return None
+
+
 # the retired word is allowed exactly where its retirement is recorded: this
 # constant, the lines that say what it was, the count itself, and the one that
 # keeps the old name from coming back as a filename. Any other use is the word
@@ -3132,11 +3146,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     _vb = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_vp)], cwd=sv,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
-        for _ in range(60):
-            try:
-                _u.urlopen(f"http://127.0.0.1:{_vp}/files", timeout=1).read(); break
-            except Exception:
-                time.sleep(0.1)
+        wait_serve(_vp)
         # nowhere of mine for an answer to live: it says so instead of guessing
         try:
             _u.urlopen(_u.Request(f"http://127.0.0.1:{_vp}/value?name=InkLitX&to=40",
@@ -3151,11 +3161,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     said_value = {}
     try:
-        for _ in range(60):
-            try:
-                _u.urlopen(f"http://127.0.0.1:{_vp2}/files", timeout=1).read(); break
-            except Exception:
-                time.sleep(0.1)
+        wait_serve(_vp2)
         said_value = json.loads(_u.urlopen(
             _u.Request(f"http://127.0.0.1:{_vp2}/value?name=InkLitX&to=691",
                        method="PUT"), timeout=30).read().decode())
@@ -3854,12 +3860,7 @@ console.log(JSON.stringify(out));
                               cwd=HERE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
         agreed = None
-        for _ in range(60):
-            try:
-                _u.urlopen(f"http://127.0.0.1:{_bench_port}/files", timeout=1).read()
-                break
-            except Exception:
-                time.sleep(0.1)
+        wait_serve(_bench_port)
         man = os.path.join(HERE, "gate.manifest.swift")
         # the panel's sweep is measured here, not read: the CLI's fence below
         # counts makers and knows the sweeper's name, and both stay true with
@@ -3901,11 +3902,7 @@ console.log(JSON.stringify(out));
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     both = None
     try:
-        for _ in range(60):
-            try:
-                _u.urlopen(f"http://127.0.0.1:{_dp}/files", timeout=1).read(); break
-            except Exception:
-                time.sleep(0.1)
+        wait_serve(_dp)
         man = os.path.join(dw, "gate.manifest.swift")
         seen = json.loads(_u.urlopen(_u.Request(
             f"http://127.0.0.1:{_dp}/verdict?f=gate.manifest.swift",
@@ -5219,11 +5216,7 @@ public enum MyWatch: AccessLedger {
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     live_said = broke_said = None
     try:
-        for _ in range(60):
-            try:
-                _u.urlopen(f"http://127.0.0.1:{_lp}/files", timeout=1).read(); break
-            except Exception:
-                time.sleep(0.1)
+        wait_serve(_lp)
         saved = open(os.path.join(liveworld, "ownership.swift"), encoding="utf-8").read()
         # the demo is met by the kit's letter now, so the forms row a person
         # breaks in the bench is the world itself: docs handed to src on the
@@ -5316,11 +5309,7 @@ public enum MyWatch: AccessLedger {
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     rail = side_text = None
     try:
-        for _ in range(60):
-            try:
-                _u.urlopen(f"http://127.0.0.1:{_sp}/files", timeout=1).read(); break
-            except Exception:
-                time.sleep(0.1)
+        wait_serve(_sp)
         rail = json.loads(_u.urlopen(f"http://127.0.0.1:{_sp}/files", timeout=30).read())
         side_text = _u.urlopen(f"http://127.0.0.1:{_sp}/seamside?f=api.swift",
                                timeout=30).read().decode()
@@ -5373,11 +5362,7 @@ public enum MyWatch: AccessLedger {
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     codes = []
     try:
-        for _ in range(60):
-            try:
-                _u.urlopen(f"http://127.0.0.1:{_pp}/files", timeout=1).read(); break
-            except Exception:
-                time.sleep(0.1)
+        wait_serve(_pp)
         for name in ("", "nosuch.swift", "../escape.swift"):
             try:
                 codes.append(_u.urlopen(_u.Request(
@@ -5847,12 +5832,7 @@ public enum MyWatch: AccessLedger {
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     bench = {}
     try:
-        for _ in range(60):
-            try:
-                bench = json.loads(_u.urlopen(f"http://127.0.0.1:{_rp}/status", timeout=1).read())
-                break
-            except Exception:
-                time.sleep(0.1)
+        bench = json.loads(wait_serve(_rp, "/status") or b"{}")
     finally:
         _rb.terminate()
     S.append(("the terminal is told to open the bench, and the bench is not told to open itself",
@@ -5871,12 +5851,7 @@ public enum MyWatch: AccessLedger {
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     seen = {}
     try:
-        for _ in range(60):
-            try:
-                seen["before"] = json.loads(_u.urlopen(
-                    f"http://127.0.0.1:{_up}/files", timeout=1).read()); break
-            except Exception:
-                time.sleep(0.1)
+        seen["before"] = json.loads(wait_serve(_up) or b"[]")
         seen["text"] = _u.urlopen(
             f"http://127.0.0.1:{_up}/world?f=extra.swift", timeout=30).read().decode()
         kept = open(os.path.join(undecl, "gate.manifest.swift"), encoding="utf-8").read()
