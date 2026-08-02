@@ -126,6 +126,36 @@ def main():
        junk by neither side. The verdict over the world is the sum of this
        over every file, kept texts included, so the background is never a
        stale recording. */
+    /* the verdict a person reads is a translation of the canon line, and
+       the show has two surfaces by right: the terminal translates in the
+       CLI, this page translates here. Two spellings of one small formula
+       over one set of data, the world's own /// notes; what gates the
+       pair is the road, which holds this page's sentence to the server's
+       recorded one word for word. */
+    function lawNotes(text) {
+        const out = {};
+        const lines = (text || "").split("\\n");
+        for (let i = 0; i < lines.length; i++) {
+            const m = lines[i].trim().match(
+                /^public (?:protocol|enum|typealias) (\\w+)/);
+            if (!m || out[m[1]] !== undefined) continue;
+            const said = [];
+            for (let j = i - 1; j >= 0; j--) {
+                const s = lines[j].trim();
+                if (!s.startsWith("///")) break;
+                said.unshift(s.slice(3).trim());
+            }
+            if (said.length) out[m[1]] = said.join(" ").trim();
+        }
+        return out;
+    }
+    function plainly(claim, notes) {
+        const m = claim.match(/^'(\\w+)[^']*' requires the types '[^']*' \\(aka '([^']+)'\\) and '[^']*' \\(aka '([^']+)'\\) be equivalent(?: \\[(\\w+)\\])?/);
+        if (!m) return claim;
+        const said = notes[m[4] || ""];
+        return m[1] + " \\u00b7 " + m[2] + " against " + m[3]
+            + (said ? ": " + said : "");
+    }
     function refusalsFor(f, text) {
         const out = [];
         if (FORMS.has(f)) {
@@ -133,10 +163,13 @@ def main():
             for (const other of FORMS) {
                 if (other !== f) stream += "\\n" + textOf(other);
             }
+            const notes = lawNotes(stream);
             for (const r of judgeWhereTexts(stream, []).refusals) {
                 const m = r.match(/'(\\w+)/);
                 if (!m || !text.includes(m[1])) continue;
-                out.push({ address: f + ":" + lineOf(text, m[1]), claim: r });
+                const bare = r.replace(/^\\s*\\u2717\\s*/, "");
+                out.push({ address: f + ":" + lineOf(text, m[1]),
+                           claim: plainly(bare, notes) });
             }
         } else if (f !== LAYOUT) {
             for (const r of judge(f, text).refusals) {
@@ -202,25 +235,18 @@ def main():
                     return -1;
                 })();
                 step("the claim line is on the page", line >= 0);
-                // the page's own court against the server's recorded one,
-                // on the untouched world. Today the two agree on the
-                // address and the count, and say the sentence differently:
-                // the server translates a where verdict into the claim's
-                // own words and the shim hands the canon line through.
-                // That is a pair with one translator still to build, in
-                // the page, so both surfaces read one sentence; until
-                // then this step holds what both courts already share,
-                // and the sentence drift is written down where work is.
+                // the page's own court against the server's recorded
+                // one, on the untouched world: two translators, one
+                // formula, and the sentence must match word for word.
                 const snapV = JSON.parse(
                     SNAP["/verdict?f=ownership.swift"] || "{}");
                 const liveV = await (await fetch("/verdict?f=ownership.swift",
                     { method: "POST",
                       body: textOf("ownership.swift") })).json();
                 const rkey = rs => (rs || []).map(
-                    r => String(r.address)).sort().join("|");
-                step("the shim court and the server court name one address",
+                    r => r.address + " :: " + r.claim).sort().join(" || ");
+                step("the shim court and the server court say one sentence",
                      snapV.refusals !== undefined
-                     && (liveV.refusals || []).length === snapV.refusals.length
                      && rkey(liveV.refusals) === rkey(snapV.refusals));
                 // edit the second argument the way a hand does: erase the
                 // tail of the name and the offer completes what the world has
@@ -307,8 +333,13 @@ def main():
                             (l, i) => i === cl ? rebuilt : l).join("\\n");
                         const rs = refusalsFor("ownership.swift", text).filter(
                             r => r.address === "ownership.swift:" + (cl + 1));
-                        const compiles = rs.every(
-                            r => !/\\(aka '[^']*\\.[^']*'\\)/.test(r.claim));
+                        // the sides stand translated now, CERT \u00b7 L
+                        // against R: law; an axis that did not resolve
+                        // keeps its dot inside a side, same border, new coat
+                        const compiles = rs.every(r => {
+                            const m = r.claim.match(/\u00b7 ([^:]+?)(?::|$)/);
+                            return !(m && m[1].includes("."));
+                        });
                         judged += 1;
                         if (compiles !== offered.has(name)) { pairOk = false; break; }
                     }
