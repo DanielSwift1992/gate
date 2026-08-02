@@ -1,8 +1,8 @@
 # Reporting a problem
 
-If you can get `holds` printed over a world that does not hold, that is
-the bug we care about most: the whole tool is one claim, *what does not
-hold is refused by line*, and a false green breaks it.
+If gate prints `holds` while two records it judges disagree, you found
+the bug we care about most. The whole tool is one claim, *a disagreement
+is refused at its line*, and a false green breaks it.
 
 Please report it privately first, by opening a
 [security advisory](https://github.com/DanielSwift1992/gate/security/advisories/new) on the

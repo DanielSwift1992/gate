@@ -4,10 +4,10 @@
 // The judge exists twice on purpose: a native binary built from the theory
 // corpus, and a port that runs where the binary cannot, in a browser and on
 // Windows. Two encodings of one judge agree only under a premise outside
-// either of them (v=i §5.4), and for years of one week that premise lived in
-// a test file: the two halves of this system were held together by a third
-// system. That is drift's favourite room. So the premise is written here, in
-// the words this tool holds everybody else to: each carrier states which
+// either of them (v=i §5.4). For the tool's first week that premise lived
+// in a test file: the two halves of this system were held together by a
+// third system, which is the failure this tool exists against. So the
+// premise is written here, in the words the tool asks of every world: each carrier states which
 // verdicts it prints and in which canon, the contract states the canon each
 // court is in, and the claim that ties them is judged with the rest of the
 // shelf on every keystroke of this file. Change the canon on one side alone
