@@ -1225,36 +1225,64 @@ const compEl = document.getElementById("completion");
 //   inside a body      the gates that may be claimed, and their arguments
 //   after a dot        the axes of whatever stands to the left
 
-// ── SCOPES, DECLARED ONCE ──
+// ── SCOPES ARE RECORDS, AND THE WALK IS THEIR READER ──
 // A scope has an opener and a closer, and that is the whole mechanism: a
 // note opens on `//` and closes on the newline exactly the way a body
 // opens on `{` and closes on `}` — the closer just is not a mirror glyph.
-// An opaque scope lets nothing open inside it. Parsing is one linear walk
-// collecting declared atoms scope by scope; which scopes a collector
-// reads in is the collector's choice, never the walk's.
-const SCOPES = [
-    { kind: "note",   open: "//", close: "\n", opaque: true },
-    { kind: "string", open: '"',  close: '"',  opaque: true },
-    { kind: "body",   open: "{",  close: "}",  opaque: false },
-    { kind: "gate",   open: "<",  close: ">",  opaque: false },
-];
-// walk one line with the scopes that die at the newline: enough to answer
-// where its note begins, because no opaque scope of ours survives a line
+// An opaque scope lets nothing open inside it. WHICH scopes exist is not
+// this file's to say: they are records on the grammar shelf, judged with
+// the rest, and this list is built from that page's own declarations the
+// way the offer's gates are built from the forms. Empty until the shelf
+// is read; a missing record is a loud red road, never a quiet default.
+let SCOPES = [];        // records from the grammar shelf, walked in order
+let NESTS = {};         // outer kind -> the inner kinds a claim admits
+function buildScopes(parsed) {
+    const spell = (name) => name === "LineEnd" ? "\n"
+        : name === "QuoteGlyph" ? '"'
+        : (parsed.literals.get(name) || {}).value;
+    const out = [], nests = {};
+    for (const d of parsed.declarations.values()) {
+        if (!(d.conformances || []).includes("Walked")) continue;
+        const opens = spell((d.aliases.get("Opens") || {}).target);
+        const closes = spell((d.aliases.get("Closes") || {}).target);
+        if (!opens || !closes) continue;
+        out.push({ kind: d.name.replace("Scope", "").toLowerCase(),
+                   open: opens, close: closes });
+    }
+    for (const [, a] of parsed.topAliases) {
+        const m = /^Nests<(\w+), ?(\w+)>$/.exec(a.target || "");
+        if (!m) continue;
+        const inner = m[1].replace("Scope", "").toLowerCase();
+        const outer = m[2].replace("Scope", "").toLowerCase();
+        (nests[outer] || (nests[outer] = new Set())).add(inner);
+    }
+    if (out.length) { SCOPES = out; NESTS = nests; }
+}
+// may `kind` open while `top` is the innermost scope? An empty stack
+// admits every scope; anything else is a claim on the grammar shelf, and
+// a pair no record admits stays shut — a note admits nothing by silence.
+function admits(top, kind) {
+    return !top || (NESTS[top.kind] && NESTS[top.kind].has(kind));
+}
+// walk one line: enough to answer where its note begins, because neither
+// a note nor a string of ours survives the newline. One walk, all scopes;
+// what may open inside what is the shelf's claims, read by admits().
 function noteStartAt(lineNo) {
     const text = cm.getLine(lineNo) || "";
-    let top = null;
-    for (let i = 0; i < text.length; ) {
-        if (top && top.opaque) {
-            const at = top.close === "\n" ? -1 : text.indexOf(top.close, i);
-            if (at < 0) return top.kind === "note" ? top.ch : -1;
-            top = null; i = at + 1;
-            continue;
+    const stack = [];
+    let i = 0;
+    while (i < text.length) {
+        const top = stack[stack.length - 1];
+        if (top && top.close !== "\n" && text.startsWith(top.close, i)) {
+            stack.pop(); i += top.close.length; continue;
         }
-        const s = SCOPES.find(sc => sc.opaque && text.startsWith(sc.open, i));
-        if (s) { top = { ...s, ch: i }; i += s.open.length; continue; }
+        const s = SCOPES.find(sc => admits(top, sc.kind)
+                                    && text.startsWith(sc.open, i));
+        if (s) { stack.push({ ...s, ch: i }); i += s.open.length; continue; }
         i += 1;
     }
-    return top && top.kind === "note" ? top.ch : -1;
+    const open = stack.find(f => f.kind === "note");
+    return open ? open.ch : -1;
 }
 function codeOfLine(lineNo) {
     const n = noteStartAt(lineNo);
@@ -3328,6 +3356,7 @@ async function loadVocabulary() {
         // must. The world judge stays plain — its parity is with the CLI.
         const READ = { seeds: new Set(), generics: new Set() };
         const read = judge(mod + ".swift", text, READ);
+        buildScopes(read.parsed);   // the walk's records, read off the shelf
         // AND THE VALUES THOSE WORLDS HOLD, on the same pass that reads their
         // words. A number is spelled on its own world's ladder from Unit, so a
         // file that says `Plus<W8, W16>` is only readable beside the world that
