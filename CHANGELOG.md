@@ -9,8 +9,8 @@ The working prototype, end to end:
   forwards a carried argv whole, so no second list exists to drift. The
   first vein is the shelf: `stdlib show` answers from Swift with the very
   bytes python answers with, page and refusal alike, and the battery
-  builds the binary and holds the pair on every run. Nothing ships as a
-  binary: a clone without a toolchain runs the python side unchanged.
+  builds the binary and holds the pair on every run. The binary itself is not
+  committed: a clone without a toolchain runs the python side unchanged.
 - One lexer for the eye and for the hand. The page had spellings of its
   own for where a note begins and where a body ends, beside the tokens
   the highlight already reads, and a gate spelled after `//` once opened

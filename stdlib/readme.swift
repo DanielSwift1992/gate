@@ -162,6 +162,11 @@
 // file you are reading right now. Rules are translated by hand, once. They
 // are small, and they are yours to read. That is the upkeep, all of it.
 //
+// The same move works between teams. You do not test my API, and I do not
+// mock yours. Each side states its half in its own repository, the seam is
+// judged, and a disagreement is named at its address on both sides. What
+// used to be an integration test is a verdict.
+//
 // And because it is plain Swift, a second, independent reader exists
 // whenever you want one: `swiftc -typecheck` passes on these files as they
 // are, with no project and no build.

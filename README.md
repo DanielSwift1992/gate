@@ -153,6 +153,11 @@ you write it as a file yourself: a page of plain declarations, translated
 by hand, once. The rules are small, and they are yours to read. That is
 the upkeep, all of it.
 
+The same move works between teams. You do not test my API, and I do not
+mock yours. Each side states its half in its own repository, the seam is
+judged, and a disagreement is named at its address on both sides. What
+used to be an integration test is a verdict.
+
 Written out, a pair is nine lines. From the demo's `ownership.swift`: the
 zone, a path in it, an owner posted to it, and the claim that ties them:
 
@@ -210,14 +215,17 @@ assumed. It is stated twice, and confirmed.
 
 ## death to drift
 
-Every pair you gate is one thing you stop keeping in your head. The
-checking does not pile up: each claim is one lookup, so a hundred pairs
-cost what ten did. Once your pairs are in, the picture is concrete: the
-rename goes red on the renamer's screen, not on yours. A new hire's access
-is a one-line diff an owner has to approve. Deleting the old config takes
-an afternoon, not a season of asking around, because the readers it still
-has are a list, not a guess. Nothing got faster. What went away is the
-asking.
+Every pair you gate is one thing you stop keeping in your head. Today
+you keep other people's facts by hand: you review renames because
+a stale rule routes them to you, you spend audit week rebuilding
+answers, and you remember what breaks when a path moves. Gate a pair
+and you state your half once; the judge holds it from there. Agreement
+is a verdict: a break is named at its line, on the breaker's screen,
+the day it lands. A rename goes red for the renamer. A new hire's
+access is one diff with an owner's name on it. Deleting an old config
+takes an afternoon, because its readers are a list. The checking does
+not pile up: a claim is one lookup, so a hundred pairs cost what ten
+did. Your work did not get faster. What went away is the asking.
 
 ## the rest, one page deep
 
@@ -250,10 +258,10 @@ bin/judge-cli.js · bin/judge-where.js
                 both courts as a node port, for machines the binary
                 was not built for, held to it line for line
 bin/gate-cli.swift
-                the Swift CLI, growing beside the python one vein by
-                vein: it alone states what it carries, and a carried
+                the Swift CLI, growing beside the python one verb by
+                verb: it alone states what it carries, and a carried
                 verb answers with the python side's own bytes
-                (bin/build-cli.sh builds it; nothing ships as a binary)
+                (bin/build-cli.sh builds it; the binary is not committed)
 stdlib/         the judge's own words, printed as real Swift files, self-judged
 judge.js        the browser judge (byte-parity port) for the bench
 ui.html         the workbench

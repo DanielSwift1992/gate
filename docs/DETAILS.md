@@ -55,8 +55,8 @@ reading.
 
 Two more facts a review leans on, both held by the battery. The CLI's
 imports are a white list, named in the battery itself: eighteen modules of
-the standard library, nothing installed, no package manager anywhere in
-the repository. And the one piece that is not text, `bin/gate-judge`, is
+the standard library, with no package manager and no lockfile in the
+repository. And the one piece that is not text, `bin/gate-judge`, is
 not a dependency: delete it and every court still answers through the node
 ports, which are ordinary files in `bin/` you can read. CI rebuilds the
 binary from the pinned public corpus on every push and runs the whole
