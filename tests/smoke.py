@@ -194,6 +194,8 @@ def main():
         "That gap has a name: drift. Two records of one fact, coming apart in silence, while both still get obeyed.",
         "Yours is wherever two places state one fact.",
         "You are looking for pairs, not objects: one fact always has more than one record.",
+        "Gate first the pairs that cross a boundary: two teams, two repositories, two languages.",
+        "A fact drifts where it changes hands.",
         "If CODEOWNERS hands the payments folder to an intern, the rule holds and every record agrees with it.",
         "What varies is which pair you point it at: a Jira ticket and the TODO that cites it, "
         "k8s RBAC and the cluster it describes, an API contract and a client in another language.",

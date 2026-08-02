@@ -122,6 +122,9 @@
 // the source of truth: a self-declared source is the record nobody compares
 // to the others any more, so that is usually where drift collects.
 //
+// Gate first the pairs that cross a boundary: two teams, two repositories,
+// two languages. A fact drifts where it changes hands.
+//
 // The quick first look is one command, over the git history already in
 // this clone:
 //
