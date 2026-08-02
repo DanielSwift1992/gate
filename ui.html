@@ -1225,14 +1225,36 @@ const compEl = document.getElementById("completion");
 //   inside a body      the gates that may be claimed, and their arguments
 //   after a dot        the axes of whatever stands to the left
 
-// where a line's note begins, read off the same tokens the ink is read off.
-// The mode is the one lexer of this page: what the eye is shown as a note
-// and what the grammar below skips are one fact, and quotes are the lexer's
-// business rather than a second rule of ours. -1 when the line is all code.
+// ── SCOPES, DECLARED ONCE ──
+// A scope has an opener and a closer, and that is the whole mechanism: a
+// note opens on `//` and closes on the newline exactly the way a body
+// opens on `{` and closes on `}` — the closer just is not a mirror glyph.
+// An opaque scope lets nothing open inside it. Parsing is one linear walk
+// collecting declared atoms scope by scope; which scopes a collector
+// reads in is the collector's choice, never the walk's.
+const SCOPES = [
+    { kind: "note",   open: "//", close: "\n", opaque: true },
+    { kind: "string", open: '"',  close: '"',  opaque: true },
+    { kind: "body",   open: "{",  close: "}",  opaque: false },
+    { kind: "gate",   open: "<",  close: ">",  opaque: false },
+];
+// walk one line with the scopes that die at the newline: enough to answer
+// where its note begins, because no opaque scope of ours survives a line
 function noteStartAt(lineNo) {
-    for (const t of cm.getLineTokens(lineNo))
-        if (t.type === "comment") return t.start;
-    return -1;
+    const text = cm.getLine(lineNo) || "";
+    let top = null;
+    for (let i = 0; i < text.length; ) {
+        if (top && top.opaque) {
+            const at = top.close === "\n" ? -1 : text.indexOf(top.close, i);
+            if (at < 0) return top.kind === "note" ? top.ch : -1;
+            top = null; i = at + 1;
+            continue;
+        }
+        const s = SCOPES.find(sc => sc.opaque && text.startsWith(sc.open, i));
+        if (s) { top = { ...s, ch: i }; i += s.open.length; continue; }
+        i += 1;
+    }
+    return top && top.kind === "note" ? top.ch : -1;
 }
 function codeOfLine(lineNo) {
     const n = noteStartAt(lineNo);
