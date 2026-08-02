@@ -1224,10 +1224,25 @@ const compEl = document.getElementById("completion");
 //   inside one         the axes it owes, and the values each of them takes
 //   inside a body      the gates that may be claimed, and their arguments
 //   after a dot        the axes of whatever stands to the left
+
+// where a line's note begins: the first `//` outside quotes, the same cut the
+// judge makes before reading a type. -1 when the line is all code.
+function noteStart(line) {
+    let quoted = false;
+    for (let j = 0; j < line.length - 1; j += 1) {
+        if (line[j] === '"') quoted = !quoted;
+        else if (!quoted && line[j] === "/" && line[j + 1] === "/") return j;
+    }
+    return -1;
+}
+function codeOf(line) {
+    const n = noteStart(line);
+    return n < 0 ? line : line.slice(0, n);
+}
 function placeAt(cur) {
     let host = null, inBody = false, depth = 0;
     for (let i = cur.line; i >= 0; i--) {
-        const code = (cm.getLine(i) || "").split("//")[0];
+        const code = codeOf(cm.getLine(i) || "");
         if (i < cur.line) depth += (code.match(/\}/g) || []).length - (code.match(/\{/g) || []).length;
         if (/var\s+body\s*:\s*some\s+Structure\s*\{/.test(code) && depth <= 0) inBody = true;
         const m = /^\s*(?:public\s+)?enum\s+(\w+)\s*:\s*([\w,\s]+?)\s*\{/.exec(code);
@@ -1274,6 +1289,11 @@ function afterDot(before, host, wanted) {
 // WHAT MAY BE WRITTEN HERE — the whole of it, in one place
 function allowedAt(cur) {
     const line = cm.getLine(cur.line) || "";
+    // right of `//` a line is a note: no grammar, so no offer. The gathered
+    // lines below already lose their notes; the cursor's own line obeys the
+    // same cut or a `<` spelled in a comment would open a slot.
+    const noteAt = noteStart(line);
+    if (noteAt >= 0 && cur.ch > noteAt) return null;
     const before = line.slice(0, cur.ch);
     const { host, inBody } = placeAt(cur);
 
@@ -1309,7 +1329,7 @@ function allowedAt(cur) {
             }
             if (depth > 0) break;
             at -= 1;
-            gathered = (cm.getLine(at) || "").split("//")[0] + "\n" + gathered;
+            gathered = codeOf(cm.getLine(at) || "") + "\n" + gathered;
         }
         const opened = gathered.lastIndexOf("<");
         if (opened > 0 && gathered.indexOf(">", opened) === -1) {
@@ -1347,7 +1367,7 @@ function allowedAt(cur) {
     if (host && !inBody && /^\s*(?:p(?:u(?:b(?:l(?:i(?:c)?)?)?)?)?)?$/.test(before)) {
         const stated = new Set();
         for (let i = cur.line - 1; i >= 0; i--) {
-            const code = (cm.getLine(i) || "").split("//")[0];
+            const code = codeOf(cm.getLine(i) || "");
             const t = /typealias\s+(\w+)/.exec(code);
             if (t) stated.add(t[1]);
             if (/enum\s+\w+\s*:/.test(code)) break;

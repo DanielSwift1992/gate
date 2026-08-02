@@ -217,6 +217,18 @@ def main():
                 cm.replaceRange("_db_", { line, ch: at + 10 },
                                 { line, ch: at + 10 }, "+input");
                 await settle();
+                // a note is not grammar: the same gate spelled after `//`
+                // summons nothing, and the line comes back byte for byte
+                const noteLine = cm.getLine(2);
+                cm.replaceRange("// note: Owns<", { line: 2, ch: 0 },
+                                { line: 2, ch: noteLine.length }, "+input");
+                cm.setCursor({ line: 2, ch: 14 });
+                offerCompletion();
+                await settle();
+                step("a note offers nothing", compEl.hidden);
+                cm.replaceRange(noteLine, { line: 2, ch: 0 },
+                                { line: 2, ch: cm.getLine(2).length }, "+input");
+                await settle();
                 // break the world with a real edit and judge it
                 const kept = cm.getValue();
                 cm.setValue(kept.replace("public typealias Post = Zone_docs",
