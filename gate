@@ -4966,8 +4966,12 @@ def cmd_import_codeowners(a):
     # `gate status` printed the judge's raw line about the very same refusal, so
     # a person met the readable half first and the unreadable half in the verb
     # they would use every day. The words belong to the law, in the file the law
-    # is written in; both surfaces read them from there.
-    notes = law_notes(world, STDLIB.get("forms-grants", ""))
+    # is written in; both surfaces read them from there. For a while this line
+    # also mixed the shipped grants shelf into the notes, words no row of the
+    # world had taken — and the comment above it said otherwise. A world that
+    # did not copy the law's words has none, and the sentence honestly stops
+    # at the two sides.
+    notes = law_notes(world)
     refusals = []
     for cert, claim in where_refused(outp):
         if cert and cert in srcmap:
