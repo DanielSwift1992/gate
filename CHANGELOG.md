@@ -4,6 +4,16 @@
 
 The working prototype, end to end:
 
+- One lexer for the eye and for the hand. The page had spellings of its
+  own for where a note begins and where a body ends, beside the tokens
+  the highlight already reads, and a gate spelled after `//` once opened
+  an offer no judge would take. Every grammar walk in the bench now reads
+  the code side of the one lexer's tokens, and the published road holds
+  the pair to the judge both ways: every name the bench offers at a slot
+  compiles there, every name it withholds does not, walked over the whole
+  vocabulary on each deploy. The road also clicks a refusal to its line,
+  fills Bare's slots, executes reset for real, and types a brace inside a
+  comment to watch nothing move.
 - One letter meets every door. The demo is entry plus a translated world
   now, the same five files `gate init` leaves anywhere with the folder's
   CODEOWNERS imported beside them, and the demo's own greeting died: three
