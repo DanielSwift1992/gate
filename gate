@@ -25,6 +25,8 @@ ROLES = {
     "judge": "the court itself: held by a reproducible build, not by judgement",
     "carried": "brought here unchanged: held by its source's name and version, "
                "and by no court of this world",
+    "tool": "the tool's own source: held by the battery's parity, "
+            "and by no court of this world",
 }
 
 
@@ -81,7 +83,8 @@ def read_manifest_rows(d, text=None):
         if f:
             lit[m.group(1)] = f.group(1)
     ROLE_OF = {"WorldFile": "world", "SeamFile": "seam", "FormsFile": "forms",
-               "JudgeFile": "judge", "CarriedFile": "carried", "Seam": "seam"}
+               "JudgeFile": "judge", "CarriedFile": "carried", "Seam": "seam",
+               "ToolFile": "tool"}
     rows = []
     for m in re.finditer(MANIFEST_ROW_RE, code):
         name, atom = m.group(1), m.group(2)
@@ -218,7 +221,8 @@ def manifest_guards(rows=None, text=None):
         # a scaffold calling itself a court would not, and the difference is the
         # whole of what this tool sells.
         atom = {"world": "WorldFile", "seam": "SeamFile", "forms": "FormsFile",
-                "judge": "JudgeFile", "carried": "CarriedFile"}.get(r["role"])
+                "judge": "JudgeFile", "carried": "CarriedFile",
+                "tool": "ToolFile"}.get(r["role"])
         # only where the row is written as an AXIS to an atom. The older
         # spelling made the role the protocol itself — `enum GrantsFile:
         # WorldFile` — and that document has no atom to declare; this tool reads
@@ -3580,7 +3584,8 @@ def declare_side(path, kind, role, frm=None, written=None, opens=None):
                          "file is relative to the world that declares it")
     name = row_atom(rel)
     ROLE_ATOM = {"world": "WorldFile", "seam": "SeamFile", "forms": "FormsFile",
-                 "judge": "JudgeFile", "carried": "CarriedFile"}
+                 "judge": "JudgeFile", "carried": "CarriedFile",
+                 "tool": "ToolFile"}
     # ── A DOCUMENT LISTS WHAT IT HAS. The template wrote every role atom this
     # tool can imagine into every world's layout, so a person opening theirs met
     # five words before two facts, two of them naming courts nothing here uses.
@@ -6682,6 +6687,23 @@ def main():
                     if os.path.exists(JUDGE) else "There is no binary here")
                  if JUDGE_KIND == "port" else ""))
         return
+    # ── THE STRANGLER'S DOOR: one place that hands an argv to the Swift CLI.
+    # The binary states what it carries (`--carries`, one argv prefix per
+    # line); this side asks once and forwards a carried argv whole, by exec.
+    # No list of moved verbs lives here: a second copy of the binary's own
+    # answer would drift the day a vein lands. No binary, or GATE_CLI=off,
+    # and every vein runs its python side, unchanged: the same door the
+    # judge's port walks, from the other side.
+    _cli = os.environ.get("GATE_CLI") or os.path.join(_HERE, "bin", "gate-cli")
+    if os.environ.get("GATE_CLI") != "off" and os.path.isfile(_cli) and os.access(_cli, os.X_OK):
+        try:
+            _said = subprocess.run([_cli, "--carries"], capture_output=True,
+                                   text=True, timeout=5).stdout
+            _veins = [tuple(l.split()) for l in _said.splitlines() if l.strip()]
+            if any(tuple(args[:len(v)]) == v for v in _veins if v):
+                os.execv(_cli, [_cli, *args])
+        except OSError:
+            pass
     as_json = "--json" in args
     args = [a for a in args if a != "--json"]
     cmd, rest = args[0], args[1:]

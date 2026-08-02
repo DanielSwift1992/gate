@@ -249,13 +249,18 @@ bin/gate-judge  the judge, one static binary, built at a pin from the
 bin/judge-cli.js · bin/judge-where.js
                 both courts as a node port, for machines the binary
                 was not built for, held to it line for line
+bin/gate-cli.swift
+                the Swift CLI, growing beside the python one vein by
+                vein: it alone states what it carries, and a carried
+                verb answers with the python side's own bytes
+                (bin/build-cli.sh builds it; nothing ships as a binary)
 stdlib/         the judge's own words, printed as real Swift files, self-judged
 judge.js        the browser judge (byte-parity port) for the bench
 ui.html         the workbench
 codemirror.*    the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
 docs/           DETAILS.md, and the cover's picture with its provenance
-tests/smoke.py   the battery: 363 end-to-end checks, the definition of green
+tests/smoke.py   the battery: 367 end-to-end checks, the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts
 ```
 

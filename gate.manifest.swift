@@ -17,6 +17,7 @@ public enum SeamFile: Role {}
 public enum FormsFile: Role {}
 public enum JudgeFile: Role {}
 public enum CarriedFile: Role {}
+public enum ToolFile: Role {}
 
 public protocol Mine {}
 
@@ -104,6 +105,16 @@ public enum TheJudge: Theirs {
     public typealias At = Rev_vi_0fd0b38
 }
 extension TheJudge { public static var typeName: String { "bin/gate-judge" } }
+
+// AND THE STRANGLER'S FIRST VEIN. The Swift CLI grows beside the python one,
+// and its source is a fact of this surface like any other, so it stands in a
+// row. What holds the pair is the battery: both CLIs answer a carried vein
+// with one set of bytes, and the binary this source builds is never
+// committed, so the row names the text, not an artifact.
+public enum TheSwiftVein: Mine {
+    public typealias Kind = ToolFile
+}
+extension TheSwiftVein { public static var typeName: String { "bin/gate-cli.swift" } }
 
 // AND THE EDITOR THIS BENCH IS WRITTEN WITH. It arrived the way anything of
 // somebody else's should: named, versioned, and unchanged — its own first line

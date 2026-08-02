@@ -4726,6 +4726,44 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         b, p = two_judges(world)
         S.append((f"both judges say the same words: {label}", b == p and (b or label == "a clean world")))
 
+    # ── the strangler: the Swift CLI answers a carried vein with the very
+    # bytes the python CLI answers with. The door is proven with a stub
+    # first, a fake binary that claims the vein and speaks a marker, so the
+    # test knows delegation happened and is not watching python twice; then
+    # the real binary is built and held to the python side byte for byte,
+    # on the page and on the refusal. GATE_CLI names the binary, off means
+    # the python side: the same lever a reader uses to compare by hand.
+    if sys.platform == "darwin" and shutil.which("swiftc"):
+        _b = subprocess.run(["bash", os.path.join(HERE, "bin", "build-cli.sh")],
+                            capture_output=True, text=True)
+        _cli_bin = os.path.join(HERE, "bin", "gate-cli")
+        S.append(("the swift vein builds from one file",
+                  _b.returncode == 0 and os.path.exists(_cli_bin)))
+        _stub = os.path.join(tmp, "cli-stub")
+        with open(_stub, "w") as f:
+            f.write("#!/bin/sh\n"
+                    'if [ "$1" = "--carries" ]; then echo "stdlib show"; exit 0; fi\n'
+                    "echo MARK; exit 0\n")
+        os.chmod(_stub, 0o755)
+        _m = subprocess.run([sys.executable, GATE, "stdlib", "show", "verbs"],
+                            capture_output=True, text=True,
+                            env={**os.environ, "GATE_CLI": _stub})
+        S.append(("the door hands a carried vein to the binary that claims it",
+                  _m.stdout.strip() == "MARK"))
+        _py = subprocess.run([sys.executable, GATE, "stdlib", "show", "verbs"],
+                             capture_output=True, env={**os.environ, "GATE_CLI": "off"})
+        _sw = subprocess.run([sys.executable, GATE, "stdlib", "show", "verbs"],
+                             capture_output=True, env={**os.environ, "GATE_CLI": _cli_bin})
+        S.append(("both CLIs print the shelf page byte for byte",
+                  os.path.exists(_cli_bin) and _sw.stdout == _py.stdout
+                  and _py.stdout.startswith(b"// gate stdlib verbs")))
+        _pe = subprocess.run([sys.executable, GATE, "stdlib", "show", "nosuch"],
+                             capture_output=True, env={**os.environ, "GATE_CLI": "off"})
+        _se = subprocess.run([sys.executable, GATE, "stdlib", "show", "nosuch"],
+                             capture_output=True, env={**os.environ, "GATE_CLI": _cli_bin})
+        S.append(("and refuse an absent page with one sentence and one exit code",
+                  _se.stderr == _pe.stderr and _se.returncode == _pe.returncode == 1))
+
     # ── zero egress: a claim about ourselves, kept by a gate on our own source.
     # An enterprise review runs this same grep; it must never come back dirty,
     # because one outbound call ends the "an engineer may just install it" path.
