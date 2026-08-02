@@ -202,6 +202,26 @@ def main():
                     return -1;
                 })();
                 step("the claim line is on the page", line >= 0);
+                // the page's own court against the server's recorded one,
+                // on the untouched world. Today the two agree on the
+                // address and the count, and say the sentence differently:
+                // the server translates a where verdict into the claim's
+                // own words and the shim hands the canon line through.
+                // That is a pair with one translator still to build, in
+                // the page, so both surfaces read one sentence; until
+                // then this step holds what both courts already share,
+                // and the sentence drift is written down where work is.
+                const snapV = JSON.parse(
+                    SNAP["/verdict?f=ownership.swift"] || "{}");
+                const liveV = await (await fetch("/verdict?f=ownership.swift",
+                    { method: "POST",
+                      body: textOf("ownership.swift") })).json();
+                const rkey = rs => (rs || []).map(
+                    r => String(r.address)).sort().join("|");
+                step("the shim court and the server court name one address",
+                     snapV.refusals !== undefined
+                     && (liveV.refusals || []).length === snapV.refusals.length
+                     && rkey(liveV.refusals) === rkey(snapV.refusals));
                 // edit the second argument the way a hand does: erase the
                 // tail of the name and the offer completes what the world has
                 const at = cm.getLine(line).indexOf("Path_3_src_db_");

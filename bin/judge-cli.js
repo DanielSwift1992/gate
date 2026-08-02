@@ -24,6 +24,35 @@ if (args[1] === "where") {
     const { runWhere } = require(path.join(__dirname, "judge-where.js"));
     process.exit(runWhere(args.slice(2)));
 }
+if (args[1] === "parse") {
+    // ONE GRAMMAR, ONE READER. This hands the judge's own parse out as
+    // JSON, so nothing beside him grows a regex over the worlds: the CLI
+    // and the battery ask here, or they do not read swift at all. The
+    // wrapper speaks it, not the port: judge.js stays the corpus's mirror,
+    // and this is only the parse it already made, carried to stdout.
+    const out = {};
+    for (const f of args.slice(2)) {
+        const r = judge(path.basename(f), fs.readFileSync(f, "utf8"),
+                        { seeds: new Set(), generics: new Set() });
+        const p = r.parsed;
+        out[path.basename(f)] = {
+            declarations: [...p.declarations.values()].map((d) => ({
+                name: d.name, qualified: d.qualified, parent: d.parent,
+                conformances: d.conformances, params: d.params || [],
+                paramKinds: d.paramKinds || [], line: d.line,
+                aliases: Object.fromEntries([...d.aliases].map(
+                    ([k, v]) => [k, { target: v.target, line: v.line }])),
+                typeName: (p.literals.get(d.name) || {}).value !== undefined
+                    ? p.literals.get(d.name).value : null,
+            })),
+            topAliases: Object.fromEntries([...p.topAliases].map(
+                ([k, v]) => [k, { target: v.target, line: v.line,
+                                  params: v.params || [] }])),
+        };
+    }
+    process.stdout.write(JSON.stringify(out) + "\n");
+    process.exit(0);
+}
 
 const files = args.slice(1);
 let decl = 0, lookups = 0, premises = 0, ms = 0;

@@ -260,7 +260,7 @@ ui.html         the workbench
 codemirror.*    the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
 docs/           DETAILS.md, and the cover's picture with its provenance
-tests/smoke.py   the battery: 367 end-to-end checks, the definition of green
+tests/smoke.py   the battery: 372 end-to-end checks, the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts
 ```
 

@@ -4726,6 +4726,69 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         b, p = two_judges(world)
         S.append((f"both judges say the same words: {label}", b == p and (b or label == "a clean world")))
 
+    # ── the judge's pin is one fact in three records: the manifest names the
+    # revision the world took, CI builds at a revision, and the build writes
+    # what it built from beside the binary. Nobody compared them, which for
+    # this tool is a confession: raise one and forget another and the
+    # manifest lies about the court. One equality, all three records.
+    _man_pin = re.search(r"verification-is-identification@([0-9a-f]+)",
+                         open(os.path.join(HERE, "gate.manifest.swift")).read())
+    _ci_pin = re.search(r"bin/build-judge\.sh ([0-9a-f]+)",
+                        open(os.path.join(HERE, ".github", "workflows", "battery.yml")).read())
+    _from = ""
+    _fp = os.path.join(HERE, "bin", "gate-judge.from")
+    if os.path.exists(_fp):
+        _from = open(_fp).read().strip()
+    S.append(("the manifest, CI and the build name one judge revision",
+              _man_pin and _ci_pin and _man_pin.group(1) == _ci_pin.group(1)
+              and _from.startswith(_man_pin.group(1))))
+
+    # ── the usage page is a second record of the verb table, and it was the
+    # one record nothing held: verbs.swift is guarded against the dispatch
+    # both ways, and USAGE listed commands from memory. Both ways here too:
+    # every dispatched verb is on the page, and every `gate word` the page
+    # spells is a verb or a spelling the tool answers.
+    # the verb table is read from the source through the judge's own parse,
+    # never a regex of ours: one grammar, one reader, and this vector is the
+    # channel's first client. USAGE itself is prose of the CLI, not swift,
+    # so its two-space anchor is the one textual read left here.
+    _usage = re.search(r'USAGE = """(.*?)"""', open(GATE).read(), re.S).group(1)
+    _pj = json.loads(subprocess.run(
+        [shutil.which("node"), os.path.join(HERE, "bin", "judge-cli.js"),
+         "judge", "parse", os.path.join(STDLIB, "verbs.swift")],
+        capture_output=True, text=True).stdout or "{}").get("verbs.swift", {})
+    _decls = _pj.get("declarations", [])
+    _verbs = {d["typeName"] for d in _decls
+              if "Verb" in d.get("conformances", []) and d.get("typeName")}
+    _spellings = {d["typeName"] for d in _decls
+                  if "Spelling" in d.get("conformances", []) and d.get("typeName")}
+    _said = set(re.findall(r"(?:^  |· )gate ([a-z-]+)", _usage, re.M))
+    if "--version" in _said:
+        _said.add("version")
+    S.append(("every verb of the table stands on the usage page",
+              len(_verbs) > 20 and all(v in _said for v in _verbs)))
+    S.append(("and the usage page spells no verb the table does not know",
+              _said and all(w in _verbs or w in _spellings or w == "--version"
+                            for w in _said)))
+
+    # ── the courts are records now, and the records reach real files. The
+    # roster in stdlib/courts.swift is the one list of judge implementations;
+    # this bridge holds it to the tree both ways, read through the judge's
+    # own parse channel, never a regex of ours. bin/judge-cli.js is not a
+    # carrier: it is the door to the port, and prints no verdict of its own.
+    _cj = json.loads(subprocess.run(
+        [shutil.which("node"), os.path.join(HERE, "bin", "judge-cli.js"),
+         "judge", "parse", os.path.join(STDLIB, "courts.swift")],
+        capture_output=True, text=True).stdout or "{}").get("courts.swift", {})
+    _carriers = {d["typeName"] for d in _cj.get("declarations", [])
+                 if "CourtCarrier" in d.get("conformances", []) and d.get("typeName")}
+    _tree = {"judge.js"} | {os.path.join("bin", f) for f in os.listdir(os.path.join(HERE, "bin"))
+                            if f.startswith("judge") and f.endswith(".js")
+                            and f != "judge-cli.js"} | {"bin/gate-judge"}
+    S.append(("the court roster and the tree name the same carriers, and each exists",
+              _carriers == _tree
+              and all(os.path.exists(os.path.join(HERE, p)) for p in _carriers)))
+
     # ── the strangler: the Swift CLI answers a carried vein with the very
     # bytes the python CLI answers with. The door is proven with a stub
     # first, a fake binary that claims the vein and speaks a marker, so the

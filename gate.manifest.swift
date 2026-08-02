@@ -64,6 +64,10 @@ extension BenchRegisters { public static var typeName: String { "stdlib/bench-re
 // The words this tool hands to whoever uses it: they arrive in an operator's
 // repository as the header of whatever gate emits, so they are this world's to
 // answer for and not somebody's reference shelf.
+public enum TheCourts: Mine {
+    public typealias Kind = FormsFile
+}
+extension TheCourts { public static var typeName: String { "stdlib/courts.swift" } }
 public enum FormsContract: Mine {
     public typealias Kind = FormsFile
 }
