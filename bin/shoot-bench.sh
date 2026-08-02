@@ -6,6 +6,10 @@
 # of ui.html as it was in front of the camera: the battery holds that hash
 # to the ui.html in the working copy, so a picture of a page that no
 # longer exists goes red there, and running this script is the whole fix.
+# PAIR, held by hand: the hash warrants the page, not the world in frame.
+# That the shot shows the demo's refusal at its line is this script's doing
+# (fresh demo, the door below) and no guard reads the pixels; if the demo's
+# world changes shape, rerun and look once with your own eyes.
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
 

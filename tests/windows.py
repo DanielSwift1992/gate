@@ -5,6 +5,10 @@
 # port, which serves both courts there. It is plain python and runs on any
 # platform, so the road it walks is also walked by the mac battery's host
 # in CI before Windows ever sees it.
+# PAIR, held by hand: the cover's platform paragraph tells this road in one
+# sentence ("it makes the demo, takes the kit, breaks a claim..."). No guard
+# compares the sentence to these asserts; change the road here, change the
+# sentence there. The battery anchors only the sentence's closing line.
 import os
 import subprocess
 import sys

@@ -240,6 +240,17 @@ def main():
                 step("and red reaches no storage",
                      Object.keys(localStorage).filter(
                          k => k.startsWith("gate.pages.")).length === kept0);
+                // the refusal is a door: a click on the row lands the hand
+                // on the claim's own line, in Full, selected
+                const row = document.querySelector("#verdicts .refusal");
+                const said = row ? (row.querySelector("code") || {}).textContent || "" : "";
+                const saidLine = parseInt(said.split(":")[1], 10);
+                if (row) row.click();
+                await settle();
+                const sel = cm.listSelections()[0];
+                step("a refusal click lands on its own line",
+                     !!row && mode === "full" && Number.isFinite(saidLine)
+                     && sel && sel.head.line === saidLine - 1);
                 // mend the world: carol's one refusal is repaired for real
                 cm.setValue(kept.replace(
                     "public typealias Place = Zone_src\\n}\\npublic typealias Owns_3_carol",
@@ -302,7 +313,24 @@ def main():
                 cm.replaceRange("", { line: ownerAt + 1, ch: 0 },
                     { line: ownerAt + 2, ch: 0 }, "+delete");
                 await settle();
-                step("reset stands ready", typeof window.__resetDemo === "function");
+                // Bare draws the same world as slots a hand can fill: the
+                // door from a verdict to an edit is one view away
+                setMode("bare");
+                await settle();
+                const placeable = document.querySelectorAll(
+                    "#bare .slot:not(.elsewhere)").length;
+                setMode("full");
+                step("Bare offers placeable slots", placeable > 0);
+                // reset executed for real: what was kept is forgotten and
+                // the world is the print again; the reload is a gesture
+                const keptHere = localStorage.getItem(
+                    "gate.pages.ownership.swift") !== null;
+                window.__resetWipe();
+                step("reset takes the demo back to its print",
+                     keptHere
+                     && localStorage.getItem("gate.pages.ownership.swift") === null
+                     && textOf("ownership.swift")
+                        === (SNAP["/world?f=ownership.swift"] || ""));
             } catch (e) {
                 steps.push("ROADFAIL crashed: " + e.message);
             }
@@ -316,7 +344,10 @@ def main():
                 ? "ROAD ALL GREEN" : "ROAD RED";
         });
     }
-    window.__resetDemo = function () {
+    /* the wipe and the reload are two acts: the wipe is the one logic of
+       forgetting, the reload is a gesture over it. The road executes the
+       wipe alone, so what it judges is what the reset button does. */
+    window.__resetWipe = function () {
         try {
             for (const key of Object.keys(localStorage)) {
                 if (key.startsWith("gate.pages.") || key === "gate.theme.declared") {
@@ -324,16 +355,22 @@ def main():
                 }
             }
         } catch (e) { }
+    };
+    window.__resetDemo = function () {
+        window.__resetWipe();
         location.reload();
     };
 })();
 </script>
 <style>
 /* the note takes its own strip: the body is one viewport high, so it is
-   shortened by the strip's height and nothing of the bench is covered */
-body { height: calc(100vh - 28px) !important; }
+   shortened by the strip's height and nothing of the bench is covered.
+   One height, spelled once: the body's cut and the strip wear the same
+   variable, so the two numbers cannot part. */
+:root { --strip: 28px; }
+body { height: calc(100vh - var(--strip)) !important; }
 #published-note { position: fixed; bottom: 0; left: 0; right: 0; z-index: 99;
-  height: 28px; box-sizing: border-box; overflow: hidden; white-space: nowrap;
+  height: var(--strip); box-sizing: border-box; overflow: hidden; white-space: nowrap;
   font: 12px/16px ui-monospace, monospace; padding: 6px 12px;
   background: #101010; color: #9a9a9a; border-top: 1px solid #2a2a2a; }
 #published-note code { color: #c9c9c9; }
