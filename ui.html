@@ -1264,6 +1264,40 @@ function buildScopes(parsed) {
 function admits(top, kind) {
     return !top || (NESTS[top.kind] && NESTS[top.kind].has(kind));
 }
+// ── the walk to a position: one linear pass, the shelf's scopes, the
+// claims' nesting. Frames answer every "where am I": the innermost gate
+// frame carries the gate's name and how many arguments its commas have
+// counted past; the innermost body frame carries the line that opened
+// it. placeAt's hand-counted braces and the six-line gathering of a
+// broken gate died here: this is the one walk, asked twice.
+function scopesAt(cur) {
+    const stack = [];
+    for (let l = 0; l <= cur.line; l++) {
+        const text = cm.getLine(l) || "";
+        const end = l === cur.line ? cur.ch : text.length;
+        let i = 0;
+        while (i < end) {
+            const top = stack[stack.length - 1];
+            if (top && top.close !== "\n" && text.startsWith(top.close, i)) {
+                stack.pop(); i += top.close.length; continue;
+            }
+            const s = SCOPES.find(sc => admits(top, sc.kind)
+                                        && text.startsWith(sc.open, i));
+            if (s) {
+                const before = text.slice(0, i);
+                const gm = /([A-Za-z_]\w*)\s*$/.exec(before);
+                stack.push({ ...s, line: l, ch: i, commas: 0,
+                             head: s.kind === "gate" ? (gm ? gm[1] : null)
+                                                     : before.trim() });
+                i += s.open.length; continue;
+            }
+            if (text[i] === "," && top) top.commas += 1;
+            i += 1;
+        }
+        while (stack.length && stack[stack.length - 1].close === "\n") stack.pop();
+    }
+    return stack;
+}
 // walk one line: enough to answer where its note begins, because neither
 // a note nor a string of ours survives the newline. One walk, all scopes;
 // what may open inside what is the shelf's claims, read by admits().
@@ -1290,17 +1324,16 @@ function codeOfLine(lineNo) {
     return n < 0 ? line : line.slice(0, n);
 }
 function placeAt(cur) {
-    let host = null, inBody = false, depth = 0;
-    for (let i = cur.line; i >= 0; i--) {
-        const code = codeOfLine(i);
-        if (i < cur.line) depth += (code.match(/\}/g) || []).length - (code.match(/\{/g) || []).length;
-        if (/var\s+body\s*:\s*some\s+Structure\s*\{/.test(code) && depth <= 0) inBody = true;
-        const m = /^\s*(?:public\s+)?enum\s+(\w+)\s*:\s*([\w,\s]+?)\s*\{/.exec(code);
-        if (m && depth <= 0) {
-            host = { name: m[1], conformances: m[2].split(",").map(x => x.trim()).filter(Boolean) };
-            break;
+    let host = null, inBody = false;
+    for (const f of scopesAt(cur)) {
+        if (f.kind !== "body") continue;
+        const m = /^(?:public\s+)?enum\s+(\w+)\s*:\s*([\w,\s]+?)$/.exec(f.head || "");
+        if (m) {
+            host = { name: m[1],
+                     conformances: m[2].split(",").map(x => x.trim()).filter(Boolean) };
+            inBody = false;
         }
-        if (/^\}/.test(code) && i < cur.line) break;     // a closed declaration above
+        if (/var\s+body\s*:\s*some\s+Structure\s*$/.test(f.head || "")) inBody = true;
     }
     return { host, inBody };
 }
@@ -1362,41 +1395,18 @@ function allowedAt(cur) {
         return { items: f || [], kind: wanted ? "this axis takes " + wanted : "an axis", closed: true };
     }
 
-    // an argument of a gate: one mechanism for every spelling. The text from
-    // the cursor back to the nearest unclosed `<` is gathered, across lines
-    // where the writer broke them; the word before that `<` names the gate,
-    // and the top-level commas in between count which argument this is. For a
-    // while the one-line spelling, which is how every claim in an imported
-    // world is printed, had a reading of its own beside the multi-line one:
-    // two readings of one question, in the tool that exists against that.
+    // an argument of a gate: one mechanism for every spelling, and it is
+    // the walk. The innermost gate frame over the cursor names the gate,
+    // and its own commas have already counted which argument this is —
+    // one line or many, the frame neither knows nor cares.
     {
-        let gathered = before, at = cur.line;
-        while (at > 0 && cur.line - at < 6) {
-            let depth = 0;
-            for (const c of gathered) {
-                if (c === "<") depth += 1;
-                else if (c === ">") depth -= 1;
-            }
-            if (depth > 0) break;
-            at -= 1;
-            gathered = codeOfLine(at) + "\n" + gathered;
-        }
-        const opened = gathered.lastIndexOf("<");
-        if (opened > 0 && gathered.indexOf(">", opened) === -1) {
-            const gm = /(\w+)\s*$/.exec(gathered.slice(0, opened));
-            if (gm && gates[gm[1]]) {
-                const kinds = gates[gm[1]];
-                let depth = 0, nth = 0;
-                for (const c of gathered.slice(opened + 1)) {
-                    if (c === "<") depth += 1;
-                    else if (c === ">") depth -= 1;
-                    else if (c === "," && depth === 0) nth += 1;
-                }
-                const k = kinds[Math.min(nth, kinds.length - 1)];
-                const f = fillersFor(k, host);
-                if (f && f.length)
-                    return { items: f, kind: "this argument takes " + k, closed: true };
-            }
+        const g = scopesAt(cur).reverse().find(f => f.kind === "gate");
+        if (g && g.head && gates[g.head]) {
+            const kinds = gates[g.head];
+            const k = kinds[Math.min(g.commas, kinds.length - 1)];
+            const f = fillersFor(k, host);
+            if (f && f.length)
+                return { items: f, kind: "this argument takes " + k, closed: true };
         }
     }
 

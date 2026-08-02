@@ -1064,11 +1064,10 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               "a slot is a closed question" in ui and "closed: true }" in ui
               and "return { items: f || []" in ui
               # and a gate's argument is one mechanism for every spelling:
-              # the one-line claim of an imported world and the multi-line
-              # record answer from the same scan, the head naming the kinds
-              # and the top-level commas counting which one this is
+              # the walk's innermost gate frame names the gate and its own
+              # commas have counted the argument, one line or many
               and "one mechanism for every spelling" in ui
-              and "top-level commas in between count" in ui))
+              and "commas have already counted" in ui))
     S.append(("the popup is pinned to the word, not moved by a changing verdict",
               "reposition || compEl.hidden" in ui and "drawCompletion(true)" in ui))
 
