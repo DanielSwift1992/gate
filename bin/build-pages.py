@@ -321,6 +321,24 @@ def main():
                     "#bare .slot:not(.elsewhere)").length;
                 setMode("full");
                 step("Bare offers placeable slots", placeable > 0);
+                // the rail is a door too: a click on a file's name opens
+                // it, and the letter's marks are lit lines of the file
+                // itself, worn in Bare
+                const lrow = [...document.querySelectorAll("#filelist .file")]
+                    .find(r => r.textContent.includes("readme.swift"));
+                if (lrow) lrow.click();
+                await settle(); await settle();
+                setMode("bare");
+                await settle();
+                const lit = document.querySelectorAll("#bare .mark").length;
+                setMode("full");
+                step("the rail opens the letter and its marks are lit",
+                     !!lrow && active === "readme.swift" && lit >= 5);
+                const orow = [...document.querySelectorAll("#filelist .file")]
+                    .find(r => r.textContent.includes("ownership.swift"));
+                if (orow) orow.click();
+                await settle(); await settle();
+                step("and the rail leads back", active === "ownership.swift");
                 // reset executed for real: what was kept is forgotten and
                 // the world is the print again; the reload is a gesture
                 const keptHere = localStorage.getItem(
