@@ -4,7 +4,7 @@ jobs:
   green:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4
       # the runner's own Xcode swift builds the corpus: a pinned separate
       # toolchain met an SDK built by a newer one and refused, so no
       # toolchain is installed here on purpose
@@ -20,16 +20,30 @@ jobs:
       # ten times the claims may cost more, and not by a different order
       - run: python3 bin/bench.py --check
       - run: bash bin/shoot-bench.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02   # v4
         with:
           name: bench-shot
           path: |
             docs/bench.png
             docs/bench.png.from
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4
+      # the same full battery, on the platform where the port serves both
+      # courts by default. The judge is still built here, from the same pin
+      # as the macos job: the parity vectors are the point of this job, and
+      # they need both carriers standing on one machine. Swift comes with
+      # the runner image; the guard below says so loudly if it ever leaves.
+      - run: |
+          command -v swift || { echo "the runner image no longer carries swift; install a toolchain step here"; exit 1; }
+          swift --version
+      - run: bin/build-judge.sh 0fd0b38
+      - run: python3 tests/smoke.py
   windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4
       # the reviewer's road on the platform the binary does not run on:
       # both courts through the node port, from entry to a red line
       - run: python tests/windows.py
@@ -45,7 +59,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4
       # the published bench: the same page, the same browser judges, and the
       # server's own answers recorded from a live serve at build time. The
       # build itself is a Linux measure: a demo is born and served under the
@@ -59,8 +73,8 @@ jobs:
           "$BROWSER" --headless --disable-gpu --no-sandbox --virtual-time-budget=15000 \
             --dump-dom "file://$PWD/_site/index.html?f=ownership.swift:84&roadtest=1" \
             2>/dev/null | grep -q "ROAD ALL GREEN"
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa   # v3
         with:
           path: _site
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e   # v4
