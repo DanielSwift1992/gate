@@ -1364,6 +1364,21 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     for (const name of ["ReaderKey", "WriterKey", "Wombat"])
         out.ladder.pair[name] = { judge: holds(filled(FORMS, name)),
                                   offer: offered.includes(name) };
+    // the certificate court of the forms reading: a two-line gate whose
+    // premise only means anything after the gate's formal words are
+    // substituted with the claim's own arguments. Kill the substitution and
+    // A == B is a sentence about names that exist nowhere: the good claim
+    // refuses, the bad one with it, and the bench's first scene (carol's
+    // refusal, judged by this very path in the browser) dies quietly.
+    const CERT = ["public protocol Matched {}",
+                  "public enum Pair2<A, B> {}",
+                  "extension Pair2: Matched",
+                  "where A == B {}"];
+    const certSaid = {
+        ok: holds(FORMS.concat(CERT, ["public typealias C1 = Pair2<ReaderKey, ReaderKey>"])),
+        bad: holds(FORMS.concat(CERT, ["public typealias C1 = Pair2<ReaderKey, WriterKey>"])),
+    };
+
     // the moment: a record typed, and a record erased
     openWith(FORMS.concat(["public enum K1: Reads {}"]));
     const typed = FORMS.concat(["public enum K1: Reads {}",
@@ -1382,6 +1397,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     const seenErased = offerAt(erased);
     out.erased = { offer: seenErased.includes("K1"), judge: holds(filled(FORMS, "K1")),
                    offered: seenErased };
+    out.cert = certSaid;
     console.log(JSON.stringify(out));
 })();
 """)
@@ -1424,6 +1440,15 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     S.append(("the buffer answers for its own file: a record typed is offered, one erased is gone",
               _typed.get("offer") is True and _typed.get("judge") is True
               and _erased.get("offer") is False and _erased.get("judge") is False))
+    # ── AND THE TWO-LINE CERTIFICATE JUDGES THROUGH ITS SUBSTITUTION. The
+    # premise `A == B` names the gate's formal words; only substituting the
+    # claim's arguments over them makes it a sentence about the world. The
+    # substitution had no vector: turned into identity, all 384 checks
+    # stayed green while the browser's first scene, judged by this exact
+    # path, went quietly blind.
+    _cert = _pr.get("cert") or {}
+    S.append(("a two-line certificate holds and refuses by its substituted premise",
+              _cert.get("ok") is True and _cert.get("bad") is False))
     # the shelf has ONE reader: the vocabulary is built in the bench from the
     # judge's own parse (axisKinds/paramKinds), so the gate carries no second
     # regex over the shelf and the bench never fetches a server-built vocabulary
@@ -5179,7 +5204,11 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
     # the real binary is built and held to the python side byte for byte,
     # on the page and on the refusal. GATE_CLI names the binary, off means
     # the python side: the same lever a reader uses to compare by hand.
-    if sys.platform == "darwin" and shutil.which("swiftc"):
+    # wherever a toolchain stands, not wherever a mac does: the vein is one
+    # plain swiftc file, and the linux job carries swiftc too. The platform
+    # lock made the battery a different SIZE per machine, and the README
+    # count check said so the first time the battery ran on ubuntu.
+    if shutil.which("swiftc"):
         _b = subprocess.run(["bash", os.path.join(HERE, "bin", "build-cli.sh")],
                             capture_output=True, text=True)
         _cli_bin = os.path.join(HERE, "bin", "gate-cli")
