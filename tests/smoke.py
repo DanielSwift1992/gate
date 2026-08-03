@@ -1154,6 +1154,7 @@ const grab = (name, prefix) => {
     }
 };
 let SCOPES = [], NESTS = {};
+let LINE_OPENERS = {}, LINE_MODS = new Set();
 let vocabulary = {}, conformers = {}, axisOf = {}, protoAxes = {}, gates = {};
 let shelfDecls = new Map();
 let layoutDecls = new Map(), declFile = new Map(), worldAliases = new Map();
@@ -1221,6 +1222,11 @@ const ask = (tail) => {
         keyslot: askAt(open9.concat(["    public typealias Key = "]), 2, 27),
         ext: ask(["extension "]),
         shield: shieldSaid,
+        floorTop: askAt(["pub"], 0, 3),
+        floorAfterPublic: askAt(["public "], 0, 7),
+        floorBody: askAt(open9.concat(["    public typealias Post = Legal",
+                                       "    public typealias Key = ReaderKey",
+                                       "    "]), 4, 4),
     }));
 })();
 """)
@@ -1278,6 +1284,25 @@ const ask = (tail) => {
     _sh = _off.get("shield") or {}
     S.append(("a string shields its brace and a note eats its own, because claims say so",
               _sh.get("stringNote") == -1 and _sh.get("frames") == ["gate"]))
+    # ── AND A LINE OPENS ONLY WITH A GRANTED WORD. Typing `public` at the top
+    # of a world offered nothing: the special forms answer lines already
+    # begun, and the empty start fell between them. The floor reads the
+    # grammar shelf now: words are atoms with spellings, a claim grants each
+    # opener its home, and the offer is the grant list. Default is deny: the
+    # body's list has no enum because no claim says a record opens inside a
+    # record, and that absence is the mechanism, not an oversight.
+    _ft = _off.get("floorTop") or {}
+    _fp = _off.get("floorAfterPublic") or {}
+    _fb = _off.get("floorBody") or {}
+    S.append(("a line opens with a granted word, and the offer is the grant list",
+              _ft.get("kind") == "what may open a line here" and _ft.get("closed") is True
+              and all(w in (_ft.get("items") or []) for w in ("public", "enum", "typealias", "extension"))
+              # a modifier spends nothing: after `public ` the openers remain
+              # and the modifier itself is not offered again
+              and "enum" in (_fp.get("items") or []) and "public" not in (_fp.get("items") or [])
+              # the body's home grants typealias and not enum: default is deny
+              and "typealias" in (_fb.get("items") or []) and "public" in (_fb.get("items") or [])
+              and "enum" not in (_fb.get("items") or [])))
 
     # ── AND THE OFFER IS HELD TO THE VERDICT, NOT TO A DESCRIPTION OF IT. Two
     # readings of one law had come apart here, and both were invisible to every
@@ -1312,6 +1337,7 @@ const grab = (name, prefix) => {
     }
 };
 let SCOPES = [], NESTS = {};
+let LINE_OPENERS = {}, LINE_MODS = new Set();
 let vocabulary = {}, conformers = {}, axisOf = {}, protoAxes = {}, gates = {};
 let shelfDecls = new Map();
 let layoutDecls = new Map(), declFile = new Map(), worldAliases = new Map();

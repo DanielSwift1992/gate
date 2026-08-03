@@ -1249,6 +1249,8 @@ const compEl = document.getElementById("completion");
 // is read; a missing record is a loud red road, never a quiet default.
 let SCOPES = [];        // records from the grammar shelf, walked in order
 let NESTS = {};         // outer kind -> the inner kinds a claim admits
+let LINE_OPENERS = {};  // home -> the words a claim lets a line open with
+let LINE_MODS = new Set();   // words standing before an opener, not using it up
 function buildScopes(parsed) {
     const spell = (name) => name === "LineEnd" ? "\n"
         : name === "QuoteGlyph" ? '"'
@@ -1268,6 +1270,23 @@ function buildScopes(parsed) {
         const inner = m[1].replace("Scope", "").toLowerCase();
         const outer = m[2].replace("Scope", "").toLowerCase();
         (nests[outer] || (nests[outer] = new Set())).add(inner);
+    }
+    // the words, their spellings, and the claims that let one open a line:
+    // the same page carries them, and this is their one reader
+    const wordSpelling = {};
+    for (const d of parsed.declarations.values()) {
+        if ((d.conformances || []).includes("Word")) {
+            const lit = parsed.literals.get(d.name);
+            if (lit) wordSpelling[d.name] = lit.value;
+            if ((d.conformances || []).includes("LineModifier") && lit)
+                LINE_MODS.add(lit.value);
+        }
+    }
+    for (const [, a] of parsed.topAliases) {
+        const m = /^OpensLine<(\w+), ?(\w+)Home>$/.exec(a.target || "");
+        if (!m || !wordSpelling[m[1]]) continue;
+        const home = m[2].toLowerCase();
+        (LINE_OPENERS[home] || (LINE_OPENERS[home] = new Set())).add(wordSpelling[m[1]]);
     }
     if (out.length) { SCOPES = out; NESTS = nests; }
 }
@@ -1491,6 +1510,27 @@ function allowedAt(cur) {
         if (owed.length)
             return { items: owed.map(a => "public typealias " + a + " = "),
                      scaffold: owed, kind: "axes this record still owes", closed: false };
+    }
+    // ── THE FLOOR UNDER EVERY LINE'S FIRST WORD. Everything above answers a
+    // form already begun; this answers the empty start. A line opens with a
+    // word only where a claim on the grammar shelf grants it, so the offer
+    // is the grant list for this home and the modifiers that may precede
+    // it. A world speaks the world dialect: a forms page has words of its
+    // own, and their claims are not written yet, so it keeps its silence
+    // rather than borrowing the wrong list.
+    {
+        const head = /^\s*((?:[a-z]+\s+)*)([a-z]*)$/.exec(before);
+        const home = host && !inBody ? "body" : (!host && !inBody ? "top" : null);
+        if (head && home && LINE_OPENERS[home] && LINE_OPENERS[home].size
+            && !(typeof formsFiles === "object" && formsFiles.has && formsFiles.has(active))) {
+            const saidWords = head[1].trim().split(/\s+/).filter(Boolean);
+            if (saidWords.every(w => LINE_MODS.has(w))) {
+                const pool = [...(saidWords.length ? [] : [...LINE_MODS]),
+                              ...LINE_OPENERS[home]];
+                return { items: [...new Set(pool)],
+                         kind: "what may open a line here", closed: true };
+            }
+        }
     }
     return null;
 }

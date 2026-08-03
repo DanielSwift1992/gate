@@ -69,3 +69,32 @@ public enum Mark: ScopedAtom {
     public typealias Home = NoteScope
 }
 extension Mark { public static var typeName: String { "==" } }
+
+// The words of a world are atoms too, with the spelling each one wears.
+// A line opens with a word only where a claim grants it: the file's top
+// and a record's body are the two homes, and a word with no claim for a
+// home may not open a line there. What may FOLLOW an opener is the
+// line's form, already read elsewhere: the walk carries scopes, these
+// claims carry openings, and nothing here is a second reading of either.
+public protocol Word {}
+// a modifier stands before an opener and does not use the opening up:
+// `public enum` is one opening, not two
+public protocol LineModifier {}
+public enum PublicWord: Word, LineModifier {}
+extension PublicWord { public static var typeName: String { "public" } }
+public enum EnumWord: Word {}
+extension EnumWord { public static var typeName: String { "enum" } }
+public enum TypealiasWord: Word {}
+extension TypealiasWord { public static var typeName: String { "typealias" } }
+public enum ExtensionWord: Word {}
+extension ExtensionWord { public static var typeName: String { "extension" } }
+
+// the two homes a line can open in, and one claim per granted pair
+public enum TopHome {}
+public enum BodyHome {}
+public enum OpensLine<W: Word, H> {}
+
+public typealias Enum_opens_top = OpensLine<EnumWord, TopHome>
+public typealias Typealias_opens_top = OpensLine<TypealiasWord, TopHome>
+public typealias Extension_opens_top = OpensLine<ExtensionWord, TopHome>
+public typealias Typealias_opens_body = OpensLine<TypealiasWord, BodyHome>
