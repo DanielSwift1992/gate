@@ -1192,6 +1192,24 @@ const ask = (tail) => {
 (async () => {
     await loadVocabulary();
     const open9 = ["public enum Legal: Realm {}", "public enum E9: Keeper {"];
+    // the walk's law is records on the grammar shelf, and the records are
+    // load-bearing. A string inside a body shields the note token and the
+    // brace it carries (String_in_body), and a note inside a body eats its
+    // own brace (Note_in_body). Cut either claim from the shelf and the
+    // phantom braces below unbalance the walk: the last line stops being
+    // one clean gate frame, and the string line grows a note.
+    const shield = ["public enum Legal: Realm {}",
+                    "public enum E9: Keeper {",
+                    "    // a note with a { in it",
+                    "    public typealias Post = Legal",
+                    "}",
+                    'extension E9 { public static var typeName: String { "a // b { c" } }',
+                    "public typealias C1 = Enter<"];
+    cm = { getLine: (n) => shield[n] };
+    const shieldSaid = {
+        stringNote: noteStartAt(5),
+        frames: scopesAt({ line: 6, ch: shield[6].length }).map(f => f.kind),
+    };
     console.log(JSON.stringify({
         first: ask(["public typealias C1 = Enter<"]),
         second: ask(["public typealias C1 = Enter<E9, "]),
@@ -1199,6 +1217,7 @@ const ask = (tail) => {
         owed: askAt(open9.concat(["    "]), 2, 4),
         keyslot: askAt(open9.concat(["    public typealias Key = "]), 2, 27),
         ext: ask(["extension "]),
+        shield: shieldSaid,
     }));
 })();
 """)
@@ -1247,6 +1266,15 @@ const ask = (tail) => {
               _ex.get("closed") is True
               and "E9" in (_ex.get("items") or []) and "Enter" in (_ex.get("items") or [])
               and "Keeper" not in (_ex.get("items") or [])))
+    # ── AND THE SHELF'S NESTING CLAIMS ARE LOAD-BEARING. Deleting
+    # String_in_body from stdlib/grammar.swift left every check green while
+    # a brace inside a string became a real brace to the walk. The claims
+    # are held by behavior now: the string line opens no note, and the
+    # cursor past a note-with-a-brace and a string-with-a-brace still
+    # stands in one clean gate frame.
+    _sh = _off.get("shield") or {}
+    S.append(("a string shields its brace and a note eats its own, because claims say so",
+              _sh.get("stringNote") == -1 and _sh.get("frames") == ["gate"]))
 
     # ── AND THE OFFER IS HELD TO THE VERDICT, NOT TO A DESCRIPTION OF IT. Two
     # readings of one law had come apart here, and both were invisible to every
