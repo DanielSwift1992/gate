@@ -4280,6 +4280,7 @@ console.log(JSON.stringify(out));
     _db = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_dp)], cwd=dw,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     both = None
+    _ref_line = ""
     try:
         wait_serve(_dp)
         man = os.path.join(dw, "gate.manifest.swift")
@@ -4288,10 +4289,39 @@ console.log(JSON.stringify(out));
             data=open(man, "rb").read(), method="POST"), timeout=30).read().decode())
         both = (seen.get("verdict"), run("status", cwd=dw)[1].get("verdict"),
                 len(seen.get("refusals", [])))
+        # ── AND THE ADDRESS NAMES THE SUBJECT'S OWN LINE. The raw judge pins
+        # an entry's refusal to the line the entry drained on; refine_addresses
+        # walks it to the line that carries the subject. Made inert, every
+        # check here stayed green while a refusal pointed at `VerifiedView<`,
+        # two lines above the name it accuses. Held through the same door the
+        # bench uses: the address, resolved against the posted text, must land
+        # on the accused name.
+        _rf_text = ("public enum W1: Employee {\n"
+                    "    public typealias Rank = Manager\n"
+                    "    public typealias Home = Finance\n"
+                    "}\n"
+                    "public enum M1 {\n"
+                    "    public static var body: some Structure {\n"
+                    "        VerifiedView<\n"
+                    "            W1,\n"
+                    "            NoSuchDoc9\n"
+                    "        >.self\n"
+                    "    }\n"
+                    "}\n")
+        _rf = json.loads(_u.urlopen(_u.Request(
+            f"http://127.0.0.1:{_dp}/verdict?f=gate.swift",
+            data=_rf_text.encode(), method="POST"), timeout=30).read().decode())
+        _hit = next((x for x in _rf.get("refusals", [])
+                     if "NoSuchDoc9" in x.get("claim", "")), None)
+        if _hit:
+            _n = int(_hit["address"].split(":")[1])
+            _ref_line = _rf_text.split("\n")[_n - 1]
     finally:
         _db.terminate()
     S.append(("and about a world with a policy and forms in it, where they last disagreed",
               both and both[0] == both[1] == "holds" and both[2] == 0))
+    S.append(("a refusal's address lands on the line that carries the accused name",
+              "NoSuchDoc9" in _ref_line))
     if agreed and not agreed[0]:
         print("   bench says", agreed[1], "with", agreed[2], "refusals; the CLI says", agreed[3])
 
