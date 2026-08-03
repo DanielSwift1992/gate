@@ -1094,6 +1094,96 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               "axis + \".\" + inner" in ui))
     S.append(("and a name followed by a dot offers what stands after it",
               "function afterDot(" in ui and "protoAxes[kind]" in ui))
+
+    # ── AND THE GATE FRAME IS DRIVEN, NOT DESCRIBED. The words above hold the
+    # mechanism's presence; a mutation inside it (an argument's kind no longer
+    # read off the frame's commas) left every one of them green. So the offer
+    # road is walked here the way the page walks it: the bench's own functions
+    # under node, the shipped shelf read by the shipped judge, a cursor inside
+    # a two-kind gate. The second argument must be offered the second kind,
+    # one line or many.
+    _oj = os.path.join(tmp, "offer-args.js")
+    open(_oj, "w").write("""
+const fs = require("fs"), path = require("path");
+const ui = fs.readFileSync(process.argv[2], "utf8");
+const { judge } = require(process.argv[3]);
+const grab = (name) => {
+    const at = ui.indexOf("function " + name + "(");
+    if (at < 0) throw new Error("no " + name);
+    let d = 0;
+    for (let j = ui.indexOf("{", at); j < ui.length; j++) {
+        if (ui[j] === "{") d++;
+        else if (ui[j] === "}" && --d === 0) return ui.slice(at, j + 1);
+    }
+};
+let SCOPES = [], NESTS = {};
+let vocabulary = {}, conformers = {}, axisOf = {}, protoAxes = {}, gates = {};
+let layoutDecls = new Map(), worldAliases = new Map(), cm = null;
+eval(["buildScopes", "admits", "scopesAt", "noteStartAt", "codeOfLine",
+      "placeAt", "axesOfHost", "fillersFor", "afterDot", "allowedAt"]
+     .map(grab).join("\\n"));
+for (const p of process.argv.slice(4)) {
+    const read = judge(path.basename(p), fs.readFileSync(p, "utf8"),
+                       { seeds: new Set(), generics: new Set() });
+    buildScopes(read.parsed);
+    for (const d of read.parsed.declarations.values()) {
+        if (d.axes) {
+            for (const [axis, kind] of Object.entries(d.axisKinds || {})) {
+                (protoAxes[d.name] || (protoAxes[d.name] = {}))[axis] = kind;
+                if (!(axis in axisOf)) axisOf[axis] = kind;
+            }
+        } else if (d.params && d.params.length) {
+            gates[d.name] = d.paramKinds || [];
+        } else {
+            for (const conf of d.conformances) {
+                const c = conf.trim();
+                if (c && !(conformers[c] || (conformers[c] = [])).includes(d.name))
+                    conformers[c].push(d.name);
+            }
+        }
+    }
+}
+const world = ["public enum Legal: Realm {}",
+               "public enum E9: Keeper {",
+               "    public typealias Post = Legal",
+               "}",
+               "public enum Doc1: Room {",
+               "    public typealias Place = Legal",
+               "}"];
+const ask = (tail) => {
+    const lines = world.concat(tail);
+    cm = { getLine: (n) => lines[n] };
+    layoutDecls = new Map();
+    const wp = judge("w.swift", lines.join("\\n"),
+                     { seeds: new Set(), generics: new Set() }).parsed;
+    for (const [name, d] of wp.declarations) layoutDecls.set(name, d);
+    const last = lines.length - 1;
+    return allowedAt({ line: last, ch: (lines[last] || "").length });
+};
+console.log(JSON.stringify({
+    first: ask(["public typealias C1 = Enter<"]),
+    second: ask(["public typealias C1 = Enter<E9, "]),
+    broken: ask(["public typealias C2 = Enter<", "    E9,", "    "]),
+}));
+""")
+    _oa = subprocess.run(["node", _oj, os.path.join(HERE, "ui.html"),
+                          os.path.join(HERE, "judge.js"),
+                          os.path.join(HERE, "stdlib", "grammar.swift"),
+                          os.path.join(HERE, "stdlib", "forms-grants.swift")],
+                         capture_output=True, text=True)
+    try:
+        _off = json.loads(_oa.stdout)
+    except Exception:
+        _off = {}
+    _f, _s, _b = (_off.get("first") or {}), (_off.get("second") or {}), (_off.get("broken") or {})
+    S.append(("a gate's first argument is offered the first kind, with the world's names",
+              _f.get("kind") == "this argument takes Keeper"
+              and "E9" in (_f.get("items") or []) and "Doc1" not in (_f.get("items") or [])))
+    S.append(("and the second argument the second kind, one line or many",
+              _s.get("kind") == "this argument takes Room"
+              and "Doc1" in (_s.get("items") or []) and "E9" not in (_s.get("items") or [])
+              and _b.get("kind") == "this argument takes Room"
+              and "Doc1" in (_b.get("items") or [])))
     # the shelf has ONE reader: the vocabulary is built in the bench from the
     # judge's own parse (axisKinds/paramKinds), so the gate carries no second
     # regex over the shelf and the bench never fetches a server-built vocabulary
@@ -2429,6 +2519,23 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and any("ArchitectIsTwoLines" in r.get("claim", "")
                       and (r.get("address") or "").startswith("vendor-forms.swift:")
                       for r in lied.get("refusals", []))))
+
+    # ── AND THE TRANSLATION KEEPS THE COURT'S OWN ORDER. plainly() rewrites the
+    # where court's raw sentence into the pair a reader sees; swap the pair and
+    # every refusal accuses the wrong side, in the same green battery. The raw
+    # sentence is fetched from the court itself, so the translation is held to
+    # whatever the court said, not to a remembered spelling of it.
+    _raw_where = subprocess.run(
+        [os.path.join(HERE, "bin", "gate-judge"), "judge", "where",
+         os.path.join(frm, "vendor-forms.swift")],
+        capture_output=True, text=True).stdout
+    _raw_pair = re.search(r"'ArchitectIsTwoLines[^']*'[^(]*\(aka '([^']+)'\)"
+                          r"[^(]*\(aka '([^']+)'\)", _raw_where)
+    _said_pair = next((r.get("claim", "") for r in lied.get("refusals", [])
+                       if "ArchitectIsTwoLines" in r.get("claim", "")), "")
+    S.append(("the where verdict a reader sees keeps the pair in the court's own order",
+              bool(_raw_pair)
+              and (_raw_pair.group(1) + " against " + _raw_pair.group(2)) in _said_pair))
 
     # ── AND THE FORMS ROWS ARE JUDGED AS ONE STREAM, WHICH IS NOT A DETAIL.
     # `where` over a LIST of files is blind, and its silence is selective by
