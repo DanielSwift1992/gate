@@ -1154,7 +1154,7 @@ const grab = (name, prefix) => {
     }
 };
 let SCOPES = [], NESTS = {};
-let LINE_OPENERS = {}, LINE_MODS = new Set();
+let LINE_OPENERS = {}, LINE_MODS = new Set(), LINE_FORMS = {};
 let vocabulary = {}, conformers = {}, axisOf = {}, protoAxes = {}, gates = {};
 let shelfDecls = new Map();
 let layoutDecls = new Map(), declFile = new Map(), worldAliases = new Map();
@@ -1221,6 +1221,16 @@ const ask = (tail) => {
         owed: askAt(open9.concat(["    "]), 2, 4),
         keyslot: askAt(open9.concat(["    public typealias Key = "]), 2, 27),
         ext: ask(["extension "]),
+        head: ask(["public enum E10: "]),
+        formpair: (() => {
+            const t = judge("p.swift", ["public enum P1: Keeper {",
+                                        "    public typealias Post = Legal",
+                                        "}"].join("\\n"),
+                            { seeds: new Set(), generics: new Set() }).parsed;
+            const d = t.declarations.get("P1");
+            return { declSeen: !!d && (d.conformances || []).includes("Keeper"),
+                     aliasSeen: !!(d && d.aliases && d.aliases.get("Post")) };
+        })(),
         shield: shieldSaid,
         floorTop: askAt(["pub"], 0, 3),
         floorAfterPublic: askAt(["public "], 0, 7),
@@ -1275,6 +1285,22 @@ const ask = (tail) => {
               _ex.get("closed") is True
               and "E9" in (_ex.get("items") or []) and "Enter" in (_ex.get("items") or [])
               and "Keeper" not in (_ex.get("items") or [])))
+    # ── AND THE LINE FORMS ARE ROWS, READ. The typealias and enum branches
+    # used to know their rows by heart; the rows live on the shelf now
+    # (LineForm claims: an opener, then its slots), and each branch asks
+    # its row before it asks its question. Cut Enum_form from
+    # stdlib/grammar.swift and the head below answers nothing; cut
+    # Typealias_form and the keyslot above goes dark: both seen by hand,
+    # the way the floor's claims were.
+    _hd = _off.get("head") or {}
+    S.append(("the record head asks the enum row for what a record is",
+              _hd.get("closed") is True and _hd.get("kind") == "what this record is"
+              and "Keeper" in (_hd.get("items") or [])))
+    # and the rows spell lines the judge's own parse carries: the offer's
+    # form and the court's grammar are one pair, not two authors
+    _fp2 = _off.get("formpair") or {}
+    S.append(("the shelf's line forms spell lines the judge's parse carries",
+              _fp2.get("declSeen") is True and _fp2.get("aliasSeen") is True))
     # ── AND THE SHELF'S NESTING CLAIMS ARE LOAD-BEARING. Deleting
     # String_in_body from stdlib/grammar.swift left every check green while
     # a brace inside a string became a real brace to the walk. The claims
@@ -1337,7 +1363,7 @@ const grab = (name, prefix) => {
     }
 };
 let SCOPES = [], NESTS = {};
-let LINE_OPENERS = {}, LINE_MODS = new Set();
+let LINE_OPENERS = {}, LINE_MODS = new Set(), LINE_FORMS = {};
 let vocabulary = {}, conformers = {}, axisOf = {}, protoAxes = {}, gates = {};
 let shelfDecls = new Map();
 let layoutDecls = new Map(), declFile = new Map(), worldAliases = new Map();

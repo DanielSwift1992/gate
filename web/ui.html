@@ -1251,6 +1251,7 @@ let SCOPES = [];        // records from the grammar shelf, walked in order
 let NESTS = {};         // outer kind -> the inner kinds a claim admits
 let LINE_OPENERS = {};  // home -> the words a claim lets a line open with
 let LINE_MODS = new Set();   // words standing before an opener, not using it up
+let LINE_FORMS = {};    // opener word -> its row of slots, read off the shelf
 function buildScopes(parsed) {
     const spell = (name) => name === "LineEnd" ? "\n"
         : name === "QuoteGlyph" ? '"'
@@ -1287,6 +1288,14 @@ function buildScopes(parsed) {
         if (!m || !wordSpelling[m[1]]) continue;
         const home = m[2].toLowerCase();
         (LINE_OPENERS[home] || (LINE_OPENERS[home] = new Set())).add(wordSpelling[m[1]]);
+    }
+    // the forms: after an opener, the row of slots the shelf states. The
+    // branches below the floor are readers of these rows, not authors
+    for (const [, a] of parsed.topAliases) {
+        const m = /^LineForm<(\w+), ?(\w+)Slot, ?(\w+)Slot, ?(\w+)Slot>$/.exec(a.target || "");
+        if (!m || !wordSpelling[m[1]]) continue;
+        LINE_FORMS[wordSpelling[m[1]]] =
+            [m[2].toLowerCase(), m[3].toLowerCase(), m[4].toLowerCase()];
     }
     if (out.length) { SCOPES = out; NESTS = nests; }
 }
@@ -1432,8 +1441,12 @@ function allowedAt(cur) {
     const before = line.slice(0, cur.ch);
     const { host, inBody } = placeAt(cur);
 
-    // an axis slot: `typealias Sex = `
-    const slot = /typealias\s+(\w+)\s*=\s*[\w.]*$/.exec(before);
+    // an axis slot: the shelf's typealias row says an axis name, the
+    // equals, then a value; the row is this branch's licence, and with
+    // the row cut the question dies here rather than guessing
+    const tform = LINE_FORMS["typealias"];
+    const slot = (tform && tform[1] === "equals" && tform[2] === "value")
+        ? /typealias\s+(\w+)\s*=\s*[\w.]*$/.exec(before) : null;
     const wanted = slot ? (axesOfHost(host)[slot[1]] || axisOf[slot[1]] || null) : null;
 
     const dotted = afterDot(before, host, wanted);
@@ -1484,8 +1497,11 @@ function allowedAt(cur) {
                                kind: "a name to extend", closed: true } : null;
     }
 
-    // the head of a declaration: `public enum Emp9007: `
-    const head = /^\s*(?:public\s+)?enum\s+\w+\s*:\s*([\w,\s]*)$/.exec(before);
+    // the head of a declaration: the shelf's enum row says a name, the
+    // colon, then what the record is; the row licences the question
+    const eform = LINE_FORMS["enum"];
+    const head = (eform && eform[1] === "colon" && eform[2] === "protos")
+        ? /^\s*(?:public\s+)?enum\s+\w+\s*:\s*([\w,\s]*)$/.exec(before) : null;
     if (head) {
         const already = new Set(head[1].split(",").map(x => x.trim()).filter(Boolean));
         const protos = Object.keys(protoAxes).filter(p => !already.has(p));

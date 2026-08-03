@@ -98,3 +98,21 @@ public typealias Enum_opens_top = OpensLine<EnumWord, TopHome>
 public typealias Typealias_opens_top = OpensLine<TypealiasWord, TopHome>
 public typealias Extension_opens_top = OpensLine<ExtensionWord, TopHome>
 public typealias Typealias_opens_body = OpensLine<TypealiasWord, BodyHome>
+
+// After an opener the rest of the line is the form: an ordered row of
+// slots. The rows are records here, and the offer branches that used to
+// know each row by heart are its readers now: cut a row and its
+// question dies with it. A slot names the kind of answer a position
+// takes, never a spelling; the spellings stay with the walk.
+public protocol LineSlot {}
+public enum NameSlot: LineSlot {}
+public enum AxisNameSlot: LineSlot {}
+public enum EqualsSlot: LineSlot {}
+public enum ValueSlot: LineSlot {}
+public enum ColonSlot: LineSlot {}
+public enum ProtosSlot: LineSlot {}
+
+public enum LineForm<W: Word, S1: LineSlot, S2: LineSlot, S3: LineSlot> {}
+
+public typealias Typealias_form = LineForm<TypealiasWord, AxisNameSlot, EqualsSlot, ValueSlot>
+public typealias Enum_form = LineForm<EnumWord, NameSlot, ColonSlot, ProtosSlot>
