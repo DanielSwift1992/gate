@@ -47,6 +47,7 @@ def measure(claims):
 
 
 def main():
+    check = "--check" in sys.argv
     small, large = measure(50), measure(500)
     out = ["# The cover's cost sentence, measured",
            "",
@@ -68,6 +69,11 @@ def main():
     open(os.path.join(HERE, "docs", "BENCH.md"), "w").write("\n".join(out) + "\n")
     print(f"1x p50 {small['p50']:.0f}ms · 10x p50 {large['p50']:.0f}ms "
           f"· ratio {ratio:.2f} · wrote docs/BENCH.md")
+    # --check holds the cover's sentence on every push: ten times the claims
+    # may cost more, and not by a different order. The bound is generous
+    # because CI machines are shared; a superlinear regression clears it.
+    if check and ratio > 3.0:
+        sys.exit(f"bench: 10x the claims cost {ratio:.2f}x the p50, over the 3.0 bound")
 
 
 if __name__ == "__main__":

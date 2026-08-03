@@ -16,6 +16,9 @@ jobs:
       # artifacts. The battery holds docs/bench.png.from to ui.html, so a
       # stale committed picture is already red above; committing the fresh
       # one stays a human act.
+      # the cover's cost sentence, held rather than measured once:
+      # ten times the claims may cost more, and not by a different order
+      - run: python3 bin/bench.py --check
       - run: bash bin/shoot-bench.sh
       - uses: actions/upload-artifact@v4
         with:
