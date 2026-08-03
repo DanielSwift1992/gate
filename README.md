@@ -47,7 +47,9 @@ The check is one lookup per claim and nothing else: no search, no solver,
 no build. The cost is linear in the number of claims: milliseconds on a
 real repository, and still milliseconds when the repository is ten times
 the size. That is what lets it run on every keystroke, in every commit,
-and in CI, with nobody waiting on it.
+and in CI, with nobody waiting on it. The sentence is measured:
+docs/BENCH.md carries the numbers, and `python3 bin/bench.py` reprints
+them on your machine.
 
 No server. No runtime. No new formats. Nothing leaves your repository.
 
@@ -269,7 +271,7 @@ ui.html         the workbench
 codemirror.*    the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
 docs/           DETAILS.md, and the cover's picture with its provenance
-tests/smoke.py   the battery: 373 checks this repository holds itself
+tests/smoke.py   the battery: 374 checks this repository holds itself
                  to, end-to-end runs through judge parity through
                  documentation contracts; the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts

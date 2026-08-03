@@ -477,6 +477,16 @@ function parse(file, text, declarations, order, refusals, extras) {
         // judge registers the name so every reference to it settles, and reads
         // the axes the body states.
         if (line.startsWith("public protocol ") || line.startsWith("protocol ")) {
+            // the plain court reads worlds of facts; a protocol is the shelf's
+            // grammar and stands outside this fragment. The binary says so at
+            // the line, and for a while this port registered the name in
+            // silence: the first seeded parity walk found the two apart, a
+            // bench green over a world CI refuses. The name is still
+            // registered below, so scope and references settle the same way.
+            if (!extras) {
+                refusals.push({ file, line: number,
+                    premise: "outside the fragment: `" + line.slice(0, 60) + "`" });
+            }
             const afterKeyword = line.replace("public protocol ", "").replace("protocol ", "");
             const selfClosed = /\{\s*\}$/.test(afterKeyword);
             const head = afterKeyword.replace(/\s*\{\s*\}$/, "").replace(/\s*\{$/, "")

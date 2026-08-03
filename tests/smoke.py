@@ -4728,6 +4728,40 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         b, p = two_judges(world)
         S.append((f"both judges say the same words: {label}", b == p and (b or label == "a clean world")))
 
+    # ── the parity of the two judges, walked beyond the five named worlds:
+    # a seeded generator assembles worlds from the grammar's own moves,
+    # valid and broken alike, and the binary and the port must say the same
+    # refusals on every one. The seed is fixed, so a red run is a red run
+    # tomorrow, and a differential found here is a case to add by name.
+    import random as _rnd
+    _rnd.seed(11)
+    _kinds = ["Realm", "Room", "Keeper"]
+    _mismatch = 0
+    for _w in range(20):
+        _lines = ["public protocol Realm {}",
+                  "public protocol Room { associatedtype Place: Realm }",
+                  "public protocol Keeper { associatedtype Post: Realm }"]
+        _zones = [f"Z{_w}_{i}" for i in range(_rnd.randint(1, 3))]
+        for _z in _zones:
+            _lines.append(f"public enum {_z}: Realm {{}}")
+        for _i in range(_rnd.randint(1, 4)):
+            _kind = _rnd.choice(["Room", "Keeper"])
+            _axis = "Place" if _kind == "Room" else "Post"
+            _target = _rnd.choice(_zones + (["Missing"] if _rnd.random() < 0.3 else []))
+            _lines.append(f"public enum N{_w}_{_i}: {_kind} {{")
+            if _rnd.random() < 0.85:
+                _lines.append(f"    public typealias {_axis} = {_target}")
+            _lines.append("}")
+        # a duplicated name stays out of the walk: the port's guard names a
+        # duplicate the binary keeps in silence, a stated asymmetry held by
+        # its own vector above, not a differential for this one to find
+        _b, _p = two_judges("\n".join(_lines) + "\n")
+        if _b != _p:
+            _mismatch += 1
+            print("   differential world", _w, "binary:", _b[:2], "port:", _p[:2])
+    S.append(("twenty seeded worlds and the two judges say the same refusals on each",
+              _mismatch == 0))
+
     # ── the judge's pin is one fact in three records: the manifest names the
     # revision the world took, CI builds at a revision, and the build writes
     # what it built from beside the binary. Nobody compared them, which for
