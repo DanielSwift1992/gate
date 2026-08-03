@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # The regression battery: every verb, end to end, in a throwaway repo.
 # Run: python3 tests/smoke.py
-import ast, glob, hashlib, io, json, os, re, shutil, subprocess, sys, tempfile, time, tokenize
+import ast, glob, hashlib, io, json, os, re, shutil, signal, subprocess, sys, tempfile, time, tokenize
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GATE = os.path.join(HERE, "gate")
@@ -61,6 +61,21 @@ GENRE_SAID_HERE = 5
 
 
 def main():
+    # ── AND THE BATTERY CANNOT HANG IN SILENCE. A judge whose cycle guard is
+    # cut does not go red, it goes forever: the mutation was planted, the port
+    # span past every clock, and this file would have sat behind it all night,
+    # because no subprocess here carries a timeout. One wall clock for the
+    # whole run turns that class into a red line with a sentence. Twenty
+    # minutes is ten times the slowest run on record.
+    if hasattr(signal, "alarm"):
+        def _overdue(sig, frame):
+            # os._exit skips every buffer, so the sentence is flushed by hand:
+            # a red with no words would be the silence this clock exists against
+            print("FAIL the battery ran past twenty minutes: something hangs", flush=True)
+            print("RED", flush=True)
+            os._exit(1)
+        signal.signal(signal.SIGALRM, _overdue)
+        signal.alarm(1200)
     tmp = tempfile.mkdtemp(prefix="gate-smoke-")
     # ── AND THIS BATTERY DOES NOT WRITE IN THE HOUSE OF WHOEVER RUNS IT. A personal
     # world lives in `~/.gate/me` unless `GATE_ME` says otherwise, and that was set
@@ -492,6 +507,20 @@ def main():
     S.append(("and a broken certificate refuses through the port in the binary's words",
               _wb2.returncode == _wn2.returncode == 1 and _wb2.stdout == _wn2.stdout
               and "be equivalent [Ordered]" in _wn2.stdout))
+    # ── AND A VALUE THAT DERIVES FROM ITSELF IS REFUSED, NOT ORBITED. The
+    # values pass is an explicit worklist with an in-flight set; cut that set
+    # and the judge does not go red, it goes forever, which no verdict can
+    # say. The sentence is pinned here through both carriers, and the wall
+    # clock at the top of main is what a hang now runs into instead of CI.
+    _cyc = os.path.join(tmp, "selfcycle.swift")
+    open(_cyc, "w").write("public enum W1: Employee {\n"
+                          "    public typealias Rank = W1.Home\n"
+                          "    public typealias Home = W1.Rank\n"
+                          "}\n")
+    _cb, _cp, _cbc, _cpc = both_ways(_cyc)
+    S.append(("a value that derives from itself is refused in one sentence by both carriers",
+              _cb == _cp and _cbc == _cpc == 1
+              and _cb.count("derives from itself") == 2))
     # AND THE ONE COMMAND WHOSE JOB IS TO SAY WHAT JUDGES THIS REPOSITORY SAYS WHICH
     # ONE. It printed the binary's digest on a machine where the binary cannot run and
     # the port was doing the judging: a file that judged nothing, named as the court.
