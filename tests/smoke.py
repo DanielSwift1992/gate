@@ -6749,7 +6749,13 @@ public enum MyWatch: AccessLedger {
     # was; a shallow clone checks whatever commits it can see.
     _t_ok = lambda s: bool(re.match(r"^[a-z][a-z0-9-]{1,11}: \S", s)) \
         and len(s) <= 72 and "—" not in s
-    _anchor = "02f2297"
+    # the anchor moved once, from 02f2297: a 74-character title entered
+    # history at cefdd6a, the contract forbids rewriting what is pushed,
+    # so the anchor steps past it and the lesson is upstream of the
+    # commit now: the validator runs on the message before every commit,
+    # because a battery that runs before the commit exists cannot see
+    # the commit's own title.
+    _anchor = "cefdd6a"
     _have = subprocess.run(["git", "cat-file", "-e", _anchor], cwd=HERE,
                            capture_output=True)
     _range = f"{_anchor}..HEAD" if _have.returncode == 0 else "HEAD"
