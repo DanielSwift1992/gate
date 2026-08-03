@@ -1095,4 +1095,6 @@ function judge(file, text, vocabulary) {
             readers: values.readers, gateTouches: values.gateTouches } };
 }
 
-if (typeof module !== "undefined") { module.exports = { judge }; }
+// conformsTo travels with the verdict: the bench asks the same walk this file
+// judges by, so an offer and a refusal cannot disagree about what a kind is.
+if (typeof module !== "undefined") { module.exports = { judge, conformsTo }; }

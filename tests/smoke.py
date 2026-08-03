@@ -1109,7 +1109,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     open(_oj, "w").write("""
 const fs = require("fs"), path = require("path");
 const ui = fs.readFileSync(process.argv[2], "utf8");
-const { judge } = require(process.argv[3]);
+const { judge, conformsTo } = require(process.argv[3]);
 const pages = process.argv.slice(4);
 const grab = (name, prefix) => {
     const head = (prefix || "") + "function " + name + "(";
@@ -1123,7 +1123,9 @@ const grab = (name, prefix) => {
 };
 let SCOPES = [], NESTS = {};
 let vocabulary = {}, conformers = {}, axisOf = {}, protoAxes = {}, gates = {};
-let layoutDecls = new Map(), worldAliases = new Map(), cm = null;
+let shelfDecls = new Map();
+let layoutDecls = new Map(), declFile = new Map(), worldAliases = new Map();
+let active = "w.swift", lastParsed = null, cm = null;
 let formsFiles = new Set();
 global.fetch = async (u) => ({
     json: async () => ({ modules: pages.map(p => path.basename(p, ".swift")) }),
@@ -1133,8 +1135,8 @@ global.fetch = async (u) => ({
         return fs.readFileSync(p, "utf8");
     },
 });
-eval(["buildScopes", "admits", "scopesAt", "noteStartAt", "codeOfLine",
-      "placeAt", "axesOfHost", "fillersFor", "afterDot", "allowedAt"]
+eval(["buildScopes", "admits", "scopesAt", "noteStartAt", "codeOfLine", "placeAt",
+      "axesOfHost", "declsInView", "declaredNow", "fillersFor", "afterDot", "allowedAt"]
      .map(n => grab(n)).join("\\n"));
 eval(grab("loadVocabulary", "async "));
 const world = ["public enum Legal: Realm {}",
@@ -1145,11 +1147,12 @@ const world = ["public enum Legal: Realm {}",
                "    public typealias Place = Legal",
                "}"];
 const askAt = (lines, line, ch) => {
+    // the text on screen is this file's whole answer for itself, which is what
+    // the page does: the buffer's parse, not a snapshot of some earlier one
     cm = { getLine: (n) => lines[n] };
-    layoutDecls = new Map();
-    const wp = judge("w.swift", lines.join("\\n"),
-                     { seeds: new Set(), generics: new Set() }).parsed;
-    for (const [name, d] of wp.declarations) layoutDecls.set(name, d);
+    layoutDecls = new Map(); declFile = new Map();
+    lastParsed = judge("w.swift", lines.join("\\n"),
+                       { seeds: new Set(), generics: new Set() }).parsed;
     return allowedAt({ line: line, ch: ch });
 };
 const ask = (tail) => {
@@ -1215,6 +1218,155 @@ const ask = (tail) => {
               _ex.get("closed") is True
               and "E9" in (_ex.get("items") or []) and "Enter" in (_ex.get("items") or [])
               and "Keeper" not in (_ex.get("items") or [])))
+
+    # ── AND THE OFFER IS HELD TO THE VERDICT, NOT TO A DESCRIPTION OF IT. Two
+    # readings of one law had come apart here, and both were invisible to every
+    # check above, because every check above reads words in a file.
+    #
+    # THE CHAIN. `Writes: Reads` means a WriterKey stands wherever a Reads
+    # stands, and the judge reads exactly that chain (conformsTo). The bench
+    # read one step of it, so a value the law takes was hidden from the hand
+    # that had to type it: a narrower law shown than the one judging. The demo
+    # world could not catch it, because no kind in it is refined by another.
+    #
+    # THE MOMENT. The pool was a snapshot taken when the file opened. A record
+    # typed a keystroke ago was not offered though the judge took it, and one
+    # erased a keystroke ago was still offered though the judge refused it. The
+    # rule the bench already states is the right one, and it is stated here as
+    # a pair: whatever the offer says at a slot, writing that name into the
+    # slot must agree with it, judged over the same text.
+    _pj = os.path.join(tmp, "offer-pair.js")
+    open(_pj, "w").write("""
+const fs = require("fs"), path = require("path");
+const ui = fs.readFileSync(process.argv[2], "utf8");
+const { judge, conformsTo } = require(process.argv[3]);
+const pages = process.argv.slice(4);
+const grab = (name, prefix) => {
+    const head = (prefix || "") + "function " + name + "(";
+    const at = ui.indexOf(head);
+    if (at < 0) throw new Error("no " + name);
+    let d = 0;
+    for (let j = ui.indexOf("{", at); j < ui.length; j++) {
+        if (ui[j] === "{") d++;
+        else if (ui[j] === "}" && --d === 0) return ui.slice(at, j + 1);
+    }
+};
+let SCOPES = [], NESTS = {};
+let vocabulary = {}, conformers = {}, axisOf = {}, protoAxes = {}, gates = {};
+let shelfDecls = new Map();
+let layoutDecls = new Map(), declFile = new Map(), worldAliases = new Map();
+let active = "w.swift", lastParsed = null, cm = null, formsFiles = new Set();
+global.fetch = async (u) => ({
+    json: async () => ({ modules: pages.map(p => path.basename(p, ".swift")) }),
+    text: async () => {
+        const m = /m=([^&]+)/.exec(u);
+        const p = pages.find(q => path.basename(q, ".swift") === decodeURIComponent(m[1]));
+        return fs.readFileSync(p, "utf8");
+    },
+});
+eval(["buildScopes", "admits", "scopesAt", "noteStartAt", "codeOfLine", "placeAt",
+      "axesOfHost", "declsInView", "declaredNow", "fillersFor", "afterDot", "allowedAt"]
+     .map(n => grab(n)).join("\\n"));
+eval(grab("loadVocabulary", "async "));
+// a world here carries its own forms, the way the demo's ownership.swift does,
+// and is read by the court that reads forms
+const READ = () => ({ seeds: new Set(), generics: new Set() });
+const parse = (lines) => judge("w.swift", lines.join("\\n"), READ()).parsed;
+const openWith = (lines) => {                          // loadFile → siblings()
+    layoutDecls = new Map(); declFile = new Map();
+    const p = parse(lines);
+    for (const [n, d] of p.declarations)
+        if (!layoutDecls.has(n)) { layoutDecls.set(n, d); declFile.set(n, "w.swift"); }
+    lastParsed = p;
+};
+const typeInto = (lines) => {                          // keystrokes: the buffer moves, the snapshot does not
+    cm = { getLine: (n) => lines[n] };
+    lastParsed = parse(lines);
+};
+const holds = (lines) => judge("w.swift", lines.join("\\n"), READ()).refusals.length === 0;
+const offerAt = (lines) => {
+    const last = lines.length - 1;
+    return (allowedAt({ line: last, ch: (lines[last] || "").length }).items) || [];
+};
+// the forms this world is written in, presented to the bench the way a world
+// presents its own (the demo's forms row IS its world file) and standing in
+// the text the judge reads: one page, two roles, never two copies
+const FORMS = fs.readFileSync(pages[pages.length - 1], "utf8").trimEnd().split("\\n");
+const slotAfter = (body) => body.concat(["public enum H1: Holder {",
+                                         "    public typealias Key = "]);
+const filled = (body, name) => body.concat(["public enum H1: Holder {",
+                                            "    public typealias Key = " + name, "}"]);
+(async () => {
+    await loadVocabulary();
+    const out = {};
+    // the chain, both ways, name by name
+    const slot = slotAfter(FORMS);
+    openWith(slot); typeInto(slot);
+    const offered = offerAt(slot);
+    out.ladder = { offered, pair: {} };
+    for (const name of ["ReaderKey", "WriterKey", "Wombat"])
+        out.ladder.pair[name] = { judge: holds(filled(FORMS, name)),
+                                  offer: offered.includes(name) };
+    // the moment: a record typed, and a record erased
+    openWith(FORMS.concat(["public enum K1: Reads {}"]));
+    const typed = FORMS.concat(["public enum K1: Reads {}",
+                                "public enum K2: Reads {}",
+                                "public enum H1: Holder {",
+                                "    public typealias Key = "]);
+    typeInto(typed);
+    const seenTyped = offerAt(typed);
+    out.typed = { offer: seenTyped.includes("K2"),
+                  judge: holds(FORMS.concat(["public enum K1: Reads {}",
+                                             "public enum K2: Reads {}"]).concat(
+                      ["public enum H1: Holder {", "    public typealias Key = K2", "}"])),
+                  offered: seenTyped };
+    const erased = slotAfter(FORMS);                   // K1 erased by the same hand
+    typeInto(erased);
+    const seenErased = offerAt(erased);
+    out.erased = { offer: seenErased.includes("K1"), judge: holds(filled(FORMS, "K1")),
+                   offered: seenErased };
+    console.log(JSON.stringify(out));
+})();
+""")
+    # a refinement chain in an axis kind, which nothing this repository ships
+    # has: `Writes: Reads` is the shape the grants page states between its key
+    # classes, said here of an axis so the offer has a chain to climb
+    _lp = os.path.join(tmp, "forms-ladder.swift")
+    open(_lp, "w", encoding="utf-8").write(
+        "public protocol Reads {}\n"
+        "public protocol Writes: Reads {}\n"
+        "public enum ReaderKey: Reads {}\n"
+        "public enum WriterKey: Writes {}\n"
+        "public protocol Holder {\n"
+        "    associatedtype Key: Reads\n"
+        "}\n")
+    _pa = subprocess.run(["node", _pj, os.path.join(HERE, "ui.html"),
+                          os.path.join(HERE, "judge.js"),
+                          os.path.join(HERE, "stdlib", "grammar.swift"), _lp],
+                         capture_output=True, text=True)
+    try:
+        _pr = json.loads(_pa.stdout)
+    except Exception:
+        _pr = {}
+    _lad = _pr.get("ladder") or {}
+    _pairs = _lad.get("pair") or {}
+    S.append(("the offer climbs the refinement chain, because the verdict climbs it",
+              # a value of a kind that refines the wanted one is offered AND taken
+              _pairs.get("WriterKey", {}).get("judge") is True
+              and _pairs.get("WriterKey", {}).get("offer") is True
+              and _pairs.get("ReaderKey", {}).get("judge") is True
+              and _pairs.get("ReaderKey", {}).get("offer") is True
+              # and a name nobody declared is neither taken nor offered
+              and _pairs.get("Wombat", {}).get("judge") is False
+              and _pairs.get("Wombat", {}).get("offer") is False
+              # walked by the judge's own function, not a second copy of it
+              and "conformsTo(name, kind, decls)" in ui
+              and "module.exports = { judge, conformsTo }" in open(
+                  os.path.join(HERE, "judge.js"), encoding="utf-8").read()))
+    _typed, _erased = (_pr.get("typed") or {}), (_pr.get("erased") or {})
+    S.append(("the buffer answers for its own file: a record typed is offered, one erased is gone",
+              _typed.get("offer") is True and _typed.get("judge") is True
+              and _erased.get("offer") is False and _erased.get("judge") is False))
     # the shelf has ONE reader: the vocabulary is built in the bench from the
     # judge's own parse (axisKinds/paramKinds), so the gate carries no second
     # regex over the shelf and the bench never fetches a server-built vocabulary
@@ -6223,7 +6375,12 @@ public enum MyWatch: AccessLedger {
               # the buffer goes in FIRST and the world only fills what it did not
               # name: the other order is the defect, and it reads as working code
               bool(_inview) and 0 <= _inview.index("lastParsed.declarations") < _inview.index("layoutDecls")
-              and "if (!out.has(name))" in _inview.split("layoutDecls", 1)[1]
+              and "if (!out.has(name)" in _inview.split("layoutDecls", 1)[1]
+              # AND THE SNAPSHOT ANSWERS FOR NO FILE THE BUFFER ANSWERS FOR. A
+              # name the file no longer declares was still coming back out of
+              # the copy taken when it opened, so the bench named a value the
+              # judge had nothing to resolve.
+              and "home !== active" in _inview
               # and no reader of the wheels keeps a special case for that one file
               and "active === personalFile" not in ui.split("function declsInView()", 1)[1][:3000]))
 

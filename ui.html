@@ -599,6 +599,10 @@ let language = { names: {}, file: "", short: null, present: false, command: "" }
 let jumpable = new Set();      // names with a home: underlined, and clickable
 let vocabulary = {};           // name -> the shelf module that declares it
 let conformers = {}, axisOf = {}, protoAxes = {}, gates = {};
+// the shelf's declarations as the judge parsed them, kept whole: the offer
+// climbs the refinement chain with the judge's own conformsTo, and that walk
+// reads declarations, not the flattened maps beside this line
+let shelfDecls = new Map();
 
 CodeMirror.defineMode("gate-swift", () => ({
     token: (stream) => {
@@ -1128,12 +1132,20 @@ darkMedia.addEventListener("change", paintTheme);   // the OS flips, and an unde
 // personal file was the only thing papering over it. One reading now, and the
 // rule is the plain one: the buffer answers for its own file, the world answers
 // for the rest.
+// ── AND THE BUFFER ANSWERS FOR ITS OWN FILE BOTH WAYS. The rule above was
+// written for a name that CHANGED, and a name that goes away is the same
+// question: the snapshot still held every record the file had when it opened,
+// so a record erased a keystroke ago stayed in view, and the offer went on
+// naming a value the judge no longer had a declaration for. What the buffer
+// says about its own file is the whole of what its file says.
 function declsInView() {
     const out = new Map();                       // name -> { d, file }
     if (active && lastParsed)
         for (const [name, d] of lastParsed.declarations) out.set(name, { d, file: active });
-    for (const [name, d] of layoutDecls)
-        if (!out.has(name)) out.set(name, { d, file: declFile.get(name) || active });
+    for (const [name, d] of layoutDecls) {
+        const home = declFile.get(name) || active;
+        if (!out.has(name) && home !== active) out.set(name, { d, file: home });
+    }
     return out;
 }
 
@@ -1346,13 +1358,33 @@ function axesOfHost(host) {
     return out;
 }
 
-// every way to reach a kind: an atom of it, a declaration of it, or a path
-// through an axis this record already has — `Sex = Given.Sex`
+// ── WHAT IS DECLARED NOW, WHICH IS NOT WHAT WAS DECLARED WHEN THIS FILE
+// OPENED. The shelf's pages, and over them the world as it stands in the
+// buffer: declsInView reads the live parse first and the snapshot after it,
+// so a record typed a second ago is a record. The offer asked layoutDecls
+// alone, a snapshot taken at open, and answered about a world that had moved
+// on: a name you had just written was not offered, and one you had just
+// deleted still was, while the judge beside it read the text.
+function declaredNow() {
+    const out = new Map(shelfDecls);
+    for (const [name, e] of declsInView()) out.set(name, e.d);
+    return out;
+}
+
+// every way to reach a kind: a value of it, a value of a kind that refines it,
+// or a path through an axis this record already has — `Sex = Given.Sex`.
+// THE CHAIN IS WALKED BY THE JUDGE'S OWN conformsTo. `Writes: Reads` means a
+// WriterKey stands wherever a Reads stands, and the verdict reads that chain;
+// the bench read one step of it and hid every name past the first, which is a
+// narrower law than the one doing the judging. A protocol is not among the
+// answers: it owes axes, so it is a kind, never a value that fills one.
 function fillersFor(kind, host, slotName) {
     if (!kind) return null;
-    const out = [...(conformers[kind] || [])];
-    for (const [name, d] of layoutDecls)
-        if ((d.conformances || []).includes(kind)) out.push(name);
+    const decls = declaredNow();
+    const out = [];
+    for (const [name, d] of decls)
+        if (!d.axes && !(d.params || []).length && conformsTo(name, kind, decls))
+            out.push(name);
     for (const [axis, axisKind] of Object.entries(axesOfHost(host))) {
         if (axis === slotName) continue;         // a slot cannot be filled by itself
         for (const [inner, innerKind] of Object.entries(protoAxes[axisKind] || {}))
@@ -1428,8 +1460,7 @@ function allowedAt(cur) {
     // gates and values, and never a protocol, which nothing here extends
     const ext = /^\s*(?:public\s+)?extension\s+(\w*)$/.exec(before);
     if (ext) {
-        const pool = [...new Set([...layoutDecls.keys(), ...Object.keys(gates),
-                                  ...Object.values(conformers).flat()])];
+        const pool = [...declaredNow()].filter(([, d]) => !d.axes).map(([n]) => n);
         return pool.length ? { items: pool, back: ext[1].length,
                                kind: "a name to extend", closed: true } : null;
     }
@@ -3169,7 +3200,10 @@ cm.on("cursorActivity", () => { if (!compEl.hidden && !compFrom) hideCompletion(
 // its arguments. Every word of it is read from the world and the forms file, so a
 // client's own domain describes itself with no dictionary of ours. ──
 function describeName(name) {
-    const d = layoutDecls.get(name);
+    // the world as it stands, not as it opened: a record written a moment ago
+    // is a record, and the line under the cursor says so
+    const seen = declsInView().get(name);
+    const d = seen && seen.d;
     if (d && d.conformances && d.conformances.length) {
         const kinds = d.conformances.filter(c => protoAxes[c]);
         const plain = d.conformances.filter(c => !protoAxes[c]);
@@ -3288,6 +3322,10 @@ async function loadFile(name) {
     // first and corrects itself is a view you cannot read at a glance.
     const early = judge(name, t, formsFiles.has(name) || name === layoutFile
                                 ? { seeds: new Set(), generics: new Set() } : undefined);
+    // and it is this file's parse from here on: the buffer answers for its own
+    // file, so between opening and the first render nothing may answer for it
+    // out of the file you just left
+    lastParsed = early.parsed;
     repaintNames(early.parsed, []);
     editor.value = t;   // setValue: judged, not written
     // ── AND OPENING A FILE IS NOT SOMETHING TO UNDO. Setting the text is a change
@@ -3378,6 +3416,7 @@ for (const head of document.querySelectorAll("h3.fold")) {
 // child, but the short name is the one the world speaks. ──
 async function loadVocabulary() {
     vocabulary = {}; conformers = {}; axisOf = {}; protoAxes = {}; gates = {};
+    shelfDecls = new Map();
     const list = await (await fetch("/shelf")).json().catch(() => ({}));
     // WHAT THIS WORLD PRESENTS COMES FIRST, because it is what this world is
     // written in. Reading only the shelf left the bench offering the ranks it
@@ -3405,6 +3444,10 @@ async function loadVocabulary() {
             if (!worldAliases.has(n)) worldAliases.set(n, a);
         for (const d of read.parsed.declarations.values()) {
             if (!(d.name in vocabulary)) vocabulary[d.name] = mod;
+            // the declaration itself, kept whole beside the flattened maps: a
+            // protocol that refines another says so here and nowhere else, and
+            // the maps below cannot hold a chain
+            if (!shelfDecls.has(d.name)) shelfDecls.set(d.name, d);
             if (d.axes) {                                   // a protocol: the axes it owes, and of what kind.
                 // The kind-less ones are owed too: the judge requires every
                 // associatedtype line, so the offer may not know fewer axes
