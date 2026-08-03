@@ -883,7 +883,7 @@ def _binary_runs(p):
 
 JUDGE_KIND = ("binary" if _binary_runs(JUDGE) else
               "port" if (shutil.which("node") and os.path.exists(_PORT_CLI)
-                         and os.path.exists(os.path.join(_HERE, "judge.js"))) else None)
+                         and os.path.exists(os.path.join(_HERE, "bin", "judge.js"))) else None)
 if JUDGE_KIND is None:
     raise SystemExit(
         "gate: no court on this machine. The judge is built for one platform and the one "
@@ -1947,8 +1947,10 @@ def cmd_vendor(root):
     pcli = os.path.join(here, "bin", "judge-cli.js")
     if os.path.exists(pcli):
         shutil.copy(pcli, os.path.join(dst, "bin", "judge-cli.js"))
-    for rel in ("gate", "judge.js", "ui.html", "codemirror.js", "codemirror.css",
-                "LICENSE", "NOTICE.md"):
+    os.makedirs(os.path.join(dst, "web"), exist_ok=True)
+    os.makedirs(os.path.join(dst, "docs"), exist_ok=True)
+    for rel in ("gate", "bin/judge.js", "web/ui.html", "web/codemirror.js",
+                "web/codemirror.css", "LICENSE", "docs/NOTICE.md"):
         src = os.path.join(here, rel)
         if os.path.exists(src):
             shutil.copy(src, os.path.join(dst, rel))
@@ -1993,7 +1995,7 @@ def cmd_vendor(root):
                 "builds the same judge, and the battery checks a build,\n"
                 "`GATE_JUDGE=path tests/smoke.py`. The linker is not byte-stable, so\n"
                 "the hash above names what is here and is not the check.\n\n"
-                "MIT licensed: LICENSE and NOTICE.md are here beside it.\n")
+                "MIT licensed: LICENSE and docs/NOTICE.md are here beside it.\n")
     return {"carried": carried, "judge_sha256": digest, "shim": "./gatew"}
 
 
@@ -5460,7 +5462,7 @@ def cmd_serve(a):
                     self.wfile.write(body)
                     return
                 if u.path in ("/", "/ui"):
-                    return self.send_file(os.path.join(here, "ui.html"), "text/html; charset=utf-8")
+                    return self.send_file(os.path.join(here, "web", "ui.html"), "text/html; charset=utf-8")
                 if u.path == "/seamside":
                     # one side of a seam, to READ. Every address this bench prints
                     # should be reachable: a line you cannot open is a line you
@@ -5506,11 +5508,11 @@ def cmd_serve(a):
                     self.wfile.write(body)
                     return
                 if u.path == "/judge.js":
-                    return self.send_file(os.path.join(here, "judge.js"), "text/javascript")
+                    return self.send_file(os.path.join(here, "bin", "judge.js"), "text/javascript")
                 if u.path == "/codemirror.js":
-                    return self.send_file(os.path.join(here, "codemirror.js"), "text/javascript")
+                    return self.send_file(os.path.join(here, "web", "codemirror.js"), "text/javascript")
                 if u.path == "/codemirror.css":
-                    return self.send_file(os.path.join(here, "codemirror.css"), "text/css")
+                    return self.send_file(os.path.join(here, "web", "codemirror.css"), "text/css")
                 if u.path == "/shelf":
                     mod = q.get("m")
                     if not mod:
@@ -6628,7 +6630,7 @@ def judge_version():
         # plain one
         try:
             digest = hashlib.sha256()
-            for piece in ("judge.js", os.path.join("bin", "judge-where.js")):
+            for piece in (os.path.join("bin", "judge.js"), os.path.join("bin", "judge-where.js")):
                 with open(os.path.join(_HERE, piece), "rb") as f:
                     digest.update(f.read())
             return "port sha256:" + digest.hexdigest()[:12]
@@ -6689,7 +6691,7 @@ def main():
               + ("\n  both courts are served by the port under node "
                  + (subprocess.run([shutil.which("node"), "--version"], capture_output=True,
                                    text=True).stdout.strip() or "")
-                 + ": the plain court runs in judge.js and the certificate court in "
+                 + ": the plain court runs in bin/judge.js and the certificate court in "
                    "bin/judge-where.js, line-for-line ports of the same judge, held to "
                    "its lines by the battery's parity checks. "
                  + ("The binary here was built for another platform"

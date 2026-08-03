@@ -80,7 +80,7 @@ def main():
         serve.wait()
         shutil.rmtree(tmp, ignore_errors=True)
 
-    ui = open(os.path.join(HERE, "ui.html"), encoding="utf-8").read()
+    ui = open(os.path.join(HERE, "web", "ui.html"), encoding="utf-8").read()
     for asset in ("codemirror.css", "ladder.css", "codemirror.js", "judge.js"):
         ui = ui.replace(f'"/{asset}"', f'"{asset}"')
 
@@ -465,8 +465,9 @@ body { height: calc(100vh - var(--strip)) !important; }
     os.makedirs(OUT, exist_ok=True)
     open(os.path.join(OUT, "index.html"), "w", encoding="utf-8").write(ui)
     open(os.path.join(OUT, "ladder.css"), "w", encoding="utf-8").write(ladder_css)
-    for asset in ("codemirror.css", "codemirror.js", "judge.js"):
-        src = os.path.join(HERE, asset)
+    for asset, home in (("codemirror.css", "web"), ("codemirror.js", "web"),
+                        ("judge.js", "bin")):
+        src = os.path.join(HERE, home, asset)
         if os.path.exists(src):
             shutil.copy(src, os.path.join(OUT, asset))
     shutil.copy(os.path.join(HERE, "bin", "judge-where.js"),

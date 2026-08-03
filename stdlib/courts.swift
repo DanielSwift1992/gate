@@ -40,7 +40,7 @@ public protocol CourtCarrier {}
 public enum BinaryJudge: CourtCarrier {}
 extension BinaryJudge { public static var typeName: String { "bin/gate-judge" } }
 public enum PortPlain: CourtCarrier {}
-extension PortPlain { public static var typeName: String { "judge.js" } }
+extension PortPlain { public static var typeName: String { "bin/judge.js" } }
 public enum PortWhere: CourtCarrier {}
 extension PortWhere { public static var typeName: String { "bin/judge-where.js" } }
 

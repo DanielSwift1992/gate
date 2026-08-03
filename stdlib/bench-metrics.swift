@@ -38,7 +38,7 @@ public typealias TwoLines = Twice<Line>
 public typealias Runway = Twice<TwoLines>
 
 // ── THE MAP OF SEAMS, read off the page and not assigned to it: which step does
-// which work, and where it stands. Every count below is measured in ui.html,
+// which work, and where it stands. Every count below is measured in web/ui.html,
 // as `calc(var(--u)*N)` plus a bare `var(--u)` for one unit, and the battery
 // counts the same way and refuses this table when the page moves on: a step
 // that stops being used shows up as a zero here, or not at all.

@@ -238,16 +238,16 @@ away, each where you would look for it:
 - [docs/DETAILS.md](docs/DETAILS.md): carrying gate vendored in your
   repository, verifying the zero-egress contract yourself, where it plugs
   in (hook, CI, review, editor), layout and ownership.
-- [SECURITY.md](SECURITY.md): what a verdict promises, and where to
+- [docs/SECURITY.md](docs/SECURITY.md): what a verdict promises, and where to
   report a wrong one.
-- [CHANGELOG.md](CHANGELOG.md): what exists, in the order it came to be.
+- [docs/CHANGELOG.md](docs/CHANGELOG.md): what exists, in the order it came to be.
 - After `gate init`, your repository is met by a letter of its own:
   `stdlib/readme.swift`, beside your files and judged with them.
 
 ## what you just cloned
 
 ```
-LICENSE         MIT · NOTICE.md lists the bundled pieces and their terms
+LICENSE         MIT · docs/NOTICE.md lists the bundled pieces and their terms
 gate            the CLI (python prototype; the judge does the judging)
 gate.cmd        the same CLI on Windows
 gate.manifest.swift
@@ -257,7 +257,7 @@ bin/gate-judge  the judge, one static binary, built at a pin from the
                 public theory corpus, verification-is-identification:
                 github.com/DanielSwift1992/verification-is-identification
                 (bin/build-judge.sh [pin] rebuilds it)
-bin/judge-cli.js · bin/judge-where.js
+bin/judge.js · bin/judge-cli.js · bin/judge-where.js
                 both courts as a node port, for machines the binary
                 was not built for, held to it line for line
 bin/gate-cli.swift
@@ -266,11 +266,11 @@ bin/gate-cli.swift
                 verb answers with the python side's own bytes
                 (bin/build-cli.sh builds it; the binary is not committed)
 stdlib/         the judge's own words, printed as real Swift files, self-judged
-judge.js        the browser judge (byte-parity port) for the bench
-ui.html         the workbench
-codemirror.*    the editor (CodeMirror 5, MIT, vendored)
+web/ui.html     the workbench; bin/judge.js judges it in the browser
+web/codemirror.*  the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
-docs/           DETAILS.md, and the cover's picture with its provenance
+docs/           DETAILS.md, SECURITY.md, CHANGELOG.md, NOTICE.md, and
+                the cover's picture with its provenance
 tests/smoke.py   the battery: 386 checks this repository holds itself
                  to, end-to-end runs through judge parity through
                  documentation contracts; the definition of green
@@ -280,11 +280,11 @@ tests/windows.py the Windows measure: the reviewer's road as asserts
 ## what runs today, and what is next
 
 Working prototype under active development, MIT licensed: see LICENSE,
-and NOTICE.md for the bundled pieces and their terms. The judge is a
+and docs/NOTICE.md for the bundled pieces and their terms. The judge is a
 native binary with a versioned verdict contract (canon v2). The CLI is
 python and will be rewritten in Swift to ship as a single static binary
 (the way git is one tool). We want to hear
-about a wrong verdict before anything else: see SECURITY.md.
+about a wrong verdict before anything else: see docs/SECURITY.md.
 
 **Where it runs.** The CLI is one python3
 file and the bench is a page, so both go wherever python3 and a browser

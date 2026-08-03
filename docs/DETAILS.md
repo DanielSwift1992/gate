@@ -30,7 +30,7 @@ python3 tests/smoke.py                      # all green, offline
 
 # 2. read the source for outbound primitives; the battery greps for these
 grep -nE "urllib\.request|socket\.socket|http\.client|requests\.(get|post)" gate
-grep -nE "XMLHttpRequest|new WebSocket|fetch\(['\"]https?:" ui.html judge.js \
+grep -nE "XMLHttpRequest|new WebSocket|fetch\(['\"]https?:" web/ui.html bin/judge.js \
     bin/judge-where.js bin/judge-cli.js
 
 # 3. the server listens on the loopback, and nowhere else
@@ -127,7 +127,7 @@ world, `gate serve` on a free port, one headless Chrome shot of
 `/ui?f=ownership.swift:84`. That door is not the camera's: any refusal
 address pastes into the browser bar as `?f=file:line`, and the bench
 opens that file at that line. Beside it, `docs/bench.png.from` records the
-sha256 of `ui.html` as photographed, and the battery holds that hash to
+sha256 of `web/ui.html` as photographed, and the battery holds that hash to
 the working copy: change the bench and the battery goes red until the
 picture is retaken. CI takes a fresh shot on every run and attaches it as
 an artifact.

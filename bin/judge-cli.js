@@ -13,7 +13,7 @@
 // the corpus's WhereJudge. The battery holds each to the binary's own lines.
 const fs = require("fs");
 const path = require("path");
-const { judge } = require(path.join(__dirname, "..", "judge.js"));
+const { judge } = require(path.join(__dirname, "judge.js"));
 
 const args = process.argv.slice(2);
 if (args[0] !== "judge") {

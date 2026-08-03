@@ -562,7 +562,7 @@ def main():
         'if(d.axisKinds&&Object.keys(d.axisKinds).length)pa[d.name]=d.axisKinds;'
         'if(d.paramKinds&&d.paramKinds.length)ga[d.name]=d.paramKinds;}'
         'console.log(JSON.stringify({pa,ga}));'
-        % (os.path.join(HERE, "judge.js"), os.path.join(HERE, "stdlib", "forms-organization.swift")))
+        % (os.path.join(HERE, "bin", "judge.js"), os.path.join(HERE, "stdlib", "forms-organization.swift")))
     kout = subprocess.run(["node", "-e", kinds_probe], capture_output=True, text=True).stdout
     try:
         kv = json.loads(kout or "{}")
@@ -932,7 +932,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and len(r["vendored"].get("judge_sha256", "")) == 64))
     S.append(("and the terms travel with it: a vendored copy carries its licence",
               os.path.exists(os.path.join(ven, ".gate", "LICENSE"))
-              and os.path.exists(os.path.join(ven, ".gate", "NOTICE.md"))))
+              and os.path.exists(os.path.join(ven, ".gate", "docs", "NOTICE.md"))))
     # ── AND SO DOES THE ONE FACT THAT IS THE DEPENDENCY. The bytes travelled and
     # the revision beside them did not: a vendored copy said "the revision this
     # judge was built from is not recorded", losing what this tool calls the real
@@ -1068,7 +1068,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     S.append(("a refused world is pointed at the address, not at the ladder",
               r["verdict"] == "refused" and "address" in r.get("next", "")))
 
-    ui = open(os.path.join(HERE, "ui.html"), encoding="utf-8").read()
+    ui = open(os.path.join(HERE, "web", "ui.html"), encoding="utf-8").read()
     # every name a printed world uses has a home: its own file, or the forms
     printed = open(os.path.join(repo, "gate.swift")).read()
     decl_here = set(re.findall(r"^\s*(?:public\s+)?(?:enum|protocol|struct|typealias)\s+(\w+)", printed, re.M))
@@ -1224,8 +1224,8 @@ const ask = (tail) => {
     }));
 })();
 """)
-    _oa = subprocess.run(["node", _oj, os.path.join(HERE, "ui.html"),
-                          os.path.join(HERE, "judge.js"),
+    _oa = subprocess.run(["node", _oj, os.path.join(HERE, "web", "ui.html"),
+                          os.path.join(HERE, "bin", "judge.js"),
                           os.path.join(HERE, "stdlib", "grammar.swift"),
                           os.path.join(HERE, "stdlib", "forms-grants.swift")],
                          capture_output=True, text=True)
@@ -1416,8 +1416,8 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
         "public protocol Holder {\n"
         "    associatedtype Key: Reads\n"
         "}\n")
-    _pa = subprocess.run(["node", _pj, os.path.join(HERE, "ui.html"),
-                          os.path.join(HERE, "judge.js"),
+    _pa = subprocess.run(["node", _pj, os.path.join(HERE, "web", "ui.html"),
+                          os.path.join(HERE, "bin", "judge.js"),
                           os.path.join(HERE, "stdlib", "grammar.swift"), _lp],
                          capture_output=True, text=True)
     try:
@@ -1438,7 +1438,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               # walked by the judge's own function, not a second copy of it
               and "conformsTo(name, kind, decls)" in ui
               and "module.exports = { judge, conformsTo }" in open(
-                  os.path.join(HERE, "judge.js"), encoding="utf-8").read()))
+                  os.path.join(HERE, "bin", "judge.js"), encoding="utf-8").read()))
     _typed, _erased = (_pr.get("typed") or {}), (_pr.get("erased") or {})
     S.append(("the buffer answers for its own file: a record typed is offered, one erased is gone",
               _typed.get("offer") is True and _typed.get("judge") is True
@@ -1471,7 +1471,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     # not yet finished, not a claim in conflict. The bench reads that register —
     # a wall of empty slots is "to fill", calm, never the red a lie earns.
     S.append(("an empty slot is read, in the judge's own words, as one to fill",
-              "states none" in open(os.path.join(HERE, "judge.js"), encoding="utf-8").read()
+              "states none" in open(os.path.join(HERE, "bin", "judge.js"), encoding="utf-8").read()
               and "/states none/.test(x.premise)" in ui
               and "+ pending.length + ' to fill</span>'" in ui
               and "is not filled in yet" in ui))
@@ -2885,7 +2885,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               and "public enum TheEditor: Theirs {" in own
               and "public typealias Kind = CarriedFile" in own
               and 'public static var typeName: String { "codemirror@5.65.16" }' in own
-              and open(os.path.join(HERE, "codemirror.js"), encoding="utf-8"
+              and open(os.path.join(HERE, "web", "codemirror.js"), encoding="utf-8"
                        ).readline().startswith("// CodeMirror 5.65.16")
               # a role names a court, and a court that reads nothing says so
               and "and by no court of this world" in shelf_src))
@@ -3029,7 +3029,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     # While both exist they may not part; when the port reads the presented file
     # instead, this is what will have proved the swap loses nothing.
     org = open(os.path.join(HERE, "stdlib", "forms-organization.swift"), encoding="utf-8").read()
-    js = open(os.path.join(HERE, "judge.js"), encoding="utf-8").read()
+    js = open(os.path.join(HERE, "bin", "judge.js"), encoding="utf-8").read()
 
     def _conformers(proto):
         return sorted(set(re.findall(r"public enum (\w+): " + proto + r"\b", org)))
@@ -3096,7 +3096,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
         "});\n"
         "console.log(JSON.stringify(out));\n")
     par_out = subprocess.run(
-        ["node", probe, os.path.join(HERE, "judge.js"), par_world,
+        ["node", probe, os.path.join(HERE, "bin", "judge.js"), par_world,
          os.path.join(HERE, "stdlib", "forms-organization.swift")],
         capture_output=True, text=True).stdout.strip().splitlines()
     try:
@@ -3204,7 +3204,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     #
     # This holds the pile still. A new world name in our port goes red here, and
     # when the leak is swept the number drops rather than a comment going stale.
-    port = open(os.path.join(HERE, "judge.js"), encoding="utf-8").read()
+    port = open(os.path.join(HERE, "bin", "judge.js"), encoding="utf-8").read()
     LANGUAGE = {"Unit", "Plus", "Twice", "Times", "Never"}
     LEAKED = {"IndividualContributor", "Lead", "Manager", "Finance", "Engineering",
               "Sales", "People", "OnSite", "Hybrid", "Remote", "Male", "Female",
@@ -3895,7 +3895,7 @@ console.log(JSON.stringify(out));
 """)
     open(os.path.join(tmp, "grants.swift"), "w").write(gate_src)
     read = json.loads(subprocess.run(
-        ["node", os.path.join(tmp, "gates.js"), os.path.join(HERE, "judge.js"),
+        ["node", os.path.join(tmp, "gates.js"), os.path.join(HERE, "bin", "judge.js"),
          os.path.join(tmp, "grants.swift")], capture_output=True, text=True).stdout or "{}")
     S.append(("a gate is read whole: its holes, what it conforms to, and the clause it turns on",
               read.get("Enter", {}).get("params") == ["Who", "Into"]
@@ -4340,8 +4340,8 @@ console.log(JSON.stringify(out));
              "print(json.dumps(g._peano(open(%r,encoding='utf-8').read())))"
              % (GATE, GATE, wp)], capture_output=True, text=True).stdout)
         page = json.loads(subprocess.run(
-            ["node", harness, os.path.join(HERE, "ui.html"),
-             os.path.join(HERE, "judge.js"), wp], capture_output=True, text=True).stdout or "{}")
+            ["node", harness, os.path.join(HERE, "web", "ui.html"),
+             os.path.join(HERE, "bin", "judge.js"), wp], capture_output=True, text=True).stdout or "{}")
         for k in set(tool) | set(page):
             counted_both += 1
             if tool.get(k) != page.get(k):
@@ -4708,7 +4708,7 @@ console.log(JSON.stringify(out));
                 'const all = [...p.values()].flatMap(d => d.conformances || []);\n'
                 'console.log(JSON.stringify({ glued: all.filter(c => /[{}]/.test(c)),\n'
                 '  documents: [...p.values()].filter(d => (d.conformances||[]).includes("Document")).map(d => d.name) }));'
-                % (os.path.join(HERE, "judge.js"),
+                % (os.path.join(HERE, "bin", "judge.js"),
                    os.path.join(HERE, "stdlib", "forms-organization.swift")))
     kj = os.path.join(tmp, "kinds.js")
     open(kj, "w").write(kinds_js)
@@ -4854,7 +4854,7 @@ console.log(JSON.stringify({
     offered: ["Male", "Female"].map(landsIn),     // what the grammar offers: taken
     foreign: ["Manager", "Finance"].map(landsIn), // a name of another kind: refused
 }));
-''' % (os.path.join(HERE, "judge.js"), json.dumps(forms_txt))
+''' % (os.path.join(HERE, "bin", "judge.js"), json.dumps(forms_txt))
     sj = os.path.join(tmp, "slotkinds.js")
     open(sj, "w").write(slot_js)
     sout = subprocess.run(["node", sj], capture_output=True, text=True).stdout
@@ -5066,7 +5066,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         'const f = process.argv[2];\n'
         'const r = judge(f.split("/").pop(), fs.readFileSync(f, "utf8"));\n'
         'console.log(JSON.stringify((r.refusals||[]).map(x => x.premise)));\n'
-        % os.path.join(HERE, "judge.js"))
+        % os.path.join(HERE, "bin", "judge.js"))
 
     def two_judges(world_text):
         p = os.path.join(par, "w.swift")
@@ -5193,9 +5193,9 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         capture_output=True, text=True).stdout or "{}").get("courts.swift", {})
     _carriers = {d["typeName"] for d in _cj.get("declarations", [])
                  if "CourtCarrier" in d.get("conformances", []) and d.get("typeName")}
-    _tree = {"judge.js"} | {os.path.join("bin", f) for f in os.listdir(os.path.join(HERE, "bin"))
-                            if f.startswith("judge") and f.endswith(".js")
-                            and f != "judge-cli.js"} | {"bin/gate-judge"}
+    _tree = {os.path.join("bin", f) for f in os.listdir(os.path.join(HERE, "bin"))
+             if f.startswith("judge") and f.endswith(".js")
+             and f != "judge-cli.js"} | {"bin/gate-judge"}
     S.append(("the court roster and the tree name the same carriers, and each exists",
               _carriers == _tree
               and all(os.path.exists(os.path.join(HERE, p)) for p in _carriers)))
@@ -5250,7 +5250,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                  r"new WebSocket", r"""fetch\(\s*['"`]https?:""",
                  r"""(?:src|href)\s*=\s*['"]https?:"""]
     hits = []
-    for f in ("gate", "ui.html", "judge.js",
+    for f in ("gate", os.path.join("web", "ui.html"), os.path.join("bin", "judge.js"),
               os.path.join("bin", "judge-where.js"), os.path.join("bin", "judge-cli.js")):
         text = open(os.path.join(HERE, f), encoding="utf-8", errors="replace").read()
         for pat in forbidden:
@@ -5279,7 +5279,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
     c, r = run("--version")
     S.append(("gate says its version, and the judge its bytes",
               r.get("gate") and r.get("judge", "").startswith("sha256:")))
-    ui = open(os.path.join(HERE, "ui.html"), encoding="utf-8").read()
+    ui = open(os.path.join(HERE, "web", "ui.html"), encoding="utf-8").read()
     S.append(("the page declares a policy that blocks any external request",
               "Content-Security-Policy" in ui and "connect-src 'self'" in ui))
 
@@ -6200,7 +6200,8 @@ public enum MyWatch: AccessLedger {
     # section that had moved; the pointer and the page are a pair like any
     # other, so every relative link in the read surfaces must land.
     _dead_links = []
-    for _lf in ("README.md", "SECURITY.md", "NOTICE.md", "CHANGELOG.md",
+    for _lf in ("README.md", os.path.join("docs", "SECURITY.md"),
+                os.path.join("docs", "NOTICE.md"), os.path.join("docs", "CHANGELOG.md"),
                 os.path.join("docs", "DETAILS.md")):
         _body = open(os.path.join(HERE, _lf), encoding="utf-8").read()
         for _t in re.findall(r"\]\(([^)#]+?)\)", _body):
@@ -6561,7 +6562,8 @@ public enum MyWatch: AccessLedger {
     _standin = re.compile(r"\b(?:is|are) the ones\b"
                           r"|\b(?:is|are) the one (?:to|that|who|we|you|everybody|anybody)\b")
     _standin_hits = []
-    for _sf in ("README.md", "SECURITY.md", "CHANGELOG.md", "NOTICE.md",
+    for _sf in ("README.md", os.path.join("docs", "SECURITY.md"),
+                os.path.join("docs", "CHANGELOG.md"), os.path.join("docs", "NOTICE.md"),
                 os.path.join("docs", "DETAILS.md")):
         _flat = re.sub(r"\s+", " ", open(os.path.join(HERE, _sf), encoding="utf-8").read())
         if _standin.search(_flat):
@@ -6829,7 +6831,7 @@ public enum MyWatch: AccessLedger {
     # page because pixels depend on the camera's fonts and the page does not.
     _shot_from = os.path.join(HERE, "docs", "bench.png.from")
     _shot_said = open(_shot_from, encoding="utf-8").read() if os.path.exists(_shot_from) else ""
-    _ui_hash = hashlib.sha256(open(os.path.join(HERE, "ui.html"), "rb").read()).hexdigest()
+    _ui_hash = hashlib.sha256(open(os.path.join(HERE, "web", "ui.html"), "rb").read()).hexdigest()
     S.append(("the cover's picture shows the bench as it is, not as it was",
               os.path.exists(os.path.join(HERE, "docs", "bench.png"))
               and "docs/bench.png" in readme

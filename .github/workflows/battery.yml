@@ -13,7 +13,7 @@ jobs:
       - run: bin/build-judge.sh 0fd0b38
       - run: python3 tests/smoke.py
       # a fresh shot of the bench on every run, downloadable from the run's
-      # artifacts. The battery holds docs/bench.png.from to ui.html, so a
+      # artifacts. The battery holds docs/bench.png.from to web/ui.html, so a
       # stale committed picture is already red above; committing the fresh
       # one stays a human act.
       # the cover's cost sentence, held rather than measured once:

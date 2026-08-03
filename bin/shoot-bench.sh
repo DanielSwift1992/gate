@@ -62,10 +62,10 @@ fi
 python3 - "$HERE" <<'EOF'
 import hashlib, sys, os
 here = sys.argv[1]
-h = hashlib.sha256(open(os.path.join(here, "ui.html"), "rb").read()).hexdigest()
+h = hashlib.sha256(open(os.path.join(here, "web", "ui.html"), "rb").read()).hexdigest()
 open(os.path.join(here, "docs", "bench.png.from"), "w").write(
-    "ui.html sha256:" + h + "\n"
+    "web/ui.html sha256:" + h + "\n"
     "door /ui?f=ownership.swift:84 over `gate demo`, 1280x800 at 2x\n"
     "retake: bash bin/shoot-bench.sh\n")
-print("docs/bench.png over ui.html", h[:12])
+print("docs/bench.png over web/ui.html", h[:12])
 EOF
