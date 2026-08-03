@@ -271,7 +271,7 @@ ui.html         the workbench
 codemirror.*    the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
 docs/           DETAILS.md, and the cover's picture with its provenance
-tests/smoke.py   the battery: 385 checks this repository holds itself
+tests/smoke.py   the battery: 386 checks this repository holds itself
                  to, end-to-end runs through judge parity through
                  documentation contracts; the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts

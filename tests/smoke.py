@@ -6581,6 +6581,32 @@ public enum MyWatch: AccessLedger {
     S.append(("a sentence leads with its verb, not with `the ones`",
               _standin_hits == []))
 
+    # ── AND A COMMIT TITLE STATES ITS AREA AND ITS CHANGE. The first screen
+    # of the repository is the file list wearing the latest titles, and a
+    # visitor read poetry there before they read the tool. The contract,
+    # held from the commit that carries it: `area: what changed`, the area
+    # one lowercase word, the whole subject 72 characters or fewer, no long
+    # dash anywhere in the message. History before the anchor stays what it
+    # was; a shallow clone checks whatever commits it can see.
+    _t_ok = lambda s: bool(re.match(r"^[a-z][a-z0-9-]{1,11}: \S", s)) \
+        and len(s) <= 72 and "—" not in s
+    _anchor = "02f2297"
+    _have = subprocess.run(["git", "cat-file", "-e", _anchor], cwd=HERE,
+                           capture_output=True)
+    _range = f"{_anchor}..HEAD" if _have.returncode == 0 else "HEAD"
+    _titles = subprocess.run(["git", "log", "--format=%s", _range], cwd=HERE,
+                             capture_output=True, text=True).stdout.strip()
+    _bad = [t for t in (_titles.split("\n") if _titles else []) if not _t_ok(t)]
+    if _bad:
+        print("   titles outside the contract:", _bad[:3])
+    S.append(("a commit title after the anchor is `area: change`, short and flat",
+              _bad == []
+              # and the validator itself refuses what the contract refuses
+              and _t_ok("bench: the offer keeps its note")
+              and not _t_ok("The Offer Reads The Law")
+              and not _t_ok("bench: " + "x" * 80)
+              and not _t_ok("bench: a title — with a dash")))
+
     # ── AND THE VOICE CARRIES NO LONG DASH. The prose here spells a pause
     # with a colon or a second sentence; an em dash in a printed line is a
     # mark this voice never uses, so one that appears is a stowaway.
