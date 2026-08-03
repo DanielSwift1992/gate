@@ -43,6 +43,12 @@ public enum PortPlain: CourtCarrier {}
 extension PortPlain { public static var typeName: String { "bin/judge.js" } }
 public enum PortWhere: CourtCarrier {}
 extension PortWhere { public static var typeName: String { "bin/judge-where.js" } }
+// the fourth carrier is the strangler's vein: the same judge sources at the
+// same pin (bin/gate-judge.from), compiled into the Swift CLI by
+// bin/build-cli.sh, so the court runs in the caller's process. The row
+// names the text: the binary it builds is never committed.
+public enum SwiftVein: CourtCarrier {}
+extension SwiftVein { public static var typeName: String { "bin/gate-cli.swift" } }
 
 /// a carrier prints a court's verdicts in the canon the contract states
 public protocol CourtCarried {}
@@ -54,3 +60,5 @@ public typealias Binary_carries_plain = Carry<BinaryJudge, PlainVerdicts, CanonV
 public typealias Binary_carries_where = Carry<BinaryJudge, WhereVerdicts, CanonV2>
 public typealias Port_carries_plain = Carry<PortPlain, PlainVerdicts, CanonV2>
 public typealias Port_carries_where = Carry<PortWhere, WhereVerdicts, CanonV2>
+public typealias Vein_carries_plain = Carry<SwiftVein, PlainVerdicts, CanonV2>
+public typealias Vein_carries_where = Carry<SwiftVein, WhereVerdicts, CanonV2>

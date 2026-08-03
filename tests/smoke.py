@@ -5243,6 +5243,8 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
     # this bridge holds it to the tree both ways, read through the judge's
     # own parse channel, never a regex of ours. bin/judge-cli.js is not a
     # carrier: it is the door to the port, and prints no verdict of its own.
+    # bin/gate-cli.swift is a carrier: the court's sources are compiled into
+    # the vein at the judge's own pin, and the row names the text.
     _cj = json.loads(subprocess.run(
         [shutil.which("node"), os.path.join(HERE, "bin", "judge-cli.js"),
          "judge", "parse", os.path.join(STDLIB, "courts.swift")],
@@ -5251,7 +5253,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                  if "CourtCarrier" in d.get("conformances", []) and d.get("typeName")}
     _tree = {os.path.join("bin", f) for f in os.listdir(os.path.join(HERE, "bin"))
              if f.startswith("judge") and f.endswith(".js")
-             and f != "judge-cli.js"} | {"bin/gate-judge"}
+             and f != "judge-cli.js"} | {"bin/gate-judge", "bin/gate-cli.swift"}
     S.append(("the court roster and the tree name the same carriers, and each exists",
               _carriers == _tree
               and all(os.path.exists(os.path.join(HERE, p)) for p in _carriers)))
@@ -5264,14 +5266,15 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
     # on the page and on the refusal. GATE_CLI names the binary, off means
     # the python side: the same lever a reader uses to compare by hand.
     # wherever a toolchain stands, not wherever a mac does: the vein is one
-    # plain swiftc file, and the linux job carries swiftc too. The platform
+    # swiftc build, the court's sources at the judge's pin compiled beside
+    # its file, and the linux job carries swiftc too. The platform
     # lock made the battery a different SIZE per machine, and the README
     # count check said so the first time the battery ran on ubuntu.
     if shutil.which("swiftc"):
         _b = subprocess.run(["bash", os.path.join(HERE, "bin", "build-cli.sh")],
                             capture_output=True, text=True)
         _cli_bin = os.path.join(HERE, "bin", "gate-cli")
-        S.append(("the swift vein builds from one file",
+        S.append(("the swift vein builds, the court's sources compiled in at the judge's pin",
                   _b.returncode == 0 and os.path.exists(_cli_bin)))
         _stub = os.path.join(tmp, "cli-stub")
         with open(_stub, "w") as f:
@@ -5297,6 +5300,42 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                              capture_output=True, env={**os.environ, "GATE_CLI": _cli_bin})
         S.append(("and refuse an absent page with one sentence and one exit code",
                   _se.stderr == _pe.stderr and _se.returncode == _pe.returncode == 1))
+        # ── and the court itself is carried: the judge sources at the pin
+        # beside bin/gate-judge are compiled into the vein, so the court
+        # runs in the caller's process. The parity that holds this road is
+        # against the binary itself: the python side has no judge verb to
+        # compare. The where court carries no clock, so its parity is byte
+        # for byte, page for page and on the refusal; the plain court
+        # prints one, stripped here the way both_ways strips it.
+        _vw_apart = []
+        for _wpg in _where_pages:
+            _vb = subprocess.run([os.path.join(HERE, "bin", "gate-judge"),
+                                  "judge", "where", _wpg],
+                                 capture_output=True, text=True)
+            _vv = subprocess.run([_cli_bin, "judge", "where", _wpg],
+                                 capture_output=True, text=True)
+            if (_vb.stdout, _vb.returncode) != (_vv.stdout, _vv.returncode):
+                _vw_apart.append(os.path.basename(_wpg))
+        S.append(("the vein's certificate court prints the binary's lines, page for page",
+                  _where_pages != [] and _vw_apart == []))
+        _vb2 = subprocess.run([os.path.join(HERE, "bin", "gate-judge"),
+                               "judge", "where", _wbroken],
+                              capture_output=True, text=True)
+        _vv2 = subprocess.run([_cli_bin, "judge", "where", _wbroken],
+                              capture_output=True, text=True)
+        S.append(("and a broken certificate refuses through the vein in the binary's words",
+                  _vb2.returncode == _vv2.returncode == 1
+                  and _vb2.stdout == _vv2.stdout
+                  and "be equivalent [Ordered]" in _vv2.stdout))
+        _strip_ms = lambda s: re.sub(r"[\d.]+ ms", "N ms", s.strip())
+        _pb = subprocess.run([os.path.join(HERE, "bin", "gate-judge"),
+                              "judge", _where_pages[0]],
+                             capture_output=True, text=True)
+        _pv = subprocess.run([_cli_bin, "judge", _where_pages[0]],
+                             capture_output=True, text=True)
+        S.append(("and the plain court answers through the vein in the binary's words",
+                  _strip_ms(_pb.stdout) == _strip_ms(_pv.stdout)
+                  and _pb.returncode == _pv.returncode))
 
     # ── zero egress: a claim about ourselves, kept by a gate on our own source.
     # An enterprise review runs this same grep; it must never come back dirty,

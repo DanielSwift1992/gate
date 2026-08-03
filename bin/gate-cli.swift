@@ -33,6 +33,18 @@ if args == ["--carries"] {
     exit(0)
 }
 
+// ── the court, carried in-process: the judge sources at the pin beside
+// bin/gate-judge (bin/gate-judge.from) are compiled into this binary by
+// bin/build-cli.sh, and this door is the corpus's own Judge.run verbatim:
+// plain, where, diff, chain. Not a python vein and not on the carries
+// list, because the python side has no judge verb. What holds the road is
+// the battery's parity against bin/gate-judge itself: byte for byte on
+// the where pages, clock stripped on the plain court.
+if args.first == "judge" {
+    Judge.run(Array(args.dropFirst()))
+    exit(0)
+}
+
 // ── stdlib show NAME: a shelf page, printed byte for byte ──
 if args.count >= 2, args[0] == "stdlib", args[1] == "show" {
     guard args.count >= 3 else {
