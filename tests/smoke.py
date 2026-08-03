@@ -529,15 +529,18 @@ def main():
               'if JUDGE_KIND != "binary":' in vsrc.split("def judge_version")[1][:600]
               and "port sha256:" in vsrc
               and "both courts are served by the port under node" in vsrc))
-    # and the README says where this runs, with the unmeasured platform named
-    # as such. Windows crossed that line the day its CI road went green, so
-    # the unmeasured one is Linux now, and the cover says exactly that.
+    # and the README says where this runs, and claims no measure it does not
+    # have. Windows crossed that line the day its CI road went green; Linux
+    # crossed it the day the full battery ran on ubuntu with the judge
+    # rebuilt at the pin. There is no unmeasured platform left to name, and
+    # the old sentence about one may not come back.
     rd = open(os.path.join(HERE, "README.md"), encoding="utf-8").read()
-    S.append(("the cover says where it runs, and calls the unmeasured platform unmeasured",
+    S.append(("the cover says where it runs, and every platform it names is measured",
               "**Where it runs.**" in rd
               and "Windows is measured on every push" in rd
               and "tests/windows.py" in rd
-              and "not\nmeasured in CI yet" in rd
+              and "On Linux, CI rebuilds the judge at the same pin" in rd
+              and "not\nmeasured" not in rd
               and "judge-cli.js" in rd and "judge-where.js" in rd))
 
     # self-hosted shelf: the product's own stdlib files are judged by its own judge
