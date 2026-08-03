@@ -730,7 +730,8 @@ const cm = CodeMirror(document.getElementById("editor-host"), {
         // (⌃⌘← / ⌃⌘→), which is also the one that crosses files.
         "Cmd-Z": undoEdit, "Ctrl-Z": undoEdit,
         "Tab": (cm) => {
-            if (!compEl.hidden) return acceptCompletion();     // the offer, first
+            // the offer, first; a note with no names takes no keystroke
+            if (!compEl.hidden && compItems.length) return acceptCompletion();
             return cm.somethingSelected() ? cm.indentSelection("add")
                                           : cm.replaceSelection("    ", "end", "+input");
         },
@@ -740,11 +741,11 @@ const cm = CodeMirror(document.getElementById("editor-host"), {
         "Cmd-Ctrl-Right": () => navGo(navForward, navBack),
         "Alt-Left": () => MAC ? CodeMirror.Pass : navGo(navBack, navForward),
         "Alt-Right": () => MAC ? CodeMirror.Pass : navGo(navForward, navBack),
-        "Down": (cm) => { if (compEl.hidden) return CodeMirror.Pass;
+        "Down": (cm) => { if (compEl.hidden || !compItems.length) return CodeMirror.Pass;
                           compChosen = (compChosen + 1) % compItems.length; drawCompletion(); },
-        "Up": (cm) => { if (compEl.hidden) return CodeMirror.Pass;
+        "Up": (cm) => { if (compEl.hidden || !compItems.length) return CodeMirror.Pass;
                         compChosen = (compChosen - 1 + compItems.length) % compItems.length; drawCompletion(); },
-        "Enter": (cm) => { if (compEl.hidden) return CodeMirror.Pass; acceptCompletion(); },
+        "Enter": (cm) => { if (compEl.hidden || !compItems.length) return CodeMirror.Pass; acceptCompletion(); },
         "Esc": (cm) => { if (compEl.hidden) return CodeMirror.Pass; hideCompletion(); },
     },
 });
@@ -1390,9 +1391,17 @@ function allowedAt(cur) {
 
     if (slot) {
         // a slot is a closed question: only what its kind allows, and if the
-        // forms state no kind for it, nothing — never a name of another kind
+        // forms state no kind for it, nothing — never a name of another kind.
+        // But the nothing is said in words: an owed axis whose kind the forms
+        // leave open and an axis no form declares are different silences, and
+        // a hidden popup told the writer neither.
         const f = wanted ? fillersFor(wanted, host, slot[1]) : null;
-        return { items: f || [], kind: wanted ? "this axis takes " + wanted : "an axis", closed: true };
+        const known = (slot[1] in axesOfHost(host)) || (slot[1] in axisOf);
+        return { items: f || [],
+                 kind: wanted ? "this axis takes " + wanted
+                     : known ? "the forms state no kind for " + slot[1]
+                             : "no form declares an axis " + slot[1],
+                 closed: true };
     }
 
     // an argument of a gate: one mechanism for every spelling, and it is
@@ -1407,7 +1416,22 @@ function allowedAt(cur) {
             const f = fillersFor(k, host);
             if (f && f.length)
                 return { items: f, kind: "this argument takes " + k, closed: true };
+            // the kind is known and nothing declares one: that is the answer,
+            // not a reason to fall through to a branch about somewhere else
+            return { items: [], kind: "this argument takes " + k
+                                      + "; nothing declares one yet", closed: true };
         }
+    }
+
+    // a head that extends: `extension ` names something that exists, so the
+    // offer is the declared names, the world's records beside the shelf's
+    // gates and values, and never a protocol, which nothing here extends
+    const ext = /^\s*(?:public\s+)?extension\s+(\w*)$/.exec(before);
+    if (ext) {
+        const pool = [...new Set([...layoutDecls.keys(), ...Object.keys(gates),
+                                  ...Object.values(conformers).flat()])];
+        return pool.length ? { items: pool, back: ext[1].length,
+                               kind: "a name to extend", closed: true } : null;
     }
 
     // the head of a declaration: `public enum Emp9007: `
@@ -1526,7 +1550,11 @@ function offerCompletion() {
     }
     compItems = items.slice(0, 8);
     compChosen = 0;
-    if (!compItems.length) return hideCompletion();
+    // a closed question with no names is still an answer: the note alone
+    // stays on the page, because a silent hide reads as a broken editor,
+    // and the keys pass through it as if no offer were up
+    if (!compItems.length && !(here.closed && here.kind && !word))
+        return hideCompletion();
     compFrom = { line: cur.line, ch: cur.ch - back };
     compEl.dataset.kind = here && here.kind ? here.kind : "";
     drawCompletion(true);
@@ -3166,9 +3194,10 @@ function describeName(name) {
 }
 
 function describeAxis(host, axis) {
-    const kind = host ? axesOfHost(host)[axis] : (axisOf[axis]);
-    if (!kind) return null;
-    return axis + " · an axis, takes " + kind;
+    const axes = host ? axesOfHost(host) : axisOf;
+    if (!(axis in axes)) return null;
+    const kind = axes[axis];
+    return axis + " · an axis, " + (kind ? "takes " + kind : "the forms state no kind");
 }
 
 let inspectFrame = 0;
@@ -3376,10 +3405,15 @@ async function loadVocabulary() {
             if (!worldAliases.has(n)) worldAliases.set(n, a);
         for (const d of read.parsed.declarations.values()) {
             if (!(d.name in vocabulary)) vocabulary[d.name] = mod;
-            if (d.axes) {                                   // a protocol: the axes it owes, and of what kind
-                for (const [axis, kind] of Object.entries(d.axisKinds || {})) {
+            if (d.axes) {                                   // a protocol: the axes it owes, and of what kind.
+                // The kind-less ones are owed too: the judge requires every
+                // associatedtype line, so the offer may not know fewer axes
+                // than the law does. A kind the forms leave unstated is null,
+                // and null never shadows a stated kind under the same name.
+                for (const axis of d.axes) {
+                    const kind = (d.axisKinds || {})[axis] || null;
                     (protoAxes[d.name] || (protoAxes[d.name] = {}))[axis] = kind;
-                    if (!(axis in axisOf)) axisOf[axis] = kind;
+                    if (!(axis in axisOf) || (axisOf[axis] == null && kind)) axisOf[axis] = kind;
                 }
             } else if (d.params && d.params.length) {       // a gate: what each parameter takes, in order
                 gates[d.name] = d.paramKinds || [];

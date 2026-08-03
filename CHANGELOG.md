@@ -4,6 +4,16 @@
 
 The working prototype, end to end:
 
+- The offer knows every axis the law knows. An associatedtype whose kind
+  the forms leave unstated (Keeper's Key) was invisible to the bench:
+  never offered at the record, silent at its slot, while the judge
+  refused the record for missing it. The bench now owes what the judge
+  requires; a slot with no stated kind answers in words, an empty closed
+  answer keeps its note on the page instead of hiding, and `extension `
+  offers the declared names. The battery drives the offer road with the
+  page's own loadVocabulary over a stubbed fetch, because the first
+  draft of that harness copied the loop and drifted the moment the real
+  one moved.
 - The parts that must not drift stop talking through test files and talk
   through records. The two judges are declared on their own shelf page,
   stdlib/courts.swift: the canon each court is in, the file each carrier

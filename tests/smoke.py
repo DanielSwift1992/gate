@@ -1101,14 +1101,19 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # road is walked here the way the page walks it: the bench's own functions
     # under node, the shipped shelf read by the shipped judge, a cursor inside
     # a two-kind gate. The second argument must be offered the second kind,
-    # one line or many.
+    # one line or many. The vocabulary is built by the page's own
+    # loadVocabulary over a stubbed fetch, not by a copy of its loop: a copy
+    # is a second reader, and the first draft of this harness proved it by
+    # drifting the moment the real loop learned kind-less axes.
     _oj = os.path.join(tmp, "offer-args.js")
     open(_oj, "w").write("""
 const fs = require("fs"), path = require("path");
 const ui = fs.readFileSync(process.argv[2], "utf8");
 const { judge } = require(process.argv[3]);
-const grab = (name) => {
-    const at = ui.indexOf("function " + name + "(");
+const pages = process.argv.slice(4);
+const grab = (name, prefix) => {
+    const head = (prefix || "") + "function " + name + "(";
+    const at = ui.indexOf(head);
     if (at < 0) throw new Error("no " + name);
     let d = 0;
     for (let j = ui.indexOf("{", at); j < ui.length; j++) {
@@ -1119,30 +1124,19 @@ const grab = (name) => {
 let SCOPES = [], NESTS = {};
 let vocabulary = {}, conformers = {}, axisOf = {}, protoAxes = {}, gates = {};
 let layoutDecls = new Map(), worldAliases = new Map(), cm = null;
+let formsFiles = new Set();
+global.fetch = async (u) => ({
+    json: async () => ({ modules: pages.map(p => path.basename(p, ".swift")) }),
+    text: async () => {
+        const m = /m=([^&]+)/.exec(u);
+        const p = pages.find(q => path.basename(q, ".swift") === decodeURIComponent(m[1]));
+        return fs.readFileSync(p, "utf8");
+    },
+});
 eval(["buildScopes", "admits", "scopesAt", "noteStartAt", "codeOfLine",
       "placeAt", "axesOfHost", "fillersFor", "afterDot", "allowedAt"]
-     .map(grab).join("\\n"));
-for (const p of process.argv.slice(4)) {
-    const read = judge(path.basename(p), fs.readFileSync(p, "utf8"),
-                       { seeds: new Set(), generics: new Set() });
-    buildScopes(read.parsed);
-    for (const d of read.parsed.declarations.values()) {
-        if (d.axes) {
-            for (const [axis, kind] of Object.entries(d.axisKinds || {})) {
-                (protoAxes[d.name] || (protoAxes[d.name] = {}))[axis] = kind;
-                if (!(axis in axisOf)) axisOf[axis] = kind;
-            }
-        } else if (d.params && d.params.length) {
-            gates[d.name] = d.paramKinds || [];
-        } else {
-            for (const conf of d.conformances) {
-                const c = conf.trim();
-                if (c && !(conformers[c] || (conformers[c] = [])).includes(d.name))
-                    conformers[c].push(d.name);
-            }
-        }
-    }
-}
+     .map(n => grab(n)).join("\\n"));
+eval(grab("loadVocabulary", "async "));
 const world = ["public enum Legal: Realm {}",
                "public enum E9: Keeper {",
                "    public typealias Post = Legal",
@@ -1150,21 +1144,31 @@ const world = ["public enum Legal: Realm {}",
                "public enum Doc1: Room {",
                "    public typealias Place = Legal",
                "}"];
-const ask = (tail) => {
-    const lines = world.concat(tail);
+const askAt = (lines, line, ch) => {
     cm = { getLine: (n) => lines[n] };
     layoutDecls = new Map();
     const wp = judge("w.swift", lines.join("\\n"),
                      { seeds: new Set(), generics: new Set() }).parsed;
     for (const [name, d] of wp.declarations) layoutDecls.set(name, d);
-    const last = lines.length - 1;
-    return allowedAt({ line: last, ch: (lines[last] || "").length });
+    return allowedAt({ line: line, ch: ch });
 };
-console.log(JSON.stringify({
-    first: ask(["public typealias C1 = Enter<"]),
-    second: ask(["public typealias C1 = Enter<E9, "]),
-    broken: ask(["public typealias C2 = Enter<", "    E9,", "    "]),
-}));
+const ask = (tail) => {
+    const lines = world.concat(tail);
+    const last = lines.length - 1;
+    return askAt(lines, last, (lines[last] || "").length);
+};
+(async () => {
+    await loadVocabulary();
+    const open9 = ["public enum Legal: Realm {}", "public enum E9: Keeper {"];
+    console.log(JSON.stringify({
+        first: ask(["public typealias C1 = Enter<"]),
+        second: ask(["public typealias C1 = Enter<E9, "]),
+        broken: ask(["public typealias C2 = Enter<", "    E9,", "    "]),
+        owed: askAt(open9.concat(["    "]), 2, 4),
+        keyslot: askAt(open9.concat(["    public typealias Key = "]), 2, 27),
+        ext: ask(["extension "]),
+    }));
+})();
 """)
     _oa = subprocess.run(["node", _oj, os.path.join(HERE, "ui.html"),
                           os.path.join(HERE, "judge.js"),
@@ -1184,6 +1188,33 @@ console.log(JSON.stringify({
               and "Doc1" in (_s.get("items") or []) and "E9" not in (_s.get("items") or [])
               and _b.get("kind") == "this argument takes Room"
               and "Doc1" in (_b.get("items") or [])))
+
+    # ── AND THE OFFER KNOWS EVERY AXIS THE LAW KNOWS. Keeper owes Post and
+    # Key; Key's kind the forms leave unstated, and the judge requires the
+    # axis all the same. The bench read only the kinded axes, so a writer was
+    # offered a record the judge then refused, with no road from the offer to
+    # the missing line. Owed is owed: the kind-less axis is offered at the
+    # record, and its slot answers in words instead of hiding the popup.
+    _ow, _ks, _ex = (_off.get("owed") or {}), (_off.get("keyslot") or {}), (_off.get("ext") or {})
+    S.append(("an axis the forms leave kind-less is owed, and its slot says so in words",
+              "public typealias Key = " in (_ow.get("items") or [])
+              and "Key" in (_ow.get("scaffold") or [])
+              and _ks.get("closed") is True and (_ks.get("items") or []) == []
+              and _ks.get("kind") == "the forms state no kind for Key"))
+    # and the note a closed empty answer carries stays on the page: the popup
+    # shows the sentence, and the keys pass through it as if nothing were up
+    S.append(("an empty closed offer keeps its note on the page, and takes no keystroke",
+              "a closed question with no names is still an answer" in ui
+              and "!(here.closed && here.kind && !word)" in ui
+              and ui.count("compEl.hidden || !compItems.length") == 3
+              and "!compEl.hidden && compItems.length" in ui))
+    # ── AND EXTENSION IS OFFERED WHAT EXISTS. The word names something already
+    # declared, so the offer is the declared names, the world's records beside
+    # the shelf's gates and values, and a protocol is not among them.
+    S.append(("extension is offered the declared names, records and gates alike",
+              _ex.get("closed") is True
+              and "E9" in (_ex.get("items") or []) and "Enter" in (_ex.get("items") or [])
+              and "Keeper" not in (_ex.get("items") or [])))
     # the shelf has ONE reader: the vocabulary is built in the bench from the
     # judge's own parse (axisKinds/paramKinds), so the gate carries no second
     # regex over the shelf and the bench never fetches a server-built vocabulary
