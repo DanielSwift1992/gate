@@ -1154,7 +1154,7 @@ const grab = (name, prefix) => {
     }
 };
 let SCOPES = [], NESTS = {};
-let LINE_OPENERS = {}, LINE_MODS = new Set(), LINE_FORMS = {};
+let LINE_OPENERS = {}, LINE_MODS = {}, LINE_FORMS = {};
 let vocabulary = {}, conformers = {}, axisOf = {}, protoAxes = {}, gates = {};
 let shelfDecls = new Map();
 let layoutDecls = new Map(), declFile = new Map(), worldAliases = new Map();
@@ -1222,6 +1222,24 @@ const ask = (tail) => {
         keyslot: askAt(open9.concat(["    public typealias Key = "]), 2, 27),
         ext: ask(["extension "]),
         head: ask(["public enum E10: "]),
+        formsFloor: (() => {
+            const probeAt = (file, lines, line, ch) => {
+                active = file;
+                formsFiles = new Set([file]);
+                cm = { getLine: (n) => lines[n] };
+                layoutDecls = new Map(); declFile = new Map();
+                lastParsed = judge(file, lines.join("\\n"),
+                                   { seeds: new Set(), generics: new Set() }).parsed;
+                return allowedAt({ line: line, ch: ch });
+            };
+            const proto = probeAt("forms-grants.swift",
+                ["public protocol Realm2 {", "    "], 1, 4);
+            const ext = probeAt("forms-grants.swift",
+                ["extension Mark {", "    "], 1, 4);
+            const ftop = probeAt("forms-grants.swift", ["pub"], 0, 3);
+            active = "w.swift"; formsFiles = new Set();
+            return { proto: proto, ext: ext, top: ftop };
+        })(),
         formpair: (() => {
             const t = judge("p.swift", ["public enum P1: Keeper {",
                                         "    public typealias Post = Legal",
@@ -1329,6 +1347,24 @@ const ask = (tail) => {
               # the body's home grants typealias and not enum: default is deny
               and "typealias" in (_fb.get("items") or []) and "public" in (_fb.get("items") or [])
               and "enum" not in (_fb.get("items") or [])))
+    # ── AND A FORMS PAGE SPEAKS ITS OWN DIALECT. The floor used to keep
+    # silence there; the dialect is claims now: four forms homes on the
+    # same shelf, the body frame's head telling them apart. A protocol
+    # body grants associatedtype alone; an extension body stands static
+    # beside public and opens var; the top grants the four openers. And
+    # the world keeps its own floor: no forms word leaks into it, because
+    # a grant names one home, never a language.
+    _ff = _off.get("formsFloor") or {}
+    _fpr, _fex, _ftp = (_ff.get("proto") or {}), (_ff.get("ext") or {}), (_ff.get("top") or {})
+    S.append(("a forms page's floor speaks the forms dialect, home by home",
+              (_fpr.get("items") or []) == ["associatedtype"]
+              and "var" in (_fex.get("items") or []) and "static" in (_fex.get("items") or [])
+              and all(w in (_ftp.get("items") or [])
+                      for w in ("public", "protocol", "enum", "typealias", "extension"))))
+    S.append(("and no forms word leaks into the world's floor",
+              "static" not in (_ft.get("items") or [])
+              and "protocol" not in (_ft.get("items") or [])
+              and "associatedtype" not in (_fb.get("items") or [])))
 
     # ── AND THE OFFER IS HELD TO THE VERDICT, NOT TO A DESCRIPTION OF IT. Two
     # readings of one law had come apart here, and both were invisible to every
@@ -1363,7 +1399,7 @@ const grab = (name, prefix) => {
     }
 };
 let SCOPES = [], NESTS = {};
-let LINE_OPENERS = {}, LINE_MODS = new Set(), LINE_FORMS = {};
+let LINE_OPENERS = {}, LINE_MODS = {}, LINE_FORMS = {};
 let vocabulary = {}, conformers = {}, axisOf = {}, protoAxes = {}, gates = {};
 let shelfDecls = new Map();
 let layoutDecls = new Map(), declFile = new Map(), worldAliases = new Map();

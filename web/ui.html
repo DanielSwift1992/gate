@@ -1250,7 +1250,7 @@ const compEl = document.getElementById("completion");
 let SCOPES = [];        // records from the grammar shelf, walked in order
 let NESTS = {};         // outer kind -> the inner kinds a claim admits
 let LINE_OPENERS = {};  // home -> the words a claim lets a line open with
-let LINE_MODS = new Set();   // words standing before an opener, not using it up
+let LINE_MODS = {};     // home -> the modifier words granted there, spending nothing
 let LINE_FORMS = {};    // opener word -> its row of slots, read off the shelf
 function buildScopes(parsed) {
     const spell = (name) => name === "LineEnd" ? "\n"
@@ -1274,20 +1274,23 @@ function buildScopes(parsed) {
     }
     // the words, their spellings, and the claims that let one open a line:
     // the same page carries them, and this is their one reader
-    const wordSpelling = {};
+    const wordSpelling = {}, modWords = new Set();
     for (const d of parsed.declarations.values()) {
         if ((d.conformances || []).includes("Word")) {
             const lit = parsed.literals.get(d.name);
             if (lit) wordSpelling[d.name] = lit.value;
-            if ((d.conformances || []).includes("LineModifier") && lit)
-                LINE_MODS.add(lit.value);
+            if ((d.conformances || []).includes("LineModifier"))
+                modWords.add(d.name);
         }
     }
+    // one claim shape for both: an opener joins its home's grant list, a
+    // modifier (LineModifier) joins the home's modifier list instead
     for (const [, a] of parsed.topAliases) {
         const m = /^OpensLine<(\w+), ?(\w+)Home>$/.exec(a.target || "");
         if (!m || !wordSpelling[m[1]]) continue;
         const home = m[2].toLowerCase();
-        (LINE_OPENERS[home] || (LINE_OPENERS[home] = new Set())).add(wordSpelling[m[1]]);
+        const into = modWords.has(m[1]) ? LINE_MODS : LINE_OPENERS;
+        (into[home] || (into[home] = new Set())).add(wordSpelling[m[1]]);
     }
     // the forms: after an opener, the row of slots the shelf states. The
     // branches below the floor are readers of these rows, not authors
@@ -1530,18 +1533,30 @@ function allowedAt(cur) {
     // ── THE FLOOR UNDER EVERY LINE'S FIRST WORD. Everything above answers a
     // form already begun; this answers the empty start. A line opens with a
     // word only where a claim on the grammar shelf grants it, so the offer
-    // is the grant list for this home and the modifiers that may precede
-    // it. A world speaks the world dialect: a forms page has words of its
-    // own, and their claims are not written yet, so it keeps its silence
-    // rather than borrowing the wrong list.
+    // is the grant list for this home and the modifiers granted beside it.
+    // A world speaks the world dialect, and a forms page speaks the forms
+    // dialect: four homes of its own on the same shelf, told apart by the
+    // head of the body frame over the cursor. Default stays deny: a home
+    // no claim names offers nothing, and static is no word of a world.
     {
         const head = /^\s*((?:[a-z]+\s+)*)([a-z]*)$/.exec(before);
-        const home = host && !inBody ? "body" : (!host && !inBody ? "top" : null);
-        if (head && home && LINE_OPENERS[home] && LINE_OPENERS[home].size
-            && !(typeof formsFiles === "object" && formsFiles.has && formsFiles.has(active))) {
+        const isForms = typeof formsFiles === "object" && formsFiles.has
+            && formsFiles.has(active);
+        let home = null;
+        if (isForms) {
+            const bf = scopesAt(cur).reverse().find(f => f.kind === "body");
+            home = !bf ? "formstop"
+                 : /\bprotocol\s+\w/.test(bf.head || "") ? "formsprotocol"
+                 : /\bextension\s+\w/.test(bf.head || "") ? "formsextension"
+                 : "formsrecord";
+        } else {
+            home = host && !inBody ? "body" : (!host && !inBody ? "top" : null);
+        }
+        if (head && home && LINE_OPENERS[home] && LINE_OPENERS[home].size) {
+            const mods = LINE_MODS[home] || new Set();
             const saidWords = head[1].trim().split(/\s+/).filter(Boolean);
-            if (saidWords.every(w => LINE_MODS.has(w))) {
-                const pool = [...(saidWords.length ? [] : [...LINE_MODS]),
+            if (saidWords.every(w => mods.has(w))) {
+                const pool = [...[...mods].filter(w => !saidWords.includes(w)),
                               ...LINE_OPENERS[home]];
                 return { items: [...new Set(pool)],
                          kind: "what may open a line here", closed: true };

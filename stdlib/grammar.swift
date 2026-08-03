@@ -116,3 +116,39 @@ public enum LineForm<W: Word, S1: LineSlot, S2: LineSlot, S3: LineSlot> {}
 
 public typealias Typealias_form = LineForm<TypealiasWord, AxisNameSlot, EqualsSlot, ValueSlot>
 public typealias Enum_form = LineForm<EnumWord, NameSlot, ColonSlot, ProtosSlot>
+
+// THE FORMS DIALECT. A forms page opens lines with words of its own,
+// granted the same way: one claim per word per home. Four homes stand
+// beside the world's two, told apart by what the body frame's head
+// opened: the page's top, a record's body, a protocol's body, an
+// extension's body. A modifier is granted per home too, and a home no
+// claim names stays silent: static is no word of a world.
+public enum FormsTopHome {}
+public enum FormsRecordHome {}
+public enum FormsProtocolHome {}
+public enum FormsExtensionHome {}
+
+public enum ProtocolWord: Word {}
+extension ProtocolWord { public static var typeName: String { "protocol" } }
+public enum AssociatedtypeWord: Word {}
+extension AssociatedtypeWord { public static var typeName: String { "associatedtype" } }
+public enum VarWord: Word {}
+extension VarWord { public static var typeName: String { "var" } }
+public enum StaticWord: Word, LineModifier {}
+extension StaticWord { public static var typeName: String { "static" } }
+
+public typealias Protocol_opens_formstop = OpensLine<ProtocolWord, FormsTopHome>
+public typealias Enum_opens_formstop = OpensLine<EnumWord, FormsTopHome>
+public typealias Typealias_opens_formstop = OpensLine<TypealiasWord, FormsTopHome>
+public typealias Extension_opens_formstop = OpensLine<ExtensionWord, FormsTopHome>
+public typealias Typealias_opens_formsrecord = OpensLine<TypealiasWord, FormsRecordHome>
+public typealias Associatedtype_opens_formsprotocol = OpensLine<AssociatedtypeWord, FormsProtocolHome>
+public typealias Var_opens_formsextension = OpensLine<VarWord, FormsExtensionHome>
+
+// the modifiers' homes: public stands in five, static in one
+public typealias Public_stands_top = OpensLine<PublicWord, TopHome>
+public typealias Public_stands_body = OpensLine<PublicWord, BodyHome>
+public typealias Public_stands_formstop = OpensLine<PublicWord, FormsTopHome>
+public typealias Public_stands_formsrecord = OpensLine<PublicWord, FormsRecordHome>
+public typealias Public_stands_formsextension = OpensLine<PublicWord, FormsExtensionHome>
+public typealias Static_stands_formsextension = OpensLine<StaticWord, FormsExtensionHome>
