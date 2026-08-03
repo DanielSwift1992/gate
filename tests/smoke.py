@@ -6392,7 +6392,7 @@ public enum MyWatch: AccessLedger {
               and ("sha256:" + _ui_hash) in _shot_said
               and "shoot-bench.sh" in _shot_said))
 
-    claimed_n = re.search(r"the battery: (\d+) end-to-end checks", readme)
+    claimed_n = re.search(r"the battery: (\d+) checks", readme)
     S.append(("the README counts these checks correctly",
               bool(claimed_n) and int(claimed_n.group(1)) == len(S) + 1))
 

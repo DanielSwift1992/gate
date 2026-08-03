@@ -61,7 +61,9 @@ not a dependency: delete it and every court still answers through the node
 ports, which are ordinary files in `bin/` you can read. CI rebuilds the
 binary from the pinned public corpus on every push and runs the whole
 battery on what it built, so the vendored binary is a convenience with a
-warrant, not a thing you are asked to trust.
+warrant, not a thing you are asked to trust. The recorded hash names the
+bytes present; the check is rebuilding from the pin and running the
+battery on what you built.
 
 ## Where it plugs in
 
@@ -114,6 +116,9 @@ and a bug in either is visible against the other. Records are
 declarations and rules are type constraints, so a record that breaks a
 rule does not get flagged: it fails to exist. And the subset is small on
 purpose: type declarations only, no functions, no bodies, nothing runs.
+The theory behind the judge ships the same way: compiler-checked
+constructions and executable witnesses, with the arguments carried by
+the papers beside them.
 
 ## The picture on the cover
 
