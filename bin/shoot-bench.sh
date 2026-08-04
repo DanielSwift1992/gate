@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The cover's picture of the bench, taken the same way every time: a fresh
 # demo world, `gate serve` on a free port, one headless Chrome shot of the
-# door /ui?f=ownership.swift:84 - the file and line of the demo's one
+# door /ui?f=ownership.swift:85 - the file and line of the demo's one
 # refusal. Beside the image it writes docs/bench.png.from with the sha256
 # of ui.html as it was in front of the camera: the battery holds that hash
 # to the ui.html in the working copy, so a picture of a page that no
@@ -46,7 +46,7 @@ mkdir -p "$HERE/docs"
 "$CHROME" --headless --disable-gpu --hide-scrollbars \
     --window-size=1280,800 --force-device-scale-factor=2 --virtual-time-budget=4000 \
     --screenshot="$HERE/docs/bench.png" \
-    "http://127.0.0.1:$PORT/ui?f=ownership.swift:84" 2>/dev/null
+    "http://127.0.0.1:$PORT/ui?f=ownership.swift:85" 2>/dev/null
 
 # a one-pixel black frame, burned into the file: the cover renders on light
 # and on dark pages, and a dark picture meeting a dark page with no seam
@@ -65,7 +65,7 @@ here = sys.argv[1]
 h = hashlib.sha256(open(os.path.join(here, "web", "ui.html"), "rb").read()).hexdigest()
 open(os.path.join(here, "docs", "bench.png.from"), "w").write(
     "web/ui.html sha256:" + h + "\n"
-    "door /ui?f=ownership.swift:84 over `gate demo`, 1280x800 at 2x\n"
+    "door /ui?f=ownership.swift:85 over `gate demo`, 1280x800 at 2x\n"
     "retake: bash bin/shoot-bench.sh\n")
 print("docs/bench.png over web/ui.html", h[:12])
 EOF

@@ -27,7 +27,7 @@ silence. Either they are equal, or you get the exact point of contact:
 ```
 $ gate status
 status: refused 1
-  ownership.swift:84 · Owns_3_carol · Zone_docs against Zone_src: an owner and
+  ownership.swift:85 · Owns_3_carol · Zone_docs against Zone_src: an owner and
                        the path they own must share one zone
 ```
 
@@ -38,10 +38,10 @@ compares two texts. This compares two claims about one thing.
 
 The same refusal on the live page (`gate serve`), at its line. The picture
 is a door, and so is this line: [the same bench, live in your
-browser](https://danielswift1992.github.io/gate/?f=ownership.swift:84),
+browser](https://danielswift1992.github.io/gate/?f=ownership.swift:85),
 over the demo, judged as you type.
 
-[![the bench: the refusal at its line, re-read on every keystroke](docs/bench.png)](https://danielswift1992.github.io/gate/?f=ownership.swift:84)
+[![the bench: the refusal at its line, re-read on every keystroke](docs/bench.png)](https://danielswift1992.github.io/gate/?f=ownership.swift:85)
 
 The check is one lookup per claim and nothing else: no search, no solver,
 no build. The cost is linear in the number of claims: milliseconds on a
@@ -271,7 +271,7 @@ web/codemirror.*  the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
 docs/           DETAILS.md, SECURITY.md, CHANGELOG.md, NOTICE.md, and
                 the cover's picture with its provenance
-tests/smoke.py   the battery: 402 checks this repository holds itself
+tests/smoke.py   the battery: 403 checks this repository holds itself
                  to, end-to-end runs through judge parity through
                  documentation contracts; the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts

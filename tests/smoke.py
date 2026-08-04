@@ -7098,6 +7098,35 @@ public enum MyWatch: AccessLedger {
               and not any(f.startswith("genre-")
                           for f in os.listdir(os.path.join(HERE, "stdlib")))))
 
+    # ── AND THE VERDICT ON THE COVER IS THE ONE THIS TOOL PRINTS, AT THE LINE IT
+    # PRINTS IT. The README quotes a refusal and four places name the door that
+    # opens it, all written by hand from a run somebody made once. A line added
+    # to the grants vocabulary moved the demo's refusal down by one and every one
+    # of them went stale in the same instant, in silence: the picture still
+    # showed a refusal, the links still opened a file, and the address on the
+    # cover was of a line that does not refuse. The pair was recorded as missing
+    # weeks ago and read as harmless because it was written from a real run once.
+    # It is held now to a run made here, of the demo the reader is invited to make.
+    _cover = os.path.join(tmp, "cover-demo")
+    run("demo", _cover)
+    _cover_refusals = run("status", cwd=_cover)[1].get("refusals") or []
+    _cover_at = (_cover_refusals[0].get("address") if _cover_refusals else "")
+    _cover_lines = [l for l in say("status", cwd=_cover).split("\n") if l.strip()]
+    _flat = lambda s: " ".join(s.split())
+    _prose = readme + open(os.path.join(HERE, "docs", "DETAILS.md"), encoding="utf-8").read() \
+        + open(os.path.join(HERE, "bin", "shoot-bench.sh"), encoding="utf-8").read()
+    _doors = set(re.findall(r"ownership\.swift:\d+", _prose))
+    S.append(("the refusal quoted on the cover is the one the demo prints, at its own line",
+              # the demo the cover is written from has exactly the one refusal
+              len(_cover_refusals) == 1 and _cover_at.startswith("ownership.swift:")
+              # and the cover quotes what the tool says, word for word and number
+              # for number, wrapping aside
+              and _flat(" ".join(_cover_lines[:2])) in _flat(readme)
+              # and every door in the prose opens the line that refuses: the
+              # picture's, the live page's, and the camera's own
+              and _doors == {_cover_at}
+              and len(re.findall(r"ownership\.swift:\d+", _prose)) >= 4))
+
     # ── AND THE COVER'S PICTURE IS OF THIS BENCH, NOT A REMEMBERED ONE. The
     # README shows docs/bench.png, and bin/shoot-bench.sh writes beside it the
     # sha256 of ui.html as photographed. Held here to the working copy, so a
