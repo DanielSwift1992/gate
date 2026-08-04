@@ -1523,11 +1523,18 @@ function walkFormAt(before) {
 // WHAT MAY BE WRITTEN HERE — the whole of it, in one place
 function allowedAt(cur) {
     const line = cm.getLine(cur.line) || "";
-    // right of the note token there is no grammar, so no offer. The gathered
-    // lines below already lose their notes; the cursor's own line obeys the
-    // same cut or a `<` spelled in a comment would open a slot.
-    const noteAt = noteStartAt(cur.line);
-    if (noteAt >= 0 && cur.ch > noteAt) return null;
+    // ── AND THE NOTE IS ALREADY SOMEBODY ELSE'S LAW. Two lines stood here to
+    // stop a `<` spelled in a comment from opening a slot, from the days when
+    // this page read lines with regexes of its own. The walk reads the grammar
+    // shelf now, and the shelf's own records carry the note whole (Note_in_body
+    // eats its brace, String_in_body shields the token), so the walk never
+    // reaches a comment as grammar and these two lines answered a position that
+    // no longer happens. Measured before they went, by the mutation run and then
+    // by the offer probe over both pages: with the cut and without it, not one
+    // answer of the whole probe differs, and it does not differ even when
+    // noteStartAt is made to say there is no note anywhere. A law stated twice
+    // is the thing this tool exists against, and the second statement was the
+    // dead one.
     const before = line.slice(0, cur.ch);
     const { host, inBody } = placeAt(cur);
 
