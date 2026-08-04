@@ -598,7 +598,7 @@ function shownTerm(term, depth) {
 let language = { names: {}, file: "", short: null, present: false, command: "" };
 let jumpable = new Set();      // names with a home: underlined, and clickable
 let vocabulary = {};           // name -> the shelf module that declares it
-let conformers = {}, axisOf = {}, protoAxes = {}, gates = {};
+let conformers = {}, axisOf = {}, protoAxes = {};
 // the shelf's declarations as the judge parsed them, kept whole: the offer
 // climbs the refinement chain with the judge's own conformsTo, and that walk
 // reads declarations, not the flattened maps beside this line
@@ -1251,7 +1251,10 @@ let SCOPES = [];        // records from the grammar shelf, walked in order
 let NESTS = {};         // outer kind -> the inner kinds a claim admits
 let LINE_OPENERS = {};  // home -> the words a claim lets a line open with
 let LINE_MODS = {};     // home -> the modifier words granted there, spending nothing
-let LINE_FORMS = {};    // opener word -> its row of slots, read off the shelf
+// the one table of forms: line rows (opener -> slots) come off the grammar
+// shelf, gate rows (name -> kinds) off the presented declarations; afterDot
+// reads the vocabulary's own axis table, which is the forms themselves
+let FORM_ROWS = { line: {}, gate: {} };
 let LINE_CONTINUERS = new Set();  // words continuing an open line, never opening one
 function buildScopes(parsed) {
     const spell = (name) => name === "LineEnd" ? "\n"
@@ -1304,7 +1307,7 @@ function buildScopes(parsed) {
     for (const [, a] of parsed.topAliases) {
         const m = /^LineForm<(\w+), ?(\w+)Slot, ?(\w+)Slot, ?(\w+)Slot>$/.exec(a.target || "");
         if (!m || !wordSpelling[m[1]]) continue;
-        LINE_FORMS[wordSpelling[m[1]]] =
+        FORM_ROWS.line[wordSpelling[m[1]]] =
             [m[2].toLowerCase(), m[3].toLowerCase(), m[4].toLowerCase()];
     }
     if (out.length) { SCOPES = out; NESTS = nests; }
@@ -1454,7 +1457,7 @@ function allowedAt(cur) {
     // an axis slot: the shelf's typealias row says an axis name, the
     // equals, then a value; the row is this branch's licence, and with
     // the row cut the question dies here rather than guessing
-    const tform = LINE_FORMS["typealias"];
+    const tform = FORM_ROWS.line["typealias"];
     const slot = (tform && tform[1] === "equals" && tform[2] === "value")
         ? /typealias\s+(\w+)\s*=\s*[\w.]*$/.exec(before) : null;
     const wanted = slot ? (axesOfHost(host)[slot[1]] || axisOf[slot[1]] || null) : null;
@@ -1484,8 +1487,8 @@ function allowedAt(cur) {
     // one line or many, the frame neither knows nor cares.
     {
         const g = scopesAt(cur).reverse().find(f => f.kind === "gate");
-        if (g && g.head && gates[g.head]) {
-            const kinds = gates[g.head];
+        if (g && g.head && FORM_ROWS.gate[g.head]) {
+            const kinds = FORM_ROWS.gate[g.head];
             const k = kinds[Math.min(g.commas, kinds.length - 1)];
             const f = fillersFor(k, host);
             if (f && f.length)
@@ -1509,7 +1512,7 @@ function allowedAt(cur) {
 
     // the head of a declaration: the shelf's enum row says a name, the
     // colon, then what the record is; the row licences the question
-    const eform = LINE_FORMS["enum"];
+    const eform = FORM_ROWS.line["enum"];
     const head = (eform && eform[1] === "colon" && eform[2] === "protos")
         ? /^\s*(?:public\s+)?enum\s+\w+\s*:\s*([\w,\s]*)$/.exec(before) : null;
     if (head) {
@@ -1520,7 +1523,7 @@ function allowedAt(cur) {
 
     // inside a body: the gates that may be claimed here
     if (inBody && /^\s*\w*$/.test(before)) {
-        const forms = Object.keys(gates);
+        const forms = Object.keys(FORM_ROWS.gate);
         return forms.length ? { items: forms, kind: "a claim this body may hold", closed: true } : null;
     }
     // inside a declaration, at the start of a line: the axes it still owes
@@ -2841,7 +2844,8 @@ function addClaimFlow(host, anchorEl) {
     // only a form whose arguments have STATED kinds can be a closed question: a
     // certificate on the shelf takes bare numbers, and the bench would have
     // nothing to offer for them. What cannot be asked closed is not offered.
-    compItems = Object.keys(gates).filter(g => (gates[g] || []).length && gates[g].every(Boolean));
+    compItems = Object.keys(FORM_ROWS.gate).filter(g =>
+        (FORM_ROWS.gate[g] || []).length && FORM_ROWS.gate[g].every(Boolean));
     compChosen = 0; compSlot = null;
     compRect = anchorEl.getBoundingClientRect();
     compEl.dataset.kind = "a claim this body may hold";
@@ -2853,7 +2857,7 @@ function addClaimFlow(host, anchorEl) {
 
 function claimStep(chosen) {
     if (!pending.head) pending.head = chosen; else pending.args.push(chosen);
-    const kinds = gates[pending.head] || [];
+    const kinds = FORM_ROWS.gate[pending.head] || [];
     if (pending.args.length < kinds.length) {
         const kind = kinds[pending.args.length];
         const items = fillersFor(kind, null, null) || [];
@@ -3211,7 +3215,7 @@ document.getElementById("bare").addEventListener("click", (e) => {
         const host = (lastParsed && lastParsed.declarations.get(slot.host)) || layoutOrActive().get(slot.host);
         const kind = slot.kind === "alias" ? axesOfHost(host)[slot.axis]
             : slot.kind === "hole" ? slot.of
-            : ((gates[slot.head] || [])[slot.index]);
+            : ((FORM_ROWS.gate[slot.head] || [])[slot.index]);
         const items = fillersFor(kind, host, slot.axis);
         if (!items) return;
         compItems = items; compSlot = slot;
@@ -3347,12 +3351,12 @@ function describeName(name) {
     if (d && d.conformances && d.conformances.length) {
         const kinds = d.conformances.filter(c => protoAxes[c]);
         const plain = d.conformances.filter(c => !protoAxes[c]);
-        if (gates[name]) return name + " · a gate: " + name + "&lt;" + gates[name].join(", ") + "&gt;";
+        if (FORM_ROWS.gate[name]) return name + " · a gate: " + name + "&lt;" + FORM_ROWS.gate[name].join(", ") + "&gt;";
         return name + " · " + (plain.length ? "a " + plain.join(", ") + " " : "") + "record"
             + (kinds.length ? ", of kind " + kinds.join(", ") : "");
     }
     if (d) return name + " · declared here";
-    if (gates[name]) return name + " · a gate: takes " + gates[name].join(", ");
+    if (FORM_ROWS.gate[name]) return name + " · a gate: takes " + FORM_ROWS.gate[name].join(", ");
     for (const [kind, atoms] of Object.entries(conformers))
         if (atoms.includes(name)) return name + " · a value of kind " + kind
             + (vocabulary[name] ? " (from " + vocabulary[name] + ")" : "");
@@ -3556,7 +3560,7 @@ for (const head of document.querySelectorAll("h3.fold")) {
 // enum body leaves its opener on the parse stack, so a later gate is read as its
 // child, but the short name is the one the world speaks. ──
 async function loadVocabulary() {
-    vocabulary = {}; conformers = {}; axisOf = {}; protoAxes = {}; gates = {};
+    vocabulary = {}; conformers = {}; axisOf = {}; protoAxes = {}; FORM_ROWS.gate = {};
     shelfDecls = new Map();
     const list = await (await fetch("/shelf")).json().catch(() => ({}));
     // WHAT THIS WORLD PRESENTS COMES FIRST, because it is what this world is
@@ -3600,7 +3604,7 @@ async function loadVocabulary() {
                     if (!(axis in axisOf) || (axisOf[axis] == null && kind)) axisOf[axis] = kind;
                 }
             } else if (d.params && d.params.length) {       // a gate: what each parameter takes, in order
-                gates[d.name] = d.paramKinds || [];
+                FORM_ROWS.gate[d.name] = d.paramKinds || [];
             } else {                                        // a plain atom: what it stands in for
                 for (const conf of d.conformances) {
                     const c = conf.trim();

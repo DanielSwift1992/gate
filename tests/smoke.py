@@ -1113,7 +1113,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               "function describeName(" in ui and "function inspect(" in ui
               and "protoAxes[name]" in ui and "conformers)" in ui))
     S.append(("and what it says is read from the world and the forms",
-              "vocabulary[name]" in ui and "gates[name]" in ui
+              "vocabulary[name]" in ui and "FORM_ROWS.gate[name]" in ui
               and "a dictionary of ours" not in ui.split("function describeName")[0][-200:]))
 
     S.append(("one reading of the grammar drives every offer, not a case per place",
@@ -1154,8 +1154,9 @@ const grab = (name, prefix) => {
     }
 };
 let SCOPES = [], NESTS = {};
-let LINE_OPENERS = {}, LINE_MODS = {}, LINE_FORMS = {}, LINE_CONTINUERS = new Set();
-let vocabulary = {}, conformers = {}, axisOf = {}, protoAxes = {}, gates = {};
+let LINE_OPENERS = {}, LINE_MODS = {}, LINE_CONTINUERS = new Set();
+let FORM_ROWS = { line: {}, gate: {} };
+let vocabulary = {}, conformers = {}, axisOf = {}, protoAxes = {};
 let shelfDecls = new Map();
 let layoutDecls = new Map(), declFile = new Map(), worldAliases = new Map();
 let active = "w.swift", lastParsed = null, cm = null;
@@ -1398,6 +1399,14 @@ const ask = (tail) => {
               and (_mm.get("bad3") or {}).get("word") == "associatedtype"))
     S.append(("and a granted line or a broken head's where wears nothing",
               _mm.get("ok1") is None and _mm.get("ok2") is None))
+    # ── AND THE OFFER READS ONE TABLE OF FORMS. Line rows and gate rows
+    # lived as two globals with two shapes; they are one table now, and
+    # afterDot reads the vocabulary's own axis table, which is the forms
+    # themselves. The behavior above already holds the refactor; the
+    # shape is pinned so a second private table cannot quietly grow back.
+    S.append(("the offer reads one table of forms, line rows and gate rows alike",
+              "FORM_ROWS.line[" in ui and "FORM_ROWS.gate[" in ui
+              and "let gates" not in ui and "let LINE_FORMS" not in ui))
 
     # ── AND THE OFFER IS HELD TO THE VERDICT, NOT TO A DESCRIPTION OF IT. Two
     # readings of one law had come apart here, and both were invisible to every
@@ -1432,8 +1441,9 @@ const grab = (name, prefix) => {
     }
 };
 let SCOPES = [], NESTS = {};
-let LINE_OPENERS = {}, LINE_MODS = {}, LINE_FORMS = {}, LINE_CONTINUERS = new Set();
-let vocabulary = {}, conformers = {}, axisOf = {}, protoAxes = {}, gates = {};
+let LINE_OPENERS = {}, LINE_MODS = {}, LINE_CONTINUERS = new Set();
+let FORM_ROWS = { line: {}, gate: {} };
+let vocabulary = {}, conformers = {}, axisOf = {}, protoAxes = {};
 let shelfDecls = new Map();
 let layoutDecls = new Map(), declFile = new Map(), worldAliases = new Map();
 let active = "w.swift", lastParsed = null, cm = null, formsFiles = new Set();
@@ -4910,7 +4920,7 @@ console.log(JSON.stringify({
               and "Lonely" in (fv.get("combos") or [])              # and a kind nobody wears is still offered
               and taken[0] and taken[1] and taken[2] and taken[3] is None
               and fv.get("askable") == ["VerifiedView"]             # a form with bare arguments is not asked
-              and 'gates[g].every(Boolean)' in ui
+              and 'FORM_ROWS.gate[g].every(Boolean)' in ui
               and 'if (!check()) return;' in ui))                   # the name is checked before it is written
 
     # ── a hole is not text yet. What a record still owes is drawn as a row and
