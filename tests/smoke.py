@@ -4564,6 +4564,43 @@ console.log(JSON.stringify({
               both and both[0] == both[1] == "holds" and both[2] == 0))
     S.append(("a refusal's address lands on the line that carries the accused name",
               "NoSuchDoc9" in _ref_line))
+
+    # ── AND ON THE FILE THAT MAKES THE CLAIM, NOT ON EVERY FILE THAT NAMES THE
+    # PERSON. The judge repeats a gate refusal once per file it was handed, and
+    # `attribute_refusals` picks the one that says it. Its own comment states the
+    # law it exists for: two entries about one person are two different claims.
+    # The code required the form and the parties and stopped there, so an entry
+    # about the same person with a DIFFERENT argument matched as well, and a world
+    # where one file holds and another refuses put an address on the holding line.
+    # Open it and you read `VerifiedAtRank<Emp9001, Lead>` under a claim that Lead
+    # is not Manager: a line that is right, accused of the neighbour's wrong.
+    #
+    # Found by the mutation run, and by the shape of the finding: turning the
+    # picker OFF gave one address and turning it on gave two, so the mechanism was
+    # adding the false one rather than dropping the broadcast copies.
+    _tw = os.path.join(tmp, "two-worlds")
+    run("demo", "org", _tw)
+    open(os.path.join(_tw, "extra.swift"), "w", encoding="utf-8").write(
+        "// a second world file: the failing claim is made HERE and nowhere else,\n"
+        "// while gate.swift carries a holding one about the same person\n"
+        "public enum ExtraTeam: Team {\n"
+        "    @StructureBuilder\n"
+        "    public static var body: some Structure {\n"
+        "        VerifiedAtRank<\n"
+        "            Emp9001,\n"
+        "            Manager\n"
+        "        >.self\n"
+        "    }\n"
+        "}\n")
+    run("mine", "extra.swift", "--role", "world", cwd=_tw)
+    _two = run("status", cwd=_tw)[1]
+    S.append(("a refusal names the file that makes the claim, and no other",
+              _two.get("verdict") == "refused"
+              # one address, in the file that says it, at the line carrying the
+              # accused name: the same law the check above holds within a file
+              and [r.get("address") for r in _two.get("refusals", [])] == ["extra.swift:7"]
+              and all("Lead against Manager" in r.get("claim", "")
+                      for r in _two.get("refusals", []))))
     if agreed and not agreed[0]:
         print("   bench says", agreed[1], "with", agreed[2], "refusals; the CLI says", agreed[3])
 

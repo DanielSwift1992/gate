@@ -991,6 +991,18 @@ def locate_claim(text, claim):
         return None
     form = names[0]
     parties = re.findall(r"\b([A-Z]\w*)\.\w+", claim)
+    # ── AND THE ARGUMENT THE CLAIM TURNS ON, WHICH IS WHAT MAKES IT THIS CLAIM
+    # AND NOT ITS NEIGHBOUR. The law above was written and only half kept: the
+    # form and the parties were required and the argument was not, so an entry
+    # about the same person with a DIFFERENT argument answered to the same claim.
+    # A world where one file holds and another refuses then put an address on the
+    # holding line, and whoever opened it read a right line accused of somebody
+    # else's wrong. The side the claim requires is the one after `==`; a claim
+    # with no `==` in it asks for nothing more than before.
+    wanted = re.search(r"==\s*([A-Z]\w*)", claim)
+    # kept apart from `parties`, because the line this refusal points AT is still
+    # the accused name's, never the argument it was measured against
+    inside = parties + ([wanted.group(1)] if wanted else [])
     lines = text.split("\n")
     for i, ln in enumerate(lines):
         if not re.search(rf"\b{re.escape(form)}\b", ln):
@@ -1000,7 +1012,7 @@ def locate_claim(text, claim):
             end += 1
         entry = lines[i:end + 1]
         joined = "\n".join(entry)
-        if not all(re.search(rf"\b{re.escape(p)}\b", joined) for p in parties):
+        if not all(re.search(rf"\b{re.escape(p)}\b", joined) for p in inside):
             continue
         want = parties[0] if parties else form
         for k, line in enumerate(entry):
