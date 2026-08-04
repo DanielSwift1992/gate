@@ -7123,6 +7123,31 @@ public enum MyWatch: AccessLedger {
                            encoding="utf-8").read().split("\n")[2].startswith("// speaks-for: ")
                       for m in speaks_map)))
 
+    # ── AND A FILE'S OWN WORD ABOUT HOW IT IS MET IS READ, OR NOBODY WOULD KNOW.
+    # Found by the mutation run: one character in the pattern that finds
+    # `// opens:` and the whole battery went on saying green, while every page
+    # that asks to be met as prose would arrive as code with its slashes showing.
+    # The head is where pages outside any manifest say it, which is the shelf's
+    # own sources, so the probe is the real letter with a word the bench cannot
+    # open put into it, and taken out again.
+    _opens_page = os.path.join(HERE, "stdlib", "readme.swift")
+    _opens_kept = open(_opens_page, encoding="utf-8").read()
+    try:
+        open(_opens_page, "w").write(_opens_kept.replace("// opens: bare",
+                                                         "// opens: sideways", 1))
+        _sideways = run("status", cwd=HERE)[1]
+    finally:
+        open(_opens_page, "w").write(_opens_kept)
+    S.append(("a page that asks to be met in a way the bench cannot open is refused by name",
+              _sideways.get("verdict") == "refused"
+              and any(r.get("address") == "stdlib/readme.swift"
+                      and "`sideways` is not a view" in r.get("claim", "")
+                      # and the refusal names the three it could have said
+                      and "full · bare · table" in r.get("claim", "")
+                      for r in _sideways.get("refusals", []))
+              # and with its own word back, this repository holds again
+              and run("status", cwd=HERE)[1].get("verdict") == "holds"))
+
     # ── AND A WORD THAT WAS RETIRED STAYS RETIRED. `genre` named a thing this
     # tool no longer believes in: a kind of world handed down, belonging to the
     # judge. What there is instead is forms — the grammar records are written
