@@ -152,3 +152,13 @@ public typealias Public_stands_formstop = OpensLine<PublicWord, FormsTopHome>
 public typealias Public_stands_formsrecord = OpensLine<PublicWord, FormsRecordHome>
 public typealias Public_stands_formsextension = OpensLine<PublicWord, FormsExtensionHome>
 public typealias Static_stands_formsextension = OpensLine<StaticWord, FormsExtensionHome>
+
+// a word may CONTINUE an open line instead of opening one: a broken
+// extension head carries its `where` to the next line, and the court
+// judges the pair as one sentence. A continuer opens nothing, so the
+// floor never offers it, and the moment's marker steps over it and
+// leaves the sentence to the court.
+public enum WhereWord: Word {}
+extension WhereWord { public static var typeName: String { "where" } }
+public enum ContinuesLine<W: Word> {}
+public typealias Where_continues = ContinuesLine<WhereWord>

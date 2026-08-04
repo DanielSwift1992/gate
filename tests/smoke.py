@@ -1154,7 +1154,7 @@ const grab = (name, prefix) => {
     }
 };
 let SCOPES = [], NESTS = {};
-let LINE_OPENERS = {}, LINE_MODS = {}, LINE_FORMS = {};
+let LINE_OPENERS = {}, LINE_MODS = {}, LINE_FORMS = {}, LINE_CONTINUERS = new Set();
 let vocabulary = {}, conformers = {}, axisOf = {}, protoAxes = {}, gates = {};
 let shelfDecls = new Map();
 let layoutDecls = new Map(), declFile = new Map(), worldAliases = new Map();
@@ -1168,7 +1168,7 @@ global.fetch = async (u) => ({
         return fs.readFileSync(p, "utf8");
     },
 });
-eval(["buildScopes", "admits", "scopesAt", "noteStartAt", "codeOfLine", "placeAt",
+eval(["buildScopes", "admits", "scopesAt", "noteStartAt", "codeOfLine", "placeAt", "ungrantedOpenerAt",
       "axesOfHost", "declsInView", "declaredNow", "fillersFor", "afterDot", "allowedAt"]
      .map(n => grab(n)).join("\\n"));
 eval(grab("loadVocabulary", "async "));
@@ -1222,6 +1222,27 @@ const ask = (tail) => {
         keyslot: askAt(open9.concat(["    public typealias Key = "]), 2, 27),
         ext: ask(["extension "]),
         head: ask(["public enum E10: "]),
+        moment: (() => {
+            const probe = (file, forms, lines, line) => {
+                active = file;
+                formsFiles = forms ? new Set([file]) : new Set();
+                cm = { getLine: (n) => lines[n], lineCount: () => lines.length };
+                layoutDecls = new Map(); declFile = new Map();
+                lastParsed = judge(file, lines.join("\\n"),
+                                   { seeds: new Set(), generics: new Set() }).parsed;
+                return ungrantedOpenerAt(line);
+            };
+            const bad1 = probe("w.swift", false, ["struct W2 {"], 0);
+            const bad2 = probe("w.swift", false,
+                ["public enum E11: Keeper {", "    static var x = Y"], 1);
+            const bad3 = probe("forms-grants.swift", true,
+                ["public enum R2: CourtSpoken {", "    associatedtype K = V"], 1);
+            const ok1 = probe("w.swift", false, ["public typealias C9 = Enter"], 0);
+            const ok2 = probe("w.swift", false,
+                ["extension E9: Granted", "where A == B {}"], 1);
+            active = "w.swift"; formsFiles = new Set();
+            return { bad1: bad1, bad2: bad2, bad3: bad3, ok1: ok1, ok2: ok2 };
+        })(),
         formsFloor: (() => {
             const probeAt = (file, lines, line, ch) => {
                 active = file;
@@ -1365,6 +1386,18 @@ const ask = (tail) => {
               "static" not in (_ft.get("items") or [])
               and "protocol" not in (_ft.get("items") or [])
               and "associatedtype" not in (_fb.get("items") or [])))
+    # ── AND THE MOMENT REFUSES WHAT NO CLAIM GRANTS. The reader knew the
+    # grants and only offered; now the first word of a line that no claim
+    # grants for its home wears the refusal underline before the file's
+    # court runs. A continuer is stepped over: a broken head's `where`
+    # opens nothing, and its sentence belongs to the court.
+    _mm = _off.get("moment") or {}
+    S.append(("an ungranted first word is refused in the moment, by its home",
+              (_mm.get("bad1") or {}).get("word") == "struct"
+              and (_mm.get("bad2") or {}).get("word") == "static"
+              and (_mm.get("bad3") or {}).get("word") == "associatedtype"))
+    S.append(("and a granted line or a broken head's where wears nothing",
+              _mm.get("ok1") is None and _mm.get("ok2") is None))
 
     # ── AND THE OFFER IS HELD TO THE VERDICT, NOT TO A DESCRIPTION OF IT. Two
     # readings of one law had come apart here, and both were invisible to every
@@ -1399,7 +1432,7 @@ const grab = (name, prefix) => {
     }
 };
 let SCOPES = [], NESTS = {};
-let LINE_OPENERS = {}, LINE_MODS = {}, LINE_FORMS = {};
+let LINE_OPENERS = {}, LINE_MODS = {}, LINE_FORMS = {}, LINE_CONTINUERS = new Set();
 let vocabulary = {}, conformers = {}, axisOf = {}, protoAxes = {}, gates = {};
 let shelfDecls = new Map();
 let layoutDecls = new Map(), declFile = new Map(), worldAliases = new Map();
@@ -1412,7 +1445,7 @@ global.fetch = async (u) => ({
         return fs.readFileSync(p, "utf8");
     },
 });
-eval(["buildScopes", "admits", "scopesAt", "noteStartAt", "codeOfLine", "placeAt",
+eval(["buildScopes", "admits", "scopesAt", "noteStartAt", "codeOfLine", "placeAt", "ungrantedOpenerAt",
       "axesOfHost", "declsInView", "declaredNow", "fillersFor", "afterDot", "allowedAt"]
      .map(n => grab(n)).join("\\n"));
 eval(grab("loadVocabulary", "async "));

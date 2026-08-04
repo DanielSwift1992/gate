@@ -1252,6 +1252,7 @@ let NESTS = {};         // outer kind -> the inner kinds a claim admits
 let LINE_OPENERS = {};  // home -> the words a claim lets a line open with
 let LINE_MODS = {};     // home -> the modifier words granted there, spending nothing
 let LINE_FORMS = {};    // opener word -> its row of slots, read off the shelf
+let LINE_CONTINUERS = new Set();  // words continuing an open line, never opening one
 function buildScopes(parsed) {
     const spell = (name) => name === "LineEnd" ? "\n"
         : name === "QuoteGlyph" ? '"'
@@ -1291,6 +1292,12 @@ function buildScopes(parsed) {
         const home = m[2].toLowerCase();
         const into = modWords.has(m[1]) ? LINE_MODS : LINE_OPENERS;
         (into[home] || (into[home] = new Set())).add(wordSpelling[m[1]]);
+    }
+    // a continuer opens nothing: the marker steps over it, the floor
+    // never offers it, and the court owns its sentence
+    for (const [, a] of parsed.topAliases) {
+        const m = /^ContinuesLine<(\w+)>$/.exec(a.target || "");
+        if (m && wordSpelling[m[1]]) LINE_CONTINUERS.add(wordSpelling[m[1]]);
     }
     // the forms: after an opener, the row of slots the shelf states. The
     // branches below the floor are readers of these rows, not authors
@@ -1564,6 +1571,68 @@ function allowedAt(cur) {
         }
     }
     return null;
+}
+
+// ── THE MOMENT'S REFUSAL. The floor offers what may open a line; this is
+// the same reading turned around: the first word of a line that no claim
+// grants for its home wears the refusal underline BEFORE the file's court
+// runs. A continuer (a broken head's `where`) opens nothing and is
+// stepped over: its sentence belongs to the court. An unfinished word at
+// the line's end is the offer's affair, not a refusal yet.
+function ungrantedOpenerAt(lineNo) {
+    const text = cm.getLine(lineNo) || "";
+    const lead = /^(\s*)[a-z]/.exec(text);
+    if (!lead) return null;
+    const noteAt = noteStartAt(lineNo);
+    if (noteAt >= 0 && lead[1].length >= noteAt) return null;
+    const cur = { line: lineNo, ch: 0 };
+    const isForms = typeof formsFiles === "object" && formsFiles.has
+        && formsFiles.has(active);
+    let home = null;
+    if (isForms) {
+        const bf = scopesAt(cur).reverse().find(f => f.kind === "body");
+        home = !bf ? "formstop"
+             : /\bprotocol\s+\w/.test(bf.head || "") ? "formsprotocol"
+             : /\bextension\s+\w/.test(bf.head || "") ? "formsextension"
+             : "formsrecord";
+    } else {
+        const { host, inBody } = placeAt(cur);
+        home = host && !inBody ? "body" : (!host && !inBody ? "top" : null);
+    }
+    if (!home || !LINE_OPENERS[home] || !LINE_OPENERS[home].size) return null;
+    const mods = LINE_MODS[home] || new Set();
+    let at = lead[1].length;
+    let rest = text.slice(at);
+    while (true) {
+        const w = /^([a-z][a-z0-9]*)/.exec(rest);
+        if (!w) return null;
+        const word = w[1];
+        if (LINE_CONTINUERS.has(word)) return null;
+        if (mods.has(word)) {
+            const gap = /^\s+/.exec(rest.slice(word.length));
+            if (!gap) return null;
+            rest = rest.slice(word.length + gap[0].length);
+            at += word.length + gap[0].length;
+            continue;
+        }
+        if (LINE_OPENERS[home].has(word)) return null;
+        if (at + word.length === text.length) return null;
+        return { line: lineNo, from: at, to: at + word.length, word: word,
+                 why: "no claim grants `" + word + "` a line here" };
+    }
+}
+let momentMarks = [];
+function paintUngranted() {
+    for (const mk of momentMarks) mk.clear();
+    momentMarks = [];
+    if (!cm || !cm.markText) return;
+    for (let l = 0; l < cm.lineCount(); l++) {
+        const bad = ungrantedOpenerAt(l);
+        if (!bad) continue;
+        momentMarks.push(cm.markText(
+            { line: l, ch: bad.from }, { line: l, ch: bad.to },
+            { className: "cm-badname", title: bad.why }));
+    }
 }
 
 let compSlot = null, compRect = null;   // the offer may belong to a slot in Bare
@@ -3330,6 +3399,7 @@ function inspect() {
 cm.on("cursorActivity", scheduleInspect);
 async function tick(write) {
     await render();                         // judges the buffer first
+    paintUngranted();                       // the moment's refusal, over the fresh parse
     // ── AND WHAT STOPS THE WRITE IS THIS FILE, NOT THE WHOLE WORLD. A refusal
     // in a file you are not editing cannot be caused by what you typed and
     // cannot be fixed by it either, and blocking on one froze the bench whole:
