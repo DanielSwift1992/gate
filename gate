@@ -520,6 +520,8 @@ def forms_guards(size=None, live=None):
         fp = os.path.join(tmp, (shelf or "presented") + ".swift")
         open(fp, "w").write(text)
         out = judge_call(["judge", "where", fp]).stdout
+        bad += canon_guard(out, ("THE WHERE" in out and "canon v" in out) or "✗" in out,
+                           "judge where")
         for cert, claim in where_refused(out):
             # the address is the file that SAYS the certificate; where a shipped
             # law refuses a value you presented, it lands on the line you wrote
@@ -913,6 +915,37 @@ def judged_refusals(out, rename=None):
     return [{"address": rename(m.group(1)) if rename else m.group(1),
              "claim": m.group(2).strip()}
             for m in re.finditer(r"^\s+(\S+\.swift:\d+)\s+(.+)$", out, re.M)]
+
+
+def canon_guard(out, spoke, verb):
+    # ── A COURT THAT DID NOT ANSWER IS NOT A COURT THAT FOUND NOTHING. Every
+    # verdict here is read out of a court's own printed lines, so an answer
+    # carrying none of them reads exactly like a clean run: nothing parses as a
+    # refusal, and the word is `holds`. Measured by substituting the court in one
+    # line: `gate status` printed `holds · 0.0 ms` and exited nought, in the demo
+    # world whose whole point is one live refusal, with no width under it.
+    #
+    # So each court is held to its own voice, which is the handshake it already
+    # prints and both carriers print alike: the plain court names itself, and the
+    # certificate court names itself and the canon both sides fold terms in. This
+    # is not the judge judging itself. It is reading whether the answer came from
+    # the thing that was asked, which is the one question a caller may always ask.
+    #
+    # What the voice is was measured, not assumed, and the first spelling of this
+    # guard was wrong twice: the certificate court prints its name and the canon
+    # when it HOLDS and prints bare `✗` lines when it refuses, so demanding the
+    # canon refused every world that had a real refusal in it; and the plain court
+    # asked about nothing at all says nothing at all, so a forms-only world, which
+    # hands it no files, tripped a guard about a court nobody had asked.
+    if spoke:
+        return []
+    said = " ".join(out.split())[:120] or "nothing at all"
+    return [{"address": (os.path.basename(MANIFEST["manifest"]) if MANIFEST
+                         else os.path.basename(JUDGE)),
+             "claim": f"the court was asked `{verb}` and did not answer in its own canon: it "
+                      f"said `{said}`. Every verdict here is read out of that answer, so an "
+                      "answer this tool cannot read is not a green. It is a court that did not "
+                      "sit, and a green over it would be this tool's own worst failure"}]
 
 
 def where_refused(out):
@@ -6184,6 +6217,12 @@ def dispatch(cmd, rest):
         refusals = judged_refusals(raw)
         if len(files) > 1:  # one claim, one file: the one that makes it
             refusals = attribute_refusals(refusals, [(os.path.basename(p), open(p).read()) for p in files])
+        # and the plain court answered in its own voice, or none of the above
+        # means anything: a silence parses as nought refusals, which is a green.
+        # Asked only when it was handed files, since a world of forms alone hands
+        # it none and a court nobody asked owes nobody an answer.
+        if files:
+            refusals += canon_guard(raw, "THE JUDGE" in raw, "judge")
         refusals += manifest_guards()
         where_size = {}
         refusals += forms_guards(where_size)

@@ -7289,6 +7289,43 @@ public enum MyWatch: AccessLedger {
               and any("must share one zone" in r.get("claim", "")
                       for r in _as_printed.get("refusals", []))))
 
+    # ── AND A COURT THAT DID NOT ANSWER IS NOT A GREEN. The worst thing this
+    # tool could do is say `holds` about a world nobody judged, and one line was
+    # all it took: a judge_call that never runs a court and hands back a
+    # fabricated green made `gate status` print `holds · 0.0 ms` and exit nought
+    # in the demo world whose whole point is one live refusal. Every verdict here
+    # is read out of a court's printed lines, so a silence parses as nought
+    # refusals, which is the word `holds`.
+    #
+    # The tool holds each court to its own voice now, and the mutant that found
+    # it stands here as the negative: planted on a copy of the tool, run, taken
+    # out. Both halves are asked, because a guard that refuses everything would
+    # pass the first half alone: the substituted court is refused in words, and
+    # the same world with the court back has exactly its own one refusal.
+    _court_world = os.path.join(tmp, "court-demo")
+    run("demo", _court_world)
+    _court_kept = open(GATE, encoding="utf-8").read()
+    _fake_court = ('    return subprocess.CompletedProcess(args, 0,\n'
+                   '        "\\u2713 THE JUDGE holds: 0 claims in 0.0 ms\\ncanon v2\\n", "")\n')
+    _court_anchor = '    if JUDGE_KIND == "binary":'
+    try:
+        open(GATE, "w").write(_court_kept.replace(_court_anchor,
+                                                  _fake_court + _court_anchor, 1))
+        _substituted = run("status", cwd=_court_world)[1]
+    finally:
+        open(GATE, "w").write(_court_kept)
+    _court_back = run("status", cwd=_court_world)[1]
+    S.append(("a court that did not answer in its own canon is refused, never a green",
+              _substituted.get("verdict") == "refused"
+              and any("did not answer in its own canon" in r.get("claim", "")
+                      and r.get("address") == "gate.manifest.swift"
+                      for r in _substituted.get("refusals", []))
+              # and with the court back, this world is refused for its own reason
+              # and nothing else: the guard speaks only when nobody sat
+              and _court_back.get("verdict") == "refused"
+              and [r.get("address") for r in _court_back.get("refusals", [])]
+              == ["ownership.swift:85"]))
+
     # ── AND THE COVER'S PICTURE IS OF THIS BENCH, NOT A REMEMBERED ONE. The
     # README shows docs/bench.png, and bin/shoot-bench.sh writes beside it the
     # sha256 of ui.html as photographed. Held here to the working copy, so a
