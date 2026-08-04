@@ -27,7 +27,7 @@ silence. Either they are equal, or you get the exact point of contact:
 ```
 $ gate status
 status: refused 1
-  ownership.swift:85 · Owns_3_carol · Zone_docs against Zone_src: an owner and
+  ownership.swift:89 · Owns_3_carol · Zone_docs against Zone_src: an owner and
                        the path they own must share one zone
 ```
 
@@ -38,10 +38,10 @@ compares two texts. This compares two claims about one thing.
 
 The same refusal on the live page (`gate serve`), at its line. The picture
 is a door, and so is this line: [the same bench, live in your
-browser](https://danielswift1992.github.io/gate/?f=ownership.swift:85),
+browser](https://danielswift1992.github.io/gate/?f=ownership.swift:89),
 over the demo, judged as you type.
 
-[![the bench: the refusal at its line, re-read on every keystroke](docs/bench.png)](https://danielswift1992.github.io/gate/?f=ownership.swift:85)
+[![the bench: the refusal at its line, re-read on every keystroke](docs/bench.png)](https://danielswift1992.github.io/gate/?f=ownership.swift:89)
 
 The check is one lookup per claim and nothing else: no search, no solver,
 no build. The cost is linear in the number of claims: milliseconds on a

@@ -1337,18 +1337,27 @@ const ask = (tail) => {
               and _b.get("kind") == "this argument takes Room"
               and "Doc1" in (_b.get("items") or [])))
 
-    # ── AND THE OFFER KNOWS EVERY AXIS THE LAW KNOWS. Keeper owes Post and
-    # Key; Key's kind the forms leave unstated, and the judge requires the
-    # axis all the same. The bench read only the kinded axes, so a writer was
-    # offered a record the judge then refused, with no road from the offer to
-    # the missing line. Owed is owed: the kind-less axis is offered at the
-    # record, and its slot answers in words instead of hiding the popup.
+    # ── AND THE OFFER KNOWS EVERY AXIS THE LAW KNOWS, AND THE CLASS EACH TAKES.
+    # Keeper owes Post and Key, and this check said for months that Key's kind
+    # the forms leave unstated: the slot answered `the forms state no kind for
+    # Key` and offered nothing, which was the honest answer while no court could
+    # hold the class. The membership court holds it now, at the certificate, so
+    # the shelf states the class in the axis itself and the offer reads it: the
+    # slot names the class and lists the keys that wear it, a writer being shown
+    # what the judge will take rather than told the forms are silent. The three
+    # keys are the ladder walked, not a flat list: WardenKey wears Reads through
+    # Administers and Writes, which is the same climb the verdict makes.
+    #
+    # The kind-less path itself is not gone, only unpeopled: no axis on this
+    # shelf leaves its class unstated any more, so what exercises that path is
+    # the ladder fixture above and nothing in the shipped forms.
     _ow, _ks, _ex = (_off.get("owed") or {}), (_off.get("keyslot") or {}), (_off.get("ext") or {})
-    S.append(("an axis the forms leave kind-less is owed, and its slot says so in words",
+    S.append(("an axis states the class it takes, and the slot offers what wears it",
               "public typealias Key = " in (_ow.get("items") or [])
               and "Key" in (_ow.get("scaffold") or [])
-              and _ks.get("closed") is True and (_ks.get("items") or []) == []
-              and _ks.get("kind") == "the forms state no kind for Key"))
+              and _ks.get("closed") is True
+              and _ks.get("kind") == "this axis takes Reads"
+              and sorted(_ks.get("items") or []) == ["ReaderKey", "WardenKey", "WriterKey"]))
     # and the note a closed empty answer carries stays on the page: the popup
     # shows the sentence, and the keys pass through it as if nothing were up
     S.append(("an empty closed offer keeps its note on the page, and takes no keystroke",
@@ -7323,7 +7332,7 @@ public enum MyWatch: AccessLedger {
               # and nothing else: the guard speaks only when nobody sat
               and _court_back.get("verdict") == "refused"
               and [r.get("address") for r in _court_back.get("refusals", [])]
-              == ["ownership.swift:85"]))
+              == ["ownership.swift:89"]))
 
     # ── AND THE COVER'S PICTURE IS OF THIS BENCH, NOT A REMEMBERED ONE. The
     # README shows docs/bench.png, and bin/shoot-bench.sh writes beside it the

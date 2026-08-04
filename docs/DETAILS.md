@@ -154,7 +154,7 @@ where a certificate compares two of them, and nowhere else.
 
 `docs/bench.png` is taken by `bin/shoot-bench.sh`: a fresh `gate demo`
 world, `gate serve` on a free port, one headless Chrome shot of
-`/ui?f=ownership.swift:85`. That door is not the camera's: any refusal
+`/ui?f=ownership.swift:89`. That door is not the camera's: any refusal
 address pastes into the browser bar as `?f=file:line`, and the bench
 opens that file at that line. Beside it, `docs/bench.png.from` records the
 sha256 of `web/ui.html` as photographed, and the battery holds that hash to

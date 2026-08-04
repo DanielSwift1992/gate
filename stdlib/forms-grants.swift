@@ -4,8 +4,12 @@
 // (exemplar: theory corpus Sources/Examples/Grants.swift @ 0fd0b38).
 // Realms are declared atoms, and the fourth is one line rather than a schema change.
 // A verb set is a protocol class, containment is conformance, and one gate
-// carries two tiers: the compiler holds the key's class, the judge holds
-// the posting equality.
+// carries both halves: this judge holds the posting equality and the key's
+// class alike, the second by walking the ladder declared right here. The
+// compiler holds that same class when somebody builds the world as Swift,
+// which is the second reader rather than the only one. This head said the
+// opposite for as long as it was true, and the day the court arrived it was
+// the last page still saying it.
 
 public protocol Reads {}
 public protocol Writes: Reads {}
@@ -17,7 +21,7 @@ public enum WardenKey: Administers {}
 public protocol Realm {}
 public protocol Keeper {
     associatedtype Post: Realm
-    associatedtype Key
+    associatedtype Key: Reads
 }
 public protocol Room {
     associatedtype Place: Realm
