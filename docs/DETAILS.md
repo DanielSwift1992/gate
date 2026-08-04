@@ -120,6 +120,33 @@ The theory behind the judge ships the same way: compiler-checked
 constructions and executable witnesses, with the arguments carried by
 the papers beside them.
 
+## What this road does not judge
+
+The second reader above is the reason this section exists. `swiftc`
+accepts these files, and this tool never runs it: what gate holds and
+what Swift holds are not the same list, and only one of them runs when
+you type `gate status`.
+
+Two courts sit here. The plain court reads your world file and holds the
+claims in it. It does not read forms you declare yourself: a protocol at
+the top of a world file is outside its fragment and it says so at that
+line. The where court reads the files declared as forms and holds the
+certificates written over them, which are equalities between axes: the
+zone a keeper is posted to against the zone a room stands in, and the
+refusal on the cover is one of those.
+
+What neither of them holds is a gate's requirement that an axis conform
+to a class. `Enter` asks that a keeper carry a key that writes and `Owns`
+that it administer; a world written in that vocabulary can name a key
+that is not a key, or a name nobody declared at all, and no court here
+refuses it. That half is the compiler's, and this road does not build
+your world. The battery holds this paragraph to a real run, so the day a
+court starts holding it, this page goes red instead of going stale.
+
+The rule under both: a court holds what it carries. Forms this judge was
+built with are checked to their last axis; forms you present are checked
+where a certificate compares two of them, and nowhere else.
+
 ## The picture on the cover
 
 `docs/bench.png` is taken by `bin/shoot-bench.sh`: a fresh `gate demo`

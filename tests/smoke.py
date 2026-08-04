@@ -7127,6 +7127,53 @@ public enum MyWatch: AccessLedger {
               and _doors == {_cover_at}
               and len(re.findall(r"ownership\.swift:\d+", _prose)) >= 4))
 
+    # ── AND WHAT THIS ROAD DOES NOT JUDGE IS WRITTEN WHERE A READER LOOKS, AND
+    # HELD TO A RUN. The grants page says the compiler holds the key's class,
+    # which is true and was read as a division of labour between two things that
+    # both run. Only one runs: this tool never builds anybody's world, so on this
+    # road nothing holds that half. A gate asking that an axis CONFORM to a class
+    # is held by neither court here: the plain court refuses a presented form as
+    # outside its fragment, and the where court holds the equalities between axes
+    # and not the conformance. Measured, both carriers, before this was written:
+    # a keeper given a name nobody declared moves no verdict at all.
+    #
+    # So the boundary is stated on the details page and shortest at the verb that
+    # prints such a world, and it is paired here to the world that verb prints.
+    # The day a court starts holding that half, this goes red and the prose is
+    # rewritten, instead of standing as a true sentence about a road that moved.
+    _bd = os.path.join(tmp, "boundary-demo")
+    run("demo", _bd)
+    _bd_page = os.path.join(_bd, "ownership.swift")
+    _bd_kept = open(_bd_page, encoding="utf-8").read()
+    _as_printed = run("status", cwd=_bd)[1]
+    try:
+        open(_bd_page, "w").write(_bd_kept.replace("    public typealias Key = WardenKey",
+                                                   "    public typealias Key = Nokey", 1))
+        _keyless = run("status", cwd=_bd)[1]
+    finally:
+        open(_bd_page, "w").write(_bd_kept)
+    _imported = run("import", "codeowners", "CODEOWNERS", "--tree", ".",
+                    "--policy", "owners.csv", "-o", os.path.join(tmp, "printed.swift"),
+                    cwd=_bd)[1]
+    _details = open(os.path.join(HERE, "docs", "DETAILS.md"), encoding="utf-8").read()
+    S.append(("the road says what it does not judge, and the saying is held to a run",
+              # the page states it, and states which court holds which half
+              "## What this road does not judge" in _details
+              and "outside its fragment" in _details
+              and "equalities between axes" in _details
+              and "a court holds what it carries" in _details
+              # and the verb that prints such a world carries the short form
+              and "the key's class is not" in (_imported.get("note") or "")
+              and "gate does not build your world" in (_imported.get("note") or "")
+              # and the road is what the words say: a key that is not a key, in a
+              # world whose vocabulary this judge does not carry, moves nothing
+              and _keyless.get("verdict") == _as_printed.get("verdict")
+              and [r.get("address") for r in _keyless.get("refusals", [])]
+              == [r.get("address") for r in _as_printed.get("refusals", [])]
+              # while the half that IS held refuses at its own line, as the page says
+              and any("must share one zone" in r.get("claim", "")
+                      for r in _as_printed.get("refusals", []))))
+
     # ── AND THE COVER'S PICTURE IS OF THIS BENCH, NOT A REMEMBERED ONE. The
     # README shows docs/bench.png, and bin/shoot-bench.sh writes beside it the
     # sha256 of ui.html as photographed. Held here to the working copy, so a

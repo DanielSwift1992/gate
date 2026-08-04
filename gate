@@ -5064,8 +5064,17 @@ def cmd_import_codeowners(a):
         "refusals": refusals + ghosts,
         "judge_ms": ms,
         "canon_handshake": "canon v2" in outp,
-        "note": ("ownership is the warden's threshold: the compiler holds the key's class "
-                 "when the world is built as Swift, and this run holds the zone equalities"
+        # ── AND THE HALF THIS ROAD DOES NOT HOLD, SAID WHERE THE WORLD IS
+        # PRINTED. The line said the compiler holds the key's class, which is
+        # true and was read as a division of labour between two things that
+        # both run. Only one runs: this tool never builds your world, so on
+        # this road nothing holds that half at all. Said here because this is
+        # the verb that prints such a world, and the person reading it is the
+        # one who will believe the whole rule is judged.
+        "note": ("ownership is the warden's threshold and this run holds one half of it: "
+                 "the zone equalities are judged here, the key's class is not. That half is "
+                 "the compiler's, and gate does not build your world (docs/DETAILS.md, "
+                 "what this road does not judge)"
                  if policy else
                  "no ownership policy given (--policy owner,zone): every rule is its own "
                  "authority, so the equalities hold trivially. The unmatched patterns above "
