@@ -10,7 +10,7 @@ jobs:
       # toolchain is installed here on purpose
       # the judge is rebuilt from the public theory corpus at the pin,
       # so the battery never trusts a stale vendored binary
-      - run: bin/build-judge.sh d18171a
+      - run: bin/build-judge.sh 784831c
       - run: python3 tests/smoke.py
       # a fresh shot of the bench on every run, downloadable from the run's
       # artifacts. The battery holds docs/bench.png.from to web/ui.html, so a
@@ -41,7 +41,7 @@ jobs:
       - run: |
           command -v swift || { echo "the runner image no longer carries swift; install a toolchain step here"; exit 1; }
           swift --version
-      - run: bin/build-judge.sh d18171a
+      - run: bin/build-judge.sh 784831c
       - run: |
           python3 tests/smoke.py 2>&1 | tee /tmp/smoke-out.txt
           exit ${PIPESTATUS[0]}

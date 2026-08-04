@@ -534,10 +534,11 @@ def forms_guards(size=None, live=None):
             bad.append({"address": spot or home or rows[0]["path"],
                         "claim": plainly(claim, law_notes(text))})
         if size is not None:
-            m = re.search(r"(\d+) equalities judged across (\d+) uses", out)
+            m = re.search(r"(\d+) equalities and (\d+) memberships judged across (\d+) uses", out)
             if m:
                 size["equalities"] = size.get("equalities", 0) + int(m.group(1))
-                size["uses"] = size.get("uses", 0) + int(m.group(2))
+                size["memberships"] = size.get("memberships", 0) + int(m.group(2))
+                size["uses"] = size.get("uses", 0) + int(m.group(3))
     shutil.rmtree(tmp, ignore_errors=True)
     return bad
 
@@ -554,7 +555,7 @@ def gate_shape_guards():
     #     extension Owns: Owned                        →  extension Owns: Owned
     #     where Who.Key: Administers, …  {}               where … {}   (one line)
     #
-    # — and `refused 1` becomes `holds · 0 equalities judged`, in the shipped
+    # — and `refused 1` becomes `holds` over nought judged, in the shipped
     # binary and in the browser port alike. Every certificate over that law stops
     # being checked and nothing says a word, which is the exact silence this
     # tool exists against. Swift accepts both spellings identically, so the
@@ -3290,6 +3291,18 @@ def cmd_import_rbac(a):
             bindings.append(it)
             namespaces.add(ns)
     lines = [RBAC_FORMS_HEADER + STDLIB["forms-grants"]]
+    # ── the read gate, this world's own. The grants vocabulary above carries
+    # one gate, entry to WORK a room, and its key must write. A read binding
+    # is not that entry: its key honestly reads, and pushing it through the
+    # writing gate was a lie the court could not see while it dropped the
+    # conjunct. The membership court walks the ladder now, so a warden and a
+    # writer pass Writes, everybody passes Reads at the read gate, and a
+    # reader at the writing gate is refused by class, at its certificate.
+    lines.append("")
+    lines.append("public protocol Viewed {}")
+    lines.append("public enum View<Who: Keeper, Into: Room> {}")
+    lines.append("extension View: Viewed")
+    lines.append("where Who.Key: Reads, Who.Post == Into.Place {}")
     srcmap = {}
     for ns in sorted(namespaces):
         lines.append(f"public enum Ns_{sanitize(ns)}: Realm {{}}")
@@ -3329,7 +3342,8 @@ def cmd_import_rbac(a):
         lines.append(f"    public typealias Post = {post}")
         lines.append(f"    public typealias Key = {key}")
         lines.append("}")
-        lines.append(f"public typealias {cert} = Enter<{keeper}, {room}>")
+        head = "View" if key == "ReaderKey" else "Enter"
+        lines.append(f"public typealias {cert} = {head}<{keeper}, {room}>")
         srcmap[cert] = what
         checked += 1
     world = "\n".join(lines) + "\n"
@@ -3359,7 +3373,7 @@ def cmd_import_rbac(a):
         "refusals": refusals,
         "judge_ms": ms,
         "canon_handshake": canon,
-        "note": "tier one (verb class, Who.Key: Writes) is the compiler's, judged when the world is built as Swift. This run holds the posting equalities (agnostic where-judge)",
+        "note": "both tiers of the gate are judged by this run: the posting equalities against one canon, and the key's class through the ladder the world presents (the membership court)",
     }
 
 
@@ -5097,16 +5111,16 @@ def cmd_import_codeowners(a):
         "refusals": refusals + ghosts,
         "judge_ms": ms,
         "canon_handshake": "canon v2" in outp,
-        # ── AND THE HALF THIS ROAD DOES NOT HOLD, SAID WHERE THE WORLD IS
-        # PRINTED. The line said the compiler holds the key's class, which is
-        # true and was read as a division of labour between two things that
-        # both run. Only one runs: this tool never builds your world, so on
-        # this road nothing holds that half at all. Said here because this is
-        # the verb that prints such a world, and the person reading it is the
-        # one who will believe the whole rule is judged.
-        "note": ("ownership is the warden's threshold and this run holds one half of it: "
-                 "the zone equalities are judged here, the key's class is not. That half is "
-                 "the compiler's, and gate does not build your world (docs/DETAILS.md, "
+        # ── AND BOTH HALVES ARE HELD NOW, SAID WHERE THE WORLD IS PRINTED.
+        # This note said the key's class is not judged on this road, and the
+        # battery held that sentence to a run so it would go red the day a
+        # court arrived, instead of standing as a true sentence about a road
+        # that moved. The court arrived: the membership walk at the judge's
+        # pin resolves the axis through the world's own tables and climbs
+        # the ladder the world presents, so the sentence moves with it.
+        "note": ("ownership is the warden's threshold and this run holds both halves of "
+                 "it: the zone equalities against one canon, and the key's class through "
+                 "the ladder this world presents (docs/DETAILS.md, "
                  "what this road does not judge)"
                  if policy else
                  "no ownership policy given (--policy owner,zone): every rule is its own "

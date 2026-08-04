@@ -135,13 +135,16 @@ certificates written over them, which are equalities between axes: the
 zone a keeper is posted to against the zone a room stands in, and the
 refusal on the cover is one of those.
 
-What neither of them holds is a gate's requirement that an axis conform
-to a class. `Enter` asks that a keeper carry a key that writes and `Owns`
-that it administer; a world written in that vocabulary can name a key
-that is not a key, or a name nobody declared at all, and no court here
-refuses it. That half is the compiler's, and this road does not build
-your world. The battery holds this paragraph to a real run, so the day a
-court starts holding it, this page goes red instead of going stale.
+What neither of them held, the where court holds now: a gate's
+requirement that an axis conform to a class. `Enter` asks that a keeper
+carry a key that writes and `Owns` that it administer; a key that is
+not a key, or a name nobody declared at all, is refused at its
+certificate, resolved through the world's own tables and walked up the
+ladder of protocols the world itself presents (the membership court,
+at the judge's pin). This paragraph said the opposite once, and the
+battery held that sentence to a real run: the day the court arrived,
+this page went red instead of going stale, which is this tool's law
+applied to its own prose.
 
 The rule under both: a court holds what it carries. Forms this judge was
 built with are checked to their last axis; forms you present are checked

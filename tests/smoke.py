@@ -473,7 +473,7 @@ def main():
     def wide(*paths):
         raw = subprocess.run([os.path.join(HERE, "bin", "gate-judge"), "judge", "where", *paths],
                              capture_output=True, text=True).stdout
-        m = re.search(r"(\d+) equalities judged", raw)
+        m = re.search(r"(\d+) equalities and \d+ memberships judged", raw)
         return int(m.group(1)) if m else None
     pal = os.path.join(HERE, "stdlib", "bench-palette.swift")
     met = os.path.join(HERE, "stdlib", "bench-metrics.swift")
@@ -3054,7 +3054,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               # so the tool is not asking of anybody a thing it had not done
               and own_status.get("verdict") == "holds"
               and open(os.path.join(HERE, "bin", "gate-judge.from"),
-                       encoding="utf-8").read().strip().startswith("d18171a")
+                       encoding="utf-8").read().strip().startswith("784831c")
               # AND THE EDITOR IS ACCOUNTED FOR TOO. It arrived the way anything
               # of somebody else's should — named, versioned, unchanged, saying
               # so in its own first line — and it was the one dependency an
@@ -3464,7 +3464,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               and lang.get("names", {}).get("Unit") == 283
               and lang.get("file", "").endswith("Primitive.swift")
               # at the revision the judge was built from, not some other one
-              and (lang.get("at") or "").startswith("d18171a")
+              and (lang.get("at") or "").startswith("784831c")
               # and the way to get it, since this tool will not go and take it
               and "git clone" in lang.get("command", "")
               # the bench reaches them: they join what a click can land on
@@ -4446,7 +4446,7 @@ console.log(JSON.stringify({
     kept = open(jm, encoding="utf-8").read()
     try:
         open(jm, "w", encoding="utf-8").write(
-            kept.replace("verification-is-identification@d18171a",
+            kept.replace("verification-is-identification@784831c",
                          "verification-is-identification@deadbee"))
         lied = run("status", cwd=HERE)[1]
     finally:
@@ -5885,7 +5885,7 @@ public enum MyWatch: AccessLedger {
 
     # ── A LAW WRITTEN ON ONE LINE IS NOT A LAW, AND BOTH COURTS GO SILENT
     # TOGETHER. Found by hand on this tool's own demo world: move one newline in
-    # the forms file and `refused 1` becomes `holds · 0 equalities judged` — in
+    # the forms file and `refused 1` becomes `holds` over nought judged — in
     # the shipped binary and in the browser port alike. Every certificate over
     # that law stops being checked and nothing says a word. Swift accepts both
     # spellings identically, so the compiler tier still catches it; the fast
@@ -5920,7 +5920,8 @@ public enum MyWatch: AccessLedger {
     S.append(("a law written on one line is read by no court, and gate refuses the shape",
               # the finding itself, reproduced: one newline is the whole difference
               "✗" in said_two and "Owns_c" in said_two
-              and "✗" not in said_one and "0 equalities judged" in said_one
+              and "✗" not in said_one
+              and "0 equalities and 0 memberships judged" in said_one
               # and the guard names it, at the line that writes it
               and any("read by no court" in r["claim"]
                       and r["address"].startswith("stdlib/forms-grants.swift:")
@@ -7242,20 +7243,18 @@ public enum MyWatch: AccessLedger {
               and _doors == {_cover_at}
               and len(re.findall(r"ownership\.swift:\d+", _prose)) >= 4))
 
-    # ── AND WHAT THIS ROAD DOES NOT JUDGE IS WRITTEN WHERE A READER LOOKS, AND
-    # HELD TO A RUN. The grants page says the compiler holds the key's class,
-    # which is true and was read as a division of labour between two things that
-    # both run. Only one runs: this tool never builds anybody's world, so on this
-    # road nothing holds that half. A gate asking that an axis CONFORM to a class
-    # is held by neither court here: the plain court refuses a presented form as
-    # outside its fragment, and the where court holds the equalities between axes
-    # and not the conformance. Measured, both carriers, before this was written:
-    # a keeper given a name nobody declared moves no verdict at all.
-    #
-    # So the boundary is stated on the details page and shortest at the verb that
-    # prints such a world, and it is paired here to the world that verb prints.
-    # The day a court starts holding that half, this goes red and the prose is
-    # rewritten, instead of standing as a true sentence about a road that moved.
+    # ── AND WHAT THIS ROAD JUDGES IS WRITTEN WHERE A READER LOOKS, AND HELD
+    # TO A RUN. This vector was born saying the opposite: the key's class was
+    # held by neither court here, measured on both carriers, and the prose
+    # said so on the details page and at the verb that prints such a world.
+    # It was built to go red the day a court arrived, and it did: the
+    # membership court entered the judge at its pin, the gates these worlds
+    # always carried ('Who.Key: Administers') stopped being half-read, and
+    # this check flipped in the same commit as the prose, which is exactly
+    # the life a self-expiring boundary was written to live. Now it holds
+    # the new truth the same way: the page and the note say both halves are
+    # judged, and the world the verb prints proves it with a ghost key
+    # refused at its certificate.
     _bd = os.path.join(tmp, "boundary-demo")
     run("demo", _bd)
     _bd_page = os.path.join(_bd, "ownership.swift")
@@ -7271,21 +7270,21 @@ public enum MyWatch: AccessLedger {
                     "--policy", "owners.csv", "-o", os.path.join(tmp, "printed.swift"),
                     cwd=_bd)[1]
     _details = open(os.path.join(HERE, "docs", "DETAILS.md"), encoding="utf-8").read()
-    S.append(("the road says what it does not judge, and the saying is held to a run",
-              # the page states it, and states which court holds which half
+    S.append(("the road says both halves are judged, and the saying is held to a run",
+              # the page states it, and names the court that arrived
               "## What this road does not judge" in _details
               and "outside its fragment" in _details
-              and "equalities between axes" in _details
+              and "the membership court" in _details
               and "a court holds what it carries" in _details
               # and the verb that prints such a world carries the short form
-              and "the key's class is not" in (_imported.get("note") or "")
-              and "gate does not build your world" in (_imported.get("note") or "")
-              # and the road is what the words say: a key that is not a key, in a
-              # world whose vocabulary this judge does not carry, moves nothing
-              and _keyless.get("verdict") == _as_printed.get("verdict")
-              and [r.get("address") for r in _keyless.get("refusals", [])]
-              == [r.get("address") for r in _as_printed.get("refusals", [])]
-              # while the half that IS held refuses at its own line, as the page says
+              and "holds both halves" in (_imported.get("note") or "")
+              and "the ladder this world presents" in (_imported.get("note") or "")
+              # and the road is what the words say: a ghost key in a printed
+              # world is refused at its certificate, named and classed
+              and _keyless.get("verdict") == "refused"
+              and any("conform to" in r.get("claim", "") and "Nokey" in r.get("claim", "")
+                      for r in _keyless.get("refusals", []))
+              # while the zone half keeps refusing at its own line, as before
               and any("must share one zone" in r.get("claim", "")
                       for r in _as_printed.get("refusals", []))))
 

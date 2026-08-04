@@ -71,21 +71,42 @@ function parameterNames(list) {
         piece.split(":")[0].trim());
 }
 
-function splitEqualities(clause) {
-    const pairs = [];
+// A gate's where carries three kinds of conjunct: an equality, judged
+// against the canon; a membership (a colon and a bare protocol name),
+// judged against the conformer's protocols closed over the presented
+// refinements; and anything else, refused at its gate by name. Mirrors
+// the binary's splitConjuncts, word for word in the refusals.
+function splitConjuncts(clause) {
+    const equalities = [];
+    const memberships = [];
+    const unjudged = [];
     for (const part of splitTopLevel(clause)) {
+        const bare = part.trim();
+        if (!bare) continue;
         const sides = part.split("==");
         if (sides.length === 2) {
-            pairs.push([sides[0].trim(), sides[1].trim()]);
+            equalities.push([sides[0].trim(), sides[1].trim()]);
+            continue;
         }
+        const claim = bare.split(":");
+        if (claim.length === 2) {
+            const lhs = claim[0].trim();
+            const proto = claim[1].trim();
+            if (lhs && /^\w+$/.test(proto)) {
+                memberships.push([lhs, proto]);
+                continue;
+            }
+        }
+        unjudged.push(bare);
     }
-    return pairs;
+    return { equalities, memberships, unjudged };
 }
 
 function readWorld(text) {
     const clean = stripComments(text);
     const world = { conformers: new Map(), aliases: new Map(), gates: [],
-        gatedProtocols: new Map(), parameters: new Map(), uses: [] };
+        gatedProtocols: new Map(), protocolParents: new Map(),
+        parameters: new Map(), uses: [] };
 
     for (const hit of captures(
         "enum\\s+(\\w+)\\s*(?:<([^>]*)>)?\\s*:\\s*([\\w,\\s]+?)\\s*\\{([^{}]*)\\}", clean
@@ -121,15 +142,35 @@ function readWorld(text) {
     for (const hit of captures(
         "extension\\s+(\\w+)\\s*:\\s*(\\w+)\\s*\\n\\s*where\\s+([^{]+)\\{", clean
     )) {
+        const conjuncts = splitConjuncts(hit[2]);
         world.gates.push({ head: hit[0], proto: hit[1],
-            equalities: splitEqualities(hit[2]) });
+            equalities: conjuncts.equalities,
+            memberships: conjuncts.memberships,
+            unjudged: conjuncts.unjudged });
     }
 
     for (const hit of captures(
         "protocol\\s+(\\w+)\\s*:\\s*[\\w,\\s]+?\\n\\s*where\\s+([^{]+)\\{", clean
     )) {
+        const conjuncts = splitConjuncts(hit[1]);
         world.gatedProtocols.set(hit[0], { name: hit[0],
-            equalities: splitEqualities(hit[1]) });
+            equalities: conjuncts.equalities,
+            memberships: conjuncts.memberships,
+            unjudged: conjuncts.unjudged });
+    }
+
+    // the refinement ladder, read from what is presented: a protocol's
+    // parents are the material the membership walk closes over
+    for (const hit of captures(
+        "protocol\\s+(\\w+)\\s*:\\s*([\\w,\\s]+?)\\s*(?:\\n\\s*where|\\{)", clean
+    )) {
+        world.protocolParents.set(hit[0],
+            hit[1].split(",").map(piece => piece.trim()).filter(Boolean));
+    }
+    for (const hit of captures("protocol\\s+(\\w+)\\s*\\{", clean)) {
+        if (!world.protocolParents.has(hit[0])) {
+            world.protocolParents.set(hit[0], []);
+        }
     }
 
     for (const hit of captures("([\\w<>,\\. ]+?)\\s*\\.self", clean)) {
@@ -272,6 +313,52 @@ function canon(text, world) {
     return serialize(arithmetic(normalize(parseTerm(text), world)));
 }
 
+// does the conformer wear the protocol: its declared list, closed over
+// the refinement ladder the file presents
+function wears(conformer, proto, world) {
+    const seen = new Set();
+    const pile = [...conformer.protocols];
+    while (pile.length > 0) {
+        const name = pile.pop();
+        if (name === proto) return true;
+        if (!seen.has(name)) {
+            seen.add(name);
+            pile.push(...(world.protocolParents.get(name) || []));
+        }
+    }
+    return false;
+}
+
+// one membership judged, mirroring the binary word for word: the left
+// side resolves through the same canon the equalities use, the resolved
+// name must be a presented conformer, and the conformer must wear the
+// protocol through the ladder.
+function judgeMemberships(memberships, site, tag, bindings, world, state) {
+    const mark = tag ? " [" + tag + "]" : "";
+    for (const [lhs, proto] of memberships) {
+        state.members += 1;
+        const resolved = arithmetic(normalize(
+            substitute(parseTerm(lhs), bindings), world));
+        const spelled = serialize(resolved);
+        const wearer = resolved.args.length === 0
+            ? world.conformers.get(resolved.head) : undefined;
+        if (wearer === undefined) {
+            state.refusals.push(
+                "'" + site + "' requires the type '" + lhs + "' (aka '" + spelled
+                + "') conform to '" + proto
+                + "', and no conformer of that name is presented" + mark);
+            continue;
+        }
+        if (!wears(wearer, proto, world)) {
+            const worn = wearer.protocols.join(", ");
+            state.refusals.push(
+                "'" + site + "' requires the type '" + lhs + "' (aka '" + resolved.head
+                + "') conform to '" + proto + "', and '" + resolved.head + ": " + worn
+                + "' does not carry it" + mark);
+        }
+    }
+}
+
 // ── the judgement ──
 // The core takes texts and returns the verdict's parts; the CLI below reads
 // files and prints. Split so the same court can sit where there is no file
@@ -292,6 +379,25 @@ function judgeWhereTexts(text, extraTexts) {
     }
     const refusals = [];
     let judged = 0;
+    const state = { members: 0, refusals };
+
+    // a gate that carries what no court here judges is named at once:
+    // the defect is the law's own spelling, not any use of it
+    for (const gate of world.gates) {
+        for (const part of gate.unjudged) {
+            refusals.push(
+                "the gate '" + gate.head + ": " + gate.proto + "' carries '" + part
+                + "', a conjunct this court does not judge");
+        }
+    }
+    for (const gated of [...world.gatedProtocols.values()]
+        .sort((a, b) => (a.name < b.name ? -1 : 1))) {
+        for (const part of gated.unjudged) {
+            refusals.push(
+                "the gated protocol '" + gated.name + "' carries '" + part
+                + "', a conjunct this court does not judge");
+        }
+    }
 
     // A typealias certificate is a judged point: a parameterless alias in the
     // world whose right side names a gated head states the gate's equalities
@@ -323,6 +429,8 @@ function judgeWhereTexts(text, extraTexts) {
                         + gate.proto + "]");
                 }
             }
+            judgeMemberships(gate.memberships, name + " = " + rule.body,
+                gate.proto, bindings, world, state);
         }
     }
 
@@ -351,6 +459,8 @@ function judgeWhereTexts(text, extraTexts) {
                         + gate.proto + "]");
                 }
             }
+            judgeMemberships(gate.memberships, use, gate.proto,
+                bindings, world, state);
         }
     }
 
@@ -373,10 +483,14 @@ function judgeWhereTexts(text, extraTexts) {
                         + right + "' (aka '" + rightCanon + "') be equivalent");
                 }
             }
+            const owned = gated.memberships.map(pair =>
+                [pair[0].includes(".") ? pair[0] : conformer.name + "." + pair[0], pair[1]]);
+            judgeMemberships(owned, conformer.name + ": " + protoName, null,
+                new Map(), world, state);
         }
     }
 
-    return { judged, uses: world.uses.length, refusals };
+    return { judged, members: state.members, uses: world.uses.length, refusals };
 }
 
 function runWhere(args) {
@@ -391,9 +505,10 @@ function runWhere(args) {
         try { extras.push(fs.readFileSync(extra, "utf8")); }
         catch (e) { fail("cannot read " + extra); }
     }
-    const { judged, uses, refusals } = judgeWhereTexts(text, extras);
+    const { judged, members, uses, refusals } = judgeWhereTexts(text, extras);
     if (refusals.length === 0) {
-        console.log("✓ THE WHERE holds: " + judged + " equalities judged across "
+        console.log("✓ THE WHERE holds: " + judged + " equalities and " + members
+            + " memberships judged across "
             + uses + " uses, the certificates, and the gated "
             + "conformers, one canon each side (canon v" + CANON_VERSION + ").");
         return 0;
