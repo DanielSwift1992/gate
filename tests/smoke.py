@@ -5922,8 +5922,14 @@ public enum MyWatch: AccessLedger {
                       for r in vanished["refusals"])
               # and the width says the same thing the verdict does: the court got
               # narrower, and a green would have hidden exactly that
+              # both sides asked the same careful way: the line above already
+              # reached for the width through `get`, and this one took it by
+              # subscript one line later. A court that answers without sitting
+              # returns no width at all, and this battery then died on a
+              # KeyError before a single check had spoken. A run that dies
+              # names nothing; a check that fails names itself.
               and vanished.get("forms", {}).get("equalities", 0)
-                  < run("status", cwd=HERE)[1]["forms"]["equalities"]
+                  < run("status", cwd=HERE)[1].get("forms", {}).get("equalities", 0)
               # a row that names a dependency rather than a file this world
               # judges is not a ghost: the judge is held by a reproducible build
               and run("status", cwd=os.path.join(tmp, "demoworld"))[1]["verdict"] == "holds"))
