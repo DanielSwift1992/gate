@@ -1,5 +1,6 @@
 // gate stdlib forms-tool v1: the types readme.swift and verbs.swift are written in
 // role: forms
+// speaks-for: the-tool
 // A verb is a record like any other: what it touches, and which court it calls.
 // These axes make a reference table a world rather than a list. One law stands
 // over them: a verb that changes nothing may be run on anybody's clone, at any

@@ -1,5 +1,6 @@
 // gate stdlib bench-palette v1: the colours the page may use, with contrast checks
 // role: gate's own
+// speaks-for: the-bench
 // Levels of light on a 0..1000 scale (a tenth of a percent), spelled on this
 // file's own ladder from Unit: the built-in U stay symbolic, so a world
 // spells its own ladder. The scale is a tenth of a percent and not a percent

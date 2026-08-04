@@ -1,5 +1,6 @@
 // gate stdlib forms-grants v1: who may read which document, as records
 // role: forms
+// speaks-for: a-domain
 // (exemplar: theory corpus Sources/Examples/Grants.swift @ 0fd0b38).
 // Realms are declared atoms, and the fourth is one line rather than a schema change.
 // A verb set is a protocol class, containment is conformance, and one gate

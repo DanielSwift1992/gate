@@ -1,5 +1,6 @@
 // gate stdlib git-atoms v1: git's own objects as atoms for your records
 // role: forms
+// speaks-for: the-tool
 // The substrate's own objects become atoms: judged records reference them.
 // Enforcement stays with git and the platform. These are the names.
 

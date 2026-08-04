@@ -2832,6 +2832,7 @@ def cmd_stdlib(a):
     return {"command": "stdlib",
             "modules": {k: v.split("\n")[0].replace("// ", "") for k, v in STDLIB.items()},
             "roles": {k: stdlib_role(k) for k in STDLIB},
+            "speaks": {k: stdlib_speaks(k) for k in STDLIB},
             "note": "printouts of what the judge already carries, not files your world is made of"}
 
 
@@ -2898,6 +2899,28 @@ def stdlib_role(name):
     return None
 
 
+# the sorts of the shelf, and the list is closed on purpose: a fifth word is a
+# category somebody invented in a hurry, and the point of the column is that
+# what taking this tool imposes on a repository can be read off a short list
+SPEAKS = ("a-domain", "the-tool", "the-bench", "the-reader")
+
+
+def stdlib_speaks(name):
+    # AND WHOSE VOICE THE PAGE SPEAKS IN, WHICH THE ROLE DOES NOT SAY. The role
+    # says which court reads a file and whether it is this tool's own furniture,
+    # and under `forms` two unlike things go on standing together: the words a
+    # world of YOURS is written in, and the words this tool's own verbs and
+    # courts are written in. An operator opening the shelf asks which of these
+    # is about their repository, and the role column answers a question they did
+    # not ask. Said in the file's third line, beside the role, for the reason the
+    # role is said there: a category read off the shape of a name is a guess.
+    for line in STDLIB.get(name, "").split("\n")[:4]:
+        m = re.match(r"// speaks-for: (.+)", line.strip())
+        if m:
+            return m.group(1).strip()
+    return None
+
+
 def stdlib_guards():
     # A PRINTOUT THAT NO LONGER MATCHES WHAT IT PRINTS. The copy claims, in its
     # own header, to be the words this judge carries; once edited it says
@@ -2921,6 +2944,30 @@ def stdlib_guards():
                                  "role in its second line: `// role: forms` for what an operator "
                                  "speaks, `// role: gate's own` for this tool's furniture, and "
                                  "one that says nothing cannot be placed"})
+    # AND WHOSE VOICE IT SPEAKS IN, WHICH IS THE QUESTION THE ROLE LEAVES OPEN.
+    # Under one role stand the words a domain of yours is written in and the
+    # words this tool's own verbs are written in, and the difference is the
+    # whole of what an operator wants from this shelf: which of it is about my
+    # repository, and which of it came with the tool. A page that says nothing
+    # is filed by whoever reads it, differently each time.
+    for name in STDLIB:
+        said = stdlib_speaks(name)
+        if said is None:
+            bad.append({"address": f"stdlib/{name}.swift:3",
+                        "claim": "this page does not say whose voice it speaks in. A shelf file "
+                                 "states its sort in its third line, beside its role: "
+                                 "`// speaks-for: a-domain` for the words a world of yours is "
+                                 "written in, `the-tool` for what this tool's own verbs and "
+                                 "courts are written in, `the-bench` for the page you read them "
+                                 "on, `the-reader` for what a repository is met with"})
+        elif said not in SPEAKS:
+            bad.append({"address": f"stdlib/{name}.swift:3",
+                        "claim": f"`{said}` is not a sort of the shelf: this page names a group "
+                                 "nobody declared, and the reader it was written for would look "
+                                 "for it and find nothing. It is one of "
+                                 + " · ".join(SPEAKS) + ", and the list is closed so that what "
+                                 "taking this tool puts on a repository stays a list somebody "
+                                 "can read to the end"})
     for name, body in STDLIB.items():
         p = os.path.join(d, f"{name}.swift")
         if os.path.exists(p):
@@ -5521,7 +5568,9 @@ def cmd_serve(a):
                         # from that parse — the shelf has one reader, not a regex
                         # here beside the judge over there.
                         body = json.dumps({"modules": list(STDLIB),
-                                           "roles": {k: stdlib_role(k) for k in STDLIB}}).encode()
+                                           "roles": {k: stdlib_role(k) for k in STDLIB},
+                                           "speaks": {k: stdlib_speaks(k)
+                                                      for k in STDLIB}}).encode()
                         self.send_response(200)
                         self.send_header("Content-Type", "application/json")
                         self.send_header("Cache-Control", "no-store")

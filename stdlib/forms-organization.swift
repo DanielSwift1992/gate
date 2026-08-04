@@ -1,5 +1,6 @@
 // gate stdlib forms-organization v1: people, departments, and who reads what
 // role: forms
+// speaks-for: a-domain
 // This is the vocabulary `gate import` prints a
 // world in: the forms and the axes, with no facts of anyone's in it.
 //

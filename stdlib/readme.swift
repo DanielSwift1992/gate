@@ -1,5 +1,6 @@
 // gate stdlib readme v1: the readme a repository is met with
 // role: forms
+// speaks-for: the-reader
 // opens: bare
 //
 // Rule for this page: a line either subtracts a piece of drift, or it is cut.

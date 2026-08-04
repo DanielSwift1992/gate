@@ -1,5 +1,6 @@
 // gate stdlib courts v1: every court this tool ships, as records
 // role: forms
+// speaks-for: the-tool
 //
 // The judge exists twice on purpose: a native binary built from the theory
 // corpus, and a port that runs where the binary cannot, in a browser and on

@@ -1,5 +1,6 @@
 // gate stdlib verbs v1: every command this tool accepts, as records
 // role: forms
+// speaks-for: the-tool
 // opens: bare
 // written in `gate stdlib show forms-tool`
 //

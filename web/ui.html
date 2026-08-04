@@ -1018,14 +1018,43 @@ async function buildJournal() {
 // The cut is the role, which each file states in its own second line — not the
 // shape of its name. `git-atoms` is here and is not a forms file: it is what your
 // merge policy is written in.
+// ── AND THE READING ORDER OF THE GROUPS, WHICH IS ALL THIS LIST IS. What each
+// sort MEANS is the file's own word and is never looked up here; in which order
+// a reader meets them is a question about this page, so it is answered on this
+// page: what your repository is written in first, the tool that judges it next,
+// then the bench, then the letter. A sort this page has not heard of is not
+// dropped — it goes last under its own name, because a page that filed an
+// unknown word under nothing would be the page deciding what the shelf may say.
+const SHELF_SORTS = ["a-domain", "the-tool", "the-bench", "the-reader"];
+function shelfRank(sort) {
+    const i = SHELF_SORTS.indexOf(sort);
+    return i < 0 ? SHELF_SORTS.length : i;
+}
+// what a group means, on the row rather than in the heading: a heading that
+// explained itself would be this page saying in its own words what the file
+// already says in one, and a sort with no sentence here still gets a row.
+const SHELF_MEANS = {
+    "a-domain": "Words the judge carries, printed as Swift: what a world of yours and your "
+        + "policy are written in. Your world speaks these with no such file present, and "
+        + "editing a copy adds no word to the language.",
+    "the-tool": "The grammar this tool's own verbs and courts are written in: how gate "
+        + "describes itself, judged by the same court as everything else. Read it to see "
+        + "what the tool claims about itself, not to write your world in.",
+    "the-bench": "A judged world this bench itself runs under: the palette it paints with, the "
+        + "ladder of lengths it spaces itself on, the atoms its surface is made of. "
+        + "Taken with the tool, like everything else here.",
+    "the-reader": "The letter a repository is met with: prose, judged as a world like the rest, "
+        + "so what it promises is held to the files it describes.",
+};
 async function buildShelf() {
     const host = document.getElementById("shelf-host");
     let mods = [];
     let roles = {};
+    let speaks = {};
     try {
         const shelf = await (await fetch("/shelf")).json();
-        mods = shelf.modules || []; roles = shelf.roles || {};
-        mods.sort((a, b) => (roles[a] || "").localeCompare(roles[b] || "")
+        mods = shelf.modules || []; roles = shelf.roles || {}; speaks = shelf.speaks || {};
+        mods.sort((a, b) => shelfRank(speaks[a]) - shelfRank(speaks[b])
                             || a.localeCompare(b));
     } catch { mods = []; }
     host.innerHTML = "";
@@ -1057,32 +1086,34 @@ async function buildShelf() {
     // world can be written in. The ones you actually speak are in `mine`, as
     // your own copies — so the panel answers "which of these am I using?" by
     // which side of the rail they stand on, with nothing added to explain it.
-    let shownRole = null;
+    // ── AND THE CUT IS THE SORT, NOT THE ROLE. The role says which court reads a
+    // file, and by that word `forms` covered two unlike things at once: the
+    // grammar YOUR world is written in, and the grammar this tool's own verbs
+    // and courts are written in. An operator opening this rail asks which of it
+    // is about their repository — so the group is the sort each page states in
+    // its third line, and what came with the tool is a list they can read to the
+    // end rather than a feeling about the shape of a name.
+    let shownSort = null;
     for (const m of mods) {
         if (alreadyMine.has(m) || roles[m] === "gate's own") continue;
-        const role = roles[m] || "taken";
-        if (role !== shownRole) {
-            shownRole = role;
+        const sort = speaks[m] || "taken";
+        if (sort !== shownSort) {
+            shownSort = sort;
             const head = document.createElement("div");
             head.className = "folder caption";
             // the word is the file's own, never a sentence written here: a lookup
-            // on the two roles this tool happens to know is that tool learning a
-            // vocabulary, and a role it had not heard of would fall through to
-            // nothing. What each group MEANS is on every row's own hover, said
-            // by the file; the heading only has to name the group.
-            head.textContent = role;
+            // on the sorts this tool happens to know is that tool learning a
+            // vocabulary, and a sort it had not heard of would fall through to
+            // nothing. What each group MEANS is on every row's own hover; the
+            // heading only has to name the group.
+            head.textContent = sort;
             host.appendChild(head);
         }
         const r = document.createElement("div");
         // a file row is a file row: the rail has one shape for one thing
         r.className = "file nested";
-        r.title = (roles[m] === "forms"
-            ? "Words the judge carries, printed as Swift: what your world and your policy are "
-              + "written in. Your world speaks these with no such file present, and editing a "
-              + "copy adds no word to the language."
-            : "A judged world this bench itself runs under: the palette it paints with, the "
-              + "ladder of lengths it spaces itself on, the atoms its surface is made of. "
-              + "Taken with the tool, like everything else here.");
+        r.title = (SHELF_MEANS[sort]
+            || "Taken with the tool, and judged like every other world here.");
         r.innerHTML = '<span class="dot"></span><span class="name">' + esc(m) + "</span>";
         r.onclick = () => openShelf(m);
         host.appendChild(r);

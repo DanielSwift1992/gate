@@ -4105,17 +4105,24 @@ console.log(JSON.stringify(out));
     # line and the tool had been reading that line to no visible end — so a
     # reader asking "is all of this the judge?" got no answer, and the answer is
     # no. `git-atoms` in particular is forms, like the rest of the language.
-    S.append(("the shelf is grouped by what each file says it is, not by one flat alphabet",
-              'const role = roles[m] || "taken";' in ui
+    # AND THE GROUP IS THE SORT, NOT THE ROLE. The role names the court; under
+    # `forms` it left the grammar YOUR world is written in standing beside the
+    # grammar this tool's own verbs are written in, which is the one difference
+    # an operator opening this rail is asking about.
+    S.append(("the shelf is grouped by the sort each file states, not by one flat alphabet",
+              'const sort = speaks[m] || "taken";' in ui
               # and the heading is the file's own word, never a sentence written
-              # in the page: a lookup on the roles this tool happens to know is
-              # the tool learning a vocabulary, and an unknown role gets nothing
-              and "head.textContent = role;" in ui
-              and '"forms — the language a world is written in"' not in ui
-              and "mods.sort((a, b) => (roles[a] || \"\").localeCompare(roles[b] || \"\")" in ui
-              # and the roles come from the files themselves, never from a list here
-              and "def stdlib_role(" in shelf_src
-              and 'm = re.match(r"// role: (.+)", line.strip())' in shelf_src))
+              # in the page: a lookup on the sorts this tool happens to know is
+              # the tool learning a vocabulary, and an unknown sort gets nothing
+              and "head.textContent = sort;" in ui
+              and '"a-domain — the language a world is written in"' not in ui
+              # the order the groups are read in is a question about this page,
+              # so it is answered on this page, once, and only as an order
+              and 'const SHELF_SORTS = ["a-domain", "the-tool", "the-bench", "the-reader"];' in ui
+              and "mods.sort((a, b) => shelfRank(speaks[a]) - shelfRank(speaks[b])" in ui
+              # and the words come from the files themselves, never from a list here
+              and "def stdlib_speaks(" in shelf_src
+              and 'm = re.match(r"// speaks-for: (.+)", line.strip())' in shelf_src))
 
     # ── AND ONE LINE ON THE PAGE IS NOT TWICE THE WEIGHT OF THE OTHERS. The
     # borrowed editor draws the gutter divider at 1px while every line this page
@@ -7021,6 +7028,57 @@ public enum MyWatch: AccessLedger {
                       for r in roleless.get("refusals", []))
               # and with the line back, this repository holds again
               and run("status", cwd=HERE)[1].get("verdict") == "holds"))
+
+    # ── AND WHOSE VOICE IT SPEAKS IN, WHICH THE ROLE NEVER SAID. The role names
+    # the court that reads a file, and by that word the grammar somebody's own
+    # world is written in and the grammar this tool's own verbs are written in
+    # were one thing. The sort is the answer and stands beside the role in the
+    # third line, held the way the role is: the line taken off the real file and
+    # put back, and the fifth word offered to see the list refuse it by name.
+    speaks_file = os.path.join(HERE, "stdlib", "forms-organization.swift")
+    kept_speaks = open(speaks_file, encoding="utf-8").read()
+    try:
+        open(speaks_file, "w").write("\n".join(
+            l for l in kept_speaks.split("\n") if not l.startswith("// speaks-for:")))
+        voiceless = run("status", cwd=HERE)[1]
+        open(speaks_file, "w").write(
+            kept_speaks.replace("// speaks-for: a-domain", "// speaks-for: a-hobby"))
+        fifth = run("status", cwd=HERE)[1]
+    finally:
+        open(speaks_file, "w").write(kept_speaks)
+    S.append(("a shelf page that does not say whose voice it speaks goes red at its own line",
+              voiceless.get("verdict") == "refused"
+              and any(r.get("address") == "stdlib/forms-organization.swift:3"
+                      and "does not say whose voice it speaks in" in r.get("claim", "")
+                      for r in voiceless.get("refusals", []))
+              # and with the line back, this repository holds again
+              and run("status", cwd=HERE)[1].get("verdict") == "holds"))
+    S.append(("a fifth sort is refused by name, and the refusal carries the whole list",
+              fifth.get("verdict") == "refused"
+              and any(r.get("address") == "stdlib/forms-organization.swift:3"
+                      and "`a-hobby` is not a sort of the shelf" in r.get("claim", "")
+                      # named, and the closed list said in full, so the page can
+                      # be corrected from the refusal without reading the source
+                      and all(w in r.get("claim", "") for w in
+                              ("a-domain", "the-tool", "the-bench", "the-reader"))
+                      for r in fifth.get("refusals", []))))
+    # ── AND EVERY PAGE ANSWERS, NOT MOST OF THEM. A column right about thirteen
+    # pages and silent about the fourteenth is the guess it replaced, wearing a
+    # column heading; and the four words are all used, or one of them is a word
+    # nobody speaks kept alive by a list.
+    shelf_out = run("stdlib", cwd=HERE)[1]
+    speaks_map = shelf_out.get("speaks") or {}
+    shelf_pages = sorted(f[:-6] for f in os.listdir(os.path.join(HERE, "stdlib"))
+                         if f.endswith(".swift"))
+    S.append(("every page on the shelf says its sort, and says one of the four",
+              sorted(speaks_map) == shelf_pages
+              and len(shelf_pages) == 14
+              and sorted(speaks_map) == sorted(shelf_out.get("modules") or {})
+              and set(speaks_map.values()) == {"a-domain", "the-tool", "the-bench", "the-reader"}
+              # said by the page in its third line, never guessed from its name
+              and all(open(os.path.join(HERE, "stdlib", f"{m}.swift"),
+                           encoding="utf-8").read().split("\n")[2].startswith("// speaks-for: ")
+                      for m in speaks_map)))
 
     # ── AND A WORD THAT WAS RETIRED STAYS RETIRED. `genre` named a thing this
     # tool no longer believes in: a kind of world handed down, belonging to the

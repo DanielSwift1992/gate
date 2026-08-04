@@ -1,5 +1,6 @@
 // gate stdlib grammar v1: the scopes and atoms the bench walks, as records
 // role: forms
+// speaks-for: the-tool
 //
 // The walk is agnostic: a scope opens, a scope closes, that is all it
 // knows, and swift is what it reads. WHICH scopes exist, how each one is

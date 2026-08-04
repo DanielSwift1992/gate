@@ -1,5 +1,6 @@
 // gate stdlib bench-metrics v1: the spacing steps, and a check on every gap
 // role: gate's own
+// speaks-for: the-bench
 // The base is the reading line: an instrument for reading measures its
 // spacing in the letter it sets. One step is a tenth of that line, and every
 // gap on the page is a whole number of steps, so a length is spelled the way

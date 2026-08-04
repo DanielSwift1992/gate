@@ -1,5 +1,6 @@
 // gate stdlib forms-reference v1: a reference and its target, judged together
 // role: forms
+// speaks-for: a-domain
 //
 // Everybody has this drift and nobody checks it: code cites a
 // ticket, a ticket is closed, and the citation stays. Nothing in either system

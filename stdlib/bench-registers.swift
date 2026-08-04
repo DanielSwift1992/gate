@@ -1,5 +1,6 @@
 // gate stdlib bench-registers v1: the type sizes the page uses, as declarations
 // role: gate's own
+// speaks-for: the-bench
 // A register is what a thing IS, said once: a face, a size, and how far one
 // line stands from the next. The page had been restating them instead:
 // nineteen font declarations where four registers were declared, half of them

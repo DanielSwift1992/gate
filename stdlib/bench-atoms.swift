@@ -1,5 +1,6 @@
 // gate stdlib bench-atoms v1: the bench's own settings, as declarations
 // role: gate's own
+// speaks-for: the-bench
 // The bench is not configured by a toggle but by a claim in your personal world:
 // MyBench says which theme the page uses, MyJournal says what the history
 // shows. The values live here, and a value from nowhere else is named on its

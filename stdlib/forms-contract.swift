@@ -1,5 +1,6 @@
 // gate stdlib forms-contract v1: an API contract and the clients that carry it
 // role: forms
+// speaks-for: a-domain
 //
 // A contract is written once and copied into a server and into every client
 // library, and the copies drift apart quietly. Types do not prevent it: they
