@@ -1208,7 +1208,10 @@ global.fetch = async (u) => ({
     },
 });
 eval(["buildScopes", "admits", "scopesAt", "noteStartAt", "codeOfLine", "placeAt", "ungrantedOpenerAt", "walkFormAt",
-      "axesOfHost", "declsInView", "declaredNow", "fillersFor", "afterDot", "allowedAt"]
+      "axesOfHost", "declsInView", "declaredNow", "fillersFor", "afterDot", "allowedAt",
+      // the readers that share codeOfLine with the offer, lifted so the note
+      // question can be put to them and not to the offer alone
+      "describeName", "describeAxis", "locateSlot"]
      .map(n => grab(n)).join("\\n"));
 eval(grab("loadVocabulary", "async "));
 const world = ["public enum Legal: Realm {}",
@@ -1310,6 +1313,38 @@ const ask = (tail) => {
                      aliasSeen: !!(d && d.aliases && d.aliases.get("Post")) };
         })(),
         shield: shieldSaid,
+        // ── THE NOTE QUESTION, PUT TO THE READERS THAT SHARE codeOfLine. The
+        // offer is one of four; the other three (the inspector's describer, the
+        // slot locator, the claim stepper) are driven by nothing, and a mutation
+        // that made a note read as grammar went through the whole battery in
+        // silence. Two of them are drivable without a screen, and the third
+        // shares the same reader, so the question is put where it can be
+        // answered: a control first, then the note.
+        notes: (() => {
+            const w = ["public enum Legal: Realm {}",
+                       "public enum E9: Keeper {",
+                       "    // a note with a { in it",
+                       "    public typealias Post = Legal",
+                       "    public typealias Key = ReaderKey",
+                       "}",
+                       "public enum E10: Keeper {",
+                       "    public typealias Post = Legal",
+                       "    public typealias Key = ReaderKey",
+                       "}"];
+            cm = { getLine: (n) => w[n], lineCount: () => w.length };
+            layoutDecls = new Map(); declFile = new Map();
+            lastParsed = judge("w.swift", w.join("\\n"),
+                               { seeds: new Set(), generics: new Set() }).parsed;
+            const d = lastParsed.declarations.get("E9");
+            return {
+                code: codeOfLine(3),                  // the control: code comes back
+                noted: codeOfLine(2),                 // and a note is not code
+                // E9 closes on its own brace at line five counting from nought,
+                // and the `{` inside the note may not push that any further
+                record: locateSlot({ kind: "record", line: d ? d.line : 2 }),
+                said: describeName("E9"),             // the describer still answers
+            };
+        })(),
         floorTop: askAt(["pub"], 0, 3),
         floorAfterPublic: askAt(["public "], 0, 7),
         floorBody: askAt(open9.concat(["    public typealias Post = Legal",
@@ -1397,6 +1432,30 @@ const ask = (tail) => {
     _sh = _off.get("shield") or {}
     S.append(("a string shields its brace and a note eats its own, because claims say so",
               _sh.get("stringNote") == -1 and _sh.get("frames") == ["gate"]))
+    # ── AND THE OTHER READERS OF A LINE ARE HELD TO THE SAME CUT. Four functions
+    # ask codeOfLine what a line says: the offer, the inspector's describer, the
+    # slot locator and the claim stepper. Only the offer was ever driven, and a
+    # mutation making a note read as grammar walked through four hundred and eight
+    # checks without a word. Two of the other three run without a screen, so the
+    # question goes to them: a `{` written inside somebody's comment must not be a
+    # brace to anybody.
+    #
+    # The control comes first, by this battery's own rule: a line of code must
+    # come back whole and the describer must still answer, or a silent probe is a
+    # broken probe rather than a finding. Measured on both pages before the check
+    # was written: with the cut, the record ends at its own closing brace; without
+    # it, the locator returns nothing at all, so removing a unit would be a
+    # gesture that quietly does nothing.
+    _nt = _off.get("notes") or {}
+    S.append(("a brace inside a note is nobody's brace, and the readers say so",
+              # the control: code is code, and a second reader is alive
+              _nt.get("code") == "    public typealias Post = Legal"
+              and _nt.get("said") == "E9 · record, of kind Keeper"
+              # the note is not code
+              and "//" not in (_nt.get("noted") or "//")
+              # and the record ends where its brace does, not where a comment says
+              and (_nt.get("record") or {}).get("from") == {"line": 1, "ch": 0}
+              and (_nt.get("record") or {}).get("to") == {"line": 6, "ch": 0}))
     # ── AND A LINE OPENS ONLY WITH A GRANTED WORD. Typing `public` at the top
     # of a world offered nothing: the special forms answer lines already
     # begun, and the empty start fell between them. The floor reads the
