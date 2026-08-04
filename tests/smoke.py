@@ -32,6 +32,21 @@ def seams_here_probe(folder):
         return -1
 
 
+class Checks(list):
+    # ── A CHECK SPEAKS WHEN IT IS DECIDED, NOT WHEN THE RUN IS OVER. Every
+    # result used to be held until the end and printed in one go, so a run that
+    # died on its way printed NOTHING: four hundred decided checks went down
+    # with the exception, and a reader got a stack trace where a list of names
+    # belongs. Found by the mutation run, which changed one line so a refusal
+    # lost its address, and watched this battery answer nought of four hundred.
+    # The lines are the same lines in the same order; they simply arrive as they
+    # are decided, so a run that stops still says everything it reached and the
+    # last name printed is the neighbour of whatever stopped it.
+    def append(self, item):
+        print(("PASS" if item[1] else "FAIL"), item[0], flush=True)
+        super().append(item)
+
+
 def say(*args, cwd=None):
     # the human line, not the JSON: the porcelain has its own words and the
     # canon of names governs them
@@ -93,7 +108,7 @@ def main():
     # bare machine, a fresh CI runner, has no global user.name for it to lean on
     subprocess.run(["git", "config", "user.name", "A Fixture"], cwd=repo)
     subprocess.run(["git", "config", "user.email", "fixture@client"], cwd=repo)
-    S = []
+    S = Checks()
     S.append(("the battery keeps its personal worlds inside its own temp dir",
               os.environ.get("GATE_ME", "").startswith(tmp)))
     # and every fixture directory too, so a run leaves the machine as it found it
@@ -102,6 +117,28 @@ def main():
     S.append(("and every fixture it makes is rooted in that directory",
               not re.search(r"tempfile\.mkdtemp\(\s*\)",
                             open(__file__, encoding="utf-8").read())))
+
+    # ── AND THE ANSWER COMES IN THE SHAPE THIS BATTERY READS, OR THIS SAYS SO
+    # AND STOPS. Found by the mutation run twice over. One line changed so the
+    # court never sits, and one so a refusal loses its address, and both times
+    # this run died at an unguarded subscript hundreds of checks before the one
+    # that would have named them: a traceback where a red line belongs, and
+    # nought of four hundred checks spoken. Every check below reads `verdict`,
+    # `refusals` and the court's width by hand, and there are too many of those
+    # reads to guard one at a time. So the shape is asked once, here, of this
+    # repository's own world, and a tool that cannot answer it is a refusal with
+    # a name. Stopping is right: no check below means anything against a tool
+    # whose answers cannot be read, and the run that stops here has said why.
+    _shape = run("status", cwd=HERE)[1]
+    S.append(("the tool answers in the shape this battery reads it in",
+              isinstance(_shape.get("verdict"), str)
+              and isinstance(_shape.get("refusals"), list)
+              and isinstance(_shape.get("forms"), dict)))
+    if not S[-1][1]:
+        print("     it answered: " + json.dumps(_shape)[:300])
+        print("     every check below reads that shape, so this run stops here")
+        print("RED")
+        raise SystemExit(1)
 
     c, r = run("init", repo)
     S.append(("init + hook wired", r.get("hooks") is not None))
@@ -7199,8 +7236,7 @@ public enum MyWatch: AccessLedger {
     S.append(("the README counts these checks correctly",
               bool(claimed_n) and int(claimed_n.group(1)) == len(S) + 1))
 
-    for name, ok in S:
-        print(("PASS" if ok else "FAIL"), name)
+    # the names have been printed as they were decided; what is left is the word
     print("ALL GREEN" if all(ok for _, ok in S) else "RED")
     shutil.rmtree(tmp)
     sys.exit(0 if all(ok for _, ok in S) else 1)
