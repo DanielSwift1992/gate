@@ -4161,6 +4161,53 @@ console.log(JSON.stringify(out));
               and "def stdlib_speaks(" in shelf_src
               and 'm = re.match(r"// speaks-for: (.+)", line.strip())' in shelf_src))
 
+    # ── AND THE ORDER IS ASKED OF THE RAIL, NOT OF A STRING INSIDE IT. The check
+    # above pins the line that spells the sort, which is what keeps a second
+    # private table from growing back, and the mutation run walked straight
+    # through it: make shelfRank answer nought for everything and that line still
+    # stands, word for word, while the reading order is gone and no check says
+    # anything. A source vector holds the SHAPE and will watch a body lie. So the
+    # page's own two lines are lifted out and the question is put to them.
+    _rj = os.path.join(tmp, "shelf-order.js")
+    open(_rj, "w").write("""
+const fs = require("fs");
+const ui = fs.readFileSync(process.argv[2], "utf8");
+const grab = (name) => {
+    const at = ui.indexOf("function " + name + "(");
+    if (at < 0) throw new Error("no " + name);
+    let d = 0;
+    for (let j = ui.indexOf("{", at); j < ui.length; j++) {
+        if (ui[j] === "{") d++;
+        else if (ui[j] === "}" && --d === 0) return ui.slice(at, j + 1);
+    }
+};
+// the list is the page's own line, lifted, never a second copy written here.
+// Both go into ONE eval and are handed out through the global: a `const`
+// declared inside an eval stays inside it, so lifting them separately left the
+// function looking at a name that was not there, and this probe threw instead
+// of measuring. A probe that throws is a red line for the wrong reason.
+eval(/^const SHELF_SORTS = \\[.*\\];$/m.exec(ui)[0] + "\\n" + grab("shelfRank")
+     + "\\nglobalThis.RANK = shelfRank; globalThis.SORTS = SHELF_SORTS;");
+const shuffled = ["the-reader", "a-sort-nobody-declared", "the-bench", "a-domain", "the-tool"];
+console.log(JSON.stringify({
+    order: shuffled.slice().sort((a, b) => RANK(a) - RANK(b)),
+    sorts: SORTS,
+}));
+""")
+    _ra = subprocess.run(["node", _rj, os.path.join(HERE, "web", "ui.html")],
+                         capture_output=True, text=True)
+    try:
+        _rank = json.loads(_ra.stdout)
+    except Exception:
+        _rank = {}
+    S.append(("the shelf's groups are met in the order the rail declares, asked of the rail",
+              _rank.get("sorts") == ["a-domain", "the-tool", "the-bench", "the-reader"]
+              # your own repository's language first, the tool that judges it
+              # next, then the bench, then the letter; and a sort this page has
+              # not heard of goes last under its own name rather than in front
+              and _rank.get("order") == ["a-domain", "the-tool", "the-bench",
+                                         "the-reader", "a-sort-nobody-declared"]))
+
     # ── AND ONE LINE ON THE PAGE IS NOT TWICE THE WEIGHT OF THE OTHERS. The
     # borrowed editor draws the gutter divider at 1px while every line this page
     # draws is half that, so the rule nearest the reading eye was the heaviest
