@@ -1255,6 +1255,7 @@ let LINE_MODS = {};     // home -> the modifier words granted there, spending no
 // shelf, gate rows (name -> kinds) off the presented declarations; afterDot
 // reads the vocabulary's own axis table, which is the forms themselves
 let FORM_ROWS = { line: {}, gate: {} };
+let SLOT_SPELLING = {};  // structural slots wear their glyph as a record
 let LINE_CONTINUERS = new Set();  // words continuing an open line, never opening one
 function buildScopes(parsed) {
     const spell = (name) => name === "LineEnd" ? "\n"
@@ -1302,6 +1303,13 @@ function buildScopes(parsed) {
         const m = /^ContinuesLine<(\w+)>$/.exec(a.target || "");
         if (m && wordSpelling[m[1]]) LINE_CONTINUERS.add(wordSpelling[m[1]]);
     }
+    // a structural slot's glyph, read off the same page: the walker needs
+    // the equals and the colon as records, not as a regex's opinion
+    for (const d of parsed.declarations.values())
+        if ((d.conformances || []).includes("LineSlot")) {
+            const lit = parsed.literals.get(d.name);
+            if (lit) SLOT_SPELLING[d.name.replace("Slot", "").toLowerCase()] = lit.value;
+        }
     // the forms: after an opener, the row of slots the shelf states. The
     // branches below the floor are readers of these rows, not authors
     for (const [, a] of parsed.topAliases) {
@@ -1443,6 +1451,44 @@ function afterDot(before, host, wanted) {
     return out.length ? { items: out, back: m[2].length } : null;
 }
 
+// ── the row walker: one loop that reads a line against its opener's row,
+// in place of a regex per branch. A structural slot wears its glyph as a
+// record (SLOT_SPELLING); an answer slot takes its text by its kind: a
+// name is one word, a value may dot, protos ride commas. The walker
+// answers only for the end of the given text: which slot it stands in,
+// what the earlier slots said, and the partial the position holds.
+function walkFormAt(before) {
+    let rest = before.replace(/^\s*/, "");
+    let opener = null;
+    while (true) {
+        const w = /^([a-z][a-z0-9]*)\s+/.exec(rest);
+        if (!w) return null;
+        rest = rest.slice(w[0].length);
+        if (FORM_ROWS.line[w[1]]) { opener = w[1]; break; }
+    }
+    const row = FORM_ROWS.line[opener];
+    const said = {};
+    for (let i = 0; i < row.length; i++) {
+        const kind = row[i];
+        const glyph = SLOT_SPELLING[kind];
+        rest = rest.replace(/^\s*/, "");
+        if (glyph) {
+            if (!rest.startsWith(glyph))
+                return rest === "" ? { opener, atKind: kind, said, tail: "" } : null;
+            rest = rest.slice(glyph.length);
+            continue;
+        }
+        const take = kind === "protos" ? /^[\w,\s]*$/
+                   : kind === "value" ? /^[\w.]*$/ : /^\w*$/;
+        if (take.test(rest)) return { opener, atKind: kind, said, tail: rest };
+        const word = /^(\w+)/.exec(rest);
+        if (!word) return null;
+        said[kind] = word[1];
+        rest = rest.slice(word[1].length);
+    }
+    return null;
+}
+
 // WHAT MAY BE WRITTEN HERE — the whole of it, in one place
 function allowedAt(cur) {
     const line = cm.getLine(cur.line) || "";
@@ -1454,13 +1500,14 @@ function allowedAt(cur) {
     const before = line.slice(0, cur.ch);
     const { host, inBody } = placeAt(cur);
 
-    // an axis slot: the shelf's typealias row says an axis name, the
-    // equals, then a value; the row is this branch's licence, and with
-    // the row cut the question dies here rather than guessing
-    const tform = FORM_ROWS.line["typealias"];
-    const slot = (tform && tform[1] === "equals" && tform[2] === "value")
-        ? /typealias\s+(\w+)\s*=\s*[\w.]*$/.exec(before) : null;
-    const wanted = slot ? (axesOfHost(host)[slot[1]] || axisOf[slot[1]] || null) : null;
+    // an axis slot: the walk against the typealias row says the position
+    // stands in the value slot, and the axis name was said two slots ago.
+    // The row is the branch's licence and its parser at once: cut the row
+    // and the question dies here rather than guessing.
+    const walk = walkFormAt(before);
+    const slot = walk && walk.opener === "typealias" && walk.atKind === "value"
+        ? { axis: walk.said.axisname } : null;
+    const wanted = slot ? (axesOfHost(host)[slot.axis] || axisOf[slot.axis] || null) : null;
 
     const dotted = afterDot(before, host, wanted);
     if (dotted) return { items: dotted.items, back: dotted.back,
@@ -1472,12 +1519,12 @@ function allowedAt(cur) {
         // But the nothing is said in words: an owed axis whose kind the forms
         // leave open and an axis no form declares are different silences, and
         // a hidden popup told the writer neither.
-        const f = wanted ? fillersFor(wanted, host, slot[1]) : null;
-        const known = (slot[1] in axesOfHost(host)) || (slot[1] in axisOf);
+        const f = wanted ? fillersFor(wanted, host, slot.axis) : null;
+        const known = (slot.axis in axesOfHost(host)) || (slot.axis in axisOf);
         return { items: f || [],
                  kind: wanted ? "this axis takes " + wanted
-                     : known ? "the forms state no kind for " + slot[1]
-                             : "no form declares an axis " + slot[1],
+                     : known ? "the forms state no kind for " + slot.axis
+                             : "no form declares an axis " + slot.axis,
                  closed: true };
     }
 
@@ -1500,23 +1547,20 @@ function allowedAt(cur) {
         }
     }
 
-    // a head that extends: `extension ` names something that exists, so the
-    // offer is the declared names, the world's records beside the shelf's
-    // gates and values, and never a protocol, which nothing here extends
-    const ext = /^\s*(?:public\s+)?extension\s+(\w*)$/.exec(before);
-    if (ext) {
+    // a head that extends: the extension row's first slot names something
+    // that exists, so the offer is the declared names, the world's records
+    // beside the shelf's gates and values, and never a protocol, which
+    // nothing here extends
+    if (walk && walk.opener === "extension" && walk.atKind === "existing") {
         const pool = [...declaredNow()].filter(([, d]) => !d.axes).map(([n]) => n);
-        return pool.length ? { items: pool, back: ext[1].length,
+        return pool.length ? { items: pool, back: walk.tail.length,
                                kind: "a name to extend", closed: true } : null;
     }
 
-    // the head of a declaration: the shelf's enum row says a name, the
-    // colon, then what the record is; the row licences the question
-    const eform = FORM_ROWS.line["enum"];
-    const head = (eform && eform[1] === "colon" && eform[2] === "protos")
-        ? /^\s*(?:public\s+)?enum\s+\w+\s*:\s*([\w,\s]*)$/.exec(before) : null;
-    if (head) {
-        const already = new Set(head[1].split(",").map(x => x.trim()).filter(Boolean));
+    // the head of a declaration: the enum row's walk stands in the protos
+    // slot, and what was typed there so far is the tail
+    if (walk && walk.opener === "enum" && walk.atKind === "protos") {
+        const already = new Set(walk.tail.split(",").map(x => x.trim()).filter(Boolean));
         const protos = Object.keys(protoAxes).filter(p => !already.has(p));
         return protos.length ? { items: protos, kind: "what this record is", closed: true } : null;
     }

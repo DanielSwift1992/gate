@@ -102,20 +102,25 @@ public typealias Typealias_opens_body = OpensLine<TypealiasWord, BodyHome>
 // After an opener the rest of the line is the form: an ordered row of
 // slots. The rows are records here, and the offer branches that used to
 // know each row by heart are its readers now: cut a row and its
-// question dies with it. A slot names the kind of answer a position
-// takes, never a spelling; the spellings stay with the walk.
+// question dies with it. An answer slot names the kind of answer a
+// position takes; a structural slot wears the glyph it is, as a record,
+// so the walker reads the row and no branch keeps a regex of its own.
 public protocol LineSlot {}
 public enum NameSlot: LineSlot {}
 public enum AxisNameSlot: LineSlot {}
+public enum ExistingSlot: LineSlot {}
 public enum EqualsSlot: LineSlot {}
+extension EqualsSlot { public static var typeName: String { "=" } }
 public enum ValueSlot: LineSlot {}
 public enum ColonSlot: LineSlot {}
+extension ColonSlot { public static var typeName: String { ":" } }
 public enum ProtosSlot: LineSlot {}
 
 public enum LineForm<W: Word, S1: LineSlot, S2: LineSlot, S3: LineSlot> {}
 
 public typealias Typealias_form = LineForm<TypealiasWord, AxisNameSlot, EqualsSlot, ValueSlot>
 public typealias Enum_form = LineForm<EnumWord, NameSlot, ColonSlot, ProtosSlot>
+public typealias Extension_form = LineForm<ExtensionWord, ExistingSlot, ColonSlot, ProtosSlot>
 
 // THE FORMS DIALECT. A forms page opens lines with words of its own,
 // granted the same way: one claim per word per home. Four homes stand

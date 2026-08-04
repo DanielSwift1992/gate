@@ -1094,7 +1094,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               "associatedtype Sex: Sexed" in forms_page and "associatedtype Rank: Ranked" in forms_page
               and "associatedtype Home: Department" in forms_page))
     S.append(("and the bench offers by that, not by what it saw nearby",
-              "function fillersFor(" in ui and "axesOfHost(host)[slot[1]]" in ui))
+              "function fillersFor(" in ui and "axesOfHost(host)[slot.axis]" in ui))
     S.append(("a recognised slot never falls through to the general pool",
               "a slot is a closed question" in ui and "closed: true }" in ui
               and "return { items: f || []" in ui
@@ -1156,6 +1156,7 @@ const grab = (name, prefix) => {
 let SCOPES = [], NESTS = {};
 let LINE_OPENERS = {}, LINE_MODS = {}, LINE_CONTINUERS = new Set();
 let FORM_ROWS = { line: {}, gate: {} };
+let SLOT_SPELLING = {};
 let vocabulary = {}, conformers = {}, axisOf = {}, protoAxes = {};
 let shelfDecls = new Map();
 let layoutDecls = new Map(), declFile = new Map(), worldAliases = new Map();
@@ -1169,7 +1170,7 @@ global.fetch = async (u) => ({
         return fs.readFileSync(p, "utf8");
     },
 });
-eval(["buildScopes", "admits", "scopesAt", "noteStartAt", "codeOfLine", "placeAt", "ungrantedOpenerAt",
+eval(["buildScopes", "admits", "scopesAt", "noteStartAt", "codeOfLine", "placeAt", "ungrantedOpenerAt", "walkFormAt",
       "axesOfHost", "declsInView", "declaredNow", "fillersFor", "afterDot", "allowedAt"]
      .map(n => grab(n)).join("\\n"));
 eval(grab("loadVocabulary", "async "));
@@ -1407,6 +1408,15 @@ const ask = (tail) => {
     S.append(("the offer reads one table of forms, line rows and gate rows alike",
               "FORM_ROWS.line[" in ui and "FORM_ROWS.gate[" in ui
               and "let gates" not in ui and "let LINE_FORMS" not in ui))
+    # ── AND THE BRANCHES WALK THEIR ROWS: one walker reads a line against
+    # its opener's row, the structural slots wear their glyphs as records
+    # (equals, colon), and the regex each branch kept is gone. The owed
+    # branch's scan of past lines stays: it reads history, not a form.
+    S.append(("the form branches walk their rows, and the regex per branch is gone",
+              "function walkFormAt(" in ui and "SLOT_SPELLING" in ui
+              and "\\s*=\\s*[\\w.]*$" not in ui
+              and "?enum\\s+\\w+\\s*:" not in ui
+              and "?extension\\s+(\\w*)$" not in ui))
 
     # ── AND THE OFFER IS HELD TO THE VERDICT, NOT TO A DESCRIPTION OF IT. Two
     # readings of one law had come apart here, and both were invisible to every
@@ -1443,6 +1453,7 @@ const grab = (name, prefix) => {
 let SCOPES = [], NESTS = {};
 let LINE_OPENERS = {}, LINE_MODS = {}, LINE_CONTINUERS = new Set();
 let FORM_ROWS = { line: {}, gate: {} };
+let SLOT_SPELLING = {};
 let vocabulary = {}, conformers = {}, axisOf = {}, protoAxes = {};
 let shelfDecls = new Map();
 let layoutDecls = new Map(), declFile = new Map(), worldAliases = new Map();
@@ -1455,7 +1466,7 @@ global.fetch = async (u) => ({
         return fs.readFileSync(p, "utf8");
     },
 });
-eval(["buildScopes", "admits", "scopesAt", "noteStartAt", "codeOfLine", "placeAt", "ungrantedOpenerAt",
+eval(["buildScopes", "admits", "scopesAt", "noteStartAt", "codeOfLine", "placeAt", "ungrantedOpenerAt", "walkFormAt",
       "axesOfHost", "declsInView", "declaredNow", "fillersFor", "afterDot", "allowedAt"]
      .map(n => grab(n)).join("\\n"));
 eval(grab("loadVocabulary", "async "));
