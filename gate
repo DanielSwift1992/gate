@@ -1222,6 +1222,18 @@ def last_entry_insert(text, head, args, indent):
 def cmd_ask(a):
     # ask view WHO DOC — would this view entry stand? a probe entry + judgement, nothing changes
     who, doc = a[0], a[1]
+    # ── AND A QUESTION OF A WORLD FILE NEEDS ONE, said where the reading is.
+    # This read FACTS unguarded, so in a world declared as a layout alone, which
+    # is what `gate demo` and `gate import codeowners` build and what this
+    # repository is, it raised: the terminal on a FileNotFoundError and the bench
+    # by dropping the connection with no response at all. The first spelling of
+    # this guard sat in the dispatcher, and the bench calls these verbs directly,
+    # so the page kept dropping the line: a guard belongs at the reading, never
+    # at one of its callers.
+    if not (FACTS and os.path.exists(FACTS)):
+        cannot("this asks its question of a world file, and there is none here",
+               "run `gate init .` to start one, or `gate demo` for a repository to look "
+               "at. A world declared as a layout alone is judged by `gate status`")
     text = open(FACTS).read()
     probe = last_entry_insert(
         text, "VerifiedView", {"first": who, "args_second": doc}, indent=12
@@ -1324,6 +1336,18 @@ def cmd_change(a):
     # The SINGLE source — the world — is edited; the diff stays a Swift git diff.
     apply_it = "--apply" in a
     a = [x for x in a if x != "--apply"]
+    # ── AND A QUESTION OF A WORLD FILE NEEDS ONE, said where the reading is.
+    # This read FACTS unguarded, so in a world declared as a layout alone, which
+    # is what `gate demo` and `gate import codeowners` build and what this
+    # repository is, it raised: the terminal on a FileNotFoundError and the bench
+    # by dropping the connection with no response at all. The first spelling of
+    # this guard sat in the dispatcher, and the bench calls these verbs directly,
+    # so the page kept dropping the line: a guard belongs at the reading, never
+    # at one of its callers.
+    if not (FACTS and os.path.exists(FACTS)):
+        cannot("this asks its question of a world file, and there is none here",
+               "run `gate init .` to start one, or `gate demo` for a repository to look "
+               "at. A world declared as a layout alone is judged by `gate status`")
     # the two doors are `diff` and `apply`, and both reached `a[0]` on an argv
     # that may be empty: bare, either one met a person with an IndexError
     if not a:

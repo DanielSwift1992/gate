@@ -4932,6 +4932,34 @@ console.log(JSON.stringify({
                   _page.get("verdict") == _term.get("verdict") == "no world here"
                   and _page.get("next") == _term.get("next")
                   and "gate log" in _page.get("next", "")))
+        # ── AND A VERB THAT CANNOT ANSWER IN THIS WORLD SAYS SO ON BOTH SURFACES.
+        # `check` and `diff` read the world file unguarded, so in a world declared
+        # as a layout alone, which is what `gate demo` and `gate import codeowners`
+        # build and what this repository is, the terminal raised FileNotFoundError
+        # and the bench dropped the connection with no response. Found by asking
+        # one world the same question through both surfaces and comparing: the two
+        # agreed everywhere else, and these two routes answered nothing at all.
+        _lay = os.path.join(tmp, "layout-only")
+        os.makedirs(_lay, exist_ok=True)
+        subprocess.run(["git", "init", "-q", "-b", "main", _lay], capture_output=True)
+        run("demo", _lay)                                   # a world with no gate.swift
+        _lp = _bench_port
+        _s5 = _sock.socket(); _s5.bind(("127.0.0.1", 0))
+        _lp = _s5.getsockname()[1]; _s5.close()
+        _lb = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_lp)],
+                               cwd=_lay, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        try:
+            _page_said = json.loads((wait_serve(
+                _lp, "/check/view?who=Emp9000&doc=FinanceShare") or b"{}").decode())
+        finally:
+            _lb.terminate()
+        _term_said = subprocess.run([sys.executable, GATE, "check", "view",
+                                     "Emp9000", "FinanceShare", "--json"], cwd=_lay,
+                                    capture_output=True, text=True)
+        S.append(("a verb with no world file to read says so on both surfaces, in the same words",
+                  _page_said.get("error") and "world file" in _page_said["error"]
+                  and _term_said.returncode == 1 and _term_said.stdout == ""
+                  and json.loads(_term_said.stderr) == _page_said))
         _asked = {}
         for _route in ("/check/view", "/check/view?who=X", "/diff/transfer"):
             try:
