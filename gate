@@ -5435,7 +5435,23 @@ def cmd_findings(a):
     if "--history" in a:
         pol = os.path.basename(a[a.index("--policy") + 1]) if "--policy" in a else None
         rows = history_divergence(int(nums[0]) if nums else 200, policy_name=pol)
+        # ── AND WHAT A FALL IS, SAID WHERE ONE IS VISIBLE. A curve that drops
+        # reads like a thing that was fixed and stays fixed, and it is not: with
+        # no court in the repository, a drop is somebody who compared the two
+        # records by hand. That comparison is recorded nowhere, so nothing
+        # carries it, and the level comes back. Read on seven public
+        # repositories: istio cleaned 13 to 11 to 9 and stands at nine, not at
+        # nought, and loki went 0 to 1 to 0 with nothing recorded either way.
+        # The sentence is printed only where a fall is in the window, because a
+        # curve nobody has seen fall does not need it.
+        fell = any(a["divergences"] is not None and b["divergences"] is not None
+                   and b["divergences"] < a["divergences"]
+                   for a, b in zip(rows, rows[1:]))
         return {"command": "findings history", "history": rows,
+                "shape": ("a fall here is somebody comparing the two records by hand. "
+                          "That comparison is recorded nowhere, so nothing carries it "
+                          "and the level comes back: with no court, nothing is obliged "
+                          "to fall and nothing holds a fall either") if fell else None,
                 # the sentence a number this shape has to arrive with
                 "measure": "divergences of the pair's judged image at each commit: "
                            "claims the court refuses, plus rules that address nothing. "
@@ -6925,6 +6941,8 @@ def humanize(out):
         if seen:
             lines.append("  read from " + seen[0][0]
                          + "".join(f", moved to {f} at {a} {w}" for f, a, w in seen[1:]))
+        if out.get("shape"):
+            lines.append(f"  {out['shape']}")
     elif cmd == "findings":
         f = out["findings"]
         if not f:

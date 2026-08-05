@@ -6368,6 +6368,28 @@ public enum MyWatch: AccessLedger {
               # and the walk still reads forwards in time, which is what makes
               # the row order a time at all
               and all(a["when"] <= b["when"] for a, b in zip(_rows, _rows[1:]))))
+
+    # ── AND A FALL SAYS WHAT IT IS, WHERE ONE IS VISIBLE. A curve that drops
+    # reads like a thing that was fixed and stays fixed, and with no court in the
+    # repository it is somebody who compared the two records by hand: a
+    # comparison recorded nowhere, so nothing carries it and the level comes
+    # back. Read on seven public repositories: istio cleaned 13 to 11 to 9 and
+    # stands at nine rather than at nought, and loki went 0 to 1 to 0 with
+    # nothing recorded either way. The fixture above falls, so the sentence is
+    # there; this repository's own pair has never fallen, so it is not, because a
+    # sentence printed under every curve is one nobody reads under the one that
+    # needs it.
+    _quiet = run("findings", "--history", "--policy", "owners.csv", cwd=HERE)[1]
+    S.append(("a curve that falls says what a fall is, and one that never has says nothing",
+              isinstance(_merged.get("shape"), str)
+              and "recorded nowhere" in _merged["shape"]
+              and "obliged to fall" in _merged["shape"]
+              and _merged["shape"] in subprocess.run(
+                  [sys.executable, GATE, "findings", "--history", "--policy", "owners.csv"],
+                  cwd=_dh, capture_output=True, text=True).stdout
+              # and this repository, whose pair has held at nought throughout
+              and _quiet.get("history") and _quiet.get("shape") is None
+              and all(r["divergences"] == 0 for r in _quiet["history"])))
     _letter_ships = open(os.path.join(HERE, "stdlib", "readme.swift"), encoding="utf-8").read()
     # ── AND WHAT THIS TOOL PUTS ON A MACHINE, IT TAKES OFF AGAIN. Nine places
     # make a directory to probe in and four of them removed none: on the machine
