@@ -191,6 +191,31 @@ def main():
               and made.returncode != 0
               and "is not on PATH" in made.stdout + made.stderr
               and "command not found" not in made.stdout + made.stderr))
+    # ── AND IT FINDS THE TOOL WHERE THE COVER SAYS TO RUN IT FROM. The cover's
+    # first command is `./gate` in a fresh clone, under the words "no install
+    # step", and the hook looked for `./gatew` and a gate on PATH and neither
+    # else. So the one path this project documents ended, one `gate init .`
+    # later, in a hook that refuses every commit. Found by wiring the hook into
+    # this repository, which carries the tool at `./gate` and nothing on PATH.
+    _hk = os.path.join(tmp, "hook-clone")
+    os.makedirs(_hk)
+    subprocess.run(["git", "init", "-q", "-b", "main", _hk], capture_output=True)
+    shutil.copy(GATE, os.path.join(_hk, "gate"))
+    os.chmod(os.path.join(_hk, "gate"), 0o755)
+    shutil.copytree(os.path.join(HERE, "stdlib"), os.path.join(_hk, "stdlib"))
+    shutil.copy(os.path.join(HERE, "gate.manifest.swift"), _hk)
+    run("init", ".", cwd=_hk)
+    open(os.path.join(_hk, "README.md"), "w").write("a clone, run as the cover says\n")
+    subprocess.run(["git", "add", "-A"], cwd=_hk, capture_output=True)
+    _clone_commit = subprocess.run(["git", "-c", "user.email=a@b", "-c", "user.name=A",
+                                    "commit", "-m", "the cover's own path"],
+                                   cwd=_hk, capture_output=True, text=True,
+                                   env=dict(os.environ, PATH="/usr/bin:/bin"))
+    S.append(("the hook runs the tool a clone carries at ./gate, the cover's own path",
+              "./gate " in open(os.path.join(_hk, ".githooks", "pre-commit"),
+                                encoding="utf-8").read()
+              # the commit is judged rather than refused for want of a tool
+              and "is not on PATH" not in _clone_commit.stdout + _clone_commit.stderr))
     # ENTERING SOMEBODY'S REPOSITORY LEAVES THE HOOK AND A LETTER, AND NOTHING
     # ELSE. It used to leave eight files: a personnel domain's empty tables, a
     # README announcing a single source of truth, an AGENT.md with one reference
