@@ -467,6 +467,49 @@ def main():
               and _named.get("wrote") == "ownership.swift"
               and sorted(os.listdir(_ro)) == sorted(_before + ["ownership.swift"])))
 
+    # ── AND THE STEP IT OFFERS IS TRUE OF THE REPOSITORY IT IS SAID IN. "commit
+    # it: from here on it is judged" was said to everybody, and in a world that
+    # declares a layout the file is judged by nothing until the manifest has a
+    # row: walking the cover's own recipe in a fresh clone of THIS repository,
+    # the very next command refused the file it had just been told to commit. An
+    # offer is a statement about the law, so the walk below takes the offer's own
+    # command, runs it, and asks whether the world then holds.
+    _rd = os.path.join(tmp, "the-road")
+    os.makedirs(os.path.join(_rd, "src", "api"))
+    subprocess.run(["git", "init", "-q", "-b", "main", _rd], capture_output=True)
+    open(os.path.join(_rd, "src", "api", "main.go"), "w").write("x\n")
+    open(os.path.join(_rd, "CODEOWNERS"), "w").write("/src/api @alice\n")
+    open(os.path.join(_rd, "owners.csv"), "w").write("owner,zone\nalice,src\n")
+    _one = run("import", "codeowners", "CODEOWNERS", "--tree", ".",
+               "--policy", "owners.csv", "-o", "ownership.swift", cwd=_rd)[1]
+    # a layout exists here now, and it says nothing about the file the next
+    # import writes: declaring the tree's own source is the cheapest way to one
+    run("mine", "src/api/main.go", "--role", "tool", cwd=_rd)
+    _two = run("import", "codeowners", "CODEOWNERS", "--tree", ".",
+               "--policy", "owners.csv", "-o", "ownership.swift", cwd=_rd)[1]
+    _step = (_two.get("command_to_run") or "").split()
+    _took = run(*_step[1:], cwd=_rd)[1] if _step[:1] == ["gate"] else {}
+    S.append(("the step a verb offers is one this repository can take, and taking it holds",
+              # with no layout to obey, committing is the whole of it
+              "commit it" in _one.get("next", "")
+              # with one, the file is judged by nothing until it has a row, and
+              # the offer names the row rather than the commit
+              and "gate mine ownership.swift --role forms" == (_two.get("command_to_run") or "")
+              # and the offer's own command is what closes the world
+              and _took.get("command") == "mine"
+              and run("status", cwd=_rd)[1].get("verdict") == "holds"
+              # and the layout that made the case is where the operator stood.
+              # `gate mine src/api/main.go` at the root of a world-less
+              # repository founded one in `src/api/` and said "written down in
+              # gate.manifest.swift", which reads like the file in front of you;
+              # `gate status` at the root then saw nothing at all. The law is
+              # written two functions from the fallback that broke it.
+              and os.path.exists(os.path.join(_rd, "gate.manifest.swift"))
+              and not os.path.exists(os.path.join(_rd, "src", "api",
+                                                  "gate.manifest.swift"))
+              and "src/api/main.go" in open(os.path.join(_rd, "gate.manifest.swift"),
+                                            encoding="utf-8").read()))
+
     # ── AND THE ADDRESS NAMES THE FILE THAT MAKES THE CLAIM. The ghost's address
     # was built from the BASENAME, so a repository keeping its rules at
     # `.github/CODEOWNERS` was handed `CODEOWNERS:7`, an address with no file

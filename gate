@@ -3774,8 +3774,19 @@ def world_root_for(path):
             return walk
         up = os.path.dirname(walk)
         if up == walk:
-            return d
+            break
         walk = up
+    # ── AND WITH NO WORLD ABOVE IT, THE WORLD IS FOUNDED WHERE YOU STAND. The
+    # fallback was the FILE'S OWN directory, so `gate mine src/main.go` typed at
+    # the root of a repository with no world wrote `src/gate.manifest.swift` and
+    # said "written down in gate.manifest.swift": a world founded one directory
+    # down, under a name that reads like the one in front of you, and `gate
+    # status` at the root then saw nothing at all. The comment two functions down
+    # already states the law this breaks, and states it for the other end only.
+    # Standing outside the file's tree is still the file's own directory: there
+    # is nowhere else it could go, and `mine` refuses that case by name.
+    here = os.path.abspath(".")
+    return here if not os.path.relpath(d, here).startswith(os.pardir) else d
 
 
 def founds_world(path):
@@ -5353,10 +5364,22 @@ def cmd_import_codeowners(a):
                  "no ownership policy given (--policy owner,zone): every rule is its own "
                  "authority, so the equalities hold trivially. The unmatched patterns above "
                  "are read from the tree, not judged."),
-        "next": ("commit it: from here on it is what you have said, and it is judged"
-                 if asked else
-                 "nothing was written: this read your CODEOWNERS and your tree and left "
-                 "both as they were. Add `-o ownership.swift` to keep the world it printed"),
+        # ── AND THE STEP IS TRUE OF THE REPOSITORY IT IS SAID IN. "commit it:
+        # from here on it is judged" was said to everybody, and in a world that
+        # declares a layout the file is judged by NOTHING until the manifest has
+        # a row for it: walking the cover's own recipe in a fresh clone of this
+        # repository, the very next command refused the file it had just been
+        # told to commit. An offer is a statement about the law, and this one
+        # was a statement about a different world's law.
+        "next": ("nothing was written: this read your CODEOWNERS and your tree and left "
+                 "both as they were. Add `-o ownership.swift` to keep the world it printed"
+                 if not asked else
+                 f"declare it: `gate mine {asked} --role forms` adds the row the layout "
+                 "in gate.manifest.swift asks for, and then commit. Until it has one, "
+                 "status names it as a file standing beside the judged ones"
+                 if MANIFEST and asked not in
+                 [r["path"] for r in ((MANIFEST.get("rows") if MANIFEST else None) or [])]
+                 else "commit it: from here on it is what you have said, and it is judged"),
     }
 
 
