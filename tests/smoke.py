@@ -5642,6 +5642,44 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         S.append(("the strangler ledger names a verb, not half of one",
                   subprocess.run([_cli_bin, "--carries"], capture_output=True, text=True)
                   .stdout.split() == ["stdlib"]))
+        # ── AND THE LEDGER IS READ AGAINST THE ROAD IT IS WALKING. The strangler
+        # has a length and a position, and both were feelings: the list of moved
+        # veins lived in the binary and the list of verbs lived in the python
+        # dispatcher, and nothing put the two numbers side by side. Here they
+        # are, so "carried" is arithmetic. Every name on the ledger is a verb the
+        # python dispatches, and both counts are written down: the day a vein
+        # lands without this number moving, this goes red, and the day the two
+        # numbers meet, the road is walked and the python side is a decision
+        # rather than a dependency. Verbs whose body sits in the dispatcher
+        # rather than a cmd_ function count like any other: the unit is the verb.
+        _ledger = subprocess.run([_cli_bin, "--carries"], capture_output=True,
+                                 text=True).stdout.split()
+        # The road's length is read from the tool's own usage rather than from a
+        # pattern over its dispatcher: the dispatcher spells a verb three ways
+        # and carries two aliases, so a regex over it answers 25, 27 or 29
+        # depending on which spelling it knows. The usage is the list a person
+        # can type, written by the tool about itself, and that is the list a
+        # strangler is walking. (The source is read from the file by name here:
+        # `gate_src` is bound to the CLI early in this run and rebound to a shelf
+        # page later, so a check down here that trusted it would count verbs in
+        # forms-grants and find none. Both of these were caught by this check
+        # going red rather than by reading.)
+        _usage = re.search(r'USAGE = ("""|")(.*?)\1',
+                           open(GATE, encoding="utf-8").read(), re.S).group(2)
+        _verbs = []
+        for _l in _usage.split("\n"):
+            _m = re.match(r"\s{2}gate (\w+)", _l)
+            if _m and _m.group(1) not in _verbs:
+                _verbs.append(_m.group(1))
+        _verbs = set(_verbs)
+        S.append(("the ledger names verbs the usage offers, 1 of 25 carried",
+                  set(_ledger) <= _verbs
+                  and len(_ledger) == 1
+                  and len(_verbs) == 25
+                  # and a name on the ledger is a whole verb: a prefix claims
+                  # everything under it, so half a verb would take argv nobody
+                  # answers, which is why the unit of the move is the verb
+                  and all(len(v.split()) == 1 for v in _ledger)))
         _both = {}
         for _tag, _env in (("py", "off"), ("sw", _cli_bin)):
             _both[_tag] = [subprocess.run([sys.executable, GATE, "stdlib", *_x],
