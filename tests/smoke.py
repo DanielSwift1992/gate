@@ -6308,6 +6308,35 @@ public enum MyWatch: AccessLedger {
               and not os.path.exists(os.path.join(_dh, "world.swift"))
               and subprocess.run(["git", "status", "--porcelain"], cwd=_dh,
                                  capture_output=True, text=True).stdout.strip() == ""))
+
+    # ── AND THE PAIR IS FOLLOWED WHERE IT LIVES, WHICH IS NOT ALWAYS THE ROOT.
+    # `findings` reads three places and named `.github/CODEOWNERS` in
+    # apache/superset; this walk read one, and answered "0 commits carry the
+    # pair" about that same repository in the same second, over 14829 commits
+    # that carry it. Of twenty public repositories read for the pilot, fifteen
+    # keep a CODEOWNERS and six keep it under `.github`: two pairs in five were
+    # invisible to the curve. And a file MOVES, so the place is asked at every
+    # commit rather than once at the tip: a pair written at the root and later
+    # filed under `.github` is one pair, and a walk that follows the name draws
+    # the history of the name.
+    subprocess.run(["git", "mv", "CODEOWNERS", ".github-tmp"], cwd=_dh, capture_output=True)
+    os.makedirs(os.path.join(_dh, ".github"), exist_ok=True)
+    subprocess.run(["git", "mv", ".github-tmp", os.path.join(".github", "CODEOWNERS")],
+                   cwd=_dh, capture_output=True)
+    _hcommit("file the pair under .github, and change nothing else")
+    _moved = run("findings", "--history", "--policy", "owners.csv", cwd=_dh)[1]
+    S.append(("the curve follows the pair when it moves, and says where it read it",
+              # the walk did not stop at the move: one more commit than before
+              _moved.get("commits") == 6
+              and [r.get("divergences") for r in _moved.get("history", [])] == [0, 1, 2, 3, 0, 0]
+              # and each row says which file it was read from, so the move shows
+              and [r.get("file") for r in _moved.get("history", [])]
+              == ["CODEOWNERS"] * 5 + [".github/CODEOWNERS"]
+              # and a person reading the terminal is told, once, not per row
+              and "read from CODEOWNERS, moved to .github/CODEOWNERS at "
+              in subprocess.run([sys.executable, GATE, "findings", "--history",
+                                 "--policy", "owners.csv"], cwd=_dh,
+                                capture_output=True, text=True).stdout))
     _letter_ships = open(os.path.join(HERE, "stdlib", "readme.swift"), encoding="utf-8").read()
     # ── AND WHAT THIS TOOL PUTS ON A MACHINE, IT TAKES OFF AGAIN. Nine places
     # make a directory to probe in and four of them removed none: on the machine
