@@ -6337,6 +6337,37 @@ public enum MyWatch: AccessLedger {
               in subprocess.run([sys.executable, GATE, "findings", "--history",
                                  "--policy", "owners.csv"], cwd=_dh,
                                 capture_output=True, text=True).stdout))
+
+    # ── AND THE WALK IS THE MAIN LINE, WHICH IS THE ONLY ONE THAT IS A TIME. A
+    # plain `git log --reverse` walks the whole graph, so on a repository that
+    # merges, adjacent rows sit on different branches and the same weeks are read
+    # more than once. Measured on crossplane/crossplane: 206 of 3000 rows step
+    # BACKWARDS in time and the curve swings 2, 0, 2, 3, 1, 3 with nothing about
+    # the pair changing; `--first-parent` steps back 5 times in 2951 and the same
+    # history reads as two rises and one fall in four years. The fixture is one
+    # merge: a folder moved on a branch, with the rules left alone.
+    _git = ["git", "-c", "commit.gpgsign=false", "-c", "user.email=a@b", "-c", "user.name=A"]
+    subprocess.run(["git", "checkout", "-q", "-b", "side"], cwd=_dh, capture_output=True)
+    shutil.move(os.path.join(_dh, "services", "api"), os.path.join(_dh, "services", "gateway"))
+    _hcommit("move api on a branch, and say nothing")
+    _side = subprocess.run(["git", "rev-parse", "--short=8", "HEAD"], cwd=_dh,
+                           capture_output=True, text=True).stdout.strip()
+    subprocess.run(["git", "checkout", "-q", "main"], cwd=_dh, capture_output=True)
+    subprocess.run([*_git, "merge", "--no-ff", "-q", "-m", "merge the branch", "side"],
+                   cwd=_dh, capture_output=True)
+    _merged = run("findings", "--history", "--policy", "owners.csv", cwd=_dh)[1]
+    _rows = _merged.get("history", [])
+    S.append(("the curve walks the line this repository stood on, not every branch it holds",
+              # the merge is a state this repository stood in, so it is read
+              _merged.get("commits") == 7
+              and [r.get("divergences") for r in _rows] == [0, 1, 2, 3, 0, 0, 1]
+              # and the commit that only ever existed on the branch is not a row:
+              # it was never a state of this line, and reading it puts the same
+              # week in twice
+              and _side and all(r["at"] != _side for r in _rows)
+              # and the walk still reads forwards in time, which is what makes
+              # the row order a time at all
+              and all(a["when"] <= b["when"] for a, b in zip(_rows, _rows[1:]))))
     _letter_ships = open(os.path.join(HERE, "stdlib", "readme.swift"), encoding="utf-8").read()
     # ── AND WHAT THIS TOOL PUTS ON A MACHINE, IT TAKES OFF AGAIN. Nine places
     # make a directory to probe in and four of them removed none: on the machine

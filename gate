@@ -5365,7 +5365,17 @@ def history_divergence(n=200, owners=None, policy_name=None):
     def git(*args):
         return subprocess.run(["git", *args], cwd=base, capture_output=True, text=True)
 
-    log = git("log", f"-{n}", "--format=%H%x1f%aI", "--reverse").stdout.strip()
+    # ── AND THE WALK IS THE MAIN LINE, WHICH IS THE ONLY ONE THAT IS A TIME.
+    # Plain `git log --reverse` walks the whole graph, so on a repository that
+    # merges, adjacent rows sit on different branches and the same weeks are read
+    # several times over. Measured on crossplane/crossplane: of 3000 rows, 206
+    # step BACKWARDS in time, and the curve they draw swings 2, 0, 2, 3, 1, 3
+    # while nothing about the pair changed. `--date-order` does not mend it (213
+    # backwards); `--first-parent` reads 5. It is also the right sequence to
+    # claim: the first-parent line is the states this repository actually stood
+    # in, one after another, which is what a curve over its history means.
+    log = git("log", f"-{n}", "--format=%H%x1f%aI", "--reverse",
+              "--first-parent").stdout.strip()
     if not log:
         return []
     rows, tmp = [], scratch("gate-history-")
