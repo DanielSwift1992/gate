@@ -303,22 +303,31 @@ if args.first == "export" {
 // asks the door this binary already answers. One court call, the same count the
 // python side makes to bin/gate-judge, and the court is still the one at this
 // binary's own pin.
-// AND IT IS SPAWNED BY HAND, BECAUSE THE ONE IN THE BOX COSTS SIXTY
-// MILLISECONDS. Foundation's `Process` was measured at 71 ms a call against 10
-// for the posix_spawn below, three rounds, byte-identical output, on a court
-// that answers in 4. The verb the demo offers says "the court over the pair, in
-// ms", so a wrapper costing fifteen times the court is not a detail. This is the
-// same child either way: one binary, one pipe, stderr left to the parent, so a
-// court that cannot read its file says so where a person will see it.
+// AND ON THE PLATFORM WHERE IT WAS MEASURED IT IS SPAWNED BY HAND, BECAUSE THE
+// ONE IN THE BOX COSTS SIXTY MILLISECONDS. Foundation's `Process` was measured
+// at 71 ms a call against 10 for the posix_spawn below, on a court that answers
+// in 4: three rounds, byte-identical output, and a Pipe swapped for a temp file
+// made no difference, so the cost is the wrapper. The verb the demo offers says
+// "the court over the pair, in ms", and a wrapper costing fifteen courts is that
+// sentence, not a detail.
+//
+// The split is by what could be MEASURED, not by taste. `posix_spawn_file_
+// actions_t` is a pointer on Darwin and a struct on Linux, `environ` is exported
+// on one and argued about on the other, and there is no Linux on this machine to
+// answer either question: a portable hand spawn here would be a guess, and one
+// went red on the linux job already. So the wrapper stays the road everywhere it
+// has not been measured. Both roads are held to the python side's bytes by the
+// parity walk, which runs wherever a toolchain stands, so neither can drift.
 func courtSays(_ path: String) -> String {
     let bin = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath().path
+    let words: [String] = [bin, "judge", "where", path]
+#if canImport(Darwin)
     var fds: [Int32] = [0, 0]
     guard pipe(&fds) == 0 else { return "" }
     var actions: posix_spawn_file_actions_t?
     posix_spawn_file_actions_init(&actions)
     posix_spawn_file_actions_adddup2(&actions, fds[1], 1)
     posix_spawn_file_actions_addclose(&actions, fds[0])
-    let words: [String] = [bin, "judge", "where", path]
     var argv: [UnsafeMutablePointer<CChar>?] = words.map { strdup($0) }
     argv.append(nil)
     var child: pid_t = 0
@@ -340,6 +349,17 @@ func courtSays(_ path: String) -> String {
     var status: Int32 = 0
     waitpid(child, &status, 0)
     return String(data: said, encoding: .utf8) ?? ""
+#else
+    let p = Process()
+    p.executableURL = URL(fileURLWithPath: bin)
+    p.arguments = Array(words.dropFirst())
+    let pipe = Pipe()
+    p.standardOutput = pipe
+    guard (try? p.run()) != nil else { return "" }
+    let said = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+    p.waitUntilExit()
+    return said
+#endif
 }
 
 if args.first == "seam" {

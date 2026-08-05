@@ -5752,6 +5752,14 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         _b = subprocess.run(["bash", os.path.join(HERE, "bin", "build-cli.sh")],
                             capture_output=True, text=True)
         _cli_bin = os.path.join(HERE, "bin", "gate-cli")
+        # and when it does not build, the compiler's own words are in the run.
+        # A vein that compiled here and not on the other machine printed a red
+        # line and nothing else, and the job log is not readable without rights
+        # to the repository, so the platform difference had to be guessed at.
+        if _b.returncode != 0:
+            print("   swiftc said:", "\n   ".join(
+                [l for l in _b.stderr.split("\n") if "error:" in l][:4]
+                or _b.stderr.strip().split("\n")[:4]))
         S.append(("the swift vein builds, the court's sources compiled in at the judge's pin",
                   _b.returncode == 0 and os.path.exists(_cli_bin)))
         _stub = os.path.join(tmp, "cli-stub")
