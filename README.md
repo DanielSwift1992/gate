@@ -237,7 +237,8 @@ away, each where you would look for it:
 
 - [docs/DETAILS.md](docs/DETAILS.md): carrying gate vendored in your
   repository, verifying the zero-egress contract yourself, where it plugs
-  in (hook, CI, review, editor), layout and ownership.
+  in (hook, CI, review, editor), layout and ownership, and the arithmetic
+  of why a judged pair pays.
 - [docs/SECURITY.md](docs/SECURITY.md): what a verdict promises, and where to
   report a wrong one.
 - [docs/CHANGELOG.md](docs/CHANGELOG.md): what exists, in the order it came to be.

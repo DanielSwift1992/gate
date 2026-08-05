@@ -85,6 +85,56 @@ gate adds no process of its own. It sits inside the four you already have:
   parse, so a VS Code problem matcher underlines them with no extension of
   ours to install.
 
+## The arithmetic
+
+Why a judged pair pays is a count, not an opinion. Every line below
+is a number measured in this repository, a number you can count on
+your own month, or an identity: a rearrangement of terms.
+
+A question, priced. Answered by hand, a question costs the search
+every time: the grep, the ticket, the person who remembers. Call that
+c: yours is somewhere between fifteen minutes and an hour. Answered
+by a judged pair, it costs one translation, T, and then a lookup: the
+cover's milliseconds, reprinted on your machine by `python3
+bin/bench.py`. The pair pays for itself after T / c questions. For a
+table you already keep, T is one `import` command, minutes, and the
+break-even is under one question. For a page of declarations written
+by hand, T is an hour, and the break-even is a handful.
+
+A divergence, timed. Unwatched, a divergence lives until the next
+time somebody compares the two records: a quarterly audit makes that
+up to ninety days. Under a judge that runs on every change, it lives
+one commit. The ratio is hundreds. And it is measured, not assumed:
+`gate findings --history` walks your own commits and draws when your
+pair diverged and when, if ever, it came back. This repository ran it
+on itself and found one excursion, eight rows wide, seven commits
+long, standing beside a green battery; commit 3be3cf1 tells that
+story and carries the guard it produced.
+
+A repeated question, free. The names you translate are paid for once;
+every question after them is a composition of names already paid, and
+a composition is a lookup. The average price of a question falls
+toward the lookup with every question asked. A reporting tool prices
+every new question as new work; here the hundredth question costs
+what the second did.
+
+Knowing before measuring. "Is anything divergent" stops at the first
+divergent address, and that is what runs in milliseconds on every
+keystroke. "How far apart" walks both records whole and costs
+accordingly, so it stands behind its own verb, `drift`, with a
+threshold you declare. The cheap question runs everywhere, always;
+the expensive one announces itself.
+
+Reading against writing. Count your own month: the lines you wrote,
+and the lines you had to read and answer for: reviews, audits,
+onboarding. More people read a line than wrote it, a record is read
+for years after the day it was written, and every agent you adopt
+moves your written count toward zero while it grows your read one. A
+world here is built for the reading side: a declaration is one
+question, does it hold, and the judge answers with a line. Your cost
+is the claim, not the execution you would otherwise replay in your
+head.
+
 ## Layout and ownership
 
 - `gate.swift` is where a world starts. Declare a multi-file layout in
