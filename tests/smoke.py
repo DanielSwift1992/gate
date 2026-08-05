@@ -7398,14 +7398,22 @@ public enum MyWatch: AccessLedger {
     # held only `named → exists`, which is a source with a direction, in the
     # repository that argues against those: a new file in the root joined
     # nothing and no check said so.
+    # ── AND NAMED IN THE LISTING, not merely somewhere on the page. This asked
+    # whether the name appears anywhere in the README, so a file the cover
+    # mentions in passing counted as listed: `CODEOWNERS` and `owners.csv`
+    # arrived in the root, the recipe two screens up names them, and the block
+    # that says what you just cloned did not. The check was green over a listing
+    # missing two of its entries, which is a guard reading the wrong side of the
+    # pair it holds.
     _root_allow = {".github", ".githooks", ".gitignore", "README.md"}
     _tracked = subprocess.run(["git", "ls-files"], cwd=HERE,
                               capture_output=True, text=True).stdout.split("\n")
     _top = sorted({p.split("/")[0] for p in _tracked if p})
+    _listing = readme.split("## what you just cloned")[-1].split("```")[1]
     _unnamed = sorted(e for e in _top
                       if e not in _root_allow
-                      and e not in readme
-                      and (os.path.splitext(e)[0] + ".*") not in readme)
+                      and e not in _listing
+                      and (os.path.splitext(e)[0] + ".*") not in _listing)
     if _unnamed:
         print("   in the root and not on the cover:", _unnamed)
     S.append(("everything in the root is named on the cover", _unnamed == []))
@@ -7445,6 +7453,36 @@ public enum MyWatch: AccessLedger {
               "roadtest=1" in _pages_src and "ROAD ALL GREEN" in _pages_src
               and "roadtest=1" in open(os.path.join(HERE, ".github", "workflows",
                                                     "battery.yml")).read()))
+
+    # ── AND THE MEASURED PAGE IS THE MEASURER'S OWN WORDS. `docs/BENCH.md` is
+    # written by `bin/bench.py`, the cover sends a reader to it for the numbers
+    # behind its cost sentence, and nothing in this battery said anything about
+    # either: edit the prose on one side and the committed page keeps the other's
+    # words until somebody happens to re-run it. CI runs the writer with
+    # `--check`, which regenerates the page on the runner, throws it away, and
+    # asserts one ratio: it holds the SHAPE of the cost, never the page.
+    #
+    # What is held here is the prose, not the numbers. The numbers are a
+    # measurement of whatever machine ran it last, and the page says so in its
+    # own second line; holding them to anything would be holding a machine.
+    _bench_src = open(os.path.join(HERE, "bin", "bench.py"), encoding="utf-8").read()
+    _bench_md = open(os.path.join(HERE, "docs", "BENCH.md"), encoding="utf-8").read()
+    # the writer's own page text: the strings between opening the list and
+    # writing the file, minus the ones carrying a field, which are the numbers
+    _emits = _bench_src.split("out = [", 1)[-1].split('"BENCH.md"', 1)[0]
+    _literals = [s for s in re.findall(r'"([^"\n]*)"', _emits)
+                 if len(s) > 12 and "{" not in s]
+    _absent = [l for l in _literals if l not in _bench_md]
+    if _absent:
+        print("   the page has lost the writer's words:", _absent[:3])
+    S.append(("the measured page carries the words its measurer writes",
+              _literals and not _absent
+              # and the page is only those words, its table, and its blanks
+              and all(l.startswith("|") or l == "" or any(w in l for w in _literals)
+                      or l.startswith("#") or "p50" in l
+                      for l in _bench_md.split("\n"))
+              # and the cover sends a reader there for the sentence it makes
+              and "docs/BENCH.md" in readme and "bin/bench.py" in readme))
 
     S.append(("the licence the README claims is the licence in the tree",
               "MIT licensed" in readme

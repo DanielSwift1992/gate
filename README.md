@@ -256,6 +256,10 @@ gate.cmd        the same CLI on Windows
 gate.manifest.swift
                 this repository's own declared layout: its worlds, their
                 roles, and the judge's row, judged like anybody's
+CODEOWNERS · owners.csv
+                who owns this repository, and the zone that owner keeps:
+                the two files the first recipe above reads, kept here for
+                the same reason yours are kept in yours
 bin/gate-judge  the judge, one static binary, built at a pin from the
                 public theory corpus, verification-is-identification:
                 github.com/DanielSwift1992/verification-is-identification
@@ -274,7 +278,7 @@ web/codemirror.*  the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
 docs/           DETAILS.md, SECURITY.md, CHANGELOG.md, NOTICE.md, and
                 the cover's picture with its provenance
-tests/smoke.py   the battery: 436 checks this repository holds itself
+tests/smoke.py   the battery: 437 checks this repository holds itself
                  to, end-to-end runs through judge parity through
                  documentation contracts; the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts
