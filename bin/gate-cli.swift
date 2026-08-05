@@ -27,6 +27,20 @@ func err(_ text: String) {
     FileHandle.standardError.write(Data(text.utf8))
 }
 
+// the non-answer, in the python side's own canon: a sentence and a step on
+// stderr for a person, the object for whoever asked for one with `--json`.
+// This binary printed the raw object either way, and the two sides then said
+// the same thing in two shapes on the one argv where they both answer.
+func cannot(_ note: String, _ then: String) -> Never {
+    if args.contains("--json") {
+        err("{" + jsonString("error") + ": " + jsonString(note) + ", "
+            + jsonString("next") + ": " + jsonString(then) + "}\n")
+    } else {
+        err("gate: " + note + "\n  next: " + then + "\n")
+    }
+    exit(1)
+}
+
 // the veins, one argv prefix per line: the whole strangler ledger.
 //
 // A vein is a PREFIX, so a verb moves whole or not at all: claiming `stdlib`
@@ -106,15 +120,13 @@ if args.count >= 2, args[0] == "stdlib", args[1] == "show" {
     guard args.count >= 3 else {
         // the naked `show` is answered in words here; the parity vector
         // walks named veins, and the python side still tracebacks on this
-        err("{\"error\": \"stdlib show takes a module name (gate stdlib lists them)\"}\n")
-        exit(1)
+        cannot("stdlib show takes a module name", "`gate stdlib` lists them")
     }
     let name = args[2]
     let page = root.appendingPathComponent("stdlib").appendingPathComponent(name + ".swift")
     guard let data = FileManager.default.contents(atPath: page.path),
           let text = String(data: data, encoding: .utf8) else {
-        err("{\"error\": \"no such stdlib module: \(name) (gate stdlib lists them)\"}\n")
-        exit(1)
+        cannot("no such stdlib module: \(name)", "`gate stdlib` lists them")
     }
     out(text)
     out("\n")   // python prints the page with print(), which ends it with one more newline
@@ -125,18 +137,15 @@ if args.count >= 2, args[0] == "stdlib", args[1] == "show" {
 // the sentence that says it is a printout ──
 if args.count >= 2, args[0] == "stdlib", args[1] == "materialize" {
     guard args.count >= 3 else {
-        err("{\"error\": \"stdlib materialize takes a module name (gate stdlib lists them)\"}\n")
-        exit(1)
+        cannot("stdlib materialize takes a module name", "`gate stdlib` lists them")
     }
     let name = args[2]
     guard let page = shelf().first(where: { $0.name == name }) else {
-        err("{\"error\": \"no such stdlib module: \(name)\"}\n")
-        exit(1)
+        cannot("no such stdlib module: \(name)", "`gate stdlib` lists them")
     }
     let path = name + ".swift"
     do { try page.text.write(toFile: path, atomically: false, encoding: .utf8) } catch {
-        err("{\"error\": \"could not write \(path)\"}\n")
-        exit(1)
+        cannot("could not write \(path)", "check the folder you are in is writable")
     }
     out(jsonObject([
         ("command", "stdlib materialize"),

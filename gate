@@ -184,6 +184,29 @@ else:
         TABLES = None
 
 
+def cannot(note, then=None):
+    # ── THE NON-ANSWER, SAID ONE WAY. A verb that cannot answer HERE is not a
+    # verb with nothing to say: it names what is missing and what to do about it,
+    # on stderr, with a code, the way git answers outside a repository. A shell
+    # and a person read the same thing then, and a wrapper can tell the case from
+    # an answer without parsing prose.
+    #
+    # Measured in a bare repository before this existed: twenty verbs answered in
+    # three shapes. Twelve printed `usage:` on stdout and exited nought, two of
+    # them (`library`, `report`) for a missing WORLD rather than a missing
+    # argument; six printed a verdict word; and two printed a raw
+    # `{"error": …}` object at a person, which is a machine's shape shown to
+    # somebody who did not ask for one. `--json` still gets the object, since
+    # that is the flag that asks for it.
+    if "--json" in sys.argv:
+        said = json.dumps({"error": note, **({"next": then} if then else {})},
+                          ensure_ascii=False)
+    else:
+        said = "gate: " + note + (f"\n  next: {then}" if then else "")
+    sys.stderr.write(said + "\n")
+    raise SystemExit(1)
+
+
 def world_files():
     # the judged file list: the main world plus the manifest-declared layout
     files = [FACTS] if FACTS and os.path.exists(FACTS) else []
@@ -1136,7 +1159,8 @@ def judge(path):
 def must_sub(text, pattern, repl, what, count=1):
     found = len(re.findall(pattern, text, re.S))
     if found != count:
-        raise SystemExit(json.dumps({"error": f"{what}: anchor x{found}, want {count}"}))
+        cannot(f"{what}: anchor x{found}, want {count}",
+               "the world says this a different number of times than the change expects")
     return re.sub(pattern, repl, text, count=count, flags=re.S)
 
 
@@ -1177,7 +1201,8 @@ def last_entry_insert(text, head, args, indent):
     if args.get("second"):
         hits = [m for m in hits if m.group(2) == args["second"]]
     if not hits:
-        raise SystemExit(json.dumps({"error": f"no {head} entries to anchor on"}))
+        cannot(f"no {head} entries to anchor on",
+               "this change writes beside an existing entry, and the world has none")
     m = hits[-1]
     pad, inner = " " * indent, " " * (indent + 4)
     entry = (
@@ -1201,7 +1226,8 @@ def cmd_ask_build(kind, a):
     # check administer|delete WHO DOC — compiler gates (Granted/Authorized):
     # a probe entry in CertifiedAccesses + swift build; seconds, the full arbiter
     if not ROOT:
-        raise SystemExit(json.dumps({"error": "check " + kind + " needs GATE_CORPUS (a checkout of the theory corpus with Team.swift)"}))
+        cannot("check " + kind + " needs GATE_CORPUS (a checkout of the theory corpus with Team.swift)",
+               "set GATE_CORPUS to that checkout, or ask `gate check view` instead, which needs none")
     who, doc = a[0], a[1]
     team = os.path.join(ROOT, "Sources", "Organization", "System", "Team.swift")
     text = open(team).read()
@@ -1252,7 +1278,8 @@ def revoke_text(text, who, doc):
     pat = rf"\n\s*VerifiedView<\s*{who},\s*{doc}\s*>\.self;?"
     found = len(re.findall(pat, text))
     if found != 1:
-        raise SystemExit(json.dumps({"error": f"revoke: grant {who}->{doc} found x{found}, want 1"}))
+        cannot(f"revoke: grant {who}->{doc} found x{found}, want 1",
+               "revoke removes one grant, and the world states that one a different number of times")
     return re.sub(pat, "", text, count=1)
 
 
@@ -1269,7 +1296,8 @@ def hire_text(text, f):
     )
     rosters = [m for m in re.finditer(r"public enum \w+: Employee, Person \{.*?\n\}", text, re.S)]
     if not rosters:
-        raise SystemExit(json.dumps({"error": "hire: no roster entries to anchor on"}))
+        cannot("hire: no roster entries to anchor on",
+               "hire writes beside an existing person, and the world has none")
     m = rosters[-1]
     text = text[: m.end()] + block + text[m.end() :]
     slices = [m for m in re.finditer(r"(Emp\w+\.self;?)(?=\s*\n\s*\})", text)]
@@ -1315,7 +1343,8 @@ def cmd_change(a):
         new = hire_text(text, f)
         label = {"command": "change hire", **f}
     else:
-        raise SystemExit(json.dumps({"error": f"unknown change {a[0]}"}))
+        cannot(f"unknown change {a[0]}",
+               "the changes this verb makes are `transfer`, `hire`, `grant` and `revoke`")
     r = judge(with_temp(new))
     applied = False
     if apply_it and r["verdict"] == "holds":
@@ -1778,7 +1807,8 @@ def cmd_guard(a):
 
     action = a[0] if a else "merge"
     if not FACTS or not os.path.exists(FACTS):
-        raise SystemExit(json.dumps({"error": "guard needs a world: run `gate init`, or cd into a repo with gate.swift"}))
+        cannot("guard reads who may act from a world, and there is no world here",
+               "run `gate init .` to start one, or `gate demo` for a repository to look at")
     world_dir = os.path.dirname(os.path.abspath(FACTS)) or "."
     email = subprocess.run(
         ["git", "log", "-1", "--format=%ae"], cwd=world_dir, capture_output=True, text=True
@@ -1793,7 +1823,8 @@ def cmd_guard(a):
         if os.path.exists(gp):
             rules = {r["action"]: r["requires_rank"] for r in csv.DictReader(open(gp))}
     if action not in rules:
-        raise SystemExit(json.dumps({"error": f"guard: no policy for '{action}': declare `public enum {action.capitalize()}Policy {{ public typealias Requires = <rank> }}` in gate.policy.swift"}))
+        cannot(f"no policy states who may {action}",
+               f"declare `public enum {action.capitalize()}Policy {{{{ public typealias Requires = <rank> }}}}` in gate.policy.swift")
     required = rules[action]
     who = identities.get(email)
     if not who:
@@ -1824,11 +1855,10 @@ def cmd_library(a):
     # and raised. It is the verb `check` sends people to for the names they may
     # use, so a stranger following that sentence met a stack trace.
     if not a and not (FACTS and os.path.exists(FACTS)):
-        return {"command": "library", "asks": True,
-                "note": "library reads the vocabulary a world is written in, and there "
-                        "is no world here",
-                "next": "run `gate init .` to start one, or `gate demo` for a repository "
-                        "to look at. `gate library diff a.json b.json` needs no world"}
+        cannot("library reads the vocabulary a world is written in, and there is no "
+               "world here",
+               "run `gate init .` to start one, or `gate demo` for a repository to look "
+               "at. `gate library diff a.json b.json` needs no world")
     if a and a[0] == "diff":
         la, lb = json.load(open(a[1])), json.load(open(a[2]))
         A, B = set(la["forms"]), set(lb["forms"])
@@ -2975,13 +3005,13 @@ def cmd_stdlib(a):
     if a and a[0] == "show":
         name = a[1]
         if name not in STDLIB:
-            raise SystemExit(json.dumps({"error": f"no such stdlib module: {name} (gate stdlib lists them)"}))
+            cannot(f"no such stdlib module: {name}", "`gate stdlib` lists them")
         print(STDLIB[name])
         sys.exit(0)
     if a and a[0] == "materialize":
         name = a[1]
         if name not in STDLIB:
-            raise SystemExit(json.dumps({"error": f"no such stdlib module: {name}"}))
+            cannot(f"no such stdlib module: {name}", "`gate stdlib` lists them")
         path = f"{name}.swift"
         with open(path, "w") as f:
             f.write(STDLIB[name])
@@ -5735,12 +5765,11 @@ def cmd_report(a):
     # a page is printed OUT OF a world, and this read FACTS without asking
     # whether there is one: in a repository with none it opened None and raised
     if not (FACTS and os.path.exists(FACTS)):
-        return {"command": "report", "asks": True,
-                "note": "report prints the world and its verdict as one page, and there "
-                        "is no world here",
-                "next": "run `gate init .` to start one, or `gate demo` for a repository "
-                        "to look at. `report -o audit.html` writes the page; without `-o` "
-                        "nothing is written"}
+        cannot("report prints a world and its verdict as one page, and there is no "
+               "world here",
+               "run `gate init .` to start one, or `gate demo` for a repository to look "
+               "at. `report -o audit.html` writes the page; without `-o` nothing is "
+               "written")
     text = open(FACTS).read()
     people, grants = world_rows(text)
     r = judge(FACTS)
@@ -6673,7 +6702,8 @@ def dispatch(cmd, rest):
         # world (the claims you keep, judged against facts other people own)
         p = personal_path()
         if not p:
-            raise SystemExit(json.dumps({"error": "no world here: cd into a repo with gate.swift"}))
+            cannot("your own world lives beside a shared one, and there is no world here",
+                    "run `gate init .` to start one, or `gate demo` for a repository to look at")
         if not os.path.exists(p):
             return {"command": "my", "personal": p, "repo_key": repo_key(), "empty": True,
                     "verdict": "holds", "refusals": [], "shared_repo_untouched": True,
@@ -6761,7 +6791,10 @@ def humanize(out):
         lines.append(f"  next: {out['next']}")
         return "\n".join(lines)
     if out.get("verdict") == "no world here":
-        lines.append("status: no world here")
+        # and the line names the verb that was asked: `gate badge` in a bare
+        # folder printed `status: no world here`, which is a different verb
+        # answering, and a person reading it looks for a status they never ran
+        lines.append(f"{cmd or 'status'}: no world here")
         lines.append(f"  next: {out['next']}")
         lines.append(f"  then: {out['then']}")
         return "\n".join(lines)

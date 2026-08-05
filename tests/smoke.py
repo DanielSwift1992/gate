@@ -6477,24 +6477,62 @@ public enum MyWatch: AccessLedger {
         _m = re.match(r"\s{2}gate (\w+)", _l)
         if _m and _m.group(1) not in _all:
             _all.append(_m.group(1))
-    _stacks = []
-    for _where, _cwd in (("no world", os.path.join(tmp, "bare-nothing")),
-                         ("a world that holds", os.path.join(tmp, "bare-world"))):
-        os.makedirs(_cwd, exist_ok=True)
-        subprocess.run(["git", "init", "-q", "-b", "main", _cwd], capture_output=True)
-        if _where != "no world":
-            run("demo", "org", _cwd)
+    # ── AND EACH VERB MEETS A PRISTINE REPOSITORY, which is what a stranger has.
+    # Walking them all in one folder was a dirty probe: `init` and `demo` come
+    # before `badge` in the usage, so by the time `badge` ran the folder called
+    # "no world" had a world in it, and the check reported a shape that was
+    # really the right answer about a different repository. One seed world is
+    # built and copied per verb, so the copy costs nothing and the case is clean.
+    _seed = os.path.join(tmp, "bare-seed")
+    os.makedirs(_seed, exist_ok=True)
+    subprocess.run(["git", "init", "-q", "-b", "main", _seed], capture_output=True)
+    run("demo", "org", _seed)
+    _stacks, _shapes = [], []
+    for _where in ("no world", "a world that holds"):
         for _v in _all:
             if _v == "serve":
                 continue
+            _cwd = os.path.join(tmp, f"bare-{_where.split()[0]}-{_v}")
+            if _where == "no world":
+                os.makedirs(_cwd, exist_ok=True)
+                subprocess.run(["git", "init", "-q", "-b", "main", _cwd], capture_output=True)
+            else:
+                shutil.copytree(_seed, _cwd)
             _p = subprocess.run([sys.executable, GATE, _v], cwd=_cwd,
                                 capture_output=True, text=True, timeout=120)
             if "Traceback" in _p.stdout + _p.stderr:
                 _stacks.append(f"{_v} ({_where})")
+                continue
+            # ── AND THE ANSWER LANDS IN ONE OF TWO PLACES, NEVER BOTH AND NEVER
+            # NEITHER. An answer goes to stdout and exits nought; a verb that
+            # cannot answer HERE goes to stderr with a code, the way git answers
+            # outside a repository. Measured in a bare folder before this
+            # existed: twenty verbs answered in three shapes, and two of them
+            # printed a raw `{"error": …}` object at a person, which is a
+            # machine's shape shown to somebody who did not ask for one.
+            _said, _sob = _p.stdout.strip(), _p.stderr.strip()
+            if bool(_said) == bool(_sob):
+                _shapes.append(f"{_v} ({_where}): both or neither")
+            elif _sob:
+                if _p.returncode != 1 or not _sob.startswith("gate: ") or "next: " not in _sob:
+                    _shapes.append(f"{_v} ({_where}): {_p.returncode} {_sob[:40]}")
+            elif _p.returncode != 0 and "refused" not in _said.split("\n")[0]:
+                # a refusal is an answer, and it exits non-nought on purpose
+                _shapes.append(f"{_v} ({_where}): stdout with code {_p.returncode}")
     if _stacks:
         print("   verbs meeting a person with a stack trace:", _stacks)
+    if _shapes:
+        print("   verbs answering outside the canon:", _shapes[:4])
     S.append(("a verb asked for nothing answers with a sentence, in a world and without one",
               _stacks == [] and len(_all) == 25))
+    # and a non-answer is a machine's object only for whoever asked for one
+    _nj = subprocess.run([sys.executable, GATE, "my", "--json"],
+                         cwd=os.path.join(tmp, "bare-no-my"),
+                         capture_output=True, text=True)
+    S.append(("a verb that cannot answer here says so on stderr, with a code and a step",
+              _shapes == []
+              and _nj.returncode == 1 and _nj.stdout == ""
+              and set(json.loads(_nj.stderr)) == {"error", "next"}))
 
     # ── AND A FALL SAYS WHAT IT IS, WHERE ONE IS VISIBLE. A curve that drops
     # reads like a thing that was fixed and stays fixed, and with no court in the
