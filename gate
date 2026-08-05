@@ -5168,8 +5168,14 @@ def repo_findings(n=400):
     for c in commits:
         authors.setdefault(c["email"], []).append(c)
 
-    # what the world says, if there is one: refusals are findings of the first order
-    if FACTS and os.path.exists(FACTS):
+    # what the world says, if there is one: refusals are findings of the first order.
+    # ── AND A WORLD OF FORMS IS STILL A WORLD, WHICH THIS ASKED WRONG. It asked
+    # whether the FACTS file was on disk, and a world whose rows are all forms has
+    # none: the first scene this tool ships, whose whole point is one live refusal
+    # at its own line, answered `gate findings` with unnamed authors and an offer
+    # and never mentioned the refusal. `status` learned this and wrote the sentence
+    # down twenty lines from here; it had not travelled.
+    if world_files() or (MANIFEST and MANIFEST.get("rows")):
         r = dispatch("status", [])
         for ref in r.get("refusals", []):
             out.append({"kind": "judged", "subject": ref["address"],

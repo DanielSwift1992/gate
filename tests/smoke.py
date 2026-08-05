@@ -5851,6 +5851,35 @@ public enum MyWatch: AccessLedger {
               r["findings"] and r["judged"] == 0 and "observed" in kinds))
     S.append(("findings never call read what the judge did not check",
               all(f["kind"] != "judged" for f in r["findings"])))
+    # ── AND A WORLD OF FORMS IS STILL A WORLD, HERE TOO. The check above holds
+    # one half of the boundary: nothing is called checked where no court sat. The
+    # other half was unheld and false. Findings ask the court only when the FACTS
+    # file exists on disk, and a world whose rows are all forms has no such file,
+    # so the first scene this tool ships, whose whole point is one live refusal at
+    # its own line, answered `gate findings` with unnamed authors and a CODEOWNERS
+    # offer and never mentioned the refusal at all. The same lesson was learned at
+    # the status path months ago and written there in those words; it had not
+    # travelled here.
+    _fw = os.path.join(tmp, "findings-forms")
+    run("demo", _fw)                        # which lays down a repository already
+    subprocess.run(["git", "add", "-A"], cwd=_fw, capture_output=True)
+    subprocess.run(["git", "-c", "commit.gpgsign=false", "-c", "user.email=solo@proj",
+                    "-c", "user.name=S", "commit", "-qm", "the world", "--no-verify"],
+                   cwd=_fw, capture_output=True)
+    _fw_status = run("status", cwd=_fw)[1]
+    _fw_found = run("findings", cwd=_fw)[1]
+    _fw_refusals = [x.get("address") for x in _fw_status.get("refusals", [])]
+    S.append(("a refusal in a world of forms is a finding of the first order too",
+              # the world refuses, and it is the demo's own one refusal
+              _fw_refusals == ["ownership.swift:89"]
+              # and findings say so, marked checked, once per refusal
+              and _fw_found.get("judged") == len(_fw_refusals)
+              and [f.get("subject") for f in _fw_found.get("findings", [])
+                   if f.get("kind") == "judged"] == _fw_refusals
+              # with the claim carried whole, not a sentence written here
+              and any(f.get("kind") == "judged" and "must share one zone" in f.get("sentence", "")
+                      and f.get("evidence") == "the judge, on this working copy"
+                      for f in _fw_found.get("findings", []))))
     _letter_ships = open(os.path.join(HERE, "stdlib", "readme.swift"), encoding="utf-8").read()
     # ── AND WHAT THIS TOOL PUTS ON A MACHINE, IT TAKES OFF AGAIN. Nine places
     # make a directory to probe in and four of them removed none: on the machine
