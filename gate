@@ -5443,7 +5443,25 @@ def cmd_init(a):
     # is built on, kept at the one moment it would have been easiest to break.
     letter = None
     layout_was = os.path.exists(os.path.join(root, "gate.manifest.swift"))
-    if "readme" in STDLIB:
+    # ── AND A PAGE THIS WORLD ALREADY DECLARES IS NOT TAKEN A SECOND TIME.
+    # Taking asks whether the destination path is free, which is a question about
+    # a filename rather than about the world: a repository that declares
+    # `stdlib/readme.swift` had a second copy laid at its root, with a row of its
+    # own, and the two rows collided on one name. Entering this tool's own
+    # repository refused, at the front door, for that reason. What entry owes is
+    # a world with the letter in it; a world that already declares the page has
+    # one, wherever the page sits.
+    declared_pages = set()
+    _man = os.path.join(root, "gate.manifest.swift")
+    if os.path.exists(_man):
+        declared_pages = {os.path.basename(p) for p in
+                          re.findall(r'typeName:\s*String\s*\{\s*"([^"]+)"\s*\}',
+                                     open(_man, encoding="utf-8").read())}
+
+    def already_declared(page):
+        return page + ".swift" in declared_pages
+
+    if "readme" in STDLIB and not already_declared("readme"):
         # ── AND THE LAYOUT IS ONE OF THE FILES THIS LEAVES. Taking a page declares
         # it, and declaring it writes the document that says so — a file appearing
         # in somebody's repository, counted by nobody: `created 3 files` while four
@@ -5460,7 +5478,7 @@ def cmd_init(a):
     # it is the one copy that could lie to them, so it travels. Taken first, it also
     # took the first row, and the bench opens on the first row: the newcomer met a
     # page of grammar instead of the letter written to them.
-    if "verbs" in STDLIB:
+    if "verbs" in STDLIB and not already_declared("verbs"):
         took_ref, _rp = take_shelf("verbs", root)
         if took_ref:
             made += [took_ref["wrote"]] + took_ref["with"]

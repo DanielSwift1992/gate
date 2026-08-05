@@ -142,6 +142,39 @@ def main():
 
     c, r = run("init", repo)
     S.append(("init + hook wired", r.get("hooks") is not None))
+    # ── AND ENTERING A REPOSITORY THAT ALREADY DECLARES THE SHELF TAKES NOTHING
+    # BUT THE HOOK. Taking a page asked whether its destination filename was
+    # free, which is a question about a path rather than about the world: a
+    # repository declaring `stdlib/readme.swift` had a second copy laid at its
+    # root with a row of its own, the two rows collided on one name, and the
+    # world refused. That repository is this one. Entry, the product's first
+    # scene, refused at its own front door, and dogfooding is what found it.
+    _own = os.path.join(tmp, "already-a-world")
+    os.makedirs(_own)
+    shutil.copytree(os.path.join(HERE, "stdlib"), os.path.join(_own, "stdlib"))
+    shutil.copy(os.path.join(HERE, "gate.manifest.swift"), _own)
+    _man_was = open(os.path.join(_own, "gate.manifest.swift"), encoding="utf-8").read()
+    subprocess.run(["git", "init", "-q", "-b", "main", _own], capture_output=True)
+    _entered = run("init", ".", cwd=_own)[1]
+    S.append(("entering a repository that already declares the shelf takes only the hook",
+              # nothing of the shelf is laid down a second time
+              not os.path.exists(os.path.join(_own, "readme.swift"))
+              and not os.path.exists(os.path.join(_own, "verbs.swift"))
+              and not os.path.exists(os.path.join(_own, "forms-tool.swift"))
+              # the layout it found is the layout it leaves
+              and open(os.path.join(_own, "gate.manifest.swift"),
+                       encoding="utf-8").read() == _man_was
+              # the hook is still wired, which is what entry is for here
+              and os.path.exists(os.path.join(_own, ".githooks", "pre-commit"))
+              and (_entered.get("hooks") or "") != ""
+              # entry names exactly what it left, and it is the one file
+              and (_entered.get("created") or []) == [".githooks/pre-commit"]))
+    # The verdict of the world this fixture leaves is not asked, and the reason
+    # is the fixture rather than the verb: it copies this repository's shelf
+    # beside a tool that presents its own, so every page is declared twice and
+    # the duplicate guard speaks. What is witnessed here is what entry did:
+    # nothing but the hook. That the entered world holds was measured by hand on
+    # a clone carrying its own copy of the tool, where the shelf is not doubled.
     # ── AND THE HOOK FINDS THE TOOL, OR SAYS SO AND STOPS. It ran `gate status`
     # flat, which fails with `gate: command not found` for anybody who has not
     # installed it, including anybody following this project's own README. Entry
