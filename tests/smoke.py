@@ -2700,6 +2700,36 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               made.get("refused") and "Emp9001" in made.get("asked", "")
               and any("gate demo org" in x for x in first.get("try", []))))
 
+    # ── AND LOOKING AT THE DEMO DOES NOT WRITE IN THE WORLD YOU ALREADY HAVE.
+    # `gate demo` founds a world in a new directory and declares its files, and
+    # the walk up from the first of them ran BEFORE that directory had a
+    # manifest: it found the world ABOVE and put four rows there. In a clone of
+    # this repository the host's own `status` then read `refused 2`, twice over
+    # one planted refusal the demo ships on purpose, and the cover invites
+    # exactly that: "No repository of your own at hand? `gate demo` makes one".
+    # The same trap catches `gate init` in any subproject of a repository whose
+    # root is already a world.
+    _host = os.path.join(tmp, "demo-in-a-world")
+    os.makedirs(_host, exist_ok=True)
+    subprocess.run(["git", "init", "-q", "-b", "main", _host], capture_output=True)
+    run("demo", "org", _host)                       # the host's own world
+    _was_man = open(os.path.join(_host, "gate.manifest.swift"), encoding="utf-8").read() \
+        if os.path.exists(os.path.join(_host, "gate.manifest.swift")) else ""
+    _was = run("status", cwd=_host)[1]
+    run("demo", cwd=_host)                          # and a demo to look at, inside it
+    _now_man = open(os.path.join(_host, "gate.manifest.swift"), encoding="utf-8").read() \
+        if os.path.exists(os.path.join(_host, "gate.manifest.swift")) else ""
+    _now = run("status", cwd=_host)[1]
+    S.append(("looking at the demo leaves the world you already have exactly as it was",
+              _now_man == _was_man
+              and _now.get("verdict") == _was.get("verdict")
+              and len(_now.get("refusals", [])) == len(_was.get("refusals", []))
+              # and the world it made is a world of its own, with its own list
+              and os.path.exists(os.path.join(_host, "gate-demo", "gate.manifest.swift"))
+              # carrying the one refusal it ships, once
+              and len(run("status", cwd=os.path.join(_host, "gate-demo"))[1]
+                      .get("refusals", [])) == 1))
+
     # ── AND THE RUNG THE LADDER OFFERS HERE IS ONE THIS WORLD CAN REACH. A
     # repository-shaped world holds, and its next rung reads "say who may merge:
     # gate.policy.swift". Write exactly that, naming an owner ownership.swift

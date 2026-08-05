@@ -3767,6 +3767,12 @@ CARRIER_HEADER = """// printed by gate declare carrier: what a library says it c
 """
 
 
+# the directory a world is being founded in, while `init` is founding it: set
+# for that call and nowhere else, so the walk above stops where the new world is
+# rather than joining an older one overhead
+_FOUNDING = None
+
+
 def world_root_for(path):
     # the world a file belongs to is found the way .git is: walking up from the
     # FILE — not from wherever the command was typed. Declaring `people/roster`
@@ -3774,6 +3780,16 @@ def world_root_for(path):
     # the file finds the one world above it. And a file under no world at all
     # founds one where it sits, which is how a bench in a fresh directory
     # begins — the temporary worlds the battery builds are exactly this.
+    # ── AND A WORLD BEING FOUNDED RIGHT HERE STOPS THE WALK. `gate init DIR`
+    # writes DIR's first files and declares them, and the walk up from the first
+    # one ran BEFORE DIR had a manifest: it found the world ABOVE and put the
+    # rows there. `gate demo` is that, in a repository that already has a world:
+    # four rows about `gate-demo/` landed in the host's own manifest and the
+    # host's `status` went red with the demo's planted refusal, which the demo
+    # ships on purpose. The same trap catches `gate init` in any subproject of a
+    # repository whose root is already a world.
+    if _FOUNDING and not os.path.relpath(os.path.abspath(path), _FOUNDING).startswith(os.pardir):
+        return _FOUNDING
     d = os.path.dirname(os.path.abspath(path)) or "."
     walk = d
     while True:
@@ -5703,6 +5719,11 @@ def cmd_init(a):
     # is built on, kept at the one moment it would have been easiest to break.
     letter = None
     layout_was = os.path.exists(os.path.join(root, "gate.manifest.swift"))
+    # this world is founded HERE, so every row entry writes belongs to it and
+    # not to a world overhead; the walk up is right for a file joining a world
+    # that already stands, and wrong for the moment one is being founded
+    global _FOUNDING
+    _FOUNDING = os.path.abspath(root)
     # ── AND A PAGE THIS WORLD ALREADY DECLARES IS NOT TAKEN A SECOND TIME.
     # Taking asks whether the destination path is free, which is a question about
     # a filename rather than about the world: a repository that declares
@@ -5769,6 +5790,7 @@ def cmd_init(a):
     if signed:
         observed = (f"read from git, and not judged: commits in this clone are signed {signed}. "
                     "If that is you, say so in my.swift. Nothing here writes your name for you")
+    _FOUNDING = None      # the founding is over; a later row joins the world it is under
     return {"command": "init", "root": root, "created": made, "hooks": hooks_note,
             "readme": letter, "observed": observed, "next": next_rung(False),
             "undo_hooks": undo, "changed_git_config": bool(hooks_note), "vendored": vendored}
