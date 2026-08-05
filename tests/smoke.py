@@ -2521,12 +2521,24 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     nat = os.path.join(tmp, "demo-native")
     _, first = run("demo", nat)
     nat_status = run("status", cwd=nat)[1]
-    # the fix a person would actually make, in the file they already know
+    # the fix a person would actually make, in the file they already know.
+    #
+    # ── AND THE PROBE READS BEFORE IT WRITES. `open(p, "w").write(open(p).read()
+    # .replace(...))` opens for writing FIRST: the file is truncated before the
+    # inner read runs, so what lands is the empty string. This line did that, and
+    # the check below stayed green on it, because an empty CODEOWNERS imports to
+    # a world with no ownership claims and a world with no claims holds. The
+    # green said "fix the line and it holds" while nobody had fixed a line: 12
+    # equalities where the fixed world has 16, and the four the fix is about
+    # simply gone. The text is read into a name here, and the assertion below
+    # refuses an emptied file outright.
     co = os.path.join(nat, "CODEOWNERS")
-    open(co, "w").write(open(co).read().replace("src/db/     @carol", "src/db/     @bob"))
+    _co = open(co).read()
+    open(co, "w").write(_co.replace("src/db/     @carol", "src/db/     @bob"))
     run("import", "codeowners", "CODEOWNERS", "--tree", ".", "--policy", "owners.csv",
         "-o", "ownership.swift", cwd=nat)
     fixed = run("status", cwd=nat)[1]
+    _co_fixed = open(co).read()
     subprocess.run(["git", "checkout", "."], cwd=nat, capture_output=True)
     again = run("status", cwd=nat)[1]
     S.append(("the first scene is a repository: CODEOWNERS, a tree, and one owner reaching past their zone",
@@ -2544,7 +2556,10 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               and len(nat_status.get("refusals", [])) == 1
               and nat_status["refusals"][0]["address"].startswith("ownership.swift:")
               # and the loop closes: fix the line in the file they know, it holds
+              # WITH the claims still in it, so an emptied file cannot pass here
               and fixed.get("verdict") == "holds"
+              and "src/db/     @bob" in _co_fixed and "@carol" in _co_fixed
+              and fixed.get("forms", {}).get("memberships") == 4
               # and the way back is one word, as promised before anything was touched
               and "git checkout ." in first.get("back", "")
               and again.get("verdict") == "refused"))
@@ -4427,7 +4442,14 @@ console.log(JSON.stringify({
     bk = os.path.join(tmp, "backworld")
     said = run("demo", "org", bk)[1]
     gs = os.path.join(bk, "gate.swift")
-    open(gs, "w").write(open(gs).read().replace(
+    # read first: `open(p, "w")` truncates before the inner read runs, and this
+    # line emptied gate.swift to nought bytes. `refused` was still true, so this
+    # passed, but the refusal it passed on was `gate.policy.swift:3 · an identity
+    # names Emp9000` from the policy guard: the world was gone, not broken at a
+    # line, and the invitation this check exists to walk was never walked. The
+    # assertion names gate.swift now, which an empty world cannot produce.
+    _gs = open(gs).read()
+    open(gs, "w").write(_gs.replace(
         "public typealias Home = Finance", "public typealias Home = Engineering", 1))
     broke = run("status", cwd=bk)[1]
     subprocess.run(["git", "checkout", "."], cwd=bk, capture_output=True)
@@ -4436,6 +4458,9 @@ console.log(JSON.stringify({
               "git checkout ." in said.get("back", "")
               and "cannot cost you" not in said.get("back", "")   # about the world, not a promise about you
               and broke.get("verdict") == "refused" and healed.get("verdict") == "holds"
+              # and the refusal is the one the invitation promises: gate.swift, at a line
+              and any(x["address"].startswith("gate.swift:")
+                      for x in broke.get("refusals", []))
               # and the invitation is a trial, never damage
               and "change one Home in gate.swift and watch the judge name the line" in said.get("next", "")
               # ONE RUNG for a person: the tool's own law about itself is that a
