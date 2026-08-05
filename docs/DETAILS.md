@@ -29,9 +29,9 @@ default. Verify it yourself, in about a minute:
 python3 tests/smoke.py                      # all green, offline
 
 # 2. read the source for outbound primitives; the battery greps for these
-grep -nE "urllib\.request|socket\.socket|http\.client|requests\.(get|post)" gate
-grep -nE "XMLHttpRequest|new WebSocket|fetch\(['\"]https?:" web/ui.html bin/judge.js \
-    bin/judge-where.js bin/judge-cli.js
+grep -nE "urllib\.request|^[[:space:]]*import socket|socket\.socket|http\.client|requests\.(get|post|put)" gate
+grep -nE "XMLHttpRequest|new WebSocket|fetch\([[:space:]]*['\"\`]https?:|(src|href)[[:space:]]*=[[:space:]]*['\"]https?:" \
+    web/ui.html bin/judge.js bin/judge-where.js bin/judge-cli.js
 
 # 3. the server listens on the loopback, and nowhere else
 grep -n 'HTTPServer((' gate                 # 127.0.0.1

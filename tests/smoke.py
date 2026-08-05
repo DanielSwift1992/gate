@@ -6231,6 +6231,33 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
             for m in re.finditer(pat, text, re.M):
                 hits.append(f + ": " + m.group(0))
     S.append(("zero egress: no outbound primitive in the runtime sources", not hits))
+    # ── AND THE RECIPE A READER RUNS IS THIS LIST, NOT A SHORTER ONE. The page
+    # says "verify it yourself" and prints two greps under the words "the
+    # battery greps for these". It printed seven of the nine above: `import
+    # socket` alone on a line, `requests.put`, and an `src=`/`href=` at an
+    # http address were the battery's and not the reader's. A promise with two
+    # records, and the one a stranger runs was the weaker.
+    #
+    # Held by the token that distinguishes each pattern, because the two are
+    # written in different dialects: python's `re` here, POSIX ERE inside a
+    # shell there, and holding the spellings to each other would be holding the
+    # dialect rather than the promise.
+    _det = open(os.path.join(HERE, "docs", "DETAILS.md"), encoding="utf-8").read()
+    _tokens = {r"urllib\.request": r"urllib\.request", r"^\s*import socket\b": "import socket",
+               r"socket\.socket": r"socket\.socket", r"http\.client": r"http\.client",
+               r"requests\.(get|post|put)": "requests\\.(get|post|put)",
+               r"XMLHttpRequest": "XMLHttpRequest", r"new WebSocket": "new WebSocket",
+               r"""fetch\(\s*['"`]https?:""": "fetch\\(",
+               r"""(?:src|href)\s*=\s*['"]https?:""": "(src|href)"}
+    _unread = [p for p in forbidden if _tokens.get(p, p) not in _det]
+    if _unread:
+        print("   the page's recipe does not look for:", _unread)
+    S.append(("the recipe the page prints looks for everything the battery greps",
+              len(_tokens) == len(forbidden) and not _unread
+              # and the port it tells a reader to watch is the one serve binds
+              and re.search(r"grep (\d+)\s", _det).group(1)
+              == re.search(r"port = int\(nums\[0\]\) if nums else (\d+)",
+                           open(GATE, encoding="utf-8").read()).group(1)))
     # the CLI's imports are a named list, and the list is the whole of it: a
     # security review reads a white list faster than it reads a file, and a
     # module appearing outside this list is a decision made visible here
