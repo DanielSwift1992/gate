@@ -5634,6 +5634,48 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                              capture_output=True, env={**os.environ, "GATE_CLI": _cli_bin})
         S.append(("and refuse an absent page with one sentence and one exit code",
                   _se.stderr == _pe.stderr and _se.returncode == _pe.returncode == 1))
+        # ── AND A VEIN IS A PREFIX, SO A VERB MOVES WHOLE. The ledger said
+        # `stdlib show` while the verb also answers `stdlib materialize`, which
+        # writes a file: half a verb on the list hands this binary an argv it
+        # does not answer, and the python side never sees it. The list names the
+        # verb now, and the parity below walks all three of its answers.
+        S.append(("the strangler ledger names a verb, not half of one",
+                  subprocess.run([_cli_bin, "--carries"], capture_output=True, text=True)
+                  .stdout.split() == ["stdlib"]))
+        _both = {}
+        for _tag, _env in (("py", "off"), ("sw", _cli_bin)):
+            _both[_tag] = [subprocess.run([sys.executable, GATE, "stdlib", *_x],
+                                          capture_output=True,
+                                          env={**os.environ, "GATE_CLI": _env})
+                           for _x in ([], ["--json"])]
+        S.append(("both CLIs list the shelf byte for byte, in words and as an answer",
+                  all(a.stdout == b.stdout and a.returncode == b.returncode
+                      for a, b in zip(_both["py"], _both["sw"]))
+                  and _both["py"][0].stdout.startswith(b"stdlib: ")
+                  and b'"speaks"' in _both["py"][1].stdout))
+        _mat = {}
+        for _tag, _env in (("py", "off"), ("sw", _cli_bin)):
+            _md = os.path.join(tmp, "materialize-" + _tag)
+            os.makedirs(_md, exist_ok=True)
+            _mat[_tag] = (subprocess.run([sys.executable, GATE, "stdlib", "materialize", "grammar"],
+                                         capture_output=True, cwd=_md,
+                                         env={**os.environ, "GATE_CLI": _env}),
+                          open(os.path.join(_md, "grammar.swift"), "rb").read()
+                          if os.path.exists(os.path.join(_md, "grammar.swift")) else None,
+                          subprocess.run([sys.executable, GATE, "stdlib", "materialize", "nosuch"],
+                                         capture_output=True, cwd=_md,
+                                         env={**os.environ, "GATE_CLI": _env}))
+        S.append(("both CLIs put the same page on disk and refuse an absent one alike",
+                  # the written bytes are the shelf page itself, from either side
+                  _mat["py"][1] == _mat["sw"][1]
+                  == open(os.path.join(HERE, "stdlib", "grammar.swift"), "rb").read()
+                  # the sentence about a printout, and the exit
+                  and _mat["py"][0].stdout == _mat["sw"][0].stdout
+                  and _mat["py"][0].returncode == _mat["sw"][0].returncode == 0
+                  and b"a printout, not a source" in _mat["py"][0].stdout
+                  # and the absent name, refused the same way with the same code
+                  and _mat["py"][2].stderr == _mat["sw"][2].stderr
+                  and _mat["py"][2].returncode == _mat["sw"][2].returncode == 1))
         # ── and the court itself is carried: the judge sources at the pin
         # beside bin/gate-judge are compiled into the vein, so the court
         # runs in the caller's process. The parity that holds this road is

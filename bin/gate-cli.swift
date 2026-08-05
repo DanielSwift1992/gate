@@ -27,10 +27,66 @@ func err(_ text: String) {
     FileHandle.standardError.write(Data(text.utf8))
 }
 
-// the veins, one argv prefix per line: the whole strangler ledger
+// the veins, one argv prefix per line: the whole strangler ledger.
+//
+// A vein is a PREFIX, so a verb moves whole or not at all: claiming `stdlib`
+// claims `stdlib materialize` with it. That is why this line grew from
+// `stdlib show` to the verb: half a verb on the list would hand this binary an
+// argv it does not answer, and the python side would never see it.
 if args == ["--carries"] {
-    out("stdlib show\n")
+    out("stdlib\n")
     exit(0)
+}
+
+// ── the shelf, read the way the python side reads it: the files next to the
+// CLI, sorted by name, each page whole ──
+func shelf() -> [(name: String, text: String)] {
+    let dir = root.appendingPathComponent("stdlib")
+    let names = ((try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? [])
+        .filter { $0.hasSuffix(".swift") }.sorted()
+    var out: [(String, String)] = []
+    for file in names {
+        let path = dir.appendingPathComponent(file).path
+        guard let data = FileManager.default.contents(atPath: path),
+              let text = String(data: data, encoding: .utf8) else { continue }
+        out.append((String(file.dropLast(6)), text))
+    }
+    return out
+}
+
+// a `//`-line of the page's head, by its opening word: the same first four
+// lines the python side reads for `role` and `speaks-for`
+func head(_ text: String, _ label: String) -> String? {
+    for line in text.components(separatedBy: "\n").prefix(4) {
+        let l = line.trimmingCharacters(in: .whitespaces)
+        if l.hasPrefix(label) { return String(l.dropFirst(label.count)).trimmingCharacters(in: .whitespaces) }
+    }
+    return nil
+}
+
+// python prints its answers with json.dumps(..., ensure_ascii=False, indent=2);
+// these two write the same bytes for the shapes this verb returns
+func jsonString(_ s: String) -> String {
+    var out = "\""
+    for ch in s.unicodeScalars {
+        switch ch {
+        case "\"": out += "\\\""
+        case "\\": out += "\\\\"
+        case "\n": out += "\\n"
+        case "\t": out += "\\t"
+        case "\r": out += "\\r"
+        default:
+            if ch.value < 0x20 { out += String(format: "\\u%04x", ch.value) } else { out.unicodeScalars.append(ch) }
+        }
+    }
+    return out + "\""
+}
+func jsonObject(_ pairs: [(String, String)], indent: Int) -> String {
+    let pad = String(repeating: " ", count: indent)
+    let inner = String(repeating: " ", count: indent + 2)
+    if pairs.isEmpty { return "{}" }
+    return "{\n" + pairs.map { inner + jsonString($0.0) + ": " + jsonString($0.1) }
+        .joined(separator: ",\n") + "\n" + pad + "}"
 }
 
 // ── the court, carried in-process: the judge sources at the pin beside
@@ -62,6 +118,71 @@ if args.count >= 2, args[0] == "stdlib", args[1] == "show" {
     }
     out(text)
     out("\n")   // python prints the page with print(), which ends it with one more newline
+    exit(0)
+}
+
+// ── stdlib materialize NAME: the page put into the caller's directory, and
+// the sentence that says it is a printout ──
+if args.count >= 2, args[0] == "stdlib", args[1] == "materialize" {
+    guard args.count >= 3 else {
+        err("{\"error\": \"stdlib materialize takes a module name (gate stdlib lists them)\"}\n")
+        exit(1)
+    }
+    let name = args[2]
+    guard let page = shelf().first(where: { $0.name == name }) else {
+        err("{\"error\": \"no such stdlib module: \(name)\"}\n")
+        exit(1)
+    }
+    let path = name + ".swift"
+    do { try page.text.write(toFile: path, atomically: false, encoding: .utf8) } catch {
+        err("{\"error\": \"could not write \(path)\"}\n")
+        exit(1)
+    }
+    out(jsonObject([
+        ("command", "stdlib materialize"),
+        ("wrote", path),
+        ("note", "a printout, not a source. These words are carried by the judge we ship: "
+               + "the world uses them with this file absent, and editing this copy "
+               + "adds no word to the language. It is here to be READ"),
+        ("next", "gate --version names the revision they were compiled from. That, and "
+               + "not this file, is the thing your world depends on"),
+    ], indent: 0) + "\n")
+    exit(0)
+}
+
+// ── stdlib, bare: the shelf as a list, in words or as the same answer ──
+if args.first == "stdlib" {
+    let pages = shelf()
+    let modules = pages.map { ($0.name, $0.text.components(separatedBy: "\n")[0]
+        .replacingOccurrences(of: "// ", with: "")) }
+    let roles = pages.map { ($0.name, head($0.text, "// role:") ?? "") }
+    let speaks = pages.map { ($0.name, head($0.text, "// speaks-for:") ?? "") }
+    if args.contains("--json") {
+        out("{\n  " + jsonString("command") + ": " + jsonString("stdlib") + ",\n"
+            + "  " + jsonString("modules") + ": " + jsonObject(modules, indent: 2) + ",\n"
+            + "  " + jsonString("roles") + ": " + jsonObject(roles, indent: 2) + ",\n"
+            + "  " + jsonString("speaks") + ": " + jsonObject(speaks, indent: 2) + ",\n"
+            + "  " + jsonString("note") + ": "
+            + jsonString("printouts of what the judge already carries, not files your world is made of")
+            + "\n}\n")
+        exit(0)
+    }
+    let roleOf = Dictionary(uniqueKeysWithValues: roles)
+    let speak = modules.filter { roleOf[$0.0] == "forms" }.count
+    var lines = ["stdlib: \(speak) you can speak, \(modules.count - speak) gate's own, all of it theirs"]
+    for (name, note) in modules {
+        let own = roleOf[name] == "forms" ? "" : "   (gate's own furniture)"
+        let said = note.components(separatedBy: ":").last!.trimmingCharacters(in: .whitespaces)
+        let cut = String(said.prefix(52))
+        lines.append("  " + name.padding(toLength: max(20, name.count), withPad: " ", startingAt: 0)
+                     + " " + cut + own)
+    }
+    lines.append("  these are theirs: read them, quote them, learn them, but they are not "
+                 + "files your world is made of, and editing one adds no word to the language. "
+                 + "`gate --version` names the revision they were compiled from")
+    lines.append("  next: `gate stdlib show <name>` reads one as plain Swift · "
+                 + "`gate mine FILE` / `gate theirs FILE` is how a file joins your world")
+    out(lines.joined(separator: "\n") + "\n")
     exit(0)
 }
 
