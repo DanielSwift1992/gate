@@ -5641,7 +5641,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         # verb now, and the parity below walks all three of its answers.
         S.append(("the strangler ledger names a verb, not half of one",
                   subprocess.run([_cli_bin, "--carries"], capture_output=True, text=True)
-                  .stdout.split() == ["stdlib"]))
+                  .stdout.split() == ["stdlib", "export"]))
         # ── AND THE LEDGER IS READ AGAINST THE ROAD IT IS WALKING. The strangler
         # has a length and a position, and both were feelings: the list of moved
         # veins lived in the binary and the list of verbs lived in the python
@@ -5672,9 +5672,39 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
             if _m and _m.group(1) not in _verbs:
                 _verbs.append(_m.group(1))
         _verbs = set(_verbs)
-        S.append(("the ledger names verbs the usage offers, 1 of 25 carried",
+        # ── AND THE SECOND VEIN, CHOSEN BY WHAT IT COSTS TO CARRY. A verb's body
+        # is not its price: `library` is 32 lines and reaches verify and import,
+        # 311 in all, while `export` is 39 lines and reaches nothing. The ladder
+        # is walked by transitive reach, and export is its first rung.
+        _ew = os.path.join(tmp, "export-world")
+        run("demo", "org", _ew)
+        _exp = {}
+        for _tag, _env in (("py", "off"), ("sw", _cli_bin)):
+            _ed = os.path.join(tmp, "export-" + _tag)
+            os.makedirs(_ed, exist_ok=True)
+            _ran = subprocess.run([sys.executable, GATE, "export",
+                                   os.path.join(_ew, "gate.swift"), "-o", "p.csv", "g.csv"],
+                                  capture_output=True, cwd=_ed,
+                                  env={**os.environ, "GATE_CLI": _env})
+            _exp[_tag] = (_ran,
+                          open(os.path.join(_ed, "p.csv"), "rb").read(),
+                          open(os.path.join(_ed, "g.csv"), "rb").read(),
+                          subprocess.run([sys.executable, GATE, "export"],
+                                         capture_output=True, cwd=_ed,
+                                         env={**os.environ, "GATE_CLI": _env}))
+        S.append(("both CLIs print the tables back out of a world, byte for byte",
+                  # the two tables, and the sentence over them
+                  _exp["py"][1] == _exp["sw"][1] and _exp["py"][2] == _exp["sw"][2]
+                  and _exp["py"][0].stdout == _exp["sw"][0].stdout
+                  and _exp["py"][0].returncode == _exp["sw"][0].returncode == 0
+                  and _exp["py"][1].startswith(b"id,rank,home,given,family,born,site,sex\n")
+                  and _exp["py"][2].startswith(b"who,doc\n")
+                  # and asked for nothing, both answer with the same sentence
+                  and _exp["py"][3].stdout == _exp["sw"][3].stdout
+                  and _exp["py"][3].stdout.startswith(b"usage: export prints")))
+        S.append(("the ledger names verbs the usage offers, 2 of 25 carried",
                   set(_ledger) <= _verbs
-                  and len(_ledger) == 1
+                  and len(_ledger) == 2
                   and len(_verbs) == 25
                   # and a name on the ledger is a whole verb: a prefix claims
                   # everything under it, so half a verb would take argv nobody

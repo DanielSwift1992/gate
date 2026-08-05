@@ -34,7 +34,7 @@ func err(_ text: String) {
 // `stdlib show` to the verb: half a verb on the list would hand this binary an
 // argv it does not answer, and the python side would never see it.
 if args == ["--carries"] {
-    out("stdlib\n")
+    out("stdlib\nexport\n")
     exit(0)
 }
 
@@ -183,6 +183,83 @@ if args.first == "stdlib" {
     lines.append("  next: `gate stdlib show <name>` reads one as plain Swift · "
                  + "`gate mine FILE` / `gate theirs FILE` is how a file joins your world")
     out(lines.joined(separator: "\n") + "\n")
+    exit(0)
+}
+
+// ── export WORLD -o people.csv grants.csv: the tables printed back out of a
+// world, which is the round trip that proves the fact translation ──
+func matches(_ pattern: String, _ text: String, dotAll: Bool = false) -> [[String]] {
+    var opts: NSRegularExpression.Options = []
+    if dotAll { opts.insert(.dotMatchesLineSeparators) }
+    guard let re = try? NSRegularExpression(pattern: pattern, options: opts) else { return [] }
+    let ns = text as NSString
+    return re.matches(in: text, range: NSRange(location: 0, length: ns.length)).map { m in
+        (1..<m.numberOfRanges).map { i in
+            m.range(at: i).location == NSNotFound ? "" : ns.substring(with: m.range(at: i))
+        }
+    }
+}
+
+if args.first == "export" {
+    let rest = Array(args.dropFirst()).filter { $0 != "--json" }
+    // asked for nothing, the verb answers with a sentence: the python side has
+    // one branch for every `asks` answer, which prints the note as a usage line
+    // and the next step under it. The JSON keeps `asks` as a bare true.
+    let note = "export prints the org tables back from a world, for the round-trip diff"
+    let next = "gate export gate.swift -o people.csv grants.csv, then diff each "
+             + "printed table against the original you imported"
+    guard let first = rest.first, !first.hasPrefix("-"),
+          let dash = rest.firstIndex(of: "-o"), dash + 2 < rest.count else {
+        if args.contains("--json") {
+            out("{\n  \"command\": \"export\",\n  \"asks\": true,\n"
+                + "  \"note\": " + jsonString(note) + ",\n"
+                + "  \"next\": " + jsonString(next) + "\n}\n")
+        } else {
+            out("usage: " + note + "\n  next: " + next + "\n")
+        }
+        exit(0)
+    }
+    let world = first
+    let peopleOut = rest[dash + 1], grantsOut = rest[dash + 2]
+    guard let data = FileManager.default.contents(atPath: world),
+          let text = String(data: data, encoding: .utf8) else {
+        err("gate-cli: no such world: \(world)\n")
+        exit(1)
+    }
+    // the same three readings the python side makes, in the same order
+    let sexPool = Dictionary(matches("public enum (\\w+): GivenNameCycle \\{.*?Sex = (\\w+)",
+                                     text, dotAll: true).map { ($0[0], $0[1]) },
+                             uniquingKeysWith: { a, _ in a })
+    var rows: [[String]] = []
+    for m in matches("public enum (\\w+): Employee, Person \\{(.*?)\\n\\}", text, dotAll: true) {
+        var f: [String: String] = [:]
+        for a in matches("public typealias (\\w+) = ([\\w.]+)", m[1]) where f[a[0]] == nil {
+            f[a[0]] = a[1]
+        }
+        let given = f["Given"] ?? ""
+        rows.append([m[0], f["Rank"] ?? "", f["Home"] ?? "", given,
+                     f["Family"] ?? "", f["Born"] ?? "", f["Site"] ?? "", sexPool[given] ?? ""])
+    }
+    let grants = matches("VerifiedView<\\s*(\\w+),\\s*(\\w+)\\s*>\\.self;?", text)
+    let people = "id,rank,home,given,family,born,site,sex\n"
+        + rows.map { $0.joined(separator: ",") + "\n" }.joined()
+    let grantRows = "who,doc\n" + grants.map { "\($0[0]),\($0[1])\n" }.joined()
+    do {
+        try people.write(toFile: peopleOut, atomically: false, encoding: .utf8)
+        try grantRows.write(toFile: grantsOut, atomically: false, encoding: .utf8)
+    } catch {
+        err("gate-cli: could not write the tables\n")
+        exit(1)
+    }
+    if args.contains("--json") {
+        out("{\n  \"command\": \"export\",\n  \"people\": \(rows.count),\n"
+            + "  \"grants\": \(grants.count),\n  \"wrote\": [\n"
+            + "    " + jsonString(peopleOut) + ",\n    " + jsonString(grantsOut)
+            + "\n  ]\n}\n")
+    } else {
+        out("export: \(rows.count) people, \(grants.count) grants → "
+            + peopleOut + ", " + grantsOut + "\n")
+    }
     exit(0)
 }
 
