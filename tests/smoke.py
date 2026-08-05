@@ -5785,7 +5785,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         # verb now, and the parity below walks all three of its answers.
         S.append(("the strangler ledger names a verb, not half of one",
                   subprocess.run([_cli_bin, "--carries"], capture_output=True, text=True)
-                  .stdout.split() == ["stdlib", "export"]))
+                  .stdout.split() == ["stdlib", "export", "seam"]))
         # ── AND THE LEDGER IS READ AGAINST THE ROAD IT IS WALKING. The strangler
         # has a length and a position, and both were feelings: the list of moved
         # veins lived in the binary and the list of verbs lived in the python
@@ -5870,9 +5870,57 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                   and b"Traceback" not in _brk["sw"].stdout + _brk["sw"].stderr
                   and b"states no Site" in _brk["py"].stdout
                   and b"gate.swift:" in _brk["py"].stdout))
-        S.append(("the ledger names verbs the usage offers, 2 of 25 carried",
+        # ── AND THE THIRD VEIN, THE FIRST THAT NEEDS A COURT'S WORDS. `seam`
+        # writes a joined world of two sides and reads the where court's verdict
+        # out of it, and the court compiled into this binary cannot be asked for
+        # that in process: Judge.run prints its lines and exits(1) on a refusal,
+        # so a caller that needs the text is not there to read it. The binary
+        # asks its own `judge where` door in a child of itself: one court call,
+        # the same count the python side makes to bin/gate-judge, and the same
+        # sources at the same pin. The clock is the one field two runs cannot
+        # share, so it comes out and everything else is held byte for byte.
+        _sd = os.path.join(tmp, "seam-vein")
+        run("demo", "seam", _sd)
+        # a pair that AGREES, cut from the one that does not: the two claims the
+        # court refuses are taken out, so the same fixture answers both ways
+        _keep, _skip = [], 0
+        for _l in open(os.path.join(_sd, "sdk.swift"), encoding="utf-8").read().split("\n"):
+            if _skip:
+                _skip = 0
+                continue
+            if _l.startswith("// /messages · sendAt") or _l.startswith("// /messages · replyTo"):
+                _skip = 1
+                continue
+            _keep.append(_l)
+        open(os.path.join(_sd, "sdk-agree.swift"), "w").write("\n".join(_keep))
+        _noclock = lambda b: re.sub(rb"[0-9]+\.[0-9]+ ms", b"MS",
+                                    re.sub(rb'"judge_ms": [0-9.]+', b'"judge_ms": MS', b))
+        _sm = {}
+        for _tag, _env in (("py", "off"), ("sw", _cli_bin)):
+            _sm[_tag] = [subprocess.run([sys.executable, GATE, *_argv], capture_output=True,
+                                        cwd=_sd, env={**os.environ, "GATE_CLI": _env})
+                         for _argv in (["seam", "api.swift", "sdk.swift"],
+                                       ["seam", "api.swift", "sdk.swift", "--json"],
+                                       ["seam", "api.swift", "sdk-agree.swift"],
+                                       ["seam", "api.swift", "sdk-agree.swift", "--json"],
+                                       ["seam"],
+                                       ["seam", "--json"])]
+        S.append(("both CLIs hold a court over one pair and answer alike, the clock apart",
+                  all(_noclock(a.stdout) == _noclock(b.stdout)
+                      and a.returncode == b.returncode and a.stderr == b.stderr
+                      for a, b in zip(_sm["py"], _sm["sw"]))
+                  # and all three answers the verb has are in the walk, not one
+                  and _sm["py"][0].returncode == 1
+                  and _sm["py"][0].stdout.startswith("seam: refused 2 · ".encode())
+                  and "/messages · sendAt".encode() in _sm["py"][0].stdout
+                  and b'"unclaimed"' in _sm["py"][1].stdout
+                  and _sm["py"][2].returncode == 0
+                  and _sm["py"][2].stdout.startswith("seam: holds · ".encode())
+                  and _sm["py"][4].returncode == 0
+                  and _sm["py"][4].stdout.startswith(b"usage: seam CONTRACT.swift")))
+        S.append(("the ledger names verbs the usage offers, 3 of 25 carried",
                   set(_ledger) <= _verbs
-                  and len(_ledger) == 2
+                  and len(_ledger) == 3
                   and len(_verbs) == 25
                   # and a name on the ledger is a whole verb: a prefix claims
                   # everything under it, so half a verb would take argv nobody

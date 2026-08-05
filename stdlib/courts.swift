@@ -46,7 +46,9 @@ public enum PortWhere: CourtCarrier {}
 extension PortWhere { public static var typeName: String { "bin/judge-where.js" } }
 // the fourth carrier is the strangler's vein: the same judge sources at the
 // same pin (bin/gate-judge.from), compiled into the Swift CLI by
-// bin/build-cli.sh, so the court runs in the caller's process. The row
+// bin/build-cli.sh, so the court runs in the vein's own process. A verb of
+// that CLI which needs the TEXT of a verdict asks the same door in a child of
+// itself, because the court prints its lines and leaves on a refusal. The row
 // names the text: the binary it builds is never committed.
 public enum SwiftVein: CourtCarrier {}
 extension SwiftVein { public static var typeName: String { "bin/gate-cli.swift" } }

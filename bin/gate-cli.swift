@@ -34,7 +34,7 @@ func err(_ text: String) {
 // `stdlib show` to the verb: half a verb on the list would hand this binary an
 // argv it does not answer, and the python side would never see it.
 if args == ["--carries"] {
-    out("stdlib\nexport\n")
+    out("stdlib\nexport\nseam\n")
     exit(0)
 }
 
@@ -188,9 +188,11 @@ if args.first == "stdlib" {
 
 // ── export WORLD -o people.csv grants.csv: the tables printed back out of a
 // world, which is the round trip that proves the fact translation ──
-func matches(_ pattern: String, _ text: String, dotAll: Bool = false) -> [[String]] {
+func matches(_ pattern: String, _ text: String,
+             dotAll: Bool = false, lines: Bool = false) -> [[String]] {
     var opts: NSRegularExpression.Options = []
     if dotAll { opts.insert(.dotMatchesLineSeparators) }
+    if lines { opts.insert(.anchorsMatchLines) }   // python's re.M
     guard let re = try? NSRegularExpression(pattern: pattern, options: opts) else { return [] }
     let ns = text as NSString
     return re.matches(in: text, range: NSRange(location: 0, length: ns.length)).map { m in
@@ -288,6 +290,150 @@ if args.first == "export" {
             + peopleOut + ", " + grantsOut + "\n")
     }
     exit(0)
+}
+
+// ── seam CONTRACT.swift CARRIER.swift: two declarations, one world, one court.
+// The only place anything here refuses a PAIR, and it can only do so because
+// both sides are present by their own word.
+//
+// THE COURT IS ASKED FOR ITS WORDS, IN A CHILD OF THIS PROCESS. Its sources are
+// compiled in and `judge where` is the door forty lines up, but Judge.run prints
+// its verdict and exits(1) on a refusal: a verb that needs the TEXT of a verdict
+// cannot call it in process and still be there to read what came back. So this
+// asks the door this binary already answers. One court call, the same count the
+// python side makes to bin/gate-judge, and the court is still the one at this
+// binary's own pin.
+func courtSays(_ path: String) -> String {
+    let p = Process()
+    p.executableURL = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath()
+    p.arguments = ["judge", "where", path]
+    let pipe = Pipe()
+    p.standardOutput = pipe
+    // stderr is the parent's: a court that cannot read its file says so there,
+    // and a probe that swallows stderr reads as a court with nothing to say. The
+    // python side captures and drops it; on a pair that judges both are empty.
+    guard (try? p.run()) != nil else { return "" }
+    let said = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+    p.waitUntilExit()
+    return said
+}
+
+if args.first == "seam" {
+    let rest = Array(args.dropFirst()).filter { $0 != "--json" }
+    let asJson = args.contains("--json")
+    let note = "seam CONTRACT.swift CARRIER.swift  both sides, as each declared them"
+    let nextAsked = "gate declare contract … and gate declare carrier … first"
+    guard rest.count >= 2 else {
+        if asJson {
+            out("{\n  \"command\": \"seam\",\n  \"asks\": true,\n"
+                + "  \"note\": " + jsonString(note) + ",\n"
+                + "  \"next\": " + jsonString(nextAsked) + "\n}\n")
+        } else {
+            out("usage: " + note + "\n  next: " + nextAsked + "\n")
+        }
+        exit(0)
+    }
+    // a path that is not there is answered in one sentence here; the python side
+    // still raises, the way `stdlib show` with no name does. Named cases are the
+    // parity, and neither side meets a person with a stack trace on one.
+    var side: [String] = []
+    for p in rest.prefix(2) {
+        guard let data = FileManager.default.contents(atPath: p),
+              let text = String(data: data, encoding: .utf8) else {
+            err("gate-cli: no such side: \(p)\n")
+            exit(1)
+        }
+        side.append(text)
+    }
+    let left = side[0], right = side[1]
+    let who = matches("public enum (\\w+): Carrier", right).first?[0] ?? "that library"
+    // what the carrier claims, keyed by the certificate that carries the claim:
+    // the route, the contract's word for the field, and the carrier's own word
+    // for it when the two differ
+    var claims: [String: (route: String, field: String, mine: String)] = [:]
+    for m in matches("^// (\\S+) · (\\S+)(?: \\(it calls it (\\S+)\\))?\\npublic typealias (Carry_\\d+)",
+                     right, lines: true) {
+        claims[m[3]] = (m[0], m[1], m[2])
+    }
+    let dir = NSTemporaryDirectory() + "gate-seam-\(ProcessInfo.processInfo.processIdentifier)"
+    try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
+    let path = dir + "/seam.swift"
+    guard (try? (left + "\n" + right).write(toFile: path, atomically: false, encoding: .utf8)) != nil else {
+        err("gate-cli: could not write the joined world\n")
+        exit(1)
+    }
+    let started = Date()
+    let said = courtSays(path)
+    let ms = (Date().timeIntervalSince(started) * 10_000).rounded() / 10
+    try? FileManager.default.removeItem(atPath: dir)
+    var refusals: [(address: String, claim: String)] = []
+    for m in matches("^✗ '(\\w+)[^']*' requires the types '[^']*' \\(aka '([^']+)'\\) and "
+                     + "'[^']*' \\(aka '([^']+)'\\)", said, lines: true) {
+        let it = claims[m[0]] ?? (route: "?", field: m[0], mine: "")
+        refusals.append((address: "\(it.route) · \(it.field)",
+                         claim: "the contract declares it \(m[1].lowercased()); \(who) declares "
+                              + (it.mine.isEmpty ? "it " : "its own \(it.mine) as ")
+                              + m[2].lowercased()))
+    }
+    // a field the contract declares and no carrier claims: not a disagreement,
+    // since a claim never made cannot be refused, so it is named beside the verdict
+    let claimed = Set(claims.values.map { $0.route + "\u{1}" + $0.field })
+    var silent: [String] = []
+    for m in matches("^// (\\S+) · (\\S+)$", left, lines: true)
+    where !claimed.contains(m[0] + "\u{1}" + m[1]) {
+        silent.append(m[0] + " · " + m[1])
+    }
+    var told = "\(claims.count) claims judged"
+    if !silent.isEmpty {
+        told += "; \(silent.count) field\(silent.count != 1 ? "s" : "") the contract declares "
+              + (silent.count != 1 ? "are" : "is")
+              + " claimed by nobody: a claim never made cannot be refused, so it stands "
+              + "beside the judgement"
+    }
+    let nextSaid = refusals.isEmpty
+        ? "wire it into CI: neither side can move without the other seeing"
+        : "open the address above: two declarations, both signed, do not agree"
+    let clock = String(format: "%.1f", ms)
+    if asJson {
+        var text = "{\n  \"command\": \"seam\",\n  \"verdict\": "
+                 + jsonString(refusals.isEmpty ? "holds" : "refused") + ",\n  \"refusals\": "
+        if refusals.isEmpty {
+            text += "[]"
+        } else {
+            var each: [String] = []
+            for r in refusals {
+                var one = "    {\n      \"address\": "
+                one += jsonString(r.address)
+                one += ",\n      \"claim\": "
+                one += jsonString(r.claim)
+                one += "\n    }"
+                each.append(one)
+            }
+            text += "[\n" + each.joined(separator: ",\n") + "\n  ]"
+        }
+        text += ",\n  \"judged\": \(claims.count),\n  \"unclaimed\": "
+        if silent.isEmpty {
+            text += "[]"
+        } else {
+            text += "[\n" + silent.map { "    " + jsonString($0) }.joined(separator: ",\n") + "\n  ]"
+        }
+        text += ",\n  \"judge_ms\": \(clock),\n  \"carrier\": "
+        text += jsonString(who)
+        text += ",\n  \"note\": "
+        text += jsonString(told)
+        text += ",\n  \"next\": "
+        text += jsonString(nextSaid)
+        text += ",\n  \"mutates\": false\n}\n"
+        out(text)
+    } else {
+        var lines = ["seam: " + (refusals.isEmpty ? "holds" : "refused \(refusals.count)")
+                     + " · \(clock) ms"]
+        for r in refusals { lines.append("  \(r.address) · \(r.claim)") }
+        lines.append("  note: " + told)
+        lines.append("  next: " + nextSaid)
+        out(lines.joined(separator: "\n") + "\n")
+    }
+    exit(refusals.isEmpty ? 0 : 1)
 }
 
 // an argv this binary never claimed: refuse loudly rather than guess. The
