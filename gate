@@ -5015,6 +5015,26 @@ def read_owners_policy(path):
     return policy
 
 
+def ghost_patterns(rules, paths, said_name):
+    # ONE READER FOR THE HALF THE COURT CANNOT SEE. A pattern that matches no
+    # file is a divergence of the pair with no claim to refuse: the world holds,
+    # and the rule addresses nothing. The import walks a working tree for its
+    # paths and the history walk asks git for a commit's paths, so the matching
+    # itself lives here once and both callers ask it the same question.
+    import fnmatch
+    out = []
+    for r in rules:
+        pat = r["pattern"].strip("/")
+        hit = any(fnmatch.fnmatch(p, pat) or fnmatch.fnmatch(p, pat + "/*")
+                  or p.startswith(pat + "/") or fnmatch.fnmatch(os.path.basename(p), pat)
+                  for p in paths)
+        if not hit:
+            out.append({"address": f"{said_name}:{r['line']}",
+                        "claim": f"CODEOWNERS names `{r['pattern']}`, and no file in "
+                                 "the tree matches it: the rule matches nothing"})
+    return out
+
+
 def codeowners_world_lines(src, policy, said_from):
     # ONE TRANSLATOR, WHOEVER ASKS. The import prints a world with this, and
     # the pair guard prints the same world again to compare: two calls of one
@@ -5088,21 +5108,12 @@ def cmd_import_codeowners(a):
     # a pattern matching no file in the tree: CODEOWNERS says it, the tree does not
     ghosts = []
     if tree:
-        import fnmatch
         paths = []
         for root, dirs, files in os.walk(tree):
             dirs[:] = [d for d in dirs if d != ".git"]
             for f in files:
                 paths.append(os.path.relpath(os.path.join(root, f), tree))
-        for r in rules:
-            pat = r["pattern"].strip("/")
-            hit = any(fnmatch.fnmatch(p, pat) or fnmatch.fnmatch(p, pat + "/*")
-                      or p.startswith(pat + "/") or fnmatch.fnmatch(os.path.basename(p), pat)
-                      for p in paths)
-            if not hit:
-                ghosts.append({"address": f"{os.path.basename(src)}:{r['line']}",
-                               "claim": f"CODEOWNERS names `{r['pattern']}`, and no file in "
-                                        "the tree matches it: the rule matches nothing"})
+        ghosts = ghost_patterns(rules, paths, os.path.basename(src))
     return {
         "command": "import codeowners",
         "world": out_path,
@@ -5252,9 +5263,84 @@ def repo_findings(n=400):
     return out
 
 
+def history_divergence(n=200, owners="CODEOWNERS", policy_name=None):
+    # ── THE PAIR'S IMAGE, COMMIT BY COMMIT. `findings` says what is true of a
+    # repository now; this says what has been true of one pair over its history.
+    # At each commit the two sides are read out of git (the rules file, and the
+    # tree the rules address), translated by the ONE translator the import verb
+    # uses, and the image's divergences counted: claims the court refuses, plus
+    # rules that address nothing. Nothing is checked out and nothing is written
+    # into the repository: a commit's text is read from the object store into a
+    # scratch directory that goes when the walk does.
+    #
+    # WHAT THIS COUNTS, said here because the number is easy to over-read: the
+    # divergences of the pair's JUDGED IMAGE under the declared translation, not
+    # the distance between the two records. A divergence of the image is a
+    # divergence of the pair; the reverse is not claimed.
+    base = os.path.dirname(os.path.abspath(FACTS)) if FACTS else os.getcwd()
+
+    def git(*args):
+        return subprocess.run(["git", *args], cwd=base, capture_output=True, text=True)
+
+    log = git("log", f"-{n}", "--format=%H%x1f%aI", "--reverse").stdout.strip()
+    if not log:
+        return []
+    rows, tmp = [], scratch("gate-history-")
+    try:
+        for line in log.split("\n"):
+            sha, when = (line.split("\x1f") + ["", ""])[:2]
+            said = git("show", f"{sha}:{owners}")
+            if said.returncode:
+                continue                    # the pair does not exist at this commit
+            paths = [p for p in git("ls-tree", "-r", "--name-only", sha).stdout.split("\n") if p]
+            pol = {}
+            if policy_name:
+                pt = git("show", f"{sha}:{policy_name}")
+                if not pt.returncode:
+                    pp = os.path.join(tmp, "policy.csv")
+                    open(pp, "w").write(pt.stdout)
+                    pol = read_owners_policy(pp)
+            cp = os.path.join(tmp, os.path.basename(owners))
+            open(cp, "w").write(said.stdout)
+            rules, lines, srcmap, _ = codeowners_world_lines(cp, pol, owners)
+            wp = os.path.join(tmp, "world.swift")
+            open(wp, "w").write("\n".join(lines) + "\n")
+            out = judge_call(["judge", "where", wp]).stdout
+            # and the court answered in its own voice, or this row is not a
+            # reading at all: a silence parses as nought refusals, which would
+            # draw a flat curve over a court that never sat
+            spoke = ("THE WHERE" in out and "canon v" in out) or "✗" in out
+            refused = [c for cert, c in where_refused(out) if cert in srcmap]
+            ghosts = ghost_patterns(rules, paths, os.path.basename(owners))
+            rows.append({"at": sha[:8], "when": when[:10], "rules": len(rules),
+                         "refusals": len(refused) if spoke else None,
+                         "unmatched": len(ghosts),
+                         "divergences": (len(refused) + len(ghosts)) if spoke else None,
+                         "judged": bool(pol),
+                         "read": spoke})
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    return rows
+
+
 def cmd_findings(a):
-    # findings [--md] [N] — what is true of this repository, in sentences.
+    # findings [--md] [--history] [N] — what is true of this repository, in
+    # sentences; with --history, what has been true of one pair over its commits.
     nums = [x for x in a if x.isdigit()]
+    if "--history" in a:
+        pol = os.path.basename(a[a.index("--policy") + 1]) if "--policy" in a else None
+        rows = history_divergence(int(nums[0]) if nums else 200, policy_name=pol)
+        return {"command": "findings history", "history": rows,
+                # the sentence a number this shape has to arrive with
+                "measure": "divergences of the pair's judged image at each commit: "
+                           "claims the court refuses, plus rules that address nothing. "
+                           "A divergence of the image is a divergence of the pair; the "
+                           "distance between the two records is not measured here",
+                "commits": len(rows),
+                "next": ("run `gate import codeowners` to see one of these commits "
+                         "translated in full" if rows else
+                         "no commit in this history carries the file this reads"),
+                "mutates": False}
     found = repo_findings(int(nums[0]) if nums else 400)
     return {"command": "findings", "findings": found,
             "next": "run `gate status`: what is judged answers in milliseconds, and this does not",
@@ -6688,6 +6774,18 @@ def humanize(out):
             who = c["person"] or c["email"]
             star = " *" if c["touches_world"] else ""
             lines.append(f"  {c['short']} {st:6} {c['when'][:10]} {who:20} {c['subject']}{star}")
+    elif cmd == "findings history":
+        rows = out["history"]
+        lines.append(f"findings history: {out['commits']} commits carry the pair, read from git")
+        lines.append(f"  {out['measure']}")
+        for r in rows:
+            n = r["divergences"]
+            said = ("not read: no verdict in the reply" if n is None else
+                    "in agreement" if n == 0 else
+                    f"{n} divergence" + ("" if n == 1 else "s"))
+            lines.append(f"  {r['at']} {r['when']}  {said:22}"
+                         f" {r['rules']} rules"
+                         + ("" if r["judged"] else ", no policy: only unmatched rules can show"))
     elif cmd == "findings":
         f = out["findings"]
         if not f:

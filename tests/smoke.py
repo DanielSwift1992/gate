@@ -5880,6 +5880,63 @@ public enum MyWatch: AccessLedger {
               and any(f.get("kind") == "judged" and "must share one zone" in f.get("sentence", "")
                       and f.get("evidence") == "the judge, on this working copy"
                       for f in _fw_found.get("findings", []))))
+
+    # ── AND WHAT HAS BEEN TRUE OF ONE PAIR, COMMIT BY COMMIT. `findings` says
+    # what holds now; the historical mode reads the two sides out of git at each
+    # commit, translates them with the one translator the import verb uses, and
+    # counts the image's divergences. The fixture is the shape the claim
+    # predicts: a pair in agreement, three commits that move a folder and say
+    # nothing, and the commit where the rules meet the tree again. Nothing is
+    # checked out: each commit's text is read from the object store.
+    #
+    # The number is easy to over-read, so the verb prints what it measured
+    # beside it: divergences of the JUDGED IMAGE, not the distance between the
+    # two records. That sentence is held here with the curve.
+    _dh = os.path.join(tmp, "drift-history")
+    os.makedirs(os.path.join(_dh, "src", "api"))
+    os.makedirs(os.path.join(_dh, "src", "ui"))
+    os.makedirs(os.path.join(_dh, "src", "db"))
+    for _d in ("api", "ui", "db"):
+        open(os.path.join(_dh, "src", _d, "main.py"), "w").write("x\n")
+    open(os.path.join(_dh, "owners.csv"), "w").write(
+        "owner,zone\nalice,src\nbob,src\ncarol,src\n")
+
+    def _hcommit(msg):
+        subprocess.run(["git", "add", "-A"], cwd=_dh, capture_output=True)
+        subprocess.run(["git", "-c", "commit.gpgsign=false", "-c", "user.email=a@b",
+                        "-c", "user.name=A", "commit", "-qm", msg, "--no-verify"],
+                       cwd=_dh, capture_output=True)
+
+    subprocess.run(["git", "init", "-q", "-b", "main", _dh], capture_output=True)
+    open(os.path.join(_dh, "CODEOWNERS"), "w").write(
+        "/src/api @alice\n/src/ui @bob\n/src/db @carol\n")
+    _hcommit("the pair, in agreement")
+    for _d in ("api", "ui", "db"):
+        os.makedirs(os.path.join(_dh, "services"), exist_ok=True)
+        shutil.move(os.path.join(_dh, "src", _d), os.path.join(_dh, "services", _d))
+        _hcommit(f"move {_d}, and say nothing")
+    open(os.path.join(_dh, "CODEOWNERS"), "w").write(
+        "/services/api @alice\n/services/ui @bob\n/services/db @carol\n")
+    open(os.path.join(_dh, "owners.csv"), "w").write(
+        "owner,zone\nalice,services\nbob,services\ncarol,services\n")
+    _hcommit("the rules meet the tree again")
+    _hist = run("findings", "--history", "--policy", "owners.csv", cwd=_dh)[1]
+    _curve = [r.get("divergences") for r in _hist.get("history", [])]
+    S.append(("the pair's history is a curve that rises unattended and falls when it is met",
+              _curve == [0, 1, 2, 3, 0]
+              # rising while nobody looks, and every rise is a rule addressing
+              # nothing rather than a claim the court refused
+              and [r.get("unmatched") for r in _hist.get("history", [])] == [0, 1, 2, 3, 0]
+              and all(r.get("refusals") == 0 for r in _hist.get("history", []))
+              # and the verb says what it counted, so the number is not read as
+              # the distance between the two records
+              and "judged image" in (_hist.get("measure") or "")
+              and "is not measured here" in (_hist.get("measure") or "")
+              and _hist.get("commits") == 5
+              # read-only: the walk writes nothing into the repository it reads
+              and not os.path.exists(os.path.join(_dh, "world.swift"))
+              and subprocess.run(["git", "status", "--porcelain"], cwd=_dh,
+                                 capture_output=True, text=True).stdout.strip() == ""))
     _letter_ships = open(os.path.join(HERE, "stdlib", "readme.swift"), encoding="utf-8").read()
     # ── AND WHAT THIS TOOL PUTS ON A MACHINE, IT TAKES OFF AGAIN. Nine places
     # make a directory to probe in and four of them removed none: on the machine
