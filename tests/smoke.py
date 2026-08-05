@@ -8298,6 +8298,24 @@ public enum MyWatch: AccessLedger {
               and "docs/bench.png" in readme
               and ("sha256:" + _ui_hash) in _shot_said
               and "shoot-bench.sh" in _shot_said))
+    # ── AND THE STAMP IS WRITTEN ONLY IF A PICTURE WAS TAKEN. The check above
+    # holds the stamp to the page, and the script that writes the stamp sent the
+    # camera's stderr to /dev/null and asked nothing about the result: a failed
+    # shot left the OLD picture on disk with a fresh stamp beside it, and this
+    # check went green over a photograph of a page that no longer exists. That
+    # is the one thing the script exists to prevent, so it is read here.
+    _shoot = open(os.path.join(HERE, "bin", "shoot-bench.sh"), encoding="utf-8").read()
+    S.append(("the camera is not allowed to fail quietly under the stamp it earns",
+              # the camera's own words survive a refusal, and stop the run
+              "2>/dev/null" not in _shoot.split("--screenshot", 1)[0].split("mkdir -p", 1)[-1]
+              and "the camera refused" in _shoot
+              # and a picture that did not change is not a picture that was taken
+              and "did not change" in _shoot
+              # and the refusal stands ABOVE the line that writes the stamp.
+              # `index` found the file's own head comment, which names the stamp
+              # eight lines in, so the first spelling of this compared a refusal
+              # against a sentence about one.
+              and _shoot.index("exit 1") < _shoot.rindex("bench.png.from")))
 
     claimed_n = re.search(r"the battery: (\d+) checks", readme)
     S.append(("the README counts these checks correctly",

@@ -43,10 +43,31 @@ for _ in $(seq 40); do
 done
 
 mkdir -p "$HERE/docs"
-"$CHROME" --headless --disable-gpu --hide-scrollbars \
+# ── AND THE CAMERA IS NOT ALLOWED TO FAIL QUIETLY. Chrome's stderr went to
+# /dev/null and nothing asked whether a picture came out, while the stamp below
+# is written either way: a failed shot left the OLD picture on disk with a
+# fresh "taken from this ui.html" beside it, and the battery, which holds that
+# stamp to the working copy, went green over a photograph of a page that no
+# longer exists. The one thing this script exists to prevent.
+BEFORE=""
+[ -f "$HERE/docs/bench.png" ] && BEFORE="$(shasum -a 256 "$HERE/docs/bench.png" | cut -d' ' -f1)"
+SHOT_ERR="$(mktemp)"
+if ! "$CHROME" --headless --disable-gpu --hide-scrollbars \
     --window-size=1280,800 --force-device-scale-factor=2 --virtual-time-budget=4000 \
     --screenshot="$HERE/docs/bench.png" \
-    "http://127.0.0.1:$PORT/ui?f=ownership.swift:89" 2>/dev/null
+    "http://127.0.0.1:$PORT/ui?f=ownership.swift:89" 2>"$SHOT_ERR"; then
+    echo "shoot-bench: the camera refused. What it said:" >&2
+    tail -5 "$SHOT_ERR" >&2
+    rm -f "$SHOT_ERR"
+    exit 1
+fi
+rm -f "$SHOT_ERR"
+[ -f "$HERE/docs/bench.png" ] || { echo "shoot-bench: no picture was written" >&2; exit 1; }
+AFTER="$(shasum -a 256 "$HERE/docs/bench.png" | cut -d' ' -f1)"
+if [ -n "$BEFORE" ] && [ "$BEFORE" = "$AFTER" ]; then
+    echo "shoot-bench: the picture on disk did not change, so nothing was taken" >&2
+    exit 1
+fi
 
 # a one-pixel black frame, burned into the file: the cover renders on light
 # and on dark pages, and a dark picture meeting a dark page with no seam
