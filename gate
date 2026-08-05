@@ -247,6 +247,19 @@ def manifest_guards(rows=None, text=None):
                                  f"`{seen_paths[r['path']]}` already speaks for: one file, one "
                                  "row, or two rows can say different things about it"})
         seen_paths[r["path"]] = r["name"]
+        # ── AND A ROW MAY NOT NAME A FILE OUTSIDE THE WORLD. Found by walking
+        # this repository's own history: eight rows once named absolute paths
+        # into a test run's temp directories, and the world held, because those
+        # files existed on the machine that wrote them. On any other machine the
+        # same document refuses. A row is a claim about this world's own tree, so
+        # a path that leaves the world is not a row about anything anybody else
+        # can read.
+        if os.path.relpath(os.path.abspath(os.path.join(d, r["path"])),
+                           os.path.abspath(d)).startswith(".."):
+            bad.append({"address": f"{man}:{r['line']}",
+                        "claim": f"`{r['name']}` names {r['path']}, which is outside this world: "
+                                 "a row is a claim about this world's own tree, and a path that "
+                                 "leaves it holds only on the machine that wrote it"})
         if not r["role"]:
             bad.append({"address": f"{man}:{r['line']}",
                         "claim": f"`{r['name']}` does not say what it is for. A row names its court: "

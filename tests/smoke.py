@@ -414,6 +414,28 @@ def main():
               any("names no file" in x["claim"]
                   and x.get("address", "").startswith("gate.manifest.swift:")
                   for x in r["refusals"])))
+    # ── AND A ROW MAY NOT NAME A FILE OUTSIDE THE WORLD. Found by walking this
+    # repository's own history for the layout pair: at 0ebb327 eight rows named
+    # absolute paths into a battery run's temp directories, and the world held,
+    # because those files existed on the machine that wrote them. Seven commits
+    # later they were cleaned by hand. Nothing refused them at the time and
+    # nothing refuses them now: the row is a claim about somebody else's tree,
+    # it holds on one machine and refuses on every other, which is the exact
+    # shape of a green nobody else could reproduce.
+    _esc = os.path.join(tmp, "escape-target")
+    os.makedirs(_esc, exist_ok=True)
+    open(os.path.join(_esc, "stray.swift"), "w").write("public enum Stray {}\n")
+    open(os.path.join(split, "gate.manifest.swift"), "w").write(
+        doc + "\npublic enum Stray: Mine {\n    public typealias Kind = FormsFile\n}\n"
+        + 'extension Stray { public static var typeName: String { "'
+        + os.path.relpath(os.path.join(_esc, "stray.swift"), split) + '" } }\n')
+    _out = run("status", cwd=split)[1]
+    S.append(("manifest: a row naming a file outside the world is refused at its line",
+              _out.get("verdict") == "refused"
+              and any("outside this world" in x.get("claim", "")
+                      and x.get("address", "").startswith("gate.manifest.swift:")
+                      for x in _out.get("refusals", []))))
+
     open(os.path.join(split, "gate.manifest.swift"), "w").write(doc)
     c, r = run("status", cwd=split)
     S.append(("manifest: and the same document with the line back holds again",
