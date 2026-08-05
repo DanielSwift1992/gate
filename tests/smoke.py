@@ -4883,13 +4883,17 @@ console.log(JSON.stringify({
         subprocess.run(["git", "-c", "commit.gpgsign=false", "-c", "user.email=a@b",
                         "-c", "user.name=A", "commit", "-qm", "a repository"],
                        cwd=_nw, capture_output=True)
-        _nwp = _bench_port + 3
+        # the port is the OS's to give, which is how every other server here is
+        # started: `_bench_port + 3` was arithmetic on somebody else's port, and
+        # a runner with that one taken failed the whole battery rather than one
+        # check. The macos job did exactly that on run 101, and the same tree
+        # went green on the next push.
+        _s4 = _sock.socket(); _s4.bind(("127.0.0.1", 0))
+        _nwp = _s4.getsockname()[1]; _s4.close()
         _nwb = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_nwp)],
                                 cwd=_nw, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         try:
-            wait_serve(_nwp, "/status")
-            _page = json.loads(_u.urlopen(f"http://127.0.0.1:{_nwp}/status",
-                                          timeout=20).read().decode())
+            _page = json.loads((wait_serve(_nwp, "/status") or b"{}").decode())
         finally:
             _nwb.terminate()
         _term = run("status", cwd=_nw)[1]
