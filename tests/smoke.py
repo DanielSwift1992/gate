@@ -2567,6 +2567,39 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               made.get("refused") and "Emp9001" in made.get("asked", "")
               and any("gate demo org" in x for x in first.get("try", []))))
 
+    # ── AND THE RUNG THE LADDER OFFERS HERE IS ONE THIS WORLD CAN REACH. A
+    # repository-shaped world holds, and its next rung reads "say who may merge:
+    # gate.policy.swift". Write exactly that, naming an owner ownership.swift
+    # declares at its own line 65, and the person set that asked only the judged
+    # list refused it: this road never writes a gate.swift, so its records live
+    # in a `forms` row and the judged list is empty. The offer and the law have
+    # to be one statement, and this pair is both halves of it: the name the world
+    # declares holds and the ladder moves on, the name off the shelf does not.
+    subprocess.run(["git", "checkout", "."], cwd=nat, capture_output=True)
+    _co2 = open(co).read()
+    open(co, "w").write(_co2.replace("src/db/     @carol", "src/db/     @bob"))
+    run("import", "codeowners", "CODEOWNERS", "--tree", ".", "--policy", "owners.csv",
+        "-o", "ownership.swift", cwd=nat)
+    _rung = run("status", cwd=nat)[1].get("next", "")
+    _pol = os.path.join(nat, "gate.policy.swift")
+    _said = ("public enum MailAlice: Identity {\n"
+             "    public typealias Person = Owner_alice\n}\n"
+             'extension MailAlice { public static var typeName: String { "a@corp" } }\n')
+    open(_pol, "w").write(_said)
+    _took = run("status", cwd=nat)[1]
+    open(_pol, "w").write(_said.replace("Owner_alice", "Anyone"))
+    _shelf = run("status", cwd=nat)[1]
+    subprocess.run(["git", "checkout", "."], cwd=nat, capture_output=True)
+    os.remove(_pol)
+    S.append(("the merge-policy rung is reachable in a world whose records live in a forms row",
+              "gate.policy.swift" in _rung
+              and _took.get("verdict") == "holds"
+              and "gate.policy.swift" not in _took.get("next", "")
+              # and the shelf is still not this world's roster
+              and _shelf.get("verdict") == "refused"
+              and any("`Anyone`" in x["claim"] and "no such person" in x["claim"]
+                      for x in _shelf.get("refusals", []))))
+
     # ── and the other door, for whoever came because a client and a contract
     # disagree rather than because of who may read what. Two sides, each in its
     # own words, and all three kinds of item at once: one the library owes, one

@@ -194,20 +194,37 @@ def world_files():
 
 def world_people():
     # ── WHO THE WORLD DECLARES, ASKED IN ONE PLACE. A person is a record, so a
-    # person is declared where records are: the judged files. The shelf is not
-    # one of them, and says so in its own listing: printouts of what the judge
-    # carries, not files your world is made of.
+    # person is declared by a file THIS WORLD DECLARES: the judged list, and the
+    # rows the manifest names that carry declarations. The shelf is not one of
+    # those, and says so in its own listing: printouts of what the judge carries,
+    # not files your world is made of. It is present in every repository on
+    # earth, so a set that reads it makes `Anyone`, a bench atom, a person
+    # everywhere.
     #
     # Two guards asked this and got two answers. `status` asked the judged files,
     # the manifest's forms rows AND the whole shelf; `guard merge` asked the
     # judged files alone, under a comment reading "the same as the policy". So an
-    # identity naming `Anyone`, a bench atom off the shelf, made `status` hold and
-    # `guard merge` refuse `gate.policy.swift:1` for naming nobody: one world, one
-    # line, two verdicts. The wide set is still right for a RANK, which is a word
-    # of a form and may well be one the judge carries with no file here; it was
-    # never right for a person.
+    # identity naming `Anyone` made `status` hold and `guard merge` refuse
+    # `gate.policy.swift:1` for naming nobody: one world, one line, two verdicts.
+    #
+    # AND THE ROWS ARE HERE BECAUSE A REPOSITORY-SHAPED WORLD KEEPS ITS RECORDS
+    # IN ONE. `gate demo` and `gate import codeowners` write ownership.swift, a
+    # page of grants vocabulary with the owners declared under it, and file it as
+    # `forms`: there is no gate.swift on that road at all. Asking the judged list
+    # alone refused `Owner_alice` at the very rung the ladder had just offered,
+    # in a world whose own line 65 declares them. A manifest row is your file,
+    # written by you and reviewed by you; the shelf is theirs. That is the line
+    # this set draws, and the wide set in `policy_guards` still stands for a
+    # RANK, which is a word of a form and may be one the judge carries with no
+    # file here.
     names = set()
-    for p in world_files():
+    seen = list(world_files())
+    base = os.path.dirname(MANIFEST["manifest"]) if MANIFEST else "."
+    for r in ((MANIFEST.get("rows") if MANIFEST else None) or []):
+        p = os.path.join(base, r["path"])
+        if r["role"] in ("world", "forms", "seam") and os.path.exists(p) and p not in seen:
+            seen.append(p)
+    for p in seen:
         names |= set(re.findall(r"(?:public\s+)?enum\s+(\w+)\s*:",
                                 open(p, encoding="utf-8", errors="replace").read()))
     return names
