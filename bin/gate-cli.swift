@@ -231,14 +231,41 @@ if args.first == "export" {
                                      text, dotAll: true).map { ($0[0], $0[1]) },
                              uniquingKeysWith: { a, _ in a })
     var rows: [[String]] = []
-    for m in matches("public enum (\\w+): Employee, Person \\{(.*?)\\n\\}", text, dotAll: true) {
+    let ns = text as NSString
+    let personRe = try! NSRegularExpression(
+        pattern: "public enum (\\w+): Employee, Person \\{(.*?)\\n\\}",
+        options: [.dotMatchesLineSeparators])
+    for m in personRe.matches(in: text, range: NSRange(location: 0, length: ns.length)) {
+        let name = ns.substring(with: m.range(at: 1))
+        let body = ns.substring(with: m.range(at: 2))
         var f: [String: String] = [:]
-        for a in matches("public typealias (\\w+) = ([\\w.]+)", m[1]) where f[a[0]] == nil {
+        for a in matches("public typealias (\\w+) = ([\\w.]+)", body) where f[a[0]] == nil {
             f[a[0]] = a[1]
         }
+        // a record missing a column is a refusal with an address, the same
+        // answer the python side gives: neither side meets a person with a
+        // stack trace, so neither side is excluded from the parity
+        let missing = ["Rank", "Home", "Given", "Family", "Born", "Site"].filter { f[$0] == nil }
+        if !missing.isEmpty {
+            let at = ns.substring(to: m.range.location).components(separatedBy: "\n").count
+            let claim = "`\(name)` states no \(missing.joined(separator: " and no ")): "
+                      + "the tables have a column for each, and a record that "
+                      + "does not say one cannot be printed back"
+            let next = "add the line to the record, or drop the record from the world"
+            if args.contains("--json") {
+                out("{\n  \"command\": \"export\",\n  \"verdict\": \"refused\",\n"
+                    + "  \"refusals\": [\n    {\n      \"address\": "
+                    + jsonString("\(world):\(at)") + ",\n      \"claim\": "
+                    + jsonString(claim) + "\n    }\n  ],\n  \"next\": "
+                    + jsonString(next) + "\n}\n")
+            } else {
+                out("export: refused 1\n  \(world):\(at) · \(claim)\n  next: \(next)\n")
+            }
+            exit(1)
+        }
         let given = f["Given"] ?? ""
-        rows.append([m[0], f["Rank"] ?? "", f["Home"] ?? "", given,
-                     f["Family"] ?? "", f["Born"] ?? "", f["Site"] ?? "", sexPool[given] ?? ""])
+        rows.append([name, f["Rank"]!, f["Home"]!, given,
+                     f["Family"]!, f["Born"]!, f["Site"]!, sexPool[given] ?? ""])
     }
     let grants = matches("VerifiedView<\\s*(\\w+),\\s*(\\w+)\\s*>\\.self;?", text)
     let people = "id,rank,home,given,family,born,site,sex\n"

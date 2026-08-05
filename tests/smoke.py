@@ -5702,6 +5702,30 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                   # and asked for nothing, both answer with the same sentence
                   and _exp["py"][3].stdout == _exp["sw"][3].stdout
                   and _exp["py"][3].stdout.startswith(b"usage: export prints")))
+        # ── AND A RECORD MISSING A COLUMN IS A REFUSAL ON BOTH SIDES. The verb's
+        # own head says a person is met with a sentence and never a stack trace,
+        # and the python raised KeyError on a world where a record states no
+        # Site: the defect the comment names, in the function the comment is on.
+        # Both sides now answer with the record's name, the missing word and the
+        # line, so the parity has no exception to write down.
+        _bw = os.path.join(tmp, "export-broken")
+        os.makedirs(_bw, exist_ok=True)
+        _whole = open(os.path.join(_ew, "gate.swift"), encoding="utf-8").read()
+        open(os.path.join(_bw, "gate.swift"), "w").write(
+            _whole.replace("    public typealias Site = Remote\n", "", 1))
+        _brk = {}
+        for _tag, _env in (("py", "off"), ("sw", _cli_bin)):
+            _brk[_tag] = subprocess.run([sys.executable, GATE, "export", "gate.swift",
+                                         "-o", "p.csv", "g.csv"],
+                                        capture_output=True, cwd=_bw,
+                                        env={**os.environ, "GATE_CLI": _env})
+        S.append(("a record missing a column is refused in words, alike on both CLIs",
+                  _brk["py"].stdout == _brk["sw"].stdout
+                  and _brk["py"].returncode == _brk["sw"].returncode == 1
+                  and b"Traceback" not in _brk["py"].stdout + _brk["py"].stderr
+                  and b"Traceback" not in _brk["sw"].stdout + _brk["sw"].stderr
+                  and b"states no Site" in _brk["py"].stdout
+                  and b"gate.swift:" in _brk["py"].stdout))
         S.append(("the ledger names verbs the usage offers, 2 of 25 carried",
                   set(_ledger) <= _verbs
                   and len(_ledger) == 2

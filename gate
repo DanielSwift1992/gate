@@ -1398,6 +1398,20 @@ def cmd_export(a):
         sex_pool = dict(
             re.findall(r"public enum (\w+): GivenNameCycle \{.*?Sex = (\w+)", text, re.S)
         )
+        # ── AND A RECORD MISSING A COLUMN IS A REFUSAL, NOT A TRACEBACK. This
+        # read the seven fields by key and raised KeyError on a world where one
+        # of them is absent: the same defect this function's own head calls out,
+        # a verb meeting a person with a stack trace. The world says which record
+        # and which word, so the answer says it too.
+        missing = [k for k in ("Rank", "Home", "Given", "Family", "Born", "Site") if k not in f]
+        if missing:
+            at = text[:m.start()].count("\n") + 1
+            return {"command": "export", "verdict": "refused",
+                    "refusals": [{"address": f"{world}:{at}",
+                                  "claim": f"`{m.group(1)}` states no {' and no '.join(missing)}: "
+                                           "the tables have a column for each, and a record that "
+                                           "does not say one cannot be printed back"}],
+                    "next": "add the line to the record, or drop the record from the world"}
         rows.append(
             [m.group(1), f["Rank"], f["Home"], f["Given"], f["Family"], f["Born"], f["Site"], sex_pool.get(f["Given"], "")]
         )
@@ -6772,6 +6786,11 @@ def humanize(out):
     elif cmd == "library":
         f = out.get("forms") or out.get("crystal") or {}
         lines.append(f"library: {len(f)} forms" + (f" · wrote {out['wrote']}" if out.get("wrote") else ""))
+    elif cmd == "export" and out.get("verdict") == "refused":
+        lines.append(f"export: refused {len(out['refusals'])}")
+        for r in out["refusals"]:
+            lines.append(f"  {r['address']} · {r['claim']}")
+        lines.append(f"  next: {out['next']}")
     elif cmd == "export":
         lines.append(f"export: {out['people']} people, {out['grants']} grants → {', '.join(out['wrote'])}")
     elif cmd == "log":
