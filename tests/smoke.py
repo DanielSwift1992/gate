@@ -439,6 +439,34 @@ def main():
     # shape that goes wrong is the shape only this repository has.
     _sv = run("survey", "40", cwd=HERE)[1]
     _st = run("status", cwd=HERE)[1]
+    # ── AND NOTHING LANDS IN SOMEBODY'S REPOSITORY UNASKED. `import codeowners`
+    # defaulted to `codeowners-gate.swift` and dropped that file into the working
+    # copy of anybody who ran the verb, while the road beside it promises that
+    # unless you ask for it by name with `-o` your repository is left as it was.
+    # It is the verb the cover invites a stranger to run in a repository they
+    # already have, and the pilot letter's own reproduce line: found by walking
+    # that line on a fresh clone of hashicorp/terraform, where it left an
+    # untracked file behind under a letter promising read-only.
+    _ro = os.path.join(tmp, "read-only-import")
+    os.makedirs(_ro, exist_ok=True)
+    subprocess.run(["git", "init", "-q", "-b", "main", _ro], capture_output=True)
+    shutil.copy(os.path.join(DEMO, "CODEOWNERS"), os.path.join(_ro, "CODEOWNERS"))
+    os.makedirs(os.path.join(_ro, "src", "api"), exist_ok=True)
+    open(os.path.join(_ro, "src", "api", "main.go"), "w").write("x\n")
+    _before = sorted(os.listdir(_ro))
+    _plain = run("import", "codeowners", "CODEOWNERS", "--tree", ".", cwd=_ro)[1]
+    _named = run("import", "codeowners", "CODEOWNERS", "--tree", ".",
+                 "-o", "ownership.swift", cwd=_ro)[1]
+    S.append(("reading somebody's ownership leaves their repository as it was, unless asked by name",
+              # asked for no file: the same reading, and nothing on disk
+              _plain.get("wrote") is None and _plain.get("world") is None
+              and "nothing was written" in _plain.get("next", "")
+              and _plain.get("paths") == _named.get("paths")
+              and _plain.get("verdict") == _named.get("verdict")
+              # named by name, it lands where it was asked for and nowhere else
+              and _named.get("wrote") == "ownership.swift"
+              and sorted(os.listdir(_ro)) == sorted(_before + ["ownership.swift"])))
+
     # ── AND THE BADGE COUNTS THE SAME WORLD, which was the last place in this
     # file that read `world_files()` as the whole answer. `gate badge` in gate's
     # own repository printed "status: no world here" and told the reader to run

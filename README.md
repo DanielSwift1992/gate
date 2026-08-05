@@ -80,7 +80,7 @@ it describes, an API contract and a client in another language.
 
 ```sh
 git clone https://github.com/DanielSwift1992/gate && cd gate    # no install step
-./gate import codeowners CODEOWNERS --tree . --policy owners.csv   # your own ownership, judged
+./gate import codeowners CODEOWNERS --tree . --policy owners.csv -o ownership.swift   # your own ownership, judged
 ./gate drift ../api/openapi.json --client ../sdk-js   # your contract, your client
 ./gate serve                                   # the same facts as a live page
 ```
@@ -90,7 +90,9 @@ fact you already keep, in a file that cannot say whether an
 owner exists or whether a pattern still matches anything. The command
 turns it into a judged world, and you write none of it: it writes one
 small Swift file, `ownership.swift`, and no Swift toolchain is involved,
-because the judge reads it directly. `owners.csv` is two columns, and it
+because the judge reads it directly. Drop the `-o` and it writes nothing
+at all: the same reading, printed, and your repository left as it was.
+`owners.csv` is two columns, and it
 adds the one thing CODEOWNERS cannot express: which zone each owner
 keeps.
 
@@ -272,7 +274,7 @@ web/codemirror.*  the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
 docs/           DETAILS.md, SECURITY.md, CHANGELOG.md, NOTICE.md, and
                 the cover's picture with its provenance
-tests/smoke.py   the battery: 430 checks this repository holds itself
+tests/smoke.py   the battery: 431 checks this repository holds itself
                  to, end-to-end runs through judge parity through
                  documentation contracts; the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts

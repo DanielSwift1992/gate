@@ -5226,8 +5226,22 @@ def cmd_import_codeowners(a):
     # own ownership, as a judged world. What CODEOWNERS cannot say, this can:
     # an owner nobody declares is refused, and a pattern matching no file in
     # the tree is named by the line it sits on.
+    # ── AND NOTHING LANDS IN SOMEBODY'S REPOSITORY UNASKED. This defaulted to
+    # `codeowners-gate.swift` and dropped that file into the working copy of
+    # anybody who ran the verb, while the road beside it promises, in so many
+    # words, that unless you ask for it by name with `-o` your repository is
+    # left as it was. `report` and `badge` keep that promise; this one did not,
+    # and it is the verb the cover invites a stranger to run in a repository
+    # they already have. Found by walking the pilot letter's own reproduce line
+    # on a fresh clone of somebody else's repository, where it left an untracked
+    # file behind under a letter promising read-only.
+    #
+    # The file is still written, because the court reads a path: it goes to the
+    # scratch the verb sweeps, and the answer says where the world would land.
     src = a[0]
-    out_path = a[a.index("-o") + 1] if "-o" in a else "codeowners-gate.swift"
+    asked = a[a.index("-o") + 1] if "-o" in a else None
+    kept = scratch("gate-codeowners-") if asked is None else None
+    out_path = asked or os.path.join(kept, "codeowners-gate.swift")
     tree = a[a.index("--tree") + 1] if "--tree" in a else None
     policy_path = a[a.index("--policy") + 1] if "--policy" in a else None
     policy = read_owners_policy(policy_path) if policy_path else {}
@@ -5265,7 +5279,8 @@ def cmd_import_codeowners(a):
         ghosts = ghost_patterns(rules, paths, os.path.basename(src))
     return {
         "command": "import codeowners",
-        "world": out_path,
+        "world": asked,
+        "wrote": asked,
         "zones": len({codeowners_zone(r["pattern"]) for r in rules}),
         "paths": len(rules),
         "owners": len(keepers),
@@ -5298,6 +5313,10 @@ def cmd_import_codeowners(a):
                  "no ownership policy given (--policy owner,zone): every rule is its own "
                  "authority, so the equalities hold trivially. The unmatched patterns above "
                  "are read from the tree, not judged."),
+        "next": ("commit it: from here on it is what you have said, and it is judged"
+                 if asked else
+                 "nothing was written: this read your CODEOWNERS and your tree and left "
+                 "both as they were. Add `-o ownership.swift` to keep the world it printed"),
     }
 
 
