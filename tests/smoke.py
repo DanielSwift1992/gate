@@ -4861,8 +4861,27 @@ console.log(JSON.stringify({
         said = run("status", cwd=HERE)[1]
         agreed = (seen.get("verdict") == said.get("verdict"),
                   seen.get("verdict"), len(seen.get("refusals", [])), said.get("verdict"))
+        # ── AND A QUESTION MISSING A WORD IS ANSWERED, NOT DROPPED. Two routes
+        # read the query straight, so a request without `who` raised KeyError
+        # inside the handler: the connection closed with NO RESPONSE AT ALL, and
+        # a page that asked saw a network error where a sentence belonged. They
+        # answer with the same object the terminal's non-answer carries, which
+        # is what carrying the words on the exception is for.
+        _asked = {}
+        for _route in ("/check/view", "/check/view?who=X", "/diff/transfer"):
+            try:
+                _r = _u.urlopen(f"http://127.0.0.1:{_bench_port}{_route}", timeout=20)
+                _asked[_route] = (_r.status, json.loads(_r.read().decode()))
+            except Exception as _e:
+                _asked[_route] = ("dropped", str(_e))
     finally:
         _bench.terminate()
+    S.append(("a question the bench cannot answer comes back as words, not a dropped line",
+              len(_asked) == 3
+              and all(isinstance(v[1], dict) and v[1].get("error") and v[1].get("next")
+                      for v in _asked.values())
+              and "asks who" in _asked["/check/view"][1]["error"]
+              and "who moves" in _asked["/diff/transfer"][1]["error"]))
     S.append(("the bench and the command line say the same thing about this repository",
               agreed and agreed[0] and agreed[1] == "holds"))
     S.append(("the panel leaves no scratch behind an answered judgement", swept))

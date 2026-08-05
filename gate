@@ -184,6 +184,20 @@ else:
         TABLES = None
 
 
+class Cannot(SystemExit):
+    # ── AND THE WORDS TRAVEL ON THE EXCEPTION, because two surfaces say them.
+    # The terminal prints them and exits; the bench answers the request with
+    # them. Writing them to stderr inside the raiser sent them to the SERVER'S
+    # log, where the person reading the page cannot see them, and left the page
+    # with `{"error": "1"}`: the exit code, rendered as a sentence.
+    def __init__(self, note, then=None):
+        self.note, self.then = note, then
+        super().__init__(1)
+
+    def said(self):
+        return {"error": self.note, **({"next": self.then} if self.then else {})}
+
+
 def cannot(note, then=None):
     # ── THE NON-ANSWER, SAID ONE WAY. A verb that cannot answer HERE is not a
     # verb with nothing to say: it names what is missing and what to do about it,
@@ -198,13 +212,7 @@ def cannot(note, then=None):
     # `{"error": …}` object at a person, which is a machine's shape shown to
     # somebody who did not ask for one. `--json` still gets the object, since
     # that is the flag that asks for it.
-    if "--json" in sys.argv:
-        said = json.dumps({"error": note, **({"next": then} if then else {})},
-                          ensure_ascii=False)
-    else:
-        said = "gate: " + note + (f"\n  next: {then}" if then else "")
-    sys.stderr.write(said + "\n")
-    raise SystemExit(1)
+    raise Cannot(note, then)
 
 
 def world_files():
@@ -6199,11 +6207,24 @@ def cmd_serve(a):
                     # would be the one lie this thing cannot afford.
                     out = {"command": "attention", "seams": seams_here()}
                 elif u.path == "/check/view":
+                    # ── AND A QUESTION MISSING A WORD IS ANSWERED, NOT DROPPED.
+                    # These read the query straight, so a request without `who`
+                    # raised KeyError inside the handler: the connection died
+                    # with no response at all, and the page saw a network error
+                    # where a sentence belonged.
+                    if not (q.get("who") and q.get("doc")):
+                        cannot("check view asks who, and about what",
+                               "/check/view?who=Emp0042&doc=FinanceShare")
                     out = cmd_ask([q["who"], q["doc"]])
                 elif u.path == "/diff/transfer":
+                    if not (q.get("who") and q.get("to")):
+                        cannot("diff transfer asks who moves, and where to",
+                               "/diff/transfer?who=Emp0042&to=Sales")
                     out = cmd_change(["transfer", q["who"], q["to"]])
                 else:
                     self.send_response(404); self.end_headers(); return
+            except Cannot as e:
+                out = e.said()
             except SystemExit as e:
                 out = {"error": str(e)}
             body = json.dumps(out, ensure_ascii=False).encode()
@@ -7302,7 +7323,16 @@ def main():
 
 if __name__ == "__main__":
     try:
-        main()
+        try:
+            main()
+        except Cannot as _no:
+            # the terminal's half of the canon: the sentence and the step on
+            # stderr, the object for whoever asked for one, and a code either way
+            sys.stderr.write((json.dumps(_no.said(), ensure_ascii=False)
+                              if "--json" in sys.argv else
+                              "gate: " + _no.note
+                              + (f"\n  next: {_no.then}" if _no.then else "")) + "\n")
+            raise SystemExit(1)
     finally:
         # whatever a verb made to probe with does not outlive the verb. `main`
         # leaves through sys.exit, so this is the one place that always runs.
