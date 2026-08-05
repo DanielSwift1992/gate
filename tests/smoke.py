@@ -8337,9 +8337,23 @@ public enum MyWatch: AccessLedger {
               # against a sentence about one.
               and _shoot.index("exit 1") < _shoot.rindex("bench.png.from")))
 
+    # ── AND A SHORT RUN SAYS IT WAS SHORT, rather than blaming the README. The
+    # swift vein's checks run only where a toolchain stands, so on a machine
+    # without `swiftc` this battery is smaller, and the count below then went red
+    # under the name "the README counts these checks correctly": a true number on
+    # the cover, accused by a machine that had walked less of the battery. A
+    # contributor reading that edits the cover and breaks it for everybody else.
+    # The run says what it was first, and the count is asked against what it was.
+    _whole = shutil.which("swiftc") is not None
+    if not _whole:
+        print("   this run walked no swift vein: swiftc is not on this machine, so it "
+              "is short of the README's count by the vein's own checks")
+    S.append(("this run walked the whole battery, toolchains and all", _whole))
     claimed_n = re.search(r"the battery: (\d+) checks", readme)
-    S.append(("the README counts these checks correctly",
-              bool(claimed_n) and int(claimed_n.group(1)) == len(S) + 1))
+    S.append(("the README counts the whole battery, and a short run says it was short",
+              bool(claimed_n)
+              and (int(claimed_n.group(1)) == len(S) + 1 if _whole
+                   else int(claimed_n.group(1)) > len(S) + 1)))
 
     # the names have been printed as they were decided; what is left is the word
     print("ALL GREEN" if all(ok for _, ok in S) else "RED")
