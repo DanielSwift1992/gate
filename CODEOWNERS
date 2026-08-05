@@ -1,0 +1,8 @@
+# who owns what here, in the file GitHub already reads. One owner, the whole
+# tree: that is the fact, and a rule per directory would be six zones for one
+# keeper, which this tool refuses at the line rather than obeying.
+#
+# Kept honest by the tool this repository is:
+#   gate import codeowners CODEOWNERS --tree . --policy owners.csv
+#   gate findings --history --policy owners.csv
+* @DanielSwift1992
