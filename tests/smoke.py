@@ -1019,6 +1019,34 @@ public enum MergePolicy {
               and any("declares no such person" in x["claim"]
                       and x["address"].startswith("gate.policy.swift:") for x in r["refusals"])))
 
+    # ── AND A NAME OFF THE SHELF IS NOT A PERSON, IN BOTH VERBS AT ONE LINE. The
+    # ghost above is a word nobody wrote down anywhere; this one is written down,
+    # on the shelf, which is printouts of what the judge carries and says in its
+    # own listing that these are not files your world is made of. `status` read
+    # the shelf into its set and `guard merge` did not, under a comment saying the
+    # two sets were the same, so an identity naming `Anyone` (a bench atom) held
+    # in one verb and was refused by the other at gate.policy.swift:1: one world,
+    # one line, two verdicts. What this pair holds is not that each verb refuses
+    # but that they refuse the SAME line with the SAME words, which is the thing
+    # that was broken. The rank half keeps the wide set on purpose: a rank is a
+    # word of a form, and may be one the judge carries with no file here.
+    t = open(pol).read().replace(
+        "public typealias Person = Emp9999", "public typealias Person = Anyone", 1)
+    open(pol, "w").write(t)
+    c, rs = run("status", cwd=grepo)
+    c, rg = run("guard", "merge", cwd=grepo)
+    _said = lambda x: [(y["address"], y["claim"]) for y in x["refusals"]
+                       if "declares no such person" in y["claim"]]
+    S.append(("a name off the shelf is not a person, and both verbs say so at one line",
+              rs["verdict"] == rg["verdict"] == "refused"
+              and _said(rs) == _said(rg)
+              and len(_said(rs)) == 1
+              and _said(rs)[0][0].startswith("gate.policy.swift:")
+              and "`Anyone`" in _said(rs)[0][1]))
+    t = open(pol).read().replace(
+        "public typealias Person = Anyone", "public typealias Person = Emp9999", 1)
+    open(pol, "w").write(t)
+
     # guard is a team gate: a personal world must not bend it. Rebind the
     # boss's email to a Manager in MY file — the verdict must not move.
     t = open(pol).read().replace(

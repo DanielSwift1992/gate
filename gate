@@ -192,6 +192,27 @@ def world_files():
     return files
 
 
+def world_people():
+    # ── WHO THE WORLD DECLARES, ASKED IN ONE PLACE. A person is a record, so a
+    # person is declared where records are: the judged files. The shelf is not
+    # one of them, and says so in its own listing: printouts of what the judge
+    # carries, not files your world is made of.
+    #
+    # Two guards asked this and got two answers. `status` asked the judged files,
+    # the manifest's forms rows AND the whole shelf; `guard merge` asked the
+    # judged files alone, under a comment reading "the same as the policy". So an
+    # identity naming `Anyone`, a bench atom off the shelf, made `status` hold and
+    # `guard merge` refuse `gate.policy.swift:1` for naming nobody: one world, one
+    # line, two verdicts. The wide set is still right for a RANK, which is a word
+    # of a form and may well be one the judge carries with no file here; it was
+    # never right for a person.
+    names = set()
+    for p in world_files():
+        names |= set(re.findall(r"(?:public\s+)?enum\s+(\w+)\s*:",
+                                open(p, encoding="utf-8", errors="replace").read()))
+    return names
+
+
 def manifest_guards(rows=None, text=None):
     # layout guards, both directions (the playground manifest's forms):
     # a declared file exists; a neighbouring *.swift is declared (no shadows)
@@ -1615,8 +1636,14 @@ def policy_guards():
     #
     # The set is gathered without this mechanism learning any world's vocabulary:
     # it asks what is declared anywhere the world reads, never what a rank is.
-    declared = set()
-    texts = [open(p).read() for p in world_files()]
+    #
+    # ── AND THE TWO QUESTIONS ARE NOT ONE QUESTION. A rank is a word of a form,
+    # and the wide set below is right for it. A person is a RECORD, and a record
+    # lives in the judged files: `world_people()` is that narrower set, asked here
+    # and by `guard merge`, which had been asking its own.
+    people = world_people()
+    declared = set(people)
+    texts = []
     base = os.path.dirname(MANIFEST["manifest"]) if MANIFEST else "."
     for r in ((MANIFEST.get("rows") if MANIFEST else None) or []):
         if r["role"] == "forms" and os.path.exists(os.path.join(base, r["path"])):
@@ -1627,7 +1654,7 @@ def policy_guards():
         declared |= set(re.findall(r"(?:public\s+)?enum\s+(\w+)\s*:", text))
     bad = []
     for mail, who in ids.items():
-        if who not in declared:
+        if who not in people:
             f, ln = where.get(mail, (os.path.basename(pp), 1))
             bad.append({"address": f"{f}:{ln}",
                         "claim": f"an identity names `{who}`, and the world declares no such person"})
@@ -1737,10 +1764,9 @@ def cmd_guard(a):
     if not who:
         return {"command": f"guard {action}", "author": email, "policy_from": stated_in, "verdict": "refused",
                 "refusals": [{"address": os.path.basename(FACTS), "claim": f"author {email} is not mapped to any person: an unknown identity performs no guarded action"}]}
-    declared = set()
-    for p in world_files():   # the shared world alone, the same as the policy
-        declared |= set(re.findall(r"(?:public\s+)?enum\s+(\w+)\s*:", open(p).read()))
-    if who not in declared:   # a policy naming nobody is not a policy
+    # the shared world alone, and now literally the same reading `status` makes:
+    # this line had gathered its own set under a comment saying it was the same
+    if who not in world_people():   # a policy naming nobody is not a policy
         f, ln = where.get(email, (os.path.basename(FACTS), 1))
         return {"command": f"guard {action}", "author": f"{email} = {who}", "policy_from": stated_in,
                 "verdict": "refused",
