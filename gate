@@ -2521,14 +2521,29 @@ def cmd_survey(a):
     ][:10]
     subjects = subprocess.run(["git", "log", f"-{n}", "--format=%s %b"], capture_output=True, text=True).stdout
     keys = collections.Counter(re.findall(r"\b[A-Z][A-Z0-9]+-\d+\b", subjects))
+    # ── AND A WORLD OF FORMS IS STILL A WORLD, HERE TOO. This asked FACTS, the
+    # plain court's one file, so a repository whose world is a manifest and a
+    # shelf of forms was told "no world yet: coverage 0%" while `gate status` in
+    # the same folder answered "holds · 186 equalities". That repository is this
+    # one. `status` learnt the lesson and wrote it down; this verb was never
+    # taught it, and the two said opposite things about one tree.
+    #
+    # The verdict is not worked out a second time here: this asks the status verb
+    # and prints what it said. A survey that judged on its own would be a second
+    # reading of the same question, which is the defect this whole tool is about.
     world = None
-    if FACTS and os.path.exists(FACTS):
-        r = judge(FACTS)
-        world = {"facts": FACTS, "verdict": r["verdict"], "refusals": len(r["refusals"])}
+    if world_files() or (MANIFEST and MANIFEST.get("rows")):
+        said = dispatch("status", [])
+        world = {"facts": FACTS if (FACTS and os.path.exists(FACTS))
+                          else os.path.basename(MANIFEST["manifest"]),
+                 "verdict": said.get("verdict"), "refusals": len(said.get("refusals", []))}
     return {
         "command": "survey",
+        # and the step is chosen by the same reading as the fabric above: this
+        # asked `world_files()` alone and told a repository whose world holds
+        # that nothing here is judged yet
         "next": ("run `gate status`: these are candidates from your history, and a world is what "
-                 "holds them" if world_files() else
+                 "holds them" if world else
                  "nothing here is judged yet: put a table into tables/ and run `gate status`"),
         "commits": len(commits),
         "unwritten_links": links,

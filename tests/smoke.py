@@ -430,6 +430,22 @@ def main():
                     "commit", "-qm", "world tables", "--no-verify"], capture_output=True)
     c, r = run("survey", "10", cwd=repo)
     S.append(("survey read-only", r.get("commits", 0) >= 1))
+    # ── AND THE SURVEY'S FABRIC IS WHAT STATUS SAYS, NOT A SECOND OPINION. This
+    # verb asked FACTS, the plain court's one file, so a repository whose world
+    # is a manifest and a shelf of forms was told "no world yet: coverage 0%"
+    # while `gate status` in the same folder answered "holds · 186 equalities".
+    # That repository is this one, and the tool's own README counts its checks.
+    # The pair below is against THIS tree rather than a fixture, because the
+    # shape that goes wrong is the shape only this repository has.
+    _sv = run("survey", "40", cwd=HERE)[1]
+    _st = run("status", cwd=HERE)[1]
+    S.append(("the survey's fabric is the verdict status gives, on a world of forms too",
+              _sv.get("fabric", {}).get("verdict") == _st.get("verdict") == "holds"
+              and _sv["fabric"].get("facts", "").endswith("gate.manifest.swift")
+              and _sv["fabric"].get("refusals") == len(_st.get("refusals", []))
+              # and the step it offers is chosen by the same reading: this said
+              # "nothing here is judged yet" over a world that holds
+              and "nothing here is judged yet" not in _sv.get("next", "")))
     c, r = run("check", "administer", "X", "Y", cwd=repo)
     S.append(("check administer honest error without corpus", "GATE_CORPUS" in json.dumps(r)))
 
