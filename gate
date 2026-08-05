@@ -1288,6 +1288,14 @@ def cmd_change(a):
     # The SINGLE source — the world — is edited; the diff stays a Swift git diff.
     apply_it = "--apply" in a
     a = [x for x in a if x != "--apply"]
+    # the two doors are `diff` and `apply`, and both reached `a[0]` on an argv
+    # that may be empty: bare, either one met a person with an IndexError
+    if not a:
+        return {"command": "change", "asks": True,
+                "note": "diff transfer WHO DEPT  ·  diff hire ID RANK HOME GIVEN FAMILY "
+                        "BORN SITE  ·  the same words after `apply` write the change",
+                "next": "gate diff transfer Emp0042 Sales shows what would move and what "
+                        "would stop holding, and writes nothing"}
     text = open(FACTS).read()
     if a[0] == "transfer":
         who, dept = a[1], a[2]
@@ -1322,6 +1330,16 @@ def cmd_import(a):
     # world's axes; refusal addresses translate back to the client's CSV lines.
     import csv
 
+    # two tables, and this line took them off an argv that may carry none: the
+    # bare verb answered with an IndexError. It is also the head of a family, so
+    # the sentence names the other doors rather than only its own.
+    if len(a) < 2:
+        return {"command": "import", "asks": True,
+                "note": "import people.csv grants.csv [-o gate.swift]  ·  "
+                        "import codeowners CODEOWNERS --tree . [--policy owners.csv]  ·  "
+                        "import rbac rbac.json  ·  import refs FILE",
+                "next": "gate import codeowners CODEOWNERS --tree . reads ownership you "
+                        "already keep, and writes one small file you commit"}
     people_csv, grants_csv = a[0], a[1]
     out_path = a[a.index("-o") + 1] if "-o" in a else "gate.swift"
     lines = []  # (text, source|None)
@@ -1801,6 +1819,16 @@ def cmd_library(a):
     # forms (entry heads + gates), axes, seed coverage. Forms carry no facts:
     # a library is shareable, client data never is (SAT5: a domain has one
     # canonical vocabulary; two worlds are subsets of it).
+    # a vocabulary is read out of a world, and this verb read FACTS without
+    # asking whether there is one: in a repository with no world it opened None
+    # and raised. It is the verb `check` sends people to for the names they may
+    # use, so a stranger following that sentence met a stack trace.
+    if not a and not (FACTS and os.path.exists(FACTS)):
+        return {"command": "library", "asks": True,
+                "note": "library reads the vocabulary a world is written in, and there "
+                        "is no world here",
+                "next": "run `gate init .` to start one, or `gate demo` for a repository "
+                        "to look at. `gate library diff a.json b.json` needs no world"}
     if a and a[0] == "diff":
         la, lb = json.load(open(a[1])), json.load(open(a[2]))
         A, B = set(la["forms"]), set(lb["forms"])
@@ -5627,6 +5655,15 @@ def cmd_report(a):
     # repository is left as it was". Found by holding the reference's own
     # `Asked` class to that sentence: five verbs kept it and this one did not.
     out_path = a[a.index("-o") + 1] if "-o" in a else None
+    # a page is printed OUT OF a world, and this read FACTS without asking
+    # whether there is one: in a repository with none it opened None and raised
+    if not (FACTS and os.path.exists(FACTS)):
+        return {"command": "report", "asks": True,
+                "note": "report prints the world and its verdict as one page, and there "
+                        "is no world here",
+                "next": "run `gate init .` to start one, or `gate demo` for a repository "
+                        "to look at. `report -o audit.html` writes the page; without `-o` "
+                        "nothing is written"}
     text = open(FACTS).read()
     people, grants = world_rows(text)
     r = judge(FACTS)
@@ -6391,6 +6428,19 @@ usage (the git-shaped porcelain):
 def dispatch(cmd, rest):
     if cmd in ("check", "ask", "diff", "apply", "change", "status", "fsck", "report"):
         ensure_world()
+    # ── AND A VERB ASKED FOR NOTHING SAYS WHAT IT WANTS. `rest[0]` below read the
+    # first argument of an argv that may have none, so `gate check`, which is the
+    # verb the cover's own table sells, answered a person with an IndexError and
+    # a stack trace. Found by walking every read-only verb through seven public
+    # repositories: `check` and `import` did this in all seven, and in a world
+    # that holds, because it was never about the repository at all. Typing a verb
+    # bare is how anybody learns what it takes.
+    if cmd in ("check", "ask") and not rest:
+        return {"command": "check", "asks": True,
+                "note": "check view WHO WHAT  ·  check administer WHO WHERE  ·  "
+                        "check delete WHO WHAT",
+                "next": "gate check view Emp0042 FinanceShare, with names your world "
+                        "declares (`gate library` lists that vocabulary)"}
     if cmd in ("check", "ask") and rest[0] == "view":
         return cmd_ask(rest[1:])
     if cmd in ("check", "ask") and rest[0] in ("administer", "delete"):

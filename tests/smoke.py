@@ -6369,6 +6369,44 @@ public enum MyWatch: AccessLedger {
               # the row order a time at all
               and all(a["when"] <= b["when"] for a, b in zip(_rows, _rows[1:]))))
 
+    # ── AND EVERY VERB, ASKED FOR NOTHING, ANSWERS WITH A SENTENCE. Typing a
+    # verb bare is how anybody learns what it takes, and three of them answered
+    # with a python stack trace instead: `check`, which the cover's own table
+    # sells, and `import`, the head of the family the cover's second command
+    # belongs to, both read `a[0]` off an argv with no arguments; `library`, the
+    # verb `check` sends people to for the names they may use, opened a world
+    # that was not there. Found by walking every read-only verb through the seven
+    # public repositories the pilot short-list was cut from: all three did it in
+    # all seven, and in a world that holds, because it was never about the
+    # repository. The walk is the whole usage rather than those three, so the
+    # next verb to grow an argument is held to the same promise.
+    #
+    # `serve` is out because it does not return, and that is the only one.
+    _bare = re.search(r'USAGE = ("""|")(.*?)\1', open(GATE, encoding="utf-8").read(), re.S).group(2)
+    _all = []
+    for _l in _bare.split("\n"):
+        _m = re.match(r"\s{2}gate (\w+)", _l)
+        if _m and _m.group(1) not in _all:
+            _all.append(_m.group(1))
+    _stacks = []
+    for _where, _cwd in (("no world", os.path.join(tmp, "bare-nothing")),
+                         ("a world that holds", os.path.join(tmp, "bare-world"))):
+        os.makedirs(_cwd, exist_ok=True)
+        subprocess.run(["git", "init", "-q", "-b", "main", _cwd], capture_output=True)
+        if _where != "no world":
+            run("demo", "org", _cwd)
+        for _v in _all:
+            if _v == "serve":
+                continue
+            _p = subprocess.run([sys.executable, GATE, _v], cwd=_cwd,
+                                capture_output=True, text=True, timeout=120)
+            if "Traceback" in _p.stdout + _p.stderr:
+                _stacks.append(f"{_v} ({_where})")
+    if _stacks:
+        print("   verbs meeting a person with a stack trace:", _stacks)
+    S.append(("a verb asked for nothing answers with a sentence, in a world and without one",
+              _stacks == [] and len(_all) == 25))
+
     # ── AND A FALL SAYS WHAT IT IS, WHERE ONE IS VISIBLE. A curve that drops
     # reads like a thing that was fixed and stays fixed, and with no court in the
     # repository it is somebody who compared the two records by hand: a
