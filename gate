@@ -6189,8 +6189,19 @@ def cmd_serve(a):
                     out = dispatch("status", [])
                     # the ladder, read from this room: whoever is asking is
                     # looking at the bench, so the rung that opens the bench is
-                    # a rung already taken
-                    out["next"] = next_rung(bool(out.get("refusals")), serving=True)
+                    # a rung already taken.
+                    #
+                    # ── AND NOT WHERE THERE IS NO WORLD TO CLIMB FROM. This line
+                    # ran unconditionally and threw away the step status had
+                    # chosen for a repository that has none: in a clone of
+                    # hashicorp/terraform the terminal said "run `gate log` to
+                    # read this repository's own history" and this page said
+                    # "run `gate init .` to wire the hook", a hook over nothing,
+                    # about the same tree in the same second. `next_rung` is the
+                    # ladder for a world; the no-world answer carries its own
+                    # step and its own second step, and neither names this room.
+                    if out.get("verdict") != "no world here":
+                        out["next"] = next_rung(bool(out.get("refusals")), serving=True)
                     # the bench asks the same question the terminal does, so it
                     # gets the same ready command back rather than re-deriving it
                     ready = command_in(out)

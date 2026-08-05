@@ -4867,6 +4867,36 @@ console.log(JSON.stringify({
         # a page that asked saw a network error where a sentence belonged. They
         # answer with the same object the terminal's non-answer carries, which
         # is what carrying the words on the exception is for.
+        # ── AND THE TWO SURFACES AGREE ABOUT A REPOSITORY WITH NO WORLD TOO.
+        # The bench re-derived the step after asking the status verb, and threw
+        # away the one status had chosen for a world-less tree: in a clone of
+        # hashicorp/terraform the terminal said "run `gate log` to read this
+        # repository's own history" and the page said "run `gate init .` to wire
+        # the hook", a hook over nothing, about one tree in one second. The pair
+        # is held in the fixture rather than here, because this repository has a
+        # world and cannot show the case.
+        _nw = os.path.join(tmp, "bench-no-world")
+        os.makedirs(_nw, exist_ok=True)
+        subprocess.run(["git", "init", "-q", "-b", "main", _nw], capture_output=True)
+        open(os.path.join(_nw, "readme.md"), "w").write("x\n")
+        subprocess.run(["git", "add", "-A"], cwd=_nw, capture_output=True)
+        subprocess.run(["git", "-c", "commit.gpgsign=false", "-c", "user.email=a@b",
+                        "-c", "user.name=A", "commit", "-qm", "a repository"],
+                       cwd=_nw, capture_output=True)
+        _nwp = _bench_port + 3
+        _nwb = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_nwp)],
+                                cwd=_nw, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        try:
+            wait_serve(_nwp, "/status")
+            _page = json.loads(_u.urlopen(f"http://127.0.0.1:{_nwp}/status",
+                                          timeout=20).read().decode())
+        finally:
+            _nwb.terminate()
+        _term = run("status", cwd=_nw)[1]
+        S.append(("the bench and the command line agree about a repository with no world",
+                  _page.get("verdict") == _term.get("verdict") == "no world here"
+                  and _page.get("next") == _term.get("next")
+                  and "gate log" in _page.get("next", "")))
         _asked = {}
         for _route in ("/check/view", "/check/view?who=X", "/diff/transfer"):
             try:
