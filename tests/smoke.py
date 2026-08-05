@@ -6003,11 +6003,21 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         # going red rather than by reading.)
         _usage = re.search(r'USAGE = ("""|")(.*?)\1',
                            open(GATE, encoding="utf-8").read(), re.S).group(2)
+        # ── AND A LINE MAY OFFER MORE THAN ONE VERB. This read the first `gate
+        # X` on a line and stopped, and the usage's very first line is `gate init
+        # [dir]  · gate status | fsck`: the tool's most used verb, the one on the
+        # cover five times, in CI and in the hook, was invisible to the list that
+        # says what the tool offers. The ratchet counted a denominator short by
+        # it, and the walk below never asked it anything. `fsck` is not counted:
+        # the usage spells it after a pipe, as the other name for status.
         _verbs = []
         for _l in _usage.split("\n"):
-            _m = re.match(r"\s{2}gate (\w+)", _l)
-            if _m and _m.group(1) not in _verbs:
-                _verbs.append(_m.group(1))
+            if not re.match(r"\s{2}gate ", _l):
+                continue
+            for _part in _l.split("·"):
+                _m = re.search(r"\bgate (\w+)", _part)
+                if _m and _m.group(1) not in _verbs:
+                    _verbs.append(_m.group(1))
         _verbs = set(_verbs)
         # ── AND THE SECOND VEIN, CHOSEN BY WHAT IT COSTS TO CARRY. A verb's body
         # is not its price: `library` is 32 lines and reaches verify and import,
@@ -6126,10 +6136,10 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                   and "declares its own send_at as count".encode() in _sm["py"][4].stdout
                   and _sm["py"][5].returncode == 0
                   and _sm["py"][5].stdout.startswith(b"usage: seam CONTRACT.swift")))
-        S.append(("the ledger names verbs the usage offers, 3 of 25 carried",
+        S.append(("the ledger names verbs the usage offers, 3 of 26 carried",
                   set(_ledger) <= _verbs
                   and len(_ledger) == 3
-                  and len(_verbs) == 25
+                  and len(_verbs) == 26
                   # and a name on the ledger is a whole verb: a prefix claims
                   # everything under it, so half a verb would take argv nobody
                   # answers, which is why the unit of the move is the verb
@@ -6568,11 +6578,17 @@ public enum MyWatch: AccessLedger {
     #
     # `serve` is out because it does not return, and that is the only one.
     _bare = re.search(r'USAGE = ("""|")(.*?)\1', open(GATE, encoding="utf-8").read(), re.S).group(2)
+    # a line may offer more than one verb, and the first one offers `status`
+    # after a `·`: read that way, this walk had never asked the tool's most
+    # used verb anything at all
     _all = []
     for _l in _bare.split("\n"):
-        _m = re.match(r"\s{2}gate (\w+)", _l)
-        if _m and _m.group(1) not in _all:
-            _all.append(_m.group(1))
+        if not re.match(r"\s{2}gate ", _l):
+            continue
+        for _part in _l.split("·"):
+            _m = re.search(r"\bgate (\w+)", _part)
+            if _m and _m.group(1) not in _all:
+                _all.append(_m.group(1))
     # ── AND EACH VERB MEETS A PRISTINE REPOSITORY, which is what a stranger has.
     # Walking them all in one folder was a dirty probe: `init` and `demo` come
     # before `badge` in the usage, so by the time `badge` ran the folder called
@@ -6620,7 +6636,7 @@ public enum MyWatch: AccessLedger {
     if _shapes:
         print("   verbs answering outside the canon:", _shapes[:4])
     S.append(("a verb asked for nothing answers with a sentence, in a world and without one",
-              _stacks == [] and len(_all) == 25))
+              _stacks == [] and len(_all) == 26))
     # and a non-answer is a machine's object only for whoever asked for one
     _nj = subprocess.run([sys.executable, GATE, "my", "--json"],
                          cwd=os.path.join(tmp, "bare-no-my"),
