@@ -467,6 +467,25 @@ def main():
               and _named.get("wrote") == "ownership.swift"
               and sorted(os.listdir(_ro)) == sorted(_before + ["ownership.swift"])))
 
+    # ── AND THE ADDRESS NAMES THE FILE THAT MAKES THE CLAIM. The ghost's address
+    # was built from the BASENAME, so a repository keeping its rules at
+    # `.github/CODEOWNERS` was handed `CODEOWNERS:7`, an address with no file
+    # behind it: this project's refusals are the shape editors already parse, and
+    # that one opens nothing. Six of the fifteen public repositories read for the
+    # pilot keep the file there, and the pilot letter was about to quote such a
+    # line at people who would click it.
+    os.makedirs(os.path.join(_ro, ".github"), exist_ok=True)
+    shutil.move(os.path.join(_ro, "CODEOWNERS"), os.path.join(_ro, ".github", "CODEOWNERS"))
+    _under = run("import", "codeowners", ".github/CODEOWNERS", "--tree", ".", cwd=_ro)[1]
+    _ghosts = [r for r in (_under.get("refusals") or []) if "matches nothing" in r["claim"]]
+    S.append(("a rule that matches nothing is addressed at the file that carries it",
+              _ghosts
+              and all(r["address"].startswith(".github/CODEOWNERS:") for r in _ghosts)
+              # and the address opens: a path in the very tree that was walked
+              and os.path.exists(os.path.join(_ro, _ghosts[0]["address"].split(":")[0]))))
+    shutil.move(os.path.join(_ro, ".github", "CODEOWNERS"), os.path.join(_ro, "CODEOWNERS"))
+    os.rmdir(os.path.join(_ro, ".github"))
+
     # ── AND THE BADGE COUNTS THE SAME WORLD, which was the last place in this
     # file that read `world_files()` as the whole answer. `gate badge` in gate's
     # own repository printed "status: no world here" and told the reader to run
@@ -829,7 +848,12 @@ def main():
               # said once: the tool holds no second copy of the law's words
               and tool_src.count("an owner and the path they own must share one zone") == 0))
     S.append(("codeowners: a pattern the tree has no file for is named",
-              len(ghosts) == 1 and ghosts[0]["address"].startswith("CODEOWNERS:")))
+              # and the address is a path that opens. Here the rules file sits
+              # outside the walked tree, so it is addressed as the caller gave
+              # it; the pair below walks the ordinary case, a file inside it
+              len(ghosts) == 1
+              and re.search(r"CODEOWNERS:\d+$", ghosts[0]["address"])
+              and os.path.exists(ghosts[0]["address"].rsplit(":", 1)[0])))
     # and the refusal is about the disagreement, not a constant: state that
     # alice keeps src, and the very same CODEOWNERS holds
     alt = os.path.join(tmp, "owners-alt.csv")

@@ -5276,7 +5276,17 @@ def cmd_import_codeowners(a):
             dirs[:] = [d for d in dirs if d != ".git"]
             for f in files:
                 paths.append(os.path.relpath(os.path.join(root, f), tree))
-        ghosts = ghost_patterns(rules, paths, os.path.basename(src))
+        # ── AND THE ADDRESS NAMES THE FILE THAT MAKES THE CLAIM. This passed the
+        # BASENAME, so a repository keeping its rules at `.github/CODEOWNERS`
+        # (six of the fifteen public ones read for the pilot) was handed
+        # `CODEOWNERS:7`, an address with no file behind it: an editor's problem
+        # matcher opens nothing, and a person pasting it into the bench asks for
+        # a file that is not there. Inside the walked tree the address is
+        # relative to it, which is how the reader's own editor opens it; a rules
+        # file from outside that tree is addressed by the path the caller gave,
+        # because that is the one they can open.
+        rel = os.path.relpath(os.path.abspath(src), os.path.abspath(tree))
+        ghosts = ghost_patterns(rules, paths, src if rel.startswith("..") else rel)
     return {
         "command": "import codeowners",
         "world": asked,
