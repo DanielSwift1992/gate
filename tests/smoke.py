@@ -689,7 +689,7 @@ def main():
               and wide(pal) != wide(met)))
     gate_src = open(GATE).read()
     S.append(("and nothing here hands it more than one",
-              all("," not in seg and "*" not in seg for seg in
+              (lambda _segs: _segs and all("," not in s and "*" not in s for s in _segs))(
                   re.findall(r'"judge",\s*"where",\s*([^\]]+)\]', gate_src))))
 
     # ── THE PORT SPEAKS THE SAME WORDS AS THE BINARY, LINE FOR LINE. The judge is
@@ -1079,7 +1079,8 @@ public enum MyWatch: AccessLedger {{
               r["verdict"] == "refused"
               and any(x["address"].startswith("my.swift:") for x in r["refusals"])))
     S.append(("and no other file is blamed for a claim only mine makes",
-              all(x["address"].startswith("my.swift:") for x in r["refusals"])))
+              r["refusals"]
+              and all(x["address"].startswith("my.swift:") for x in r["refusals"])))
     myclaim("Emp9001", "FinanceShare")       # legal
     c, r = runme("my", cwd=jrepo)
     S.append(("personal claim holds while the shared world agrees", r["verdict"] == "holds"))
@@ -5918,7 +5919,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
              if f.startswith("judge") and f.endswith(".js")
              and f != "judge-cli.js"} | {"bin/gate-judge", "bin/gate-cli.swift"}
     S.append(("the court roster and the tree name the same carriers, and each exists",
-              _carriers == _tree
+              _carriers and _carriers == _tree
               and all(os.path.exists(os.path.join(HERE, p)) for p in _carriers)))
 
     # ── the strangler: the Swift CLI answers a carried vein with the very
@@ -6239,12 +6240,30 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
             _imp.add(_p.strip().split(" as ")[0].split(".")[0])
     for _m in re.finditer(r"^\s*from ([\w.]+) import", open(GATE).read(), re.M):
         _imp.add(_m.group(1).split(".")[0])
+    _white = {"json", "os", "re", "shutil", "subprocess", "sys",
+              "tempfile", "time", "csv", "hashlib", "itertools",
+              "collections", "fnmatch", "datetime", "webbrowser",
+              "threading", "http", "urllib"}
     S.append(("the CLI imports the standard library alone, from a named list",
-              _imp <= {"json", "os", "re", "shutil", "subprocess", "sys",
-                       "tempfile", "time", "csv", "hashlib", "itertools",
-                       "collections", "fnmatch", "datetime", "webbrowser",
-                       "threading", "http", "urllib"}
-              and {"json", "subprocess", "http"} <= _imp))
+              _imp <= _white and {"json", "subprocess", "http"} <= _imp))
+    # ── AND A NUMBER IN THE PROSE IS THE NUMBER ITS OWNER HOLDS. Two counts
+    # stated in the documents had an owner in the code and no line between them:
+    # docs/DETAILS.md says the white list above is "eighteen modules", and
+    # docs/BENCH.md says the measurement is over "15 runs", which is `RUNS` in
+    # bin/bench.py. Add a nineteenth module or change RUNS and both pages keep
+    # the old number with every check green, which is the shape of drift this
+    # tool is against, in its own documentation.
+    _words = ("nought one two three four five six seven eight nine ten eleven twelve "
+              "thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty").split()
+    _details_md = open(os.path.join(HERE, "docs", "DETAILS.md"), encoding="utf-8").read()
+    _runs = int(re.search(r"^RUNS = (\d+)", open(os.path.join(HERE, "bin", "bench.py"),
+                                                 encoding="utf-8").read(), re.M).group(1))
+    S.append(("a count stated in the documents is the count its owner holds",
+              f"{_words[len(_white)]} modules" in _details_md
+              and f"over {_runs} runs" in open(os.path.join(HERE, "docs", "BENCH.md"),
+                                               encoding="utf-8").read()
+              # and the number word is a real one, not an index off the end
+              and len(_white) < len(_words)))
     src = open(GATE, encoding="utf-8").read()
     S.append(("the bench binds to the loopback alone", 'HTTPServer(("127.0.0.1"' in src))
     S.append(("nothing served is cacheable: an updated gate is never hidden",
@@ -6416,7 +6435,8 @@ public enum MyWatch: AccessLedger {
     S.append(("findings speak about a repository that has no world at all",
               r["findings"] and r["judged"] == 0 and "observed" in kinds))
     S.append(("findings never call read what the judge did not check",
-              all(f["kind"] != "judged" for f in r["findings"])))
+              r["findings"]
+              and all(f["kind"] != "judged" for f in r["findings"])))
     # ── AND A WORLD OF FORMS IS STILL A WORLD, HERE TOO. The check above holds
     # one half of the boundary: nothing is called checked where no court sat. The
     # other half was unheld and false. Findings ask the court only when the FACTS
