@@ -1,0 +1,11 @@
+#!/bin/sh
+# the claims must hold before a commit is made (they are judged, never reprinted)
+if [ -x ./gatew ]; then exec ./gatew status; fi
+# a clone carries the tool at ./gate, which is the way the cover says to run it
+# ("no install step"), so the hook looks there before it looks for an install
+if [ -x ./gate ]; then exec ./gate status; fi
+if command -v gate >/dev/null 2>&1; then exec gate status; fi
+echo "pre-commit: gate is not on PATH and there is no ./gatew here, so nothing"
+echo "checked the claims in this repository. Put gate on PATH, run"
+echo "gate init . --vendor to carry it here, or delete .githooks/pre-commit."
+exit 1
