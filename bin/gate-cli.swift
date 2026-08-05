@@ -303,19 +303,43 @@ if args.first == "export" {
 // asks the door this binary already answers. One court call, the same count the
 // python side makes to bin/gate-judge, and the court is still the one at this
 // binary's own pin.
+// AND IT IS SPAWNED BY HAND, BECAUSE THE ONE IN THE BOX COSTS SIXTY
+// MILLISECONDS. Foundation's `Process` was measured at 71 ms a call against 10
+// for the posix_spawn below, three rounds, byte-identical output, on a court
+// that answers in 4. The verb the demo offers says "the court over the pair, in
+// ms", so a wrapper costing fifteen times the court is not a detail. This is the
+// same child either way: one binary, one pipe, stderr left to the parent, so a
+// court that cannot read its file says so where a person will see it.
 func courtSays(_ path: String) -> String {
-    let p = Process()
-    p.executableURL = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath()
-    p.arguments = ["judge", "where", path]
-    let pipe = Pipe()
-    p.standardOutput = pipe
-    // stderr is the parent's: a court that cannot read its file says so there,
-    // and a probe that swallows stderr reads as a court with nothing to say. The
-    // python side captures and drops it; on a pair that judges both are empty.
-    guard (try? p.run()) != nil else { return "" }
-    let said = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-    p.waitUntilExit()
-    return said
+    let bin = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath().path
+    var fds: [Int32] = [0, 0]
+    guard pipe(&fds) == 0 else { return "" }
+    var actions: posix_spawn_file_actions_t?
+    posix_spawn_file_actions_init(&actions)
+    posix_spawn_file_actions_adddup2(&actions, fds[1], 1)
+    posix_spawn_file_actions_addclose(&actions, fds[0])
+    let words: [String] = [bin, "judge", "where", path]
+    var argv: [UnsafeMutablePointer<CChar>?] = words.map { strdup($0) }
+    argv.append(nil)
+    var child: pid_t = 0
+    let started = posix_spawn(&child, bin, &actions, nil, &argv, environ)
+    posix_spawn_file_actions_destroy(&actions)
+    for word in argv where word != nil { free(word) }
+    close(fds[1])
+    // read to the end BEFORE waiting: a court with more to say than the pipe
+    // holds would block on the write while this waited on the exit
+    var said = Data()
+    var chunk = [UInt8](repeating: 0, count: 8192)
+    while true {
+        let got = read(fds[0], &chunk, chunk.count)
+        if got <= 0 { break }
+        said.append(contentsOf: chunk[0..<got])
+    }
+    close(fds[0])
+    guard started == 0 else { return "" }
+    var status: Int32 = 0
+    waitpid(child, &status, 0)
+    return String(data: said, encoding: .utf8) ?? ""
 }
 
 if args.first == "seam" {

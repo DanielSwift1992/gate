@@ -5893,6 +5893,18 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                 continue
             _keep.append(_l)
         open(os.path.join(_sd, "sdk-agree.swift"), "w").write("\n".join(_keep))
+        # ── AND A SIDE THAT USES ITS OWN NAME FOR A FIELD. The emitter writes
+        # `(it calls it send_at)` beside the route, and the refusal then reads
+        # "declares its own send_at as count" rather than "declares it count".
+        # Nothing in this repository exercised that branch, on either side: the
+        # demo renames nothing and no fixture did. It is one key in the carrier's
+        # own declaration, so it costs one line to say and one to judge.
+        _decl = json.load(open(os.path.join(_sd, "sdk.declared.json"), encoding="utf-8"))
+        for _c in _decl.get("carries") or []:
+            if _c["field"] == "sendAt":
+                _c["mine"] = "send_at"
+        json.dump(_decl, open(os.path.join(_sd, "sdk-renamed.json"), "w"), indent=1)
+        run("declare", "carrier", "sdk-renamed.json", "-o", "sdk-renamed.swift", cwd=_sd)
         _noclock = lambda b: re.sub(rb"[0-9]+\.[0-9]+ ms", b"MS",
                                     re.sub(rb'"judge_ms": [0-9.]+', b'"judge_ms": MS', b))
         _sm = {}
@@ -5903,6 +5915,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                                        ["seam", "api.swift", "sdk.swift", "--json"],
                                        ["seam", "api.swift", "sdk-agree.swift"],
                                        ["seam", "api.swift", "sdk-agree.swift", "--json"],
+                                       ["seam", "api.swift", "sdk-renamed.swift"],
                                        ["seam"],
                                        ["seam", "--json"])]
         S.append(("both CLIs hold a court over one pair and answer alike, the clock apart",
@@ -5916,8 +5929,10 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                   and b'"unclaimed"' in _sm["py"][1].stdout
                   and _sm["py"][2].returncode == 0
                   and _sm["py"][2].stdout.startswith("seam: holds · ".encode())
-                  and _sm["py"][4].returncode == 0
-                  and _sm["py"][4].stdout.startswith(b"usage: seam CONTRACT.swift")))
+                  # a side that renamed the field says so in the refusal
+                  and "declares its own send_at as count".encode() in _sm["py"][4].stdout
+                  and _sm["py"][5].returncode == 0
+                  and _sm["py"][5].stdout.startswith(b"usage: seam CONTRACT.swift")))
         S.append(("the ledger names verbs the usage offers, 3 of 25 carried",
                   set(_ledger) <= _verbs
                   and len(_ledger) == 3
