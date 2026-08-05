@@ -439,6 +439,27 @@ def main():
     # shape that goes wrong is the shape only this repository has.
     _sv = run("survey", "40", cwd=HERE)[1]
     _st = run("status", cwd=HERE)[1]
+    # ── AND THE BADGE COUNTS THE SAME WORLD, which was the last place in this
+    # file that read `world_files()` as the whole answer. `gate badge` in gate's
+    # own repository printed "status: no world here" and told the reader to run
+    # `gate init .`, two lines after `gate status` said "holds · 186 equalities"
+    # about the same tree: the souvenir this project offers, and this project
+    # could not print its own. The number is asked of status rather than counted
+    # again, because reading the forms pages straight through the where court
+    # answers 0 equalities where status answers 186, and two numbers for one
+    # question is the defect this tool is about.
+    _bg = run("badge", cwd=HERE)[1]
+    S.append(("the badge counts the claims status counts, on a world of forms too",
+              _bg.get("verdict") == "holds"
+              and _bg.get("claims") == run("status", cwd=HERE)[1]["forms"]["equalities"]
+              and _bg["claims"] > 0
+              # and the run of days is not invented where it cannot be replayed:
+              # with no path filter the walk took the whole repository's history
+              # and printed 15d beside a note saying the days are not counted
+              and _bg.get("unbroken_days") is None
+              and not re.search(r"\d+d$", _bg.get("text", ""))
+              and "not counted for one yet" in _bg.get("note", "")
+              and _bg.get("mutates") is False))
     S.append(("the survey's fabric is the verdict status gives, on a world of forms too",
               _sv.get("fabric", {}).get("verdict") == _st.get("verdict") == "holds"
               and _sv["fabric"].get("facts", "").endswith("gate.manifest.swift")

@@ -3529,25 +3529,54 @@ def cmd_badge(a):
     # a badge counts JUDGED claims, so it belongs to a world and to nothing else.
     # It once spoke for a seam too, over premises no one had declared — a badge
     # over an observation is a verdict wearing a number, and there was no court.
+    # ── AND A WORLD OF FORMS IS STILL A WORLD, WHICH THIS WAS THE LAST PLACE NOT
+    # TO KNOW. `world_files()` is the plain court's list and rightly holds no
+    # forms row, so `gate badge` in gate's own repository printed "no world here"
+    # and told the reader to run `gate init .`, two lines after `gate status`
+    # said "holds · 186 equalities" about the same tree. The souvenir this
+    # project offers, and this project could not print its own.
     files = world_files()
-    if not files:
+    forms = [] if files else [os.path.join(os.path.dirname(MANIFEST["manifest"]), r["path"])
+                              for r in ((MANIFEST.get("rows") if MANIFEST else None) or [])
+                              if r["role"] == "forms"
+                              and os.path.exists(os.path.join(os.path.dirname(MANIFEST["manifest"]),
+                                                              r["path"]))]
+    if not files and not forms:
         return {"command": "badge", "verdict": "no world here", "refusals": [],
                 "next": "run `gate init .` to start a world in this folder",
                 "then": "then `gate badge -o gate.svg` prints a badge nobody can forge", "mutates": False}
     t0 = time.time()
-    raw = judge_call(["judge", *files]).stdout
-    m = re.search(r"(\d+) declarations · (\d+) lookups · (\d+) premises", raw)
-    claims = int(m.group(3)) if m else 0
-    holds = "THE JUDGE holds" in raw
+    # AND THE NUMBER IS THE ONE STATUS COUNTS, asked rather than worked out
+    # again. Reading the forms files straight through the where court answers 0
+    # equalities where status answers 186: the grouping status judges them in is
+    # a reading of its own, and a badge that made its own would be a second
+    # number for one question. Premises where the plain court sits, equalities
+    # where the where court does; both are claims judged, and neither can be
+    # raised by hand.
+    said = dispatch("status", [])
+    holds = said.get("verdict") == "holds"
+    claims = ((said.get("world") or {}).get("premises")
+              if files else (said.get("forms") or {}).get("equalities")) or 0
     root = (subprocess.run(["git", "rev-parse", "--show-toplevel"],
                            capture_output=True, text=True).stdout or "").strip()
     root = os.path.realpath(root) if root else ""
+    # ── AND THE RUN OF DAYS IS COUNTED WHERE IT CAN BE COUNTED HONESTLY. The
+    # replay judges each past commit with the plain court over the world's own
+    # files, and a forms world is not judged that way: status reads its pages in
+    # a grouping of its own, and replaying them any other way would print a run
+    # of green days over a period nobody checked, which is the one thing this
+    # badge exists against. So the days are counted for a plain world, and a
+    # forms world gets the claims and the verdict with the gap named in the note
+    # rather than a number nobody stands behind.
     rels = [os.path.relpath(os.path.realpath(f), root) for f in files] if root else []
     shallow = root and (subprocess.run(["git", "-C", root, "rev-parse", "--is-shallow-repository"],
                                        capture_output=True, text=True).stdout or "").strip() == "true"
+    # `rels` empty means no path filter, so the walk below took the WHOLE
+    # repository's history and the badge printed a run of days over commits that
+    # never touched a world: 15d beside a note saying the days are not counted
     marks = ([l.split(None, 1) for l in git_lines(
         root, "log", "--format=%H %as", *(["--since=" + since] if since else []), "--", *rels)]
-        if root and not shallow else [])
+        if root and not shallow and rels else [])
     # newest first, back until one refuses: the leash is the run of commits since
     # the last time this world did not hold
     judged, broke = 0, None
@@ -3584,7 +3613,11 @@ def cmd_badge(a):
             "commits_judged": judged, "unbroken_days": days, "last_refusal": broke,
             "shallow": bool(shallow), "wrote": out_path, "text": right,
             "ms": round((time.time() - t0) * 1000, 1),
-            "note": (("this repository arrived without history, so only today is counted"
+            "note": (("this world is forms, and the run of days is not counted for one yet: "
+                      "replaying its pages any way other than the one status reads them in "
+                      "would print green days over a period nothing checked"
+                      if not files else
+                      "this repository arrived without history, so only today is counted"
                       if shallow or not marks else
                       f"{judged} commits that touched this world were judged again, oldest {marks[-1][1]}"
                       + (f", and the last that did not hold was {broke}" if broke else ", and every one held"))
