@@ -10,11 +10,20 @@ STDLIB = os.path.join(HERE, "stdlib")
 
 
 def run(*args, cwd=None):
+    # ── AND THE ANSWER MAY BE ON EITHER CHANNEL. A verb that cannot answer here
+    # says so on stderr with a code, which is this tool's canon, and this helper
+    # read stdout alone: every check that met a non-answer got the fallback
+    # below and compared it against something real. The first cross-surface
+    # walk read the page's `{"error": …}` against `{"raw": …}` and called two
+    # equal sentences a difference, which is the reader being blind rather than
+    # the two surfaces being apart.
     r = subprocess.run([sys.executable, GATE, *args, "--json"], capture_output=True, text=True, cwd=cwd)
-    try:
-        return r.returncode, json.loads(r.stdout)
-    except Exception:
-        return r.returncode, {"raw": r.stdout[:200], "stderr": r.stderr[:200]}
+    for said in (r.stdout, r.stderr):
+        try:
+            return r.returncode, json.loads(said)
+        except Exception:
+            pass
+    return r.returncode, {"raw": r.stdout[:200], "stderr": r.stderr[:200]}
 
 
 def seams_here_probe(folder):
@@ -4960,6 +4969,32 @@ console.log(JSON.stringify({
                   _page_said.get("error") and "world file" in _page_said["error"]
                   and _term_said.returncode == 1 and _term_said.stdout == ""
                   and json.loads(_term_said.stderr) == _page_said))
+        # ── AND THE TWO SURFACES ARE WALKED PAIR BY PAIR, with what may differ
+        # written down. Sweep four asked one world the same question through both
+        # and found two routes that answered nothing; sweep five asked seven
+        # public repositories and found nothing new, which is worth keeping as a
+        # check rather than as a run somebody did once. Three pairs differ on
+        # purpose and are named here, so a FOURTH difference is a red line rather
+        # than a shrug: `/version` serves the subset the page's staleness bar
+        # reads, `/attention` answers an empty account where the terminal asks
+        # for a seam, and `/shelf` is the bench's own listing of the same pages.
+        _pairs = [("/status", ("status",)), ("/log", ("log",)),
+                  ("/check/view?who=Emp9000&doc=FinanceShare",
+                   ("check", "view", "Emp9000", "FinanceShare")),
+                  ("/diff/transfer?who=Emp9000&to=Sales",
+                   ("diff", "transfer", "Emp9000", "Sales"))]
+        _clock = {"judge_ms", "wall_ms", "ms", "command_to_run", "markdown", "next"}
+        _apart = []
+        for _route, _argv in _pairs:
+            _p = json.loads((wait_serve(_bench_port, _route) or b"{}").decode())
+            _t = run(*_argv, cwd=HERE)[1]
+            for _k in sorted(set(_p) | set(_t)):
+                if _k not in _clock and _p.get(_k) != _t.get(_k):
+                    _apart.append(f"{_route}:{_k}")
+        if _apart:
+            print("   the two surfaces answer apart:", _apart[:5])
+        S.append(("the bench and the command line answer one world alike, pair by pair",
+                  _apart == [] and len(_pairs) == 4))
         _asked = {}
         for _route in ("/check/view", "/check/view?who=X", "/diff/transfer"):
             try:
