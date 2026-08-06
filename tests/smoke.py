@@ -1025,6 +1025,38 @@ def main():
               and "misread" not in json.dumps(_bare_json)
               and _bare_json.get("asks") is True))
 
+    # ── AND THE ADDRESS COMES FIRST, THE WAY THE COVER SAYS IT DOES. A refusal
+    # from the importer carried `source` alone, so the terminal fell back to the
+    # certificate, which the claim already begins with: the line a person reads
+    # every day said `Owns_2_alice · Owns_2_alice · …`, in the verb the cover
+    # sells. Worse than the stutter: "refusals are file:line · claim, the shape
+    # editors already parse" is a claim this repository makes about itself, and
+    # an editor's problem matcher matched none of these lines at all.
+    _soil = os.path.join(tmp, "hostile-codeowners")
+    os.makedirs(os.path.join(_soil, "src"), exist_ok=True)
+    subprocess.run(["git", "init", "-q", "-b", "main", _soil], capture_output=True)
+    open(os.path.join(_soil, "src", "a.py"), "w").write("x\n")
+    open(os.path.join(_soil, "CODEOWNERS"), "w").write(
+        "# a comment\n\n/src @alice\n*.py @alice\n/nowhere @alice\n")
+    open(os.path.join(_soil, "owners.csv"), "w").write("owner,zone\nalice,src\n")
+    _imp = run("import", "codeowners", "CODEOWNERS", "--policy", "owners.csv", cwd=_soil)[1]
+    _impsaid = subprocess.run(
+        [sys.executable, GATE, "import", "codeowners", "CODEOWNERS", "--policy", "owners.csv"],
+        cwd=_soil, capture_output=True, text=True).stdout
+    _rows = [l for l in _impsaid.splitlines() if l.startswith("  CODEOWNERS:")]
+    S.append(("a refusal from the importer is addressed at its line, in the shape editors parse",
+              len(_imp.get("refusals") or []) == 2
+              and all(re.fullmatch(r"CODEOWNERS:\d+", r.get("address") or "")
+                      for r in _imp["refusals"])
+              # the line a person reads begins with that address
+              and len(_rows) == 2
+              # and says the certificate once, not twice
+              and all(r.split(" · ")[1] != r.split(" · ")[2].split(":")[0]
+                      for r in _rows if r.count(" · ") >= 2)
+              and "Owns_2_alice · Owns_2_alice" not in _impsaid
+              # the rule itself still travels, beside the address rather than under it
+              and "(*.py @alice)" in _impsaid))
+
     # ── AND A PLACE THAT CANNOT HOLD A FILE IS SAID, NOT RAISED. Every verb that
     # takes `-o` or `--out` handed the path straight to `open(..., "w")`, so a
     # directory, a read-only folder, or a parent that does not exist met a person

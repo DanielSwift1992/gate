@@ -3661,7 +3661,8 @@ def cmd_import_rbac(a):
         dangling = re.match(r"(\w+)\.Place$", right)
         claim = (f"roleRef names a Role that exists nowhere ({right} undeclared)"
                  if dangling else f"the binding lives in {left}, its Role lives in {right}: a RoleBinding and its Role must share one namespace")
-        refusals.append({"certificate": cert, "source": srcmap[cert], "claim": claim})
+        refusals.append({"certificate": cert, "source": srcmap[cert],
+                         "address": str(srcmap[cert]).split(" · ")[0], "claim": claim})
     canon = "canon v2" in outp
     return {
         "command": "import rbac",
@@ -5592,7 +5593,14 @@ def cmd_import_codeowners(a):
     refusals = []
     for cert, claim in where_refused(outp):
         if cert and cert in srcmap:
+            # ── AND THE ADDRESS COMES FIRST, THE WAY EVERY OTHER VERB SAYS IT.
+            # A refusal here carried `source` alone — "CODEOWNERS:5 · *.py
+            # @alice" — and the terminal, finding no `address`, fell back to the
+            # certificate, which the claim already begins with: the line a
+            # person reads every day said `Owns_2_alice · Owns_2_alice · …`, in
+            # the verb the cover sells. The file and line are in hand here.
             refusals.append({"certificate": cert, "source": srcmap[cert],
+                             "address": str(srcmap[cert]).split(" · ")[0],
                              "claim": plainly(claim, notes)})
     # a pattern matching no file in the tree: CODEOWNERS says it, the tree does not
     ghosts = []
@@ -7376,7 +7384,12 @@ def humanize(out):
                          + (", …" if n > 3 else "") + "). The certificate court is the "
                          "binary's, and this machine has none that runs")
         for r in out.get("refusals", []):
-            src = f"  ({r['source']})" if r.get("source") else ""
+            # the source carries the address and the rule; the address is printed
+            # first, so what follows in the brackets is the rule alone
+            _rule = str(r.get("source") or "")
+            if r.get("address") and _rule.startswith(str(r["address"]) + " · "):
+                _rule = _rule[len(str(r["address"])) + 3:]
+            src = f"  ({_rule})" if _rule else ""
             # an address, or the certificate that carries one: an importer names
             # the claim, the source line names where it came from
             where = r.get("address") or r.get("certificate") or "?"
