@@ -5706,7 +5706,13 @@ def history_divergence(n=200, owners=None, policy_name=None):
     # commits and answered with fewer, so there is no older one: that fact is
     # the whole difference between "parted before this reading" and "never
     # agreed", and it costs nothing to carry out of here.
-    whole = len(log.split("\n")) < n
+    # ── AND A LINE CUT BY A CLONE IS NOT A LINE THAT ENDED. `--depth 3` gives
+    # git three commits and no older ones to give, so "asked for n, got fewer"
+    # reads as "this is the start" and the walk would say the two records have
+    # never agreed about a repository whose first commit agreed. git says which
+    # it is, so the walk asks instead of assuming.
+    whole = (len(log.split("\n")) < n
+             and git("rev-parse", "--is-shallow-repository").stdout.strip() != "true")
     rows, tmp = [], scratch("gate-history-")
     # AND THE PAIR IS LOOKED FOR AT EVERY COMMIT, not once at the tip. A file
     # moves: a CODEOWNERS written at the root and later filed under `.github` is
@@ -5763,6 +5769,17 @@ def cmd_findings(a):
     nums = [x for x in a if x.isdigit()]
     if "--history" in a:
         pol = os.path.basename(a[a.index("--policy") + 1]) if "--policy" in a else None
+        # ── AND A DIRECTORY THAT IS NOT A REPOSITORY IS TOLD SO. This verb read
+        # nought commits there and answered "0 commits carry the pair, read from
+        # git" beside no git at all: a true-sounding sentence about a thing that
+        # is not there. A repository with no commits yet is a different answer,
+        # and gets the honest nought.
+        _base = os.path.dirname(os.path.abspath(FACTS)) if FACTS else os.getcwd()
+        if subprocess.run(["git", "rev-parse", "--git-dir"], cwd=_base,
+                          capture_output=True, text=True).returncode:
+            cannot("this walks a repository's commits, and this directory is not one",
+                   "run it inside a git repository, or ask `gate findings` for what is "
+                   "true here now")
         rows, whole = history_divergence(int(nums[0]) if nums else 200, policy_name=pol)
         # ── AND WHAT A FALL IS, SAID WHERE ONE IS VISIBLE. A curve that drops
         # reads like a thing that was fixed and stays fixed, and it is not: with
@@ -5809,7 +5826,10 @@ def cmd_findings(a):
         for x, y in zip(rows, rows[1:]):
             if x["divergences"] == 0 and (y["divergences"] or 0) > 0:
                 at = y
-        parted, standing = None, rows[-1]["divergences"]
+        # (a repository with no commits, and a directory that is no repository,
+        # both walk nought rows: reading the last of them is how this verb
+        # learned to raise instead of answer)
+        parted, standing = None, rows[-1]["divergences"] if rows else None
         read = [r for r in rows if r["read"]]
         if standing and (at or (read and read[0]["divergences"])):
             from datetime import date as _d

@@ -7039,6 +7039,47 @@ public enum MyWatch: AccessLedger {
               and "have not agreed since the pair was written" in _nf["said"]
               and "parted" not in _nf["said"]))
 
+    # ── AND A LINE CUT BY A CLONE IS NOT A LINE THAT ENDED. `git clone --depth`
+    # hands over three commits and has no older ones to hand over, so "asked for
+    # n, got fewer" reads as "this is the start of the line", and the fold said
+    # the two records had never agreed about a repository whose first commit
+    # agreed. CI clones are shallow by default, which is where this sentence
+    # would have been read most often.
+    _sh = os.path.join(tmp, "shallow")
+    subprocess.run(["git", "clone", "-q", "--depth", "3", "file://" + _fold, _sh],
+                   capture_output=True)
+    _shf = run("findings", "--history", cwd=_sh)[1].get("parted")
+    S.append(("a history cut by a shallow clone is not a history that never agreed",
+              _shf and _shf["beyond"] is True and _shf["never"] is False
+              and "parted before this run's reading" in _shf["said"]
+              and "have not agreed" not in _shf["said"]
+              # while the same walk over the whole line still says never agreed
+              and run("findings", "--history", cwd=_never)[1]["parted"]["never"] is True))
+
+    # ── AND A WALK WITH NOTHING TO WALK ANSWERS. Two shapes, told apart: a
+    # directory that is no repository is refused by name, because "0 commits
+    # carry the pair, read from git" beside no git is a true-sounding sentence
+    # about a thing that is not there; a repository with no commits yet is a
+    # repository, and gets the honest nought. Both used to raise IndexError on
+    # the fold's own reading of the last row.
+    _norepo = os.path.join(tmp, "not-a-repository")
+    os.makedirs(_norepo, exist_ok=True)
+    open(os.path.join(_norepo, "CODEOWNERS"), "w").write("/x @a\n")
+    _nr = subprocess.run([sys.executable, GATE, "findings", "--history"], cwd=_norepo,
+                         capture_output=True, text=True)
+    _empty = os.path.join(tmp, "no-commits-yet")
+    os.makedirs(_empty, exist_ok=True)
+    subprocess.run(["git", "init", "-q", "-b", "main", _empty], capture_output=True)
+    open(os.path.join(_empty, "CODEOWNERS"), "w").write("/x @a\n")
+    _em = run("findings", "--history", cwd=_empty)
+    S.append(("a walk with nothing to walk says which nothing it found",
+              _nr.returncode == 1 and "not one" in _nr.stderr and "next:" in _nr.stderr
+              and "Traceback" not in _nr.stderr and not _nr.stdout.strip()
+              and run("findings", "--history", "--json", cwd=_norepo)[1].get("next")
+              # a repository with no commits is still a repository
+              and _em[0] == 0 and _em[1]["commits"] == 0
+              and _em[1]["parted"] is None))
+
     S.append(("the curve follows the pair when it moves, and says where it read it",
               # the walk did not stop at the move: one more commit than before
               _moved.get("commits") == 6
