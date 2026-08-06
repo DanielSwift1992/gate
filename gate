@@ -2220,8 +2220,14 @@ def cmd_vendor(root):
         shutil.copy(pcli, os.path.join(dst, "bin", "judge-cli.js"))
     os.makedirs(os.path.join(dst, "web"), exist_ok=True)
     os.makedirs(os.path.join(dst, "docs"), exist_ok=True)
-    for rel in ("gate", "bin/judge.js", "web/ui.html", "web/codemirror.js",
-                "web/codemirror.css", "LICENSE", "docs/NOTICE.md"):
+    # ── AND BOTH COURTS TRAVEL, OR THE CARRY IS HALF A TOOL. `bin/judge.js`
+    # went and `bin/judge-where.js` stayed, so a vendored clone on a platform
+    # the binary does not run on answered `status` with "the court was asked
+    # `judge where` and did not answer in its own canon" — the guard against a
+    # silent court doing its job over a hole this verb dug. Read by carrying
+    # gate into a fresh repository, hiding the binary, and asking.
+    for rel in ("gate", "bin/judge.js", "bin/judge-where.js", "web/ui.html",
+                "web/codemirror.js", "web/codemirror.css", "LICENSE", "docs/NOTICE.md"):
         src = os.path.join(here, rel)
         if os.path.exists(src):
             shutil.copy(src, os.path.join(dst, rel))

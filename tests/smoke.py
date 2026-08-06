@@ -1535,6 +1535,28 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "not recorded" not in subprocess.run(
                   [os.path.join(ven, "gatew"), "--version"], cwd=ven,
                   capture_output=True, text=True).stdout))
+    # ── AND BOTH COURTS TRAVEL, OR THE CARRY IS HALF A TOOL. `bin/judge.js` went
+    # and `bin/judge-where.js` stayed, over a comment saying a clone on another
+    # platform has a court only if the file that speaks for it is here. The
+    # binary hides the hole on the machine that vendored: on any platform it does
+    # not run on, which is the whole reason the ports exist, a vendored clone
+    # answered `status` with "the court was asked `judge where` and did not
+    # answer in its own canon" — the guard against a silent court doing its job
+    # over a hole this verb dug. Found by carrying gate into a fresh repository,
+    # hiding the binary, and asking, which is what a linux clone does by itself.
+    _hidden = os.path.join(ven, ".gate", "bin", "gate-judge")
+    os.rename(_hidden, _hidden + ".away")
+    _portonly = subprocess.run([os.path.join(ven, "gatew"), "status", "--json"],
+                               cwd=ven, capture_output=True, text=True)
+    _po = json.loads(_portonly.stdout or "{}")
+    os.rename(_hidden + ".away", _hidden)
+    S.append(("a vendored copy carries both courts, so a clone with no binary still judges",
+              os.path.exists(os.path.join(ven, ".gate", "bin", "judge.js"))
+              and os.path.exists(os.path.join(ven, ".gate", "bin", "judge-where.js"))
+              and os.path.exists(os.path.join(ven, ".gate", "bin", "judge-cli.js"))
+              and _po.get("verdict") == "holds"
+              and "did not answer in its own canon" not in _portonly.stdout))
+
     subprocess.run(["git", "add", "-A"], cwd=ven)
     subprocess.run(["git", "-c", "commit.gpgsign=false", "-c", "user.email=a@b", "-c",
                     "user.name=A", "commit", "-qm", "world and tool", "--no-verify"], cwd=ven)
