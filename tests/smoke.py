@@ -988,6 +988,43 @@ def main():
     S.append(("a file that is not the kind a verb reads is said, not raised",
               _raised == [] and len(_kinds) == 6))
 
+    # ── AND A VERB GIVEN HALF OF WHAT IT NEEDS DOES NOT EXIT NOUGHT. Typing a
+    # verb bare is a question: a usage line and a nought exit are the right
+    # answer. Naming some of what it takes and not the rest is a mistake, and
+    # seven verbs answered those the same way, so a Makefile step reading only
+    # the code was told a world had taken a file it never took. Two of them did
+    # not answer at all: `check view Emp0042` and `declare contract` read
+    # argv[1] of a one-word argv and met a person with a stack trace, on the
+    # verbs the cover's own table sells. `seam` is carried by the Swift vein, so
+    # the split stands on both carriers or the parity check below goes red.
+    _half = os.path.join(tmp, "half-typed")
+    os.makedirs(_half, exist_ok=True)
+    subprocess.run([sys.executable, GATE, "init", "."], cwd=_half, capture_output=True)
+    open(os.path.join(_half, "real.swift"), "w").write(
+        "public enum X: Mine { public typealias Kind = WorldFile }\n")
+    _asked = [["seam"], ["verify"], ["aside"], ["check", "view"], ["declare", "contract"],
+              ["import"], ["export"]]
+    _meant = [["seam", "real.swift"], ["verify", "real.swift"], ["aside", "Route", "Field"],
+              ["check", "view", "Emp0042"], ["theirs", "real.swift"],
+              ["mine", "real.swift", "--role", "nosuchcourt"]]
+    _halfway = []
+    for _argv, _want in ([(x, 0) for x in _asked] + [(x, 1) for x in _meant]):
+        _r = subprocess.run([sys.executable, GATE, *_argv], cwd=_half,
+                            capture_output=True, text=True, timeout=120)
+        _said = _r.stderr if _want else _r.stdout
+        if ("Traceback" in _r.stdout + _r.stderr or _r.returncode != _want
+                or not _said.startswith("gate: " if _want else "usage: ")):
+            _halfway.append(" ".join(_argv) + f" -> {_r.returncode}")
+    if _halfway:
+        print("   asked and mistyped still answer alike:", _halfway[:4])
+    # and the mark a verb leaves for that split never reaches a reader: the vein
+    # carrying `seam` prints its own JSON, and a field on one side is a red
+    _bare_json = run("seam", cwd=_half)[1]
+    S.append(("a verb given half of what it needs does not exit nought",
+              _halfway == [] and len(_asked) + len(_meant) == 13
+              and "misread" not in json.dumps(_bare_json)
+              and _bare_json.get("asks") is True))
+
     # ── AND A FILE THAT IS NOT THERE IS SAID TOO. The wrong-kind sweep above
     # walked verbs with a file that is not what they read; this walks them with
     # a path that is nothing at all, which is the commoner mistake by far: a
@@ -3296,15 +3333,18 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     # outlives what it was for. Setting aside took two files edited by hand,
     # which is friction in the wrong place — it is one sentence now, and it still
     # refuses without a reason, because that part of the cost is the point.
-    _, no_reason = run("aside", "/messages", "sendAt", cwd=ent)
+    no_reason = run("aside", "/messages", "sendAt", cwd=ent)
     _, said = run("aside", "/messages", "sendAt", "--because", "PROJ-9", "--by", "sdk-team",
                   "-o", os.path.join(ent, "aside.json"), cwd=ent)
     twice = run("aside", "/messages", "sendAt", "--because", "PROJ-10", "--by", "sdk-team",
                 "-o", os.path.join(ent, "aside.json"), cwd=ent)[1]
     written = json.load(open(os.path.join(ent, "aside.json")))
     S.append(("setting something aside costs a reason that can close, and costs nothing else",
-              # without a reason it does not happen at all
-              no_reason.get("asks") and "not optional" in no_reason.get("next", "")
+              # without a reason it does not happen at all, and naming a route and
+              # a field and no reason is a mistake rather than a question: it
+              # answered with a usage line and exit nought, which a script reads
+              # as "the divergence is now set aside"
+              no_reason[0] == 1 and "not optional" in no_reason[1].get("next", "")
               # with one, it is a single sentence and the reason is kept with the author
               and said.get("because") == "PROJ-9" and said.get("declared_by") == "sdk-team"
               # and saying it again about the same field replaces rather than piles up
@@ -3573,8 +3613,8 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     # made of. And the role is not decoration on a row: it says which court reads
     # it, so a row gate cannot place is refused at its own line rather than taken
     # quietly as a fragment of the world. That exact sweep broke a world once.
-    no_pin = run("theirs", "api.swift", cwd=two)[1]
-    bad_role = run("theirs", "api.swift", "--at", "r1", "--role", "sensor", cwd=two)[1]
+    no_pin = run("theirs", "api.swift", cwd=two)
+    bad_role = run("theirs", "api.swift", "--at", "r1", "--role", "sensor", cwd=two)
     pinned = run("theirs", "api.swift", "--at", "openapi@3f2a1c9", cwd=two)[1]
     with_pin = open(os.path.join(two, "gate.manifest.swift")).read()
     # and the same is refused when the operator wrote the row by hand
@@ -3591,11 +3631,13 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     hand_said = run("status", cwd=hand)[1]
     claims = " ".join(r.get("claim", "") for r in hand_said.get("refusals", []))
     S.append(("what is taken says at what, and a row says which court reads it",
-              # taking without a revision does not happen at all
-              no_pin.get("asks") and "taken at a revision" in no_pin.get("note", "")
-              and "--at REV" in no_pin.get("next", "")
+              # taking without a revision does not happen at all, and it refuses:
+              # a file was named, so this is a half-typed sentence rather than
+              # somebody asking what the verb takes
+              no_pin[0] == 1 and "taken at a revision" in no_pin[1].get("error", "")
+              and "--at REV" in no_pin[1].get("next", "")
               # a role no court reads is refused before it is written
-              and bad_role.get("asks") and "not a court" in bad_role.get("note", "")
+              and bad_role[0] == 1 and "not a court" in bad_role[1].get("error", "")
               # with a pin it is written down, and the line says what was taken and at what
               and pinned.get("at") == "openapi@3f2a1c9" and pinned.get("role") == "seam"
               # a revision is an atom of its own, so two rows at one revision

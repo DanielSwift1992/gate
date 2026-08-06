@@ -379,6 +379,13 @@ if args.first == "seam" {
     let note = "seam CONTRACT.swift CARRIER.swift  both sides, as each declared them"
     let nextAsked = "gate declare contract … and gate declare carrier … first"
     guard rest.count >= 2 else {
+        // ── AND ONE SIDE OF TWO IS A MISTAKE, NOT A QUESTION. `gate seam` bare
+        // is somebody learning what the verb takes and answers with a usage
+        // line and a nought exit. `gate seam api.swift` is somebody who meant a
+        // pair and named half of it, and the same nought exit tells a script
+        // the two sides agree. The python side splits these the same way; this
+        // vein carries the verb, so the split has to stand on both.
+        if !rest.isEmpty { cannot(note, nextAsked) }
         if asJson {
             out("{\n  \"command\": \"seam\",\n  \"asks\": true,\n"
                 + "  \"note\": " + jsonString(note) + ",\n"

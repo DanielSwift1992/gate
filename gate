@@ -1241,6 +1241,20 @@ def last_entry_insert(text, head, args, indent):
 
 def cmd_ask(a):
     # ask view WHO DOC — would this view entry stand? a probe entry + judgement, nothing changes
+    #
+    # ── AND ONE NAME OF TWO IS A MISTAKE, NOT A QUESTION. `gate check view`
+    # bare is somebody learning what the verb takes, and the dispatcher answers
+    # that with a usage line and a nought exit. `gate check view Emp0042` is
+    # somebody who meant something and stopped halfway, and it read argv[1] of
+    # a one-word argv: a stack trace on the verb the cover's own table sells.
+    _asked = ("gate check view Emp0042 FinanceShare, with names your world declares "
+              "(`gate library` lists that vocabulary)")
+    if not a:
+        return {"command": "check", "asks": True,
+                "note": "check view WHO WHAT  ·  a question about one entry, and nothing changes",
+                "next": _asked}
+    if len(a) < 2:
+        cannot(f"check view WHO WHAT: this names only {a[0]}", _asked)
     who, doc = a[0], a[1]
     # ── AND A QUESTION OF A WORLD FILE NEEDS ONE, said where the reading is.
     # This read FACTS unguarded, so in a world declared as a layout alone, which
@@ -1268,6 +1282,14 @@ def cmd_ask_build(kind, a):
     if not ROOT:
         cannot("check " + kind + " needs GATE_CORPUS (a checkout of the theory corpus with Team.swift)",
                "set GATE_CORPUS to that checkout, or ask `gate check view` instead, which needs none")
+    _asked = (f"gate check {kind} Emp0042 FinanceVault, with names your world declares "
+              "(`gate library` lists that vocabulary)")
+    if not a:
+        return {"command": "check", "asks": True,
+                "note": f"check {kind} WHO WHAT  ·  the compiler is the arbiter, and it takes seconds",
+                "next": _asked}
+    if len(a) < 2:
+        cannot(f"check {kind} WHO WHAT: this names only {a[0]}", _asked)
     who, doc = a[0], a[1]
     team = os.path.join(ROOT, "Sources", "Organization", "System", "Team.swift")
     text = open(team).read()
@@ -1610,6 +1632,7 @@ def cmd_verify(a):
     # somebody is already unsure what they typed.
     if len(a) < 2 or a[0].startswith("-") or a[1].startswith("-"):
         return {"command": "verify", "asks": True,
+                "misread": bool([x for x in a if not x.startswith("-")]),
                 "note": "verify reads two catalogue files and judges their seeds",
                 "next": "gate verify people.csv grants.csv [--against CMD]: the two tables, "
                         "and the checker you have today if you want the two answers compared "
@@ -4303,7 +4326,7 @@ def cmd_side(a, kind):
                 "bring the file here first. gate never fetches: a file of theirs "
                 "arrives by a checkout, a copy, a vendor step you already trust"))
     if role not in ROLES:
-        return {"command": word, "asks": True,
+        return {"command": word, "asks": True, "misread": True,
                 "note": f"`{role}` is not a court anything here reads",
                 "next": "a row says what it is for: "
                         + " · ".join(f"`{k}` — {v}" for k, v in ROLES.items())}
@@ -4318,7 +4341,7 @@ def cmd_side(a, kind):
         # exactly why no version solver exists here — the problem is not solved,
         # it cannot be stated. A revision nobody wrote down gives that away for
         # free, so taking without one is not a thing that happens.
-        return {"command": word, "asks": True,
+        return {"command": word, "asks": True, "misread": True,
                 "note": "what is taken is taken at a revision, and this one says none",
                 "next": f"gate theirs {os.path.basename(path)} --at REV — a commit, a tag, a "
                         "release: whatever the source calls the thing you actually took"}
@@ -4394,6 +4417,12 @@ def cmd_declare(a):
     import json as _json
     what = a[0] if a else ""
     out_path = a[a.index("-o") + 1] if "-o" in a else None
+    if what in ("contract", "carrier") and len(a) < 2:
+        # the word without its document is somebody asking what the act takes
+        return {"command": "declare", "asks": True,
+                "note": "declare contract SPEC [-o F]  ·  declare carrier DECL.json [-o F]",
+                "next": "the spec is a JSON OpenAPI document, and the carrier declaration is "
+                        "what your build emits. After this it is what you have SAID, and judged"}
     if what == "contract":
         src = a[1]
         mine_too = "--theirs" in a or "--mine" in a
@@ -4710,7 +4739,7 @@ def cmd_aside(a):
     # takes the two hand-edits it used to take and makes them one sentence.
     import json as _json
     if len(a) < 2 or "--because" not in a:
-        return {"command": "aside", "asks": True,
+        return {"command": "aside", "asks": True, "misread": bool(a),
                 "note": "aside ROUTE FIELD --because KEY [--by WHO] [-o known.json]",
                 "next": ("the reason is not optional: name something that can close, such as a ticket, a "
                          "release. This stands aside only while that is open")}
@@ -4748,7 +4777,7 @@ def cmd_seam(a):
     # about somebody's code: it is about two sentences that do not agree, each
     # signed by whoever wrote it.
     if len(a) < 2:
-        return {"command": "seam", "asks": True,
+        return {"command": "seam", "asks": True, "misread": bool(a),
                 "note": "seam CONTRACT.swift CARRIER.swift  both sides, as each declared them",
                 "next": "gate declare contract … and gate declare carrier … first"}
     for _side in a[:2]:
@@ -7684,6 +7713,20 @@ def main():
         out = cmd_report(rest)
     else:
         out = dispatch(cmd, rest)
+    # ── AND A VERB GIVEN HALF OF WHAT IT NEEDS DOES NOT EXIT NOUGHT. Typing a
+    # verb bare is a question, and a usage line with a nought exit is the right
+    # answer to it. Naming some of what a verb takes and not the rest is a
+    # mistake: `gate theirs their.swift` with no revision, `gate seam one.swift`
+    # with no second side, `gate mine f.swift --role nosuchcourt`. Five verbs
+    # answered those with the same nought exit, so a script reading only the
+    # code was told a world had taken a file it never took. The verbs mark it
+    # where they read their arguments; the canon is written once, here.
+    # (popped, not read: the mark is how a verb says which of its two answers
+    # this is, and a mark that survives into `--json` is a field the Swift vein
+    # carrying the same verb does not print. Byte parity between the carriers is
+    # the battery's own check, and it caught this the run it was written)
+    if isinstance(out, dict) and out.pop("misread", False):
+        cannot(out["note"], out.get("next"))
     if isinstance(out, dict) and "command_to_run" not in out:
         ready = command_in(out)
         if ready:
