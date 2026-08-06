@@ -6972,10 +6972,48 @@ public enum MyWatch: AccessLedger {
               and _folded["parted"]["days"] > 100
               # said on the first line a reader sees, above the rows it folds
               and _fsaid.split("\n")[1].strip().startswith("parted at ")
-              and "on this line" in _fsaid
+              # and the count says what it counted, so nobody reads it as reviews
+              and "commits carrying the pair ago" in _fsaid
               # and a pair that came back has no such sentence: nothing parted
               and run("findings", "--history", "--policy", "owners.csv",
                       cwd=_dh)[1].get("parted") is None))
+
+    # ── AND A PARTING OLDER THAN THE READING IS SAID AS A BOUND. The walk reads
+    # a window; on a repository apart for years there is no rise inside it to
+    # point at, and a fold that speaks only of risings it witnessed would keep
+    # the sentence for toy histories and lose it on the ones it was written for.
+    # Six of the seven public repositories read in this phase part before the
+    # window opens. Two facts that look alike are kept apart here, because git
+    # can tell them apart: a walk that stopped at its window says it parted
+    # before this reading, and a walk that reached the start of the line says
+    # the two records have never agreed. Guessing between them would be the
+    # tool inventing a past.
+    _short = run("findings", "--history", "2", cwd=_fold)[1]["parted"]
+    _never = os.path.join(tmp, "never-agreed")
+    os.makedirs(os.path.join(_never, "src"), exist_ok=True)
+    subprocess.run(["git", "init", "-q", "-b", "main", _never], capture_output=True)
+    open(os.path.join(_never, "src", "main.py"), "w").write("x\n")
+    open(os.path.join(_never, "CODEOWNERS"), "w").write("/nowhere @alice\n")
+    for _i in (1, 2, 3):
+        open(os.path.join(_never, "notes.txt"), "a").write(f"n{_i}\n")
+        subprocess.run(["git", "add", "-A"], cwd=_never, capture_output=True)
+        subprocess.run(["git", "-c", "commit.gpgsign=false", "-c", "user.email=a@b",
+                        "-c", "user.name=A", "commit", "-qm", f"n{_i}", "--no-verify"],
+                       cwd=_never, capture_output=True,
+                       env={**os.environ, "GIT_AUTHOR_DATE": f"2026-0{_i}-01T00:00:00",
+                            "GIT_COMMITTER_DATE": f"2026-0{_i}-01T00:00:00"})
+    _nf = run("findings", "--history", cwd=_never)[1]["parted"]
+    S.append(("a parting older than the reading is a bound, and never agreed is not a parting",
+              # the window stopped short: apart throughout, and it says so
+              _short and _short["beyond"] is True and _short["never"] is False
+              and _short["at"] is None and _short["commits_since"] == 1
+              and "parted before this run's reading" in _short["said"]
+              # the same repository read whole names the commit instead
+              and run("findings", "--history", cwd=_fold)[1]["parted"]["beyond"] is False
+              # and a pair that was wrong from its first commit never parted
+              and _nf and _nf["never"] is True and _nf["standing"] == 1
+              and "have not agreed since the pair was written" in _nf["said"]
+              and "parted" not in _nf["said"]))
 
     S.append(("the curve follows the pair when it moves, and says where it read it",
               # the walk did not stop at the move: one more commit than before
