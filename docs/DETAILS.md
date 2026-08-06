@@ -106,7 +106,14 @@ time somebody compares the two records: a quarterly audit makes that
 up to ninety days. Under a judge that runs on every change, it lives
 one commit. The ratio is hundreds. And it is measured, not assumed:
 `gate findings --history` walks your own commits and draws when your
-pair diverged and when, if ever, it came back. This repository ran it
+pair diverged and when, if ever, it came back. It folds that walk into
+one line: where it parted, how long ago in days and in commits carrying
+the pair, and how many are still apart today. Where the parting is
+older than the window it read, the line says how far back it looked
+instead of guessing, and it never calls a pair that has never agreed a
+pair that parted. Every number there is git's own, and the counting is
+of commits on the first-parent line, not of merges or reviews: those
+would be claims about a forge, and this reads git. This repository ran it
 on itself and found one excursion, eight rows wide, seven commits
 long, standing beside a green battery; commit 3be3cf1 tells that
 story and carries the guard it produced.
