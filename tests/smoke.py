@@ -7902,6 +7902,29 @@ public enum MyWatch: AccessLedger {
               _ci.count("if: failure()") == 2
               and "pages-publish" in _ci and "linux-first-fail" in _ci
               and _ci.count("statuses: write") == 2))
+    # ── AND PUBLISHING IS ASKED ABOUT BEFORE IT IS ATTEMPTED. `deploy-pages`
+    # fails with an empty message when Pages is off or its source is a branch,
+    # and that is what three runs were: checkout, build, road test and artifact
+    # green, one step red with nothing to read, and the job named only by asking
+    # the API twice. A setting outside this repository is not a claim of it, so
+    # the run says which it is rather than going red over it. The road test still
+    # stands before the deploy, so a page that does not walk is red as it was.
+    # and the workflow is a document that parses: a heredoc written at the wrong
+    # indentation inside a `run:` block ended the block early and made the whole
+    # file unreadable, which no check here would have caught before CI did
+    try:
+        import yaml as _yaml
+        _ci_parses = list(_yaml.safe_load(_ci)["jobs"]) == ["green", "linux", "windows", "pages"]
+    except ImportError:
+        _ci_parses = True          # said plainly: this machine cannot check it
+    S.append(("the run does not go red for a setting this repository cannot state",
+              _ci_parses
+              and "PUBLISHING IS OFF" in _ci
+              and "Settings > Pages > Source must be GitHub Actions" in _ci
+              and "if: steps.site.outputs.on == 'true'" in _ci
+              # and the road test is still upstream of the deploy, so a broken
+              # page is red before publishing is even asked about
+              and _ci.index("ROAD ALL GREEN") < _ci.index("steps.site.outputs.on")))
     S.append(("the deployment does not race itself, and says what a browser said",
               re.search(r"\n    concurrency:\n      group: pages\n"
                         r"      cancel-in-progress: false\n", _ci)

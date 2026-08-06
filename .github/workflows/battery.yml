@@ -117,7 +117,32 @@ jobs:
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa   # v3
         with:
           path: _site
-      - id: deployment
+      # ── AND PUBLISHING IS ASKED ABOUT BEFORE IT IS ATTEMPTED. `deploy-pages`
+      # fails with an empty message when Pages is off or its source is a branch
+      # rather than this workflow, and that is what runs 123, 124 and 125 were:
+      # checkout, build, road test and artifact all green, one step red with
+      # nothing to read. A setting outside the repository is not a claim of the
+      # repository, so the run says which it is instead of going red over it.
+      - id: site
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          CODE=$(curl -s -o /tmp/pages.json -w '%{http_code}' \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/pages")
+          echo "the pages api answered $CODE"
+          if [ "$CODE" = "200" ] && grep -q '"build_type": *"workflow"' /tmp/pages.json; then
+            echo "on=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "on=false" >> "$GITHUB_OUTPUT"
+            echo "PUBLISHING IS OFF FOR THIS REPOSITORY."
+            echo "Settings > Pages > Source must be GitHub Actions."
+            echo "The page was built and walked its own road in the steps above:"
+            echo "nothing here is about this repository's claims, and the battery"
+            echo "is the other three jobs."
+          fi
+      - if: steps.site.outputs.on == 'true'
+        id: deployment
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e   # v4
       # ── AND A RED FROM THIS JOB SAYS IT IS THIS JOB. Only the linux battery
       # posted a commit status, so a failing deployment left none at all and the
@@ -129,7 +154,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          BODY=$(python3 -c 'import json;print(json.dumps({"state":"failure","context":"pages-publish","description":"the page built and walked its road; publishing it failed. The battery is the other jobs"}))')
+          BODY=$(python3 -c 'import json;print(json.dumps({"state":"failure","context":"pages-publish","description":"the page built and walked its road; publishing it failed with Pages switched on. The battery is the other jobs"}))')
           curl -s -X POST -H "Authorization: Bearer $GH_TOKEN" \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
             -d "$BODY" > /dev/null
