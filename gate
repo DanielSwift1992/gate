@@ -1574,6 +1574,14 @@ def cmd_export(a):
 
 def seeds(people, grants):
     # the seed catalogue: one violation per rule form, drawn from the data itself
+    # ── AND A TABLE WITH NO ROWS IS SAID, NOT INDEXED. `gate verify` handed two
+    # files of the wrong kind straight to this, and `people[0]` raised: the
+    # catalogue is drawn FROM the data, so with no data there is nothing to draw
+    # and that is a sentence, not a stack trace.
+    if not people or not grants:
+        cannot("the tables this reads have no rows: a seed is drawn from the data itself",
+               "point it at the two CSVs you imported, people and grants, with their "
+               "header lines")
     p0 = people[0]
     other_home = next(p["home"] for p in people if p["home"] != p0["home"])
     yield "cross-view", people, grants + [{"who": p0["id"], "doc": other_home + "Share"}]
@@ -1917,7 +1925,8 @@ def cmd_library(a):
                "run `gate init .` to start one, or `gate demo` for a repository to look "
                "at. `gate library diff a.json b.json` needs no world")
     if a and a[0] == "diff":
-        la, lb = json.load(open(a[1])), json.load(open(a[2]))
+        la = theirs_json(a[1], "a library printed by `gate library -o`")
+        lb = theirs_json(a[2], "a library printed by `gate library -o`")
         A, B = set(la["forms"]), set(lb["forms"])
         return {
             "command": "library diff",
@@ -3501,7 +3510,7 @@ def cmd_import_rbac(a):
     # with both names) / no such Role anywhere (dangling).
     src = a[0]
     out_path = a[a.index("-o") + 1] if "-o" in a else "rbac-gate.swift"
-    items = json.load(theirs_text(src)).get("items", [])
+    items = theirs_json(src, "a kubectl dump of roles and bindings").get("items", [])
     roles, cluster_roles, bindings = {}, {}, []
     namespaces = set()
     for it in items:
@@ -4390,7 +4399,7 @@ def cmd_declare(a):
                 "next": "commit it: from here on it is what you have said, and it is judged",
                 "mutates": bool(out_path)}
     if what == "carrier":
-        decl = _json.load(theirs_text(a[1]))
+        decl = theirs_json(a[1], "a carrier declaration your build emits")
         who = sanitize(decl.get("carrier") or "Carrier")
         against = decl.get("against") or {}
         lines = [CARRIER_HEADER
@@ -4570,7 +4579,8 @@ def cmd_attention(a):
     left, right = open(a[0], encoding="utf-8").read(), open(a[1], encoding="utf-8").read()
     stated, claims, carrier = seam_read(left, right)
     me = a[a.index("--as") + 1] if "--as" in a else carrier
-    known = _json.load(open(a[a.index("--known") + 1], encoding="utf-8")) if "--known" in a else {}
+    known = (theirs_json(a[a.index("--known") + 1], "the divergences you declared")
+             if "--known" in a else {})
     tracker = read_tracker(a[a.index("--tracker") + 1]) if "--tracker" in a else {}
 
     d = scratch("gate-att-")
@@ -4916,7 +4926,7 @@ def read_contract(path):
     # an OpenAPI document, read for the one thing a client must agree with: the
     # fields of a request body and the sort of thing each one is.
     import json as _json
-    return contract_fields(_json.load(theirs_text(path)))
+    return contract_fields(theirs_json(path, "an OpenAPI document"))
 
 
 def body_media(spec):
@@ -5171,8 +5181,7 @@ def read_tracker(path):
     # a tracker export, in the shape every tracker can produce: a list of
     # {key, status}. What counts as open is the tracker's word, not ours —
     # anything it does not call done or closed is still open.
-    import json as _json
-    raw = _json.load(open(path, encoding="utf-8"))
+    raw = theirs_json(path, "a tracker export: a list of {key, status}")
     items = raw.get("issues", raw) if isinstance(raw, dict) else raw
     out = {}
     for it in items:
@@ -5280,6 +5289,26 @@ def codeowners_zone(pattern):
     if not p or p.startswith("*"):
         return "Root"
     return sanitize(p.split("/")[0]) or "Root"
+
+
+def theirs_json(path, what):
+    # ── AND A FILE OF THE WRONG KIND IS SAID, NOT RAISED. Every verb here that
+    # reads somebody's JSON handed it straight to the parser, so a text file, a
+    # YAML, or a spec saved half-written met a person with a JSONDecodeError and
+    # a stack trace: six verbs did it, and `drift` alone answered in words. The
+    # law is the one this tool repeats everywhere: a verb meets a person with a
+    # sentence. The parser's own line and column travel in it, because that is
+    # the address of the thing that is wrong.
+    import json as _json
+    try:
+        return _json.load(theirs_text(path))
+    except _json.JSONDecodeError as e:
+        cannot(f"{path} is not the JSON this reads ({what}): {e.msg} at line {e.lineno}, "
+               f"column {e.colno}",
+               "point it at the document itself. For YAML, `yq -o=json '.' file.yml > file.json` "
+               "writes the JSON this reads")
+    except OSError:
+        cannot(f"no such file: {path}", f"name the {what} you mean")
 
 
 def theirs_text(path):

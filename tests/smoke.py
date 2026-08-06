@@ -945,6 +945,35 @@ def main():
               and "`/src/gone away/`" in _sp_gone["refusals"][0]["claim"]
               and _sp_gone["refusals"][0]["address"].endswith("CODEOWNERS:3")))
 
+    # ── AND A FILE OF THE WRONG KIND IS SAID, NOT RAISED. Every verb that reads
+    # somebody's JSON handed it straight to the parser, so a text file, a YAML,
+    # or a spec saved half-written met a person with a JSONDecodeError and a
+    # stack trace. Six verbs did it and `drift` alone answered in words, which is
+    # how the shape was found: walking each file-reading verb with a file that is
+    # not what it reads. `verify` is the seventh and raised differently, on
+    # `people[0]` of a table with no rows.
+    _wrong = os.path.join(tmp, "wrong-kind")
+    os.makedirs(_wrong, exist_ok=True)
+    open(os.path.join(_wrong, "wrong.txt"), "w").write("not json at all\n")
+    _kinds = [("import", "refs", "wrong.txt", "--code", "."),
+              ("import", "rbac", "wrong.txt"),
+              ("declare", "contract", "wrong.txt"),
+              ("declare", "carrier", "wrong.txt"),
+              ("library", "diff", "wrong.txt", "wrong.txt"),
+              ("verify", "wrong.txt", "wrong.txt")]
+    _raised = []
+    for _argv in _kinds:
+        _p2 = subprocess.run([sys.executable, GATE, *_argv], cwd=_wrong,
+                             capture_output=True, text=True, timeout=120)
+        if "Traceback" in _p2.stdout + _p2.stderr:
+            _raised.append(" ".join(_argv))
+        elif not (_p2.stderr.startswith("gate: ") and "next: " in _p2.stderr):
+            _raised.append(" ".join(_argv) + " (not the canon)")
+    if _raised:
+        print("   a file of the wrong kind still raises:", _raised[:4])
+    S.append(("a file that is not the kind a verb reads is said, not raised",
+              _raised == [] and len(_kinds) == 6))
+
     # ── AND A ROW IS FORGOTTEN WHERE IT WAS WRITTEN, BY THE PATH IT SAYS. The
     # forget branch looked for the manifest in the FILE'S OWN directory and asked
     # for the row by BASENAME. A declared layout is exactly a world with files in
