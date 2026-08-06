@@ -63,6 +63,21 @@ def say(*args, cwd=None):
     return r.stdout
 
 
+def ask_bench(port, path, timeout=60):
+    # ── LIVENESS IS NOT AN ANSWER, AND THE WAITER BELOW MEASURES LIVENESS. It
+    # polls with a one-second budget per try, which is right for "is it up" and
+    # wrong for "what does it say": under the node port `/status` runs both
+    # courts over this repository's shelf and takes 0.69 s here, so on a slower
+    # machine every try times out, the waiter gives up, and a caller reading its
+    # reply as the answer compares an empty object against a real one. That is
+    # what took the linux job red twice on a check green everywhere else: a
+    # margin of three tenths of a second deciding a verdict.
+    import urllib.request as _u
+    wait_serve(port)                      # up, on the cheapest route it serves
+    return json.loads(_u.urlopen(f"http://127.0.0.1:{port}{path}", timeout=timeout)
+                      .read().decode())
+
+
 def wait_serve(port, path="/files"):
     # one spelling of "the bench is up": poll until the server answers, and
     # hand back the reply for callers that read it. Eight probes each grew
@@ -4933,7 +4948,7 @@ console.log(JSON.stringify({
         _nwb = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_nwp)],
                                 cwd=_nw, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         try:
-            _page = json.loads((wait_serve(_nwp, "/status") or b"{}").decode())
+            _page = ask_bench(_nwp, "/status")
         finally:
             _nwb.terminate()
         _term = run("status", cwd=_nw)[1]
@@ -4958,8 +4973,7 @@ console.log(JSON.stringify({
         _lb = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_lp)],
                                cwd=_lay, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         try:
-            _page_said = json.loads((wait_serve(
-                _lp, "/check/view?who=Emp9000&doc=FinanceShare") or b"{}").decode())
+            _page_said = ask_bench(_lp, "/check/view?who=Emp9000&doc=FinanceShare")
         finally:
             _lb.terminate()
         _term_said = subprocess.run([sys.executable, GATE, "check", "view",
@@ -4986,7 +5000,7 @@ console.log(JSON.stringify({
         _clock = {"judge_ms", "wall_ms", "ms", "command_to_run", "markdown", "next"}
         _apart = []
         for _route, _argv in _pairs:
-            _p = json.loads((wait_serve(_bench_port, _route) or b"{}").decode())
+            _p = ask_bench(_bench_port, _route)
             _t = run(*_argv, cwd=HERE)[1]
             for _k in sorted(set(_p) | set(_t)):
                 if _k not in _clock and _p.get(_k) != _t.get(_k):
@@ -7794,7 +7808,10 @@ public enum MyWatch: AccessLedger {
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     bench = {}
     try:
-        bench = json.loads(wait_serve(_rp, "/status") or b"{}")
+        # the same trap, and not one of mine: `/status` is an answer, and the
+        # waiter budgets one second a try. Under the node port this repository's
+        # status takes most of that here and more on a shared machine.
+        bench = ask_bench(_rp, "/status")
     finally:
         _rb.terminate()
     S.append(("the terminal is told to open the bench, and the bench is not told to open itself",
