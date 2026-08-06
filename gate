@@ -1505,6 +1505,11 @@ def cmd_export(a):
                 "next": "gate export gate.swift -o people.csv grants.csv, then diff each "
                         "printed table against the original you imported"}
     world = a[0]
+    # and a world that is not there is said, not raised: the vein carrying this
+    # verb answered in words while this line raised FileNotFoundError
+    if not os.path.exists(world):
+        cannot(f"no such world: {world}",
+               "name the file your world is written in, or `gate init .` to start one")
     people_out, grants_out = a[a.index("-o") + 1], a[a.index("-o") + 2]
     text = open(world).read()
     rows = []
@@ -3035,12 +3040,22 @@ SHIPPED_PATHS = {os.path.abspath(os.path.join(
 
 def cmd_stdlib(a):
     if a and a[0] == "show":
+        # ── AND A NAME THAT WAS NOT GIVEN IS ASKED FOR, NOT INDEXED. `a[1]` on an
+        # argv of one raised, so `gate stdlib show` met a person with a stack
+        # trace; the Swift vein carrying this same verb had answered in words all
+        # along, and its own comment said the python side still raised here. A
+        # carried vein owes the python side's bytes, so the two were apart on an
+        # argv the parity walk never took.
+        if len(a) < 2:
+            cannot("stdlib show takes a module name", "`gate stdlib` lists them")
         name = a[1]
         if name not in STDLIB:
             cannot(f"no such stdlib module: {name}", "`gate stdlib` lists them")
         print(STDLIB[name])
         sys.exit(0)
     if a and a[0] == "materialize":
+        if len(a) < 2:
+            cannot("stdlib materialize takes a module name", "`gate stdlib` lists them")
         name = a[1]
         if name not in STDLIB:
             cannot(f"no such stdlib module: {name}", "`gate stdlib` lists them")
@@ -4673,6 +4688,13 @@ def cmd_seam(a):
         return {"command": "seam", "asks": True,
                 "note": "seam CONTRACT.swift CARRIER.swift  both sides, as each declared them",
                 "next": "gate declare contract … and gate declare carrier … first"}
+    for _side in a[:2]:
+        # both sides are files, and a side that is not there is a sentence: this
+        # opened them straight and raised, where the vein said which one is missing
+        if not os.path.exists(_side):
+            cannot(f"no such side: {_side}",
+                   "both sides are files: `gate declare contract SPEC -o api.swift` and "
+                   "`gate declare carrier DECL.json -o sdk.swift` write them")
     left, right = open(a[0], encoding="utf-8").read(), open(a[1], encoding="utf-8").read()
     m = re.search(r"public enum (\w+): Carrier", right)
     who = m.group(1) if m else "that library"

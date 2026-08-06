@@ -6230,6 +6230,41 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                   and "declares its own send_at as count".encode() in _sm["py"][4].stdout
                   and _sm["py"][5].returncode == 0
                   and _sm["py"][5].stdout.startswith(b"usage: seam CONTRACT.swift")))
+        # ── AND A PREFIX IS A PROMISE ABOUT EVERY ARGV UNDER IT. The parity walk
+        # above takes the shapes a person is meant to type; the ledger claims a
+        # PREFIX, so the vein owes the python side's bytes on the malformed ones
+        # too. Walked in sweep six: five shapes answered apart, and in every one
+        # the python side met a person with a stack trace where the vein had
+        # answered in words. `stdlib show` and `stdlib materialize` with no name,
+        # `stdlib show --json` (a module called `--json` on one side, a missing
+        # name on the other), `export` on a world that is not there, and `seam`
+        # on a side that is not there.
+        _shapes = [["stdlib", "show"], ["stdlib", "materialize"], ["stdlib", "show", "--json"],
+                   ["stdlib", "show", "verbs", "extra"], ["stdlib", "nosuch"],
+                   ["export", "nosuch.swift", "-o", "a.csv", "b.csv"],
+                   ["export", "gate.swift"], ["seam", "a.swift"], ["seam", "a.swift", "b.swift"]]
+        _sd2 = os.path.join(tmp, "ledger-walk")
+        os.makedirs(_sd2, exist_ok=True)
+        _apart2 = []
+        for _argv in _shapes:
+            _ran = []
+            for _tag, _env in (("py", "off"), ("sw", _cli_bin)):
+                _rd = os.path.join(_sd2, _tag)
+                os.makedirs(_rd, exist_ok=True)
+                _r2 = subprocess.run([sys.executable, GATE, *_argv], cwd=_rd,
+                                     capture_output=True,
+                                     env={**os.environ, "GATE_CLI": _env}, timeout=120)
+                _ran.append((_noclock(_r2.stdout), _noclock(_r2.stderr), _r2.returncode))
+            if _ran[0] != _ran[1]:
+                _apart2.append(" ".join(_argv))
+        if _apart2:
+            print("   the two CLIs answer apart on:", _apart2[:4])
+        S.append(("a carried prefix answers alike on the argv nobody means to type",
+                  _apart2 == [] and len(_shapes) == 9
+                  # and none of them is a stack trace on either side
+                  and not any(b"Traceback" in subprocess.run(
+                      [sys.executable, GATE, *_a], cwd=_sd2, capture_output=True,
+                      env={**os.environ, "GATE_CLI": "off"}).stderr for _a in _shapes)))
         S.append(("the ledger names verbs the usage offers, 3 of 26 carried",
                   set(_ledger) <= _verbs
                   and len(_ledger) == 3

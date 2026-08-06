@@ -117,12 +117,13 @@ if args.first == "judge" {
 
 // ── stdlib show NAME: a shelf page, printed byte for byte ──
 if args.count >= 2, args[0] == "stdlib", args[1] == "show" {
-    guard args.count >= 3 else {
+    let asked = args.filter { $0 != "--json" }
+    guard asked.count >= 3 else {
         // the naked `show` is answered in words here; the parity vector
         // walks named veins, and the python side still tracebacks on this
         cannot("stdlib show takes a module name", "`gate stdlib` lists them")
     }
-    let name = args[2]
+    let name = asked[2]
     let page = root.appendingPathComponent("stdlib").appendingPathComponent(name + ".swift")
     guard let data = FileManager.default.contents(atPath: page.path),
           let text = String(data: data, encoding: .utf8) else {
@@ -136,10 +137,11 @@ if args.count >= 2, args[0] == "stdlib", args[1] == "show" {
 // ── stdlib materialize NAME: the page put into the caller's directory, and
 // the sentence that says it is a printout ──
 if args.count >= 2, args[0] == "stdlib", args[1] == "materialize" {
-    guard args.count >= 3 else {
+    let asked = args.filter { $0 != "--json" }
+    guard asked.count >= 3 else {
         cannot("stdlib materialize takes a module name", "`gate stdlib` lists them")
     }
-    let name = args[2]
+    let name = asked[2]
     guard let page = shelf().first(where: { $0.name == name }) else {
         cannot("no such stdlib module: \(name)", "`gate stdlib` lists them")
     }
@@ -234,8 +236,8 @@ if args.first == "export" {
     let peopleOut = rest[dash + 1], grantsOut = rest[dash + 2]
     guard let data = FileManager.default.contents(atPath: world),
           let text = String(data: data, encoding: .utf8) else {
-        err("gate-cli: no such world: \(world)\n")
-        exit(1)
+        cannot("no such world: \(world)",
+               "name the file your world is written in, or `gate init .` to start one")
     }
     // the same three readings the python side makes, in the same order
     let sexPool = Dictionary(matches("public enum (\\w+): GivenNameCycle \\{.*?Sex = (\\w+)",
@@ -393,8 +395,9 @@ if args.first == "seam" {
     for p in rest.prefix(2) {
         guard let data = FileManager.default.contents(atPath: p),
               let text = String(data: data, encoding: .utf8) else {
-            err("gate-cli: no such side: \(p)\n")
-            exit(1)
+            cannot("no such side: \(p)",
+                   "both sides are files: `gate declare contract SPEC -o api.swift` and "
+                   + "`gate declare carrier DECL.json -o sdk.swift` write them")
         }
         side.append(text)
     }
