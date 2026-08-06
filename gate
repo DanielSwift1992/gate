@@ -6897,8 +6897,29 @@ def dispatch(cmd, rest):
                             "Open the bench and write a claim in my.swift: it is judged with the "
                             "shared world, stays out of it, and is kept on this machine alone. "
                             "Clear it again and it is gone."}
-        named = [(n, q) for n, q in bench_files() if os.path.exists(q)]
-        raw = judge_call(["judge", *[q for _, q in named]]).stdout
+        # ── AND A FORMS ROW GOES TO THE COURT THAT READS IT, HERE TOO. This
+        # handed every file of the world to the PLAIN court, and a forms page
+        # declares protocols, which that court refuses as outside its fragment:
+        # `gate my` read `refused 18` in a world `gate status` holds, about
+        # `forms-organization.swift:6`, with the operator's own file empty. The
+        # comment below already carries the law it broke: a court that answers
+        # about a world may not answer with less than the court beside it, and
+        # answering with MORE than the world has is the same fault mirrored.
+        _base = os.path.dirname(MANIFEST["manifest"]) if MANIFEST else None
+        _forms_rows = {os.path.abspath(os.path.join(_base, r["path"]))
+                       for r in ((MANIFEST.get("rows") if MANIFEST else None) or [])
+                       if r["role"] == "forms"} if _base else set()
+        # the layout document and the policy beside it are META, judged by their
+        # own guards and by no court: the bench opens them, and handing them to
+        # the plain court refused this world's own accounting page for declaring
+        # `public protocol Role {}`, which is what a layout is written in
+        if MANIFEST:
+            _forms_rows.add(os.path.abspath(MANIFEST["manifest"]))
+        if policy_path():
+            _forms_rows.add(os.path.abspath(policy_path()))
+        named = [(n, q) for n, q in bench_files()
+                 if os.path.exists(q) and os.path.abspath(q) not in _forms_rows]
+        raw = judge_call(["judge", *[q for _, q in named]]).stdout if named else ""
         refusals = judged_refusals(raw)
         refusals = attribute_refusals(refusals, [(n, open(q).read()) for n, q in named])
         # AND THE SAME GUARDS THE SHARED WORLD GETS. Declaring `MyBench` in a
@@ -6910,6 +6931,7 @@ def dispatch(cmd, rest):
         sources = [(n, open(q).read()) for n, q in one_stream(named)]
         refusals += duplicate_guards_over(sources)
         refusals += entry_guards_over(sources)
+        refusals += forms_guards()      # the forms half, by the court that reads it
         return {"command": "my", "personal": p, "repo_key": repo_key(),
                 "shared_repo_untouched": True,
                 "verdict": "holds" if not refusals else "refused", "refusals": refusals}

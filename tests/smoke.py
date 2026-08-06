@@ -1245,6 +1245,30 @@ public enum MyWatch: AccessLedger {{
     myclaim("Emp9001", "FinanceShare")       # legal
     c, r = runme("my", cwd=jrepo)
     S.append(("personal claim holds while the shared world agrees", r["verdict"] == "holds"))
+    # ── AND IT ANSWERS ABOUT THE SAME WORLD `status` ANSWERS ABOUT. This handed
+    # every file of the world to the PLAIN court, and a forms page declares
+    # protocols, which that court refuses as outside its fragment. In a world
+    # with a forms row, `gate my` read `refused 18` about
+    # `forms-organization.swift:6` where `gate status` held, with the operator's
+    # own file empty: eighteen refusals about pages the operator never wrote,
+    # printed by the one command that is about their own file. The layout
+    # document and the policy beside it are meta, judged by their own guards,
+    # and were being handed to that court too.
+    _mw = os.path.join(tmp, "my-and-forms")
+    os.makedirs(_mw, exist_ok=True)
+    subprocess.run(["git", "init", "-q", "-b", "main", _mw], capture_output=True)
+    run("demo", "org", _mw)                    # a world with a forms row in its list
+    _mw_me = runme("my", cwd=_mw)[1]
+    os.makedirs(os.path.dirname(_mw_me["personal"]), exist_ok=True)
+    open(_mw_me["personal"], "w").write("")    # it exists, and says nothing
+    _mw_mine = runme("my", cwd=_mw)[1]
+    _mw_shared = run("status", cwd=_mw)[1]
+    S.append(("your own world is judged by the courts the shared one is judged by",
+              _mw_shared.get("verdict") == "holds"
+              and _mw_mine.get("verdict") == _mw_shared.get("verdict")
+              # and nothing of somebody else's is named in an answer about yours
+              and not [x for x in _mw_mine.get("refusals", [])
+                       if "outside the fragment" in x.get("claim", "")]))
     t = open(os.path.join(jrepo, "gate.swift")).read().replace(
         "public enum Emp9001: Employee, Person {\n    public typealias Rank = Lead\n    public typealias Home = Finance",
         "public enum Emp9001: Employee, Person {\n    public typealias Rank = Lead\n    public typealias Home = Engineering", 1)
