@@ -1557,6 +1557,45 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and _po.get("verdict") == "holds"
               and "did not answer in its own canon" not in _portonly.stdout))
 
+    # ── AND THE FIRST REFUSAL A STRANGER CAN MEET IS SAID IN THE CANON TOO. With
+    # no binary and no node there is no court, and that raised a bare SystemExit
+    # carrying the whole sentence: no `next:` line, and `--json` answered a
+    # machine with prose. Both halves of this tool's own canon, missing from the
+    # one refusal that comes before anything else works.
+    #
+    # AND A NODE THAT DOES NOT RUN IS NOT A COURT THAT SAT. A node on the PATH
+    # that exits without a word — the wrong architecture, a broken install, a
+    # shim in a container — came back as a court that answered nothing, so
+    # `status` said "refused 3 · judged by the port under node" and named the
+    # world's own files. Every one of those refusals was about the machine.
+    _nonode = os.path.join(tmp, "no-node")
+    os.makedirs(_nonode, exist_ok=True)
+    open(os.path.join(_nonode, "node"), "w").write("#!/bin/sh\nexit 127\n")
+    os.chmod(os.path.join(_nonode, "node"), 0o755)
+    os.rename(_hidden, _hidden + ".away")
+    _bare_path = {**os.environ, "PATH": "/usr/bin:/bin", "GATE_CLI": "off"}
+    _nocourt = subprocess.run([os.path.join(ven, "gatew"), "status", "--json"], cwd=ven,
+                              capture_output=True, text=True, env=_bare_path)
+    _broken = subprocess.run([os.path.join(ven, "gatew"), "status"], cwd=ven,
+                             capture_output=True, text=True,
+                             env={**_bare_path, "PATH": _nonode + ":/usr/bin:/bin"})
+    os.rename(_hidden + ".away", _hidden)
+    try:
+        _nc = json.loads(_nocourt.stderr or "{}")
+    except Exception:
+        _nc = {}
+    S.append(("no court at all, and a court that will not start, are said in the canon",
+              _nocourt.returncode == 1 and _nc.get("error") and _nc.get("next")
+              and "no court on this machine" in _nc["error"]
+              and "install node" in _nc["next"]
+              and "Traceback" not in _nocourt.stderr
+              # and a node that exits without a word is named as the machine it is
+              and _broken.returncode == 1
+              and _broken.stderr.startswith("gate: the port under node did not run")
+              and "next:" in _broken.stderr
+              # never as a court that sat and found the world's files wanting
+              and "refused" not in _broken.stdout))
+
     subprocess.run(["git", "add", "-A"], cwd=ven)
     subprocess.run(["git", "-c", "commit.gpgsign=false", "-c", "user.email=a@b", "-c",
                     "user.name=A", "commit", "-qm", "world and tool", "--no-verify"], cwd=ven)

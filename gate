@@ -989,13 +989,17 @@ def _binary_runs(p):
 JUDGE_KIND = ("binary" if _binary_runs(JUDGE) else
               "port" if (shutil.which("node") and os.path.exists(_PORT_CLI)
                          and os.path.exists(os.path.join(_HERE, "bin", "judge.js"))) else None)
-if JUDGE_KIND is None:
-    raise SystemExit(
-        "gate: no court on this machine. The judge is built for one platform and the one "
-        "here does not run"
-        + ("" if os.path.exists(JUDGE) else " (and bin/gate-judge is missing)")
-        + ". Build it with bin/build-judge.sh, set GATE_JUDGE, or install node so the "
-          "port can serve the plain court.")
+# ── AND NO COURT IS A REFUSAL LIKE ANY OTHER. This raised a bare SystemExit
+# with the whole sentence inside it, so the one refusal a person meets before
+# anything else works had no `next:` line and answered `--json` with prose: the
+# two halves of this tool's own canon, missing where a stranger meets it first.
+NO_COURT = (("no court on this machine: the judge is built for one platform and the "
+             "one here does not run")
+            + ("" if os.path.exists(JUDGE) else ", and bin/gate-judge is missing")
+            if JUDGE_KIND is None else None)
+NO_COURT_NEXT = ("install node, which serves both courts through bin/judge.js and "
+                 "bin/judge-where.js, or build the binary with `bin/build-judge.sh` "
+                 "and point GATE_JUDGE at it")
 # the name of the court that answered, said wherever a verdict is printed: a tool
 # that quietly swapped one arbiter for another would be the second truth it exists
 # against
@@ -1005,10 +1009,26 @@ JUDGE_SAID = ("the judge" if JUDGE_KIND == "binary" else
 
 def judge_call(args, **kw):
     # ONE PLACE THAT CALLS A COURT, so no caller has to know which one exists here.
+    if NO_COURT:
+        cannot(NO_COURT, NO_COURT_NEXT)
     if JUDGE_KIND == "binary":
         return subprocess.run([JUDGE, *args], capture_output=True, text=True, **kw)
-    return subprocess.run([shutil.which("node"), _PORT_CLI, *args],
+    said = subprocess.run([shutil.which("node"), _PORT_CLI, *args],
                           capture_output=True, text=True, **kw)
+    # ── AND A NODE THAT DOES NOT RUN IS NOT A COURT THAT SAT. A node on the PATH
+    # that exits without a word of its own — the wrong architecture, a broken
+    # install, a shim in a container — came back as a court that answered
+    # nothing, so `status` printed "refused 3 · judged by the port under node"
+    # and named the world's own files. Every one of those refusals was about the
+    # machine, and a person would have gone looking at their files. The canon
+    # guard below is what caught it; this says which of the two it is.
+    if said.returncode and not said.stdout.strip():
+        cannot(f"the port under node did not run: node exited {said.returncode}"
+               + (f" saying `{said.stderr.strip().splitlines()[0][:80]}`"
+                  if said.stderr.strip() else " with nothing on either channel"),
+               "check `node --version` on this machine, or build the binary with "
+               "`bin/build-judge.sh` and point GATE_JUDGE at it")
+    return said
 
 
 def judged_refusals(out, rename=None):
