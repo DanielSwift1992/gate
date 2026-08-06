@@ -7892,6 +7892,16 @@ public enum MyWatch: AccessLedger {
     # The road test beside it swallowed the browser's stderr, the same shape
     # bin/shoot-bench.sh carried until this phase: a step that fails with no
     # reason printed is a step somebody guesses at.
+    # ── AND EVERY JOB THAT CAN GO RED SAYS SO BY NAME. Only the linux battery
+    # posted a commit status, so three failing deployments in a row left none at
+    # all: the run read as a mystery with the battery green on three platforms,
+    # and the job had to be named by asking the API. The page is built and walked
+    # before the deploy step, so a red there is about publishing and not about
+    # this repository, and the status now says which.
+    S.append(("a job that can go red posts a status naming itself",
+              _ci.count("if: failure()") == 2
+              and "pages-publish" in _ci and "linux-first-fail" in _ci
+              and _ci.count("statuses: write") == 2))
     S.append(("the deployment does not race itself, and says what a browser said",
               re.search(r"\n    concurrency:\n      group: pages\n"
                         r"      cancel-in-progress: false\n", _ci)

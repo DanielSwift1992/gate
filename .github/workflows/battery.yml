@@ -90,6 +90,7 @@ jobs:
     permissions:
       pages: write
       id-token: write
+      statuses: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -118,3 +119,17 @@ jobs:
           path: _site
       - id: deployment
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e   # v4
+      # ── AND A RED FROM THIS JOB SAYS IT IS THIS JOB. Only the linux battery
+      # posted a commit status, so a failing deployment left none at all and the
+      # run read as a mystery: three of them in a row, with the battery green on
+      # three platforms, and the job had to be named by asking the API for it.
+      # The page is built and walked before this step, so a red here is about
+      # publishing and not about the repository, and the status says which.
+      - if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          BODY=$(python3 -c 'import json;print(json.dumps({"state":"failure","context":"pages-publish","description":"the page built and walked its road; publishing it failed. The battery is the other jobs"}))')
+          curl -s -X POST -H "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -d "$BODY" > /dev/null
