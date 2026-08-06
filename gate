@@ -5801,10 +5801,14 @@ def cmd_findings(a):
         # written for. Read on seven public ones: six of the seven part before
         # the window opens. So the fold says how far back it looked, that it was
         # already apart there, and that the parting is older than its reading.
+        # (named `x, y` and not `a, b`: `a` is this verb's argv, and a loop that
+        # rebinds it leaves every flag read after this point reading a row of
+        # the table instead. `--md` was taken and dropped that way for one
+        # commit's worth of time)
         at = None
-        for a, b in zip(rows, rows[1:]):
-            if a["divergences"] == 0 and (b["divergences"] or 0) > 0:
-                at = b
+        for x, y in zip(rows, rows[1:]):
+            if x["divergences"] == 0 and (y["divergences"] or 0) > 0:
+                at = y
         parted, standing = None, rows[-1]["divergences"]
         read = [r for r in rows if r["read"]]
         if standing and (at or (read and read[0]["divergences"])):
@@ -5836,6 +5840,11 @@ def cmd_findings(a):
                          f"{len(since) - 1} commits carrying the pair ago; "
                          f"{standing} still apart today")}
         return {"command": "findings history", "history": rows, "parted": parted,
+                # ── AND `--md` MEANS HERE WHAT IT MEANS EVERYWHERE ELSE. The
+                # flag was taken and dropped on this route: accepted, and then
+                # nothing. A flag that is quietly ignored is the tool lying
+                # about itself in the cheapest possible way.
+                "markdown": history_markdown(rows, parted) if "--md" in a else None,
                 "shape": ("a fall here is somebody comparing the two records by hand. "
                           "That comparison is recorded nowhere, so nothing carries it "
                           "and the level comes back: with no court, nothing is obliged "
@@ -5857,6 +5866,30 @@ def cmd_findings(a):
             "observed": sum(1 for f in found if f["kind"] != "judged"),
             "markdown": findings_markdown(found) if "--md" in a else None,
             "mutates": False}
+
+
+def history_markdown(rows, parted):
+    # the walk as a note somebody could paste into an issue: the sentence
+    # first, and then the TURNING POINTS only. Pasting two hundred rows into a
+    # thread is the same mistake the fold exists against, so what goes in is
+    # where the count changed, with how many were read said next to it.
+    if not rows:
+        return "Nothing to report: no commit in this history carries the file this reads.\n"
+    turns = [r for i, r in enumerate(rows)
+             if i == 0 or r["divergences"] != rows[i - 1]["divergences"]]
+    lines = [f"### The pair over {len(rows)} commits", ""]
+    lines.append(parted["said"] if parted else
+                 "the two records agree at this repository's tip.")
+    lines += ["", f"| commit | date | divergences | rules |", "| --- | --- | --- | --- |"]
+    for r in turns:
+        n = "not read" if r["divergences"] is None else str(r["divergences"])
+        lines.append(f"| `{r['at']}` | {r['when']} | {n} | {r['rules']} |")
+    lines += ["", f"<sub>{len(turns)} row{'' if len(turns) == 1 else 's'} where the count "
+                  f"changed, of {len(rows)} read. "
+                  "Divergences of the pair's judged image: claims the court refuses, plus "
+                  "rules that address nothing. Read it yourself with "
+                  "`gate findings --history`.</sub>", ""]
+    return "\n".join(lines)
 
 
 def findings_markdown(found):
@@ -7423,6 +7456,9 @@ def humanize(out):
                          + "".join(f", moved to {f} at {a} {w}" for f, a, w in seen[1:]))
         if out.get("shape"):
             lines.append(f"  {out['shape']}")
+        if out.get("markdown"):
+            lines.append("")
+            lines.append(out["markdown"])
     elif cmd == "findings":
         f = out["findings"]
         if not f:

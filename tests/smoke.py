@@ -6978,6 +6978,28 @@ public enum MyWatch: AccessLedger {
               and run("findings", "--history", "--policy", "owners.csv",
                       cwd=_dh)[1].get("parted") is None))
 
+    # ── AND `--md` MEANS ON THIS ROUTE WHAT IT MEANS ON THE OTHER. The flag was
+    # accepted here and dropped: the walk's own loop rebound `a`, which is the
+    # verb's argv, so every flag read after it was reading a row of the table.
+    # Silently ignoring a flag is the cheapest lie a tool can tell about itself.
+    # What the note carries is the fold and the turning points, never the dump:
+    # pasting two hundred rows into a thread is the thing the fold exists
+    # against, and a note is exactly where somebody would paste them.
+    _md = subprocess.run([sys.executable, GATE, "findings", "--md", "--history"], cwd=_fold,
+                         capture_output=True, text=True).stdout
+    _mdj = run("findings", "--md", "--history", cwd=_fold)[1]
+    S.append(("a walk asked for a note answers with one, and the note is the fold",
+              _mdj.get("markdown")
+              and "### The pair over 6 commits" in _mdj["markdown"]
+              and _mdj["parted"]["said"] in _mdj["markdown"]
+              # the turning points, not the walk: two of the six rows
+              and _mdj["markdown"].count("| `") == 2
+              and "2 rows where the count changed, of 6 read" in _mdj["markdown"]
+              # the note reaches the terminal too, under the walk it folds
+              and _md.index("### The pair over") > _md.index("read from CODEOWNERS")
+              # and asking for no note still gets none
+              and run("findings", "--history", cwd=_fold)[1].get("markdown") is None))
+
     # ── AND A PARTING OLDER THAN THE READING IS SAID AS A BOUND. The walk reads
     # a window; on a repository apart for years there is no rise inside it to
     # point at, and a fold that speaks only of risings it witnessed would keep
