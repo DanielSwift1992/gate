@@ -6131,6 +6131,20 @@ def cmd_init(a):
                 else "git config --unset core.hooksPath")
         if prior:
             hooks_note += f". It was {prior}"
+        # ── AND A HOOK THAT WILL NOT FIND THE TOOL SAYS SO NOW, NOT AT THE FIRST
+        # COMMIT. The hook looks for `./gatew`, then `./gate`, then `gate` on
+        # PATH, and refuses the commit loudly when it finds none, which is right:
+        # a hook that cannot check must not wave a commit through. But somebody
+        # who founded a world by running a checkout — `python3 ~/src/gate/gate
+        # init .`, the way the cover itself shows a stranger — got that sentence
+        # for the first time at their next commit, about a setting this verb had
+        # just made. The three places are known here, so the answer names it.
+        if not (os.access(os.path.join(root, "gatew"), os.X_OK)
+                or os.access(os.path.join(root, "gate"), os.X_OK)
+                or shutil.which("gate")):
+            hooks_note += (". It will not find gate from here, and will refuse every commit "
+                           "until it can: run `gate init . --vendor` to carry the tool in "
+                           "this repository, or put gate on PATH")
     # ── AND THE ONE THING MISSING IS NAMED WITHOUT BEING GUESSED. The world that
     # arrives is ours; the only thing nobody has said yet is who is keeping it, and
     # this repository's own git already carries a name. So the name is OFFERED, as

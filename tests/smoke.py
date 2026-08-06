@@ -1557,6 +1557,26 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and _po.get("verdict") == "holds"
               and "did not answer in its own canon" not in _portonly.stdout))
 
+    # ── AND A HOOK THAT WILL NOT FIND THE TOOL SAYS SO AT WIRING TIME. The hook
+    # looks for ./gatew, then ./gate, then gate on PATH, and refuses the commit
+    # loudly when it finds none, which is right: a hook that cannot check must
+    # not wave a commit through. But somebody who founded a world by running a
+    # checkout — `python3 ~/src/gate/gate init .`, the way the cover shows a
+    # stranger — met that sentence for the first time at their next commit,
+    # about a setting `init` had just made and not mentioned. The three places
+    # are known at wiring time, so the answer names it there.
+    _lonely = os.path.join(tmp, "hook-with-no-tool")
+    os.makedirs(_lonely, exist_ok=True)
+    subprocess.run(["git", "init", "-q", "-b", "main", _lonely], capture_output=True)
+    _lone = run("init", ".", cwd=_lonely)[1]
+    S.append(("a hook wired where it cannot find the tool says so, and says it now",
+              "will not find gate" in (_lone.get("hooks") or "")
+              and "--vendor" in _lone["hooks"]
+              # and where the tool travels with the repository it is simply wired
+              and "will not find" not in (run("init", ven, "--vendor")[1].get("hooks") or "")
+              # the hook itself still refuses rather than waving a commit through
+              and "exit 1" in open(os.path.join(_lonely, ".githooks", "pre-commit")).read()))
+
     # ── AND THE FIRST REFUSAL A STRANGER CAN MEET IS SAID IN THE CANON TOO. With
     # no binary and no node there is no court, and that raised a bare SystemExit
     # carrying the whole sentence: no `next:` line, and `--json` answered a
