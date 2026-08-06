@@ -7008,6 +7008,8 @@ public enum MyWatch: AccessLedger {
               _short and _short["beyond"] is True and _short["never"] is False
               and _short["at"] is None and _short["commits_since"] == 1
               and "parted before this run's reading" in _short["said"]
+              # and "apart at every one of N" counts rows the court spoke on
+              and "every one of the 2 commits this run read" in _short["said"]
               # the same repository read whole names the commit instead
               and run("findings", "--history", cwd=_fold)[1]["parted"]["beyond"] is False
               # and a pair that was wrong from its first commit never parted

@@ -5822,7 +5822,12 @@ def cmd_findings(a):
                 "at": None if beyond else mark["at"], "when": mark["when"], "days": days,
                 "commits_since": len(since) - 1, "standing": standing, "beyond": beyond,
                 "never": beyond and whole,
-                "said": (f"apart at every one of the {len(since)} commits carrying the pair, "
+                # and the number in "apart at every one of N" counts rows the
+                # court actually spoke on: a commit whose reading is silent is
+                # not a commit found apart, and rolling it into the claim would
+                # be counting silence as evidence
+                "said": (f"apart at every one of the {len([r for r in since if r['read']])} "
+                         f"commits this run read, "
                          f"back to {mark['when']}, {days} days ago; " +
                          ("the two records have not agreed since the pair was written"
                           if whole else "it parted before this run's reading") +
