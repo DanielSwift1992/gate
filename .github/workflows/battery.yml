@@ -48,11 +48,19 @@ jobs:
       # the first red line travels out as a commit status, because the job
       # log is not readable without a token and a failure nobody can read
       # is a failure that gets guessed at instead of fixed
+      #
+      # AND THE DIAGNOSTIC TRAVELS WITH IT. The battery prints what a check
+      # found on the line above its name, indented, and only the names were
+      # shipped: a red that says "the two surfaces answer apart" without the
+      # fields it found apart is a name to guess at, which is the thing this
+      # step exists against. Measured the hard way: that exact check went red
+      # here twice, held on a machine that could not reproduce it, and the
+      # list of differing fields was sitting in a log nobody may read.
       - if: failure()
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SAID=$(grep -m3 '^FAIL' /tmp/smoke-out.txt | paste -sd '; ' - || true)
+          SAID=$(grep -m3 -E '^FAIL|^   ' /tmp/smoke-out.txt | paste -sd '; ' - || true)
           [ -n "$SAID" ] || SAID=$(tail -1 /tmp/smoke-out.txt)
           BODY=$(python3 -c 'import json,sys; print(json.dumps({"state":"failure","context":"linux-first-fail","description":sys.argv[1][:138]}))' "$SAID")
           curl -s -X POST -H "Authorization: Bearer $GH_TOKEN" \
