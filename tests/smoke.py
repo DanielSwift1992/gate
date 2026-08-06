@@ -5328,7 +5328,14 @@ console.log(JSON.stringify({
         S.append(("the bench and the command line answer one world alike, pair by pair",
                   _apart == [] and len(_pairs) == 4))
         _asked = {}
-        for _route in ("/check/view", "/check/view?who=X", "/diff/transfer"):
+        # ── AND A NUMBER THAT IS NOT ONE IS SAID TOO. `?n=` comes off a URL,
+        # which is a place anybody can type into, and `int()` raised inside the
+        # handler: the socket closed with no response written and the page's own
+        # fetch showed a network error with no words. Two more routes and a
+        # reading nobody thought of are held with it, because a room that drops
+        # a line says nothing at all, which is the thing this tool is against.
+        for _route in ("/check/view", "/check/view?who=X", "/diff/transfer",
+                       "/log?n=notanumber", "/log?n=-5", "/log?n=0"):
             try:
                 _r = _u.urlopen(f"http://127.0.0.1:{_bench_port}{_route}", timeout=20)
                 _asked[_route] = (_r.status, json.loads(_r.read().decode()))
@@ -5337,11 +5344,13 @@ console.log(JSON.stringify({
     finally:
         _bench.terminate()
     S.append(("a question the bench cannot answer comes back as words, not a dropped line",
-              len(_asked) == 3
+              len(_asked) == 6
               and all(isinstance(v[1], dict) and v[1].get("error") and v[1].get("next")
                       for v in _asked.values())
               and "asks who" in _asked["/check/view"][1]["error"]
-              and "who moves" in _asked["/diff/transfer"][1]["error"]))
+              and "who moves" in _asked["/diff/transfer"][1]["error"]
+              and "is not a count" in _asked["/log?n=notanumber"][1]["error"]
+              and "is not a count" in _asked["/log?n=-5"][1]["error"]))
     S.append(("the bench and the command line say the same thing about this repository",
               agreed and agreed[0] and agreed[1] == "holds"))
     S.append(("the panel leaves no scratch behind an answered judgement", swept))
@@ -6733,7 +6742,11 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
     _white = {"json", "os", "re", "shutil", "subprocess", "sys",
               "tempfile", "time", "csv", "hashlib", "itertools",
               "collections", "fnmatch", "datetime", "webbrowser",
-              "threading", "http", "urllib"}
+              # `traceback` prints to the bench operator's own stderr when a
+              # request raises something the handler had not thought of: the
+              # room answers the asker in words and hides nothing from whoever
+              # is running it
+              "traceback", "threading", "http", "urllib"}
     S.append(("the CLI imports the standard library alone, from a named list",
               _imp <= _white and {"json", "subprocess", "http"} <= _imp))
     # ── AND A NUMBER IN THE PROSE IS THE NUMBER ITS OWNER HOLDS. Two counts

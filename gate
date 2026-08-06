@@ -4,7 +4,7 @@
 # a refusal names the line. Spec: docs/PRODUCT.md. Human output by default,
 # --json for machines. Dry-run by default: apply writes only on holds.
 
-import json, os, re, shutil, subprocess, sys, tempfile, time
+import json, os, re, shutil, subprocess, sys, tempfile, time, traceback
 
 # GATE_CORPUS: optional checkout of the theory corpus — needed only for the
 # compiler-path verbs (check administer|delete, apply into the corpus world).
@@ -6531,7 +6531,17 @@ def cmd_serve(a):
                     self.wfile.write(body)
                     return
                 if u.path == "/log":
-                    out = repo_journal(int(q.get("n", 200)), q.get("scope", "world"))
+                    # ── AND A NUMBER THAT IS NOT ONE IS SAID, NOT DROPPED. `?n=`
+                    # comes off a URL, which is a place anybody can type into:
+                    # `int()` raised a ValueError inside the handler, the socket
+                    # closed with no response written, and the page's own fetch
+                    # showed a network error with no words in it. Silence is the
+                    # thing this tool exists against, and this is its own room.
+                    _n = q.get("n", "200")
+                    if not (_n.isdigit() and 0 < int(_n) <= 100000):
+                        cannot(f"the history is read in commits, and `n={_n}` is not a count",
+                               "ask for a whole number of commits, such as `?n=200`")
+                    out = repo_journal(int(_n), q.get("scope", "world"))
                 elif u.path == "/show":
                     out = commit_change(q.get("hash", ""), q.get("f") or None)
                 elif u.path == "/status":
@@ -6587,6 +6597,19 @@ def cmd_serve(a):
                 out = e.said()
             except SystemExit as e:
                 out = {"error": str(e)}
+            # ── AND NOTHING LEAVES THIS ROOM WITHOUT WORDS. A reading this
+            # handler had not thought of raised, and the socket closed with no
+            # response at all: the page's fetch showed a network error, which
+            # reads as "the bench is gone" rather than "that request was wrong".
+            # The trace still goes to whoever is running the bench, on its own
+            # stderr, because hiding it from the operator would be the other
+            # half of the same mistake.
+            except Exception as e:
+                traceback.print_exc()
+                out = {"error": f"this request was not one the bench could read: "
+                                f"{type(e).__name__}", "next":
+                       "the terminal answers the same questions and says more: "
+                       "`gate status`, `gate log`, `gate findings`"}
             body = json.dumps(out, ensure_ascii=False).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
