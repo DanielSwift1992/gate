@@ -945,6 +945,36 @@ def main():
               and "`/src/gone away/`" in _sp_gone["refusals"][0]["claim"]
               and _sp_gone["refusals"][0]["address"].endswith("CODEOWNERS:3")))
 
+    # ── AND A ROW IS FORGOTTEN WHERE IT WAS WRITTEN, BY THE PATH IT SAYS. The
+    # forget branch looked for the manifest in the FILE'S OWN directory and asked
+    # for the row by BASENAME. A declared layout is exactly a world with files in
+    # folders, so `gate mine b/page.swift --forget` answered "page.swift is not
+    # in your list" about a row plainly in it, and no file below the root could
+    # be forgotten at all. The basename half is the same class as the link and
+    # the escaped space: a guard comparing the spelling of a name where the law
+    # is about the thing it names. Two files may share a basename in two folders,
+    # and forgetting the wrong row is worse than forgetting none.
+    _tw = os.path.join(tmp, "twins")
+    os.makedirs(os.path.join(_tw, "a"), exist_ok=True)
+    os.makedirs(os.path.join(_tw, "b"), exist_ok=True)
+    subprocess.run(["git", "init", "-q", "-b", "main", _tw], capture_output=True)
+    open(os.path.join(_tw, "a", "page.swift"), "w").write("// a\n")
+    open(os.path.join(_tw, "b", "page.swift"), "w").write("// b\n")
+    run("mine", "a/page.swift", "--role", "forms", cwd=_tw)
+    run("mine", "b/page.swift", "--role", "forms", cwd=_tw)
+    _tw_man = os.path.join(_tw, "gate.manifest.swift")
+    _tw_before = open(_tw_man, encoding="utf-8").read()
+    _tw_gone = run("mine", "b/page.swift", "--forget", cwd=_tw)[1]
+    _tw_after = open(_tw_man, encoding="utf-8").read()
+    S.append(("a row in a folder can be forgotten, and it is the row you named",
+              _tw_before.count('"a/page.swift"') == _tw_before.count('"b/page.swift"') == 1
+              and _tw_gone.get("forgot") == "b/page.swift"
+              # the one named is gone and its twin is untouched
+              and '"b/page.swift"' not in _tw_after
+              and _tw_after.count('"a/page.swift"') == 1
+              # and the file itself is where it was: forgetting is not deleting
+              and os.path.exists(os.path.join(_tw, "b", "page.swift"))))
+
     # ── AND A LINK LEAVES THE WORLD AS SURELY AS A `..` DOES. The law is that a
     # row is a claim about this world's own tree, and it was asked of the PATH:
     # `outside.swift` sits in the world, so a row naming it passed while the link

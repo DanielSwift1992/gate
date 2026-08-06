@@ -4077,8 +4077,10 @@ def forget_side(path, d):
         return None, None
     text = open(mp, encoding="utf-8").read()
     _, rows = read_manifest_rows(d)
-    row = next((r for r in (rows or []) if r["path"] == path
-                or os.path.basename(r["path"]) == os.path.basename(path)), None)
+    # by the path the row says, not by the name at the end of it: two files may
+    # share a basename in two folders, and forgetting the wrong row is worse
+    # than forgetting none. The caller hands the path relative to this world.
+    row = next((r for r in (rows or []) if r["path"] == path), None)
     if not row or not row["name"]:
         return None, None
     # BY BRACES, NOT BY SHAPE. A row is an enum body and an extension body now,
@@ -4219,8 +4221,16 @@ def cmd_side(a, kind):
             "note": usage, "mutates": False}
     path = rest[0]
     if "--forget" in a:
-        d = os.path.dirname(os.path.abspath(path)) or "."
-        mp, row = forget_side(os.path.basename(path), d)
+        # ── AND A ROW IS FOUND WHERE IT WAS WRITTEN, BY THE PATH IT SAYS. This
+        # looked for the manifest in the FILE'S OWN directory and asked for the
+        # row by BASENAME, so `gate mine b/page.swift --forget` in a world whose
+        # list sits at the root answered "page.swift is not in your list" about a
+        # row plainly in it: a declared layout is exactly a world with files in
+        # folders, and none of them could be forgotten. The world is found the
+        # way everything else finds it, and the row is asked for by the path it
+        # carries.
+        d = world_root_for(path)
+        mp, row = forget_side(os.path.relpath(os.path.abspath(path), d), d)
         if not mp:
             return {"command": word, "asks": True,
                     "note": f"{os.path.basename(path)} is not in your list",
