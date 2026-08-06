@@ -945,6 +945,34 @@ def main():
               and "`/src/gone away/`" in _sp_gone["refusals"][0]["claim"]
               and _sp_gone["refusals"][0]["address"].endswith("CODEOWNERS:3")))
 
+    # ── AND SOMEBODY ELSE'S FILE IS READ THE WAY THEY SAVED IT. A CODEOWNERS, a
+    # CSV or a spec written by a Windows editor begins with a byte-order mark.
+    # Python's default read hands it to the first line, so the first CODEOWNERS
+    # pattern carried it, its zone parsed as empty, and gate refused a rule that
+    # was right: `Zone_src against Zone__`. The policy CSV and the contract JSON
+    # did not survive it at all, both raised. Three readers, one class: a file
+    # from outside, and this tool exists to read files from outside.
+    _bom = os.path.join(tmp, "byte-order-mark")
+    os.makedirs(os.path.join(_bom, "src"), exist_ok=True)
+    open(os.path.join(_bom, "src", "plain.go"), "w").write("x\n")
+    open(os.path.join(_bom, "CODEOWNERS"), "w", encoding="utf-8-sig").write("/src/plain.go @bob\n")
+    open(os.path.join(_bom, "owners.csv"), "w", encoding="utf-8-sig").write("owner,zone\nbob,src\n")
+    json.dump({"openapi": "3.0.0", "paths": {"/m": {"post": {"requestBody": {"content":
+              {"application/json": {"schema": {"type": "object", "properties":
+              {"to": {"type": "string"}}}}}}}}}},
+              open(os.path.join(_bom, "spec.json"), "w", encoding="utf-8-sig"))
+    _bom_co = run("import", "codeowners", "CODEOWNERS", "--tree", ".",
+                  "--policy", "owners.csv", cwd=_bom)[1]
+    _bom_dc = run("declare", "contract", "spec.json", cwd=_bom)[1]
+    S.append(("a file that opens with a byte-order mark reads as the file it is",
+              # the rule is right, and is not refused for carrying the mark
+              _bom_co.get("verdict") == "holds" and _bom_co.get("paths") == 1
+              and not [r for r in _bom_co.get("refusals", []) if "Zone__" in r.get("claim", "")]
+              # and the two readers that raised on it answer
+              and _bom_dc.get("declares") == 1
+              # every reader of somebody else's file goes through one door
+              and open(GATE, encoding="utf-8").read().count("def theirs_text(") == 1))
+
     S.append(("codeowners: a pattern the tree has no file for is named",
               # and the address is a path that opens. Here the rules file sits
               # outside the walked tree, so it is addressed as the caller gave
