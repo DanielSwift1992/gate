@@ -5256,7 +5256,16 @@ def read_codeowners(path):
         line = raw.split("#")[0].strip()
         if not line:
             continue
-        parts = line.split()
+        # ── AND A SPACE IN A PATH IS ESCAPED, WHICH THIS SPLIT DID NOT KNOW.
+        # A CODEOWNERS pattern escapes a space as `\ `, which is the documented
+        # way to own a folder whose name has one. Splitting on whitespace read
+        # `/src/my\ code/ @alice` as the pattern `/src/my\` and the owner
+        # `code/`, so the pattern matched nothing and gate REFUSED A RULE THAT
+        # MATCHES A REAL DIRECTORY: a false refusal, at the one place this whole
+        # tool sells, in somebody else's file. The escape is honoured first, and
+        # the split happens on the spaces that are not escaped.
+        parts = [p.replace("\x00", " ") for p in
+                 line.replace("\\ ", "\x00").split()]
         owners = [p for p in parts[1:] if p.startswith("@") or "@" in p]
         if owners:
             rules.append({"line": n, "pattern": parts[0], "owners": owners})

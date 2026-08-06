@@ -914,6 +914,37 @@ def main():
                           for x in judged)
               # said once: the tool holds no second copy of the law's words
               and tool_src.count("an owner and the path they own must share one zone") == 0))
+    # ── AND A SPACE IN A PATH IS ESCAPED, WHICH THE SPLIT DID NOT KNOW. A
+    # CODEOWNERS pattern escapes a space as `\ `, the documented way to own a
+    # folder whose name has one. Splitting the line on whitespace read
+    # `/src/my\ code/ @alice` as the pattern `/src/my\` and the owner `code/`,
+    # so the pattern matched nothing and gate REFUSED A RULE THAT MATCHES A REAL
+    # DIRECTORY. A false refusal is the one failure this tool cannot afford: the
+    # whole product is that a refusal names a line, in somebody else's file.
+    _sp = os.path.join(tmp, "spacey")
+    os.makedirs(os.path.join(_sp, "src", "my code"), exist_ok=True)
+    open(os.path.join(_sp, "src", "my code", "main.go"), "w").write("x\n")
+    open(os.path.join(_sp, "src", "plain.go"), "w").write("y\n")
+    open(os.path.join(_sp, "owners.csv"), "w").write("owner,zone\nalice,src\nbob,src\n")
+    open(os.path.join(_sp, "CODEOWNERS"), "w").write(
+        "/src/my\\ code/ @alice\n/src/plain.go @bob\n")
+    _sp_held = run("import", "codeowners", "CODEOWNERS", "--tree", ".",
+                   "--policy", "owners.csv", cwd=_sp)[1]
+    open(os.path.join(_sp, "CODEOWNERS"), "a").write("/src/gone\\ away/ @alice\n")
+    _sp_gone = run("import", "codeowners", "CODEOWNERS", "--tree", ".",
+                   "--policy", "owners.csv", cwd=_sp)[1]
+    S.append(("a path with an escaped space is the path it names, not a truncation",
+              # the folder that is there is owned, and nothing is refused
+              _sp_held.get("verdict") == "holds"
+              and _sp_held.get("paths") == 2
+              # and one that is not there is still refused, by its line, spelled
+              # the way a person reads it rather than the way a shell escapes it
+              and _sp_gone.get("verdict") == "refused"
+              and [r["claim"] for r in _sp_gone["refusals"]
+                   if "matches nothing" in r["claim"]]
+              and "`/src/gone away/`" in _sp_gone["refusals"][0]["claim"]
+              and _sp_gone["refusals"][0]["address"].endswith("CODEOWNERS:3")))
+
     S.append(("codeowners: a pattern the tree has no file for is named",
               # and the address is a path that opens. Here the rules file sits
               # outside the walked tree, so it is addressed as the caller gave
