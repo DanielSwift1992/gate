@@ -1965,8 +1965,8 @@ def cmd_guard_deps(a):
     # drift "resolves to nothing" with an address. Not one new form.
     manifest_p = a[0] if a else "package.json"
     lock_p = a[1] if len(a) > 1 else "package-lock.json"
-    manifest = json.load(open(manifest_p))
-    lock = json.load(open(lock_p))
+    manifest = theirs_json(manifest_p, "a package manifest")
+    lock = theirs_json(lock_p, "the lockfile your resolver wrote")
     deps = manifest.get("dependencies", {})
     pins = {
         name.replace("node_modules/", ""): info.get("version")
@@ -4290,12 +4290,18 @@ def cmd_side(a, kind):
                         "What the shelf ships is unchanged and still shipped. Yours simply "
                         "stands where it stood",
                 "next": "gate status: it is judged with the rest of your world"}
+    # ── AND A NAMED FILE THAT IS NOT THERE IS A MISTAKE, NOT A QUESTION. Typing
+    # the verb bare is somebody asking what it takes, and that answers with a
+    # usage line and a nought exit. Naming a file that does not exist is a typo,
+    # a file not written yet, a relative path run from the wrong directory: the
+    # same answer there exits nought too, so a Makefile reads "this world now
+    # holds your file" from a run that held nothing.
     if not os.path.exists(path):
-        return {"command": word, "asks": True, "note": f"no file at {path}",
-                "next": ("bring the file here first, or name one this tool ships: "
-                         + " · ".join(sorted(STDLIB)) if kind == "Mine" else
-                         "bring the file here first. gate never fetches: a file of theirs "
-                         "arrives by a checkout, a copy, a vendor step you already trust")}
+        cannot(f"no file at {path}",
+               ("bring the file here first, or name one this tool ships: "
+                + " · ".join(sorted(STDLIB)) if kind == "Mine" else
+                "bring the file here first. gate never fetches: a file of theirs "
+                "arrives by a checkout, a copy, a vendor step you already trust"))
     if role not in ROLES:
         return {"command": word, "asks": True,
                 "note": f"`{role}` is not a court anything here reads",
@@ -4589,7 +4595,8 @@ def cmd_attention(a):
                 "note": "no seam is declared here, so nobody is waiting on anybody",
                 "next": "gate theirs their-side.swift --role seam --at REV  say which pair you "
                         "are party to, and this becomes the question you ask each morning"}
-    left, right = open(a[0], encoding="utf-8").read(), open(a[1], encoding="utf-8").read()
+    left, right = (theirs_text(a[0], "the contract side of the pair").read(),
+                   theirs_text(a[1], "the carrier side of the pair").read())
     stated, claims, carrier = seam_read(left, right)
     me = a[a.index("--as") + 1] if "--as" in a else carrier
     known = (theirs_json(a[a.index("--known") + 1], "the divergences you declared")
@@ -4716,7 +4723,7 @@ def cmd_aside(a):
     known = {"diverges": []}
     if os.path.exists(path):
         try:
-            known = _json.load(open(path, encoding="utf-8"))
+            known = _json.load(theirs_text(path, "the divergences you declared"))
         except Exception:
             known = {"diverges": []}
     rows = [d for d in (known.get("diverges") or [])
@@ -4751,7 +4758,8 @@ def cmd_seam(a):
             cannot(f"no such side: {_side}",
                    "both sides are files: `gate declare contract SPEC -o api.swift` and "
                    "`gate declare carrier DECL.json -o sdk.swift` write them")
-    left, right = open(a[0], encoding="utf-8").read(), open(a[1], encoding="utf-8").read()
+    left, right = (theirs_text(a[0], "the contract side of the pair").read(),
+                   theirs_text(a[1], "the carrier side of the pair").read())
     m = re.search(r"public enum (\w+): Carrier", right)
     who = m.group(1) if m else "that library"
     where = {}
@@ -4813,13 +4821,16 @@ def cmd_drift(a):
     from datetime import date as _date
     # the first thing a stranger types is `--help`, and taking it for a filename
     # printed an observation of a contract that does not exist
-    if not a or a[0].startswith("-") or not os.path.exists(a[0]):
+    _spec_next = ("the contract is a JSON OpenAPI document in a git checkout, and "
+                  "for YAML, `yq -o=json '.' spec.yml > spec.json` first")
+    if not a or a[0].startswith("-"):
         return {"command": "drift", "asks": True,
-                "note": ("drift CONTRACT --client DIR [--since DATE] [--name N] [--fail-over DAYS]"
-                         + ("" if not a or a[0].startswith("-") else
-                            f" — no such contract here: {a[0]}")),
-                "next": "the contract is a JSON OpenAPI document in a git checkout, and "
-                        "for YAML, `yq -o=json '.' spec.yml > spec.json` first"}
+                "note": "drift CONTRACT --client DIR [--since DATE] [--name N] [--fail-over DAYS]",
+                "next": _spec_next}
+    # and a contract that was named and is not there is the other answer: asked
+    # and mistyped are two different things, and only one of them exits nought
+    if not os.path.exists(a[0]):
+        cannot(f"no such contract here: {a[0]}", _spec_next)
     src = a[0]
     root = a[a.index("--client") + 1] if "--client" in a else "."
     since = a[a.index("--since") + 1] if "--since" in a else None
@@ -5314,17 +5325,17 @@ def theirs_json(path, what):
     # the address of the thing that is wrong.
     import json as _json
     try:
-        return _json.load(theirs_text(path))
+        return _json.load(theirs_text(path, what))
     except _json.JSONDecodeError as e:
         cannot(f"{path} is not the JSON this reads ({what}): {e.msg} at line {e.lineno}, "
                f"column {e.colno}",
                "point it at the document itself. For YAML, `yq -o=json '.' file.yml > file.json` "
                "writes the JSON this reads")
     except OSError:
-        cannot(f"no such file: {path}", f"name the {what} you mean")
+        cannot(f"no such file: {path}", f"point it at {what}")
 
 
-def theirs_text(path):
+def theirs_text(path, what="the file you mean"):
     # ── SOMEBODY ELSE'S FILE, READ THE WAY THEY SAVED IT. A CODEOWNERS, a CSV or
     # a spec written by a Windows editor begins with a byte-order mark, and
     # python's default read hands it to the first line: the first CODEOWNERS
@@ -5333,7 +5344,15 @@ def theirs_text(path):
     # JSON did not survive it at all: both raised. Every file that came from
     # outside is read through here, and `utf-8-sig` is plain utf-8 when there is
     # no mark to drop.
-    return open(path, encoding="utf-8-sig")
+    # ── AND A FILE THAT IS NOT THERE IS SAID HERE TOO. `attention` opened both
+    # sides of a seam straight from argv and met a mistyped path with a
+    # FileNotFoundError: the same shape `theirs_json` was written against, one
+    # door further out. Every reading of somebody else's text comes through
+    # here, so the sentence is written once.
+    try:
+        return open(path, encoding="utf-8-sig")
+    except OSError:
+        cannot(f"no such file: {path}", f"point it at {what}")
 
 
 def read_codeowners(path):
@@ -5445,7 +5464,18 @@ def cmd_import_codeowners(a):
     #
     # The file is still written, because the court reads a path: it goes to the
     # scratch the verb sweeps, and the answer says where the world would land.
-    src = a[0]
+    # ── AND THE VERB THE COVER SELLS FINDS THE FILE IT IS NAMED AFTER. `gate
+    # import codeowners`, typed bare, read argv[0] of an empty argv and met a
+    # person with an IndexError: the same shape `check` was mended of, in the
+    # verb a stranger is invited to run in a repository they already have. The
+    # pair lives in three known places, so the verb looks there before it asks.
+    src = a[0] if a and not a[0].startswith("-") else next(
+        (p for p in CODEOWNERS_PLACES if os.path.exists(p)), None)
+    if src is None:
+        cannot("this reads a CODEOWNERS, and there is none at " +
+               ", ".join(CODEOWNERS_PLACES),
+               "name the file: `gate import codeowners PATH`, or run `gate demo` for a "
+               "repository that has one")
     asked = a[a.index("-o") + 1] if "-o" in a else None
     kept = scratch("gate-codeowners-") if asked is None else None
     out_path = asked or os.path.join(kept, "codeowners-gate.swift")
@@ -5961,7 +5991,16 @@ def cmd_init(a):
     made = []
     for rel, content in INIT_FILES.items():
         p = os.path.join(root, rel)
-        os.makedirs(os.path.dirname(p), exist_ok=True)
+        # ── AND A WORLD THAT CANNOT BE PUT THERE IS SAID, NOT RAISED. `gate init
+        # /no/such/parent` met an OSError from makedirs: a read-only mount, a
+        # path that does not exist, a directory somebody else owns. The founding
+        # verb is the first one anybody runs, so it is the worst place to hand
+        # over a stack trace.
+        try:
+            os.makedirs(os.path.dirname(p), exist_ok=True)
+        except OSError as e:
+            cannot(f"a world cannot be founded at {root}: {e.strerror.lower()}",
+                   "name a directory you can write in, or `gate init .` to found one here")
         if not os.path.exists(p):
             with open(p, "w") as f:
                 f.write(content)

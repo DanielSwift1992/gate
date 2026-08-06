@@ -988,6 +988,53 @@ def main():
     S.append(("a file that is not the kind a verb reads is said, not raised",
               _raised == [] and len(_kinds) == 6))
 
+    # ── AND A FILE THAT IS NOT THERE IS SAID TOO. The wrong-kind sweep above
+    # walked verbs with a file that is not what they read; this walks them with
+    # a path that is nothing at all, which is the commoner mistake by far: a
+    # typo, a file not yet written, a relative path run from the wrong
+    # directory. Four raised. `attention` and `guard deps` opened argv straight,
+    # `init` met a read-only mount from makedirs, and `import codeowners` typed
+    # bare read argv[0] of an empty argv: the verb the cover invites a stranger
+    # to run in a repository they already have.
+    _gone = [("guard", "deps", "no-such.json"),
+             ("attention", "no-a.swift", "no-b.swift"),
+             ("import", "rbac", "no-such.json"),
+             ("import", "refs", "no-such.json", "--code", "."),
+             ("declare", "contract", "no-such.json"),
+             ("drift", "no-such.json", "NoCarrier"),
+             ("mine", "no-such-file.swift"),
+             ("init", "/no/such/parent/dir")]
+    _grose = []
+    for _argv in _gone:
+        _p3 = subprocess.run([sys.executable, GATE, *_argv], cwd=_wrong,
+                             capture_output=True, text=True, timeout=120)
+        if "Traceback" in _p3.stdout + _p3.stderr:
+            _grose.append(" ".join(_argv))
+        elif not (_p3.stderr.startswith("gate: ") and "next: " in _p3.stderr):
+            _grose.append(" ".join(_argv) + " (not the canon)")
+    if _grose:
+        print("   a file that is not there still raises:", _grose[:4])
+    # and the sentence names what the verb wanted, without the stray article
+    # that "name the a kubectl dump of roles and bindings you mean" carried
+    _art = subprocess.run([sys.executable, GATE, "import", "rbac", "no-such.json"],
+                          cwd=_wrong, capture_output=True, text=True)
+    # and the verb the cover sells finds the pair it is named after, unasked
+    _has = os.path.join(tmp, "has-a-codeowners")
+    os.makedirs(os.path.join(_has, "src"), exist_ok=True)
+    open(os.path.join(_has, "src", "main.py"), "w").write("x\n")
+    open(os.path.join(_has, "CODEOWNERS"), "w").write("/src @alice\n")
+    _bare = subprocess.run([sys.executable, GATE, "import", "codeowners"], cwd=_has,
+                           capture_output=True, text=True)
+    _nobody = subprocess.run([sys.executable, GATE, "import", "codeowners"], cwd=_wrong,
+                             capture_output=True, text=True)
+    S.append(("a file that is not there is said, and the sentence names what was wanted",
+              _grose == [] and len(_gone) == 8
+              and "point it at a kubectl dump of roles and bindings" in _art.stderr
+              and "name the a" not in _art.stderr
+              and _bare.returncode == 0 and "import codeowners:" in _bare.stdout
+              and _nobody.returncode == 1
+              and "there is none at CODEOWNERS, .github/CODEOWNERS" in _nobody.stderr))
+
     # ── AND A ROW IS FORGOTTEN WHERE IT WAS WRITTEN, BY THE PATH IT SAYS. The
     # forget branch looked for the manifest in the FILE'S OWN directory and asked
     # for the row by BASENAME. A declared layout is exactly a world with files in
@@ -3407,7 +3454,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     mine_said = run("mine", "more.swift", cwd=two)[1]
     after = run("status", cwd=two)[1]
     manifest = open(os.path.join(two, "gate.manifest.swift")).read()
-    missing = run("theirs", "not-here.swift", cwd=two)[1]
+    missing = run("theirs", "not-here.swift", cwd=two)
 
     # ── AND A ROW MAY NOT POINT OUT OF THE WORLD THAT MAKES IT. This is not
     # hypothetical: an older walk started from the working directory instead of
@@ -3433,9 +3480,13 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               and "public typealias Kind = WorldFile" in manifest
               # theirs is the other value of the same column, not a second document
               and 'cmd_side(rest, "Theirs")' in two_src and 'cmd_side(rest, "Mine")' in two_src
-              # and a file that is not here is asked for, never fetched
-              and missing.get("asks") and "no file at" in missing.get("note", "")
-              and "gate never fetches" in missing.get("next", "")
+              # ── AND A NAMED FILE THAT IS NOT THERE IS A MISTAKE, NOT A QUESTION.
+              # This answered with a usage note and exit nought, so a Makefile
+              # step reading only the code was told the world now holds a file
+              # that was never there. Typing the verb bare is still a question,
+              # and still exits nought; naming a file that is not there refuses.
+              and missing[0] == 1 and missing[1].get("error", "").startswith("no file at")
+              and "gate never fetches" in missing[1].get("next", "")
               # both are in the usage, so neither is knowledge you must already have
               and "gate mine FILE" in two_src and "gate theirs FILE" in two_src))
 
@@ -5609,10 +5660,13 @@ console.log(JSON.stringify(out));
     # filename printed an observation of a contract that does not exist, in the
     # first second of the first minute somebody spends here.
     _, asked = run("drift", "--help")
-    _, missing_spec = run("drift", os.path.join(tmp, "nowhere.json"), "--client", tmp)
+    _mcode, missing_spec = run("drift", os.path.join(tmp, "nowhere.json"), "--client", tmp)
     S.append(("the first thing a stranger types is not a filename",
               asked.get("asks") and "drift CONTRACT" in asked.get("note", "")
-              and missing_spec.get("asks") and "no such contract" in missing_spec.get("note", "")
+              # and a contract named and not found is the other answer: asked and
+              # mistyped are different, and only one of them exits nought
+              and _mcode == 1 and "no such contract" in missing_spec.get("error", "")
+              and "OpenAPI document" in missing_spec.get("next", "")
               # and asking is not an error
               and "verdict" not in asked and not asked.get("over_threshold")))
 
