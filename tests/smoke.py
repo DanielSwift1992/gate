@@ -432,6 +432,20 @@ def main():
               r.get("verdict") == "holds" and world_text.count("Emp9002,") == 3))
     c, r = run("apply", "grant", "Emp9002", "FinanceShare", cwd=repo)
     S.append(("apply grant back", r.get("applied") is True))
+    # ── AND `applied` MEANS SOMETHING CHANGED. A transfer to the department
+    # somebody is already in rewrites the file with the bytes it already had, and
+    # the verb said `applied` while `git status` stayed empty: an answer that is
+    # not what happened. It holds, which is true, and says there was nothing to
+    # change, which is also true.
+    _was = open(os.path.join(repo, "gate.swift"), encoding="utf-8").read()
+    c, _same = run("apply", "transfer", "Emp9001", "Finance", cwd=repo)
+    S.append(("a change that changes nothing says so, and holds",
+              _same.get("verdict") == "holds"
+              and _same.get("applied") is False and _same.get("changed") is False
+              and open(os.path.join(repo, "gate.swift"), encoding="utf-8").read() == _was
+              and "nothing to change" in subprocess.run(
+                  [sys.executable, GATE, "apply", "transfer", "Emp9001", "Finance"],
+                  cwd=repo, capture_output=True, text=True).stdout))
     c, r = run("import", "tables/people.csv", "tables/grants.csv", "-o", "gate.swift", cwd=repo)
     S.append(("import clean", r["verdict"] == "holds"))
     printed = open(os.path.join(repo, "gate.swift")).read()

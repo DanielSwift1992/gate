@@ -1398,11 +1398,16 @@ def cmd_change(a):
         cannot(f"unknown change {a[0]}",
                "the changes this verb makes are `transfer`, `hire`, `grant` and `revoke`")
     r = judge(with_temp(new))
-    applied = False
-    if apply_it and r["verdict"] == "holds":
+    # ── AND `applied` MEANS SOMETHING CHANGED. A transfer to the department
+    # somebody is already in rewrites the file with the bytes it already had, and
+    # this said `applied` while `git status` stayed empty: the answer must be
+    # what happened, and nothing happened. The verb still holds, and says so.
+    applied, moved = False, open(FACTS, encoding="utf-8").read() != new
+    if apply_it and r["verdict"] == "holds" and moved:
         open(FACTS, "w").write(new)
         applied = True
-    return {**label, **r, "dry_run": not apply_it, "applied": applied}
+    return {**label, **r, "dry_run": not apply_it, "applied": applied,
+            "changed": moved}
 
 
 def cmd_import(a):
@@ -7064,7 +7069,10 @@ def humanize(out):
         if out.get("build_s") is not None:
             tail.append(f"build {out['build_s']} s")
         if cmd.startswith("change") and not out.get("dry_run", True):
-            tail.append("applied" if out.get("applied") else "NOT applied")
+            tail.append("applied" if out.get("applied") else
+                        "nothing to change: it already says this"
+                        if out.get("changed") is False and out.get("verdict") == "holds"
+                        else "NOT applied")
         elif cmd.startswith("change"):
             tail.append("dry-run")
         lines.append(f"{cmd or 'verdict'}: {head}" + (" · " + " · ".join(tail) if tail else ""))
