@@ -7858,10 +7858,28 @@ public enum MyWatch: AccessLedger {
               _uncovered == []))
     # and the road itself is written into the page: CI walks it headless on
     # every push, from typing to the offer to red to green to kept
+    _ci = open(os.path.join(HERE, ".github", "workflows", "battery.yml"),
+               encoding="utf-8").read()
     S.append(("the published bench carries the user's road, and CI walks it",
               "roadtest=1" in _pages_src and "ROAD ALL GREEN" in _pages_src
-              and "roadtest=1" in open(os.path.join(HERE, ".github", "workflows",
-                                                    "battery.yml")).read()))
+              and "roadtest=1" in _ci))
+    # ── AND A RED IS ABOUT THIS REPOSITORY. There is one Pages site and one
+    # deployment at a time, and the job had no concurrency group: a second push
+    # while the first was deploying failed the second, and run 123 went red with
+    # the battery green on macos, linux and windows. A red nobody can act on
+    # teaches people to stop reading red, which costs more than the deployment.
+    # The road test beside it swallowed the browser's stderr, the same shape
+    # bin/shoot-bench.sh carried until this phase: a step that fails with no
+    # reason printed is a step somebody guesses at.
+    S.append(("the deployment does not race itself, and says what a browser said",
+              re.search(r"\n    concurrency:\n      group: pages\n"
+                        r"      cancel-in-progress: false\n", _ci)
+              # asked of the COMMANDS, not of the prose: the first spelling of
+              # this tripped over the comment that explains why the silencer is
+              # gone, which is a guard reading the sentence about itself
+              and not [l for l in _ci.split("\n")
+                       if "2>/dev/null" in l and not l.lstrip().startswith("#")]
+              and "What the browser said" in _ci))
 
     # ── AND THE MEASURED PAGE IS THE MEASURER'S OWN WORDS. `docs/BENCH.md` is
     # written by `bin/bench.py`, the cover sends a reader to it for the numbers

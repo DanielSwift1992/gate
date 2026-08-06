@@ -78,6 +78,15 @@ jobs:
   pages:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    # ── AND TWO PUSHES DO NOT RACE FOR ONE DEPLOYMENT. There is one Pages site
+    # and one deployment at a time; without a group, a second push while the
+    # first is deploying fails the second, and the run goes red for a reason
+    # that is not about this repository at all. That happened on run 123: the
+    # battery was green on macos, linux and windows, and the red was a queue.
+    # A red nobody can act on teaches people to stop reading red.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     permissions:
       pages: write
       id-token: write
@@ -96,9 +105,14 @@ jobs:
       # where any step of it falls over
       - run: |
           BROWSER=$(command -v google-chrome || command -v chromium-browser || command -v chromium)
+          # the camera's own words survive: `2>/dev/null` here meant a browser
+          # that could not start failed this step with no reason printed, which
+          # is the shape bin/shoot-bench.sh carried until this phase
           "$BROWSER" --headless --disable-gpu --no-sandbox --virtual-time-budget=15000 \
             --dump-dom "file://$PWD/_site/index.html?f=ownership.swift:84&roadtest=1" \
-            2>/dev/null | grep -q "ROAD ALL GREEN"
+            2>/tmp/road-err.txt | grep -q "ROAD ALL GREEN" \
+            || { echo "the road test did not reach ROAD ALL GREEN. What the browser said:"; \
+                 tail -5 /tmp/road-err.txt; exit 1; }
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa   # v3
         with:
           path: _site
