@@ -1057,6 +1057,24 @@ def main():
               # the rule itself still travels, beside the address rather than under it
               and "(*.py @alice)" in _impsaid))
 
+    # ── AND SO IS A LEFTOVER PIN. `guard deps` named the lockfile and nothing
+    # else, so the one shape this tool promises everywhere stopped at the door of
+    # the verb that reads somebody's lockfile. The line is a search away, and the
+    # address is only worth printing if it points at the pin it accuses.
+    _lock = os.path.join(tmp, "a-lockfile")
+    os.makedirs(_lock, exist_ok=True)
+    json.dump({"dependencies": {"left-pad": "^1.3.0"}},
+              open(os.path.join(_lock, "package.json"), "w"), indent=1)
+    json.dump({"packages": {"node_modules/left-pad": {"version": "1.3.0"},
+                            "node_modules/orphan": {"version": "9.9.9"}}},
+              open(os.path.join(_lock, "package-lock.json"), "w"), indent=1)
+    _dep = run("guard", "deps", "package.json", "package-lock.json", cwd=_lock)[1]
+    _at = (_dep.get("refusals") or [{}])[0].get("address", "")
+    _lines = open(os.path.join(_lock, "package-lock.json")).read().splitlines()
+    S.append(("a leftover pin is addressed at the line that holds it",
+              re.fullmatch(r"package-lock\.json:\d+", _at)
+              and "node_modules/orphan" in _lines[int(_at.split(":")[1]) - 1]))
+
     # ── AND A PLACE THAT CANNOT HOLD A FILE IS SAID, NOT RAISED. Every verb that
     # takes `-o` or `--out` handed the path straight to `open(..., "w")`, so a
     # directory, a read-only folder, or a parent that does not exist met a person

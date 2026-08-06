@@ -2014,6 +2014,22 @@ def cmd_library(a):
     return result
 
 
+def lock_line(path, name):
+    # ── AND A LEFTOVER PIN IS ADDRESSED AT ITS LINE. This named the lockfile and
+    # nothing else, so the one shape this tool promises everywhere — `file:line ·
+    # claim`, the shape an editor already parses — stopped at the door of the
+    # verb that reads somebody's lockfile. The line is a search away.
+    try:
+        text = theirs_text(path).read()
+    except Exception:
+        return 1
+    for spelling in (f'"node_modules/{name}"', f'"{name}"'):
+        at = text.find(spelling)
+        if at >= 0:
+            return text.count("\n", 0, at) + 1
+    return 1
+
+
 def cmd_guard_deps(a):
     # guard deps [manifest lock] — git's own soil: manifest ↔ lockfile.
     # The adapter prints a world: the lock declares "package@version" atoms,
@@ -2059,7 +2075,8 @@ def cmd_guard_deps(a):
         out["orphan_pins"] = orphans
         out["verdict"] = "refused"
         out["refusals"] = out["refusals"] + [
-            {"address": os.path.basename(lock_p), "claim": f"pin {o}@{pins[o]} is required by nothing: a leftover after removal"}
+            {"address": f"{os.path.basename(lock_p)}:{lock_line(lock_p, o)}",
+             "claim": f"pin {o}@{pins[o]} is required by nothing: a leftover after removal"}
             for o in orphans
         ]
     out["note"] = ("a sketch, and not a product path: only orphan pins are detected. A missing "
