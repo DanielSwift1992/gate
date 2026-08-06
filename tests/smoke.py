@@ -7689,6 +7689,34 @@ public enum MyWatch: AccessLedger {
               # and the cover sends a reader there for the sentence it makes
               and "docs/BENCH.md" in readme and "bin/bench.py" in readme))
 
+    # ── AND THE ROAD THE COVER TELLS IS THE ROAD THE SECOND BATTERY WALKS. The
+    # cover says of Windows: "it makes the demo, takes the kit, breaks a claim,
+    # and the break is refused at its line, all under the port". `tests/
+    # windows.py` walks exactly that, and its own head says nobody compares the
+    # two: "change the road here, change the sentence there". It is a pair of
+    # this repository's own, named by the file that carries one side, and it can
+    # be held mechanically after all: the sentence's words are verbs, and the
+    # file either runs them or does not.
+    _win = open(os.path.join(HERE, "tests", "windows.py"), encoding="utf-8").read()
+    _road = re.search(r"On Windows, CI runs .*?So Windows is measured on every push\.",
+                      readme, re.S)
+    _said_road = " ".join(_road.group(0).split()) if _road else ""
+    # not `_steps`: this file already has a function by that name, and shadowing
+    # it took the whole battery down two thousand lines later
+    _road_steps = [("makes the demo", 'run("demo"'), ("takes the kit", 'run("init"'),
+                   ("refused at its line", 'run("status"')]
+    _missing = [w for w, _v in _road_steps if w not in _said_road] \
+        + [v for _w, v in _road_steps if v not in _win]
+    if _missing:
+        print("   the cover's Windows road and the measure are apart:", _missing[:4])
+    S.append(("the road the cover tells for Windows is the one the measure walks",
+              _said_road and not _missing
+              # and the court it names is the one the measure asserts
+              and "under the port" in _said_road
+              and "names the port as the court" in _win
+              # and the break it promises is refused with an address
+              and "goes red at its line" in _win))
+
     S.append(("the licence the README claims is the licence in the tree",
               "MIT licensed" in readme
               and open(os.path.join(HERE, "LICENSE"), encoding="utf-8").read().startswith("MIT License")))
