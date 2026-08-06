@@ -945,6 +945,54 @@ def main():
               and "`/src/gone away/`" in _sp_gone["refusals"][0]["claim"]
               and _sp_gone["refusals"][0]["address"].endswith("CODEOWNERS:3")))
 
+    # ── AND A LINK LEAVES THE WORLD AS SURELY AS A `..` DOES. The law is that a
+    # row is a claim about this world's own tree, and it was asked of the PATH:
+    # `outside.swift` sits in the world, so a row naming it passed while the link
+    # under it pointed two directories up. That world read a page it does not
+    # contain, and the bench SERVED ITS BYTES on the loopback to whoever asked,
+    # against the promise on the cover that what gate reads is your working copy.
+    # Three readings asked the question of the spelling: the row guard, the
+    # declaring guard, and the neighbour walk the bench serves from.
+    _lk = os.path.join(tmp, "linky")
+    os.makedirs(os.path.join(_lk, "real"), exist_ok=True)
+    _far = os.path.join(tmp, "far-away")
+    os.makedirs(_far, exist_ok=True)
+    open(os.path.join(_far, "secret.swift"), "w").write("// not in that world at all\n")
+    open(os.path.join(_lk, "real", "page.swift"), "w").write("// x\n")
+    subprocess.run(["git", "init", "-q", "-b", "main", _lk], capture_output=True)
+    os.symlink(os.path.join("real", "page.swift"), os.path.join(_lk, "link.swift"))
+    os.symlink(os.path.join("..", "far-away", "secret.swift"), os.path.join(_lk, "outside.swift"))
+    _lk_in = run("mine", "link.swift", "--role", "forms", cwd=_lk)[1]
+    _lk_out = run("mine", "outside.swift", "--role", "forms", cwd=_lk)[1]
+    _lk_st = run("status", cwd=_lk)[1]
+    import socket as _lksock          # `_sock` is bound further down this file
+    _lkp = _lksock.socket(); _lkp.bind(("127.0.0.1", 0))
+    _lk_port = _lkp.getsockname()[1]; _lkp.close()
+    _lkb = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_lk_port)],
+                            cwd=_lk, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    import urllib.request as _lku
+    try:
+        wait_serve(_lk_port)
+        _served = {}
+        for _f in ("outside.swift", "link.swift"):
+            try:
+                _r3 = _lku.urlopen(f"http://127.0.0.1:{_lk_port}/world?f={_f}", timeout=30)
+                _served[_f] = (_r3.status, _r3.read().decode())
+            except Exception as _e:
+                _served[_f] = (getattr(_e, "code", "dropped"), "")
+    finally:
+        _lkb.terminate()
+    S.append(("a link out of the world is not a file of it, and is not served as one",
+              # a link that stays inside is an ordinary file of this world
+              _lk_in.get("file") == "link.swift" and _lk_st.get("verdict") == "holds"
+              # one that leaves is refused where it would be written down
+              and _lk_out.get("asks") and "not inside the world" in _lk_out.get("note", "")
+              # and the bench serves neither its bytes nor somebody else's in its
+              # name: a name this world does not carry is a miss, not a neighbour
+              and _served["outside.swift"][0] == 404
+              and "not in that world" not in _served["outside.swift"][1]
+              and _served["link.swift"][0] == 200 and "// x" in _served["link.swift"][1]))
+
     # ── AND SOMEBODY ELSE'S FILE IS READ THE WAY THEY SAVED IT. A CODEOWNERS, a
     # CSV or a spec written by a Windows editor begins with a byte-order mark.
     # Python's default read hands it to the first line, so the first CODEOWNERS

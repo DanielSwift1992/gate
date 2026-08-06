@@ -142,6 +142,19 @@ def read_manifest_rows(d, text=None):
     return mp, rows
 
 
+def leaves_world(path, root):
+    # ── AND A LINK LEAVES THE WORLD AS SURELY AS A `..` DOES. The law here is
+    # that a row is a claim about this world's own tree, and it was asked of the
+    # PATH: `outside.swift` sits in the world, so a row naming it passed, and the
+    # link under it pointed at a file two directories up. That world then read a
+    # page it does not contain, and the bench SERVED ITS BYTES over the loopback
+    # to whoever asked, against the one promise on the cover: what gate reads is
+    # your working copy. Both sides are resolved, so the question is about the
+    # file rather than about the spelling of the way to it.
+    real = os.path.realpath(os.path.join(root, path))
+    return os.path.relpath(real, os.path.realpath(root)).split(os.sep)[0] == os.pardir
+
+
 def read_manifest(d):
     # the layout is a fact of the world: gate.manifest.swift declares files, and
     # the judged world is the rows whose role is `world` — nothing else in the
@@ -323,8 +336,7 @@ def manifest_guards(rows=None, text=None):
         # same document refuses. A row is a claim about this world's own tree, so
         # a path that leaves the world is not a row about anything anybody else
         # can read.
-        if os.path.relpath(os.path.abspath(os.path.join(d, r["path"])),
-                           os.path.abspath(d)).startswith(".."):
+        if leaves_world(r["path"], d):
             bad.append({"address": f"{man}:{r['line']}",
                         "claim": f"`{r['name']}` names {r['path']}, which is outside this world: "
                                  "a row is a claim about this world's own tree, and a path that "
@@ -474,7 +486,15 @@ def undeclared_here():
             continue
         for f in sorted(os.listdir(dd)):
             p = os.path.join(dd, f)
-            if f.endswith(".swift") and p not in declared and not is_seam_side(p):
+            # ── AND A LINK THAT LEAVES IS NOT A FILE OF THIS WORLD AT ALL. This
+            # list is what the shadow guard names and what the bench SERVES on
+            # `/world?f=`, so a symlink pointing two directories up put a page
+            # from outside on the loopback for anybody to read, against the one
+            # promise on the cover: what gate reads is your working copy. The
+            # declaring guard refuses such a row, so listing it also offered a
+            # step the tool would refuse.
+            if f.endswith(".swift") and p not in declared and not is_seam_side(p) \
+                    and not leaves_world(os.path.relpath(p, d), d):
                 out.append(os.path.relpath(p, d))
     return out
 
@@ -3947,7 +3967,10 @@ def declare_side(path, kind, role, frm=None, written=None, opens=None):
     # deleted the same minute, and nothing downstream could tell them from real
     # ones. Walking from the file is what prevents it; this is what catches it
     # if the walk is ever wrong again.
-    if rel.split(os.sep)[0] == os.pardir:
+    # and a link is asked the same question as a `..`: the path may sit in the
+    # world while the file it names does not, which the reading guard catches and
+    # this one let through, so the row was written and refused a second later
+    if rel.split(os.sep)[0] == os.pardir or leaves_world(rel, d):
         raise ValueError(f"{path} is not inside the world at {d}: a row says where a "
                          "file is relative to the world that declares it")
     name = row_atom(rel)
@@ -6351,6 +6374,15 @@ def cmd_serve(a):
             # about a file in the verdict with no way to look at it.
             if q.get("f", "") in undeclared_here():
                 return os.path.join(os.path.dirname(MANIFEST["manifest"]), q["f"])
+            # ── AND A NAME THIS WORLD DOES NOT CARRY IS NOT ANSWERED WITH ANOTHER
+            # FILE. Asked for a file it has no row and no neighbour for, this fell
+            # through to the world's first page and served it with a 200: the door
+            # opening on the wrong room while saying nothing, which is the shape
+            # the comment above was written against for the empty case. A name
+            # given and not found is a miss, and the fallback below is for the
+            # question that named nothing at all.
+            if q.get("f"):
+                return None
             if FACTS and os.path.exists(FACTS):
                 return FACTS
             return next((p for _, p in bench_files() if os.path.exists(p)), FACTS)
