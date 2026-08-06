@@ -6934,6 +6934,49 @@ public enum MyWatch: AccessLedger {
                    cwd=_dh, capture_output=True)
     _hcommit("file the pair under .github, and change nothing else")
     _moved = run("findings", "--history", "--policy", "owners.csv", cwd=_dh)[1]
+    # ── AND THE WALK IS FOLDED INTO ONE SENTENCE. Two hundred rows are the
+    # evidence, not the finding. Cutting the pilot letter meant writing two
+    # scripts to fold these rows by hand, which is the tool asking its reader to
+    # finish it. Every number in the fold is git's own and its bound is said with
+    # it: commits ON THE WALKED LINE, not pull requests and nothing about what
+    # any of them did, because a claim about merges is a claim about a forge.
+    _fold = os.path.join(tmp, "the-fold")
+    os.makedirs(os.path.join(_fold, "src", "api"), exist_ok=True)
+    subprocess.run(["git", "init", "-q", "-b", "main", _fold], capture_output=True)
+    open(os.path.join(_fold, "src", "api", "main.py"), "w").write("x\n")
+    open(os.path.join(_fold, "CODEOWNERS"), "w").write("/src/api @alice\n")
+    open(os.path.join(_fold, "owners.csv"), "w").write("owner,zone\nalice,src\n")
+
+    def _fcommit(msg, when):
+        subprocess.run(["git", "add", "-A"], cwd=_fold, capture_output=True)
+        subprocess.run(["git", "-c", "commit.gpgsign=false", "-c", "user.email=a@b",
+                        "-c", "user.name=A", "commit", "-qm", msg, "--no-verify"],
+                       cwd=_fold, capture_output=True,
+                       env={**os.environ, "GIT_AUTHOR_DATE": when, "GIT_COMMITTER_DATE": when})
+
+    _fcommit("the pair, in agreement", "2026-01-05T00:00:00")
+    os.makedirs(os.path.join(_fold, "services"), exist_ok=True)
+    subprocess.run(["git", "mv", "src/api", "services/api"], cwd=_fold, capture_output=True)
+    _fcommit("move the folder, say nothing", "2026-03-10T00:00:00")
+    for _i in range(1, 5):
+        open(os.path.join(_fold, "notes.txt"), "a").write(f"note {_i}\n")
+        _fcommit(f"note {_i}", f"2026-05-2{_i}T00:00:00")
+    _folded = run("findings", "--history", cwd=_fold)[1]
+    _fsaid = subprocess.run([sys.executable, GATE, "findings", "--history"], cwd=_fold,
+                            capture_output=True, text=True).stdout
+    S.append(("the walk is folded into one sentence, and the sentence is git's own",
+              _folded.get("parted")
+              and _folded["parted"]["when"] == "2026-03-10"
+              and _folded["parted"]["commits_since"] == 4
+              and _folded["parted"]["standing"] == 1
+              and _folded["parted"]["days"] > 100
+              # said on the first line a reader sees, above the rows it folds
+              and _fsaid.split("\n")[1].strip().startswith("parted at ")
+              and "on this line" in _fsaid
+              # and a pair that came back has no such sentence: nothing parted
+              and run("findings", "--history", "--policy", "owners.csv",
+                      cwd=_dh)[1].get("parted") is None))
+
     S.append(("the curve follows the pair when it moves, and says where it read it",
               # the walk did not stop at the move: one more commit than before
               _moved.get("commits") == 6

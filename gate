@@ -5771,7 +5771,37 @@ def cmd_findings(a):
         fell = any(a["divergences"] is not None and b["divergences"] is not None
                    and b["divergences"] < a["divergences"]
                    for a, b in zip(rows, rows[1:]))
-        return {"command": "findings history", "history": rows,
+        # ── AND THE WALK IS FOLDED INTO ONE SENTENCE. Two hundred rows are the
+        # evidence, not the finding: a person reading this wants when it parted,
+        # how long ago, and how much has gone past since. Measured on myself:
+        # cutting the pilot letter meant writing two scripts to fold these rows
+        # by hand, which is the tool asking its reader to finish it.
+        #
+        # EVERY NUMBER HERE IS GIT'S OWN, and the bounds are said with them. The
+        # count is of commits ON THE WALKED LINE, which is the first-parent line
+        # within the window this run read: not of pull requests, not of reviews,
+        # and nothing about what any of them did. A claim about merges would be
+        # a claim about somebody's forge, and this tool reads git.
+        #
+        # AND A PAIR THAT CAME BACK HAS NOT PARTED. The sentence is about a gap
+        # that is open now, so it is written only when today's row is still
+        # apart; a curve that rose and fell is a fixed thing, and saying "parted
+        # 149 days ago" about it would be a false alarm carrying a true date.
+        at = None
+        for a, b in zip(rows, rows[1:]):
+            if a["divergences"] == 0 and (b["divergences"] or 0) > 0:
+                at = b
+        parted = None
+        if at and rows[-1]["divergences"]:
+            since = rows[len(rows) - 1 - rows[::-1].index(at):]
+            from datetime import date as _d
+            days = (_d.today() - _d.fromisoformat(at["when"])).days
+            parted = {"at": at["at"], "when": at["when"], "days": days,
+                      "commits_since": len(since) - 1, "standing": rows[-1]["divergences"],
+                      "said": (f"parted at {at['at']} on {at['when']}, {days} days and "
+                               f"{len(since) - 1} commits ago on this line; "
+                               f"{rows[-1]['divergences']} still apart today")}
+        return {"command": "findings history", "history": rows, "parted": parted,
                 "shape": ("a fall here is somebody comparing the two records by hand. "
                           "That comparison is recorded nowhere, so nothing carries it "
                           "and the level comes back: with no court, nothing is obliged "
@@ -7334,6 +7364,9 @@ def humanize(out):
     elif cmd == "findings history":
         rows = out["history"]
         lines.append(f"findings history: {out['commits']} commits carry the pair, read from git")
+        # the fold first, because it is the finding and the rows are its evidence
+        if out.get("parted"):
+            lines.append(f"  {out['parted']['said']}")
         lines.append(f"  {out['measure']}")
         for r in rows:
             n = r["divergences"]
