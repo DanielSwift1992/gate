@@ -3714,7 +3714,15 @@ def cmd_badge(a):
     span = marks[0][1] if marks else None
     days = ((_date.today() - _date.fromisoformat(broke)).days if broke
             else (_date.today() - _date.fromisoformat(marks[-1][1])).days if marks else None)
-    right = f"{claims} claims · {'holds' if holds else 'refused'}" + (f" · {days}d" if days is not None else "")
+    # ── AND A RED BADGE DOES NOT REPORT NOUGHT CLAIMS. The count of claims comes
+    # from the court's own holding line, and a refusal does not print one, so a
+    # world with eighty-two premises and two refusals wore `0 claims · refused`
+    # in the file people put in a README. This badge exists to say how WIDE the
+    # green is, and on a red world there is no green to be wide: it says how many
+    # were refused, which is the number that is true then.
+    refused_n = len(said.get("refusals", []))
+    right = (f"{claims} claims · holds" if holds else
+             f"refused {refused_n}") + (f" · {days}d" if days is not None else "")
     if out_path:
         lw, rw = 40, 8 + int(len(right) * 6.2)
         open(out_path, "w").write(BADGE_SVG.format(

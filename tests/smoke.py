@@ -2616,6 +2616,27 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               and bg.get("commits_judged") == 2
               # and it never claims to have seen what nobody saw
               and "silent" not in (bg.get("note") or "") and "claims" in bg.get("text", "")))
+    # ── AND A RED BADGE DOES NOT REPORT NOUGHT CLAIMS. The claim count comes
+    # from the court's own holding line, and a refusal prints no such line, so a
+    # world with eighty-two premises and two refusals wore `0 claims · refused`
+    # in the file people put in a README. The badge exists to say how WIDE the
+    # green is; on a red world there is no green to be wide, and the number that
+    # is true then is how many were refused.
+    _bb = os.path.join(tmp, "badge-red")
+    os.makedirs(_bb, exist_ok=True)
+    run("demo", "org", _bb)
+    _bb_w = os.path.join(_bb, "gate.swift")
+    open(_bb_w, "w").write(open(_bb_w, encoding="utf-8").read()
+                           .replace("public typealias Home = Engineering",
+                                    "public typealias Home = Finance", 1))
+    _bb_red = run("badge", "-o", "gate.svg", cwd=_bb)[1]
+    _bb_svg = open(os.path.join(_bb, "gate.svg"), encoding="utf-8").read()
+    S.append(("a red badge says how many were refused, never nought claims",
+              _bb_red.get("verdict") == "refused"
+              and "0 claims" not in _bb_red.get("text", "")
+              and _bb_red.get("text", "").startswith("refused ")
+              # and the picture carries the same words as the answer
+              and f'aria-label="gate: {_bb_red["text"]}"' in _bb_svg))
 
 
     # ── an offer is a question put over a value, and a shadow is light taken
