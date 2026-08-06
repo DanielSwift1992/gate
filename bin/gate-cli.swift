@@ -41,6 +41,15 @@ func cannot(_ note: String, _ then: String) -> Never {
     exit(1)
 }
 
+// ── AND THE FLAG THIS TOOL DOES NOT READ IS SAID HERE TOO. Every verb writes
+// with `-o`; `--out` is the guess anybody makes, and swallowing it wrote nothing
+// and said nothing. The python side refuses it in `main`, before any verb reads
+// its argv, and the verbs this vein carries never reach that line.
+if args.contains("--out") && !args.contains("-o") {
+    cannot("this tool writes with `-o`, and `--out` is not a flag it reads",
+           "spell it `-o PATH`, the way the usage line for every writing verb does")
+}
+
 // the veins, one argv prefix per line: the whole strangler ledger.
 //
 // A vein is a PREFIX, so a verb moves whole or not at all: claiming `stdlib`
@@ -223,6 +232,17 @@ if args.first == "export" {
              + "printed table against the original you imported"
     guard let first = rest.first, !first.hasPrefix("-"),
           let dash = rest.firstIndex(of: "-o"), dash + 2 < rest.count else {
+        // ── AND A WORLD NAMED WITH NOWHERE TO PRINT IT IS A MISTAKE, NOT A
+        // QUESTION. `export` bare is somebody learning what the verb takes;
+        // `export gate.swift -o one.csv` is half a sentence, and the nought exit
+        // told a script the two tables were written. The python side splits it
+        // the same way, and this vein carries the verb.
+        if !(rest.isEmpty || (rest.count == 1 && rest[0].hasPrefix("-"))) {
+            cannot("export prints two tables and needs both named: "
+                   + "`gate export gate.swift -o people.csv grants.csv`",
+                   "name the two files, and each is printed for the round-trip diff "
+                   + "against the table you imported")
+        }
         if args.contains("--json") {
             out("{\n  \"command\": \"export\",\n  \"asks\": true,\n"
                 + "  \"note\": " + jsonString(note) + ",\n"

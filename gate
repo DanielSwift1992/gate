@@ -1534,7 +1534,7 @@ def cmd_import(a):
         emit(f"            VerifiedView<\n                {g['who']},\n                {g['doc']}\n            >.self", src)
     emit("    }\n}")
 
-    with open(out_path, "w") as f:
+    with ours_write(out_path, "the world this reads") as f:
         f.write("\n".join(t for t, _ in lines) + "\n")
     r = judge(out_path)
     for ref in r["refusals"]:
@@ -1566,6 +1566,14 @@ def cmd_export(a):
     # ⇒ the fact translation is proven mechanically, no trust in the translator.
     # A verb meets a person with a sentence, never a stack trace: asked for
     # nothing, this answered IndexError, the same voice verify once used.
+    if a and not (len(a) == 1 and a[0].startswith("-")) and (
+            "-o" not in a or a.index("-o") + 2 >= len(a)):
+        # a world was named and the two files to print it into were not: half a
+        # sentence, and the same nought exit told a script the tables were written
+        cannot("export prints two tables and needs both named: "
+               "`gate export gate.swift -o people.csv grants.csv`",
+               "name the two files, and each is printed for the round-trip diff "
+               "against the table you imported")
     if not a or a[0].startswith("-") or "-o" not in a or a.index("-o") + 2 >= len(a):
         return {"command": "export", "asks": True,
                 "note": "export prints the org tables back from a world, for the round-trip diff",
@@ -1604,7 +1612,7 @@ def cmd_export(a):
         rows.append(
             [m.group(1), f["Rank"], f["Home"], f["Given"], f["Family"], f["Born"], f["Site"], sex_pool.get(f["Given"], "")]
         )
-    with open(people_out, "w") as f:
+    with ours_write(people_out, "the people table") as f:
         f.write("id,rank,home,given,family,born,site,sex\n")
         f.writelines(",".join(r) + "\n" for r in rows)
     grants = re.findall(r"VerifiedView<\s*(\w+),\s*(\w+)\s*>\.self;?", text)
@@ -1967,11 +1975,7 @@ def cmd_library(a):
     # asking whether there is one: in a repository with no world it opened None
     # and raised. It is the verb `check` sends people to for the names they may
     # use, so a stranger following that sentence met a stack trace.
-    if not a and not (FACTS and os.path.exists(FACTS)):
-        cannot("library reads the vocabulary a world is written in, and there is no "
-               "world here",
-               "run `gate init .` to start one, or `gate demo` for a repository to look "
-               "at. `gate library diff a.json b.json` needs no world")
+
     if a and a[0] == "diff":
         la = theirs_json(a[1], "a library printed by `gate library -o`")
         lb = theirs_json(a[2], "a library printed by `gate library -o`")
@@ -1983,6 +1987,15 @@ def cmd_library(a):
             "only_second": sorted(B - A),
             "note": "the union is safe by construction: one domain has one canonical vocabulary (SAT5), so a difference is teachable form, never client data",
         }
+    # ── AND THE GUARD SITS AT THE READING, NOT AT ONE SPELLING OF THE ARGV. It
+    # asked `not a`, so `gate library` bare refused in words and `gate library -o
+    # lib.json` opened a world file that is not there and raised. The `diff`
+    # route above needs no world and has already returned by here.
+    if not (FACTS and os.path.exists(FACTS)):
+        cannot("library reads the vocabulary a world is written in, and there is no "
+               "world here",
+               "run `gate init .` to start one, or `gate demo` for a repository to look "
+               "at. `gate library diff a.json b.json` needs no world")
     out_path = a[a.index("-o") + 1] if "-o" in a else None
     text = open(FACTS).read()
     heads = sorted(set(re.findall(r"(\w+)<\s*\w+,\s*\w+\s*>\.self;?", text)))
@@ -1995,7 +2008,7 @@ def cmd_library(a):
     result = {"command": "library", "facts": FACTS, **lib,
               "next": "run `gate status` to judge what this vocabulary is used to say"}
     if out_path:
-        with open(out_path, "w") as f:
+        with ours_write(out_path, "this world's vocabulary") as f:
             json.dump(lib, f, indent=2, sort_keys=True)
         result["wrote"] = out_path
     return result
@@ -3635,7 +3648,7 @@ def cmd_import_rbac(a):
         srcmap[cert] = what
         checked += 1
     world = "\n".join(lines) + "\n"
-    with open(out_path, "w") as f:
+    with ours_write(out_path, "the world this prints") as f:
         f.write(world)
     t0 = time.time()
     outp = judge_call(["judge", "where", out_path]).stdout
@@ -3774,7 +3787,7 @@ def cmd_badge(a):
              f"refused {refused_n}") + (f" · {days}d" if days is not None else "")
     if out_path:
         lw, rw = 40, 8 + int(len(right) * 6.2)
-        open(out_path, "w").write(BADGE_SVG.format(
+        ours_write(out_path, "the badge").write(BADGE_SVG.format(
             w=lw + rw, lw=lw, rw=rw, tx=lw + 5, right=esc_xml(right),
             fill="#007D36" if holds else "#BF4035", alt="gate: " + right))
     return {"command": "badge", "claims": claims, "verdict": "holds" if holds else "refused",
@@ -4461,7 +4474,7 @@ def cmd_declare(a):
                       f"    public typealias Of = {f['shape']}", "}"]
         world = "\n".join(lines) + "\n"
         if out_path:
-            open(out_path, "w").write(world)
+            ours_write(out_path, "the side you are declaring").write(world)
         mine = declare_side(out_path, "Theirs", "seam",
                             a[a.index("--at") + 1] if "--at" in a else
                             os.path.basename(src)) if (mine_too and out_path) else None
@@ -4487,7 +4500,7 @@ def cmd_declare(a):
                       f"public typealias Carry_{i} = Carries<{who}, {rec}, {c['as']}>"]
         world = "\n".join(lines) + "\n"
         if out_path:
-            open(out_path, "w").write(world)
+            ours_write(out_path, "the side you are declaring").write(world)
         # THE PIN IT ALREADY CARRIES. A carrier declaration says what contract it
         # was built against and at what revision; asking the operator to type
         # that again would be asking for a second copy of a fact, and a second
@@ -4785,7 +4798,7 @@ def cmd_aside(a):
             if not (d.get("route") == route and d.get("field") == field)]
     rows.append({"route": route, "field": field, "because": because, "declared_by": by})
     known["diverges"] = rows
-    _json.dump(known, open(path, "w"), indent=1)
+    _json.dump(known, ours_write(path, "the divergences you declare"), indent=1)
     return {"command": "aside", "address": f"{route} · {field}", "because": because,
             "declared_by": by, "wrote": path, "standing": len(rows),
             "note": (f"{by} says this one is meant, while {because} is open. It stands out of the "
@@ -5329,7 +5342,7 @@ def cmd_import_refs(a):
         lines.append(f"public typealias {cert} = Cites<{site}, {sanitize(c['key'])}>")
         srcmap[cert] = {"address": f"{c['file']}:{c['line']}", "key": c["key"]}
     world = "\n".join(lines) + "\n"
-    with open(out_path, "w") as f:
+    with ours_write(out_path, "the world this prints") as f:
         f.write(world)
     t0 = time.time()
     outp = judge_call(["judge", "where", out_path]).stdout
@@ -5388,6 +5401,27 @@ def theirs_json(path, what):
                "writes the JSON this reads")
     except OSError:
         cannot(f"no such file: {path}", f"point it at {what}")
+
+
+def ours_write(path, what="the file to write"):
+    # ── AND A PLACE THAT CANNOT HOLD A FILE IS SAID, NOT RAISED. Every verb that
+    # takes `-o` or `--out` handed the path straight to `open(..., "w")`, so a
+    # directory, a read-only folder, or a parent that does not exist met a person
+    # with an IsADirectoryError, a PermissionError or a FileNotFoundError and a
+    # stack trace. Six verbs did it, found by walking each writing verb into each
+    # of the three. This is the writing half of `theirs_text` and `theirs_json`,
+    # and the sentence is written once for all of them.
+    try:
+        return open(path, "w", encoding="utf-8")
+    except IsADirectoryError:
+        cannot(f"{path} is a directory, and this writes {what}",
+               "name a file inside it, or another path")
+    except PermissionError:
+        cannot(f"{path} cannot be written here: permission denied",
+               f"name a path you can write, and this will put {what} there")
+    except OSError as e:
+        cannot(f"{path} cannot be written here: {(e.strerror or str(e)).lower()}",
+               f"name a path whose folder exists, and this will put {what} there")
 
 
 def theirs_text(path, what="the file you mean"):
@@ -5540,7 +5574,7 @@ def cmd_import_codeowners(a):
     said_from = src + (f" --policy {policy_path}" if policy_path else "")
     rules, lines, srcmap, keepers = codeowners_world_lines(src, policy, said_from)
     world = "\n".join(lines) + "\n"
-    with open(out_path, "w") as f:
+    with ours_write(out_path, "the world this prints") as f:
         f.write(world)
     t0 = time.time()
     outp = judge_call(["judge", "where", out_path]).stdout
@@ -7766,6 +7800,15 @@ def main():
                 os.execv(_cli, [_cli, *args])
         except OSError:
             pass
+    # ── AND THE FLAG THIS TOOL DOES NOT READ IS SAID, NOT SWALLOWED. Every verb
+    # here writes with `-o`, and `--out` is the guess anybody makes: `gate badge
+    # --out gate.svg` printed a badge to the terminal, wrote nothing, and said
+    # nothing about the flag it had just ignored. A flag quietly ignored is the
+    # cheapest lie a tool can tell about itself, and this is the one spelling
+    # near enough to a real one to be typed by somebody who read the usage.
+    if "--out" in args and "-o" not in args:
+        cannot("this tool writes with `-o`, and `--out` is not a flag it reads",
+               "spell it `-o PATH`, the way the usage line for every writing verb does")
     as_json = "--json" in args
     args = [a for a in args if a != "--json"]
     cmd, rest = args[0], args[1:]

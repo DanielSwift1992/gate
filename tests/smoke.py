@@ -1025,6 +1025,61 @@ def main():
               and "misread" not in json.dumps(_bare_json)
               and _bare_json.get("asks") is True))
 
+    # ── AND A PLACE THAT CANNOT HOLD A FILE IS SAID, NOT RAISED. Every verb that
+    # takes `-o` or `--out` handed the path straight to `open(..., "w")`, so a
+    # directory, a read-only folder, or a parent that does not exist met a person
+    # with an IsADirectoryError, a PermissionError or a FileNotFoundError. Found
+    # by walking each writing verb into each of the three. `ours_write` is the
+    # writing half of `theirs_text` and `theirs_json`: one door, one sentence.
+    #
+    # AND `library` GUARDED ITS WORLD AT ONE SPELLING OF THE ARGV: it asked `not
+    # a`, so the verb bare refused in words and `library -o lib.json` opened a
+    # world file that is not there and raised.
+    _ow = os.path.join(tmp, "nowhere-to-write")
+    os.makedirs(os.path.join(_ow, "src"), exist_ok=True)
+    os.makedirs(os.path.join(_ow, "adir"), exist_ok=True)
+    _ro = os.path.join(_ow, "ro")
+    os.makedirs(_ro, exist_ok=True)
+    open(os.path.join(_ow, "CODEOWNERS"), "w").write("/src @alice\n")
+    open(os.path.join(_ow, "src", "a.py"), "w").write("x\n")
+    subprocess.run([sys.executable, GATE, "init", "."], cwd=_ow, capture_output=True)
+    os.chmod(_ro, 0o555)
+    _shut = []
+    for _argv in (["import", "codeowners", "CODEOWNERS", "-o", "adir"],
+                  ["import", "codeowners", "CODEOWNERS", "-o", "ro/out.swift"],
+                  ["import", "codeowners", "CODEOWNERS", "-o", "/no/such/dir/out.swift"],
+                  ["badge", "-o", "adir"],
+                  ["aside", "R", "F", "--because", "K", "-o", "ro/known.json"],
+                  ["library", "-o", "adir"],
+                  ["export", "gate.swift", "-o", "adir"]):
+        _r4 = subprocess.run([sys.executable, GATE, *_argv], cwd=_ow,
+                             capture_output=True, text=True, timeout=180)
+        if ("Traceback" in _r4.stdout + _r4.stderr or _r4.returncode != 1
+                or not _r4.stderr.startswith("gate: ") or "next: " not in _r4.stderr):
+            _shut.append(" ".join(_argv) + f" -> {_r4.returncode}")
+    os.chmod(_ro, 0o755)
+    if _shut:
+        print("   a place that cannot hold a file still raises:", _shut[:4])
+    S.append(("a place that cannot hold a file is said, not raised",
+              _shut == []
+              # and the sentence names which of the three it is
+              and "is a directory" in subprocess.run(
+                  [sys.executable, GATE, "import", "codeowners", "CODEOWNERS", "-o", "adir"],
+                  cwd=_ow, capture_output=True, text=True).stderr
+              # ── AND THE FLAG THIS TOOL DOES NOT READ IS SAID, NOT SWALLOWED.
+              # Every verb writes with `-o`, and `--out` is the guess anybody
+              # makes: `gate badge --out gate.svg` printed a badge to the
+              # terminal, wrote nothing, and said nothing about the flag it had
+              # just ignored. Both carriers refuse it, the vein before its own
+              # verbs read their argv.
+              and all(_o.returncode == 1 and "not a flag it reads" in _o.stderr
+                      for _o in [subprocess.run(
+                          [sys.executable, GATE, *_a], cwd=_ow, capture_output=True,
+                          text=True, env={**os.environ, "GATE_CLI": _env})
+                          for _a in (["badge", "--out", "gate.svg"],
+                                     ["export", "gate.swift", "--out", "a.csv", "b.csv"])
+                          for _env in ("off", os.path.join(HERE, "bin", "gate-cli"))])))
+
     # ── AND A FILE THAT IS NOT THERE IS SAID TOO. The wrong-kind sweep above
     # walked verbs with a file that is not what they read; this walks them with
     # a path that is nothing at all, which is the commoner mistake by far: a
