@@ -31,6 +31,14 @@ func err(_ text: String) {
 // stderr for a person, the object for whoever asked for one with `--json`.
 // This binary printed the raw object either way, and the two sides then said
 // the same thing in two shapes on the one argv where they both answer.
+// ── ONE IS NOT MANY, AND THE NOUN CARRIES IT. The python side prints every
+// count through its own `many`, and this vein carries three of them: a verb
+// that says `1 people` on one carrier and `1 person` on the other is not the
+// same verb, and the battery holds these two byte for byte.
+func many(_ n: Int, _ one: String, _ more: String? = nil) -> String {
+    return "\(n) " + (n == 1 ? one : (more ?? one + "s"))
+}
+
 func cannot(_ note: String, _ then: String) -> Never {
     if args.contains("--json") {
         err("{" + jsonString("error") + ": " + jsonString(note) + ", "
@@ -317,7 +325,8 @@ if args.first == "export" {
             + "    " + jsonString(peopleOut) + ",\n    " + jsonString(grantsOut)
             + "\n  ]\n}\n")
     } else {
-        out("export: \(rows.count) people, \(grants.count) grants → "
+        out("export: " + many(rows.count, "person", "people") + ", "
+            + many(grants.count, "grant") + " → "
             + peopleOut + ", " + grantsOut + "\n")
     }
     exit(0)
@@ -466,7 +475,7 @@ if args.first == "seam" {
     where !claimed.contains(m[0] + "\u{1}" + m[1]) {
         silent.append(m[0] + " · " + m[1])
     }
-    var told = "\(claims.count) claims judged"
+    var told = many(claims.count, "claim") + " judged"
     if !silent.isEmpty {
         told += "; \(silent.count) field\(silent.count != 1 ? "s" : "") the contract declares "
               + (silent.count != 1 ? "are" : "is")

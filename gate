@@ -3801,7 +3801,7 @@ def cmd_badge(a):
     # green is, and on a red world there is no green to be wide: it says how many
     # were refused, which is the number that is true then.
     refused_n = len(said.get("refusals", []))
-    right = (f"{claims} claims · holds" if holds else
+    right = (f"{many(claims, 'claim')} · holds" if holds else
              f"refused {refused_n}") + (f" · {days}d" if days is not None else "")
     if out_path:
         lw, rw = 40, 8 + int(len(right) * 6.2)
@@ -3818,7 +3818,8 @@ def cmd_badge(a):
                       if not files else
                       "this repository arrived without history, so only today is counted"
                       if shallow or not marks else
-                      f"{judged} commits that touched this world were judged again, oldest {marks[-1][1]}"
+                      f"{many(judged, 'commit')} that touched this world were judged again, "
+                       f"oldest {marks[-1][1]}"
                       + (f", and the last that did not hold was {broke}" if broke else ", and every one held"))
                      + ": the judge counts the claims again on every run"),
             "next": ("put it in the README beside the build: it says how WIDE the green is, "
@@ -4878,7 +4879,7 @@ def cmd_seam(a):
             "refusals": refusals, "judged": len(where), "unclaimed": silent,
             "judge_ms": ms,
             "carrier": who,
-            "note": (f"{len(where)} claims judged"
+            "note": (f"{many(len(where), 'claim')} judged"
                      + (f"; {len(silent)} field{'s' if len(silent) != 1 else ''} the contract declares "
                         + ("are" if len(silent) != 1 else "is")
                         + " claimed by nobody: a claim never made cannot be refused, so it stands "
@@ -5015,11 +5016,11 @@ def cmd_drift(a):
             "note": ("an observation, of a world that has not entered: git objects, and a walk. "
                      + (f"no history to date anything: {' and '.join(thin)} arrived with one commit "
                         "standing in for all of them. " if thin else
-                        f"{len(revs)} revisions of the contract were read, and the library's history "
+                        f"{many(len(revs), 'revision')} of the contract were read, and the library's history "
                         "walked once. ")
-                     + f"Absence is a fact about this walk: {scope['files']} files under "
+                     + f"Absence is a fact about this walk: {many(scope['files'], 'file')} under "
                      + f"{scope['root']}, kinds {scope['kinds']}, skipping {scope['skipped']}"
-                     + (f"; {len(undatable)} names cannot be dated, being already declared when the "
+                     + (f"; {many(len(undatable), 'name')} cannot be dated, being already declared when the "
                         "window opened" if undatable else "")),
             "next": ("re-run it yourself: everything above is a git object or a walk whose bounds "
                      "are printed with it" if not thin else
@@ -5421,6 +5422,17 @@ def theirs_json(path, what):
         cannot(f"no such file: {path}", f"point it at {what}")
 
 
+def many(n, one, more=None):
+    # ── ONE IS NOT MANY, AND THE NOUN CARRIES IT. This tool prints counts in
+    # nearly every line it says, and each site spelled its own plural: `1 rules`,
+    # `1 rows`, `1 commits`. A number and a noun that disagree are the tool
+    # saying a thing it does not mean, in the sentence somebody reads to decide
+    # something. Mended twice by hand at two sites before it was mended as a
+    # class; the battery holds the class, over what the verbs print and over the
+    # source, so the thirty-third site cannot be written bare.
+    return f"{n} {one if n == 1 else (more or one + 's')}"
+
+
 def ours_write(path, what="the file to write"):
     # ── AND A PLACE THAT CANNOT HOLD A FILE IS SAID, NOT RAISED. Every verb that
     # takes `-o` or `--out` handed the path straight to `open(..., "w")`, so a
@@ -5645,7 +5657,8 @@ def cmd_import_codeowners(a):
         "zones": len({codeowners_zone(r["pattern"]) for r in rules}),
         "paths": len(rules),
         "owners": len(keepers),
-        "policy": (f"{len(policy)} owners have a stated zone" if policy else None),
+        "policy": (f"{many(len(policy), 'owner')} {'has' if len(policy) == 1 else 'have'} a stated zone"
+                   if policy else None),
         # ── A GREEN NOBODY COULD HAVE BROKEN IS NOT A GREEN. Without a policy
         # every rule is its own authority: the zone equalities cannot fail, so
         # `holds` would be the verdict of a court that never sat — and the note
@@ -5744,8 +5757,8 @@ def repo_findings(n=400):
                                 capture_output=True, text=True).stdout.strip()
         if edits and not (ci or hooked):
             out.append({"kind": "observed", "subject": "unchecked edits",
-                        "sentence": f"{len(touchers)} people changed these facts across "
-                                    f"{edits} commits, and nothing checked those edits: "
+                        "sentence": f"{many(len(touchers), 'person', 'people')} changed these facts across "
+                                    f"{many(edits, 'commit')}, and nothing checked those edits: "
                                     "there is no hook and no workflow in this repository.",
                         "evidence": f"git log over {', '.join(sorted(world))}"})
         unnamed = sorted({c["email"] for c in commits if c["touches_world"] and not c["person"]})
@@ -5768,9 +5781,9 @@ def repo_findings(n=400):
             # a history too short to be evidence proves nothing about anyone
             if quiet and len(commits) >= 50:
                 out.append({"kind": "observed", "subject": "quiet owners",
-                            "sentence": f"{len(quiet)} of the {len(owners)} owners named in "
+                            "sentence": f"{len(quiet)} of the {many(len(owners), 'owner')} named in "
                                         f"CODEOWNERS have not appeared in the last "
-                                        f"{len(commits)} commits: ownership outlives people, "
+                                        f"{many(len(commits), 'commit')}: ownership outlives people, "
                                         "and nothing here notices.",
                             "evidence": ", ".join("@" + q for q in quiet[:4])})
             them = "it" if len(rules) == 1 else "them"
@@ -5795,10 +5808,10 @@ def repo_findings(n=400):
         share = round(100 * len(cs) / len(commits))
         if share >= 50:
             out.append({"kind": "observed", "subject": "concentration",
-                        "sentence": f"{share}% of the last {len(commits)} commits are one "
+                        "sentence": f"{share}% of the last {many(len(commits), 'commit')} are one "
                                     f"person's ({who}): what they know is not written down "
                                     "anywhere this repository can check.",
-                        "evidence": f"{len(cs)} of {len(commits)} commits"})
+                        "evidence": f"{len(cs)} of {many(len(commits), 'commit')}"})
     return out
 
 
@@ -5994,14 +6007,15 @@ def cmd_findings(a):
                 # court actually spoke on: a commit whose reading is silent is
                 # not a commit found apart, and rolling it into the claim would
                 # be counting silence as evidence
-                "said": (f"apart at every one of the {len([r for r in since if r['read']])} "
-                         f"commits this run read, "
+                "said": (f"apart at every one of the "
+                         f"{many(len([r for r in since if r['read']]), 'commit')} "
+                         f"this run read, "
                          f"back to {mark['when']}, {days} days ago; " +
                          ("the two records have not agreed since the pair was written"
                           if whole else "it parted before this run's reading") +
                          f"; {standing} still apart today") if beyond else
                         (f"parted at {mark['at']} on {mark['when']}: {days} days and "
-                         f"{len(since) - 1} commits carrying the pair ago; "
+                         f"{many(len(since) - 1, 'commit')} carrying the pair ago; "
                          f"{standing} still apart today")}
         return {"command": "findings history", "history": rows, "parted": parted,
                 # ── AND `--md` MEANS HERE WHAT IT MEANS EVERYWHERE ELSE. The
@@ -6041,7 +6055,7 @@ def history_markdown(rows, parted):
         return "Nothing to report: no commit in this history carries the file this reads.\n"
     turns = [r for i, r in enumerate(rows)
              if i == 0 or r["divergences"] != rows[i - 1]["divergences"]]
-    lines = [f"### The pair over {len(rows)} commits", ""]
+    lines = [f"### The pair over {many(len(rows), 'commit')}", ""]
     lines.append(parted["said"] if parted else
                  "the two records agree at this repository's tip.")
     lines += ["", f"| commit | date | divergences | rules |", "| --- | --- | --- | --- |"]
@@ -6303,7 +6317,7 @@ th{{background:#f5f5f7}}.ok{{color:#248a3d}}.bad li{{color:#c4453b;margin:.3em 0
 .findings li{{margin:.6em 0}}.findings small{{color:#8e8e93}}
 </style>
 <h1>gate report</h1>
-<p>{len(people)} people · {len(grants)} grants · judged in {r['judge_ms']} ms</p>
+<p>{many(len(people), 'person', 'people')} · {many(len(grants), 'grant')} · judged in {r['judge_ms']} ms</p>
 <h2>Verdict</h2>{verdict_html}
 <h2>People</h2>{table(people, ["id", "rank", "home", "site", "given", "family", "born"])}
 <h2>Grants</h2>{table(grants, ["who", "doc"])}
@@ -7365,7 +7379,8 @@ def humanize(out):
         tail = []
         if isinstance(out.get("world"), dict):
             w = out["world"]
-            tail.append(f"{w['declarations']} declarations · {w['lookups']} lookups · {w['premises']} premises")
+            tail.append(f"{many(w['declarations'], 'declaration')} · {many(w['lookups'], 'lookup')} · "
+                        f"{many(w['premises'], 'premise')}")
         if isinstance(out.get("forms"), dict):
             # NOUGHT IS THREE DIFFERENT FACTS AND ONLY ONE OF THEM IS WORDS. Beside
             # a judged world it is a number. Beside a refusal it is nothing at all:
@@ -7376,7 +7391,7 @@ def humanize(out):
             # breaking the letter on a fresh entry printed the second.
             n = out["forms"]["equalities"]
             if n:
-                tail.append(f"{n} equalities")
+                tail.append(many(n, "equality", "equalities"))
             elif not out.get("refusals") and not out.get("world"):
                 tail.append("nothing claimed here yet, so nothing was checked")
         if out.get("judge_ms") is not None:
@@ -7395,7 +7410,7 @@ def humanize(out):
             lines[-1] += f" · judged by {out['court']}"
         if out.get("unjudged"):
             n = len(out["unjudged"])
-            lines.append(f"  not judged here: {n} forms "
+            lines.append(f"  not judged here: {many(n, 'form')} "
                          + ("row" if n == 1 else "rows")
                          + " (" + ", ".join(out["unjudged"][:3])
                          + (", …" if n > 3 else "") + "). The certificate court is the "
@@ -7473,7 +7488,7 @@ def humanize(out):
             lines.append(f"  back: {out['back']}")
         lines.append(f"  more: {len(out['try'])} other things to try; `--json` lists them")
     elif cmd == "init":
-        lines.append(f"init: {out['root']}" + (f" · created {len(out['created'])} files" if out["created"] else " · already there"))
+        lines.append(f"init: {out['root']}" + (f" · created {many(len(out['created']), 'file')}" if out["created"] else " · already there"))
         if out.get("next"):
             lines.append(f"  next: {out['next']}")
         if out.get("hooks"):
@@ -7575,7 +7590,7 @@ def humanize(out):
         if out.get("thin"):
             head += " · no history here, so nothing is dated"
         elif out["late"]:
-            head += (f" · behind on {out['late']} names · median {out['median_days']} days"
+            head += (f" · behind on {many(out['late'], 'name')} · median {many(out['median_days'], 'day')}"
                      f" · worst {out['worst_days']}")
         else:
             head += " · nothing arrived late"
@@ -7622,14 +7637,15 @@ def humanize(out):
                      "`gate mine FILE` / `gate theirs FILE` is how a file joins your world")
     elif cmd == "library":
         f = out.get("forms") or out.get("crystal") or {}
-        lines.append(f"library: {len(f)} forms" + (f" · wrote {out['wrote']}" if out.get("wrote") else ""))
+        lines.append(f"library: {many(len(f), 'form')}" + (f" · wrote {out['wrote']}" if out.get("wrote") else ""))
     elif cmd == "export" and out.get("verdict") == "refused":
         lines.append(f"export: refused {len(out['refusals'])}")
         for r in out["refusals"]:
             lines.append(f"  {r['address']} · {r['claim']}")
         lines.append(f"  next: {out['next']}")
     elif cmd == "export":
-        lines.append(f"export: {out['people']} people, {out['grants']} grants → {', '.join(out['wrote'])}")
+        lines.append(f"export: {many(out['people'], 'person', 'people')}, "
+                     f"{many(out['grants'], 'grant')} → {', '.join(out['wrote'])}")
     elif cmd == "log":
         d = out.get("default_branch") or "?"
         what = ("the world's history" if out.get("scope") == "world" and out.get("world_files")
@@ -7637,7 +7653,8 @@ def humanize(out):
         # and when the word could not be honoured, the line says which word and why
         if out.get("narrowed") is False:
             what += ": no file here is declared a world file, so there is nothing narrower"
-        lines.append(f"log: {len(out['commits'])} commits · {what} · observed, not judged · closed = reachable from {d}")
+        lines.append(f"log: {many(len(out['commits']), 'commit')} · {what} · observed, "
+                     f"not judged · closed = reachable from {d}")
         for c in out["commits"]:
             st = "?" if c["closed"] is None else ("closed" if c["closed"] else "open")
             who = c["person"] or c["email"]
@@ -7645,7 +7662,8 @@ def humanize(out):
             lines.append(f"  {c['short']} {st:6} {c['when'][:10]} {who:20} {c['subject']}{star}")
     elif cmd == "findings history":
         rows = out["history"]
-        lines.append(f"findings history: {out['commits']} commits carry the pair, read from git")
+        lines.append(f"findings history: {many(out['commits'], 'commit')} "
+                     f"{'carries' if out['commits'] == 1 else 'carry'} the pair, read from git")
         # the fold first, because it is the finding and the rows are its evidence
         if out.get("parted"):
             lines.append(f"  {out['parted']['said']}")
@@ -7656,7 +7674,7 @@ def humanize(out):
                     "in agreement" if n == 0 else
                     f"{n} divergence" + ("" if n == 1 else "s"))
             lines.append(f"  {r['at']} {r['when']}  {said:22}"
-                         f" {r['rules']} rules"
+                         f" {many(r['rules'], 'rule')}"
                          + ("" if r["judged"] else ", no policy: only unmatched rules can show"))
         # and where the pair was read, said once rather than on every row, plus
         # every move: a file that changed place is the same pair, and a reader
@@ -7689,7 +7707,7 @@ def humanize(out):
             lines.append("")
             lines.append(out["markdown"])
     elif cmd == "survey":
-        lines.append(f"survey: {out['commits']} commits, read-only")
+        lines.append(f"survey: {many(out['commits'], 'commit')}, read-only")
         lines.append("  unwritten links (co-change from your own history):")
         for l in out["unwritten_links"]:
             lines.append(f"    {l['together']:3d}x {l['confidence']:4.0%}  {l['a']} <-> {l['b']}")

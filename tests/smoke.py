@@ -1075,6 +1075,73 @@ def main():
               re.fullmatch(r"package-lock\.json:\d+", _at)
               and "node_modules/orphan" in _lines[int(_at.split(":")[1]) - 1]))
 
+    # ── ONE IS NOT MANY, AND THE CLASS IS CLOSED AS A CLASS. `1 rows` was mended
+    # at one site and `1 rules` was still standing two files away: a fix on the
+    # instance leaves the class open, and the next count written bare joins it.
+    # Two sieves hold it now. The first asks a world where everything is one and
+    # reads every line the verbs print; the second reads the source, so a site
+    # this fixture cannot reach is caught the day it is written rather than the
+    # day somebody notices a sentence that says a thing it does not mean.
+    _ones = os.path.join(tmp, "one-of-each")
+    os.makedirs(os.path.join(_ones, "src"), exist_ok=True)
+    subprocess.run(["git", "init", "-q", "-b", "main", _ones], capture_output=True)
+    open(os.path.join(_ones, "src", "a.py"), "w").write("x\n")
+    open(os.path.join(_ones, "CODEOWNERS"), "w").write("/nowhere @alice\n")
+    open(os.path.join(_ones, "owners.csv"), "w").write("owner,zone\nalice,src\n")
+    subprocess.run(["git", "add", "-A"], cwd=_ones, capture_output=True)
+    subprocess.run(["git", "-c", "commit.gpgsign=false", "-c", "user.email=a@b", "-c",
+                    "user.name=A", "commit", "-qm", "one of each", "--no-verify"],
+                   cwd=_ones, capture_output=True)
+    subprocess.run([sys.executable, GATE, "init", "."], cwd=_ones, capture_output=True)
+    # a word that ends in s and is not a plural, and a unit that is always short
+    _FINE = {"ms", "this", "its", "less", "plus", "status", "address", "was", "is",
+             "as", "has", "yours", "premises"}
+    _ONE = re.compile(r"\b1 ([a-z][a-z-]*s)\b")
+    _said_one = []
+    for _argv in (["status"], ["fsck"], ["findings"], ["findings", "--history"],
+                  ["findings", "--md", "--history"], ["badge"], ["library"], ["my"],
+                  ["survey"], ["log"], ["attention"], ["report"],
+                  ["import", "codeowners", "CODEOWNERS", "--policy", "owners.csv"],
+                  ["import", "codeowners", "CODEOWNERS"]):
+        _r5 = subprocess.run([sys.executable, GATE, *_argv], cwd=_ones,
+                             capture_output=True, text=True, timeout=300)
+        for _line in (_r5.stdout + _r5.stderr).splitlines():
+            for _m in _ONE.finditer(_line):
+                if _m.group(1) not in _FINE:
+                    _said_one.append(f"{' '.join(_argv)}: 1 {_m.group(1)}")
+    if _said_one:
+        print("   one printed as many:", sorted(set(_said_one))[:4])
+    S.append(("a world where everything is one is told so, in every verb that counts",
+              _said_one == []))
+
+    # and the same class, read in the source: every counted noun this tool prints
+    # goes through `many`, so a bare `{n} rules` is a red before anybody runs it
+    _NOUNS = ("rules rows commits claims equalities forms files owners people grants "
+              "revisions names divergences refusals premises declarations lookups "
+              "fields things answers pages seeds pins requirements links modules "
+              "verbs worlds sides certificates").split()
+    _NPAT = re.compile(r"^\s*(" + "|".join(_NOUNS) + r")\b")
+    _bare = []
+    for _node in ast.walk(ast.parse(open(GATE, encoding="utf-8").read())):
+        if not isinstance(_node, ast.JoinedStr):
+            continue
+        _vs = _node.values
+        for _i, _p in enumerate(_vs):
+            if not isinstance(_p, ast.FormattedValue):
+                continue
+            _nx = _vs[_i + 1] if _i + 1 < len(_vs) else None
+            if isinstance(_nx, ast.Constant) and isinstance(_nx.value, str):
+                _hit = _NPAT.match(_nx.value)
+                if _hit:
+                    _bare.append(f"{_node.lineno}: {{{ast.unparse(_p.value)[:24]}}} {_hit.group(1)}")
+    if _bare:
+        print("   a counted noun printed with a bare number:", _bare[:4])
+    S.append(("every counted noun this tool prints goes through one door",
+              _bare == [] and "def many(n, one, more=None):" in open(GATE, encoding="utf-8").read()
+              # and the vein carrying three of them counts the same way
+              and "func many(" in open(os.path.join(HERE, "bin", "gate-cli.swift"),
+                                       encoding="utf-8").read()))
+
     # ── AND A PLACE THAT CANNOT HOLD A FILE IS SAID, NOT RAISED. Every verb that
     # takes `-o` or `--out` handed the path straight to `open(..., "w")`, so a
     # directory, a read-only folder, or a parent that does not exist met a person
