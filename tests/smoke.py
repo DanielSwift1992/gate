@@ -1075,6 +1075,38 @@ def main():
               re.fullmatch(r"package-lock\.json:\d+", _at)
               and "node_modules/orphan" in _lines[int(_at.split(":")[1]) - 1]))
 
+    # ── AND THIS REPOSITORY TOOK THE RUNG IT WAS OFFERING. `gate status` here
+    # said "say who may merge: gate.policy.swift" for weeks: the tool asking its
+    # own repository for a thing its own repository had not done, in the first
+    # line anybody running it here reads. The keeper is not invented in that
+    # file: CODEOWNERS says `* @DanielSwift1992`, `ownership.swift` is printed
+    # from it by the command CODEOWNERS itself names, and the policy binds the
+    # email git records to the keeper that file declares. No rank is written:
+    # one keeper and no ladder above them is the fact, and `Requires = Manager`
+    # to make a verb light up would be a fact stated for the tool's convenience.
+    _own = open(os.path.join(HERE, "ownership.swift"), encoding="utf-8").read()
+    _pol_here = open(os.path.join(HERE, "gate.policy.swift"), encoding="utf-8").read()
+    _named = re.search(r"typealias\s+Person\s*=\s*(\w+)", _pol_here)
+    _mail = re.search(r'typeName.*?"([^"]+)"', _pol_here)
+    _here_said = run("status", cwd=HERE)[1]
+    S.append(("this repository says who keeps it, and the name is one its world declares",
+              _named and f"public enum {_named.group(1)}:" in _own
+              # the email is one git actually records here, not a plausible one
+              and _mail and _mail.group(1) in subprocess.run(
+                  ["git", "log", "--format=%ae"], cwd=HERE, capture_output=True,
+                  text=True).stdout.split()
+              # the rung it was offering is taken, and the ladder moved on
+              and _here_said.get("verdict") == "holds"
+              and "gate.policy.swift" not in _here_said.get("next", "")
+              # and no rank was invented to make a verb light up. Read from the
+              # DECLARATIONS, not the prose: the paragraph explaining why no rank
+              # is written names `MergePolicy` and `Requires = Manager`, and a
+              # guard that greps the file entire trips over the sentence that
+              # explains it. Third time this class has bitten in this battery.
+              and not [l for l in _pol_here.splitlines()
+                       if not l.lstrip().startswith("//")
+                       and ("Policy {" in l or "Requires" in l)]))
+
     # ── ONE IS NOT MANY, AND THE CLASS IS CLOSED AS A CLASS. `1 rows` was mended
     # at one site and `1 rules` was still standing two files away: a fix on the
     # instance leaves the class open, and the next count written bare joins it.

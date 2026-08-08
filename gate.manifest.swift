@@ -143,3 +143,7 @@ public enum TheEditorSheet: Theirs {
     public typealias At = Rev_codemirror_5_65_16
 }
 extension TheEditorSheet { public static var typeName: String { "codemirror.css" } }
+public enum Ownership: Mine {
+    public typealias Kind = FormsFile
+}
+extension Ownership { public static var typeName: String { "ownership.swift" } }
