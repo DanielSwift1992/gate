@@ -334,7 +334,7 @@ def main():
         "Its one move is to put the agreement in writing before the argument: each side states its half in its own file, the judge compares the halves from then on, and you hold a meeting when the verdict says you differ.",
         "What used to be an integration test is a verdict.",
         "If CODEOWNERS hands the payments folder to an intern, the rule holds and every record agrees with it.",
-        "What varies is which pair you point it at: a Jira ticket and the TODO that cites it, "
+        "You point it at any pair: a Jira ticket and the TODO that cites it, "
         "k8s RBAC and the cluster it describes, an API contract and a client in another language.",
         "Agreement here is not assumed. It is stated twice, and confirmed.",
         "Every pair you gate is one thing you stop keeping in your head.",

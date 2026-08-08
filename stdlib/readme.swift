@@ -46,14 +46,14 @@
 //
 // And CODEOWNERS is the example. The tool itself is general: two files that
 // state one fact, each side declared once, held to each other on every
-// change. That is the whole of it. What varies is which pair you point it
-// at: a Jira ticket and the TODO that cites it, k8s RBAC and the cluster it
+// change. That is the whole of it. You point it at any pair: a Jira ticket
+// and the TODO that cites it, k8s RBAC and the cluster it
 // describes, an API contract and a client in another language.
 //
 // The check is one lookup per claim and nothing else: no search, no solver, no
 // build. The cost is linear in the number of claims: milliseconds on a real
 // repository, and still milliseconds when the repository is ten times the size.
-// That is what lets it run on every keystroke and in every commit, with nobody
+// So it runs on every keystroke and in every commit, with nobody
 // waiting on it.
 //
 // ── what gate put in your repository, and how to take it out ──
