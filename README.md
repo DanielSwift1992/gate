@@ -260,6 +260,13 @@ CODEOWNERS · owners.csv
                 who owns this repository, and the zone that owner keeps:
                 the two files the first recipe above reads, kept here for
                 the same reason yours are kept in yours
+ownership.swift this repository's own ownership, printed from those two by
+                the command CODEOWNERS itself names, and judged with the
+                rest of the world
+gate.policy.swift
+                who keeps this repository, said once: the email git
+                records bound to the keeper ownership.swift declares. A
+                name the world does not declare is refused at this line
 bin/gate-judge  the judge, one static binary, built at a pin from the
                 public theory corpus, verification-is-identification:
                 github.com/DanielSwift1992/verification-is-identification
