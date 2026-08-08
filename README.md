@@ -185,8 +185,8 @@ public typealias Owns_2_carol = Owns<Owner_carol, Path_2_docs_>
 ```
 
 The language is three things: names, claims between names, and the
-rules the claims must satisfy. In the forms, a Realm is a zone, a Room
-a place in it, a Keeper its owner. The judge asks one
+rules the claims must satisfy. Realm, Room, Keeper: the zone, the
+path, the owner. The judge asks one
 question of every claim: the same, or not, and at which line.
 
 The files are bare Swift: the same language with the ceremony stripped,
