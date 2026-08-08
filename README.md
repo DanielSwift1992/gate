@@ -47,7 +47,7 @@ over the demo, judged as you type.
 The check is one lookup per claim and nothing else: no search, no solver,
 no build. The cost is linear in the number of claims: milliseconds on a
 real repository, and still milliseconds when the repository is ten times
-the size. That is what lets it run on every keystroke, in every commit,
+the size. So it runs on every keystroke, in every commit,
 and in CI, with nobody waiting on it. The sentence is measured:
 docs/BENCH.md carries the numbers, and `python3 bin/bench.py` reprints
 them on your machine.
@@ -107,8 +107,8 @@ commands use your own names. You pay once, per name you
 translate. Every question after that is a composition of what you already
 translated, and compositions are free: the opposite of a reporting tool,
 where each new question is new work. The tool is general; the table is
-one example. What varies is which pair you point
-it at: a Jira ticket and the TODO that cites it, k8s RBAC and the cluster
+one example. You point it at any pair: a Jira ticket and the TODO that
+cites it, k8s RBAC and the cluster
 it describes, an API contract and a client in another language.
 
 ## find your drift
