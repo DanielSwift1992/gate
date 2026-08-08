@@ -8,7 +8,8 @@ matching.
 
 One case, to be concrete. CODEOWNERS hands `/src/api` to @alice. The folder
 was renamed to `/services/api` in the spring. The rule now matches nothing,
-reviews still go to Alice, and no tool reports a problem. You find out at
+reviews still go to Alice, and no tool reports a problem: the rename fired
+no event on either file. You find out at
 an audit, or the day a colleague merges what nobody reviewed.
 
 That gap has a name: drift. Two records of one fact, coming apart in
@@ -53,29 +54,6 @@ them on your machine.
 
 No server. No runtime. No new formats. Nothing leaves your repository.
 
-## ask the file, not a person
-
-Every question below is one you answer today by searching: greping
-repositories, opening tickets, asking whoever remembers. Here each is a
-lookup, answered in milliseconds against the file itself:
-
-| The question | Today | Here |
-|---|---|---|
-| May this person read this document? | ask the owner, or read the ACLs by hand | `gate check view Emp0042 FinanceShare` |
-| What breaks if we move them to Sales? | find out after the move | `gate diff transfer Emp0042 Sales` |
-| Who may merge this, and since when? | convention, and memory | `gate guard merge` · `gate log` |
-| Which commit broke this rule? | bisect by hand, if anyone notices | `git bisect run gate status` |
-| Is anything inconsistent right now? | an audit, quarterly | `gate status`, on every keystroke |
-
-The names in the examples come from a sandbox this repository can make for
-you. Your own commands use your own names. You pay once, per name you
-translate. Every question after that is a composition of what you already
-translated, and compositions are free. That is the opposite of a
-reporting tool, where each new question is new work. And the table is one
-example. The tool itself is general. What varies is which pair you point
-it at: a Jira ticket and the TODO that cites it, k8s RBAC and the cluster
-it describes, an API contract and a client in another language.
-
 ## try it on your own repository
 
 ```sh
@@ -111,6 +89,28 @@ Every command here is written `gate`. Until it is on your path it is
 `./gate`, run from the clone: nothing else to install, nothing else to
 undo.
 
+## ask the file, not a person
+
+Today these are answered by searching: grep, tickets, whoever remembers.
+Here each is a lookup, in milliseconds, against the file itself:
+
+| The question | Today | Here |
+|---|---|---|
+| May this person read this document? | ask the owner, or read the ACLs by hand | `gate check view Emp0042 FinanceShare` |
+| What breaks if we move them to Sales? | find out after the move | `gate diff transfer Emp0042 Sales` |
+| Who may merge this, and since when? | convention, and memory | `gate guard merge` · `gate log` |
+| Which commit broke this rule? | bisect by hand, if anyone notices | `git bisect run gate status` |
+| Is anything inconsistent right now? | an audit, quarterly | `gate status`, on every keystroke |
+
+The names come from a sandbox this repository makes for you; your own
+commands use your own names. You pay once, per name you
+translate. Every question after that is a composition of what you already
+translated, and compositions are free: the opposite of a reporting tool,
+where each new question is new work. The table is one example of a
+general move. What varies is which pair you point
+it at: a Jira ticket and the TODO that cites it, k8s RBAC and the cluster
+it describes, an API contract and a client in another language.
+
 ## find your drift
 
 Yours is wherever two places state one fact. Take a thing you shipped this
@@ -131,8 +131,9 @@ two languages. A fact drifts where it changes hands.
 The quick first look is one command, over the git history already in your
 clone. `gate findings` prints plain sentences: who changed which facts,
 across how many commits, and whether any hook or workflow checked those
-edits. Nothing to set up, and nothing judged yet: these are readings, not
-verdicts.
+edits. `gate findings --history` says when a pair parted and how much has
+passed through since. Nothing to set up, and nothing judged yet: these
+are readings, not verdicts.
 
 Something drifts? Gate it
 
@@ -292,6 +293,14 @@ tests/windows.py the Windows measure: the reviewer's road as asserts
 ```
 
 ## what runs today, and what is next
+
+```
+$ gate badge
+badge: 186 claims · holds
+```
+
+The badge is this repository's own, and the judge re-counts it on every
+run.
 
 Working prototype under active development, MIT licensed: see LICENSE,
 and docs/NOTICE.md for the bundled pieces and their terms. The judge is a
