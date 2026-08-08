@@ -15,6 +15,10 @@ an audit, or the day a colleague merges what nobody reviewed.
 That gap has a name: drift. Two records of one fact, coming apart in
 silence, while both still get obeyed.
 
+You know it by its local names: config drift, doc rot, schema drift, a
+stale CODEOWNERS. The mechanism is one: two records, and nobody
+compares them.
+
 The usual cure is to pick one place and call it the source of truth. But a
 source has a direction: everything downstream must watch it, and it watches
 nothing. The folder was renamed in a pull request that never read the file.
@@ -76,7 +80,7 @@ keeps.
 
 `drift` reads an API contract and a client library out of git on your
 machine, and prints what the copies have been doing to each other.
-Nothing is uploaded and nothing is fetched. It observes rather than
+It uploads nothing and fetches nothing. It observes rather than
 judges: the exit code follows a threshold you declare (`--fail-over 30`),
 never a verdict of ours.
 
@@ -132,7 +136,7 @@ The quick first look is one command, over the git history already in your
 clone. `gate findings` prints plain sentences: who changed which facts,
 across how many commits, and whether any hook or workflow checked those
 edits. `gate findings --history` says when a pair parted and how much has
-passed through since. Nothing to set up, and nothing judged yet: these
+passed through since. It needs no setup and judges nothing yet: these
 are readings, not verdicts.
 
 Something drifts? Gate it
@@ -163,8 +167,10 @@ mock yours. Each side states its half in its own repository, the seam is
 judged, and a disagreement is named at its address on both sides. What
 used to be an integration test is a verdict.
 
-Written out, a pair is nine lines. From the demo's `ownership.swift`: the
-zone, a path in it, an owner posted to it, and the claim that ties them:
+You already write claims: every line of CODEOWNERS is one. These nine
+lines, from the demo's `ownership.swift`, are the same claim with its
+parts named: the
+zone, a path in it, an owner posted to it, and the tie between them:
 
 ```swift
 public enum Zone_docs: Realm {}
@@ -178,9 +184,10 @@ public enum Owner_carol: Keeper {
 public typealias Owns_2_carol = Owns<Owner_carol, Path_2_docs_>
 ```
 
-Nothing else is in the language: names, claims between names, and the
-rules the claims must satisfy. The forms say what they hold: a Realm is
-a zone, a Room a place in it, a Keeper its owner.
+The language is three things: names, claims between names, and the
+rules the claims must satisfy. In the forms, a Realm is a zone, a Room
+a place in it, a Keeper its owner. The judge asks one
+question of every claim: the same, or not, and at which line.
 
 The files are bare Swift: the same language with the ceremony stripped,
 and no DSL. Records are declarations, rules are type constraints in the
@@ -222,7 +229,10 @@ assumed. It is stated twice, and confirmed.
 
 ## death to drift
 
-Every pair you gate is one thing you stop keeping in your head. Today
+Every pair you gate is one thing you stop keeping in your head. An
+unwritten agreement has no address: to obey one, you remember them
+all. A gated pair has an address: the judge brings the one line your
+change touched, and the rest stay written. Today
 you keep other people's facts by hand: you review renames because
 a stale rule routes them to you, you spend audit week rebuilding
 answers, and you remember what breaks when a path moves. Gate a pair
