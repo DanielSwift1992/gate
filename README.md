@@ -3,8 +3,8 @@
 Your repository is full of sentences that must match something, and nobody
 checks the match. The schema must match the service that writes it. The
 rota must match who actually answers. Each pair held the day you or a
-colleague wrote it down, and nothing tells you the day the two stopped
-matching.
+colleague wrote it down, and the day the two stopped matching is
+written nowhere.
 
 One case, to be concrete. CODEOWNERS hands `/src/api` to @alice. The folder
 was renamed to `/services/api` in the spring. The rule now matches nothing,
@@ -179,7 +179,8 @@ public typealias Owns_2_carol = Owns<Owner_carol, Path_2_docs_>
 ```
 
 Nothing else is in the language: names, claims between names, and the
-rules the claims must satisfy.
+rules the claims must satisfy. The forms say what they hold: a Realm is
+a zone, a Room a place in it, a Keeper its owner.
 
 The files are bare Swift: the same language with the ceremony stripped,
 and no DSL. Records are declarations, rules are type constraints in the
@@ -231,7 +232,7 @@ the day it lands. A rename goes red for the renamer. A new hire's
 access is one diff with an owner's name on it. Deleting an old config
 takes an afternoon, because its readers are a list. The checking does
 not pile up: a claim is one lookup, so a hundred pairs cost what ten
-did. Your work did not get faster. What went away is the asking.
+did. Your work did not get faster. The asking is gone.
 
 ## the rest, one page deep
 

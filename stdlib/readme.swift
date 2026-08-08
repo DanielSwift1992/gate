@@ -13,8 +13,8 @@
 // Your repository is full of sentences that must match something, and nobody
 // checks the match. The schema must match the service that writes it. The
 // rota must match who actually answers. Each pair held the day you or a
-// colleague wrote it down, and nothing tells you the day the two stopped
-// matching.
+// colleague wrote it down, and the day the two stopped matching is
+// written nowhere.
 //
 // One case, to be concrete. CODEOWNERS hands `/src/api` to @alice. The folder was
 // renamed to `/services/api` in the spring. The rule now matches nothing, reviews
@@ -199,8 +199,8 @@
 // rename goes red on the renamer's screen, not on yours. A new hire's
 // access is a one-line diff an owner has to approve. Deleting the old
 // config takes an afternoon, not a season of asking around, because the
-// readers it still has are a list, not a guess. Nothing got faster. What
-// went away is the asking.
+// readers it still has are a list, not a guess. Nothing got faster.
+// The asking is gone.
 //
 // Something drifts? Gate it
 
@@ -219,4 +219,4 @@
 // == put your half of it in a file here, once
 // == That is the upkeep, all of it.
 // == rename goes red on the renamer's screen, not on yours.
-// == went away is the asking.
+// == The asking is gone.
