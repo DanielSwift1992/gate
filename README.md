@@ -296,7 +296,7 @@ tests/windows.py the Windows measure: the reviewer's road as asserts
 
 ```
 $ gate badge
-badge: 186 claims · holds
+badge: 188 claims · holds
 ```
 
 The badge is this repository's own, and the judge re-counts it on every
