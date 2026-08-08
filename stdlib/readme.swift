@@ -13,8 +13,8 @@
 // Your repository is full of sentences that must match something, and nobody
 // checks the match. The schema must match the service that writes it. The
 // rota must match who actually answers. Each pair held the day you or a
-// colleague wrote it down, and the day the two stopped matching is
-// written nowhere.
+// colleague wrote it down, and nobody records the day the two stop
+// matching.
 //
 // One case, to be concrete. CODEOWNERS hands `/src/api` to @alice. The folder was
 // renamed to `/services/api` in the spring. The rule now matches nothing, reviews
