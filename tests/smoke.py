@@ -8896,13 +8896,14 @@ public enum MyWatch: AccessLedger {
     # was; a shallow clone checks whatever commits it can see.
     _t_ok = lambda s: bool(re.match(r"^[a-z][a-z0-9-]{1,11}: \S", s)) \
         and len(s) <= 72 and "—" not in s
-    # the anchor moved once, from 02f2297: a 74-character title entered
-    # history at cefdd6a, the contract forbids rewriting what is pushed,
-    # so the anchor steps past it and the lesson is upstream of the
-    # commit now: the validator runs on the message before every commit,
-    # because a battery that runs before the commit exists cannot see
-    # the commit's own title.
-    _anchor = "cefdd6a"
+    # the anchor moved twice. From 02f2297: a 74-character title entered
+    # history at cefdd6a. From cefdd6a: another of the same class entered
+    # at 8d5a985, pushed before the battery ran. The contract forbids
+    # rewriting what is pushed, so the anchor steps past each offender,
+    # and the lesson now stands upstream in fact: .githooks/commit-msg
+    # refuses such a title before the commit exists, because a battery
+    # that runs before the commit cannot see the commit's own title.
+    _anchor = "8d5a985"
     _have = subprocess.run(["git", "cat-file", "-e", _anchor], cwd=HERE,
                            capture_output=True)
     _range = f"{_anchor}..HEAD" if _have.returncode == 0 else "HEAD"
@@ -8918,6 +8919,20 @@ public enum MyWatch: AccessLedger {
               and not _t_ok("The Offer Reads The Law")
               and not _t_ok("bench: " + "x" * 80)
               and not _t_ok("bench: a title — with a dash")))
+
+    # ── AND THE SAME CONTRACT STANDS UPSTREAM. The hook refuses the title
+    # before the commit exists; the battery can only find it after. One
+    # good title passes, a long one and a dashed one are refused.
+    def _msg_rc(text):
+        p = os.path.join(tmp, "commit-msg-probe")
+        open(p, "w").write(text + "\n")
+        return subprocess.run(["sh", os.path.join(HERE, ".githooks", "commit-msg"), p],
+                              capture_output=True).returncode
+    S.append(("the commit-msg hook refuses what the title contract refuses",
+              _msg_rc("bench: the offer keeps its note") == 0
+              and _msg_rc("cover: " + "x" * 80) != 0
+              and _msg_rc("bench: a title — with a dash") != 0
+              and _msg_rc("A Title Without An Area") != 0))
 
     # ── AND THE VOICE CARRIES NO LONG DASH. The prose here spells a pause
     # with a colon or a second sentence; an em dash in a printed line is a

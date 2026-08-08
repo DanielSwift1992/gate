@@ -8,8 +8,8 @@ matching.
 
 One case, to be concrete. CODEOWNERS hands `/src/api` to @alice. The folder
 was renamed to `/services/api` in the spring. The rule now matches nothing,
-reviews still go to Alice, and no tool reports a problem: the rename fired
-no event on either file. You find out at
+reviews still go to Alice, and no tool reports a problem: there was no
+event on either file to notice. You find out at
 an audit, or the day a colleague merges what nobody reviewed.
 
 That gap has a name: drift. Two records of one fact, coming apart in
@@ -91,8 +91,8 @@ undo.
 
 ## ask the file, not a person
 
-Today these are answered by searching: grep, tickets, whoever remembers.
-Here each is a lookup, in milliseconds, against the file itself:
+The state of the art for these is a search: grep, a ticket, whoever
+remembers. Here each is a lookup against the file, in milliseconds:
 
 | The question | Today | Here |
 |---|---|---|
@@ -106,8 +106,8 @@ The names come from a sandbox this repository makes for you; your own
 commands use your own names. You pay once, per name you
 translate. Every question after that is a composition of what you already
 translated, and compositions are free: the opposite of a reporting tool,
-where each new question is new work. The table is one example of a
-general move. What varies is which pair you point
+where each new question is new work. The tool is general; the table is
+one example. What varies is which pair you point
 it at: a Jira ticket and the TODO that cites it, k8s RBAC and the cluster
 it describes, an API contract and a client in another language.
 
@@ -286,7 +286,7 @@ web/codemirror.*  the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
 docs/           DETAILS.md, SECURITY.md, CHANGELOG.md, NOTICE.md, and
                 the cover's picture with its provenance
-tests/smoke.py   the battery: 473 checks this repository holds itself
+tests/smoke.py   the battery: 474 checks this repository holds itself
                  to, end-to-end runs through judge parity through
                  documentation contracts; the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts

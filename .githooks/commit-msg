@@ -1,0 +1,19 @@
+#!/bin/sh
+# The title contract, refused before the commit exists: `area: change`,
+# the area one lowercase word, the whole subject 72 characters or fewer,
+# no long dash anywhere in the message. The battery validates the same
+# contract after the fact; this hook is the half that can still say no.
+title=$(head -1 "$1")
+if grep -q "—" "$1"; then
+  echo "commit-msg: the message carries a long dash" >&2
+  exit 1
+fi
+if [ ${#title} -gt 72 ]; then
+  echo "commit-msg: the title runs past 72 characters: $title" >&2
+  exit 1
+fi
+printf '%s' "$title" | grep -qE '^[a-z][a-z0-9-]{1,11}: [^ ]' || {
+  echo "commit-msg: the title is not \`area: change\`: $title" >&2
+  exit 1
+}
+exit 0
