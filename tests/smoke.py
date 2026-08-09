@@ -6845,6 +6845,41 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                              capture_output=True, env={**os.environ, "GATE_CLI": _cli_bin})
         S.append(("and refuse an absent page with one sentence and one exit code",
                   _se.stderr == _pe.stderr and _se.returncode == _pe.returncode == 1))
+        # ── AND A READER TAKES A RECORD'S BOUNDARY FROM THE FILE, NOT FROM A
+        # PATTERN. One search with the dot matching newlines ran the whole
+        # document, so a declaration written on ONE line — `public enum
+        # WorldFile: Role {}`, which every layout opens with — carried the search
+        # to the `\n}` of the NEXT record and swallowed it. The row that went
+        # missing was the first row of this repository's own manifest, and the
+        # journal narrowed to the wrong files. Held here on a layout built for
+        # it: a one-line declaration standing in front of a row.
+        _bd2 = os.path.join(tmp, "one-line-first")
+        os.makedirs(os.path.join(_bd2, "pages"), exist_ok=True)
+        subprocess.run(["git", "init", "-q", "-b", "main", _bd2], capture_output=True)
+        open(os.path.join(_bd2, "pages", "a.swift"), "w").write("public enum A_ {}\n")
+        open(os.path.join(_bd2, "pages", "b.swift"), "w").write("public enum B_ {}\n")
+        open(os.path.join(_bd2, "gate.manifest.swift"), "w").write(
+            "public protocol Role {}\n"
+            "public enum FormsFile: Role {}\n"          # the one-line declaration
+            "public enum Mine {}\n"
+            "public enum PageA: Mine {\n    public typealias Kind = FormsFile\n}\n"
+            'extension PageA { public static var typeName: String { "pages/a.swift" } }\n'
+            "public enum PageB: Mine {\n    public typealias Kind = FormsFile\n}\n"
+            'extension PageB { public static var typeName: String { "pages/b.swift" } }\n')
+        subprocess.run(["git", "add", "-A"], cwd=_bd2, capture_output=True)
+        subprocess.run(["git", "-c", "commit.gpgsign=false", "-c", "user.email=a@b", "-c",
+                        "user.name=A", "commit", "-qm", "two pages", "--no-verify"],
+                       cwd=_bd2, capture_output=True)
+        _lw = [json.loads(subprocess.run([sys.executable, GATE, "log", "--json"], cwd=_bd2,
+                                         capture_output=True, text=True, timeout=180,
+                                         env={**os.environ, "GATE_CLI": _e}).stdout or "{}")
+               for _e in ("off", _cli_bin)]
+        S.append(("a record's boundary comes from the file, not from one pattern over it",
+                  _lw[0] == _lw[1]
+                  # both rows are read, and the one behind the one-line
+                  # declaration is the one that used to vanish
+                  and _lw[0].get("world_files") == ["pages/a.swift", "pages/b.swift"]))
+
         # ── AND THE ONE WRITING VERB THIS VEIN CARRIES WRITES THE SAME BYTES.
         # `aside` is the first carried verb that changes a file, so parity is not
         # only what the two say but what they leave on disk: the divergences you
