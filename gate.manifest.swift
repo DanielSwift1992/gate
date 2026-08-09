@@ -151,3 +151,7 @@ public enum StdlibManifest: Mine {
     public typealias Kind = FormsFile
 }
 extension StdlibManifest { public static var typeName: String { "stdlib/manifest.swift" } }
+public enum StdlibDeclare: Mine {
+    public typealias Kind = FormsFile
+}
+extension StdlibDeclare { public static var typeName: String { "stdlib/declare.swift" } }

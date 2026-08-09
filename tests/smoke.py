@@ -6860,6 +6860,31 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         _mark = "// ── what is written into a world begins here ──\n"
         _head = _page.split(_mark, 1)[1]
         _made = open(os.path.join(_born, "gate.manifest.swift"), encoding="utf-8").read()
+        # and the two heads a declared side is printed under live the same way, on
+        # one page with a mark per section: they are the same act written twice,
+        # and both carriers write them
+        _dpage = open(os.path.join(HERE, "stdlib", "declare.swift"), encoding="utf-8").read()
+        _dc = os.path.join(tmp, "declared-heads")
+        os.makedirs(_dc, exist_ok=True)
+        open(os.path.join(_dc, "spec.json"), "w").write(json.dumps(
+            {"paths": {"/a": {"post": {"requestBody": {"content": {"application/json": {
+                "schema": {"properties": {"f": {"type": "string"}}}}}}}}}}))
+        json.dump({"carrier": "Lib", "against": {"contract": "spec.json"},
+                   "carries": [{"route": "/a", "field": "f", "as": "Text"}]},
+                  open(os.path.join(_dc, "decl.json"), "w"))
+        _cworld = run("declare", "contract", "spec.json", cwd=_dc)[1].get("world") or ""
+        _kworld = run("declare", "carrier", "decl.json", cwd=_dc)[1].get("world") or ""
+        S.append(("the heads a declared side is printed under are a page with a mark per text",
+                  _dpage.count("// ── ") == 2
+                  and _cworld.startswith(_dpage.split(
+                      "// ── what a contract side is printed under begins here ──\n", 1)[1]
+                      .split("// ── ")[0])
+                  and _kworld.startswith(_dpage.split(
+                      "// ── what a carrier side is printed under begins here ──\n", 1)[1])
+                  # and no second copy of either text is kept in the CLI
+                  and "printed by gate declare:" not in open(GATE, encoding="utf-8").read()
+                  and "printed by gate declare carrier:" not in open(GATE, encoding="utf-8").read()))
+
         S.append(("the head a layout is born with is a page, and the page is its one home",
                   _mark in _page
                   # what the tool writes is what the page says, to the byte
@@ -9723,7 +9748,7 @@ public enum MyWatch: AccessLedger {
                          if f.endswith(".swift"))
     S.append(("every page on the shelf says its sort, and says one of the four",
               sorted(speaks_map) == shelf_pages
-              and len(shelf_pages) == 15
+              and len(shelf_pages) == 16
               and sorted(speaks_map) == sorted(shelf_out.get("modules") or {})
               and set(speaks_map.values()) == {"a-domain", "the-tool", "the-bench", "the-reader"}
               # said by the page in its third line, never guessed from its name

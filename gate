@@ -3242,6 +3242,21 @@ def opens_guards():
 SHELF_MARK = "// ── what is written into a world begins here ──\n"
 
 
+def shelf_section(page, mark):
+    # ── A PAGE MAY CARRY MORE THAN ONE TEXT, and each says where it begins. The
+    # layout's head is a page of its own; the two heads a declared side is
+    # printed under are one page with two sections, because they are the same
+    # act written twice. A section runs from its own mark to the next one, and a
+    # mark is a line the page shows a reader: nothing here counts lines.
+    said = STDLIB.get(page, "")
+    if mark not in said:
+        cannot(f"the shelf page {page} does not carry the section this writes: {mark.strip()}",
+               "restore stdlib/" + page + ".swift, or run this where the tool's own stdlib/ is")
+    rest = said.split(mark, 1)[1]
+    cut = re.search(r"^// ── .+ ──$", rest, re.M)
+    return rest[:cut.start()] if cut else rest
+
+
 def shelf_template(name):
     # ── A TEXT THIS TOOL WRITES INTO SOMEBODY'S REPOSITORY HAS ONE HOME. The
     # head a layout is born with was a literal in this file, and the day the
@@ -3929,23 +3944,7 @@ def first_mentions(root, names, only=None, without=None):
     return seen
 
 
-DECLARE_HEADER = """// printed by gate declare: one side of a seam, stated rather than found.
-// Whoever runs this owns what it says: it is a view of a document they publish,
-// emitted by their own build and signed by merging it. Nothing here was read out
-// of anybody's source, because judgement has no jurisdiction over a world that
-// has not entered. This file is the entering.
-//
-"""
 
-CARRIER_HEADER = """// printed by gate declare carrier: what a library says it carries, emitted from
-// what that library already keeps: its own generated schema, its own types. The
-// emitter lives on its side and belongs to it. This only renders what it said
-// into the grammar both sides are judged in. Where its own name for a field
-// differs from the contract's, the correspondence is stated too, and only
-// where it does not follow, since a declaration that restates what already
-// matches is a second copy, and a second copy drifts.
-//
-"""
 
 
 # the directory a world is being founded in, while `init` is founding it: set
@@ -4498,7 +4497,7 @@ def cmd_declare(a):
         src = a[1]
         mine_too = "--theirs" in a or "--mine" in a
         fields = [f for f in read_contract(src) if f.get("shape")]
-        lines = [DECLARE_HEADER + STDLIB["forms-contract"], ""]
+        lines = [shelf_section("declare", "// ── what a contract side is printed under begins here ──\n") + STDLIB["forms-contract"], ""]
         for f in fields:
             rec = "F_" + sanitize(f["route"]) + "_" + sanitize(f["field"])
             lines += [f"// {f['route']} · {f['field']}",
@@ -4521,7 +4520,7 @@ def cmd_declare(a):
         decl = theirs_json(a[1], "a carrier declaration your build emits")
         who = sanitize(decl.get("carrier") or "Carrier")
         against = decl.get("against") or {}
-        lines = [CARRIER_HEADER
+        lines = [shelf_section("declare", "// ── what a carrier side is printed under begins here ──\n")
                  + f"// {who} · against {against.get('contract', 'a contract')}"
                  + (f" at {against['revision']}" if against.get("revision") else "") + "\n",
                  f"public enum {who}: Carrier {{}}", ""]
