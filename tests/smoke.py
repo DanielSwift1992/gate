@@ -7083,6 +7083,71 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                   and b"public typealias Written = FormsTool"
                       in _p1verbs.get("gate.manifest.swift", b"")))
 
+        # ── AND ENTRY ITSELF MOVES, THE LAST VERB OF THE FIRST PACK. `init` is
+        # the act of taking performed for somebody who has not typed anything
+        # yet, so its parity is lives too: a git repository entered twice, a
+        # bare folder that founds `world/`, a named nested directory, and a
+        # vendored entry whose whole .gate/ tree is compared byte for byte,
+        # judge and digest included. The wired hooksPath is read back from git
+        # itself on both sides.
+        _e9s = {
+            "git-entry": [["init", "."], ["init", "."], ["init", ".", "--json"]],
+            "bare-folder": [["init"], ["init"]],
+            "named-dir": [["init", "deep/nest"], ["init", "deep/nest", "--json"]],
+            "vendored": [["init", ".", "--vendor", "--json"]],
+        }
+        _e9apart, _e9tree = [], {}
+        for _ename, _eargvs in _e9s.items():
+            _got = []
+            for _tag, _env in (("py", "off"), ("sw", _cli_bin)):
+                _eroot = os.path.join(tmp, "entry-" + _ename, _tag)
+                shutil.rmtree(_eroot, ignore_errors=True)
+                os.makedirs(_eroot, exist_ok=True)
+                if _ename != "bare-folder":
+                    subprocess.run(["git", "init", "-q", "-b", "main", _eroot],
+                                   capture_output=True)
+                    subprocess.run(["git", "-C", _eroot, "config", "user.name", "A Person"],
+                                   capture_output=True)
+                _said = []
+                for _argv in _eargvs:
+                    _r = subprocess.run([sys.executable, GATE, *_argv], cwd=_eroot,
+                                        capture_output=True, timeout=180,
+                                        env={**os.environ, "GATE_CLI": _env})
+                    _said.append((_r.returncode, _r.stdout, _r.stderr))
+                _files = {}
+                for _dp, _, _fs in os.walk(_eroot):
+                    if os.sep + ".git" + os.sep in _dp + os.sep and ".gate" not in _dp:
+                        continue
+                    for _f in sorted(_fs):
+                        _at = os.path.join(_dp, _f)
+                        _rel = os.path.relpath(_at, _eroot)
+                        if _rel.startswith(".git" + os.sep):
+                            continue
+                        _files[_rel] = open(_at, "rb").read()
+                _wired = subprocess.run(["git", "-C", _eroot, "config", "--local",
+                                         "core.hooksPath"], capture_output=True,
+                                        text=True).stdout
+                _got.append((_said, _files, _wired))
+                _e9tree[_ename + "-" + _tag] = _files
+            if _got[0] != _got[1]:
+                _e9apart.append(_ename)
+        if _e9apart:
+            print("   entry answers apart on:", _e9apart)
+        S.append(("entry moves whole: four lives replayed alike, tree and hook and all",
+                  _e9apart == [] and len(_e9s) == 4))
+        _e9entry = _e9tree.get("git-entry-py", {})
+        _e9vend = _e9tree.get("vendored-py", {})
+        S.append(("and entry leaves what entry promises: the letter, the hook, the carried judge",
+                  ".githooks/pre-commit" in _e9entry
+                  and b"exec ./gatew status" in _e9entry.get(".githooks/pre-commit", b"")
+                  and b"This copy is yours" in _e9entry.get("readme.swift", b"")
+                  and "gate.manifest.swift" in _e9entry
+                  and os.path.join(".gate", "bin", "gate-judge") in _e9vend
+                  and (b"judge sha256: " + hashlib.sha256(
+                      open(os.path.join(HERE, "bin", "gate-judge"), "rb").read())
+                      .hexdigest().encode())
+                      in _e9vend.get(os.path.join(".gate", "README.md"), b"")))
+
         # ── AND A ROAD IS HELD BEFORE ITS VERB ARRIVES. `contractFields` is the
         # reading `declare` and `drift` will both stand on. It is in the vein
         # with nothing routed to it, behind a door this battery opens and no
@@ -7480,7 +7545,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         S.append(("the strangler ledger names a verb, not half of one",
                   subprocess.run([_cli_bin, "--carries"], capture_output=True, text=True)
                   .stdout.split() == ["stdlib", "export", "seam", "log", "aside", "declare",
-                                      "mine", "theirs"]))
+                                      "mine", "theirs", "init"]))
         # ── AND THE LEDGER IS READ AGAINST THE ROAD IT IS WALKING. The strangler
         # has a length and a position, and both were feelings: the list of moved
         # veins lived in the binary and the list of verbs lived in the python
@@ -7657,7 +7722,8 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                    ["declare", "contract"], ["declare", "carrier"],
                    ["mine"], ["theirs"], ["mine", "--json"], ["theirs", "--json"],
                    ["mine", "nosuch.swift"], ["theirs", "their.swift"],
-                   ["mine", "f.swift", "--role"], ["theirs", "f.swift", "--at"]]
+                   ["mine", "f.swift", "--role"], ["theirs", "f.swift", "--at"],
+                   ["init"], ["init", "--json"]]
         _sd2 = os.path.join(tmp, "ledger-walk")
         os.makedirs(_sd2, exist_ok=True)
         _apart2 = []
@@ -7675,7 +7741,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         if _apart2:
             print("   the two CLIs answer apart on:", _apart2[:4])
         S.append(("a carried prefix answers alike on the argv nobody means to type",
-                  _apart2 == [] and len(_shapes) == 30
+                  _apart2 == [] and len(_shapes) == 32
                   # and none of them is a stack trace on either side
                   and not any(b"Traceback" in subprocess.run(
                       [sys.executable, GATE, *_a], cwd=_sd2, capture_output=True,
@@ -7729,9 +7795,9 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         for _r in sorted(_by_road):
             if _r != "carried":
                 print(f"     {_r:18} {' '.join(sorted(_by_road[_r]))[:88]}")
-        S.append(("the ledger names verbs the usage offers, 8 of 27 carried",
+        S.append(("the ledger names verbs the usage offers, 9 of 27 carried",
                   set(_ledger) <= _verbs
-                  and len(_ledger) == 8
+                  and len(_ledger) == 9
                   and len(_verbs) == 27
                   # and a name on the ledger is a whole verb: a prefix claims
                   # everything under it, so half a verb would take argv nobody

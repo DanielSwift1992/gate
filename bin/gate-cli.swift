@@ -20,6 +20,12 @@ let root = URL(fileURLWithPath: CommandLine.arguments[0])
     .deletingLastPathComponent()   // the clone
 let args = Array(CommandLine.arguments.dropFirst())
 
+// the world being founded right now, if any: set by entry for the length of
+// its own writes, so the row walk does not climb past a root being born.
+// Declared here because top-level order is execution order, and the walk is
+// called from verbs that stand above the entry section in this file.
+var FOUNDING: String? = nil
+
 func out(_ text: String) {
     FileHandle.standardOutput.write(Data(text.utf8))
 }
@@ -65,7 +71,7 @@ if args.contains("--out") && !args.contains("-o") {
 // `stdlib show` to the verb: half a verb on the list would hand this binary an
 // argv it does not answer, and the python side would never see it.
 if args == ["--carries"] {
-    out("stdlib\nexport\nseam\nlog\naside\ndeclare\nmine\ntheirs\n")
+    out("stdlib\nexport\nseam\nlog\naside\ndeclare\nmine\ntheirs\ninit\n")
     exit(0)
 }
 
@@ -629,6 +635,13 @@ func worldRootFor(_ path: String) -> String {
     // nothing here standardizes, because that strips /private from a path that
     // exists and leaves it on one that does not, and the row's relative path is
     // computed against this root by plain string arithmetic.
+    // a world being founded right here stops the walk: entry writes DIR's
+    // first files, and the walk up from the first one must not put its rows
+    // into a world standing overhead
+    if let f = FOUNDING,
+       relPath(absPath(path), f).components(separatedBy: "/").first != ".." {
+        return f
+    }
     var walk = (absPath(path) as NSString).deletingLastPathComponent
     while true {
         for name in ["gate.swift", "gate.manifest.swift"] {
@@ -2864,6 +2877,241 @@ if args.first == "aside" {
     out("aside: " + address + " · while " + because + " is open · said by " + by
         + " · " + String(rows.count) + " standing\n  note: " + noteSaid
         + "\n  next: " + nextSaid + "\n")
+    exit(0)
+}
+
+// ── init [DIR] [--vendor]: entry, which is the act of taking performed once
+// for somebody who has not typed anything yet. The letter and the reference
+// arrive by the same verb everything arrives by, the hook wires itself where
+// a .git stands, and --vendor makes the tool travel with the repository.
+let INIT_HOOK = "#!/bin/sh\n"
+    + "# the claims must hold before a commit is made (they are judged, never reprinted)\n"
+    + "if [ -x ./gatew ]; then exec ./gatew status; fi\n"
+    + "# a clone carries the tool at ./gate, which is the way the cover says to run it\n"
+    + "# (\"no install step\"), so the hook looks there before it looks for an install\n"
+    + "if [ -x ./gate ]; then exec ./gate status; fi\n"
+    + "if command -v gate >/dev/null 2>&1; then exec gate status; fi\n"
+    + "echo \"pre-commit: gate is not on PATH and there is no ./gatew here, so nothing\"\n"
+    + "echo \"checked the claims in this repository. Put gate on PATH, run\"\n"
+    + "echo \"gate init . --vendor to carry it here, or delete .githooks/pre-commit.\"\n"
+    + "exit 1\n"
+
+func copyItem(_ src: String, _ dst: String) {
+    try? FileManager.default.removeItem(atPath: dst)
+    try? FileManager.default.copyItem(atPath: src, toPath: dst)
+}
+
+func vendorInto(_ rootDir: String) -> (carried: [String], digest: String?, shim: String) {
+    // the tool travels WITH the repository, the way ./gradlew does: one person
+    // commits .gate/, and everybody who pulls has it
+    let here = root.path
+    let dst = (rootDir as NSString).appendingPathComponent(".gate")
+    try? FileManager.default.createDirectory(
+        atPath: (dst as NSString).appendingPathComponent("bin"),
+        withIntermediateDirectories: true)
+    var carried: [String] = []
+    let pcli = (here as NSString).appendingPathComponent("bin/judge-cli.js")
+    if FileManager.default.fileExists(atPath: pcli) {
+        copyItem(pcli, (dst as NSString).appendingPathComponent("bin/judge-cli.js"))
+    }
+    for sub in ["web", "docs"] {
+        try? FileManager.default.createDirectory(
+            atPath: (dst as NSString).appendingPathComponent(sub),
+            withIntermediateDirectories: true)
+    }
+    for rel in ["gate", "bin/judge.js", "bin/judge-where.js", "web/ui.html",
+                "web/codemirror.js", "web/codemirror.css", "LICENSE", "docs/NOTICE.md"] {
+        let src = (here as NSString).appendingPathComponent(rel)
+        if FileManager.default.fileExists(atPath: src) {
+            copyItem(src, (dst as NSString).appendingPathComponent(rel))
+            carried.append(rel)
+        }
+    }
+    let shelfSrc = (here as NSString).appendingPathComponent("stdlib")
+    var isDir: ObjCBool = false
+    if FileManager.default.fileExists(atPath: shelfSrc, isDirectory: &isDir), isDir.boolValue {
+        let shelfDst = (dst as NSString).appendingPathComponent("stdlib")
+        try? FileManager.default.createDirectory(atPath: shelfDst,
+                                                 withIntermediateDirectories: true)
+        for f in ((try? FileManager.default.contentsOfDirectory(atPath: shelfSrc)) ?? []).sorted() {
+            copyItem((shelfSrc as NSString).appendingPathComponent(f),
+                     (shelfDst as NSString).appendingPathComponent(f))
+        }
+        carried.append("stdlib/")
+    }
+    let jsrc = (here as NSString).appendingPathComponent("bin/gate-judge")
+    var digest: String? = nil
+    if FileManager.default.fileExists(atPath: jsrc) {
+        let jdst = (dst as NSString).appendingPathComponent("bin/gate-judge")
+        copyItem(jsrc, jdst)
+        try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: jdst)
+        digest = sha256Hex(FileManager.default.contents(atPath: jsrc) ?? Data())
+        carried.append("bin/gate-judge")
+        if FileManager.default.fileExists(atPath: jsrc + ".from") {
+            copyItem(jsrc + ".from", jdst + ".from")
+            carried.append("bin/gate-judge.from")
+        }
+    }
+    try? FileManager.default.setAttributes(
+        [.posixPermissions: 0o755],
+        ofItemAtPath: (dst as NSString).appendingPathComponent("gate"))
+    let shim = (rootDir as NSString).appendingPathComponent("gatew")
+    try? ("#!/bin/sh\n# gate, carried by this repository. Nothing to install.\n"
+          + "exec python3 \"$(dirname \"$0\")/.gate/gate\" \"$@\"\n")
+        .write(toFile: shim, atomically: false, encoding: .utf8)
+    try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: shim)
+    let readme = "# gate, carried by this repository\n\n"
+        + "Run `./gatew status`. Nothing to install: this directory is the tool\n"
+        + "itself, pinned by the commit that added it, so every clone judges with\n"
+        + "the same judge and an old commit is judged by the judge it was written\n"
+        + "with.\n\n"
+        + "judge sha256: \(digest ?? "None")\n\n"
+        + "The judge is rebuilt from a public corpus: `bin/build-judge.sh <pin>`\n"
+        + "builds the same judge, and the battery checks a build,\n"
+        + "`GATE_JUDGE=path tests/smoke.py`. The linker is not byte-stable, so\n"
+        + "the hash above names what is here and is not the check.\n\n"
+        + "MIT licensed: LICENSE and docs/NOTICE.md are here beside it.\n"
+    try? readme.write(toFile: (dst as NSString).appendingPathComponent("README.md"),
+                      atomically: false, encoding: .utf8)
+    return (carried, digest, "./gatew")
+}
+
+if args.first == "init" {
+    loadStatusShelf()
+    let asJson = args.contains("--json")
+    var a = Array(args.dropFirst()).filter { $0 != "--json" }
+    let vendor = a.contains("--vendor")
+    a = a.filter { $0 != "--vendor" }
+    let hereIsWorld = FileManager.default.fileExists(atPath: "gate.swift")
+        || FileManager.default.fileExists(atPath: "gate.manifest.swift")
+    var isGitDir: ObjCBool = false
+    let hasGit = FileManager.default.fileExists(atPath: ".git", isDirectory: &isGitDir)
+        && isGitDir.boolValue
+    let rootDir = a.first ?? ((hereIsWorld || hasGit) ? "." : "world")
+    var made: [String] = []
+    let hookRel = ".githooks/pre-commit"
+    let hookPath = (rootDir as NSString).appendingPathComponent(hookRel)
+    do {
+        try FileManager.default.createDirectory(
+            atPath: (hookPath as NSString).deletingLastPathComponent,
+            withIntermediateDirectories: true)
+    } catch {
+        cannot("a world cannot be founded at \(rootDir): "
+               + error.localizedDescription.lowercased(),
+               "name a directory you can write in, or `gate init .` to found one here")
+    }
+    if !FileManager.default.fileExists(atPath: hookPath) {
+        try? INIT_HOOK.write(toFile: hookPath, atomically: false, encoding: .utf8)
+        made.append(hookRel)
+    }
+    try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: hookPath)
+    var letter: String? = nil
+    let manPath = (rootDir as NSString).appendingPathComponent("gate.manifest.swift")
+    let layoutWas = FileManager.default.fileExists(atPath: manPath)
+    // this world is founded HERE, so every row entry writes belongs to it and
+    // not to a world overhead
+    FOUNDING = absPath(rootDir)
+    var declaredPages = Set<String>()
+    if let t = readText(manPath) {
+        for m in matches("typeName:\\s*String\\s*\\{\\s*\"([^\"]+)\"\\s*\\}", t) {
+            declaredPages.insert((m[0] as NSString).lastPathComponent)
+        }
+    }
+    if STDLIB_TEXTS["readme"] != nil, !declaredPages.contains("readme.swift") {
+        let (took, _) = takeShelf("readme", rootDir)
+        if let took = took {
+            letter = took.wrote
+            made += [took.wrote] + took.with
+        }
+    }
+    if STDLIB_TEXTS["verbs"] != nil, !declaredPages.contains("verbs.swift") {
+        let (tookRef, _) = takeShelf("verbs", rootDir)
+        if let tookRef = tookRef { made += [tookRef.wrote] + tookRef.with }
+    }
+    if !layoutWas, FileManager.default.fileExists(atPath: manPath) {
+        made.append("gate.manifest.swift")
+    }
+    let vendored = vendor ? vendorInto(rootDir) : nil
+    var hooksNote: String? = nil
+    var undo: String? = nil
+    var gitDir: ObjCBool = false
+    if FileManager.default.fileExists(
+        atPath: (rootDir as NSString).appendingPathComponent(".git"),
+        isDirectory: &gitDir), gitDir.boolValue {
+        let prior = runGit(["config", "--local", "core.hooksPath"], rootDir)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        _ = runGit(["config", "core.hooksPath", ".githooks"], rootDir)
+        var note = "pre-commit hook wired (core.hooksPath = .githooks)"
+        undo = prior.isEmpty ? "git config --unset core.hooksPath"
+                             : "git config core.hooksPath " + prior
+        if !prior.isEmpty { note += ". It was " + prior }
+        let gatew = (rootDir as NSString).appendingPathComponent("gatew")
+        let gateHere = (rootDir as NSString).appendingPathComponent("gate")
+        let onPath = (ProcessInfo.processInfo.environment["PATH"] ?? "")
+            .components(separatedBy: ":").contains(where: {
+                FileManager.default.isExecutableFile(
+                    atPath: ($0 as NSString).appendingPathComponent("gate")) })
+        if !(FileManager.default.isExecutableFile(atPath: gatew)
+             || FileManager.default.isExecutableFile(atPath: gateHere) || onPath) {
+            note += ". It will not find gate from here, and will refuse every commit "
+                  + "until it can: run `gate init . --vendor` to carry the tool in "
+                  + "this repository, or put gate on PATH"
+        }
+        hooksNote = note
+    }
+    var observed: String? = nil
+    if hooksNote != nil {
+        let signed = runGit(["config", "user.name"], rootDir)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if !signed.isEmpty {
+            observed = "read from git, and not judged: commits in this clone are signed "
+                     + signed + ". If that is you, say so in my.swift. Nothing here writes "
+                     + "your name for you"
+        }
+    }
+    FOUNDING = nil
+    // the command that makes a world knows the world it made: the rung is for
+    // the repository as it stands now
+    let w2 = WorldState(facts: (absPath(rootDir) as NSString)
+                            .appendingPathComponent("gate.swift"),
+                        tables: nil,
+                        layout: layoutRowsFull(absPath(rootDir)).manifest.map {
+                            Layout(manifest: $0, rows: layoutRowsFull(absPath(rootDir)).rows) })
+    let next = nextRung(w2, false)
+    if asJson {
+        var pairs: [(String, StatusJSON)] = [
+            ("command", .text("init")),
+            ("root", .text(rootDir)),
+            ("created", .list(made.map { .text($0) })),
+            ("hooks", hooksNote.map { .text($0) } ?? .null),
+            ("readme", letter.map { .text($0) } ?? .null),
+            ("observed", observed.map { .text($0) } ?? .null),
+            ("next", .text(next)),
+            ("undo_hooks", undo.map { .text($0) } ?? .null),
+            ("changed_git_config", .raw(hooksNote != nil ? "true" : "false")),
+            ("vendored", vendored.map { v in .object([
+                ("carried", .list(v.carried.map { .text($0) })),
+                ("judge_sha256", v.digest.map { .text($0) } ?? .null),
+                ("shim", .text(v.shim))]) } ?? .null),
+        ]
+        if let ready = commandIn(next) { pairs.append(("command_to_run", .text(ready))) }
+        out(statusDumps(.object(pairs), 0) + "\n")
+        exit(0)
+    }
+    var lines = ["init: " + rootDir
+                 + (made.isEmpty ? " · already there" : " · created " + many(made.count, "file"))]
+    lines.append("  next: " + next)
+    if let h = hooksNote { lines.append("  " + h) }
+    if let u = undo { lines.append("  to undo that one git setting: " + u) }
+    if let o = observed { lines.append("  " + o) }
+    if let v = vendored {
+        lines.append("  gate now travels with this repository: .gate/ + " + v.shim)
+        lines.append("  commit it, and every clone has the tool. Nothing to install")
+        if let d = v.digest {
+            lines.append("  judge sha256: " + String(d.prefix(16)) + "…")
+        }
+    }
+    out(lines.joined(separator: "\n") + "\n")
     exit(0)
 }
 
