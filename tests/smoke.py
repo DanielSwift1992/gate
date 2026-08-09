@@ -1075,6 +1075,78 @@ def main():
               re.fullmatch(r"package-lock\.json:\d+", _at)
               and "node_modules/orphan" in _lines[int(_at.split(":")[1]) - 1]))
 
+    # ── AND THE STRIPPED FORM IS PRINTED BY THE TOOL. The cover shows a world
+    # with the ceremony stripped, and until now that block was typed by hand: a
+    # claim about what gate prints, made by somebody's fingers. `gate bare` is
+    # the door, and the roadmap line it closes reads "gate diff shows the
+    # stripped form". Bare is a PROJECTION over one source: the file on disk
+    # stays full Swift, git keeps it, swiftc reads it, and this verb writes
+    # nothing at all.
+    #
+    # The parse is the judge's own — `judge parse`, the route whose comment says
+    # nothing beside him grows a regex over the worlds. The reading of the prose
+    # is the bench's own marks, read from the file: a run of comment lines is a
+    # paragraph, `── like this ──` is a heading, four spaces is set, `role:` and
+    # `opens:` are the file talking to the tool, `== word` marks a phrase.
+    _bd = os.path.join(tmp, "bare-door")
+    os.makedirs(_bd, exist_ok=True)
+    subprocess.run(["git", "init", "-q", "-b", "main", _bd], capture_output=True)
+    run("demo", _bd)
+    _bw = _bd
+    _bare = run("bare", "ownership.swift", cwd=_bw)
+    _bl = (_bare[1].get("lines") or [])
+    _btext = "\n".join(_bl)
+    S.append(("the stripped form is printed by the tool, and it is a record with its content",
+              _bare[0] == 0
+              # a record, its conformance and the clause it conforms under
+              and "Enter: Entered when Who.Key: Writes, Who.Post == Into.Place" in _bl
+              # the holes it opens, one to a line, each saying what may fill it
+              and "    Who asks for Keeper" in _bl and "    Into asks for Room" in _bl
+              # a protocol's axes are the same act, written the same way
+              and "    Post asks for Realm" in _bl
+              # a record's own columns, and a claim written as a claim
+              and "    Place = Zone_src" in _bl
+              and any(l.startswith("Owns_0_alice = Owns<") for l in _bl)
+              # the file's own prose, as paragraphs rather than a column of ends
+              and any("who owns what in this repository" in l for l in _bl)
+              # and what the file says to the tool is not said to a reader
+              and "role: forms" not in _btext and "opens:" not in _btext))
+
+    # and the full text is the same bytes that sit on disk: bare is a view over
+    # this file, never a second copy of it
+    _full = run("bare", "ownership.swift", "--full", cwd=_bw)[1]
+    _disk = open(os.path.join(_bw, "ownership.swift"), encoding="utf-8").read()
+    _before = hashlib.sha256(_disk.encode()).hexdigest()
+    run("bare", "ownership.swift", cwd=_bw)
+    S.append(("bare is a projection: --full is the file, and neither writes a byte",
+              _full.get("full") == _disk
+              and hashlib.sha256(open(os.path.join(_bw, "ownership.swift"),
+                                      encoding="utf-8").read().encode()).hexdigest() == _before
+              # asked for nothing it says what it takes; a file that is not there refuses
+              and run("bare", cwd=_bw)[1].get("asks")
+              and run("bare", "no-such.swift", cwd=_bw)[0] == 1))
+
+    # ── AND BOTH VIEWS READ THE SAME RECORD. The bench draws this view in HTML
+    # and the door prints it as lines; measured once headless on the demo world,
+    # the two are fifty lines and nothing apart (recorded in EXECUTION). A
+    # browser is not run here, so what the battery holds is the thing that
+    # actually drifts: a field one side shows and the other does not.
+    _ui = open(os.path.join(HERE, "web", "ui.html"), encoding="utf-8").read()
+    _bf = _ui[_ui.index("function bareForm("):]
+    _bf = _bf[:_bf.index("\n}")]
+    _src = open(GATE, encoding="utf-8").read()
+    _door = _src[_src.index("def bare_lines("):]
+    _door = _door[:_door.index("\ndef ")]
+    _fields = ["aliases", "entries", "params", "paramKinds", "axes", "axisKinds",
+               "whereText", "conformances", "topAliases"]
+    _missing = [f for f in _fields if f not in _bf or f not in _door]
+    if _missing:
+        print("   a field one view reads and the other does not:", _missing)
+    S.append(("the bench's bare view and the door read the same record",
+              _missing == []
+              # and the literal, which each spells in its own tongue
+              and "literals" in _bf and "typeName" in _door))
+
     # ── AND THIS REPOSITORY TOOK THE RUNG IT WAS OFFERING. `gate status` here
     # said "say who may merge: gate.policy.swift" for weeks: the tool asking its
     # own repository for a thing its own repository had not done, in the first
@@ -6894,10 +6966,10 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                   and not any(b"Traceback" in subprocess.run(
                       [sys.executable, GATE, *_a], cwd=_sd2, capture_output=True,
                       env={**os.environ, "GATE_CLI": "off"}).stderr for _a in _shapes)))
-        S.append(("the ledger names verbs the usage offers, 3 of 26 carried",
+        S.append(("the ledger names verbs the usage offers, 3 of 27 carried",
                   set(_ledger) <= _verbs
                   and len(_ledger) == 3
-                  and len(_verbs) == 26
+                  and len(_verbs) == 27
                   # and a name on the ledger is a whole verb: a prefix claims
                   # everything under it, so half a verb would take argv nobody
                   # answers, which is why the unit of the move is the verb
@@ -7590,7 +7662,7 @@ public enum MyWatch: AccessLedger {
     if _shapes:
         print("   verbs answering outside the canon:", _shapes[:4])
     S.append(("a verb asked for nothing answers with a sentence, in a world and without one",
-              _stacks == [] and len(_all) == 26))
+              _stacks == [] and len(_all) == 27))
     # and a non-answer is a machine's object only for whoever asked for one
     _nj = subprocess.run([sys.executable, GATE, "my", "--json"],
                          cwd=os.path.join(tmp, "bare-no-my"),

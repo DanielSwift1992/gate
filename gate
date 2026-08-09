@@ -5920,6 +5920,163 @@ def history_divergence(n=200, owners=None, policy_name=None):
     return rows, whole
 
 
+def world_parse(path):
+    # ── THE JUDGE'S OWN READING, ASKED FOR. Nothing here grows a grammar over
+    # somebody's world: `judge parse` hands out the parse the court already
+    # made, and this is its one caller on the python side. The route lives in
+    # the port's wrapper, so it needs node even where the binary judges.
+    node = shutil.which("node")
+    if not (node and os.path.exists(_PORT_CLI)):
+        cannot("this reads the judge's own parse, and that route is the node port",
+               "install node, which serves it through bin/judge-cli.js, or read the "
+               "file itself: it is plain Swift and `swiftc -typecheck` reads it too")
+    said = subprocess.run([node, _PORT_CLI, "judge", "parse", path],
+                          capture_output=True, text=True)
+    if said.returncode or not said.stdout.strip():
+        cannot(f"the parse of {os.path.basename(path)} came back empty: "
+               + ((said.stderr or "").strip().splitlines() or ["no reason given"])[0][:90],
+               "check the file is the Swift this judges, or run `gate status` to see "
+               "what the court says about it")
+    return list(json.loads(said.stdout).values())[0]
+
+
+def bare_comments(text, parsed):
+    # ── THE PROSE THE FILE ALREADY CARRIES, READ THE WAY IT WAS WRITTEN. The
+    # same marks the bench's own bare view reads, because they are marks in the
+    # file and not settings anywhere: a run of comment lines is one paragraph
+    # and a blank `//` is where the writer stopped; `── like this ──` is a
+    # heading; four spaces inside a comment is set, not flowed, which is what a
+    # command with its continuation needs; `role:` and `opens:` are how a file
+    # tells this tool what it is, not something it says to a reader; `== word`
+    # marks a phrase and is not read out. A `///` line above a record belongs to
+    # that record and travels with it, not here.
+    lines = text.split("\n")
+    taken = set()
+    for at in ([d["line"] for d in parsed["declarations"]]
+               + [a["line"] for a in (parsed.get("topAliases") or {}).values()]):
+        i = at - 2
+        while i >= 0 and lines[i].strip().startswith("///"):
+            taken.add(i)
+            i -= 1
+    out, run = [], None
+    for i, raw in enumerate(lines):
+        stripped = raw.strip()
+        if not stripped.startswith("//") or i in taken:
+            run = None
+            continue
+        body = re.sub(r"^\s*/+", "", raw)
+        said = body.strip()
+        if not said or re.match(r"^(role|opens):", said, re.I) or said.startswith("== "):
+            run = None
+            continue
+        head = re.match(r"^──+\s*(.+?)\s*──+$", said)
+        if head:
+            run = None
+            out.append({"line": i + 1, "kind": "head", "text": head.group(1)})
+            continue
+        if re.match(r"^\s{4,}", body):
+            if run and run["kind"] == "set":
+                run["text"] += "\n" + re.sub(r"^\s{1,4}", "", body)
+            else:
+                run = {"line": i + 1, "kind": "set", "text": re.sub(r"^\s{1,4}", "", body)}
+                out.append(run)
+            continue
+        if run and run["kind"] == "prose":
+            run["text"] += " " + said
+        else:
+            run = {"line": i + 1, "kind": "prose", "text": said}
+            out.append(run)
+    return [c for c in out if c["text"]]
+
+
+def bare_note(text, at):
+    # the `///` a writer put above a record is that record's own sentence
+    lines, said = text.split("\n"), []
+    i = at - 2
+    while i >= 0 and lines[i].strip().startswith("///"):
+        said.insert(0, lines[i].strip().lstrip("/").strip())
+        i -= 1
+    return " ".join(x for x in said if x)
+
+
+def bare_lines(parsed, text):
+    # ── BARE IS THE RECORD WITHOUT CEREMONY, NEVER THE RECORD WITHOUT ITS
+    # CONTENT. The same items the bench's own bare view draws, in the order the
+    # document has them: a record with its columns, the holes it opens, the
+    # clause it conforms under, the one string it is allowed, and the claims
+    # written inside it. The bench decorates these with slots and marks because
+    # you write in it; here they are lines, because you read them.
+    items = []
+    for d in parsed["declarations"]:
+        head = d["name"]
+        if d.get("conformances"):
+            head += ": " + ", ".join(d["conformances"])
+        if d.get("whereText"):
+            head += " when " + d["whereText"]
+        block = []
+        note = bare_note(text, d["line"])
+        if note:
+            block.append(note)
+        block.append(head)
+        if d.get("typeName") is not None:
+            block.append('    "' + d["typeName"] + '"')
+        for k, v in (d.get("aliases") or {}).items():
+            block.append(f"    {k} = {v['target']}")
+        # a hole is a line, and the line says what may fill it: a gate's
+        # parameter and a protocol's axis are the same act written two ways
+        kinds = d.get("paramKinds") or []
+        holes = [(a, kinds[i] if i < len(kinds) else None)
+                 for i, a in enumerate(d.get("params") or [])]
+        holes += [(a, (d.get("axisKinds") or {}).get(a)) for a in (d.get("axes") or [])]
+        for axis, kind in holes:
+            block.append(f"    {axis} asks for {kind or 'anything'}")
+        for e in (d.get("entries") or []):
+            args = ", ".join(e.get("args") or [])
+            block.append(f"    {e['head']}" + (f"<{args}>" if args else ""))
+        items.append((d["line"], block))
+    for name, a in (parsed.get("topAliases") or {}).items():
+        note = bare_note(text, a["line"])
+        items.append((a["line"], ([note] if note else []) + [f"{name} = {a['target']}"]))
+    for c in bare_comments(text, parsed):
+        items.append((c["line"], ["── " + c["text"] + " ──"] if c["kind"] == "head"
+                      else c["text"].split("\n") if c["kind"] == "set"
+                      else [c["text"]]))
+    items.sort(key=lambda x: x[0])
+    out = []
+    for _, block in items:
+        if out:
+            out.append("")
+        out += block
+    return out
+
+
+def cmd_bare(a):
+    # bare FILE [--full] — the world with the ceremony stripped, printed by the
+    # tool rather than by hand. A projection over one source: the file on disk
+    # stays the full Swift it was, git keeps it, swiftc reads it, and this
+    # writes nothing at all.
+    paths = [x for x in a if not x.startswith("-")]
+    if not paths:
+        return {"command": "bare", "asks": True,
+                "note": "bare FILE [--full]  ·  the same world with the ceremony stripped",
+                "next": "name a world file: `gate bare gate.swift`, or `gate bare "
+                        "stdlib/verbs.swift` for a page off the shelf"}
+    src = paths[0]
+    if not os.path.exists(src):
+        cannot(f"no file at {src}", "name a world file this judges, or run `gate demo` "
+                                    "for a repository that has one")
+    text = theirs_text(src, "the world to strip").read()
+    if "--full" in a:
+        return {"command": "bare", "file": src, "full": text, "mutates": False,
+                "note": "the whole text, as it sits on disk and as swiftc reads it",
+                "next": "`gate bare " + src + "` prints the same world stripped"}
+    lines = bare_lines(world_parse(src), text)
+    return {"command": "bare", "file": src, "lines": lines, "mutates": False,
+            "note": "a projection: the file on disk is unchanged full Swift, and "
+                    "`gate bare " + src + " --full` prints it",
+            "next": "run `gate serve` to edit this view and watch the verdict move"}
+
+
 def cmd_findings(a):
     # findings [--md] [--history] [N] — what is true of this repository, in
     # sentences; with --history, what has been true of one pair over its commits.
@@ -7069,6 +7226,12 @@ usage (the git-shaped porcelain):
                                        translation at all: any clone has it)
   gate findings [--md]                (what is true of this clone, in sentences:
                                        needs no world and no configuration)
+  gate bare FILE [--full]             (the same world with the ceremony stripped:
+                                       a projection, and the file on disk is the
+                                       full Swift it was, which `--full` prints)
+  gate bare FILE [--full]             (the same world with the ceremony stripped:
+                                       a projection, and the file on disk is the
+                                       full Swift it was, which `--full` prints)
   gate my [clear]                     (your own world: a claim in your git alone)
   gate stdlib [show|materialize] NAME (the words a world may be written in)
   gate --version                      (the tool, and the revision its judge was
@@ -7298,6 +7461,8 @@ def dispatch(cmd, rest):
         return {"command": "my", "personal": p, "repo_key": repo_key(),
                 "shared_repo_untouched": True,
                 "verdict": "holds" if not refusals else "refused", "refusals": refusals}
+    if cmd == "bare":
+        return cmd_bare(rest)
     if cmd == "findings":
         return cmd_findings(rest)
     if cmd == "log":
@@ -7692,6 +7857,13 @@ def humanize(out):
         if out.get("markdown"):
             lines.append("")
             lines.append(out["markdown"])
+    elif cmd == "bare":
+        if out.get("full") is not None:
+            lines.append(out["full"].rstrip("\n"))
+        else:
+            lines += out["lines"]
+        lines.append("")
+        lines.append(f"  {out['note']}")
     elif cmd == "findings":
         f = out["findings"]
         if not f:

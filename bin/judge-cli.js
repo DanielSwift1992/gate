@@ -44,6 +44,18 @@ if (args[1] === "parse") {
                     ([k, v]) => [k, { target: v.target, line: v.line }])),
                 typeName: (p.literals.get(d.name) || {}).value !== undefined
                     ? p.literals.get(d.name).value : null,
+                // ── AND WHAT A RECORD IS MADE OF TRAVELS WITH IT. The bare view
+                // shows a record's claims, the clause a gated form conforms
+                // under, and the holes a protocol opens; this handed out the
+                // name, its axes and its literal, and stopped there. A reader
+                // built on that would have had to grow a regex over the world
+                // for the rest, which is the one thing this route exists
+                // against. The parse has held all of it all along.
+                entries: (d.entries || []).map((e) => ({
+                    head: e.head, args: e.args || [], line: e.line })),
+                whereText: d.whereText || null,
+                axes: d.axes || [], axisKinds: d.axisKinds || {},
+                kind: d.kind || null,
             })),
             topAliases: Object.fromEntries([...p.topAliases].map(
                 ([k, v]) => [k, { target: v.target, line: v.line,

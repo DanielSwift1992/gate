@@ -61,6 +61,14 @@ public enum Findings: Verb {
 }
 extension Findings { public static var typeName: String { "findings" } }
 
+/// the same world with the ceremony stripped: a projection, and the file on disk
+/// is the full Swift it was
+public enum Bare: Verb {
+    public typealias Does = Reads
+    public typealias Under = NoCourt
+}
+extension Bare { public static var typeName: String { "bare" } }
+
 /// the repository's own history, with no translation at all: any clone carries it
 public enum Log: Verb {
     public typealias Does = Reads
@@ -262,6 +270,7 @@ public typealias CheckIsSafe = Run<Check>
 public typealias DiffIsSafe = Run<Diff>
 public typealias LogIsSafe = Run<Log>
 public typealias FindingsIsSafe = Run<Findings>
+public typealias BareIsSafe = Run<Bare>
 public typealias SurveyIsSafe = Run<Survey>
 public typealias DriftIsSafe = Run<Drift>
 public typealias SeamIsSafe = Run<Seam>
