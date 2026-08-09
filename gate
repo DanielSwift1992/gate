@@ -4311,8 +4311,12 @@ def cmd_side(a, kind):
     # took from somewhere at something, and that is a fact about it the way its
     # path is.
     word = "mine" if kind == "Mine" else "theirs"
-    role = a[a.index("--role") + 1] if "--role" in a else ("world" if kind == "Mine" else "seam")
-    at = a[a.index("--at") + 1] if "--at" in a else None
+    # a flag as the last word names nothing: read past the argv this raised,
+    # and the sentence for a value that is missing already exists downstream
+    role = (a[a.index("--role") + 1] if a.index("--role") + 1 < len(a) else None) \
+        if "--role" in a else ("world" if kind == "Mine" else "seam")
+    at = (a[a.index("--at") + 1] if a.index("--at") + 1 < len(a) else None) \
+        if "--at" in a else None
     rest = [x for x in a if not x.startswith("--")]
     for flag in ("--role", "--at"):
         if flag in a and a.index(flag) + 1 < len(a):

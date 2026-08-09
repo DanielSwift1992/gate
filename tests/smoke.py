@@ -6987,6 +6987,102 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         S.append(("the writing side of a layout is one on both carriers, born and grown",
                   _rows_apart == [] and len(_layouts) == 4))
 
+        # ── AND THE ACCOUNT'S OWN PAIR OF VERBS MOVES WHOLE. `mine` and `theirs`
+        # are one act seen from the two ends of the edge, and they walk every
+        # door the roads laid: the world found from the file, the row written,
+        # the shelf taken in hand with the grammar it is written in, the pin
+        # that refuses to move, the forgetting that leaves the file alone.
+        # Held as scenarios rather than single shapes, because the account is
+        # stateful: what the second command answers depends on what the first
+        # one wrote, so each carrier replays the same life and the words, the
+        # codes and every .swift byte left behind are compared at each step.
+        _p1s = {
+            "fresh-mine": [
+                ["mine", "page.swift", "--role", "forms"],
+                ["mine"], ["mine", "--json"],
+                ["mine", "page.swift"],
+                ["mine", "deep/side.swift", "--role", "world"],
+                ["mine", "deep/side.swift", "--forget"],
+                ["mine", "page.swift", "--forget", "--json"],
+                ["mine"], ["mine", "page.swift", "--forget"],
+            ],
+            "theirs-pins": [
+                ["theirs", "api.json", "--at", "v1.2.3"],
+                ["theirs"], ["theirs", "--json"],
+                ["theirs", "api.json", "--at", "v2.0.0"],
+                ["theirs", "api.json", "--forget"],
+                ["theirs", "api.json", "--at", "latest"],
+                ["theirs", "api.json", "--at", "^1.2.0"],
+                ["theirs", "api.json", "--at", "1.2.x"],
+                ["theirs", "api.json"],
+                ["theirs", "api.json", "--at"],
+                ["theirs", "api.json", "--at", "v1", "--role", "carried", "--json"],
+            ],
+            "take-shelf": [
+                ["mine", "verbs"], ["mine", "verbs"], ["mine", "verbs", "--json"],
+                ["mine", "nosuch.swift"],
+                ["mine", "page.swift", "--role", "nocourt"],
+                ["mine", "page.swift", "--role"],
+            ],
+            "outside": [
+                ["mine", "../elsewhere/f.swift"],
+                ["mine", "../elsewhere/f.swift", "--json"],
+            ],
+        }
+
+        def _p1build(base):
+            os.makedirs(os.path.join(base, "deep"), exist_ok=True)
+            subprocess.run(["git", "init", "-q", "-b", "main", base], capture_output=True)
+            open(os.path.join(base, "page.swift"), "w").write("public enum P {}\n")
+            open(os.path.join(base, "deep", "side.swift"), "w").write("public enum S {}\n")
+            open(os.path.join(base, "api.json"), "w").write("{}\n")
+            os.makedirs(os.path.join(os.path.dirname(base), "elsewhere"), exist_ok=True)
+            open(os.path.join(os.path.dirname(base), "elsewhere", "f.swift"),
+                 "w").write("public enum F {}\n")
+        _p1apart, _p1left = [], {}
+        for _pname, _pargvs in _p1s.items():
+            _got = []
+            for _tag, _env in (("py", "off"), ("sw", _cli_bin)):
+                _proot = os.path.join(tmp, "pair-" + _pname, _tag)
+                shutil.rmtree(_proot, ignore_errors=True)
+                _p1build(_proot)
+                _said = []
+                for _argv in _pargvs:
+                    _r = subprocess.run([sys.executable, GATE, *_argv], cwd=_proot,
+                                        capture_output=True, timeout=180,
+                                        env={**os.environ, "GATE_CLI": _env})
+                    _said.append((_r.returncode, _r.stdout, _r.stderr))
+                _files = {}
+                for _dp, _, _fs in os.walk(_proot):
+                    if ".git" in _dp:
+                        continue
+                    for _f in sorted(_fs):
+                        if _f.endswith(".swift"):
+                            _at = os.path.join(_dp, _f)
+                            _files[os.path.relpath(_at, _proot)] = open(_at, "rb").read()
+                _got.append((_said, _files))
+                _p1left[_pname + "-" + _tag] = _files
+            if _got[0] != _got[1]:
+                _p1apart.append(_pname)
+        if _p1apart:
+            print("   the pair of account verbs answers apart on:", _p1apart)
+        S.append(("mine and theirs move whole: four lives replayed alike, bytes and all",
+                  _p1apart == [] and len(_p1s) == 4))
+        # and the lives mean what they were lived to mean: the pin is written as
+        # an atom, the taking carried the grammar with its Written column, and
+        # forgetting left the file on disk
+        _p1man = _p1left.get("theirs-pins-py", {}).get("gate.manifest.swift", b"")
+        _p1verbs = _p1left.get("take-shelf-py", {})
+        S.append(("and the pair's rows say what happened: the pin, the taking, the leaving",
+                  b"Rev_v1" in _p1man and b"public typealias At = " in _p1man
+                  and b"typeName: String { \"v1\" }" in _p1man
+                  and "page.swift" in _p1left.get("fresh-mine-py", {})
+                  and "gate.manifest.swift" in _p1left.get("fresh-mine-py", {})
+                  and "verbs.swift" in _p1verbs and "forms-tool.swift" in _p1verbs
+                  and b"Origin: gate's shelf" in _p1verbs.get("verbs.swift", b"")
+                  and b"public typealias Written = FormsTool"
+                      in _p1verbs.get("gate.manifest.swift", b"")))
+
         # ── AND A ROAD IS HELD BEFORE ITS VERB ARRIVES. `contractFields` is the
         # reading `declare` and `drift` will both stand on. It is in the vein
         # with nothing routed to it, behind a door this battery opens and no
@@ -7383,7 +7479,8 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         # verb now, and the parity below walks all three of its answers.
         S.append(("the strangler ledger names a verb, not half of one",
                   subprocess.run([_cli_bin, "--carries"], capture_output=True, text=True)
-                  .stdout.split() == ["stdlib", "export", "seam", "log", "aside", "declare"]))
+                  .stdout.split() == ["stdlib", "export", "seam", "log", "aside", "declare",
+                                      "mine", "theirs"]))
         # ── AND THE LEDGER IS READ AGAINST THE ROAD IT IS WALKING. The strangler
         # has a length and a position, and both were feelings: the list of moved
         # veins lived in the binary and the list of verbs lived in the python
@@ -7557,7 +7654,10 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                    ["log"], ["log", "--json"], ["log", "--wrold"], ["log", "1", "all"],
                    ["aside"], ["aside", "--json"], ["aside", "/r"], ["aside", "/r", "f"],
                    ["declare"], ["declare", "--json"], ["declare", "nonsense"],
-                   ["declare", "contract"], ["declare", "carrier"]]
+                   ["declare", "contract"], ["declare", "carrier"],
+                   ["mine"], ["theirs"], ["mine", "--json"], ["theirs", "--json"],
+                   ["mine", "nosuch.swift"], ["theirs", "their.swift"],
+                   ["mine", "f.swift", "--role"], ["theirs", "f.swift", "--at"]]
         _sd2 = os.path.join(tmp, "ledger-walk")
         os.makedirs(_sd2, exist_ok=True)
         _apart2 = []
@@ -7575,7 +7675,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         if _apart2:
             print("   the two CLIs answer apart on:", _apart2[:4])
         S.append(("a carried prefix answers alike on the argv nobody means to type",
-                  _apart2 == [] and len(_shapes) == 22
+                  _apart2 == [] and len(_shapes) == 30
                   # and none of them is a stack trace on either side
                   and not any(b"Traceback" in subprocess.run(
                       [sys.executable, GATE, *_a], cwd=_sd2, capture_output=True,
@@ -7629,9 +7729,9 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         for _r in sorted(_by_road):
             if _r != "carried":
                 print(f"     {_r:18} {' '.join(sorted(_by_road[_r]))[:88]}")
-        S.append(("the ledger names verbs the usage offers, 6 of 27 carried",
+        S.append(("the ledger names verbs the usage offers, 8 of 27 carried",
                   set(_ledger) <= _verbs
-                  and len(_ledger) == 6
+                  and len(_ledger) == 8
                   and len(_verbs) == 27
                   # and a name on the ledger is a whole verb: a prefix claims
                   # everything under it, so half a verb would take argv nobody

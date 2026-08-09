@@ -65,7 +65,7 @@ if args.contains("--out") && !args.contains("-o") {
 // `stdlib show` to the verb: half a verb on the list would hand this binary an
 // argv it does not answer, and the python side would never see it.
 if args == ["--carries"] {
-    out("stdlib\nexport\nseam\nlog\naside\ndeclare\n")
+    out("stdlib\nexport\nseam\nlog\naside\ndeclare\nmine\ntheirs\n")
     exit(0)
 }
 
@@ -623,10 +623,13 @@ func rowAtom(_ rel: String) -> String {
 
 func worldRootFor(_ path: String) -> String {
     // the world a file belongs to is found the way .git is: walking up from the
-    // FILE, never from wherever the command happened to be typed
-    var walk = (path as NSString).deletingLastPathComponent
-    if walk.isEmpty { walk = FileManager.default.currentDirectoryPath }
-    walk = (walk as NSString).standardizingPath
+    // FILE, never from wherever the command happened to be typed. The walk goes
+    // from the file's absolute place, because a relative path with a folder in
+    // it walked from the folder's own name and founded a world inside it; and
+    // nothing here standardizes, because that strips /private from a path that
+    // exists and leaves it on one that does not, and the row's relative path is
+    // computed against this root by plain string arithmetic.
+    var walk = (absPath(path) as NSString).deletingLastPathComponent
     while true {
         for name in ["gate.swift", "gate.manifest.swift"] {
             if FileManager.default.fileExists(atPath: (walk as NSString).appendingPathComponent(name)) {
@@ -644,10 +647,9 @@ func worldRootFor(_ path: String) -> String {
     // to the working directory only when the file is UNDER it, and to the
     // file's own folder otherwise.
     let here = FileManager.default.currentDirectoryPath
-    let dir = (path as NSString).deletingLastPathComponent
-    let standing = (dir.isEmpty ? here : dir as String) as NSString
-    return standing.standardizingPath.hasPrefix((here as NSString).standardizingPath)
-        ? here : standing.standardizingPath
+    let standing = (absPath(path) as NSString).deletingLastPathComponent
+    return relPath(standing, here).components(separatedBy: "/").first == ".."
+        ? standing : here
 }
 
 func shelfPage(_ name: String) -> String {
@@ -2863,6 +2865,341 @@ if args.first == "aside" {
         + " · " + String(rows.count) + " standing\n  note: " + noteSaid
         + "\n  next: " + nextSaid + "\n")
     exit(0)
+}
+
+// ── mine PATH [--role R] · theirs PATH --at REV: one account, two directions,
+// and nobody special. What I emit is judged and moves the verdict; what I took
+// I took from somewhere at something, and that is a fact about it the way its
+// path is. The writing side of the layout landed with the roads; this is the
+// verb over it, moved whole: the account listing, the taking of a shelf world,
+// the forgetting, and the pin that refuses to move.
+let MOVING_NAMES: Set<String> = ["latest", "head", "tip", "main", "master", "trunk",
+                                 "default", "stable", "edge", "dev", "develop",
+                                 "nightly", "current", "next"]
+
+func movingPin(_ at: String?) -> String? {
+    // a pin names a moment, and this is why: a seam's verdict is a pure
+    // function of two fixed texts, and a range or a moving name breaks the
+    // precondition under which the question has an answer at all
+    let a = (at ?? "").trimmingCharacters(in: .whitespaces)
+    if a.isEmpty { return "a revision nobody wrote down" }
+    if MOVING_NAMES.contains(a.lowercased()) {
+        return "`\(a)` is a name that moves: whatever it points at today, it points somewhere "
+             + "else tomorrow, and a row that says it stops being a fact the moment it is true"
+    }
+    if !matches("[\\^~*]|[<>]=?|,\\s*[<>^~]|\\|\\|", a).isEmpty {
+        return "`\(a)` is a range, not a revision: it names a SET of revisions, and this world "
+             + "took exactly one"
+    }
+    if matchAt(a, "[\\d.]*[xX](\\.[\\dxX]+)*$") != nil, !matches("\\d", a).isEmpty {
+        return "`\(a)` is a range with a wildcard in it, and this world took exactly one revision"
+    }
+    return nil
+}
+
+func foundsWorld(_ path: String) -> Bool {
+    // true when this claim would found a world rather than join one
+    let rootDir = worldRootFor(path)
+    return !(FileManager.default.fileExists(atPath: (rootDir as NSString)
+                 .appendingPathComponent("gate.swift"))
+        || FileManager.default.fileExists(atPath: (rootDir as NSString)
+                 .appendingPathComponent("gate.manifest.swift")))
+}
+
+func forgetSide(_ relSaid: String, _ d: String) -> (mp: String?, row: LayoutRow?) {
+    // unsubscribing is deleting a line, by braces and never by shape: the row
+    // is an enum body and an extension body, and the file itself is not touched
+    let mp = (d as NSString).appendingPathComponent("gate.manifest.swift")
+    guard FileManager.default.fileExists(atPath: mp), let text = readText(mp)
+    else { return (nil, nil) }
+    let (rows, _) = layoutRowsFull(d)
+    guard let row = rows.first(where: { $0.path == relSaid }), let n = row.name
+    else { return (nil, nil) }
+    var out: [String] = []
+    let lines = text.components(separatedBy: "\n")
+    var i = 0
+    while i < lines.count {
+        if lines[i].hasPrefix("public enum " + n + ":") || lines[i].hasPrefix("extension " + n + " ")
+            || lines[i].hasPrefix("extension " + n + "{") {
+            var depth = lines[i].filter { $0 == "{" }.count - lines[i].filter { $0 == "}" }.count
+            i += 1
+            while depth > 0 && i < lines.count {
+                depth += lines[i].filter { $0 == "{" }.count - lines[i].filter { $0 == "}" }.count
+                i += 1
+            }
+            continue
+        }
+        out.append(lines[i])
+        i += 1
+    }
+    do { try out.joined(separator: "\n").write(toFile: mp, atomically: false, encoding: .utf8) }
+    catch {
+        cannot(mp + " cannot be written here: " + error.localizedDescription.lowercased(),
+               "the row is still in the layout: nothing was changed")
+    }
+    return ((mp as NSString).lastPathComponent, row)
+}
+
+func declareSideHere(_ path: String, _ kind: String, _ role: String, _ frm: String?,
+                     _ written: String? = nil, _ opens: String? = nil)
+    -> (declared: String?, refused: String?) {
+    // the writing road with a file at the end of it: the same bytes the
+    // reading side proved, landed where the world's own walk says
+    let d = worldRootFor(path)
+    let mp = (d as NSString).appendingPathComponent("gate.manifest.swift")
+    let rel = relPath(absPath(path), d)
+    if rel.components(separatedBy: "/").first == ".." || leavesWorldHere(rel, d) {
+        return (nil, path + " is not inside the world at " + d + ": a row says where a "
+                     + "file is relative to the world that declares it")
+    }
+    let text = FileManager.default.fileExists(atPath: mp)
+        ? theirsText(mp, "the layout of this world") : manifestHead()
+    let said = upsertRow(text, name: rowAtom(rel), rel: rel, kind: kind, role: role,
+                         from: frm, written: written, opens: opens)
+    do { try said.write(toFile: mp, atomically: false, encoding: .utf8) } catch {
+        cannot(mp + " cannot be written here: " + error.localizedDescription.lowercased(),
+               "name a path you can write, and the row will have a home")
+    }
+    return ((mp as NSString).lastPathComponent, nil)
+}
+
+struct Took { var wrote: String; var with: [String]; var declaredIn: String
+              var from: String?; var court: String }
+
+func takeShelf(_ mod: String, _ into: String = ".") -> (took: Took?, dest: String) {
+    // one act of taking, and every door uses it: a copy lands where they
+    // stand, carrying where it came from, declared in the same movement
+    let dest = absPath((into as NSString).appendingPathComponent(mod + ".swift"))
+    if FileManager.default.fileExists(atPath: dest) { return (nil, dest) }
+    let roleSaid = shelfHeadLine(mod, "// role:")
+    let court = STATUS_ROLES.contains(where: { $0.0 == roleSaid }) ? roleSaid! : "forms"
+    let came = judgeFrom()
+    var body = (STDLIB_TEXTS[mod] ?? "").components(separatedBy: "\n")
+    let opens = body.prefix(8).map { $0.trimmingCharacters(in: .whitespaces) }
+        .first(where: { $0.hasPrefix("// opens:") })
+    let written = body.prefix(8).first(where: { $0.contains("written in") && $0.hasPrefix("//") })?
+        .trimmingCharacters(in: .whitespaces)
+    let grammar = matches("stdlib show ([\\w-]+)", written ?? "").first?.first
+    while let first = body.first, first.hasPrefix("//") { body.removeFirst() }
+    let view = opens.flatMap { matches("opens:\\s*(\\S+)", $0).first?.first }?
+        .trimmingCharacters(in: .whitespaces).lowercased()
+    var page = "// This copy is yours: read it, change it, break it, delete it when you are\n"
+             + "// done.\n"
+    var middle = body.joined(separator: "\n")
+    while middle.hasSuffix("\n") { middle.removeLast() }
+    while middle.hasPrefix("\n") { middle.removeFirst() }
+    page += "\n" + middle + "\n"
+    page += "\n// Origin: gate's shelf"
+    page += came.map { ", built from \($0.prefix(7))" } ?? ""
+    page += ". `gate stdlib show \(mod)` prints what shipped, unchanged,\n"
+          + "// for comparing or restoring by hand. Deleting this file and its row in\n"
+          + "// `gate.manifest.swift` removes it completely.\n"
+    do { try page.write(toFile: dest, atomically: false, encoding: .utf8) } catch {
+        cannot(dest + " cannot be written here: " + error.localizedDescription.lowercased(),
+               "stand in a directory you can write, and the copy lands beside you")
+    }
+    // the grammar arrives FIRST, so the row for this page can point at its row
+    var withIt: [String] = []
+    var grammarAtom: String? = nil
+    if let g = grammar, g != mod, STDLIB_TEXTS[g] != nil {
+        let (also, adest) = takeShelf(g, into)
+        grammarAtom = rowAtom(relPath(adest, absPath(into)))
+        if let also = also { withIt.append(also.wrote) }
+    }
+    let (mp, _) = declareSideHere(dest, "Mine", court, nil,
+                                  grammarAtom, view.map { $0.prefix(1).uppercased() + $0.dropFirst() })
+    return (Took(wrote: relPath(dest, absPath(into)), with: withIt,
+                 declaredIn: mp ?? "gate.manifest.swift", from: came, court: court), dest)
+}
+
+if args.first == "mine" || args.first == "theirs" {
+    loadStatusShelf()
+    let kind = args.first == "mine" ? "Mine" : "Theirs"
+    let word = args.first!
+    let asJson = args.contains("--json")
+    let a = Array(args.dropFirst()).filter { $0 != "--json" }
+    func flagValue(_ flag: String) -> String? {
+        guard let i = a.firstIndex(of: flag) else { return nil }
+        return i + 1 < a.count ? a[i + 1] : nil
+    }
+    // a flag as the last word names nothing, and the sentence for a missing
+    // value already stands downstream: the same guard the other carrier keeps
+    let role = a.contains("--role") ? flagValue("--role")
+                                    : (kind == "Mine" ? "world" : "seam")
+    let at = flagValue("--at")
+    var rest = a.filter { !$0.hasPrefix("--") }
+    for flag in ["--role", "--at"] {
+        if let v = flagValue(flag) { rest = rest.filter { $0 != v } }
+    }
+    let roleList = STATUS_ROLES.map { $0.0 }.joined(separator: "|")
+    let usage = "gate \(word) PATH" + (kind == "Mine" ? "" : " --at REV")
+              + " [--role " + roleList + "] · gate \(word) PATH --forget"
+
+    func answer(_ pairs: [(String, StatusJSON)], _ human: [String]) -> Never {
+        if asJson { out(statusDumps(.object(pairs), 0) + "\n") }
+        else { out(human.joined(separator: "\n") + "\n") }
+        exit(0)
+    }
+    func asks(_ note: String, _ next: String) -> Never {
+        answer([("command", .text(word)), ("asks", .raw("true")),
+                ("note", .text(note)), ("next", .text(next))],
+               ["usage: " + note, "  next: " + next])
+    }
+    if rest.isEmpty {
+        // the same word asks and answers: with a path it declares, with none
+        // it is the account an owner actually has
+        let w = discoverWorld()
+        let d = w.facts.map { (absPath($0) as NSString).deletingLastPathComponent }
+            ?? FileManager.default.currentDirectoryPath
+        let (rows, _) = layoutRowsFull(d)
+        let held = rows.filter { $0.source == word }
+        if held.isEmpty {
+            asks(usage, kind == "Mine"
+                 ? "a file you emit, judged with the rest of your world"
+                 : "a file you took from somewhere, at the revision you took it at")
+        }
+        var lines = ["\(word): \(held.count)"]
+        for h in held {
+            let atSaid = h.from.map { " · at \($0)" } ?? ""
+            let file = h.path.padding(toLength: max(28, h.path.count), withPad: " ",
+                                      startingAt: 0)
+            let roleSaid = (h.role?.isEmpty ?? true) ? "unsaid" : h.role!
+            lines.append("  " + file + " "
+                         + roleSaid.padding(toLength: max(7, roleSaid.count), withPad: " ",
+                                            startingAt: 0) + atSaid)
+        }
+        lines.append("  next: `gate \(word) FILE --forget` takes one out of the list, "
+                     + "and leaves the file alone")
+        answer([("command", .text(word)),
+                ("held", .list(held.map { .object([
+                    ("file", .text($0.path)),
+                    ("role", $0.role.map { .text($0) } ?? .null),
+                    ("at", $0.from.map { .text($0) } ?? .null)]) })),
+                ("note", .text(usage)), ("mutates", .raw("false"))], lines)
+    }
+    let path = rest[0]
+    if a.contains("--forget") {
+        let d = worldRootFor(path)
+        let (mp, row) = forgetSide(relPath(absPath(path), d), d)
+        guard let mp = mp, let row = row else {
+            asks("\((path as NSString).lastPathComponent) is not in your list",
+                 "gate \(word) — what is in it")
+        }
+        answer([("command", .text(word)), ("forgot", .text(row.path)),
+                ("declared_in", .text(mp)), ("mutates", .raw("true")),
+                ("note", .text("out of your account. The file is still on disk: taking a thing "
+                             + "out of your list is not throwing it away, and that second act "
+                             + "is yours alone")),
+                ("next", .text("delete the file too if you meant that: a commit like any "
+                             + "other, visible and dated"))],
+               ["\(word): \(row.path) · out of \(mp)",
+                "  the file is still on disk: that is a separate act, and yours",
+                "  next: delete the file too if you meant that: a commit like any "
+                + "other, visible and dated"])
+    }
+    // making something yours is the third verb: a shelf world taken in hand,
+    // copied here, declared in the same movement, judged from that second
+    if kind == "Mine", !FileManager.default.fileExists(atPath: path),
+       STDLIB_TEXTS[path] != nil {
+        let (took, _) = takeShelf(path)
+        guard let took = took else {
+            asks("\(path).swift is already here",
+                 "gate \(word) \(path).swift — declare the copy you have, or move it "
+                 + "aside first: nothing here overwrites a file you wrote")
+        }
+        answer([("command", .text(word)), ("made_mine", .text(path)),
+                ("wrote", .text((took.wrote as NSString).lastPathComponent)),
+                ("with", .list(took.with.map { .text($0) })),
+                ("court", .text(took.court)),
+                ("declared_in", .text(took.declaredIn)),
+                ("from", took.from.map { .text($0) } ?? .null),
+                ("mutates", .raw("true")),
+                ("note", .text("\(path) is yours: a copy is here, declared, and judged from "
+                             + "now on. What the shelf ships is unchanged and still shipped. "
+                             + "Yours simply stands where it stood")),
+                ("next", .text("gate status: it is judged with the rest of your world"))],
+               ["\(word): \(path) is yours · wrote \((took.wrote as NSString).lastPathComponent)"
+                + (took.with.isEmpty ? "" : " and " + took.with.joined(separator: " and "))
+                + (took.from.map { " · from the judge at \($0.prefix(7))" } ?? ""),
+                "  note: \(path) is yours: a copy is here, declared, and judged from now on. "
+                + "What the shelf ships is unchanged and still shipped. Yours simply stands "
+                + "where it stood",
+                "  next: gate status: it is judged with the rest of your world"])
+    }
+    if !FileManager.default.fileExists(atPath: path) {
+        cannot("no file at \(path)",
+               kind == "Mine"
+               ? "bring the file here first, or name one this tool ships: "
+                 + SHELF_ORDER.sorted().joined(separator: " · ")
+               : "bring the file here first. gate never fetches: a file of theirs "
+                 + "arrives by a checkout, a copy, a vendor step you already trust")
+    }
+    if !STATUS_ROLES.contains(where: { $0.0 == role }) {
+        cannot("`\(role ?? "None")` is not a court anything here reads",
+               "a row says what it is for: "
+               + STATUS_ROLES.map { "`\($0.0)` — \($0.1)" }.joined(separator: " · "))
+    }
+    if kind == "Theirs", let at = at, !at.isEmpty, let moving = movingPin(at) {
+        asks(moving,
+             "write down the revision you actually took: a commit, a tag, a release. "
+             + "What holds between two sides is a fact about two fixed texts. Name a "
+             + "moving one and there is nothing for it to be a fact about, which is "
+             + "the whole reason nothing here has to be solved")
+    }
+    if kind == "Theirs" && (at == nil || at!.isEmpty) {
+        cannot("what is taken is taken at a revision, and this one says none",
+               "gate theirs \((path as NSString).lastPathComponent) --at REV — a commit, a "
+               + "tag, a release: whatever the source calls the thing you actually took")
+    }
+    let here = absPath(".")
+    let outside = relPath(absPath(path), here).components(separatedBy: "/").first == ".."
+    if outside && foundsWorld(path) {
+        asks("\(path) is not inside the world here, and there is no world around it",
+             "a world is founded where you stand: run this from the directory that "
+             + "world is in, or bring the file into this one. A world judges what "
+             + "is in it")
+    }
+    let (rows2, _) = layoutRowsFull(worldRootFor(path))
+    let rel2 = relPath(absPath(path), worldRootFor(path))
+    if let said = rows2.first(where: { $0.path == rel2 }) {
+        asks("\(rel2) is already declared, as `\(said.name ?? "None")` "
+             + "(\(said.source), \(said.role ?? "None"))",
+             "gate \(word) \(rel2) --forget, then say it again — a file is declared "
+             + "once, or the list stops being an account of anything")
+    }
+    let (mp, refused) = declareSideHere(path, kind, role!, at)
+    if let refused = refused {
+        asks(refused,
+             "bring the file into the world first. A world judges what is in "
+             + "it, and a row that points outside is a claim it cannot keep")
+    }
+    let roleMeans = STATUS_ROLES.first(where: { $0.0 == role })!.1
+    let file = (path as NSString).lastPathComponent
+    if kind == "Mine" {
+        answer([("command", .text(word)), ("file", .text(file)),
+                ("declared_in", .text(mp!)), ("role", .text(role!)),
+                ("role_means", .text(roleMeans)), ("mutates", .raw("true")),
+                ("note", .text("mine: I emit it, it is judged with the rest of my world, and "
+                             + "changing it changes the verdict")),
+                ("next", .text("gate status: it is judged from here on"))],
+               ["\(word): \(file) · written down in \(mp!)",
+                "  role `\(role!)` — \(roleMeans)",
+                "  next: gate status: it is judged from here on"])
+    }
+    let nextSaid = role == "seam"
+        ? "gate attention: what now waits for a word, read the same from either side"
+        : "gate status: the row is accounted for, and its court is `" + role! + "`"
+    answer([("command", .text(word)), ("file", .text(file)),
+            ("declared_in", .text(mp!)), ("role", .text(role!)),
+            ("role_means", .text(roleMeans)), ("mutates", .raw("true")),
+            ("at", .text(at!)),
+            ("note", .text("theirs, taken at \(at!): I read it and never rewrite it. To move "
+                         + "it, take it again at a newer revision. There is nothing here to "
+                         + "solve")),
+            ("next", .text(nextSaid))],
+           ["\(word): \(file) · took it at \(at!) · written down in \(mp!)",
+            "  role `\(role!)` — \(roleMeans)",
+            "  next: " + nextSaid])
 }
 
 // ── log: the repository's own history, projected and never judged ──
