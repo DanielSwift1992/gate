@@ -339,9 +339,8 @@ break is refused at its line, all under the port. So Windows is measured on ever
 On Linux, CI rebuilds the judge at the same pin and runs the full
 battery on every push, so every platform named here is measured.
 
-Roadmap, next: single-binary Swift CLI (Linux/Windows included) · the
-bare-Swift diff view (`gate diff` shows the stripped form, `--full` the
-whole text) · editable bare view in the bench · apply routing over the
-declared layout · more domain forms.
+Roadmap, next: single-binary Swift CLI (Linux/Windows included) ·
+editable bare view in the bench · apply routing over the declared
+layout · more domain forms.
 
 Something drifts? Gate it
