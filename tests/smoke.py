@@ -6805,7 +6805,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         # verb now, and the parity below walks all three of its answers.
         S.append(("the strangler ledger names a verb, not half of one",
                   subprocess.run([_cli_bin, "--carries"], capture_output=True, text=True)
-                  .stdout.split() == ["stdlib", "export", "seam"]))
+                  .stdout.split() == ["stdlib", "export", "seam", "log"]))
         # ── AND THE LEDGER IS READ AGAINST THE ROAD IT IS WALKING. The strangler
         # has a length and a position, and both were feelings: the list of moved
         # veins lived in the binary and the list of verbs lived in the python
@@ -6975,7 +6975,8 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         _shapes = [["stdlib", "show"], ["stdlib", "materialize"], ["stdlib", "show", "--json"],
                    ["stdlib", "show", "verbs", "extra"], ["stdlib", "nosuch"],
                    ["export", "nosuch.swift", "-o", "a.csv", "b.csv"],
-                   ["export", "gate.swift"], ["seam", "a.swift"], ["seam", "a.swift", "b.swift"]]
+                   ["export", "gate.swift"], ["seam", "a.swift"], ["seam", "a.swift", "b.swift"],
+                   ["log"], ["log", "--json"], ["log", "--wrold"], ["log", "1", "all"]]
         _sd2 = os.path.join(tmp, "ledger-walk")
         os.makedirs(_sd2, exist_ok=True)
         _apart2 = []
@@ -6993,14 +6994,14 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         if _apart2:
             print("   the two CLIs answer apart on:", _apart2[:4])
         S.append(("a carried prefix answers alike on the argv nobody means to type",
-                  _apart2 == [] and len(_shapes) == 9
+                  _apart2 == [] and len(_shapes) == 13
                   # and none of them is a stack trace on either side
                   and not any(b"Traceback" in subprocess.run(
                       [sys.executable, GATE, *_a], cwd=_sd2, capture_output=True,
                       env={**os.environ, "GATE_CLI": "off"}).stderr for _a in _shapes)))
-        S.append(("the ledger names verbs the usage offers, 3 of 27 carried",
+        S.append(("the ledger names verbs the usage offers, 4 of 27 carried",
                   set(_ledger) <= _verbs
-                  and len(_ledger) == 3
+                  and len(_ledger) == 4
                   and len(_verbs) == 27
                   # and a name on the ledger is a whole verb: a prefix claims
                   # everything under it, so half a verb would take argv nobody
@@ -7076,6 +7077,43 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         S.append(("and the plain court answers through the vein in the binary's words",
                   _strip_ms(_pb.stdout) == _strip_ms(_pv.stdout)
                   and _pb.returncode == _pv.returncode))
+
+        # ── AND THE JOURNAL IS WALKED IN WORLDS, NOT IN AN EMPTY FOLDER. `log`
+        # is the first carried verb that reads the world rather than the files in
+        # its argv: the layout the manifest declares, the forms rows beside it,
+        # the policy, the identities a table binds, and the wheel an operator
+        # turned. Every one of those is a place the two carriers could part, and
+        # an empty directory exercises none of them. The hole this closed: the
+        # vein's first reading swallowed the row after any declaration written on
+        # one line, so this repository's own first row went missing and the
+        # journal narrowed to the wrong set of files.
+        _jw = []
+        for _where, _make in (("demo", ["demo"]), ("org", ["demo", "org"])):
+            _jd = os.path.join(tmp, "journal-" + _where)
+            os.makedirs(_jd, exist_ok=True)
+            subprocess.run(["git", "init", "-q", "-b", "main", _jd], capture_output=True)
+            subprocess.run([sys.executable, GATE, *_make, _jd], capture_output=True)
+            for _argv in (["log"], ["log", "--json"], ["log", "all", "3"], ["log", "world"]):
+                _two = [subprocess.run([sys.executable, GATE, *_argv], cwd=_jd,
+                                       capture_output=True,
+                                       env={**os.environ, "GATE_CLI": _e}, timeout=180)
+                        for _e in ("off", _cli_bin)]
+                if [(_noclock(_x.stdout), _noclock(_x.stderr), _x.returncode) for _x in _two][0] \
+                        != [(_noclock(_x.stdout), _noclock(_x.stderr), _x.returncode) for _x in _two][1]:
+                    _jw.append(f"{_where}: {' '.join(_argv)}")
+        # and in this repository, whose layout is a manifest of forms rows with a
+        # policy beside it: the shape that found the hole
+        for _argv in (["log"], ["log", "--json"], ["log", "5"]):
+            _two = [subprocess.run([sys.executable, GATE, *_argv], cwd=HERE, capture_output=True,
+                                   env={**os.environ, "GATE_CLI": _e}, timeout=180)
+                    for _e in ("off", _cli_bin)]
+            if [(_noclock(_x.stdout), _x.returncode) for _x in _two][0] \
+                    != [(_noclock(_x.stdout), _x.returncode) for _x in _two][1]:
+                _jw.append("here: " + " ".join(_argv))
+        if _jw:
+            print("   the journal answers apart:", _jw[:4])
+        S.append(("the journal reads one world on both carriers, layout and all",
+                  _jw == []))
 
     # ── zero egress: a claim about ourselves, kept by a gate on our own source.
     # An enterprise review runs this same grep; it must never come back dirty,

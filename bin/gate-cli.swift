@@ -65,7 +65,7 @@ if args.contains("--out") && !args.contains("-o") {
 // `stdlib show` to the verb: half a verb on the list would hand this binary an
 // argv it does not answer, and the python side would never see it.
 if args == ["--carries"] {
-    out("stdlib\nexport\nseam\n")
+    out("stdlib\nexport\nseam\nlog\n")
     exit(0)
 }
 
@@ -228,6 +228,384 @@ func matches(_ pattern: String, _ text: String,
             m.range(at: i).location == NSNotFound ? "" : ns.substring(with: m.range(at: i))
         }
     }
+}
+
+// ── THE WORLD, READ THE WAY THE PYTHON SIDE READS IT. Every verb still on the
+// other side of the strangler needs three things this vein did not have: a way
+// to run git, the layout the manifest declares, and which of those rows the
+// courts read. The three carried verbs took their files from argv and needed
+// none of it. This is the first stretch of that road, written for `log` and
+// shaped for the verbs behind it.
+//
+// The manifest is read by the same targeted patterns the python side uses, not
+// by a second grammar: a row is a declaration with a `Kind` axis and a
+// `typeName` literal, and both sides read exactly those.
+func runGit(_ arguments: [String], _ cwd: String) -> String {
+    let p = Process()
+    p.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+    p.arguments = ["git"] + arguments
+    p.currentDirectoryURL = URL(fileURLWithPath: cwd)
+    let pipe = Pipe(), quiet = Pipe()
+    p.standardOutput = pipe
+    p.standardError = quiet
+    do { try p.run() } catch { return "" }
+    let said = pipe.fileHandleForReading.readDataToEndOfFile()
+    quiet.fileHandleForReading.readDataToEndOfFile()
+    p.waitUntilExit()
+    return String(data: said, encoding: .utf8) ?? ""
+}
+
+func uncommented(_ text: String) -> String {
+    // a `//` inside a string literal is not a comment, which is why this walks
+    // rather than greps: the python side learned that on a typeName holding a URL
+    var out = "", inString = false
+    var i = text.startIndex
+    while i < text.endIndex {
+        let c = text[i]
+        if c == "\"" { inString.toggle(); out.append(c); i = text.index(after: i); continue }
+        if !inString, c == "/", text.index(after: i) < text.endIndex,
+           text[text.index(after: i)] == "/" {
+            while i < text.endIndex, text[i] != "\n" { i = text.index(after: i) }
+            continue
+        }
+        out.append(c)
+        i = text.index(after: i)
+    }
+    return out
+}
+
+struct WorldRow { let path: String; let role: String }
+
+func manifestRows(_ dir: String) -> (rows: [WorldRow], manifest: String?) {
+    let mp = (dir as NSString).appendingPathComponent("gate.manifest.swift")
+    guard let text = try? String(contentsOfFile: mp, encoding: .utf8) else { return ([], nil) }
+    let code = uncommented(text)
+    var literal: [String: String] = [:]
+    for m in matches("extension (\\w+)\\b[^{]*\\{(.*?)\\n(?=public |extension |\\Z)",
+                     code + "\n", dotAll: true) where m.count == 2 {
+        let found = matches("typeName:\\s*String\\s*\\{\\s*\"([^\"]*)\"\\s*\\}", m[1])
+        if let first = found.first, first.count == 1 { literal[m[0]] = first[0] }
+    }
+    // ── AND EACH ROW IS READ AT ITS OWN NAME. One pattern over the whole
+    // document, with the dot matching newlines, let the FIRST declaration in the
+    // file swallow the second: `public enum WorldFile: Role {}` is written on one
+    // line, so a body search from there ran to the next `\n}`, which belonged to
+    // the row after it. The python side never had that hole because it finds the
+    // heads first and then asks for each body BY NAME; this does the same, and
+    // the row it was losing is the first row of this repository's own layout.
+    var rows: [WorldRow] = []
+    for m in matches("public enum (\\w+): (Mine|Theirs|WorldFile|SeamFile) \\{", code)
+    where m.count == 2 {
+        guard let path = literal[m[0]], !path.isEmpty else { continue }
+        let body = matches("public enum " + m[0] + "\\b[^{]*\\{(.*?)\\n\\}",
+                           code + "\n", dotAll: true).first?.first ?? ""
+        let kind = matches("typealias\\s+Kind\\s*=\\s*(\\w+)", body).first?.first ?? ""
+        let role: String
+        switch kind {
+        case "WorldFile": role = "world"
+        case "SeamFile": role = "seam"
+        case "FormsFile": role = "forms"
+        case "JudgeFile": role = "judge"
+        case "CarriedFile": role = "carried"
+        case "ToolFile": role = "tool"
+        case "Seam": role = "seam"
+        default:
+            // no Kind axis: the older spellings said it in the atom itself
+            role = kind.isEmpty ? (m[1] == "WorldFile" ? "world"
+                                   : m[1] == "SeamFile" ? "seam" : "")
+                                : kind.lowercased()
+        }
+        if !role.isEmpty { rows.append(WorldRow(path: path, role: role)) }
+    }
+    return (rows, mp)
+}
+
+// ── AND THE TWO FACTS A JOURNAL READS BESIDE GIT. An email is not a person:
+// `tables/identities.csv` binds the two where a world keeps one, and a journal
+// that skipped it printed addresses where the other side printed names. And a
+// wheel the operator turned is a declaration like any other: `MyJournal` says
+// what you get when you type no word at all, read from the world's own files
+// and from your personal one. A verb moves whole or not at all, so both travel.
+func commandIn(_ said: String) -> String? {
+    // ── THE LAST MILE, ON THIS SIDE TOO. Every answer ends with a step naming a
+    // command in backticks, and the python side lifts that command out beside
+    // the sentence so nobody retypes it. An answer carried by this vein that
+    // dropped the field would be the same verb saying less on one carrier.
+    guard let m = matches("`([^`]+)`", said).first?.first else { return nil }
+    let ready = m.trimmingCharacters(in: .whitespaces)
+    let starts = ["gate", "git", "bin/", "yq", "swift"]
+    return starts.contains(where: { ready.hasPrefix($0) }) ? ready : nil
+}
+
+func sha1Prefix(_ text: String) -> String {
+    // ── SHA-1, WRITTEN OUT, because the alternative is a platform library on one
+    // side of a binary that has to build on the other. Eight hex digits of it name
+    // a personal world for a clone with no remote, which is the one place this
+    // tool hashes anything at all.
+    var h: [UInt32] = [0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476, 0xC3D2E1F0]
+    var message = Array(text.utf8)
+    let bitCount = UInt64(message.count) * 8
+    message.append(0x80)
+    while message.count % 64 != 56 { message.append(0) }
+    for i in (0..<8).reversed() { message.append(UInt8((bitCount >> (UInt64(i) * 8)) & 0xFF)) }
+    for chunk in stride(from: 0, to: message.count, by: 64) {
+        var w = [UInt32](repeating: 0, count: 80)
+        for i in 0..<16 {
+            let o = chunk + i * 4
+            w[i] = (UInt32(message[o]) << 24) | (UInt32(message[o + 1]) << 16)
+                 | (UInt32(message[o + 2]) << 8) | UInt32(message[o + 3])
+        }
+        for i in 16..<80 {
+            let x = w[i - 3] ^ w[i - 8] ^ w[i - 14] ^ w[i - 16]
+            w[i] = (x << 1) | (x >> 31)
+        }
+        var a = h[0], b = h[1], c = h[2], d = h[3], e = h[4]
+        for i in 0..<80 {
+            var f: UInt32 = 0, k: UInt32 = 0
+            switch i {
+            case 0..<20:  f = (b & c) | (~b & d);          k = 0x5A827999
+            case 20..<40: f = b ^ c ^ d;                   k = 0x6ED9EBA1
+            case 40..<60: f = (b & c) | (b & d) | (c & d); k = 0x8F1BBCDC
+            default:      f = b ^ c ^ d;                   k = 0xCA62C1D6
+            }
+            let t = ((a << 5) | (a >> 27)) &+ f &+ e &+ k &+ w[i]
+            e = d; d = c; c = (b << 30) | (b >> 2); b = a; a = t
+        }
+        h[0] = h[0] &+ a; h[1] = h[1] &+ b; h[2] = h[2] &+ c
+        h[3] = h[3] &+ d; h[4] = h[4] &+ e
+    }
+    return h.map { String(format: "%08x", $0) }.joined().prefix(8).description
+}
+
+func identities(_ base: String) -> [String: String] {
+    let path = (base as NSString).appendingPathComponent("tables/identities.csv")
+    guard let text = try? String(contentsOfFile: path, encoding: .utf8) else { return [:] }
+    var rows = text.components(separatedBy: "\n").filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+    guard !rows.isEmpty else { return [:] }
+    let head = rows.removeFirst().components(separatedBy: ",").map {
+        $0.trimmingCharacters(in: .whitespaces) }
+    guard let mail = head.firstIndex(of: "email"), let who = head.firstIndex(of: "id") else { return [:] }
+    var out: [String: String] = [:]
+    for row in rows {
+        let cells = row.components(separatedBy: ",")
+        if cells.count > max(mail, who) { out[cells[mail]] = cells[who] }
+    }
+    return out
+}
+
+func repoKey(_ base: String) -> String {
+    let url = runGit(["config", "--get", "remote.origin.url"], base)
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+    if !url.isEmpty {
+        var k = url
+        for pattern in ["^[a-zA-Z+]+://", "^[^@/]+@", "\\.git$"] {
+            k = k.replacingOccurrences(of: pattern, with: "", options: .regularExpression)
+        }
+        k = k.replacingOccurrences(of: ":", with: "/")
+        k = k.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        return k.replacingOccurrences(of: "[^A-Za-z0-9._-]", with: "_", options: .regularExpression)
+    }
+    let top = runGit(["rev-parse", "--show-toplevel"], base)
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+    let home = top.isEmpty ? base : top
+    let name = (home as NSString).lastPathComponent
+        .replacingOccurrences(of: "[^A-Za-z0-9._-]", with: "_", options: .regularExpression)
+    return name + "-" + sha1Prefix(home)
+}
+
+func turned(_ surface: String, _ base: String, _ files: [String]) -> [String: String] {
+    var out: [String: String] = [:]
+    for path in files {
+        guard let raw = try? String(contentsOfFile: path, encoding: .utf8) else { continue }
+        // a comment is not a declaration: the shelf documents this very wheel by
+        // showing one, and reading the example as an answer made `gate log` obey
+        // a line written to explain it
+        let text = raw.components(separatedBy: "\n")
+            .filter { !$0.trimmingCharacters(in: .whitespaces).hasPrefix("//") }
+            .joined(separator: "\n")
+        for m in matches("public enum \\w+: " + surface + " \\{(.*?)\\n\\}", text, dotAll: true)
+        where m.count == 1 {
+            for a in matches("public typealias (\\w+) = (\\w+)", m[0]) where a.count == 2 {
+                out[a[0]] = a[1]
+            }
+        }
+    }
+    return out
+}
+
+// ── log: the repository's own history, projected and never judged ──
+//
+// A commit is closed iff it is reachable from the default branch. The world's
+// history is git's own filtering by pathspec over the files the layout declares,
+// which is why this needed the reader above; asking for a world's history where
+// no file is declared one narrows nothing, and the line says so rather than
+// printing the repository under the word `the world`.
+if args.first == "log" {
+    let rest = Array(args.dropFirst()).filter { $0 != "--json" }
+    let asJson = args.contains("--json")
+    let known: Set<String> = ["all", "--all", "world", "--world"]
+    if let stray = rest.first(where: { !known.contains($0) && Int($0) == nil }) {
+        let note = "`" + stray + "` is not a word this command knows"
+        let next = "gate log  the world's history · gate log all  the repository's · "
+                 + "gate log N  how many · and `MyJournal` declares what you get "
+                 + "when you say none of them"
+        if asJson {
+            out("{\n  \"command\": \"log\",\n  \"asks\": true,\n"
+                + "  \"note\": " + jsonString(note) + ",\n"
+                + "  \"next\": " + jsonString(next) + "\n}\n")
+        } else {
+            out("usage: " + note + "\n  next: " + next + "\n")
+        }
+        exit(0)
+    }
+    let here = FileManager.default.currentDirectoryPath
+    let (rows, manifest) = manifestRows(here)
+    let facts = (here as NSString).appendingPathComponent("gate.swift")
+    let base = here
+    let limit = rest.compactMap { Int($0) }.first ?? 200
+
+    // which files this world is made of: the plain court's own list, and the
+    // forms rows beside it, because whose history this is does not depend on
+    // which court reads the file
+    var world = Set<String>()
+    if FileManager.default.fileExists(atPath: facts) { world.insert("gate.swift") }
+    if manifest != nil {
+        for r in rows where r.role == "world" || r.role == "forms" {
+            if FileManager.default.fileExists(atPath: (here as NSString).appendingPathComponent(r.path)) {
+                world.insert(r.path)
+            }
+        }
+    }
+    let policy = (here as NSString).appendingPathComponent("gate.policy.swift")
+    if FileManager.default.fileExists(atPath: policy) { world.insert("gate.policy.swift") }
+
+    // a word typed now outranks a standing declaration, the way it does
+    // everywhere else; with no word, the wheel the operator turned answers
+    let personalRoot = ProcessInfo.processInfo.environment["GATE_ME"]
+        ?? ((NSHomeDirectory() as NSString).appendingPathComponent(".gate/me"))
+    let mine = (personalRoot as NSString)
+        .appendingPathComponent("worlds/" + repoKey(base) + "/my.swift")
+    var wheelFiles = world.sorted().map { (here as NSString).appendingPathComponent($0) }
+    if !world.isEmpty { wheelFiles.append(mine) }
+    let wheel = world.isEmpty ? [:] : turned("Journal", base, wheelFiles)
+    // the FIRST word decides, which is what the other carrier reads: `gate log 1
+    // all` says a count and then a word the reading never reaches, and a vein
+    // that answered the word would be a second opinion about one argv
+    let firstWord = rest.first ?? ""
+    var scope = "world"
+    if firstWord == "all" || firstWord == "--all" { scope = "all" }
+    else if firstWord == "world" || firstWord == "--world" { scope = "world" }
+    else if wheel["Scope"] == "AllRepo" { scope = "all" }
+    let onlyMe = wheel["Author"] == "Me"
+    let who = identities(base)
+
+    var branch = ""
+    for candidate in ["origin/HEAD", "main", "master"] {
+        let said = runGit(["rev-parse", "--verify", "-q", candidate], base)
+        if !said.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            branch = candidate
+            break
+        }
+    }
+    var merged = Set<String>()
+    if !branch.isEmpty {
+        merged = Set(runGit(["rev-list", branch], base)
+            .split(whereSeparator: { $0 == "\n" || $0 == " " }).map(String.init))
+    }
+    let narrowed = !(scope == "world" && world.isEmpty)
+    var arguments = ["log", "--all", "-\(limit)", "--format=%x01%H%x1f%ae%x1f%aI%x1f%s", "--name-only"]
+    if scope == "world" && !world.isEmpty { arguments += ["--"] + world.sorted() }
+    let said = runGit(arguments, base)
+
+    struct Commit { var hash = "", email = "", when = "", subject = ""
+                    var files: [String] = []; var touches = false; var closed: Bool? = nil }
+    var commits: [Commit] = []
+    for line in said.components(separatedBy: "\n") {
+        if line.hasPrefix("\u{01}") {
+            let parts = String(line.dropFirst()).components(separatedBy: "\u{1f}")
+            var c = Commit()
+            c.hash = parts.count > 0 ? parts[0] : ""
+            c.email = parts.count > 1 ? parts[1] : ""
+            c.when = parts.count > 2 ? parts[2] : ""
+            c.subject = parts.count > 3 ? parts[3] : ""
+            c.closed = merged.isEmpty ? nil : merged.contains(c.hash)
+            commits.append(c)
+        } else if !line.trimmingCharacters(in: .whitespaces).isEmpty, !commits.isEmpty {
+            let f = line.trimmingCharacters(in: .whitespaces)
+            commits[commits.count - 1].files.append(f)
+            if world.contains(f) { commits[commits.count - 1].touches = true }
+        }
+    }
+    let me = runGit(["config", "user.email"], base).trimmingCharacters(in: .whitespacesAndNewlines)
+    if onlyMe && !me.isEmpty { commits = commits.filter { $0.email == me } }
+    let nextSaid = world.isEmpty
+        ? "run `gate demo` for a repository to look at, or drop a table you already export "
+          + "into tables/ and run `gate status`"
+        : "run `gate status` to have the judge read what these commits changed"
+
+    if asJson {
+        // built in pieces: one long concatenation put the type-checker past its
+        // budget, and a shape this exact is easier to read a line at a time
+        func arrayOf(_ items: [String], _ pad: String) -> String {
+            if items.isEmpty { return "[]" }
+            let inner = items.map { pad + "  " + jsonString($0) }.joined(separator: ",\n")
+            return "[\n" + inner + "\n" + pad + "]"
+        }
+        var text = "{\n"
+        text += "  \"command\": \"log\",\n"
+        let branchSaid: String = branch.isEmpty ? "null" : jsonString(branch)
+        text += "  \"default_branch\": " + branchSaid + ",\n"
+        text += "  \"scope\": " + jsonString(scope) + ",\n"
+        text += "  \"limit\": " + String(limit) + ",\n"
+        text += "  \"mine_only\": " + (onlyMe ? "true" : "false") + ",\n"
+        text += "  \"narrowed\": " + (narrowed ? "true" : "false") + ",\n"
+        text += "  \"next\": " + jsonString(nextSaid) + ",\n"
+        text += "  \"me\": " + jsonString(me) + ",\n"
+        text += "  \"world_files\": " + arrayOf(world.sorted(), "  ") + ",\n"
+        var blocks: [String] = []
+        for c in commits {
+            var one = "    {\n"
+            one += "      \"hash\": " + jsonString(c.hash) + ",\n"
+            one += "      \"short\": " + jsonString(String(c.hash.prefix(8))) + ",\n"
+            one += "      \"email\": " + jsonString(c.email) + ",\n"
+            let personSaid: String = who[c.email].map { jsonString($0) } ?? "null"
+            one += "      \"person\": " + personSaid + ",\n"
+            one += "      \"when\": " + jsonString(c.when) + ",\n"
+            one += "      \"subject\": " + jsonString(c.subject) + ",\n"
+            one += "      \"files\": " + arrayOf(c.files, "      ") + ",\n"
+            one += "      \"touches_world\": " + (c.touches ? "true" : "false") + ",\n"
+            let closedSaid: String = c.closed == nil ? "null" : (c.closed! ? "true" : "false")
+            one += "      \"closed\": " + closedSaid + "\n"
+            one += "    }"
+            blocks.append(one)
+        }
+        let commitsSaid: String = blocks.isEmpty ? "[]"
+            : "[\n" + blocks.joined(separator: ",\n") + "\n  ]"
+        text += "  \"commits\": " + commitsSaid
+        if let ready = commandIn(nextSaid) {
+            text += ",\n  \"command_to_run\": " + jsonString(ready)
+        }
+        text += "\n}\n"
+        out(text)
+        exit(0)
+    }
+    var what = (scope == "world" && !world.isEmpty) ? "the world's history" : "the repository"
+    if !narrowed { what += ": no file here is declared a world file, so there is nothing narrower" }
+    var lines = ["log: " + many(commits.count, "commit") + " · " + what
+                 + " · observed, not judged · closed = reachable from "
+                 + (branch.isEmpty ? "?" : branch)]
+    for c in commits {
+        let state = c.closed == nil ? "?" : (c.closed! ? "closed" : "open")
+        let said = who[c.email] ?? c.email
+        let star = c.touches ? " *" : ""
+        lines.append("  " + String(c.hash.prefix(8)) + " " + state.padding(toLength: 6, withPad: " ", startingAt: 0)
+                     + " " + String(c.when.prefix(10)) + " "
+                     + said.padding(toLength: max(20, said.count), withPad: " ", startingAt: 0)
+                     + " " + c.subject + star)
+    }
+    lines.append("  next: " + nextSaid)
+    out(lines.joined(separator: "\n") + "\n")
+    exit(0)
 }
 
 if args.first == "export" {
