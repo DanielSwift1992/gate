@@ -580,6 +580,129 @@ func readSaid(_ text: String) -> Said? {
     return i >= chars.count ? said : said
 }
 
+// ── WRITING A ROW INTO A LAYOUT, which is what `declare`, `init`, `mine` and
+// `theirs` all do and none of them can do without. The reading side landed with
+// `log`; this is the writing side, and it obeys the same two laws: a record's
+// boundary comes from the file (kind 14), and the bytes of somebody else's file
+// outside your own line do not change (kind 12).
+let ROLE_ATOM: [String: String] = ["world": "WorldFile", "seam": "SeamFile",
+                                   "forms": "FormsFile", "judge": "JudgeFile",
+                                   "carried": "CarriedFile", "tool": "ToolFile"]
+
+func sanitized(_ s: String) -> String {
+    return s.replacingOccurrences(of: "[^A-Za-z0-9]", with: "_", options: .regularExpression)
+}
+
+func rowAtom(_ rel: String) -> String {
+    // the other carrier's `row_atom`: the path without its extension, sanitised,
+    // title-cased, and its separators dropped
+    let stem = (rel as NSString).deletingPathExtension
+    let said = sanitized(stem)
+    let titled = said.split(separator: "_", omittingEmptySubsequences: false)
+        .map { $0.isEmpty ? "" : $0.prefix(1).uppercased() + $0.dropFirst().lowercased() }
+        .joined()
+    let out = titled.replacingOccurrences(of: "/", with: "")
+    return out.isEmpty ? "Side" : out
+}
+
+func worldRootFor(_ path: String) -> String {
+    // the world a file belongs to is found the way .git is: walking up from the
+    // FILE, never from wherever the command happened to be typed
+    var walk = (path as NSString).deletingLastPathComponent
+    if walk.isEmpty { walk = FileManager.default.currentDirectoryPath }
+    walk = (walk as NSString).standardizingPath
+    while true {
+        for name in ["gate.swift", "gate.manifest.swift"] {
+            if FileManager.default.fileExists(atPath: (walk as NSString).appendingPathComponent(name)) {
+                return walk
+            }
+        }
+        let up = (walk as NSString).deletingLastPathComponent
+        if up == walk || up.isEmpty { break }
+        walk = up
+    }
+    return FileManager.default.currentDirectoryPath
+}
+
+func manifestHead() -> String {
+    // one home for the text, read from the same page the other carrier reads
+    let mark = "// ── what is written into a world begins here ──\n"
+    for page in shelf() where page.name == "manifest" {
+        if let cut = page.text.range(of: mark) {
+            return String(page.text[cut.upperBound...])
+        }
+    }
+    cannot("the shelf page a layout is born from is missing: stdlib/manifest.swift",
+           "restore the file, or run this where the tool's own stdlib/ is beside it")
+}
+
+func upsertRow(_ text: String, name: String, rel: String, kind: String, role: String,
+               from: String? = nil, written: String? = nil, opens: String? = nil) -> String {
+    var said = text
+    func ensure(_ line: String) {
+        if !said.contains(line) {
+            said = said.replacingOccurrences(of: "\n+$", with: "\n",
+                                             options: .regularExpression) + line + "\n"
+        }
+    }
+    guard let atom = ROLE_ATOM[role] else {
+        cannot("no such role: " + role, "a row says which court reads it: world, seam or forms")
+    }
+    if !said.contains("public enum " + atom + ": Role {}") {
+        ensure("public enum " + atom + ": Role {}")
+    }
+    if let opens = opens {
+        if !said.contains("public protocol View {}") { ensure("public protocol View {}") }
+        if !said.contains("public enum " + opens + ": View {}") {
+            ensure("public enum " + opens + ": View {}")
+        }
+    }
+    if kind == "Mine", !said.contains("public protocol Mine {}") {
+        ensure("\npublic protocol Mine {}")
+    }
+    var rev = ""
+    var revAtom = ""
+    if let from = from {
+        revAtom = "Rev_" + sanitized(from).trimmingCharacters(in: CharacterSet(charactersIn: "_"))
+        if !said.contains("public enum " + revAtom + " {}") {
+            rev = "public enum " + revAtom + " {}\n"
+                + "extension " + revAtom + " { public static var typeName: String { \""
+                + from + "\" } }\n"
+        }
+    }
+    var line = rev + "public enum " + name + ": " + kind + " {\n"
+    line += "    public typealias Kind = " + atom + "\n"
+    if from != nil { line += "    public typealias At = " + revAtom + "\n" }
+    if let written = written { line += "    public typealias Written = " + written + "\n" }
+    if let opens = opens { line += "    public typealias Opens = " + opens + "\n" }
+    line += "}\n"
+    line += "extension " + name + " { public static var typeName: String { \"" + rel + "\" } }\n"
+    if said.contains(line) { return said }
+    // kept in its own group, because this document is read by a person: what I
+    // write and what I only read are the one distinction it exists to draw
+    var rows = said.components(separatedBy: "\n")
+    var last = -1
+    for (i, r) in rows.enumerated()
+    where r.hasPrefix("public enum ") && r.hasSuffix(": " + kind + " {}") { last = i }
+    if last >= 0 {
+        // past the whole block, not past one line of it: a row is an extension
+        // BODY, and stepping over it by its first line puts the next row inside
+        // the previous one's braces
+        while last + 1 < rows.count && rows[last + 1].hasPrefix("extension ") {
+            var depth = 0
+            while last + 1 < rows.count {
+                last += 1
+                depth += rows[last].filter { $0 == "{" }.count
+                depth -= rows[last].filter { $0 == "}" }.count
+                if depth <= 0 { break }
+            }
+        }
+        rows.insert(String(line.dropLast()), at: last + 1)
+        return rows.joined(separator: "\n")
+    }
+    return said + line
+}
+
 // ── WHAT A CONTRACT DECLARES, read for the one thing a client must agree with:
 // the fields of a request, and the sort of thing each one is. The other carrier
 // reads it in document order, so this one needs the reader above rather than
@@ -804,6 +927,23 @@ func asideJSON(_ rows: [[(String, String)]], _ others: [(String, String)]) -> St
 // nothing routed to it: a door the BATTERY opens, never an argv a person types.
 // The alternative was leaving it in a session's scratch, where it would have
 // died with the session; sleeping code a vector holds is not dead code.
+// the writing road, opened by the battery and by no argv: it prints what the
+// layout WOULD become, and writes nothing, so the comparison is byte for byte
+// against what the other carrier's own writing verb leaves on disk
+if args.first == "--manifest-row" {
+    guard args.count > 4 else {
+        cannot("--manifest-row takes a file, a kind, a role and a world",
+               "the battery calls this, not a person")
+    }
+    let path = args[1], kind = args[2], role = args[3], root = args[4]
+    let mp = (root as NSString).appendingPathComponent("gate.manifest.swift")
+    let text = FileManager.default.fileExists(atPath: mp)
+        ? theirsText(mp, "the layout of this world") : manifestHead()
+    let rel = path.hasPrefix(root + "/") ? String(path.dropFirst(root.count + 1)) : path
+    out(upsertRow(text, name: rowAtom(rel), rel: rel, kind: kind, role: role))
+    exit(0)
+}
+
 if args.first == "--contract-fields" {
     guard args.count > 1 else { cannot("--contract-fields takes a document", "name one") }
     let text = theirsText(args[1], "an OpenAPI document")

@@ -6876,6 +6876,48 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                   # and the CLI holds no second copy of that text
                   and "One list, three columns" not in open(GATE, encoding="utf-8").read()))
 
+        # ── AND THE WRITING SIDE OF A LAYOUT IS ONE ON BOTH CARRIERS. `declare`,
+        # `init`, `mine` and `theirs` all write a row and none of them can move
+        # without this. It obeys the two laws the reading side taught: a record's
+        # boundary comes from the file, and the bytes outside your own line do
+        # not change. Held by replaying the same rows through the vein, which
+        # PRINTS what the layout would become and writes nothing, against what
+        # the other carrier's own verb leaves on disk.
+        _layouts = {
+            "a world with no layout at all": [("deep/side.swift", "forms")],
+            "a second row beside the first": [("a.swift", "forms"), ("b.swift", "forms")],
+            "the same row written twice": [("a.swift", "forms"), ("a.swift", "forms")],
+            "a world row and a forms row": [("world.swift", "world"), ("page.swift", "forms")],
+        }
+        _rows_apart = []
+        for _label, _rows in _layouts.items():
+            _rw = os.path.join(tmp, "row-" + str(len(_rows_apart)) + str(len(_label)))
+            shutil.rmtree(_rw, ignore_errors=True)
+            os.makedirs(os.path.join(_rw, "deep"))
+            subprocess.run(["git", "init", "-q", "-b", "main", _rw], capture_output=True)
+            for _rel, _role in _rows:
+                _at = os.path.join(_rw, _rel)
+                os.makedirs(os.path.dirname(_at) or _rw, exist_ok=True)
+                open(_at, "w").write("public enum X_" + _rel.replace("/", "_").replace(".", "_")
+                                     + " {}\n")
+            for _rel, _role in _rows:
+                subprocess.run([sys.executable, GATE, "mine", _rel, "--role", _role], cwd=_rw,
+                               capture_output=True, env={**os.environ, "GATE_CLI": "off"})
+            _pyman = open(os.path.join(_rw, "gate.manifest.swift"), encoding="utf-8").read()
+            os.remove(os.path.join(_rw, "gate.manifest.swift"))
+            _swman = ""
+            for _rel, _role in _rows:
+                _swman = subprocess.run([_cli_bin, "--manifest-row", os.path.join(_rw, _rel),
+                                         "Mine", _role, _rw],
+                                        capture_output=True, text=True, timeout=180).stdout
+                open(os.path.join(_rw, "gate.manifest.swift"), "w").write(_swman)
+            if _pyman != _swman:
+                _rows_apart.append(_label)
+        if _rows_apart:
+            print("   the two carriers write a layout apart:", _rows_apart[:3])
+        S.append(("the writing side of a layout is one on both carriers, born and grown",
+                  _rows_apart == [] and len(_layouts) == 4))
+
         # ── AND A ROAD IS HELD BEFORE ITS VERB ARRIVES. `contractFields` is the
         # reading `declare` and `drift` will both stand on. It is in the vein
         # with nothing routed to it, behind a door this battery opens and no
