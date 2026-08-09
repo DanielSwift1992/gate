@@ -1586,7 +1586,9 @@ def cmd_export(a):
         cannot(f"no such world: {world}",
                "name the file your world is written in, or `gate init .` to start one")
     people_out, grants_out = a[a.index("-o") + 1], a[a.index("-o") + 2]
-    text = open(world).read()
+    # somebody's world comes through the one door, so a file that is not text is
+    # a sentence here too rather than a UnicodeDecodeError from inside the walk
+    text = theirs_text(world, "the world to print back").read()
     rows = []
     for m in re.finditer(
         r"public enum (\w+): Employee, Person \{(.*?)\n\}", text, re.S
@@ -5468,10 +5470,23 @@ def theirs_text(path, what="the file you mean"):
     # FileNotFoundError: the same shape `theirs_json` was written against, one
     # door further out. Every reading of somebody else's text comes through
     # here, so the sentence is written once.
+    # ── AND A FILE THAT IS NOT TEXT IS SAID TOO. The handle came back fine and
+    # the decode failed at the first read, so six verbs met a person with a
+    # UnicodeDecodeError from inside whatever they were doing: a PNG named as a
+    # world, a CSV that is really a zip, a spec saved in one of the encodings
+    # this tool does not read. The reading happens here now, which is the only
+    # place that can say it in one sentence.
     try:
-        return open(path, encoding="utf-8-sig")
+        said = open(path, encoding="utf-8-sig").read()
     except OSError:
         cannot(f"no such file: {path}", f"point it at {what}")
+    except UnicodeDecodeError as e:
+        cannot(f"{path} is not text this can read: byte {e.object[e.start]:#04x} at "
+               f"offset {e.start} is not utf-8",
+               "point it at a text file. If it is text in another encoding, "
+               "`iconv -f <encoding> -t utf-8` writes the one this reads")
+    import io as _io
+    return _io.StringIO(said)
 
 
 def read_codeowners(path):

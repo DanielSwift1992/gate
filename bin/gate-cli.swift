@@ -255,6 +255,38 @@ func runGit(_ arguments: [String], _ cwd: String) -> String {
     return String(data: said, encoding: .utf8) ?? ""
 }
 
+func theirsText(_ path: String, _ what: String) -> String {
+    // ── THE ONE DOOR, ON THIS SIDE TOO. A file that is not there and a file that
+    // is not text are two different sentences, and this vein said the first one
+    // for both: `no such side` about a file sitting right there, while the other
+    // carrier named the byte. Two carriers, one verb, two stories.
+    guard let data = FileManager.default.contents(atPath: path) else {
+        cannot("no such file: " + path, "point it at " + what)
+    }
+    if let text = String(data: data, encoding: .utf8) { return text }
+    // the first byte that is not utf-8, counted the way the other side counts it
+    let bytes = [UInt8](data)
+    var i = 0
+    while i < bytes.count {
+        let b = bytes[i]
+        var width = 0
+        if b < 0x80 { width = 1 }
+        else if b >= 0xC2 && b <= 0xDF { width = 2 }
+        else if b >= 0xE0 && b <= 0xEF { width = 3 }
+        else if b >= 0xF0 && b <= 0xF4 { width = 4 }
+        else { break }
+        if i + width > bytes.count { break }
+        var ok = true
+        for k in 1..<max(width, 1) where bytes[i + k] < 0x80 || bytes[i + k] > 0xBF { ok = false }
+        if !ok { break }
+        i += width
+    }
+    let said = String(format: "%#04x", Int(bytes[min(i, bytes.count - 1)]))
+    cannot(path + " is not text this can read: byte " + said + " at offset \(i) is not utf-8",
+           "point it at a text file. If it is text in another encoding, "
+           + "`iconv -f <encoding> -t utf-8` writes the one this reads")
+}
+
 func uncommented(_ text: String) -> String {
     // a `//` inside a string literal is not a comment, which is why this walks
     // rather than greps: the python side learned that on a typeName holding a URL
@@ -640,11 +672,11 @@ if args.first == "export" {
     }
     let world = first
     let peopleOut = rest[dash + 1], grantsOut = rest[dash + 2]
-    guard let data = FileManager.default.contents(atPath: world),
-          let text = String(data: data, encoding: .utf8) else {
+    guard FileManager.default.fileExists(atPath: world) else {
         cannot("no such world: \(world)",
                "name the file your world is written in, or `gate init .` to start one")
     }
+    let text = theirsText(world, "the world to print back")
     // the same three readings the python side makes, in the same order
     let sexPool = Dictionary(matches("public enum (\\w+): GivenNameCycle \\{.*?Sex = (\\w+)",
                                      text, dotAll: true).map { ($0[0], $0[1]) },
@@ -807,13 +839,14 @@ if args.first == "seam" {
     // parity, and neither side meets a person with a stack trace on one.
     var side: [String] = []
     for p in rest.prefix(2) {
-        guard let data = FileManager.default.contents(atPath: p),
-              let text = String(data: data, encoding: .utf8) else {
+        // a file that is not there and a file that is not text are two
+        // sentences, and the door says whichever one is true
+        guard FileManager.default.fileExists(atPath: p) else {
             cannot("no such side: \(p)",
                    "both sides are files: `gate declare contract SPEC -o api.swift` and "
                    + "`gate declare carrier DECL.json -o sdk.swift` write them")
         }
-        side.append(text)
+        side.append(theirsText(p, "the side of the pair you named"))
     }
     let left = side[0], right = side[1]
     let who = matches("public enum (\\w+): Carrier", right).first?[0] ?? "that library"

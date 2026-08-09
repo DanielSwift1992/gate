@@ -54,7 +54,7 @@ is the point. A tool that checks by reading should be checkable by
 reading.
 
 Two more facts a review leans on, both held by the battery. The CLI's
-imports are a white list, named in the battery itself: nineteen modules of
+imports are a white list, named in the battery itself: twenty modules of
 the standard library, with no package manager and no lockfile in the
 repository. And the one piece that is not text, `bin/gate-judge`, is
 not a dependency: delete it and every court still answers through the node

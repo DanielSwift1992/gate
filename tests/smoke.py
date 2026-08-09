@@ -1272,6 +1272,53 @@ def main():
               and "func many(" in open(os.path.join(HERE, "bin", "gate-cli.swift"),
                                        encoding="utf-8").read()))
 
+    # ── AND A FILE THAT IS NOT TEXT IS SAID TOO. The handle opened fine and the
+    # decode failed at the first read, so six verbs met a person with a
+    # UnicodeDecodeError from inside whatever they were doing: a PNG named as a
+    # world, a CSV that is really a zip, a spec saved in an encoding this does
+    # not read. The reading happens at the one door now, which is the only place
+    # that can say it in a sentence. Found by handing `gate bare` a file of
+    # random bytes and walking the class outward from there.
+    _nt = os.path.join(tmp, "not-text")
+    os.makedirs(_nt, exist_ok=True)
+    open(os.path.join(_nt, "binary.swift"), "wb").write(bytes(range(160, 256)) * 8)
+    open(os.path.join(_nt, "policy.csv"), "wb").write(b"\xd0\x00\xff" * 40)
+    _raw = []
+    for _argv in (["bare", "binary.swift"], ["import", "codeowners", "binary.swift"],
+                  ["verify", "binary.swift", "binary.swift"],
+                  ["import", "codeowners", "binary.swift", "--policy", "policy.csv"],
+                  ["seam", "binary.swift", "binary.swift"],
+                  ["declare", "contract", "binary.swift"],
+                  ["export", "binary.swift", "-o", "a.csv", "b.csv"]):
+        _r6 = subprocess.run([sys.executable, GATE, *_argv], cwd=_nt, capture_output=True,
+                             text=True, timeout=180, env={**os.environ, "GATE_CLI": "off"})
+        if ("Traceback" in _r6.stdout + _r6.stderr or _r6.returncode != 1
+                or "is not text this can read" not in _r6.stderr
+                or "next: " not in _r6.stderr):
+            _raw.append(" ".join(_argv) + f" -> {_r6.returncode}")
+    # and the two carriers tell the same two stories: a file that is not there
+    # and a file that is not text are different sentences, and the vein said the
+    # first for both until it had this door
+    _carried = []
+    for _argv in (["seam", "binary.swift", "binary.swift"],
+                  ["export", "binary.swift", "-o", "a.csv", "b.csv"],
+                  ["seam", "nosuch.swift", "other.swift"],
+                  ["export", "nosuch.swift", "-o", "a.csv", "b.csv"]):
+        _two = [subprocess.run([sys.executable, GATE, *_argv], cwd=_nt, capture_output=True,
+                               text=True, timeout=180, env={**os.environ, "GATE_CLI": _e})
+                for _e in ("off", os.path.join(HERE, "bin", "gate-cli"))]
+        if (_two[0].stderr, _two[0].returncode) != (_two[1].stderr, _two[1].returncode):
+            _carried.append(" ".join(_argv))
+    if _raw or _carried:
+        print("   a file that is not text:", (_raw + _carried)[:4])
+    S.append(("a file that is not text is said, not raised, and alike on both carriers",
+              _raw == [] and _carried == []
+              # the sentence names the byte and where it sits, because that is
+              # the address of the thing that is wrong
+              and re.search(r"byte 0x[0-9a-f]{2} at offset \d+ is not utf-8", subprocess.run(
+                  [sys.executable, GATE, "bare", "binary.swift"], cwd=_nt,
+                  capture_output=True, text=True).stderr)))
+
     # ── AND A PLACE THAT CANNOT HOLD A FILE IS SAID, NOT RAISED. Every verb that
     # takes `-o` or `--out` handed the path straight to `open(..., "w")`, so a
     # directory, a read-only folder, or a parent that does not exist met a person
@@ -7172,8 +7219,11 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
               # `traceback` prints to the bench operator's own stderr when a
               # request raises something the handler had not thought of: the
               # room answers the asker in words and hides nothing from whoever
-              # is running it
-              "traceback", "threading", "http", "urllib"}
+              # is running it. `io` holds the text the one reading door hands
+              # out: the door reads the whole file so it can say in a sentence
+              # that the bytes are not text, and its callers still get something
+              # they can iterate and read.
+              "io", "traceback", "threading", "http", "urllib"}
     S.append(("the CLI imports the standard library alone, from a named list",
               _imp <= _white and {"json", "subprocess", "http"} <= _imp))
     # ── AND A NUMBER IN THE PROSE IS THE NUMBER ITS OWNER HOLDS. Two counts
