@@ -71,7 +71,7 @@ if args.contains("--out") && !args.contains("-o") {
 // `stdlib show` to the verb: half a verb on the list would hand this binary an
 // argv it does not answer, and the python side would never see it.
 if args == ["--carries"] {
-    out("stdlib\nexport\nseam\nlog\naside\ndeclare\nmine\ntheirs\ninit\ndrift\n")
+    out("stdlib\nexport\nseam\nlog\naside\ndeclare\nmine\ntheirs\ninit\ndrift\nmy\n")
     exit(0)
 }
 
@@ -2596,6 +2596,94 @@ func statusDoor(_ asJson: Bool) -> Never {
 // the road's own door: the battery calls this, not a person
 if args.first == "--status-core" {
     statusDoor(args.contains("--json"))
+}
+
+// ── my — your personal world: where it is, and its verdict WITH the shared
+// world (the claims you keep, judged against facts other people own)
+//
+// This one moves as a verb and not as a door: nothing here seeds a world, so
+// the bootstrap that keeps `status` off the carries line does not hold it back.
+if args.first == "my" {
+    let asJson = args.contains("--json")
+    loadStatusShelf()
+    let w = discoverWorld()
+    guard let personal = personalPathOf(w), let facts = w.facts else {
+        cannot("your own world lives beside a shared one, and there is no world here",
+               "run `gate init .` to start one, or `gate demo` for a repository to look at")
+    }
+    let key = repoKey((absPath(facts) as NSString).deletingLastPathComponent)
+    if !FileManager.default.fileExists(atPath: personal) {
+        // nothing was written, so nothing is stored: an empty personal world is
+        // no file at all, and this says so rather than making one to report on
+        let next = "nobody has written in your world, so it is not stored anywhere. "
+                 + "Open the bench and write a claim in my.swift: it is judged with the "
+                 + "shared world, stays out of it, and is kept on this machine alone. "
+                 + "Clear it again and it is gone."
+        if asJson {
+            out(statusDumps(.object([
+                ("command", .text("my")),
+                ("personal", .text(personal)),
+                ("repo_key", .text(key)),
+                ("empty", .raw("true")),
+                ("verdict", .text("holds")),
+                ("refusals", .list([])),
+                ("shared_repo_untouched", .raw("true")),
+                ("next", .text(next)),
+            ]), 0) + "\n")
+        } else {
+            out("my: holds\n  next: " + next + "\n")
+        }
+        exit(0)
+    }
+    // ── AND A FORMS ROW GOES TO THE COURT THAT READS IT, HERE TOO. Handing
+    // every file of the world to the PLAIN court refuses a forms page for
+    // declaring protocols, which that court reads as outside its fragment, and
+    // `gate my` then answers with MORE than the world has while `gate status`
+    // holds. The layout and the policy are META beside them: judged by their own
+    // guards and by no court. A court that answers about a world may not answer
+    // with less than the court beside it, and answering with more is that same
+    // fault mirrored.
+    var apart = Set<String>()
+    if let l = w.layout {
+        let mbase = (l.manifest as NSString).deletingLastPathComponent
+        for r in l.rows where r.role == "forms" {
+            apart.insert(absPath((mbase as NSString).appendingPathComponent(r.path)))
+        }
+        apart.insert(absPath(l.manifest))
+    }
+    if let pp = policyPathOf(w) { apart.insert(absPath(pp)) }
+    let named = benchFilesOf(w).filter {
+        FileManager.default.fileExists(atPath: $0.1) && !apart.contains(absPath($0.1))
+    }
+    let raw = named.isEmpty ? "" : courtSays(named.map { $0.1 })
+    var refusals = judgedRefusals(raw)
+    refusals = attributeRefusals(refusals, named.map { ($0.0, readText($0.1) ?? "") })
+    // AND THE SAME GUARDS THE SHARED WORLD GETS. Declaring `MyBench` in a
+    // personal world when the shared one already declares it is two truths about
+    // one name: `gate status` refused it with both addresses and this said
+    // `holds`, which is the one command a person runs about the file that
+    // carries the second one.
+    let sources = oneStream(w, named).map { ($0.0, readText($0.1) ?? "") }
+    refusals += duplicateGuardsOver(sources)
+    refusals += entryGuardsOver(sources)
+    var whereSize: [String: Int] = [:]
+    refusals += formsGuards(w, &whereSize)   // the forms half, by the court that reads it
+    if asJson {
+        out(statusDumps(.object([
+            ("command", .text("my")),
+            ("personal", .text(personal)),
+            ("repo_key", .text(key)),
+            ("shared_repo_untouched", .raw("true")),
+            ("verdict", .text(refusals.isEmpty ? "holds" : "refused")),
+            ("refusals", .list(refusals.map {
+                .object([("address", .text($0.address)), ("claim", .text($0.claim))]) })),
+        ]), 0) + "\n")
+    } else {
+        var lines = ["my: " + (refusals.isEmpty ? "holds" : "refused \(refusals.count)")]
+        for r in refusals { lines.append("  \(r.address) · \(r.claim)") }
+        out(lines.joined(separator: "\n") + "\n")
+    }
+    exit(refusals.isEmpty ? 0 : 1)
 }
 
 // ── declare contract SPEC [-o F] · declare carrier DECL.json [-o F]

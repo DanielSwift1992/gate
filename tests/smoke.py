@@ -7629,7 +7629,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         S.append(("the strangler ledger names a verb, not half of one",
                   subprocess.run([_cli_bin, "--carries"], capture_output=True, text=True)
                   .stdout.split() == ["stdlib", "export", "seam", "log", "aside", "declare",
-                                      "mine", "theirs", "init", "drift"]))
+                                      "mine", "theirs", "init", "drift", "my"]))
         # ── AND THE LEDGER IS READ AGAINST THE ROAD IT IS WALKING. The strangler
         # has a length and a position, and both were feelings: the list of moved
         # veins lived in the binary and the list of verbs lived in the python
@@ -7880,9 +7880,9 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         for _r in sorted(_by_road):
             if _r != "carried":
                 print(f"     {_r:18} {' '.join(sorted(_by_road[_r]))[:88]}")
-        S.append(("the ledger names verbs the usage offers, 10 of 27 carried",
+        S.append(("the ledger names verbs the usage offers, 11 of 27 carried",
                   set(_ledger) <= _verbs
-                  and len(_ledger) == 10
+                  and len(_ledger) == 11
                   and len(_verbs) == 27
                   # and a name on the ledger is a whole verb: a prefix claims
                   # everything under it, so half a verb would take argv nobody
@@ -7995,6 +7995,121 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
             print("   the journal answers apart:", _jw[:4])
         S.append(("the journal reads one world on both carriers, layout and all",
                   _jw == []))
+
+        # ── AND THE PERSONAL WORLD IS JUDGED WITH THE SHARED ONE, ON BOTH
+        # CARRIERS. `my` is the first carried verb reading a world OUTSIDE the
+        # repository: the slot under GATE_ME, judged together with the shared
+        # world and kept out of it. Walked by lives, because the ways the two
+        # carriers part are the states this verb has: no world at all, a slot
+        # nobody wrote in, a claim that holds beside the shared world, and a
+        # name declared twice across the two.
+        _me = os.path.join(tmp, "my-me")
+        _my_nowhere = os.path.join(tmp, "my-nowhere")
+        os.makedirs(_me, exist_ok=True)
+        os.makedirs(_my_nowhere, exist_ok=True)
+        _my_worlds = []
+        for _where, _make in (("demo", ["demo"]), ("org", ["demo", "org"])):
+            _md = os.path.join(tmp, "my-" + _where)
+            os.makedirs(_md, exist_ok=True)
+            subprocess.run(["git", "init", "-q", "-b", "main", _md], capture_output=True)
+            subprocess.run([sys.executable, GATE, *_make, _md], capture_output=True)
+            _my_worlds.append(_md)
+
+        def _my_pair(_d, *_argv):
+            return [subprocess.run([sys.executable, GATE, "my", *_argv], cwd=_d,
+                                   capture_output=True, text=True, timeout=180,
+                                   env={**os.environ, "GATE_ME": _me, "GATE_CLI": _e})
+                    for _e in ("off", _cli_bin)]
+
+        def _my_told(_two):
+            return [(_x.stdout, _x.stderr, _x.returncode) for _x in _two]
+
+        _myw = []
+        for _d in [_my_nowhere] + _my_worlds + [HERE]:
+            for _argv in ((), ("--json",)):
+                _t = _my_told(_my_pair(_d, *_argv))
+                if _t[0] != _t[1]:
+                    _myw.append(f"empty {os.path.basename(_d)} {' '.join(_argv) or 'plain'}")
+        # and with something written in it: one claim of its own, then a name the
+        # shared world already declares
+        _my_said, _beside = {}, {}
+        for _d, _dup in ((_my_worlds[0], "Owns"), (_my_worlds[1], "Edsger")):
+            _slot = json.loads(_my_pair(_d, "--json")[0].stdout)["personal"]
+            os.makedirs(os.path.dirname(_slot), exist_ok=True)
+            for _tag, _text in (("holds", "// mine\npublic enum MyOwnNote {}\n"),
+                                ("twice", "// mine\npublic enum %s {}\n" % _dup)):
+                with open(_slot, "w") as _f:      # a file of ours, written whole
+                    _f.write(_text)
+                for _argv in ((), ("--json",)):
+                    _two = _my_pair(_d, *_argv)
+                    if _my_told(_two)[0] != _my_told(_two)[1]:
+                        _myw.append(f"{_tag} {os.path.basename(_d)} {' '.join(_argv) or 'plain'}")
+                    _my_said[(os.path.basename(_d), _tag, bool(_argv))] = _two[1]
+                if _tag == "holds":
+                    # the court beside it, asked while the same slot is written:
+                    # the comparison below is only a comparison in that state
+                    _beside[os.path.basename(_d)] = subprocess.run(
+                        [sys.executable, GATE, "status", "--json"], cwd=_d, capture_output=True,
+                        text=True, env={**os.environ, "GATE_ME": _me})
+            os.remove(_slot)
+        if _myw:
+            print("   the personal world answers apart:", _myw[:4])
+        S.append(("the personal world is judged alike on both carriers, by lives",
+                  _myw == []))
+
+        # ── AND THE PINS BESIDE THE PARITY, because parity is blind to whatever
+        # both sides share by construction: a fixture broken the same way passes
+        # it. These say what the answer IS. The law they hold is the one this
+        # verb broke twice: a court that answers about a world may not answer
+        # with less than the court beside it, and answering with MORE is that
+        # same fault mirrored — `my` handed the layout and the forms rows to the
+        # PLAIN court and refused a protocol page the `status` beside it holds.
+        _mp = []
+        _org, _demo = os.path.basename(_my_worlds[1]), os.path.basename(_my_worlds[0])
+        _hold = _my_said[(_org, "holds", False)]
+        if _hold.stdout != "my: holds\n" or _hold.returncode != 0:
+            _mp.append("a personal claim beside a world of forms does not hold")
+        if "forms-organization.swift" in _hold.stdout:
+            _mp.append("the plain court was handed a forms page")
+        _twice = _my_said[(_org, "twice", False)]
+        if not (_twice.returncode == 1 and _twice.stdout.startswith("my: refused 1\n")
+                and "my.swift:2" in _twice.stdout and "declared twice" in _twice.stdout
+                and "gate.swift:" in _twice.stdout):
+            _mp.append("a name declared twice is not named with both its places")
+        _hj = json.loads(_my_said[(_org, "holds", True)].stdout)
+        if ([k for k in _hj] != ["command", "personal", "repo_key",
+                                 "shared_repo_untouched", "verdict", "refusals"]
+                or _hj["shared_repo_untouched"] is not True or _hj["command"] != "my"):
+            _mp.append("the answer's own fields moved: " + ", ".join(_hj))
+        # the empty slot is no file, and the answer says so rather than making one.
+        # Written down because it is the ONE state where this verb does not judge
+        # at all: an empty slot answers `holds` in a world whose shared court
+        # refuses, and the sentence is what makes that readable rather than a
+        # second truth. Pinned so the day it changes is a day somebody chose it.
+        _empty = _my_pair(_my_worlds[1])[1]
+        _slot_org = json.loads(_my_pair(_my_worlds[1], "--json")[1].stdout)["personal"]
+        if not (_empty.returncode == 0 and _empty.stdout.startswith("my: holds\n")
+                and "nobody has written in your world" in _empty.stdout
+                and not os.path.exists(_slot_org)):
+            _mp.append("an empty personal world is not answered empty, or was created")
+        # no world at all is a refusal in words, not a nought exit
+        _none = _my_pair(_my_nowhere)[1]
+        if not (_none.returncode == 1 and "there is no world here" in _none.stderr
+                and "next: " in _none.stderr):
+            _mp.append("no world here is not refused in words")
+        # and the court beside it, asked of the world with a live refusal of its
+        # own, while the same personal slot is written: the same addresses and
+        # the same claims, verb for verb
+        _mine = json.loads(_my_said[(_demo, "holds", True)].stdout)["refusals"]
+        _theirs = json.loads(_beside[_demo].stdout)["refusals"]
+        if [(r["address"], r["claim"]) for r in _mine] != \
+           [(r["address"], r["claim"]) for r in _theirs]:
+            _mp.append(f"{_demo}: my says {len(_mine)} where the court beside it says "
+                       f"{len(_theirs)}")
+        if _mp:
+            print("   the personal world's pins:", _mp[:4])
+        S.append(("the personal world answers neither less nor more than the court beside it",
+                  _mp == []))
 
     # ── zero egress: a claim about ourselves, kept by a gate on our own source.
     # An enterprise review runs this same grep; it must never come back dirty,
