@@ -4125,11 +4125,8 @@ def declare_side(path, kind, role, frm=None, written=None, opens=None):
     if kind == "Mine" and "public protocol Mine {}" not in text:
         text = ensure(text, "\npublic protocol Mine {}")
     if kind == "Theirs" and "public protocol Theirs {}" not in text:
-        text += ("\n// What this world took from somewhere else. A file is listed because this\n"
-                 "// side said so, and a row here says which file and whose it is. Every taken\n"
-                 "// row names the revision it was taken at. This tool has no ranges, so\n"
-                 "// nothing here needs a solver.\n"
-                 "public protocol Theirs {}\n")
+        text += shelf_section(
+            "manifest", "// ── what a world says when it first takes something begins here ──\n")
     rev = ""
     if frm:
         rev_atom = "Rev_" + re.sub(r"\W+", "_", frm).strip("_")

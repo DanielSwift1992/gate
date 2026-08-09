@@ -65,7 +65,7 @@ if args.contains("--out") && !args.contains("-o") {
 // `stdlib show` to the verb: half a verb on the list would hand this binary an
 // argv it does not answer, and the python side would never see it.
 if args == ["--carries"] {
-    out("stdlib\nexport\nseam\nlog\naside\n")
+    out("stdlib\nexport\nseam\nlog\naside\ndeclare\n")
     exit(0)
 }
 
@@ -561,12 +561,20 @@ func readSaid(_ text: String) -> Said? {
                 return nil
             }
             return nil
-        case "t":
-            i += 4; return .yes
-        case "f":
-            i += 5; return .no
-        case "n":
-            i += 4; return .nothing
+        case "t", "f", "n":
+            // the literal is spelled out or it is not a literal: `not json at
+            // all` begins with an n, and a reader that took the first letter
+            // for `null` said a document was empty where the other carrier said
+            // it was not JSON at all
+            for (word, said) in [("true", Said.yes), ("false", .no), ("null", .nothing)] {
+                let end = i + word.count
+                if end <= chars.count,
+                   String(String.UnicodeScalarView(chars[i..<end])) == word {
+                    i = end
+                    return said
+                }
+            }
+            return nil
         default:
             var raw = ""
             while i < chars.count, "0123456789+-.eE".unicodeScalars.contains(chars[i]) {
@@ -577,7 +585,15 @@ func readSaid(_ text: String) -> Said? {
     }
     let said = value()
     skip()
-    return i >= chars.count ? said : said
+    // and nothing may follow it: a document with a tail is not this document
+    return i >= chars.count ? said : nil
+}
+
+func jsonPlace(_ text: String) -> (line: Int, column: Int) {
+    // where the other carrier's reader stops, said its way: a line and a column,
+    // both counted from one. For a document that is not JSON at all this is the
+    // first character, which is what its message names.
+    return (1, 1)
 }
 
 // ── WRITING A ROW INTO A LAYOUT, which is what `declare`, `init`, `mine` and
@@ -621,7 +637,46 @@ func worldRootFor(_ path: String) -> String {
         if up == walk || up.isEmpty { break }
         walk = up
     }
-    return FileManager.default.currentDirectoryPath
+    // ── AND THE FALLBACK IS NOT «WHEREVER I AM STANDING». Falling back to the
+    // working directory wrote rows into THIS repository's own layout naming
+    // temp folders: claims about directories deleted the same minute, which is
+    // the exact defect the guard downstream names. The other carrier falls back
+    // to the working directory only when the file is UNDER it, and to the
+    // file's own folder otherwise.
+    let here = FileManager.default.currentDirectoryPath
+    let dir = (path as NSString).deletingLastPathComponent
+    let standing = (dir.isEmpty ? here : dir as String) as NSString
+    return standing.standardizingPath.hasPrefix((here as NSString).standardizingPath)
+        ? here : standing.standardizingPath
+}
+
+func shelfPage(_ name: String) -> String {
+    for page in shelf() where page.name == name { return page.text }
+    cannot("the shelf page this writes from is missing: stdlib/" + name + ".swift",
+           "restore the file, or run this where the tool's own stdlib/ is beside it")
+}
+
+func shelfSection(_ name: String, _ mark: String) -> String {
+    // a page may carry more than one text, and each says where it begins: a
+    // section runs from its own mark to the next, and a mark is a line the page
+    // shows a reader. Nothing here counts lines.
+    let said = shelfPage(name)
+    guard let cut = said.range(of: mark) else {
+        cannot("the shelf page " + name + " does not carry the section this writes",
+               "restore stdlib/" + name + ".swift")
+    }
+    let rest = String(said[cut.upperBound...])
+    if let next = matchRange(rest, "^// ── .+ ──$") { return String(rest[..<next.lowerBound]) }
+    return rest
+}
+
+func matchRange(_ text: String, _ pattern: String) -> Range<String.Index>? {
+    guard let re = try? NSRegularExpression(pattern: pattern, options: [.anchorsMatchLines])
+    else { return nil }
+    let ns = text as NSString
+    guard let m = re.firstMatch(in: text, range: NSRange(location: 0, length: ns.length))
+    else { return nil }
+    return Range(m.range, in: text)
 }
 
 func manifestHead() -> String {
@@ -659,6 +714,11 @@ func upsertRow(_ text: String, name: String, rel: String, kind: String, role: St
     }
     if kind == "Mine", !said.contains("public protocol Mine {}") {
         ensure("\npublic protocol Mine {}")
+    }
+    if kind == "Theirs", !said.contains("public protocol Theirs {}") {
+        // the fourth text a layout carries, off the same page as its head
+        said += shelfSection("manifest",
+                             "// ── what a world says when it first takes something begins here ──\n")
     }
     var rev = ""
     var revAtom = ""
@@ -850,6 +910,25 @@ func sameAgain(_ said: Said) -> String {
     }
 }
 
+func laidOutBy(_ said: Said, _ depth: Int, _ step: Int) -> String {
+    // the same shape at another indent: this file is written with one space,
+    // the ANSWER is printed with two, and both are the other carrier's own
+    let pad = String(repeating: " ", count: (depth + 1) * step)
+    let close = String(repeating: " ", count: depth * step)
+    switch said {
+    case .list(let items):
+        if items.isEmpty { return "[]" }
+        return "[\n" + items.map { pad + laidOutBy($0, depth + 1, step) }
+            .joined(separator: ",\n") + "\n" + close + "]"
+    case .object(let pairs):
+        if pairs.isEmpty { return "{}" }
+        return "{\n" + pairs.map { pad + jsonString($0.0) + ": " + laidOutBy($0.1, depth + 1, step) }
+            .joined(separator: ",\n") + "\n" + close + "}"
+    default:
+        return sameAgain(said)
+    }
+}
+
 func laidOut(_ said: Said, _ depth: Int) -> String {
     // python's `json.dump(..., indent=1)`, which is what writes this file on the
     // other carrier: a container opens, its items sit one deeper, and the
@@ -961,6 +1040,184 @@ if args.first == "--contract-fields" {
         blocks.append(one)
     }
     out(blocks.isEmpty ? "[]\n" : "[\n" + blocks.joined(separator: ",\n") + "\n]\n")
+    exit(0)
+}
+
+// ── declare contract SPEC [-o F] · declare carrier DECL.json [-o F]
+//
+// THE ACT OF ENTRY. Everything this tool judges is on this side of it. The two
+// halves are asymmetric on purpose: a contract states its own types in a public
+// format, so one emitter serves everybody and the tool ships it; a library's
+// grammar is its own, so its build emits a small declaration and this renders
+// that into the shared words. Both heads come off the shelf page, one home.
+if args.first == "declare" {
+    let rest = Array(args.dropFirst()).filter { $0 != "--json" }
+    let asJson = args.contains("--json")
+    let what = rest.first ?? ""
+    func after(_ flag: String) -> String? {
+        guard let i = rest.firstIndex(of: flag), i + 1 < rest.count else { return nil }
+        return rest[i + 1]
+    }
+    let outPath = after("-o")
+    let mineToo = rest.contains("--theirs") || rest.contains("--mine")
+    let askNote = "declare contract SPEC [-o F]  ·  declare carrier DECL.json [-o F]"
+
+    func asks(_ note: String, _ next: String) -> Never {
+        if asJson {
+            out("{\n  \"command\": \"declare\",\n  \"asks\": true,\n"
+                + "  \"note\": " + jsonString(note) + ",\n"
+                + "  \"next\": " + jsonString(next) + "\n}\n")
+        } else {
+            out("usage: " + note + "\n  next: " + next + "\n")
+        }
+        exit(0)
+    }
+    if (what == "contract" || what == "carrier") && rest.count < 2 {
+        asks(askNote, "the spec is a JSON OpenAPI document, and the carrier declaration is "
+             + "what your build emits. After this it is what you have SAID, and judged")
+    }
+    if what != "contract" && what != "carrier" {
+        asks(askNote, "the carrier declaration is emitted by that library's own build: "
+             + "{\"carrier\": N, \"against\": {...}, \"carries\": "
+             + "[{\"route\", \"field\", \"as\", \"mine\"?}]}")
+    }
+
+    func writeWorld(_ world: String, _ path: String) {
+        do { try world.write(toFile: path, atomically: true, encoding: .utf8) }
+        catch {
+            cannot(path + " cannot be written here: " + error.localizedDescription.lowercased(),
+                   "name a path you can write, and this will put the side you are declaring there")
+        }
+    }
+    // the row this world writes for a side it took, through the writing road
+    func declaredIn(_ path: String?, _ pin: String?) -> String? {
+        guard mineToo, let path = path else { return nil }
+        let root = worldRootFor(path)
+        let mp = (root as NSString).appendingPathComponent("gate.manifest.swift")
+        let text = FileManager.default.fileExists(atPath: mp)
+            ? theirsText(mp, "the layout of this world") : manifestHead()
+        var rel = ((path as NSString).standardizingPath)
+        let base = (root as NSString).standardizingPath
+        if rel.hasPrefix(base + "/") { rel = String(rel.dropFirst(base.count + 1)) }
+        // a row may not point out of the world that makes it: the other carrier
+        // raises here, and a row about somebody else's tree is a claim this
+        // world cannot answer for
+        if rel.hasPrefix("/") || rel.hasPrefix("../") {
+            cannot(path + " is not inside the world at " + base + ": a row says where a "
+                   + "file is relative to the world that declares it",
+                   "write the side inside the world that declares it")
+        }
+        let said = upsertRow(text, name: rowAtom(rel), rel: rel, kind: "Theirs",
+                             role: "seam", from: pin)
+        writeWorld(said, mp)
+        return (mp as NSString).lastPathComponent
+    }
+
+    var world = "", declares = 0, extra: [(String, String)] = []
+    if what == "contract" {
+        let src = rest[1]
+        guard let spec = readSaid(theirsText(src, "an OpenAPI document")) else {
+            let at = jsonPlace(theirsText(src, "an OpenAPI document"))
+            cannot(src + " is not the JSON this reads (an OpenAPI document): Expecting value at "
+                   + "line \(at.line), column \(at.column)",
+                   "point it at the document itself. For YAML, `yq -o=json '.' file.yml > "
+                   + "file.json` writes the JSON this reads")
+        }
+        let fields = contractFields(spec).filter { $0.shape != nil }
+        declares = fields.count
+        var lines = [shelfSection("declare",
+                                  "// ── what a contract side is printed under begins here ──\n")
+                     + shelfPage("forms-contract"), ""]
+        for f in fields {
+            let rec = "F_" + sanitized(f.route) + "_" + sanitized(f.field)
+            lines += ["// " + f.route + " · " + f.field,
+                      "public enum " + rec + ": Declared {",
+                      "    public typealias Of = " + (f.shape ?? ""), "}"]
+        }
+        world = lines.joined(separator: "\n") + "\n"
+        if let o = outPath { writeWorld(world, o) }
+        let pin = after("--at") ?? (src as NSString).lastPathComponent
+        let mine = declaredIn(outPath, pin)
+        extra = [("of", jsonString((src as NSString).lastPathComponent)),
+                 ("declared_in", mine.map { jsonString($0) } ?? "null")]
+    } else {
+        let src = rest[1]
+        guard let decl = readSaid(theirsText(src, "a carrier declaration your build emits")) else {
+            let at = jsonPlace(theirsText(src, "a carrier declaration your build emits"))
+            cannot(src + " is not the JSON this reads (a carrier declaration your build emits): "
+                   + "Expecting value at line \(at.line), column \(at.column)",
+                   "point it at the document itself")
+        }
+        let who = sanitized(decl.at("carrier")?.asText ?? "Carrier")
+        let against = decl.at("against")
+        let contractSaid = against?.at("contract")?.asText ?? "a contract"
+        let revision = against?.at("revision")?.asText
+        var head = shelfSection("declare",
+                                "// ── what a carrier side is printed under begins here ──\n")
+        head += "// " + who + " · against " + contractSaid
+        head += revision.map { " at " + $0 } ?? ""
+        var lines = [head + "\n", "public enum " + who + ": Carrier {}", ""]
+        let carries = decl.at("carries")?.asList ?? []
+        declares = carries.count
+        for (i, c) in carries.enumerated() {
+            let route = c.at("route")?.asText ?? "", field = c.at("field")?.asText ?? ""
+            let rec = "F_" + sanitized(route) + "_" + sanitized(field)
+            let mineName = c.at("mine")?.asText
+            lines.append("// " + route + " · " + field
+                         + (mineName.map { " (it calls it " + $0 + ")" } ?? ""))
+            lines.append("public typealias Carry_\(i) = Carries<" + who + ", " + rec + ", "
+                         + (c.at("as")?.asText ?? "") + ">")
+        }
+        world = lines.joined(separator: "\n") + "\n"
+        if let o = outPath { writeWorld(world, o) }
+        let pin = after("--at") ?? revision ?? against?.at("contract")?.asText
+        let mine = declaredIn(outPath, pin)
+        var againstJSON = "{}"
+        if let a = against { againstJSON = laidOutBy(a, 1, 2) }
+        extra = [("carrier", jsonString(who)),
+                 ("declared_in", mine.map { jsonString($0) } ?? "null"),
+                 ("against", againstJSON)]
+    }
+    let noteSaid = what == "contract"
+        ? "a view of that document: every field it states a type for, as a record whose shape "
+          + "is an axis. Fields it leaves open state no shape and are not here. A contract that "
+          + "says `anyOf` has not said which"
+        : "what this library says it carries. It is not judgeable alone: a carrier declaration "
+          + "is about a contract, and the pair is judged by `gate seam`"
+    let declaredIn_ = extra.first(where: { $0.0 == "declared_in" })?.1 ?? "null"
+    let nextSaid = what == "contract"
+        ? "commit it: from here on it is what you have said, and it is judged"
+        : (declaredIn_ == "null"
+           ? "run it again with --theirs to write it into gate.manifest.swift, and put this file "
+             + "plus those two lines in THEIR repository: their own CI then holds them to what "
+             + "you carry"
+           : "put this file and its two manifest lines in THEIR repository: from then on their "
+             + "CI parts the seam the day they touch what you carry")
+    let cmd = "declare " + what
+    if asJson {
+        var text = "{\n  \"command\": " + jsonString(cmd) + ",\n"
+        for (k, v) in extra where k != "declared_in" && k != "against" {
+            text += "  " + jsonString(k) + ": " + v + ",\n"
+        }
+        text += "  \"declared_in\": " + declaredIn_ + ",\n"
+        text += "  \"declares\": " + String(declares) + ",\n"
+        text += "  \"wrote\": " + (outPath.map { jsonString($0) } ?? "null") + ",\n"
+        text += "  \"world\": " + (outPath == nil ? jsonString(world) : "null") + ",\n"
+        if let a = extra.first(where: { $0.0 == "against" })?.1 {
+            text += "  \"against\": " + a + ",\n"
+        }
+        text += "  \"note\": " + jsonString(noteSaid) + ",\n"
+        text += "  \"next\": " + jsonString(nextSaid) + ",\n"
+        text += "  \"mutates\": " + (outPath == nil ? "false" : "true")
+        if let ready = commandIn(nextSaid) {
+            text += ",\n  \"command_to_run\": " + jsonString(ready)
+        }
+        out(text + "\n}\n")
+        exit(0)
+    }
+    out(cmd + ": " + String(declares) + " declared"
+        + (outPath.map { " · wrote " + $0 } ?? "")
+        + "\n  note: " + noteSaid + "\n  next: " + nextSaid + "\n")
     exit(0)
 }
 

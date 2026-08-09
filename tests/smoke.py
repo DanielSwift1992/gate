@@ -6901,6 +6901,50 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                   # and the CLI holds no second copy of that text
                   and "One list, three columns" not in open(GATE, encoding="utf-8").read()))
 
+        # ── AND THE ACT OF ENTRY MOVES, WHICH IS THE FIRST VERB THE ROADS CARRY.
+        # `declare` needed four of them at once: the contract reading, the
+        # writing side of a layout, both heads off the shelf, and the order-
+        # keeping json. It went over byte for byte on the first build, which is
+        # what a road is for: the verb after the roads is small.
+        # Held on what the two carriers SAY and on what they LEAVE: the side
+        # they print, and the row they write into a layout for it.
+        _dec = {"paths": {"/a": {"post": {
+            "parameters": [{"name": "q", "in": "query", "schema": {"type": "integer"}}],
+            "requestBody": {"content": {"application/json": {"schema": {"properties": {
+                "f": {"type": "string"}, "g": {"type": "boolean"}}}}}}}}}}
+        _carry = {"carrier": "Lib", "against": {"contract": "openapi.json",
+                                                "revision": "a1b2c3d"},
+                  "carries": [{"route": "/a", "field": "f", "as": "Text"},
+                              {"route": "/a", "field": "g", "as": "Flag", "mine": "flagged"}]}
+        _dapart = []
+        for _argv in (["declare", "contract", "spec.json"],
+                      ["declare", "contract", "spec.json", "--json"],
+                      ["declare", "carrier", "decl.json"],
+                      ["declare", "carrier", "decl.json", "--json"],
+                      ["declare", "contract", "spec.json", "-o", "api.swift", "--theirs"],
+                      ["declare", "carrier", "decl.json", "-o", "sdk.swift", "--theirs"],
+                      ["declare", "contract", "no-such.json"]):
+            _two = []
+            for _tag, _env in (("py", "off"), ("sw", _cli_bin)):
+                _dw = os.path.join(tmp, "declared-" + _tag)
+                shutil.rmtree(_dw, ignore_errors=True)
+                os.makedirs(_dw)
+                subprocess.run(["git", "init", "-q", "-b", "main", _dw], capture_output=True)
+                open(os.path.join(_dw, "spec.json"), "w").write(json.dumps(_dec))
+                open(os.path.join(_dw, "decl.json"), "w").write(json.dumps(_carry))
+                _rd = subprocess.run([sys.executable, GATE, *_argv], cwd=_dw, text=True,
+                                     capture_output=True, timeout=180,
+                                     env={**os.environ, "GATE_CLI": _env})
+                _left = {_f: open(os.path.join(_dw, _f), encoding="utf-8").read()
+                         for _f in sorted(os.listdir(_dw)) if _f.endswith(".swift")}
+                _two.append((_rd.returncode, _rd.stdout, _rd.stderr, _left))
+            if _two[0] != _two[1]:
+                _dapart.append(" ".join(_argv))
+        if _dapart:
+            print("   the act of entry differs between carriers:", _dapart[:3])
+        S.append(("the act of entry is one on both carriers, in what it says and what it leaves",
+                  _dapart == []))
+
         # ── AND THE WRITING SIDE OF A LAYOUT IS ONE ON BOTH CARRIERS. `declare`,
         # `init`, `mine` and `theirs` all write a row and none of them can move
         # without this. It obeys the two laws the reading side taught: a record's
@@ -7161,7 +7205,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         # verb now, and the parity below walks all three of its answers.
         S.append(("the strangler ledger names a verb, not half of one",
                   subprocess.run([_cli_bin, "--carries"], capture_output=True, text=True)
-                  .stdout.split() == ["stdlib", "export", "seam", "log", "aside"]))
+                  .stdout.split() == ["stdlib", "export", "seam", "log", "aside", "declare"]))
         # ── AND THE LEDGER IS READ AGAINST THE ROAD IT IS WALKING. The strangler
         # has a length and a position, and both were feelings: the list of moved
         # veins lived in the binary and the list of verbs lived in the python
@@ -7333,7 +7377,9 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                    ["export", "nosuch.swift", "-o", "a.csv", "b.csv"],
                    ["export", "gate.swift"], ["seam", "a.swift"], ["seam", "a.swift", "b.swift"],
                    ["log"], ["log", "--json"], ["log", "--wrold"], ["log", "1", "all"],
-                   ["aside"], ["aside", "--json"], ["aside", "/r"], ["aside", "/r", "f"]]
+                   ["aside"], ["aside", "--json"], ["aside", "/r"], ["aside", "/r", "f"],
+                   ["declare"], ["declare", "--json"], ["declare", "nonsense"],
+                   ["declare", "contract"], ["declare", "carrier"]]
         _sd2 = os.path.join(tmp, "ledger-walk")
         os.makedirs(_sd2, exist_ok=True)
         _apart2 = []
@@ -7351,7 +7397,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         if _apart2:
             print("   the two CLIs answer apart on:", _apart2[:4])
         S.append(("a carried prefix answers alike on the argv nobody means to type",
-                  _apart2 == [] and len(_shapes) == 17
+                  _apart2 == [] and len(_shapes) == 22
                   # and none of them is a stack trace on either side
                   and not any(b"Traceback" in subprocess.run(
                       [sys.executable, GATE, *_a], cwd=_sd2, capture_output=True,
@@ -7405,9 +7451,9 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         for _r in sorted(_by_road):
             if _r != "carried":
                 print(f"     {_r:18} {' '.join(sorted(_by_road[_r]))[:88]}")
-        S.append(("the ledger names verbs the usage offers, 5 of 27 carried",
+        S.append(("the ledger names verbs the usage offers, 6 of 27 carried",
                   set(_ledger) <= _verbs
-                  and len(_ledger) == 5
+                  and len(_ledger) == 6
                   and len(_verbs) == 27
                   # and a name on the ledger is a whole verb: a prefix claims
                   # everything under it, so half a verb would take argv nobody

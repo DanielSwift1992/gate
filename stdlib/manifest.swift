@@ -30,3 +30,11 @@
 // text. `Written` names another row: the words a page is written in, so the
 // two are read together.
 public protocol Role {}
+//
+// ── what a world says when it first takes something begins here ──
+
+// What this world took from somewhere else. A file is listed because this
+// side said so, and a row here says which file and whose it is. Every taken
+// row names the revision it was taken at. This tool has no ranges, so
+// nothing here needs a solver.
+public protocol Theirs {}
