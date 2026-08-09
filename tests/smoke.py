@@ -7083,6 +7083,90 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                   and b"public typealias Written = FormsTool"
                       in _p1verbs.get("gate.manifest.swift", b"")))
 
+        # ── AND OBSERVATION MOVES: `drift` holds no court and carries no
+        # verdict, so its parity is a built history rather than a world: a
+        # contract that grew a field, a client that learned each name some
+        # commits later, dated by hand so every number below is a constant.
+        # Both carriers date the same lag from the same objects, walk the same
+        # bounds, and follow the same declared threshold to the same exit code.
+        _dr = os.path.join(tmp, "drift-pair")
+        shutil.rmtree(_dr, ignore_errors=True)
+        os.makedirs(os.path.join(_dr, "client"))
+        subprocess.run(["git", "init", "-q", "-b", "main", _dr], capture_output=True)
+
+        def _drcommit(msg, day):
+            subprocess.run(["git", "add", "-A"], cwd=_dr, capture_output=True)
+            subprocess.run(["git", "-c", "commit.gpgsign=false", "-c", "user.email=a@b",
+                            "-c", "user.name=A", "commit", "-qm", msg, "--no-verify",
+                            "--date", day + "T12:00:00"], cwd=_dr, capture_output=True,
+                           env={**os.environ, "GIT_COMMITTER_DATE": day + "T12:00:00"})
+        _spec1 = json.loads(
+            '{"paths": {"/messages": {"post": {"requestBody": {"content": '
+            '{"application/json": {"schema": {"properties": {"to": {"type": "string"}, '
+            '"body": {"type": "string"}}}}}}}}}}')
+        open(os.path.join(_dr, "spec.json"), "w").write(json.dumps(_spec1))
+        open(os.path.join(_dr, "client", "sdk.py"), "w").write(
+            "def send(to):\n    return to\n")
+        _drcommit("birth", "2024-01-10")
+        _spec2 = json.loads(
+            '{"paths": {"/messages": {"post": {"requestBody": {"content": '
+            '{"application/json": {"schema": {"properties": {"to": {"type": "string"}, '
+            '"body": {"type": "string"}, "send-at": {"type": "string"}}}}}}}}, '
+            '"/health": {"get": {"parameters": [{"name": "verbose", "in": "query", '
+            '"schema": {"type": "boolean"}}]}}}}')
+        open(os.path.join(_dr, "spec.json"), "w").write(json.dumps(_spec2))
+        _drcommit("grow", "2024-03-01")
+        open(os.path.join(_dr, "client", "sdk.py"), "w").write(
+            'def send(to, body):\n    return post("/messages", to, body)\n')
+        _drcommit("client learns body", "2024-04-15")
+        open(os.path.join(_dr, "client", "sdk.py"), "w").write(
+            'def send(to, body, send_at=None):\n'
+            '    return post("/messages", to, body, send_at)\n')
+        _drcommit("client learns send-at", "2024-06-01")
+        _drthin = os.path.join(tmp, "drift-thin")
+        shutil.rmtree(_drthin, ignore_errors=True)
+        os.makedirs(_drthin)
+        open(os.path.join(_drthin, "spec.json"), "w").write(json.dumps(_spec1))
+        _drnoms = lambda b: re.sub(rb'"ms": [0-9.]+', b'"ms": MS', b)
+        _drapart, _drsaid = [], {}
+        for _cwd, _argv in [
+            (_dr, ["drift", "spec.json", "--client", "client"]),
+            (_dr, ["drift", "spec.json", "--client", "client", "--json"]),
+            (_dr, ["drift", "spec.json", "--client", "client", "--fail-over", "10"]),
+            (_dr, ["drift", "spec.json", "--client", "client", "--since",
+                   "2024-02-01", "--json"]),
+            (_dr, ["drift", "spec.json", "--client", "client", "--name", "SDKPy"]),
+            (_drthin, ["drift", "spec.json"]),
+            (_drthin, ["drift", "spec.json", "--json"]),
+        ]:
+            _py = subprocess.run([sys.executable, GATE, *_argv], cwd=_cwd,
+                                 capture_output=True, timeout=180,
+                                 env={**os.environ, "GATE_CLI": "off"})
+            _sv = subprocess.run([_cli_bin, *_argv], cwd=_cwd, capture_output=True,
+                                 timeout=180)
+            if (_drnoms(_py.stdout), _py.stderr, _py.returncode) != \
+               (_drnoms(_sv.stdout), _sv.stderr, _sv.returncode):
+                _drapart.append(" ".join(_argv))
+            _drsaid[" ".join(_argv)] = (_py.returncode, _py.stdout)
+        if _drapart:
+            print("   observation answers apart on:", _drapart[:3])
+        S.append(("observation moves whole: both carriers date the same history alike",
+                  _drapart == []))
+        _drplain = _drsaid.get("drift spec.json --client client", (9, b""))
+        _drfail = _drsaid.get("drift spec.json --client client --fail-over 10", (9, b""))
+        _drthin_said = _drsaid.get("drift spec.json", (9, b""))
+        S.append(("and the observation reads what the history was built to say",
+                  _drplain[0] == 0
+                  and b"behind on 2 names" in _drplain[1]
+                  and b"median 94 days" in _drplain[1]
+                  and b"the library's earliest commit writing it 2024-04-15: 96 days"
+                      in _drplain[1]
+                  and b"verbose" in _drplain[1] and b"/health" in _drplain[1]
+                  and _drfail[0] == 1
+                  and b"by your rule, not by a verdict" in _drfail[1]
+                  and _drthin_said[0] == 0
+                  and b"no history here, so nothing is dated" in _drthin_said[1]))
+
         # ── AND ENTRY ITSELF MOVES, THE LAST VERB OF THE FIRST PACK. `init` is
         # the act of taking performed for somebody who has not typed anything
         # yet, so its parity is lives too: a git repository entered twice, a
@@ -7545,7 +7629,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         S.append(("the strangler ledger names a verb, not half of one",
                   subprocess.run([_cli_bin, "--carries"], capture_output=True, text=True)
                   .stdout.split() == ["stdlib", "export", "seam", "log", "aside", "declare",
-                                      "mine", "theirs", "init"]))
+                                      "mine", "theirs", "init", "drift"]))
         # ── AND THE LEDGER IS READ AGAINST THE ROAD IT IS WALKING. The strangler
         # has a length and a position, and both were feelings: the list of moved
         # veins lived in the binary and the list of verbs lived in the python
@@ -7723,7 +7807,8 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                    ["mine"], ["theirs"], ["mine", "--json"], ["theirs", "--json"],
                    ["mine", "nosuch.swift"], ["theirs", "their.swift"],
                    ["mine", "f.swift", "--role"], ["theirs", "f.swift", "--at"],
-                   ["init"], ["init", "--json"]]
+                   ["init"], ["init", "--json"],
+                   ["drift"], ["drift", "--json"], ["drift", "nosuch.json"]]
         _sd2 = os.path.join(tmp, "ledger-walk")
         os.makedirs(_sd2, exist_ok=True)
         _apart2 = []
@@ -7741,7 +7826,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         if _apart2:
             print("   the two CLIs answer apart on:", _apart2[:4])
         S.append(("a carried prefix answers alike on the argv nobody means to type",
-                  _apart2 == [] and len(_shapes) == 32
+                  _apart2 == [] and len(_shapes) == 35
                   # and none of them is a stack trace on either side
                   and not any(b"Traceback" in subprocess.run(
                       [sys.executable, GATE, *_a], cwd=_sd2, capture_output=True,
@@ -7795,9 +7880,9 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         for _r in sorted(_by_road):
             if _r != "carried":
                 print(f"     {_r:18} {' '.join(sorted(_by_road[_r]))[:88]}")
-        S.append(("the ledger names verbs the usage offers, 9 of 27 carried",
+        S.append(("the ledger names verbs the usage offers, 10 of 27 carried",
                   set(_ledger) <= _verbs
-                  and len(_ledger) == 9
+                  and len(_ledger) == 10
                   and len(_verbs) == 27
                   # and a name on the ledger is a whole verb: a prefix claims
                   # everything under it, so half a verb would take argv nobody

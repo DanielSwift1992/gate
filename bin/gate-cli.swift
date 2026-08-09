@@ -71,7 +71,7 @@ if args.contains("--out") && !args.contains("-o") {
 // `stdlib show` to the verb: half a verb on the list would hand this binary an
 // argv it does not answer, and the python side would never see it.
 if args == ["--carries"] {
-    out("stdlib\nexport\nseam\nlog\naside\ndeclare\nmine\ntheirs\ninit\n")
+    out("stdlib\nexport\nseam\nlog\naside\ndeclare\nmine\ntheirs\ninit\ndrift\n")
     exit(0)
 }
 
@@ -1296,22 +1296,22 @@ func worldPeopleOf(_ w: WorldState) -> Set<String> {
     return names
 }
 
-func leavesWorldHere(_ path: String, _ rootDir: String) -> Bool {
+func canonicalPath(_ p: String) -> String {
+    // one door for every path comparison that crosses realpath: macOS's
     // resolvingSymlinksInPath strips the /private prefix from a path that
-    // exists and leaves it on one that does not, so the two sides of this
-    // comparison are put through one door before they meet: what matters is
-    // that both are canonical the same way, not which spelling won
-    func canonical(_ p: String) -> String {
-        let r = (p as NSString).resolvingSymlinksInPath
-        for known in ["/private/tmp/", "/private/var/", "/private/etc/"]
-        where r.hasPrefix(known) || r == String(known.dropLast()) {
-            return String(r.dropFirst("/private".count))
-        }
-        return r
+    // exists and leaves it on one that does not, so both sides of any
+    // comparison go through here and the spelling cannot split them
+    let r = (absPath(p) as NSString).resolvingSymlinksInPath
+    for known in ["/private/tmp/", "/private/var/", "/private/etc/"]
+    where r.hasPrefix(known) || r == String(known.dropLast()) {
+        return String(r.dropFirst("/private".count))
     }
-    let real = canonical((rootDir as NSString).appendingPathComponent(path))
-    let rootReal = canonical(rootDir)
-    return relPath(real, rootReal).components(separatedBy: "/").first == ".."
+    return r
+}
+
+func leavesWorldHere(_ path: String, _ rootDir: String) -> Bool {
+    let real = canonicalPath((rootDir as NSString).appendingPathComponent(path))
+    return relPath(real, canonicalPath(rootDir)).components(separatedBy: "/").first == ".."
 }
 
 func isSeamSide(_ path: String) -> Bool {
@@ -2878,6 +2878,393 @@ if args.first == "aside" {
         + " · " + String(rows.count) + " standing\n  note: " + noteSaid
         + "\n  next: " + nextSaid + "\n")
     exit(0)
+}
+
+// ── drift CONTRACT --client DIR: observation, and nothing else. A world that
+// has not entered ours holds no court and carries no verdict: what prints is
+// lexical facts about git objects and a walk whose bounds travel with every
+// absence. The exit code follows the operator's own threshold, never a verdict.
+func gitLines(_ rootDir: String, _ arguments: [String]) -> [String] {
+    return runGit(["-C", rootDir] + arguments, FileManager.default.currentDirectoryPath)
+        .components(separatedBy: "\n")
+        .filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+}
+
+func contractRevisions(_ path: String, _ since: String?) -> (root: String?, revs: [(String, Data)]) {
+    // every revision of a contract, oldest first, read out of git and never off
+    // the disk: one cat-file --batch for the lot
+    let full = canonicalPath(path)
+    var here = (full as NSString).deletingLastPathComponent
+    if here.isEmpty { here = "." }
+    let rootSaid = runGit(["-C", here, "rev-parse", "--show-toplevel"],
+                          FileManager.default.currentDirectoryPath)
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+    if rootSaid.isEmpty { return (nil, []) }
+    let rootDir = canonicalPath(rootSaid)
+    let rel = relPath(full, rootDir)
+    if rel.hasPrefix("..") { return (nil, []) }
+    var logArgs = ["log", "--reverse", "--format=%H %as"]
+    if let since = since { logArgs.append("--since=" + since) }
+    logArgs += ["--", rel]
+    let marks = gitLines(rootDir, logArgs).map { line -> (String, String) in
+        let parts = line.split(separator: " ", maxSplits: 1).map(String.init)
+        return (parts.first ?? "", parts.count > 1 ? parts[1] : "")
+    }
+    if marks.isEmpty { return (rootDir, []) }
+    let p = Process()
+    p.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+    p.arguments = ["git", "-C", rootDir, "cat-file", "--batch"]
+    let put = Pipe(), got = Pipe()
+    p.standardInput = put
+    p.standardOutput = got
+    p.standardError = Pipe()
+    guard (try? p.run()) != nil else { return (rootDir, []) }
+    let asked = marks.map { "\($0.0):\(rel)" }.joined(separator: "\n")
+    // written on its own queue, the way communicate does: a batch bigger than
+    // the pipe would deadlock a writer who waits to read
+    DispatchQueue.global().async {
+        put.fileHandleForWriting.write(Data(asked.utf8))
+        put.fileHandleForWriting.closeFile()
+    }
+    let blob = got.fileHandleForReading.readDataToEndOfFile()
+    p.waitUntilExit()
+    var out: [(String, Data)] = []
+    var i = 0
+    for (_, when) in marks {
+        guard let j = blob[i...].firstIndex(of: 0x0A) else { break }
+        let head = String(decoding: blob[i..<j], as: UTF8.self)
+            .split(separator: " ").map(String.init)
+        if head.count < 3 { i = j + 1; continue }
+        let size = Int(head[2]) ?? 0
+        out.append((when, blob.subdata(in: (j + 1)..<min(j + 1 + size, blob.count))))
+        i = j + 1 + size + 1
+        if i > blob.count { break }
+    }
+    return (rootDir, out)
+}
+
+func snakeOf(_ name: String) -> String {
+    var out = ""
+    for (i, ch) in name.enumerated() {
+        if i > 0, ch.isUppercase { out.append("_") }
+        out.append(ch)
+    }
+    return out.lowercased()
+}
+
+func nameVariants(_ name: String) -> Set<String> {
+    // a wire name is rarely the name a library writes: the contract's
+    // hyphenated spelling, the snake, and the camel are all one word
+    let plain = name.replacingOccurrences(of: "-", with: "_")
+    var camel = ""
+    var lift = false
+    for ch in name {
+        if ch == "-" || ch == "_" { lift = true; continue }
+        camel.append(lift ? Character(ch.uppercased()) : ch)
+        lift = false
+    }
+    return [name, plain, snakeOf(plain), camel]
+}
+
+func firstMentions(_ rootDir: String, _ names: [String],
+                   only: String?, without: String?) -> [String: String] {
+    // when each name first appeared in a library, read from the diffs
+    // themselves, in every spelling the library might use; the log is streamed
+    // and torn down the moment the last name is found
+    var whereArgs: [String] = []
+    if let only = only { whereArgs = ["--", only] }
+    if let without = without {
+        if whereArgs.isEmpty { whereArgs = ["--"] }
+        whereArgs.append(":(exclude)" + without)
+    }
+    var left: [(String, NSRegularExpression)] = []
+    for n in names {
+        let alt = nameVariants(n).map { NSRegularExpression.escapedPattern(for: $0) }
+            .joined(separator: "|")
+        if let re = try? NSRegularExpression(pattern: "\\b(?:" + alt + ")\\b") {
+            left.append((n, re))
+        }
+    }
+    var seen: [String: String] = [:]
+    let p = Process()
+    p.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+    p.arguments = ["git", "-C", rootDir, "log", "--reverse", "-p", "--no-color",
+                   "--format=~gate~ %as"] + whereArgs
+    let got = Pipe()
+    p.standardOutput = got
+    p.standardError = Pipe()
+    guard (try? p.run()) != nil else { return seen }
+    var when: String? = nil
+    var carry = Data()
+    let handle = got.fileHandleForReading
+    reading: while true {
+        let chunk = handle.availableData
+        if chunk.isEmpty { break }
+        carry.append(chunk)
+        while let nl = carry.firstIndex(of: 0x0A) {
+            let line = String(decoding: carry[carry.startIndex..<nl], as: UTF8.self)
+            carry.removeSubrange(carry.startIndex...nl)
+            if line.hasPrefix("~gate~ ") {
+                when = String(line.dropFirst(7)).trimmingCharacters(in: .whitespaces)
+                continue
+            }
+            guard line.hasPrefix("+"), !line.hasPrefix("+++") else { continue }
+            let ns = line as NSString
+            for (i, (n, re)) in left.enumerated().reversed()
+            where re.firstMatch(in: line, range: NSRange(location: 0, length: ns.length)) != nil {
+                seen[n] = when ?? ""
+                left.remove(at: i)
+            }
+            if left.isEmpty { break reading }
+        }
+    }
+    p.terminate()
+    handle.closeFile()
+    return seen
+}
+
+let CARRIER_KINDS = [".py", ".ts", ".js", ".rs", ".go", ".rb", ".java", ".kt"]
+
+func readCarrier(_ rootDir: String) -> (body: String, files: Int, said: String) {
+    // what a client library names, and, said out loud, where this looked:
+    // absence is a fact about a walk, so the bounds travel with it
+    var texts: [String] = []
+    var count = 0
+    func walk(_ d: String) {
+        let names = ((try? FileManager.default.contentsOfDirectory(atPath: d)) ?? []).sorted()
+        for f in names {
+            let p = (d as NSString).appendingPathComponent(f)
+            var isDir: ObjCBool = false
+            guard FileManager.default.fileExists(atPath: p, isDirectory: &isDir) else { continue }
+            if isDir.boolValue {
+                if [".git", "node_modules", "target", "dist", "build", ".venv",
+                    "proto"].contains(f) { continue }
+                if f.lowercased().contains("test") || f.lowercased().contains("example") {
+                    continue
+                }
+                walk(p)
+                continue
+            }
+            guard CARRIER_KINDS.contains((f as NSString).pathExtension.isEmpty
+                                         ? "" : "." + (f as NSString).pathExtension)
+            else { continue }
+            if f.lowercased().contains("test") || f.lowercased().contains("example") { continue }
+            if f.contains("_pb2") || f.hasSuffix("_pb.js") || f.hasSuffix("_pb.ts") { continue }
+            guard let text = readText(p) else { continue }
+            texts.append(text)
+            count += 1
+        }
+    }
+    walk(rootDir)
+    return (texts.joined(separator: "\n"), count,
+            "directories named test/example, and .git node_modules target dist build .venv "
+            + "proto, files named test/example, protobuf stubs (_pb2, _pb.js, _pb.ts)")
+}
+
+if args.first == "drift" {
+    let asJson = args.contains("--json")
+    let a = Array(args.dropFirst()).filter { $0 != "--json" }
+    let specNext = "the contract is a JSON OpenAPI document in a git checkout, and "
+                 + "for YAML, `yq -o=json '.' spec.yml > spec.json` first"
+    if a.isEmpty || a[0].hasPrefix("-") {
+        let note = "drift CONTRACT --client DIR [--since DATE] [--name N] [--fail-over DAYS]"
+        if asJson {
+            var pairs: [(String, StatusJSON)] = [
+                ("command", .text("drift")), ("asks", .raw("true")),
+                ("note", .text(note)), ("next", .text(specNext))]
+            if let ready = commandIn(specNext) { pairs.append(("command_to_run", .text(ready))) }
+            out(statusDumps(.object(pairs), 0) + "\n")
+        } else {
+            out("usage: " + note + "\n  next: " + specNext + "\n")
+        }
+        exit(0)
+    }
+    if !FileManager.default.fileExists(atPath: a[0]) {
+        cannot("no such contract here: \(a[0])", specNext)
+    }
+    let src = a[0]
+    func after(_ flag: String) -> String? {
+        guard let i = a.firstIndex(of: flag), i + 1 < a.count else { return nil }
+        return a[i + 1]
+    }
+    let clientRoot = after("--client") ?? "."
+    let since = after("--since")
+    let who = after("--name") ?? sanitized((absPath(clientRoot) as NSString).lastPathComponent)
+    let over = after("--fail-over").flatMap { Int($0) }
+    let t0 = Date()
+    let (sroot, revs) = contractRevisions(src, since)
+    // history dates; today walks: the union is what the contract has EVER
+    // said, and only the dates come from it
+    var declared: [(field: String, when: String?)] = []
+    func setdefault(_ f: String, _ when: String?) {
+        if !declared.contains(where: { $0.field == f }) { declared.append((f, when)) }
+    }
+    for (when, blob) in revs {
+        guard let spec = readSaid(String(decoding: blob, as: UTF8.self)) else { continue }
+        for f in contractFields(spec) { setdefault(f.field, when) }
+    }
+    var current: [String] = []
+    var routes: [String] = []
+    if let spec = readText(src).flatMap({ readSaid($0) }) {
+        for f in contractFields(spec) {
+            current.append(f.field)
+            if !routes.contains(f.route) { routes.append(f.route) }
+            setdefault(f.field, nil)
+        }
+    }
+    let carrier = readCarrier(clientRoot)
+    let words = Set(findAll("\\w+", carrier.body))
+    let spoken = Set(matches("[\"'`/]([A-Za-z0-9_.\\-]+)(?=[\"'`/?]|$)", carrier.body,
+                             lines: true).map { $0[0] })
+    let unwritten = Set(current.filter { nameVariants($0).isDisjoint(with: words) }).sorted()
+    var silent: [String] = []
+    func segments(_ r: String) -> [String] {
+        return r.components(separatedBy: "/").filter { !$0.isEmpty && !$0.hasPrefix("{") }
+    }
+    if routes.contains(where: { segments($0).allSatisfy { spoken.contains($0) } }) {
+        for r in routes.sorted() {
+            let segs = segments(r)
+            if !segs.isEmpty, !segs.allSatisfy({ spoken.contains($0) }) { silent.append(r) }
+        }
+    }
+    let crootSaid = runGit(["-C", clientRoot, "rev-parse", "--show-toplevel"],
+                           FileManager.default.currentDirectoryPath)
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+    let croot = crootSaid.isEmpty ? "" : canonicalPath(crootSaid)
+    func shallow(_ r: String) -> Bool {
+        return !r.isEmpty && runGit(["-C", r, "rev-parse", "--is-shallow-repository"],
+                                    FileManager.default.currentDirectoryPath)
+            .trimmingCharacters(in: .whitespacesAndNewlines) == "true"
+    }
+    var thin: [String] = []
+    if sroot == nil || shallow(sroot ?? "") || revs.count < 2 {
+        thin.append((src as NSString).lastPathComponent)
+    }
+    if croot.isEmpty || shallow(croot) {
+        thin.append(who)
+    }
+    var late: [(field: String, contract: String, carrier: String, days: Int)] = []
+    var undatable: [String] = []
+    var median = 0
+    if thin.isEmpty {
+        let here = relPath(canonicalPath(clientRoot), croot)
+        let specReal = canonicalPath(src)
+        let specRel = specReal.hasPrefix(croot + "/") ? relPath(specReal, croot) : nil
+        let seen = firstMentions(croot, declared.map { $0.field },
+                                 only: (here == "." || here.isEmpty) ? nil : here,
+                                 without: specRel)
+        // a window has an edge: whatever the contract already declared when
+        // the window opened carries the window's date, not the day it was said
+        let edge = since != nil ? revs.first?.0 : nil
+        func daysApart(_ a: String, _ b: String) -> Int? {
+            let f = DateFormatter()
+            f.dateFormat = "yyyy-MM-dd"
+            f.timeZone = TimeZone(identifier: "UTC")
+            guard let da = f.date(from: a), let db = f.date(from: b) else { return nil }
+            return Int((db.timeIntervalSince(da) / 86400).rounded())
+        }
+        for (f, sd) in declared {
+            guard let sd = sd, sd != edge else { undatable.append(f); continue }
+            guard let cd = seen[f] else { continue }
+            guard let days = daysApart(sd, cd), days > 0 else { continue }
+            late.append((f, sd, cd, days))
+        }
+        // sorted the way the other carrier sorts: by days descending, and the
+        // declaration order kept where two are equal, because its sort is stable
+        late = late.enumerated().sorted {
+            $0.element.days != $1.element.days
+                ? $0.element.days > $1.element.days : $0.offset < $1.offset
+        }.map { $0.element }
+        let mid = late.map { $0.days }.sorted()
+        if !mid.isEmpty {
+            median = mid.count % 2 == 1 ? mid[mid.count / 2]
+                                        : (mid[mid.count / 2 - 1] + mid[mid.count / 2]) / 2
+        }
+    }
+    let worst = Array(late.prefix(5))
+    let ms = ((Date().timeIntervalSince(t0) * 1000 * 10).rounded(.toNearestOrEven)) / 10
+    let noteSaid = "an observation, of a world that has not entered: git objects, and a walk. "
+        + (thin.isEmpty
+           ? many(revs.count, "revision") + " of the contract were read, and the library's "
+             + "history walked once. "
+           : "no history to date anything: " + thin.joined(separator: " and ")
+             + " arrived with one commit standing in for all of them. ")
+        + "Absence is a fact about this walk: " + many(carrier.files, "file") + " under "
+        + absPath(clientRoot) + ", kinds " + CARRIER_KINDS.joined(separator: " ")
+        + ", skipping " + carrier.said
+        + (undatable.isEmpty ? ""
+           : "; " + many(undatable.count, "name") + " cannot be dated, being already declared "
+             + "when the window opened")
+    let nextSaid = thin.isEmpty
+        ? "re-run it yourself: everything above is a git object or a walk whose bounds "
+          + "are printed with it"
+        : "git fetch --unshallow in \(thin[0]), and the dates become readable"
+    let red = over != nil && median > over!
+    if asJson {
+        var pairs: [(String, StatusJSON)] = [
+            ("command", .text("drift")),
+            ("contract", .text((src as NSString).lastPathComponent)),
+            ("carrier", .text(who)),
+            ("revisions", .raw(String(revs.count))),
+            ("declares", .raw(String(current.count))),
+            ("since", since.map { .text($0) } ?? .null),
+            ("thin", .list(thin.map { .text($0) })),
+            ("scope", .object([("files", .raw(String(carrier.files))),
+                               ("root", .text(absPath(clientRoot))),
+                               ("kinds", .text(CARRIER_KINDS.joined(separator: " "))),
+                               ("skipped", .text(carrier.said))])),
+            ("unwritten", .list(unwritten.map { .text($0) })),
+            ("silent_routes", .list(silent.map { .text($0) })),
+            ("late", .raw(String(late.count))),
+            ("median_days", .raw(String(median))),
+            ("worst_days", .raw(String(late.first?.days ?? 0))),
+            ("worst", .list(worst.map { .object([
+                ("field", .text($0.field)), ("contract", .text($0.contract)),
+                ("carrier", .text($0.carrier)), ("days", .raw(String($0.days)))]) })),
+            ("undatable", .raw(String(undatable.count))),
+            ("over_threshold", .raw(red ? "true" : "false")),
+            ("threshold", over.map { .raw(String($0)) } ?? .null),
+            ("ms", .raw(String(ms))),
+            ("note", .text(noteSaid)),
+            ("next", .text(nextSaid)),
+        ]
+        if let ready = commandIn(nextSaid) { pairs.append(("command_to_run", .text(ready))) }
+        out(statusDumps(.object(pairs), 0) + "\n")
+        exit(red ? 1 : 0)
+    }
+    var head = "drift: observation of \(who) against \((src as NSString).lastPathComponent)"
+    if !thin.isEmpty {
+        head += " · no history here, so nothing is dated"
+    } else if !late.isEmpty {
+        head += " · behind on " + many(late.count, "name") + " · median "
+              + many(median, "day") + " · worst \(late.first!.days)"
+    } else {
+        head += " · nothing arrived late"
+    }
+    var lines = [head]
+    for w in worst {
+        lines.append("  in history · \(w.field) · the contract's earliest revision saying it is "
+                   + "\(w.contract), the library's earliest commit writing it \(w.carrier): "
+                   + "\(w.days) days")
+    }
+    for n in unwritten.prefix(5) {
+        lines.append("  in this walk · \(n) · the contract declares it; no file walked writes it")
+    }
+    if unwritten.count > 5 {
+        lines.append("  … and \(unwritten.count - 5) more names no file walked writes")
+    }
+    for r in silent.prefix(3) {
+        lines.append("  in this walk · \(r) · the contract declares this route; no file walked "
+                   + "spells its segments")
+    }
+    if red {
+        lines.append("  threshold: you set --fail-over \(over!), and the median is "
+                   + "\(median) — this exits non-zero by your rule, not by a verdict")
+    }
+    lines.append("  note: " + noteSaid)
+    lines.append("  next: " + nextSaid)
+    out(lines.joined(separator: "\n") + "\n")
+    exit(red ? 1 : 0)
 }
 
 // ── init [DIR] [--vendor]: entry, which is the act of taking performed once
