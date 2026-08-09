@@ -8137,10 +8137,34 @@ public enum MyWatch: AccessLedger {
               and ui.index('if (mode === "full") cm.refresh();')
                   > ui.index("if (!readable.length && seamRows.length)")
               # and the door's line jump rides that same measured frame: scrolled
-              # earlier, the editor has no height yet and the line lands short
-              and "if (doorLine) reveal(doorLine);" in ui
-              and ui.index("if (doorLine) reveal(doorLine);")
-                  > ui.index('if (mode === "full") cm.refresh();')))
+              # earlier, the editor has no height yet and the line lands short.
+              # A door that names its view keeps it, and in Bare the same line
+              # brings its own record into sight instead of switching surfaces
+              and "if (doorLine && !doorView) reveal(doorLine);" in ui
+              and ui.index("if (doorLine && !doorView) reveal(doorLine);")
+                  > ui.index('if (mode === "full") cm.refresh();')
+              and 'owner.scrollIntoView({ block: "center" });' in ui))
+
+    # ── AND THE FIRST SURFACE IS THE RECORD, THE LAST IS THE SWIFT. A reader
+    # arrives for what the world says, not for the ceremony it is written in, so
+    # the switch reads Bare, Table, Full in that order and the page opens on
+    # Bare. The Swift is the last tab and not a secret: it is the one source
+    # under all three, and `Full` is one click from every one of them.
+    _seg = re.search(r'id="view-seg">(.*?)</span>', ui, re.S).group(1)
+    S.append(("the bench opens on the record, and the swift is the last tab",
+              [m for m in re.findall(r'data-m="(\w+)"', _seg)] == ["bare", "table", "full"]
+              and re.search(r'<button class="on" data-m="bare">', _seg)
+              and 'let mode = "bare";' in ui
+              # and a door may name its view, which is how the cover's picture
+              # is taken in the one the bench opens on
+              and 'const askedView = new URLSearchParams(location.search).get("view");' in ui
+              and 'if (["bare", "table", "full"].includes(askedView)) setMode(askedView);' in ui
+              # the shot is taken through that door, so the picture and the page
+              # cannot drift apart about which surface a reader meets
+              and "view=bare" in open(os.path.join(HERE, "bin", "shoot-bench.sh"),
+                                      encoding="utf-8").read()
+              and "view=bare" in open(os.path.join(HERE, "docs", "bench.png.from"),
+                                      encoding="utf-8").read()))
 
     # ── AND THE ADDRESS IS A DOOR. The bar reads the address the verdicts
     # speak, `?f=file` or `?f=file:line`, and opens there; every open file

@@ -1,8 +1,9 @@
 <!-- gate ui — the world bench, v2: the playground's shell, faithfully.
      CodeMirror editor with declared-name highlighting; the Code · Table
      surface switch (Table projects the world as sortable relations, click a
-     name to jump); Full · Bare (the same editor, ceremony collapsed from
-     view — full Swift, fully editable); a draggable file rail (the declared
+     name to jump); Bare · Table · Full, in that order and opening on Bare:
+     the record without ceremony is what a reader came for, and the full
+     Swift is a tab away, not a secret; a draggable file rail (the declared
      layout); the verdict docked at the bottom, Xcode-style; cross-file
      judgement over unsaved text. -->
 <meta charset="utf-8"><title>gate · world bench</title>
@@ -443,7 +444,7 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 <div id="main">
   <div id="bar">
     <span class="seg" id="nav-seg"><button id="nav-back" disabled>&lsaquo;</button><button id="nav-fwd" disabled>&rsaquo;</button></span>
-    <span class="seg" id="view-seg"><button class="on" data-m="full">Full</button><button data-m="bare">Bare</button><button data-m="table">Table</button></span>
+    <span class="seg" id="view-seg"><button class="on" data-m="bare">Bare</button><button data-m="table">Table</button><button data-m="full">Full</button></span>
     <b id="fname" class="fact">gate.swift</b>
     <button id="keys-btn" title="Keyboard shortcuts">?</button>
     <span id="gitstate" class="observed" title="Edits go straight to the file on disk. gate keeps no state of its own: commit or discard with git."></span>
@@ -780,7 +781,7 @@ let files = [], active = "", personalFile = null, personalEmpty = false, viewing
 // how each file asks to be first met, said in its own head line. A letter
 // opened in Full reads as code, and a rule about how much prose a file holds
 // would be a guess wearing a threshold — so the author says it, in their file.
-let opensAs = {};
+let opensAs = {}, doorView = null;
 // the sides of a seam this layout declares. Not bench files — their court is
 // `gate seam`, and one swept into the judged list broke a world once — but they
 // are rows of a document open on this screen, and a name the panel prints and
@@ -3275,7 +3276,12 @@ function bareForm(parsed, text) {
     items.sort((a, b) => a.line - b.line);
     // each item is a block of its own, so the gap between them is a declared
     // length rather than whatever line-height the font happens to carry
-    return items.map(i => '<span class="rec">' + (i.note || "") + i.block.join("\n") + "</span>").join("")
+    // ── AND A RECORD SAYS WHICH LINE IT IS. A door may name a line and this
+    // view, and without the number on the block there was nothing to bring into
+    // sight: the refusal was named in the bar at the bottom while the record it
+    // is about sat below the fold.
+    return items.map(i => '<span class="rec" data-line="' + i.line + '">'
+                     + (i.note || "") + i.block.join("\n") + "</span>").join("")
         + (reading() ? "" : '<span class="add caption" data-add-record="1">+ add record</span>');
 }
 // one delegated handler: a name in the bare view jumps to its declaration
@@ -3770,13 +3776,22 @@ buildRail();
         // `file` or `file:line`, so a printed refusal pastes straight into the
         // bar. A name the world does not have falls to the first file, and the
         // address corrects itself to what actually opened.
+        // ── AND A DOOR MAY NAME ITS VIEW. The address bar is the door, and it
+        // could name a file and a line but never which of the three surfaces to
+        // open in: a link to a refusal always landed in Full, so the picture on
+        // the cover, and any link anybody shares, showed the ceremony rather
+        // than the record. `view=bare|table|full` names it, and a line asked
+        // for in Bare marks its record instead of selecting its text.
+        const askedView = new URLSearchParams(location.search).get("view");
         const asked = new URLSearchParams(location.search).get("f") || "";
         const askedLine = asked.match(/:(\d+)$/);
         const askedFile = askedLine ? asked.slice(0, askedLine.index) : asked;
         const first = files.includes(askedFile) ? askedFile : (files[0] || "gate.swift");
         if (opensAs[first]) setMode(opensAs[first]);
         await loadFile(first);
+        if (["bare", "table", "full"].includes(askedView)) setMode(askedView);
         if (first === askedFile && askedLine) doorLine = +askedLine[1];
+        doorView = askedView;
     }
     // ── AND THE EDITOR IS MEASURED ONCE THE PAGE HAS A LAYOUT. CodeMirror
     // measures itself when it is built, and it is built while the rail is still
@@ -3791,7 +3806,15 @@ buildRail();
     // the fold
     requestAnimationFrame(() => {
         if (mode === "full") cm.refresh();
-        if (doorLine) reveal(doorLine);
+        // a door that named its view keeps it: revealing a line means Full,
+        // and the reader asked for the record, not the text under it. In Bare
+        // the same line brings its own record into sight instead.
+        if (doorLine && !doorView) reveal(doorLine);
+        else if (doorLine && mode === "bare") {
+            const blocks = [...document.querySelectorAll("#bare .rec[data-line]")];
+            const owner = blocks.filter(b => +b.dataset.line <= doorLine).pop();
+            if (owner) owner.scrollIntoView({ block: "center" });
+        }
     });
 })();
 

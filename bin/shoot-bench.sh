@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # The cover's picture of the bench, taken the same way every time: a fresh
 # demo world, `gate serve` on a free port, one headless Chrome shot of the
-# door /ui?f=ownership.swift:89 - the file and line of the demo's one
-# refusal. Beside the image it writes docs/bench.png.from with the sha256
+# door /?f=ownership.swift:89&view=bare - the file and line of the demo's
+# one refusal, in the view the bench opens on: the record without ceremony,
+# with the refusing rows marked where they stand. The full Swift is a tab
+# away in the same picture, which is the point being made. Beside the image it writes docs/bench.png.from with the sha256
 # of ui.html as it was in front of the camera: the battery holds that hash
 # to the ui.html in the working copy, so a picture of a page that no
 # longer exists goes red there, and running this script is the whole fix.
@@ -55,7 +57,7 @@ SHOT_ERR="$(mktemp)"
 if ! "$CHROME" --headless --disable-gpu --hide-scrollbars \
     --window-size=1280,800 --force-device-scale-factor=2 --virtual-time-budget=4000 \
     --screenshot="$HERE/docs/bench.png" \
-    "http://127.0.0.1:$PORT/ui?f=ownership.swift:89" 2>"$SHOT_ERR"; then
+    "http://127.0.0.1:$PORT/?f=ownership.swift:89&view=bare" 2>"$SHOT_ERR"; then
     echo "shoot-bench: the camera refused. What it said:" >&2
     tail -5 "$SHOT_ERR" >&2
     rm -f "$SHOT_ERR"
@@ -86,7 +88,7 @@ here = sys.argv[1]
 h = hashlib.sha256(open(os.path.join(here, "web", "ui.html"), "rb").read()).hexdigest()
 open(os.path.join(here, "docs", "bench.png.from"), "w").write(
     "web/ui.html sha256:" + h + "\n"
-    "door /ui?f=ownership.swift:89 over `gate demo`, 1280x800 at 2x\n"
+    "door /?f=ownership.swift:89&view=bare over `gate demo`, 1280x800 at 2x\n"
     "retake: bash bin/shoot-bench.sh\n")
 print("docs/bench.png over web/ui.html", h[:12])
 EOF
