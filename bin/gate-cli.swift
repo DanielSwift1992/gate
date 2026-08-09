@@ -2462,16 +2462,34 @@ func floatRepr(_ s: String) -> String {
     return String(d)
 }
 
-func statusDoor(_ asJson: Bool) -> Never {
-    // ── THE DOOR THE BATTERY OPENS, and no argv a person types: the whole
-    // status answer, byte for byte against the other carrier on the worlds the
-    // battery keeps. The verb itself moves with the asking pack, because the
-    // tables bootstrap (`ensure_world`, python's `cmd_import`) has not moved:
-    // this door reads worlds, it does not seed them.
+// the whole status answer, assembled once and returned: the door below prints
+// it, and the verbs that ask about a world (`badge` today, its neighbours next)
+// take their counts from the verb that owns them rather than counting again.
+// Every field here is one the door already printed, and the split moves no byte.
+struct StatusAnswer {
+    var noWorld = false
+    var judged: [String] = []
+    var refusals: [(address: String, claim: String)] = []
+    var judgeMs: String? = nil
+    var wallMs: Double = 0
+    var world: [String]? = nil          // declarations, lookups, premises
+    var whereSize: [String: Int] = [:]
+    var next = ""
+    var then = ""
+    var verdict: String { noWorld ? "no world here" : (refusals.isEmpty ? "holds" : "refused") }
+}
+
+func statusAnswer() -> StatusAnswer {
+    // ── THE ANSWER THE BATTERY OPENS THROUGH A DOOR, and no argv a person
+    // types: byte for byte against the other carrier on the worlds the battery
+    // keeps. The verb itself moves with the asking pack, because the tables
+    // bootstrap (`ensure_world`, python's `cmd_import`) has not moved: this
+    // reads worlds, it does not seed them.
     loadStatusShelf()
     let w = discoverWorld()
     let files = worldFilesOf(w)
     let here = FileManager.default.currentDirectoryPath
+    var answer = StatusAnswer()
     if files.isEmpty && (w.layout?.rows.isEmpty ?? true) {
         // no world here: the rung the reader is standing on, chosen by what is
         // actually in the folder
@@ -2492,23 +2510,10 @@ func statusDoor(_ asJson: Bool) -> Never {
             + "`owner,zone` are the rest"
             : "run `gate demo` for a repository with one, or drop your own tables "
             + "into tables/ and run gate status again"
-        if asJson {
-            var pairs: [(String, StatusJSON)] = [
-                ("command", .text("status")),
-                ("verdict", .text("no world here")),
-                ("refusals", .list([])),
-                ("next", .text(next)),
-                ("then", .text(then)),
-                ("mutates", .raw("false")),
-            ]
-            if let ready = commandIn(next) ?? commandIn(then) {
-                pairs.append(("command_to_run", .text(ready)))
-            }
-            out(statusDumps(.object(pairs), 0) + "\n")
-        } else {
-            out("status: no world here\n  next: \(next)\n  then: \(then)\n")
-        }
-        exit(0)
+        answer.noWorld = true
+        answer.next = next
+        answer.then = then
+        return answer
     }
     let t0 = Date()
     let raw = courtSays(files)
@@ -2539,9 +2544,41 @@ func statusDoor(_ asJson: Bool) -> Never {
     if judged.isEmpty {
         judged = Set((w.layout?.rows ?? []).filter { $0.role == "forms" }.map { $0.path }).sorted()
     }
-    let verdict = refusals.isEmpty ? "holds" : "refused"
-    let worldM = matches("(\\d+) declarations · (\\d+) lookups · (\\d+) premises", raw).first
-    let next = nextRung(w, !refusals.isEmpty)
+    answer.judged = judged
+    answer.refusals = refusals
+    answer.judgeMs = times.last
+    answer.wallMs = wallMs
+    answer.world = matches("(\\d+) declarations · (\\d+) lookups · (\\d+) premises", raw).first
+    answer.whereSize = whereSize
+    answer.next = nextRung(w, !refusals.isEmpty)
+    return answer
+}
+
+// the door: it prints what the answer above assembled, and decides nothing
+func statusDoor(_ asJson: Bool) -> Never {
+    let a = statusAnswer()
+    if a.noWorld {
+        if asJson {
+            var pairs: [(String, StatusJSON)] = [
+                ("command", .text("status")),
+                ("verdict", .text("no world here")),
+                ("refusals", .list([])),
+                ("next", .text(a.next)),
+                ("then", .text(a.then)),
+                ("mutates", .raw("false")),
+            ]
+            if let ready = commandIn(a.next) ?? commandIn(a.then) {
+                pairs.append(("command_to_run", .text(ready)))
+            }
+            out(statusDumps(.object(pairs), 0) + "\n")
+        } else {
+            out("status: no world here\n  next: \(a.next)\n  then: \(a.then)\n")
+        }
+        exit(0)
+    }
+    let (judged, refusals, whereSize) = (a.judged, a.refusals, a.whereSize)
+    let (verdict, worldM, next, times) = (a.verdict, a.world, a.next, a.judgeMs)
+    let wallMs = a.wallMs
     if asJson {
         var pairs: [(String, StatusJSON)] = [
             ("command", .text("status")),
@@ -2550,7 +2587,7 @@ func statusDoor(_ asJson: Bool) -> Never {
             ("verdict", .text(verdict)),
             ("refusals", .list(refusals.map {
                 .object([("address", .text($0.address)), ("claim", .text($0.claim))]) })),
-            ("judge_ms", times.last.map { .raw(floatRepr($0)) } ?? .null),
+            ("judge_ms", times.map { .raw(floatRepr($0)) } ?? .null),
             ("wall_ms", .raw(String(wallMs))),
             ("mutates", .raw("false")),
         ]
@@ -2584,7 +2621,7 @@ func statusDoor(_ asJson: Bool) -> Never {
                 tail.append("nothing claimed here yet, so nothing was checked")
             }
         }
-        if let ms = times.last { tail.append(floatRepr(ms) + " ms") }
+        if let ms = times { tail.append(floatRepr(ms) + " ms") }
         var lines = ["status: " + head + (tail.isEmpty ? "" : " · " + tail.joined(separator: " · "))]
         for r in refusals { lines.append("  \(r.address) · \(r.claim)") }
         lines.append("  next: " + next)
