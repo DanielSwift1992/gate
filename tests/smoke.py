@@ -6845,6 +6845,49 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                              capture_output=True, env={**os.environ, "GATE_CLI": _cli_bin})
         S.append(("and refuse an absent page with one sentence and one exit code",
                   _se.stderr == _pe.stderr and _se.returncode == _pe.returncode == 1))
+        # ── AND THE ONE WRITING VERB THIS VEIN CARRIES WRITES THE SAME BYTES.
+        # `aside` is the first carried verb that changes a file, so parity is not
+        # only what the two say but what they leave on disk: the divergences you
+        # declare, in the order they were declared, with a row somebody else put
+        # there travelling unchanged. A file rewritten in a different order every
+        # run is a diff nobody can read.
+        _aw = []
+        for _tag, _env in (("py", "off"), ("sw", _cli_bin)):
+            _ad = os.path.join(tmp, "aside-" + _tag)
+            shutil.rmtree(_ad, ignore_errors=True)
+            os.makedirs(_ad)
+            subprocess.run(["git", "init", "-q", "-b", "main", _ad], capture_output=True)
+            subprocess.run(["git", "-C", _ad, "config", "user.name", "A Person"],
+                           capture_output=True)
+            with open(os.path.join(_ad, "known.json"), "w") as _f:
+                json.dump({"diverges": [
+                    {"route": "/messages", "field": "sendAt",
+                     "because": "OLD-1", "declared_by": "x"},
+                    {"route": "/keep", "field": "me", "because": "KEEP", "declared_by": "y"}]},
+                    _f, indent=1)
+            _said = []
+            for _argv in (["aside", "/messages", "sendAt", "--because", "PROJ-9"],
+                          ["aside", "/orders", "total", "--because", "REL-2", "--by", "sdk"],
+                          ["aside", "/messages", "sendAt", "--because", "PROJ-10", "--json"]):
+                _r7 = subprocess.run([sys.executable, GATE, *_argv], cwd=_ad, text=True,
+                                     capture_output=True, timeout=180,
+                                     env={**os.environ, "GATE_CLI": _env})
+                _said.append((_r7.stdout, _r7.stderr, _r7.returncode))
+            _aw.append((_said, open(os.path.join(_ad, "known.json"), encoding="utf-8").read()))
+        if _aw[0] != _aw[1]:
+            print("   the two carriers set aside differently:",
+                  "words" if _aw[0][0] != _aw[1][0] else "the file they wrote")
+        S.append(("the carried writing verb leaves the same bytes on both carriers",
+                  _aw[0] == _aw[1]
+                  # the row nobody touched is still there, and the one said twice
+                  # is replaced rather than piled up
+                  and json.loads(_aw[0][1])["diverges"] == [
+                      {"route": "/keep", "field": "me", "because": "KEEP", "declared_by": "y"},
+                      {"route": "/orders", "field": "total", "because": "REL-2",
+                       "declared_by": "sdk"},
+                      {"route": "/messages", "field": "sendAt", "because": "PROJ-10",
+                       "declared_by": "A Person"}]))
+
         # ── AND A VEIN IS A PREFIX, SO A VERB MOVES WHOLE. The ledger said
         # `stdlib show` while the verb also answers `stdlib materialize`, which
         # writes a file: half a verb on the list hands this binary an argv it
@@ -6852,7 +6895,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         # verb now, and the parity below walks all three of its answers.
         S.append(("the strangler ledger names a verb, not half of one",
                   subprocess.run([_cli_bin, "--carries"], capture_output=True, text=True)
-                  .stdout.split() == ["stdlib", "export", "seam", "log"]))
+                  .stdout.split() == ["stdlib", "export", "seam", "log", "aside"]))
         # ── AND THE LEDGER IS READ AGAINST THE ROAD IT IS WALKING. The strangler
         # has a length and a position, and both were feelings: the list of moved
         # veins lived in the binary and the list of verbs lived in the python
@@ -7023,7 +7066,8 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                    ["stdlib", "show", "verbs", "extra"], ["stdlib", "nosuch"],
                    ["export", "nosuch.swift", "-o", "a.csv", "b.csv"],
                    ["export", "gate.swift"], ["seam", "a.swift"], ["seam", "a.swift", "b.swift"],
-                   ["log"], ["log", "--json"], ["log", "--wrold"], ["log", "1", "all"]]
+                   ["log"], ["log", "--json"], ["log", "--wrold"], ["log", "1", "all"],
+                   ["aside"], ["aside", "--json"], ["aside", "/r"], ["aside", "/r", "f"]]
         _sd2 = os.path.join(tmp, "ledger-walk")
         os.makedirs(_sd2, exist_ok=True)
         _apart2 = []
@@ -7041,14 +7085,63 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         if _apart2:
             print("   the two CLIs answer apart on:", _apart2[:4])
         S.append(("a carried prefix answers alike on the argv nobody means to type",
-                  _apart2 == [] and len(_shapes) == 13
+                  _apart2 == [] and len(_shapes) == 17
                   # and none of them is a stack trace on either side
                   and not any(b"Traceback" in subprocess.run(
                       [sys.executable, GATE, *_a], cwd=_sd2, capture_output=True,
                       env={**os.environ, "GATE_CLI": "off"}).stderr for _a in _shapes)))
-        S.append(("the ledger names verbs the usage offers, 4 of 27 carried",
+        # ── AND THE RATCHET PRINTS THE APPROACH, NOT ONLY THE COUNT. Four of
+        # twenty-seven is a score; what a reader of this run wants is the road.
+        # Computed from the source rather than written down: for each verb, what
+        # its implementation reaches. A verb that reaches the court over a world
+        # waits on the status core; one that reaches the node parse waits on a
+        # reading door in the corpus; the rest wait only on the reader the vein
+        # already has. Derived every run, so it cannot go stale the way a
+        # hand-kept map does.
+        _defs = {n.name: n for n in ast.walk(ast.parse(open(GATE, encoding="utf-8").read()))
+                 if isinstance(n, ast.FunctionDef)}
+        def _reaches(name, seen=None):
+            seen = seen or set()
+            # the dispatcher is not walked through: every verb is reachable from
+            # it, so expanding it says every verb needs everything. A verb that
+            # calls it is asking another verb, which is its own answer.
+            if name in seen or name not in _defs or name == "dispatch":
+                return set()
+            seen.add(name)
+            calls, node = set(), _defs[name]
+            for _c in ast.walk(node):
+                if isinstance(_c, ast.Call) and isinstance(_c.func, ast.Name):
+                    calls.add(_c.func.id)
+            out = set(calls)
+            for _c in calls:
+                out |= _reaches(_c, seen)
+            return out
+        _roads = {}
+        for _v in sorted(_verbs):
+            _fn = "cmd_" + _v.replace("-", "_")
+            _needs = _reaches(_fn) if _fn in _defs else set()
+            _roads[_v] = ("carried" if _v in _ledger else
+                          "the bench" if _v == "serve" else
+                          "the status core" if _v in ("status", "fsck") else
+                          # a verb whose body is written in the dispatcher itself
+                          # has no function to walk; it is read by hand or moved
+                          # with the core it sits in
+                          "in the dispatcher" if _fn not in _defs else
+                          "the parse" if "world_parse" in _needs else
+                          "asks another verb" if "dispatch" in _needs else
+                          "the status core" if "judge_call" in _needs else
+                          "the world reader")
+        _by_road = {}
+        for _v, _r in _roads.items():
+            _by_road.setdefault(_r, []).append(_v)
+        print("   the strangler's roads: "
+              + " · ".join(f"{_r}: {len(_vs)}" for _r, _vs in sorted(_by_road.items())))
+        for _r in sorted(_by_road):
+            if _r != "carried":
+                print(f"     {_r:18} {' '.join(sorted(_by_road[_r]))[:88]}")
+        S.append(("the ledger names verbs the usage offers, 5 of 27 carried",
                   set(_ledger) <= _verbs
-                  and len(_ledger) == 4
+                  and len(_ledger) == 5
                   and len(_verbs) == 27
                   # and a name on the ledger is a whole verb: a prefix claims
                   # everything under it, so half a verb would take argv nobody

@@ -65,7 +65,7 @@ if args.contains("--out") && !args.contains("-o") {
 // `stdlib show` to the verb: half a verb on the list would hand this binary an
 // argv it does not answer, and the python side would never see it.
 if args == ["--carries"] {
-    out("stdlib\nexport\nseam\nlog\n")
+    out("stdlib\nexport\nseam\nlog\naside\n")
     exit(0)
 }
 
@@ -463,6 +463,118 @@ func turned(_ surface: String, _ base: String, _ files: [String]) -> [String: St
         }
     }
     return out
+}
+
+// ── aside ROUTE FIELD --because KEY: a divergence somebody means, said out loud
+//
+// The only writing verb this vein carries, and it writes one file: the
+// divergences you declare, in the order they were declared. A record read back
+// keeps its keys and their order, because a file rewritten in a different order
+// every run is a diff nobody can read and a pair nobody can review.
+func asideJSON(_ rows: [[(String, String)]]) -> String {
+    // python writes this with `json.dump(..., indent=1)`, and this is that shape
+    // written out: one space of indent, keys in the order they were set
+    if rows.isEmpty { return "{\n \"diverges\": []\n}" }
+    var blocks: [String] = []
+    for r in rows {
+        let inner = r.map { "   " + jsonString($0.0) + ": " + jsonString($0.1) }
+            .joined(separator: ",\n")
+        blocks.append("  {\n" + inner + "\n  }")
+    }
+    return "{\n \"diverges\": [\n" + blocks.joined(separator: ",\n") + "\n ]\n}"
+}
+
+if args.first == "aside" {
+    let rest = Array(args.dropFirst()).filter { $0 != "--json" }
+    let asJson = args.contains("--json")
+    let note = "aside ROUTE FIELD --because KEY [--by WHO] [-o known.json]"
+    let next = "the reason is not optional: name something that can close, such as a ticket, a "
+             + "release. This stands aside only while that is open"
+    if rest.count < 2 || !rest.contains("--because") {
+        // named a route and a field and no reason: half a sentence, and the
+        // nought exit told a script the divergence was set aside
+        if !rest.isEmpty { cannot(note, next) }
+        if asJson {
+            out("{\n  \"command\": \"aside\",\n  \"asks\": true,\n"
+                + "  \"note\": " + jsonString(note) + ",\n"
+                + "  \"next\": " + jsonString(next) + "\n}\n")
+        } else {
+            out("usage: " + note + "\n  next: " + next + "\n")
+        }
+        exit(0)
+    }
+    func after(_ flag: String) -> String? {
+        guard let i = rest.firstIndex(of: flag), i + 1 < rest.count else { return nil }
+        return rest[i + 1]
+    }
+    let route = rest[0], field = rest[1]
+    let because = after("--because") ?? ""
+    let here = FileManager.default.currentDirectoryPath
+    let by = after("--by") ?? {
+        let said = runGit(["config", "user.name"], here)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return said.isEmpty ? "somebody" : said
+    }()
+    let path = after("-o") ?? "known.json"
+    var rows: [[(String, String)]] = []
+    if FileManager.default.fileExists(atPath: path) {
+        let text = theirsText(path, "the divergences you declared")
+        if let data = text.data(using: .utf8),
+           let top = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let said = top["diverges"] as? [[String: Any]] {
+            for d in said {
+                let r = d["route"] as? String ?? "", f = d["field"] as? String ?? ""
+                if r == route && f == field { continue }
+                // the keys this tool writes, in the order it writes them; a key
+                // somebody else put there travels after them, unchanged
+                var kept: [(String, String)] = []
+                for k in ["route", "field", "because", "declared_by"] where d[k] != nil {
+                    kept.append((k, d[k] as? String ?? ""))
+                }
+                for (k, v) in d where !["route", "field", "because", "declared_by"].contains(k) {
+                    kept.append((k, v as? String ?? ""))
+                }
+                rows.append(kept)
+            }
+        }
+    }
+    rows.append([("route", route), ("field", field),
+                 ("because", because), ("declared_by", by)])
+    let said = asideJSON(rows)
+    do {
+        try said.write(toFile: path, atomically: true, encoding: .utf8)
+    } catch {
+        cannot(path + " cannot be written here: " + error.localizedDescription.lowercased(),
+               "name a path you can write, and this will put the divergences you declare there")
+    }
+    let address = route + " · " + field
+    let noteSaid = by + " says this one is meant, while " + because + " is open. It stands out of "
+                 + "the way until " + because + " closes, and comes back by itself when it does"
+    let nextSaid = "point a tracker export at it — `gate attention … --known " + path
+                 + " --tracker tickets.json`, and the day it closes this returns first"
+    if asJson {
+        var text = "{\n"
+        text += "  \"command\": \"aside\",\n"
+        text += "  \"address\": " + jsonString(address) + ",\n"
+        text += "  \"because\": " + jsonString(because) + ",\n"
+        text += "  \"declared_by\": " + jsonString(by) + ",\n"
+        text += "  \"wrote\": " + jsonString(path) + ",\n"
+        text += "  \"standing\": " + String(rows.count) + ",\n"
+        text += "  \"note\": " + jsonString(noteSaid) + ",\n"
+        text += "  \"next\": " + jsonString(nextSaid) + ",\n"
+        text += "  \"mutates\": true"
+        if let ready = commandIn(nextSaid) {
+            text += ",\n  \"command_to_run\": " + jsonString(ready)
+        }
+        out(text + "\n}\n")
+        exit(0)
+    }
+    // the step is printed by the other carrier's own common tail, under every
+    // answer it gives: a verb that ends without one is a verb that stops short
+    out("aside: " + address + " · while " + because + " is open · said by " + by
+        + " · " + String(rows.count) + " standing\n  note: " + noteSaid
+        + "\n  next: " + nextSaid + "\n")
+    exit(0)
 }
 
 // ── log: the repository's own history, projected and never judged ──
