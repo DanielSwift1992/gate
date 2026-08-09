@@ -465,23 +465,225 @@ func turned(_ surface: String, _ base: String, _ files: [String]) -> [String: St
     return out
 }
 
+// ── JSON, READ WITH ITS ORDER KEPT. Foundation's reader hands back a
+// dictionary, and a dictionary has no order: a file rewritten through it comes
+// out with its keys shuffled, which is a diff nobody can read and a review
+// nobody can do. The other carrier keeps whatever order the file had, because
+// python's own reader does. So this one does too: an object is a list of pairs,
+// and a number keeps the text it was written as, so what goes back out is what
+// came in unless something meant to change it.
+indirect enum Said {
+    case text(String), number(String), yes, no, nothing
+    case list([Said])
+    case object([(String, Said)])
+
+    var asText: String? { if case .text(let s) = self { return s }; return nil }
+    var asList: [Said]? { if case .list(let l) = self { return l }; return nil }
+    var asObject: [(String, Said)]? { if case .object(let o) = self { return o }; return nil }
+    func at(_ key: String) -> Said? { asObject?.first(where: { $0.0 == key })?.1 }
+}
+
+func readSaid(_ text: String) -> Said? {
+    var chars = Array(text.unicodeScalars)
+    var i = 0
+
+    func skip() { while i < chars.count, chars[i] == " " || chars[i] == "\n"
+                        || chars[i] == "\t" || chars[i] == "\r" { i += 1 } }
+
+    func string() -> String? {
+        guard i < chars.count, chars[i] == "\"" else { return nil }
+        i += 1
+        var out = ""
+        while i < chars.count {
+            let c = chars[i]
+            if c == "\\" , i + 1 < chars.count {
+                let e = chars[i + 1]
+                i += 2
+                switch e {
+                case "n": out.append("\n")
+                case "t": out.append("\t")
+                case "r": out.append("\r")
+                case "b": out.append("\u{08}")
+                case "f": out.append("\u{0C}")
+                case "u":
+                    let hex = String(String.UnicodeScalarView(chars[i..<min(i + 4, chars.count)]))
+                    i += 4
+                    if let n = UInt32(hex, radix: 16), let scalar = Unicode.Scalar(n) {
+                        out.unicodeScalars.append(scalar)
+                    }
+                default: out.unicodeScalars.append(e)
+                }
+                continue
+            }
+            if c == "\"" { i += 1; return out }
+            out.unicodeScalars.append(c)
+            i += 1
+        }
+        return nil
+    }
+
+    func value() -> Said? {
+        skip()
+        guard i < chars.count else { return nil }
+        switch chars[i] {
+        case "\"":
+            return string().map { Said.text($0) }
+        case "{":
+            i += 1
+            var pairs: [(String, Said)] = []
+            skip()
+            if i < chars.count, chars[i] == "}" { i += 1; return .object(pairs) }
+            while i < chars.count {
+                skip()
+                guard let k = string() else { return nil }
+                skip()
+                guard i < chars.count, chars[i] == ":" else { return nil }
+                i += 1
+                guard let v = value() else { return nil }
+                pairs.append((k, v))
+                skip()
+                if i < chars.count, chars[i] == "," { i += 1; continue }
+                if i < chars.count, chars[i] == "}" { i += 1; return .object(pairs) }
+                return nil
+            }
+            return nil
+        case "[":
+            i += 1
+            var items: [Said] = []
+            skip()
+            if i < chars.count, chars[i] == "]" { i += 1; return .list(items) }
+            while i < chars.count {
+                guard let v = value() else { return nil }
+                items.append(v)
+                skip()
+                if i < chars.count, chars[i] == "," { i += 1; continue }
+                if i < chars.count, chars[i] == "]" { i += 1; return .list(items) }
+                return nil
+            }
+            return nil
+        case "t":
+            i += 4; return .yes
+        case "f":
+            i += 5; return .no
+        case "n":
+            i += 4; return .nothing
+        default:
+            var raw = ""
+            while i < chars.count, "0123456789+-.eE".unicodeScalars.contains(chars[i]) {
+                raw.unicodeScalars.append(chars[i]); i += 1
+            }
+            return raw.isEmpty ? nil : .number(raw)
+        }
+    }
+    let said = value()
+    skip()
+    return i >= chars.count ? said : said
+}
+
 // ── aside ROUTE FIELD --because KEY: a divergence somebody means, said out loud
 //
 // The only writing verb this vein carries, and it writes one file: the
 // divergences you declare, in the order they were declared. A record read back
 // keeps its keys and their order, because a file rewritten in a different order
 // every run is a diff nobody can read and a pair nobody can review.
-func asideJSON(_ rows: [[(String, String)]]) -> String {
+func kindOf(_ said: Said) -> String {
+    switch said {
+    case .text: return "str"
+    case .number: return "int"
+    case .yes, .no: return "bool"
+    case .nothing: return "NoneType"
+    case .list: return "list"
+    case .object: return "dict"
+    }
+}
+
+func sameAgain(_ said: Said) -> String {
+    // a value written back the way the other carrier writes it: `json.dumps`
+    // with its own defaults, which is what both the guard's sentence and the
+    // kept top-level keys go through
+    switch said {
+    case .text(let s): return asciiJSONString(s)
+    case .number(let n): return n
+    case .yes: return "true"
+    case .no: return "false"
+    case .nothing: return "null"
+    case .list(let items): return "[" + items.map(sameAgain).joined(separator: ", ") + "]"
+    case .object(let pairs):
+        return "{" + pairs.map { asciiJSONString($0.0) + ": " + sameAgain($0.1) }
+            .joined(separator: ", ") + "}"
+    }
+}
+
+func laidOut(_ said: Said, _ depth: Int) -> String {
+    // python's `json.dump(..., indent=1)`, which is what writes this file on the
+    // other carrier: a container opens, its items sit one deeper, and the
+    // closing bracket comes back to the container's own depth. The compact form
+    // above is `json.dumps(x)` with no indent, which is what a SENTENCE about a
+    // value uses; a file and a sentence are not the same channel.
+    let pad = String(repeating: " ", count: depth + 1)
+    let close = String(repeating: " ", count: depth)
+    switch said {
+    case .list(let items):
+        if items.isEmpty { return "[]" }
+        return "[\n" + items.map { pad + laidOut($0, depth + 1) }.joined(separator: ",\n")
+             + "\n" + close + "]"
+    case .object(let pairs):
+        if pairs.isEmpty { return "{}" }
+        return "{\n" + pairs.map { pad + asciiJSONString($0.0) + ": " + laidOut($0.1, depth + 1) }
+            .joined(separator: ",\n") + "\n" + close + "}"
+    default:
+        return sameAgain(said)
+    }
+}
+
+func asciiJSONString(_ s: String) -> String {
+    // the file this verb writes goes through python's `json.dump` on the other
+    // carrier, whose default escapes everything above ascii; the ANSWER goes
+    // through `json.dumps(..., ensure_ascii=False)` and does not. One tool, two
+    // channels, and the bytes have to match on each.
+    var out = "\""
+    for scalar in s.unicodeScalars {
+        switch scalar {
+        case "\"": out += "\\\""
+        case "\\": out += "\\\\"
+        case "\n": out += "\\n"
+        case "\t": out += "\\t"
+        case "\r": out += "\\r"
+        default:
+            if scalar.value < 0x20 {
+                out += String(format: "\\u%04x", scalar.value)
+            } else if scalar.value < 0x80 {
+                out.unicodeScalars.append(scalar)
+            } else if scalar.value > 0xFFFF {
+                let v = scalar.value - 0x10000
+                out += String(format: "\\u%04x\\u%04x", 0xD800 + (v >> 10), 0xDC00 + (v & 0x3FF))
+            } else {
+                out += String(format: "\\u%04x", scalar.value)
+            }
+        }
+    }
+    return out + "\""
+}
+
+func asideJSON(_ rows: [[(String, String)]], _ others: [(String, String)]) -> String {
     // python writes this with `json.dump(..., indent=1)`, and this is that shape
     // written out: one space of indent, keys in the order they were set
-    if rows.isEmpty { return "{\n \"diverges\": []\n}" }
+    // whatever else the file said at its top level travels with it, in the order
+    // it was written: the other carrier keeps those keys because it loads the
+    // whole document and replaces one of them
+    var head = others.map { " " + asciiJSONString($0.0) + ": " + $0.1 }
+    if rows.isEmpty {
+        head.append(" \"diverges\": []")
+        return "{\n" + head.joined(separator: ",\n") + "\n}"
+    }
     var blocks: [String] = []
     for r in rows {
-        let inner = r.map { "   " + jsonString($0.0) + ": " + jsonString($0.1) }
+        let inner = r.map { "   " + asciiJSONString($0.0) + ": " + asciiJSONString($0.1) }
             .joined(separator: ",\n")
         blocks.append("  {\n" + inner + "\n  }")
     }
-    return "{\n \"diverges\": [\n" + blocks.joined(separator: ",\n") + "\n ]\n}"
+    head.append(" \"diverges\": [\n" + blocks.joined(separator: ",\n") + "\n ]")
+    return "{\n" + head.joined(separator: ",\n") + "\n}"
 }
 
 if args.first == "aside" {
@@ -517,30 +719,41 @@ if args.first == "aside" {
     }()
     let path = after("-o") ?? "known.json"
     var rows: [[(String, String)]] = []
+    var others: [(String, String)] = []
     if FileManager.default.fileExists(atPath: path) {
         let text = theirsText(path, "the divergences you declared")
-        if let data = text.data(using: .utf8),
-           let top = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-           let said = top["diverges"] as? [[String: Any]] {
+        if let top = readSaid(text), let pairsTop = top.asObject {
+            // every other key the file states, kept as it was written
+            for (k, v) in pairsTop where k != "diverges" {
+                others.append((k, laidOut(v, 1)))
+            }
+        }
+        if let top = readSaid(text), let held = top.at("diverges"), held.asList == nil {
+            cannot(path + " states `diverges` as " + kindOf(held)
+                   + ", and it is a list of records",
+                   "each divergence is an object with a route and a field; fix the file, or move "
+                   + "it aside and let this write a new one")
+        }
+        if let top = readSaid(text), let said = top.at("diverges")?.asList {
             for d in said {
-                let r = d["route"] as? String ?? "", f = d["field"] as? String ?? ""
+                guard let pairs = d.asObject else {
+                    cannot(path + " holds a divergence that is not a record: " + sameAgain(d).prefix(40),
+                           "each divergence is an object with a route and a field; fix that line, "
+                           + "or move the file aside and let this write a new one")
+                }
+                let r = pairs.first(where: { $0.0 == "route" })?.1.asText ?? ""
+                let f = pairs.first(where: { $0.0 == "field" })?.1.asText ?? ""
                 if r == route && f == field { continue }
-                // the keys this tool writes, in the order it writes them; a key
-                // somebody else put there travels after them, unchanged
-                var kept: [(String, String)] = []
-                for k in ["route", "field", "because", "declared_by"] where d[k] != nil {
-                    kept.append((k, d[k] as? String ?? ""))
-                }
-                for (k, v) in d where !["route", "field", "because", "declared_by"].contains(k) {
-                    kept.append((k, v as? String ?? ""))
-                }
-                rows.append(kept)
+                // every key the row had, in the order the file had them: the
+                // other carrier keeps that order because its reader does, and a
+                // row rewritten in another order is a diff nobody can read
+                rows.append(pairs.map { ($0.0, $0.1.asText ?? "") })
             }
         }
     }
     rows.append([("route", route), ("field", field),
                  ("because", because), ("declared_by", by)])
-    let said = asideJSON(rows)
+    let said = asideJSON(rows, others)
     do {
         try said.write(toFile: path, atomically: true, encoding: .utf8)
     } catch {

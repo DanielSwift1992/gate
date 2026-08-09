@@ -4815,7 +4815,23 @@ def cmd_aside(a):
             known = _json.load(theirs_text(path, "the divergences you declared"))
         except Exception:
             known = {"diverges": []}
-    rows = [d for d in (known.get("diverges") or [])
+    # ── AND A FILE OF THE RIGHT KIND MAY STILL BE THE WRONG SHAPE. This walked
+    # whatever `diverges` held and asked each item for a route, so a list with a
+    # string in it met a person with an AttributeError from inside a list
+    # comprehension. Somebody's file is somebody's file: it is said, not raised,
+    # and never quietly dropped, because rewriting the file without it would
+    # take a line out of their record on their behalf.
+    _said = known.get("diverges")
+    if _said is not None and not isinstance(_said, list):
+        cannot(f"{path} states `diverges` as {type(_said).__name__}, and it is a list of records",
+               "each divergence is an object with a route and a field; fix the file, or move it "
+               "aside and let this write a new one")
+    for _d in (_said or []):
+        if not isinstance(_d, dict):
+            cannot(f"{path} holds a divergence that is not a record: {json.dumps(_d)[:40]}",
+                   "each divergence is an object with a route and a field; fix that line, or "
+                   "move the file aside and let this write a new one")
+    rows = [d for d in (_said or [])
             if not (d.get("route") == route and d.get("field") == field)]
     rows.append({"route": route, "field": field, "because": because, "declared_by": by})
     known["diverges"] = rows

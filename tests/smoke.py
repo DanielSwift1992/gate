@@ -6877,6 +6877,57 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         if _aw[0] != _aw[1]:
             print("   the two carriers set aside differently:",
                   "words" if _aw[0][0] != _aw[1][0] else "the file they wrote")
+        # ── AND THE FILE IT REWRITES KEEPS EVERYTHING IT SAID. Three holes, all
+        # found by handing it files somebody else could plausibly have: the vein
+        # normalised each row's key order because Foundation's reader hands back
+        # a dictionary and a dictionary has no order; it dropped the file's other
+        # top-level keys; and it wrote non-ascii as itself where the other
+        # carrier's writer escapes it. The vein reads json with its order kept
+        # now, and lays it out the way `json.dump(indent=1)` does. A fourth was
+        # the python side's: a `diverges` list holding anything but records met
+        # a person with an AttributeError from inside a comprehension.
+        _seeds = {
+            "order and an extra key":
+                '{\n "diverges": [\n  {\n   "because": "OLD-1",\n   "route": "/keep",\n'
+                '   "field": "me",\n   "declared_by": "y",\n   "ticket": "T-1"\n  }\n ]\n}',
+            "other keys of every kind":
+                '{"note": "hi", "n": 3, "flag": true, "gone": null, "l": [1, "x"], '
+                '"diverges": []}',
+            "a nested object among them":
+                '{"deep": {"a": [1, {"b": 2}], "c": {}}, "diverges": []}',
+            "not json at all": "this is not json",
+            "a row that is not a record": '{"diverges": ["x"]}',
+            "diverges is not a list": '{"diverges": "nope"}',
+            "unicode and escapes":
+                '{"diverges": [{"route": "/\u043f\u00fc", "field": "f", "because": "\\"q\\"", '
+                '"declared_by": "z"}]}',
+        }
+        _seedapart = []
+        for _label, _seed in _seeds.items():
+            _both = []
+            for _tag, _env in (("py", "off"), ("sw", _cli_bin)):
+                _sd3 = os.path.join(tmp, "aside-seed-" + _tag)
+                shutil.rmtree(_sd3, ignore_errors=True)
+                os.makedirs(_sd3)
+                subprocess.run(["git", "init", "-q", "-b", "main", _sd3], capture_output=True)
+                subprocess.run(["git", "-C", _sd3, "config", "user.name", "A Person"],
+                               capture_output=True)
+                open(os.path.join(_sd3, "known.json"), "w").write(_seed)
+                _r8 = subprocess.run([sys.executable, GATE, "aside", "/new", "f",
+                                      "--because", "X"], cwd=_sd3, capture_output=True,
+                                     text=True, timeout=180,
+                                     env={**os.environ, "GATE_CLI": _env})
+                _both.append((_r8.stdout, _r8.stderr, _r8.returncode,
+                              open(os.path.join(_sd3, "known.json"), encoding="utf-8").read()))
+            if _both[0] != _both[1]:
+                _seedapart.append(_label)
+            if "Traceback" in _both[0][1] + _both[1][1]:
+                _seedapart.append(_label + " (raised)")
+        if _seedapart:
+            print("   a file somebody else wrote is handled apart:", _seedapart[:4])
+        S.append(("the file this verb rewrites keeps everything it said, on both carriers",
+                  _seedapart == []))
+
         S.append(("the carried writing verb leaves the same bytes on both carriers",
                   _aw[0] == _aw[1]
                   # the row nobody touched is still there, and the one said twice
