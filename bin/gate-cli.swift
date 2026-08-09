@@ -580,6 +580,119 @@ func readSaid(_ text: String) -> Said? {
     return i >= chars.count ? said : said
 }
 
+// ── WHAT A CONTRACT DECLARES, read for the one thing a client must agree with:
+// the fields of a request, and the sort of thing each one is. The other carrier
+// reads it in document order, so this one needs the reader above rather than
+// Foundation's: a list of fields whose order changes run to run is a diff.
+let DECLARED: [String: String] = ["string": "Text", "integer": "Count",
+                                  "number": "Count", "boolean": "Flag",
+                                  "array": "Many", "object": "Nested"]
+
+func declaredShape(_ said: Said?) -> String? {
+    guard let said = said else { return nil }
+    if case .list(let items) = said {
+        // two types is the contract leaving it open, and `null` beside one is not
+        let real = items.compactMap { $0.asText }.filter { $0 != "null" }
+        return real.count == 1 ? DECLARED[real[0]] : nil
+    }
+    return said.asText.flatMap { DECLARED[$0] }
+}
+
+struct Field { let route: String; let field: String; let where_: String; let shape: String? }
+
+func spellable(_ name: String) -> Bool {
+    // a name a library could spell: `project_ids` yes, `Parameter1.Name` no,
+    // `StartTime<` no. The wire has a syntax; a vocabulary does not carry it.
+    let pattern = "[A-Za-z_]\\w*(?:-\\w+)*"
+    guard let re = try? NSRegularExpression(pattern: pattern) else { return false }
+    let ns = name as NSString
+    let m = re.firstMatch(in: name, range: NSRange(location: 0, length: ns.length))
+    return m?.range.length == ns.length && m?.range.location == 0
+}
+
+func contractFields(_ spec: Said) -> [Field] {
+    var shelf: [(String, Said)] = spec.at("definitions")?.asObject ?? []
+    if let s = spec.at("components")?.at("schemas")?.asObject { shelf += s }
+    func resolve(_ s: Said) -> Said {
+        if let ref = s.at("$ref")?.asText {
+            let name = ref.components(separatedBy: "/").last ?? ""
+            return shelf.first(where: { $0.0 == name })?.1 ?? .object([])
+        }
+        return s
+    }
+    // what the contract also SENDS BACK: where one shape serves both directions,
+    // its fields say nothing about what a request carries
+    var returned = Set<String>()
+    func gather(_ node: Said?) {
+        guard let node = node else { return }
+        switch node {
+        case .object(let pairs):
+            for (k, v) in pairs {
+                if k == "$ref", let r = v.asText { returned.insert(r) }
+                gather(v)
+            }
+        case .list(let items):
+            for v in items { gather(v) }
+        default: break
+        }
+    }
+    for (_, ops) in spec.at("paths")?.asObject ?? [] {
+        for (_, op) in ops.asObject ?? [] { gather(op.at("responses")) }
+    }
+
+    var out: [Field] = []
+    for (route, ops) in spec.at("paths")?.asObject ?? [] {
+        guard let opPairs = ops.asObject else { continue }
+        let shared = ops.at("parameters")?.asList ?? []
+        for (_, op) in opPairs {
+            guard let _ = op.asObject else { continue }
+            for p in (op.at("parameters")?.asList ?? []) + shared {
+                guard p.asObject != nil, p.at("in")?.asText == "query",
+                      let raw = p.at("name")?.asText, !raw.isEmpty else { continue }
+                let sch = p.at("schema")
+                if let inner = sch.map({ resolve($0) })?.at("properties")?.asObject, !inner.isEmpty {
+                    // a query parameter declared as an object carries its fields
+                    // in its properties; its own name is a wrapper nobody writes
+                    for (nm, pr) in inner.sorted(by: { $0.0 < $1.0 }) {
+                        out.append(Field(route: route, field: nm, where_: "query",
+                                         shape: declaredShape(pr.at("type"))))
+                    }
+                    continue
+                }
+                // `project_ids[]` is how a repeated key is written ON THE WIRE
+                let nm = raw.hasSuffix("[]") ? String(raw.dropLast(2)) : raw
+                if !spellable(nm) { continue }
+                out.append(Field(route: route, field: nm, where_: "query",
+                                 shape: declaredShape(sch?.at("type") ?? p.at("type"))))
+            }
+            let content = op.at("requestBody")?.at("content")
+            var body = content?.at("application/json")?.at("schema")
+            if body == nil {
+                // a form is a request too: the names go on the wire as written
+                for kind in ["application/x-www-form-urlencoded", "multipart/form-data"] {
+                    if let s = content?.at(kind)?.at("schema") { body = s; break }
+                }
+            }
+            if body == nil {
+                // swagger 2.0 puts the body among the parameters
+                for p in op.at("parameters")?.asList ?? [] {
+                    if p.at("in")?.asText == "body", let s = p.at("schema") { body = s; break }
+                }
+            }
+            guard let found = body else { continue }
+            if let ref = found.at("$ref")?.asText, returned.contains(ref) { continue }
+            for (name, prop) in (resolve(found).at("properties")?.asObject ?? [])
+                .sorted(by: { $0.0 < $1.0 }) {
+                if !spellable(name) { continue }
+                if case .yes = prop.at("readOnly") ?? .nothing { continue }
+                out.append(Field(route: route, field: name, where_: "body",
+                                 shape: declaredShape(prop.at("type") ?? resolve(prop).at("type"))))
+            }
+        }
+    }
+    return out
+}
+
 // ── aside ROUTE FIELD --because KEY: a divergence somebody means, said out loud
 //
 // The only writing verb this vein carries, and it writes one file: the
@@ -684,6 +797,31 @@ func asideJSON(_ rows: [[(String, String)]], _ others: [(String, String)]) -> St
     }
     head.append(" \"diverges\": [\n" + blocks.joined(separator: ",\n") + "\n ]")
     return "{\n" + head.joined(separator: ",\n") + "\n}"
+}
+
+// ── A ROAD MAY BE WALKED BEFORE ITS VERB ARRIVES. `contractFields` is the
+// reading `declare` and `drift` will both stand on, and it is here now with
+// nothing routed to it: a door the BATTERY opens, never an argv a person types.
+// The alternative was leaving it in a session's scratch, where it would have
+// died with the session; sleeping code a vector holds is not dead code.
+if args.first == "--contract-fields" {
+    guard args.count > 1 else { cannot("--contract-fields takes a document", "name one") }
+    let text = theirsText(args[1], "an OpenAPI document")
+    guard let spec = readSaid(text) else {
+        cannot(args[1] + " is not the JSON this reads", "point it at an OpenAPI document")
+    }
+    var blocks: [String] = []
+    for f in contractFields(spec) {
+        var one = "  {\n"
+        one += "    \"route\": " + jsonString(f.route) + ",\n"
+        one += "    \"field\": " + jsonString(f.field) + ",\n"
+        one += "    \"where\": " + jsonString(f.where_) + ",\n"
+        one += "    \"shape\": " + (f.shape.map { jsonString($0) } ?? "null") + "\n"
+        one += "  }"
+        blocks.append(one)
+    }
+    out(blocks.isEmpty ? "[]\n" : "[\n" + blocks.joined(separator: ",\n") + "\n]\n")
+    exit(0)
 }
 
 if args.first == "aside" {

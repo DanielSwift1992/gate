@@ -6845,6 +6845,88 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                              capture_output=True, env={**os.environ, "GATE_CLI": _cli_bin})
         S.append(("and refuse an absent page with one sentence and one exit code",
                   _se.stderr == _pe.stderr and _se.returncode == _pe.returncode == 1))
+        # ── AND A ROAD IS HELD BEFORE ITS VERB ARRIVES. `contractFields` is the
+        # reading `declare` and `drift` will both stand on. It is in the vein
+        # with nothing routed to it, behind a door this battery opens and no
+        # argv reaches: sleeping code a vector holds is not dead code, and the
+        # alternative was leaving it in a session's scratch to die with the
+        # session. Held against what the other carrier prints from the same
+        # document: the pairs, their shapes, and their order.
+        _cf = os.path.join(tmp, "contract-road")
+        os.makedirs(_cf, exist_ok=True)
+        _specs = {
+            # every trap the reading knows: a bracketed key, a name no library
+            # can spell, an object parameter that carries its own fields, a form
+            # body, a readOnly field, and a body whose shape is also a response
+            "the whole vocabulary": {"paths": {
+                "/scrape": {"post": {
+                    "parameters": [
+                        {"name": "waitFor", "in": "query", "schema": {"type": "integer"}},
+                        {"name": "ids[]", "in": "query", "schema": {"type": "array"}},
+                        {"name": "StartTime<", "in": "query", "schema": {"type": "string"}},
+                        {"name": "opts", "in": "query", "schema": {
+                            "type": "object",
+                            "properties": {"exclude_fields": {"type": "string"}}}}],
+                    "requestBody": {"content": {"application/json": {"schema": {"properties": {
+                        "url": {"type": "string"},
+                        "log-slow-requests-time-ms": {"type": "integer"},
+                        "Parameter1.Name": {"type": "string"},
+                        "createdAt": {"type": "integer", "readOnly": True}}}}}}}},
+                "/forms": {"post": {"requestBody": {"content": {
+                    "application/x-www-form-urlencoded": {
+                        "schema": {"properties": {"Body": {"type": "string"}}}}}}}},
+                "/echo": {"post": {
+                    "requestBody": {"content": {"application/json": {
+                        "schema": {"$ref": "#/definitions/Thing"}}}},
+                    "responses": {"200": {"schema": {"$ref": "#/definitions/Thing"}}}}}},
+                "definitions": {"Thing": {"properties": {"echoed": {"type": "string"}}}}},
+            # swagger 2.0 puts the body among the parameters
+            "the older spelling": {"paths": {"/v2": {"post": {"parameters": [
+                {"in": "body", "name": "body", "schema": {"$ref": "#/definitions/In"}}]}}},
+                "definitions": {"In": {"properties": {"a": {"type": "string"},
+                                                      "b": {"type": "boolean"}}}}},
+            # a contract that says two types has not said which
+            "a shape left open": {"paths": {"/open": {"post": {"requestBody": {"content": {
+                "application/json": {"schema": {"properties": {
+                    "said": {"type": "string"},
+                    "unsaid": {"type": ["string", "integer"]},
+                    "nullable": {"type": ["string", "null"]}}}}}}}}}},
+            "nothing at all": {"paths": {}},
+        }
+        _road = []
+        for _label, _spec in _specs.items():
+            _sp = os.path.join(_cf, "spec.json")
+            open(_sp, "w").write(json.dumps(_spec))
+            _world = json.loads(subprocess.run(
+                [sys.executable, GATE, "declare", "contract", "spec.json", "--json"],
+                cwd=_cf, capture_output=True, text=True, timeout=180,
+                env={**os.environ, "GATE_CLI": "off"}).stdout or "{}").get("world") or ""
+            _pyf = [(m.group(1), m.group(2), m.group(3)) for m in re.finditer(
+                r"^// (\S+) · (\S+)\npublic enum \S+: Declared \{\n"
+                r"    public typealias Of = (\w+)", _world, re.M)]
+            # the reading returns every field the contract states; `declare`
+            # prints the ones it gave a shape, because a contract that says
+            # `anyOf` has not said which. Like is compared with like: the road
+            # keeps the open ones for `drift`, which dates them.
+            _all = json.loads(subprocess.run(
+                [_cli_bin, "--contract-fields", "spec.json"], cwd=_cf,
+                capture_output=True, text=True, timeout=180).stdout or "[]")
+            _swf = [(f["route"], f["field"], f["shape"]) for f in _all if f["shape"]]
+            if _pyf != _swf:
+                _road.append(f"{_label}: {_pyf[:2]} | {_swf[:2]}")
+        if _road:
+            print("   the two carriers read a contract apart:", _road[:2])
+        # and the open field is READ and left shapeless, not dropped: `drift`
+        # dates what a contract has ever said, including what it left open
+        open(os.path.join(_cf, "spec.json"), "w").write(json.dumps(_specs["a shape left open"]))
+        _openf = json.loads(subprocess.run(
+            [_cli_bin, "--contract-fields", "spec.json"], cwd=_cf,
+            capture_output=True, text=True, timeout=180).stdout or "[]")
+        S.append(("the contract reading is one on both carriers, before its verb has moved",
+                  _road == [] and len(_specs) == 4
+                  and [f["field"] for f in _openf] == ["nullable", "said", "unsaid"]
+                  and [f["shape"] for f in _openf] == ["Text", "Text", None]))
+
         # ── AND A READER TAKES A RECORD'S BOUNDARY FROM THE FILE, NOT FROM A
         # PATTERN. One search with the dot matching newlines ran the whole
         # document, so a declaration written on ONE line — `public enum
