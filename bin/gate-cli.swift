@@ -1043,6 +1043,1546 @@ if args.first == "--contract-fields" {
     exit(0)
 }
 
+// ── THE STATUS CORE: the last big road, and the one every asking verb will
+// stand on. The world is discovered the way the other carrier discovers it,
+// each row is routed to its court by role, the courts are the ones compiled
+// into this binary, and the guards beside them are the python side's, spelled
+// a second time and held to the first by the battery's parity on worlds that
+// refuse for every reason a guard exists. Nothing here is reached by a carried
+// argv: the door at the end of the section is the battery's, the way
+// `--contract-fields` and `--manifest-row` are, because the verb itself moves
+// with the pack that asks it, and the tables bootstrap (`ensure_world`) stays
+// on the python side until the import family moves.
+
+// the roles a row may have, in the order the refusal lists them
+let STATUS_ROLES: [(String, String)] = [
+    ("world", "judged with the rest of my world, by the plain court"),
+    ("seam", "judged where it meets mine, and nowhere else"),
+    ("forms", "grammar and the certificates over it, judged by the where court"),
+    ("judge", "the court itself: held by a reproducible build, not by judgement"),
+    ("carried", "brought here unchanged: held by its source's name and version, "
+              + "and by no court of this world"),
+    ("tool", "the tool's own source: held by the battery's parity, "
+           + "and by no court of this world"),
+]
+let ROLE_OF_KIND: [String: String] = ["WorldFile": "world", "SeamFile": "seam",
+                                      "FormsFile": "forms", "JudgeFile": "judge",
+                                      "CarriedFile": "carried", "ToolFile": "tool",
+                                      "Seam": "seam"]
+
+// the shelf, loaded once per run the way the other carrier loads it at import:
+// filled by the status door, empty on every carried argv, so no vein pays for
+// a road it is not walking
+var STDLIB_TEXTS: [String: String] = [:]
+var SHELF_ORDER: [String] = []
+var SHIPPED_SET: Set<String> = []
+
+func loadStatusShelf() {
+    for page in shelf() {
+        STDLIB_TEXTS[page.name] = page.text
+        SHELF_ORDER.append(page.name)
+        SHIPPED_SET.insert(absPath((root.appendingPathComponent("stdlib").path as NSString)
+            .appendingPathComponent(page.name + ".swift")))
+    }
+}
+
+func absPath(_ p: String) -> String {
+    // python's abspath is lexical: nothing is resolved, `.` and `..` fold away
+    let full = p.hasPrefix("/") ? p
+        : (FileManager.default.currentDirectoryPath as NSString).appendingPathComponent(p)
+    var out: [String] = []
+    for c in full.components(separatedBy: "/") {
+        if c.isEmpty || c == "." { continue }
+        if c == ".." { if !out.isEmpty { out.removeLast() }; continue }
+        out.append(c)
+    }
+    return "/" + out.joined(separator: "/")
+}
+
+func relPath(_ path: String, _ start: String) -> String {
+    let p = absPath(path).components(separatedBy: "/").filter { !$0.isEmpty }
+    let s = absPath(start).components(separatedBy: "/").filter { !$0.isEmpty }
+    var i = 0
+    while i < min(p.count, s.count), p[i] == s[i] { i += 1 }
+    let rest = [String](repeating: "..", count: s.count - i) + p[i...]
+    return rest.isEmpty ? "." : rest.joined(separator: "/")
+}
+
+func readText(_ path: String) -> String? {
+    // read with python's errors="replace": a byte that is not utf-8 becomes the
+    // replacement character rather than a refusal to read the file at all
+    guard let data = FileManager.default.contents(atPath: path) else { return nil }
+    return String(decoding: data, as: UTF8.self)
+}
+
+func matchesAt(_ pattern: String, _ text: String,
+               dotAll: Bool = false, lines: Bool = false) -> [(groups: [String], line: Int)] {
+    // like `matches`, and each hit carries the line its match starts on,
+    // counted from one: the other carrier addresses a row by
+    // text[:m.start()].count("\n") + 1
+    var opts: NSRegularExpression.Options = []
+    if dotAll { opts.insert(.dotMatchesLineSeparators) }
+    if lines { opts.insert(.anchorsMatchLines) }
+    guard let re = try? NSRegularExpression(pattern: pattern, options: opts) else { return [] }
+    let ns = text as NSString
+    return re.matches(in: text, range: NSRange(location: 0, length: ns.length)).map { m in
+        let groups = (1..<m.numberOfRanges).map { i in
+            m.range(at: i).location == NSNotFound ? "" : ns.substring(with: m.range(at: i))
+        }
+        let before = ns.substring(to: m.range.location)
+        return (groups, before.components(separatedBy: "\n").count)
+    }
+}
+
+func matchAt(_ text: String, _ pattern: String) -> [String]? {
+    // python's re.match: anchored at the start, groups from the whole match on
+    guard let re = try? NSRegularExpression(pattern: "^(?:" + pattern + ")") else { return nil }
+    let ns = text as NSString
+    guard let m = re.firstMatch(in: text, range: NSRange(location: 0, length: ns.length)),
+          m.range.location == 0 else { return nil }
+    return (0..<m.numberOfRanges).map { i in
+        m.range(at: i).location == NSNotFound ? "" : ns.substring(with: m.range(at: i))
+    }
+}
+
+struct LayoutRow {
+    var name: String?
+    var source: String
+    var path: String
+    var role: String?
+    var from: String?
+    var written: String?
+    var opens: String?
+    var line: Int
+}
+struct Layout { var manifest: String; var rows: [LayoutRow] }
+struct WorldState { var facts: String?; var tables: String?; var layout: Layout? }
+
+func layoutDir(_ w: WorldState) -> String? {
+    return w.layout.map { ($0.manifest as NSString).deletingLastPathComponent }
+}
+
+func layoutRowsFull(_ dir: String) -> (rows: [LayoutRow], manifest: String?) {
+    let mp = (dir as NSString).appendingPathComponent("gate.manifest.swift")
+    guard let text = readText(mp) else { return ([], nil) }
+    let code = uncommented(text)
+    var lit: [String: String] = [:]
+    for m in matches("extension (\\w+)\\b[^{]*\\{(.*?)\\n(?=public |extension |\\z)",
+                     code + "\n", dotAll: true) where m.count == 2 {
+        if let f = matches("typeName:\\s*String\\s*\\{\\s*\"([^\"]*)\"\\s*\\}", m[1]).first,
+           f.count == 1 {
+            lit[m[0]] = f[0]
+        }
+    }
+    var rows: [LayoutRow] = []
+    for (m, at) in matchesAt("public enum (\\w+): (Mine|Theirs|WorldFile|SeamFile) \\{", code) {
+        let name = m[0], atom = m[1]
+        let inner = matches("public enum " + name + "\\b[^{]*\\{(.*?)\\n\\}",
+                            code + "\n", dotAll: true).first?.first ?? ""
+        let outer = matches("extension " + name + "\\b[^{]*\\{(.*?)\\n(?=public |extension |\\z)",
+                            code + "\n", dotAll: true).first?.first ?? ""
+        let both = inner + outer
+        func field(_ k: String) -> String? {
+            return matches(k + ":\\s*String\\s*\\{\\s*\"([^\"]*)\"\\s*\\}", both).first?.first
+        }
+        func axis(_ k: String) -> String? {
+            return matches("typealias " + k + "\\s*=\\s*(\\w+)", both).first?.first
+        }
+        var path = lit[name] ?? ""
+        if path.isEmpty { path = field("typeName") ?? "" }
+        if path.isEmpty { continue }
+        let kind = axis("Kind")
+        var role: String? = kind.map { ROLE_OF_KIND[$0] ?? $0.lowercased() }
+        if role == nil || role!.isEmpty { role = field("role") }
+        if role == nil || role!.isEmpty {
+            role = atom == "WorldFile" ? "world" : atom == "SeamFile" ? "seam" : nil
+        }
+        var from = axis("At").flatMap { lit[$0] }
+        if from == nil || from!.isEmpty { from = field("from") }
+        rows.append(LayoutRow(name: name,
+                              source: (atom == "Mine" || atom == "WorldFile") ? "mine" : "theirs",
+                              path: path, role: role,
+                              from: (from?.isEmpty ?? true) ? nil : from,
+                              written: axis("Written"), opens: axis("Opens"), line: at))
+    }
+    if rows.isEmpty && !code.contains("Mine") && !code.contains("WorldFile") {
+        // older layouts: a bare list of paths, every one of them a world file
+        rows = matches("typeName:\\s*String\\s*\\{\\s*\"([^\"]+)\"\\s*\\}", code).map {
+            LayoutRow(name: nil, source: "mine", path: $0[0], role: "world",
+                      from: nil, written: nil, opens: nil, line: 0)
+        }
+    }
+    return (rows, mp)
+}
+
+func discoverWorld() -> WorldState {
+    // the world is found the way .git is: walking up. GATE_FACTS pins it for
+    // probes and carries no layout, the way the other carrier's override does.
+    if let env = ProcessInfo.processInfo.environment["GATE_FACTS"], !env.isEmpty {
+        return WorldState(facts: env, tables: nil, layout: nil)
+    }
+    var d = FileManager.default.currentDirectoryPath
+    while true {
+        let w = (d as NSString).appendingPathComponent("gate.swift")
+        let t = (d as NSString).appendingPathComponent("tables")
+        let hasTables = FileManager.default.fileExists(
+                atPath: (t as NSString).appendingPathComponent("people.csv"))
+            && FileManager.default.fileExists(
+                atPath: (t as NSString).appendingPathComponent("grants.csv"))
+        let (rows, mp) = layoutRowsFull(d)
+        let layout = mp.map { Layout(manifest: $0, rows: rows) }
+        if FileManager.default.fileExists(atPath: w) || hasTables || layout != nil {
+            return WorldState(facts: w, tables: hasTables ? t : nil, layout: layout)
+        }
+        let up = (d as NSString).deletingLastPathComponent
+        if up == d || up.isEmpty { break }
+        d = up
+    }
+    if let corpus = ProcessInfo.processInfo.environment["GATE_CORPUS"], !corpus.isEmpty {
+        let f = (((corpus as NSString).appendingPathComponent("Sources") as NSString)
+            .appendingPathComponent("Organization") as NSString)
+            .appendingPathComponent("System/GeneratedTeam.swift")
+        return WorldState(facts: f, tables: nil, layout: nil)
+    }
+    return WorldState(facts: nil, tables: nil, layout: nil)
+}
+
+func worldFilesOf(_ w: WorldState) -> [String] {
+    var files: [String] = []
+    if let f = w.facts, FileManager.default.fileExists(atPath: f) { files.append(f) }
+    if let d = layoutDir(w) {
+        // filtered against the list as it stood, not as it grows: two rows
+        // naming one file keep both copies here, exactly as the other carrier
+        // keeps them, and the second-row guard is the one that refuses the pair
+        let stood = files
+        for r in w.layout!.rows where r.role == "world" {
+            let p = (d as NSString).appendingPathComponent(r.path)
+            if !stood.contains(p) { files.append(p) }
+        }
+    }
+    return files
+}
+
+func worldPeopleOf(_ w: WorldState) -> Set<String> {
+    var names = Set<String>()
+    var seen = worldFilesOf(w)
+    let base = layoutDir(w) ?? "."
+    for r in w.layout?.rows ?? [] {
+        let p = (base as NSString).appendingPathComponent(r.path)
+        if ["world", "forms", "seam"].contains(r.role ?? ""),
+           FileManager.default.fileExists(atPath: p), !seen.contains(p) {
+            seen.append(p)
+        }
+    }
+    for p in seen {
+        guard let text = readText(p) else { continue }
+        for m in matches("(?:public\\s+)?enum\\s+(\\w+)\\s*:", text) { names.insert(m[0]) }
+    }
+    return names
+}
+
+func leavesWorldHere(_ path: String, _ rootDir: String) -> Bool {
+    // resolvingSymlinksInPath strips the /private prefix from a path that
+    // exists and leaves it on one that does not, so the two sides of this
+    // comparison are put through one door before they meet: what matters is
+    // that both are canonical the same way, not which spelling won
+    func canonical(_ p: String) -> String {
+        let r = (p as NSString).resolvingSymlinksInPath
+        for known in ["/private/tmp/", "/private/var/", "/private/etc/"]
+        where r.hasPrefix(known) || r == String(known.dropLast()) {
+            return String(r.dropFirst("/private".count))
+        }
+        return r
+    }
+    let real = canonical((rootDir as NSString).appendingPathComponent(path))
+    let rootReal = canonical(rootDir)
+    return relPath(real, rootReal).components(separatedBy: "/").first == ".."
+}
+
+func isSeamSide(_ path: String) -> Bool {
+    guard let data = FileManager.default.contents(atPath: path) else { return false }
+    let head = String(decoding: data.prefix(4000), as: UTF8.self)
+    return !matches("^public enum \\w+: Carrier \\{\\}", head, lines: true).isEmpty
+        || !matches("^public enum F_\\w+: Declared \\{", head, lines: true).isEmpty
+}
+
+func topNames(_ text: String) -> [(String, Int)] {
+    // the names a file gives, at the top of it and nowhere else: a typealias
+    // inside a declaration is an axis, and every record of a kind states the
+    // same ones
+    var out: [(String, Int)] = []
+    var depth = 0
+    for (i, line) in text.components(separatedBy: "\n").enumerated() {
+        let code = line.components(separatedBy: "//")[0]
+        if depth == 0,
+           let m = matchAt(code, "\\s*(?:public\\s+)?(enum|protocol|struct|typealias)\\s+(\\w+)") {
+            out.append((m[2], i + 1))
+        }
+        depth += code.filter { $0 == "{" }.count - code.filter { $0 == "}" }.count
+    }
+    return out
+}
+
+func undeclaredHere(_ w: WorldState) -> [String] {
+    guard let layout = w.layout else { return [] }
+    let d = (layout.manifest as NSString).deletingLastPathComponent
+    var declared = Set<String>([layout.manifest,
+                                (d as NSString).appendingPathComponent("gate.swift"),
+                                (d as NSString).appendingPathComponent("gate.policy.swift")])
+    var spoken = Set<String>([d])
+    for r in layout.rows where !r.path.isEmpty {
+        let p = (d as NSString).appendingPathComponent(r.path)
+        declared.insert(p)
+        spoken.insert((p as NSString).deletingLastPathComponent)
+    }
+    var out: [String] = []
+    for dd in spoken.sorted() {
+        var isDir: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: dd, isDirectory: &isDir),
+              isDir.boolValue else { continue }
+        for f in ((try? FileManager.default.contentsOfDirectory(atPath: dd)) ?? []).sorted() {
+            let p = (dd as NSString).appendingPathComponent(f)
+            if f.hasSuffix(".swift"), !declared.contains(p), !isSeamSide(p),
+               !leavesWorldHere(relPath(p, d), d) {
+                out.append(relPath(p, d))
+            }
+        }
+    }
+    return out
+}
+
+func manifestGuards(_ w: WorldState) -> [(address: String, claim: String)] {
+    // layout guards, both directions: a declared file exists, a neighbouring
+    // *.swift is declared, a row says which court reads it, and every claim
+    // below is the other carrier's, word for word
+    guard let layout = w.layout else { return [] }
+    var bad: [(address: String, claim: String)] = []
+    let man = (layout.manifest as NSString).lastPathComponent
+    let d = (layout.manifest as NSString).deletingLastPathComponent
+    let live = layout.rows
+    let liveText = uncommented(readText(layout.manifest) ?? "")
+    var seenPaths: [String: String] = [:]
+    for r in live {
+        let said = r.name ?? "None"
+        if let role = r.role, let atom = ROLE_ATOM[role],
+           liveText.contains("public typealias Kind = " + atom),
+           !liveText.contains("public enum " + atom + ": Role {}") {
+            bad.append(("\(man):\(r.line)",
+                        "`\(said)` is filed under `\(role)` and this document "
+                      + "declares no `\(atom)`: a column is an axis to a declared atom, "
+                      + "and a name nothing declares names nothing"))
+        }
+        if let prev = seenPaths[r.path] {
+            bad.append(("\(man):\(r.line)",
+                        "`\(said)` is a second row about \(r.path), which "
+                      + "`\(prev)` already speaks for: one file, one "
+                      + "row, or two rows can say different things about it"))
+        }
+        seenPaths[r.path] = said
+        if leavesWorldHere(r.path, d) {
+            bad.append(("\(man):\(r.line)",
+                        "`\(said)` names \(r.path), which is outside this world: "
+                      + "a row is a claim about this world's own tree, and a path that "
+                      + "leaves it holds only on the machine that wrote it"))
+        }
+        if r.role == nil || r.role!.isEmpty {
+            bad.append(("\(man):\(r.line)",
+                        "`\(said)` does not say what it is for. A row names its court: "
+                      + STATUS_ROLES.map { "`\($0.0)` — \($0.1)" }.joined(separator: " · ")))
+        } else if r.role == "seam",
+                  FileManager.default.fileExists(
+                      atPath: (d as NSString).appendingPathComponent(r.path)),
+                  !isSeamSide((d as NSString).appendingPathComponent(r.path)) {
+            bad.append(("\(man):\(r.line)",
+                        "`\(said)` is filed under `seam`, and \(r.path) does not "
+                      + "say it is one side of one: a side states a contract or claims "
+                      + "to carry one, in its own first lines"))
+        } else if !STATUS_ROLES.contains(where: { $0.0 == r.role }) {
+            bad.append(("\(man):\(r.line)",
+                        "`\(said)` is for `\(r.role!)`, which no court here reads. "
+                      + "A row gate cannot place is refused, never quietly taken as a "
+                      + "fragment of your world: "
+                      + STATUS_ROLES.map { $0.0 }.joined(separator: " · ")))
+        }
+        if r.source == "theirs" && r.from == nil {
+            bad.append(("\(man):\(r.line)",
+                        "`\(said)` is theirs and does not say which revision it was "
+                      + "taken at. Taken means taken from somewhere, at something: "
+                      + "`gate theirs " + r.path + " --at REV`"))
+        }
+    }
+    let named = Set(live.compactMap { $0.name })
+    for (m, at) in matchesAt("public enum (\\w+): (Mine|Theirs|WorldFile|SeamFile) \\{", liveText)
+    where !named.contains(m[0]) {
+        bad.append(("\(man):\(at)",
+                    "`\(m[0])` is a row and names no file: a row is about one file, "
+                  + "said as `extension \(m[0]) { public static var typeName: "
+                  + "String { \"path\" } }`. Give it one or take the row out"))
+    }
+    for r in live where ["world", "seam", "forms"].contains(r.role ?? "") {
+        if !FileManager.default.fileExists(atPath: (d as NSString).appendingPathComponent(r.path)) {
+            bad.append(("\(man):\(r.line)",
+                        "the manifest declares \(r.path), and no such file exists: "
+                      + "either the file is gone or the row is, and a row for a file "
+                      + "nobody has is a court with nothing to check"))
+        }
+    }
+    for r in live where r.role == "forms" && !r.path.isEmpty {
+        let p = (d as NSString).appendingPathComponent(r.path)
+        guard let data = FileManager.default.contents(atPath: p) else { continue }
+        let head = String(decoding: data.prefix(1200), as: UTF8.self)
+            .components(separatedBy: "\n").prefix(8)
+        var want: String? = nil
+        var saw = false
+        for ln in head where ln.hasPrefix("//") && ln.contains("written in") {
+            saw = true
+            want = matches("stdlib show ([\\w-]+)", ln).first.map { $0[0] }
+            break
+        }
+        guard saw, let shelfName = want else { continue }
+        let wantFile = shelfName + ".swift"
+        let mineNames = Set(topNames(String(decoding: data, as: UTF8.self)).map { $0.0 })
+        let theirs = Set(topNames(STDLIB_TEXTS[shelfName] ?? "").map { $0.0 })
+        if !theirs.isDisjoint(with: mineNames) { continue }
+        let row = live.first(where: { $0.name == r.written })
+        if row == nil || (row!.path as NSString).lastPathComponent != wantFile {
+            bad.append(("\(man):\(r.line)",
+                        "`\(r.name ?? "None")` says in its own head that it is written in "
+                      + "\(wantFile), and this row does not declare it: add "
+                      + "`public typealias Written = <the row for \(wantFile)>`. Which laws a "
+                      + "page is judged under is a column, not a comment"))
+        }
+    }
+    for rel in undeclaredHere(w) {
+        bad.append((rel,
+                    "this file sits beside the judged ones and has no row in the "
+                  + "manifest, so it is not judged. `gate mine PATH --role R` adds "
+                  + "the row"))
+    }
+    return bad
+}
+
+func findAll(_ pattern: String, _ text: String, lines: Bool = false) -> [String] {
+    // python's findall for a pattern with no groups: the whole match, each time
+    var opts: NSRegularExpression.Options = []
+    if lines { opts.insert(.anchorsMatchLines) }
+    guard let re = try? NSRegularExpression(pattern: pattern, options: opts) else { return [] }
+    let ns = text as NSString
+    return re.matches(in: text, range: NSRange(location: 0, length: ns.length))
+        .map { ns.substring(with: $0.range) }
+}
+
+func oneStream(_ w: WorldState, _ named: [(String, String)]) -> [(String, String)] {
+    // one namespace is one stream, and this is the one place that says which:
+    // a forms file is its own stream, and the layout's court is the guards
+    let forms = Set((w.layout?.rows ?? []).filter { $0.role == "forms" }.map { $0.path })
+    var apart = Set<String>()
+    if let l = w.layout { apart.insert(absPath(l.manifest)) }
+    if let pp = policyPathOf(w) { apart.insert(absPath(pp)) }
+    return named.filter { !forms.contains($0.0) && !apart.contains(absPath($0.1)) }
+}
+
+func diskSources(_ w: WorldState) -> [(String, String)] {
+    var out: [(String, String)] = []
+    for (n, p) in oneStream(w, benchFilesOf(w)) where FileManager.default.fileExists(atPath: p) {
+        out.append((n, readText(p) ?? ""))
+    }
+    return out
+}
+
+func duplicateGuardsOver(_ sources: [(String, String)]) -> [(address: String, claim: String)] {
+    var seen: [String: String] = [:]
+    var bad: [(address: String, claim: String)] = []
+    for (name, text) in sources {
+        for (who, i) in topNames(text) {
+            let here = "\(name):\(i)"
+            if let was = seen[who] {
+                bad.append((here,
+                            "`\(who)` is declared twice: once at \(was) and again "
+                          + "here. One name, one declaration: two of them are two truths "
+                          + "about it, and only one can be read"))
+            } else {
+                seen[who] = here
+            }
+        }
+    }
+    return bad
+}
+
+func entryGuardsOver(_ sources: [(String, String)]) -> [(address: String, claim: String)] {
+    // the body is total, the way the top of a file is: every line inside one
+    // belongs to a whole entry, and an entry that never closes is named
+    var bad: [(address: String, claim: String)] = []
+    for (name, text) in sources {
+        let lines = text.components(separatedBy: "\n")
+        var inBody = false, depth = 0
+        var openAt: Int? = nil
+        for (i0, rawLine) in lines.enumerated() {
+            let i = i0 + 1
+            let code = rawLine.components(separatedBy: "//")[0]
+            if !inBody {
+                if !matches("var\\s+body\\s*:\\s*some\\s+Structure\\s*\\{", code).isEmpty {
+                    inBody = true; depth = 1; openAt = nil
+                }
+                continue
+            }
+            depth += code.filter { $0 == "{" }.count - code.filter { $0 == "}" }.count
+            if depth <= 0 {
+                if let at = openAt {
+                    bad.append(("\(name):\(at)",
+                                "an entry opens here and never closes: everything after it "
+                              + "stops being read as a claim, and the judge says nothing"))
+                }
+                inBody = false
+                continue
+            }
+            let bare = code.trimmingCharacters(in: .whitespaces)
+            if bare.isEmpty { continue }
+            let closes = !matches(">\\s*\\.self\\s*;?", bare).isEmpty
+            let opens = matchAt(bare, "[A-Z]\\w*\\s*<") != nil
+            if opens {
+                if let at = openAt {
+                    bad.append(("\(name):\(at)",
+                                "an entry opens here and never closes: the next one begins "
+                              + "before it ends, so neither is read as a claim"))
+                }
+                openAt = i
+                if closes { openAt = nil }
+                continue
+            }
+            if closes {
+                if openAt == nil {
+                    bad.append(("\(name):\(i)",
+                                "an entry closes here that nothing opens: its form is "
+                              + "commented out or missing, so the claim it made is gone "
+                              + "and what is left is not Swift"))
+                }
+                openAt = nil
+                continue
+            }
+            if openAt == nil {
+                bad.append(("\(name):\(i)",
+                            "`\(bare.prefix(40))` stands inside a body and belongs to no entry: "
+                          + "a body holds claims, and every claim is a form, its arguments "
+                          + "and the `>.self` that ends it"))
+            }
+        }
+    }
+    return bad
+}
+
+func lawNotes(_ texts: [String]) -> [String: String] {
+    // a law's own sentence, read from the file the law is written in: the ///
+    // run directly above a declaration, first spelling wins
+    var out: [String: String] = [:]
+    for text in texts {
+        let lines = text.components(separatedBy: "\n")
+        for (i, line) in lines.enumerated() {
+            guard let m = matchAt(line.trimmingCharacters(in: .whitespaces),
+                                  "public (?:protocol|enum|typealias) (\\w+)"),
+                  out[m[1]] == nil else { continue }
+            var said: [String] = []
+            var j = i - 1
+            while j >= 0 {
+                let s = lines[j].trimmingCharacters(in: .whitespaces)
+                if !s.hasPrefix("///") { break }
+                said.insert(String(s.dropFirst(3)).trimmingCharacters(in: .whitespaces), at: 0)
+                j -= 1
+            }
+            if !said.isEmpty {
+                out[m[1]] = said.joined(separator: " ").trimmingCharacters(in: .whitespaces)
+            }
+        }
+    }
+    return out
+}
+
+func plainly(_ claim: String, _ notes: [String: String]) -> String {
+    // the where court's sentence, said the way the plain court says its own:
+    // the certificate, the two sides, and the law in the law's own words
+    guard let m = matchAt(claim, "'(\\w+)[^']*' requires the types '[^']*' \\(aka '([^']+)'\\) "
+                               + "and '[^']*' \\(aka '([^']+)'\\) be equivalent(?: \\[(\\w+)\\])?")
+    else { return claim }
+    let said = notes[m[4]]
+    return "\(m[1]) · \(m[2]) against \(m[3])" + (said.map { ": " + $0 } ?? "")
+}
+
+func presentedOver(_ w: WorldState, _ shelfName: String)
+    -> (text: String, placed: [(String, String)], clash: [(address: String, claim: String)]) {
+    // a world you present replaces a value in a world this tool ships, in
+    // place, and only this world's names; two declarations inside one layer
+    // are refused with both addresses rather than settled by list order
+    let shipped = STDLIB_TEXTS[shelfName] ?? ""
+    let rows = w.layout?.rows ?? []
+    if rows.isEmpty { return (shipped, [], []) }
+    let base = layoutDir(w) ?? "."
+    var mine: [(name: String, path: String, line: Int, raw: String)] = []
+    var clash: [(address: String, claim: String)] = []
+    for r in rows where r.role == "forms" {
+        if SHIPPED_SET.contains(absPath((base as NSString).appendingPathComponent(r.path))) {
+            continue
+        }
+        let fp = (base as NSString).appendingPathComponent(r.path)
+        guard FileManager.default.fileExists(atPath: fp), let body = readText(fp) else { continue }
+        var depth = 0
+        for (i0, line) in body.components(separatedBy: "\n").enumerated() {
+            let i = i0 + 1
+            let code = line.components(separatedBy: "//")[0]
+            let atTop = depth == 0
+            depth += code.filter { $0 == "{" }.count - code.filter { $0 == "}" }.count
+            guard let m = matchAt(line.trimmingCharacters(in: .whitespaces),
+                                  "public typealias (\\w+) = "), atTop else { continue }
+            let name = m[1]
+            let head = matchAt(line.trimmingCharacters(in: .whitespaces),
+                               "public typealias \\w+ = (\\w+)<")
+            let was = matches("^public typealias " + name + " = (\\w+)<", shipped, lines: true).first
+            if let was = was, head == nil || head![1] != was[0] {
+                clash.append(("\(r.path):\(i)",
+                              "`\(name)` is a law of a world you did not write, and this "
+                            + "says it is `\(head.map { $0[1] } ?? "a value")` where "
+                            + "it is `\(was[0])`. Restate what holds of your own "
+                            + "numbers as much as you like. The form is not yours to "
+                            + "replace, or the law could be rewritten to permit whatever "
+                            + "broke it"))
+                continue
+            }
+            if let had = mine.first(where: { $0.name == name }), had.path != r.path {
+                clash.append(("\(r.path):\(i)",
+                              "`\(name)` is said here and at \(had.path):"
+                            + "\(had.line) — two worlds you present, one name, "
+                            + "and nothing but the order they are listed in to choose "
+                            + "between them. One layer, one declaration"))
+                continue
+            }
+            if let at = mine.firstIndex(where: { $0.name == name }) {
+                mine[at] = (name, r.path, i, line)
+            } else {
+                mine.append((name, r.path, i, line))
+            }
+        }
+    }
+    if mine.isEmpty { return (shipped, [], clash) }
+    var out: [String] = []
+    var placed: [(String, String)] = []
+    for ln in shipped.components(separatedBy: "\n") {
+        if let m = matchAt(ln.trimmingCharacters(in: .whitespaces), "public typealias (\\w+) = "),
+           let had = mine.first(where: { $0.name == m[1] }) {
+            out.append(had.raw)
+            if !placed.contains(where: { $0.0 == m[1] }) { placed.append((m[1], had.path)) }
+        } else {
+            out.append(ln)
+        }
+    }
+    return (out.joined(separator: "\n"), placed, clash)
+}
+
+func canonGuard(_ w: WorldState, _ out: String, _ spoke: Bool, _ verb: String)
+    -> [(address: String, claim: String)] {
+    // a court that did not answer is not a court that found nothing: each
+    // court is held to its own printed voice, and a silence is named
+    if spoke { return [] }
+    let words = out.split(whereSeparator: { $0 == " " || $0 == "\n" || $0 == "\t" || $0 == "\r"
+                                            || $0 == "\u{0b}" || $0 == "\u{0c}" })
+        .joined(separator: " ")
+    let said = words.isEmpty ? "nothing at all" : String(words.prefix(120))
+    let address = w.layout.map { ($0.manifest as NSString).lastPathComponent } ?? "gate-judge"
+    return [(address,
+             "the court was asked `\(verb)` and did not answer in its own canon: it "
+           + "said `\(said)`. Every verdict here is read out of that answer, so an "
+           + "answer this tool cannot read is not a green. It is a court that did not "
+           + "sit, and a green over it would be this tool's own worst failure")]
+}
+
+func whereRefused(_ out: String) -> [(cert: String?, claim: String)] {
+    var found: [(String?, String)] = []
+    for line in out.components(separatedBy: "\n") {
+        let l = line.trimmingCharacters(in: .whitespaces)
+        guard l.hasPrefix("✗") else { continue }
+        let claim = String(l.dropFirst()).trimmingCharacters(in: .whitespaces)
+        found.append((matchAt(claim, "'(\\w+)").map { $0[1] }, claim))
+    }
+    return found
+}
+
+func formsGuards(_ w: WorldState, _ size: inout [String: Int]) -> [(address: String, claim: String)] {
+    // the forms rows of one layout are one world laid out in files: glued and
+    // judged together by the where court, with the shelf worlds an operator
+    // overrides judged each as its own stream
+    guard let layout = w.layout else { return [] }
+    let d = (layout.manifest as NSString).deletingLastPathComponent
+    let rows = layout.rows.filter { $0.role == "forms"
+        && FileManager.default.fileExists(atPath: (d as NSString).appendingPathComponent($0.path)) }
+    if rows.isEmpty { return [] }
+    var bad: [(address: String, claim: String)] = []
+    func bodyOf(_ r: LayoutRow) -> String {
+        return readText((d as NSString).appendingPathComponent(r.path)) ?? ""
+    }
+    var streams: [(shelf: String?, text: String, mine: [(String, String)])] = []
+    for shelfName in SHELF_ORDER {
+        let (text, placed, clash) = presentedOver(w, shelfName)
+        bad += clash
+        if !placed.isEmpty { streams.append((shelfName, text, placed)) }
+    }
+    streams.append((nil, rows.map(bodyOf).joined(separator: "\n"), []))
+    var whereMap: [String: String] = [:]
+    for r in rows {
+        for (i0, line) in bodyOf(r).components(separatedBy: "\n").enumerated() {
+            if let m = matchAt(line.trimmingCharacters(in: .whitespaces),
+                               "public (?:typealias|enum|protocol) (\\w+)"),
+               whereMap[m[1]] == nil {
+                whereMap[m[1]] = "\(r.path):\(i0 + 1)"
+            }
+        }
+    }
+    let tmp = NSTemporaryDirectory() + "gate-forms-\(ProcessInfo.processInfo.processIdentifier)"
+    try? FileManager.default.createDirectory(atPath: tmp, withIntermediateDirectories: true)
+    for (shelfName, text, mine) in streams {
+        let fp = (tmp as NSString).appendingPathComponent((shelfName ?? "presented") + ".swift")
+        try? text.write(toFile: fp, atomically: false, encoding: .utf8)
+        let said = courtSays(["where", fp])
+        bad += canonGuard(w, said,
+                          (said.contains("THE WHERE") && said.contains("canon v"))
+                              || said.contains("✗"),
+                          "judge where")
+        for (cert, claim) in whereRefused(said) {
+            var spot: String? = cert.flatMap { whereMap[$0] }
+            if spot == nil && !mine.isEmpty {
+                let touched = mine.map { $0.0 }.filter { claim.contains($0) }
+                spot = touched.first.flatMap { whereMap[$0] }
+                if spot == nil, let t = touched.first {
+                    spot = mine.first(where: { $0.0 == t })?.1
+                }
+            }
+            bad.append((spot ?? rows[0].path, plainly(claim, lawNotes([text]))))
+        }
+        if let m = matches("(\\d+) equalities and (\\d+) memberships judged across (\\d+) uses",
+                           said).first {
+            size["equalities"] = (size["equalities"] ?? 0) + (Int(m[0]) ?? 0)
+            size["memberships"] = (size["memberships"] ?? 0) + (Int(m[1]) ?? 0)
+            size["uses"] = (size["uses"] ?? 0) + (Int(m[2]) ?? 0)
+        }
+    }
+    try? FileManager.default.removeItem(atPath: tmp)
+    return bad
+}
+
+func policyPathOf(_ w: WorldState) -> String? {
+    guard let f = w.facts else { return nil }
+    let p = ((absPath(f) as NSString).deletingLastPathComponent as NSString)
+        .appendingPathComponent("gate.policy.swift")
+    return FileManager.default.fileExists(atPath: p) ? p : nil
+}
+
+func policyGuards(_ w: WorldState) -> [(address: String, claim: String)] {
+    // the policy file is not in the judged list, so status guards it: every
+    // Person an identity names is declared by the world, every Requires is a
+    // name something this world reads declares
+    guard let pp = policyPathOf(w) else { return [] }
+    let text = readText(pp) ?? ""
+    var ids: [(mail: String, who: String)] = []
+    var rules: [(action: String, rank: String)] = []
+    var whereAt: [String: (String, Int)] = [:]
+    let name = (pp as NSString).lastPathComponent
+    for (m, at) in matchesAt("(?:public\\s+)?enum\\s+(\\w+)\\s*:[^{\\n]*\\bIdentity\\b[^{\\n]*"
+                             + "\\{(.*?)\\n\\}", text, dotAll: true) {
+        guard let who = matches("typealias\\s+Person\\s*=\\s*(\\w+)", m[1]).first?.first,
+              let mail = matches("extension\\s+" + m[0] + "\\b.*?typeName.*?\"([^\"]+)\"",
+                                 text, dotAll: true).first?.first else { continue }
+        if let i = ids.firstIndex(where: { $0.mail == mail }) { ids[i] = (mail, who) }
+        else { ids.append((mail, who)) }
+        whereAt[mail] = (name, at)
+    }
+    for (m, at) in matchesAt("(?:public\\s+)?enum\\s+(\\w+)Policy\\s*\\{(.*?)\\n\\}",
+                             text, dotAll: true) {
+        guard let req = matches("typealias\\s+Requires\\s*=\\s*(\\w+)", m[1]).first?.first
+        else { continue }
+        let action = m[0].lowercased()
+        if let i = rules.firstIndex(where: { $0.action == action }) { rules[i] = (action, req) }
+        else { rules.append((action, req)) }
+        whereAt["policy:" + action] = (name, at)
+    }
+    let people = worldPeopleOf(w)
+    var declared = people
+    let base = layoutDir(w) ?? "."
+    for r in w.layout?.rows ?? [] where r.role == "forms" {
+        let p = (base as NSString).appendingPathComponent(r.path)
+        guard FileManager.default.fileExists(atPath: p), let t = readText(p) else { continue }
+        for m in matches("(?:public\\s+)?enum\\s+(\\w+)\\s*:", t) { declared.insert(m[0]) }
+    }
+    for shelfName in SHELF_ORDER {
+        for m in matches("(?:public\\s+)?enum\\s+(\\w+)\\s*:", STDLIB_TEXTS[shelfName] ?? "") {
+            declared.insert(m[0])
+        }
+    }
+    var bad: [(address: String, claim: String)] = []
+    for (mail, who) in ids where !people.contains(who) {
+        let (f, ln) = whereAt[mail] ?? (name, 1)
+        bad.append(("\(f):\(ln)",
+                    "an identity names `\(who)`, and the world declares no such person"))
+    }
+    for (action, rank) in rules {
+        let (f, ln) = whereAt["policy:" + action] ?? (name, 1)
+        if matchAt(rank, "[A-Z]\\w*$") == nil {
+            bad.append(("\(f):\(ln)",
+                        "the \(action) policy requires `\(rank)`, which is not a name"))
+        } else if !declared.isEmpty && !declared.contains(rank) {
+            bad.append(("\(f):\(ln)",
+                        "the \(action) policy requires `\(rank)`, and nothing this world "
+                      + "reads declares it. A policy naming a rank nobody has is a "
+                      + "policy that can never be met"))
+        }
+    }
+    return bad
+}
+
+let SHELF_SPEAKS = ["a-domain", "the-tool", "the-bench", "the-reader"]
+
+func shelfHeadLine(_ name: String, _ label: String) -> String? {
+    for line in (STDLIB_TEXTS[name] ?? "").components(separatedBy: "\n").prefix(4) {
+        if let m = matchAt(line.trimmingCharacters(in: .whitespaces), label + " (.+)") {
+            return m[1].trimmingCharacters(in: .whitespaces)
+        }
+    }
+    return nil
+}
+
+func stdlibGuards(_ w: WorldState) -> [(address: String, claim: String)] {
+    // a printout that no longer matches what it prints, and a shelf page that
+    // does not say what it is or whose voice it speaks in
+    guard let f = w.facts else { return [] }
+    let d = (absPath(f) as NSString).deletingLastPathComponent
+    var bad: [(address: String, claim: String)] = []
+    for name in SHELF_ORDER where shelfHeadLine(name, "// role:") == nil {
+        bad.append(("stdlib/\(name).swift:2",
+                    "this page does not say what it is. A shelf file states its own "
+                  + "role in its second line: `// role: forms` for what an operator "
+                  + "speaks, `// role: gate's own` for this tool's furniture, and "
+                  + "one that says nothing cannot be placed"))
+    }
+    for name in SHELF_ORDER {
+        guard let said = shelfHeadLine(name, "// speaks-for:") else {
+            bad.append(("stdlib/\(name).swift:3",
+                        "this page does not say whose voice it speaks in. A shelf file "
+                      + "states its sort in its third line, beside its role: "
+                      + "`// speaks-for: a-domain` for the words a world of yours is "
+                      + "written in, `the-tool` for what this tool's own verbs and "
+                      + "courts are written in, `the-bench` for the page you read them "
+                      + "on, `the-reader` for what a repository is met with"))
+            continue
+        }
+        if !SHELF_SPEAKS.contains(said) {
+            bad.append(("stdlib/\(name).swift:3",
+                        "`\(said)` is not a sort of the shelf: this page names a group "
+                      + "nobody declared, and the reader it was written for would look "
+                      + "for it and find nothing. It is one of "
+                      + SHELF_SPEAKS.joined(separator: " · ")
+                      + ", and the list is closed so that what "
+                      + "taking this tool puts on a repository stays a list somebody "
+                      + "can read to the end"))
+        }
+    }
+    for name in SHELF_ORDER {
+        let p = (d as NSString).appendingPathComponent(name + ".swift")
+        guard FileManager.default.fileExists(atPath: p), let text = readText(p) else { continue }
+        if text.hasPrefix("// gate stdlib") && text != (STDLIB_TEXTS[name] ?? "") {
+            bad.append(("\(name).swift",
+                        "this printout no longer matches the words the judge carries, and "
+                      + "still says it does. Editing it adds no word to the language: print "
+                      + "it again, or drop the header so it stops claiming to be the printout"))
+        }
+    }
+    return bad
+}
+
+func gateShapeGuards(_ w: WorldState) -> [(address: String, claim: String)] {
+    // a gated conformance written on one line is read by no court, in either
+    // carrier of the court: refused rather than left quietly unjudged
+    var bad: [(address: String, claim: String)] = []
+    guard let layout = w.layout else { return bad }
+    let d = (layout.manifest as NSString).deletingLastPathComponent
+    for r in layout.rows where r.role == "forms" {
+        let path = (d as NSString).appendingPathComponent(r.path)
+        guard FileManager.default.fileExists(atPath: path), let text = readText(path)
+        else { continue }
+        for (i0, line) in text.components(separatedBy: "\n").enumerated() {
+            if !matches("^\\s*(?:public )?extension\\s+\\w+\\s*:\\s*\\w+\\b.*\\bwhere\\b.*"
+                        + "\\{\\s*\\}\\s*$", line).isEmpty {
+                bad.append(("\(r.path):\(i0 + 1)",
+                            "a gated conformance written on one line is read by no court: "
+                          + "break the line before `where` and the law is judged again. "
+                          + "Left as it is, every certificate over it holds without "
+                          + "being checked"))
+            }
+        }
+    }
+    return bad
+}
+
+func ownSurfaceGuards(_ w: WorldState) -> [(address: String, claim: String)] {
+    // the table of verbs and the dispatch, held to each other by name: the
+    // dispatch is still the python side's, so its file is the one read
+    guard let layout = w.layout else { return [] }
+    let d = (layout.manifest as NSString).deletingLastPathComponent
+    let rows = layout.rows.filter { $0.role == "forms"
+        && SHIPPED_SET.contains(absPath((d as NSString).appendingPathComponent($0.path)))
+        && ($0.path as NSString).lastPathComponent == "verbs.swift" }
+    guard let first = rows.first else { return [] }
+    let name = first.path
+    let text = readText((d as NSString).appendingPathComponent(name)) ?? ""
+    var said: [String: String] = [:]
+    var at: [String: Int] = [:]
+    for (i0, line) in text.components(separatedBy: "\n").enumerated() {
+        guard let m = matchAt(line.trimmingCharacters(in: .whitespaces),
+                              "public enum (\\w+): (Verb|Spelling) \\{") else { continue }
+        if let spelt = matches("extension " + m[1] + " \\{ public static var typeName: "
+                               + "String \\{ \"([^\"]+)\" \\} \\}", text).first {
+            said[spelt[0]] = m[1]
+            at[spelt[0]] = i0 + 1
+        }
+    }
+    let src = readText(root.appendingPathComponent("gate").path) ?? ""
+    var verbs = Set(matches("cmd\\s*==\\s*\"([a-z-]+)\"", src).map { $0[0] })
+    for grp in matches("cmd\\s+in\\s+\\(([^)]*)\\)", src) {
+        for m in matches("\"([a-z-]+)\"", grp[0]) { verbs.insert(m[0]) }
+    }
+    for grp in matches("args\\[0\\]\\s+in\\s+\\(([^)]*)\\)", src) {
+        for m in matches("\"([a-z-]+)\"", grp[0]) {
+            verbs.insert(String(m[0].drop(while: { $0 == "-" })))
+        }
+    }
+    var bad: [(address: String, claim: String)] = []
+    for word in Set(said.keys).subtracting(verbs).sorted() {
+        bad.append(("\(name):\(at[word]!)",
+                    "`gate \(word)` is a record here and no word the dispatch answers to: "
+                  + "a promise this tool no longer keeps"))
+    }
+    for word in verbs.subtracting(said.keys).sorted() {
+        bad.append((name,
+                    "`gate \(word)` is a word this tool answers to and no record here says "
+                  + "so: a verb nobody is told about"))
+    }
+    return bad
+}
+
+let BENCH_VIEWS = ["full", "bare", "table"]
+
+func personalPathOf(_ w: WorldState) -> String? {
+    guard let f = w.facts else { return nil }
+    let proot = ProcessInfo.processInfo.environment["GATE_ME"]
+        ?? (NSHomeDirectory() as NSString).appendingPathComponent(".gate/me")
+    let base = (absPath(f) as NSString).deletingLastPathComponent
+    return (((proot as NSString).appendingPathComponent("worlds") as NSString)
+        .appendingPathComponent(repoKey(base)) as NSString).appendingPathComponent("my.swift")
+}
+
+func benchFilesOf(_ w: WorldState) -> [(String, String)] {
+    // the shared world, its forms, the layout, the policy and the personal
+    // slot: the list the panel opens, and the list the stream guards walk
+    guard let f = w.facts else { return [] }
+    let base = (absPath(f) as NSString).deletingLastPathComponent
+    var out: [(String, String)] = worldFilesOf(w).map { (relPath($0, base), $0) }
+    for r in w.layout?.rows ?? [] where r.role == "forms" {
+        let p = (base as NSString).appendingPathComponent(r.path)
+        if FileManager.default.fileExists(atPath: p),
+           !out.contains(where: { $0.0 == r.path && $0.1 == p }) {
+            out.append((r.path, p))
+        }
+    }
+    if let l = w.layout, FileManager.default.fileExists(atPath: l.manifest) {
+        out.append((relPath(l.manifest, base), l.manifest))
+    }
+    if let pp = policyPathOf(w) {
+        let rel = relPath(pp, base)
+        if !out.contains(where: { $0.0 == rel }) { out.append((rel, pp)) }
+    }
+    if let pf = personalPathOf(w) {
+        let name = out.contains(where: { $0.0 == "my.swift" }) ? "personal-my.swift" : "my.swift"
+        out.append((name, pf))
+    }
+    return out
+}
+
+func opensAs(_ w: WorldState, _ path: String) -> (view: String?, said: String?) {
+    let base = w.facts.map { (absPath($0) as NSString).deletingLastPathComponent }
+        ?? FileManager.default.currentDirectoryPath
+    for r in w.layout?.rows ?? [] {
+        if absPath((base as NSString).appendingPathComponent(r.path)) == absPath(path),
+           let opens = r.opens, !opens.isEmpty {
+            let said = opens.lowercased()
+            return (BENCH_VIEWS.contains(said) ? said : nil, said)
+        }
+    }
+    guard let data = FileManager.default.contents(atPath: path) else { return (nil, nil) }
+    let head = String(decoding: data.prefix(2000), as: UTF8.self)
+    for line in head.components(separatedBy: "\n").prefix(6) {
+        if let m = matchAt(line.trimmingCharacters(in: .whitespaces), "//\\s*opens:\\s*(\\S+)") {
+            let said = m[1].trimmingCharacters(in: .whitespaces).lowercased()
+            return (BENCH_VIEWS.contains(said) ? said : nil, said)
+        }
+    }
+    return (nil, nil)
+}
+
+func opensGuards(_ w: WorldState) -> [(address: String, claim: String)] {
+    var bad: [(address: String, claim: String)] = []
+    for (name, path) in benchFilesOf(w) {
+        guard FileManager.default.fileExists(atPath: path) else { continue }
+        let (view, said) = opensAs(w, path)
+        if let said = said, view == nil {
+            bad.append((name,
+                        "`\(said)` is not a view: this file says how it should first be "
+                      + "met and names something the bench cannot open. It is one of "
+                      + BENCH_VIEWS.joined(separator: " · ")))
+        }
+    }
+    return bad
+}
+
+func sha256Hex(_ data: Data) -> String {
+    // SHA-256, written out for the same reason SHA-1 above is: the vendored
+    // judge states its digest and somebody has to be able to check it
+    let k: [UInt32] = [
+        0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1,
+        0x923f82a4, 0xab1c5ed5, 0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3,
+        0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174, 0xe49b69c1, 0xefbe4786,
+        0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+        0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147,
+        0x06ca6351, 0x14292967, 0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13,
+        0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85, 0xa2bfe8a1, 0xa81a664b,
+        0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+        0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a,
+        0x5b9cca4f, 0x682e6ff3, 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208,
+        0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2]
+    var h: [UInt32] = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
+                       0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19]
+    var message = [UInt8](data)
+    let bits = UInt64(message.count) * 8
+    message.append(0x80)
+    while message.count % 64 != 56 { message.append(0) }
+    for i in (0..<8).reversed() { message.append(UInt8((bits >> (UInt64(i) * 8)) & 0xFF)) }
+    func rot(_ x: UInt32, _ n: UInt32) -> UInt32 { return (x >> n) | (x << (32 - n)) }
+    for chunk in stride(from: 0, to: message.count, by: 64) {
+        var w = [UInt32](repeating: 0, count: 64)
+        for i in 0..<16 {
+            let o = chunk + i * 4
+            w[i] = (UInt32(message[o]) << 24) | (UInt32(message[o + 1]) << 16)
+                 | (UInt32(message[o + 2]) << 8) | UInt32(message[o + 3])
+        }
+        for i in 16..<64 {
+            let s0 = rot(w[i - 15], 7) ^ rot(w[i - 15], 18) ^ (w[i - 15] >> 3)
+            let s1 = rot(w[i - 2], 17) ^ rot(w[i - 2], 19) ^ (w[i - 2] >> 10)
+            w[i] = w[i - 16] &+ s0 &+ w[i - 7] &+ s1
+        }
+        var a = h[0], b = h[1], c = h[2], d = h[3]
+        var e = h[4], f = h[5], g = h[6], hh = h[7]
+        for i in 0..<64 {
+            let s1 = rot(e, 6) ^ rot(e, 11) ^ rot(e, 25)
+            let ch = (e & f) ^ (~e & g)
+            let t1 = hh &+ s1 &+ ch &+ k[i] &+ w[i]
+            let s0 = rot(a, 2) ^ rot(a, 13) ^ rot(a, 22)
+            let mj = (a & b) ^ (a & c) ^ (b & c)
+            let t2 = s0 &+ mj
+            hh = g; g = f; f = e; e = d &+ t1
+            d = c; c = b; b = a; a = t1 &+ t2
+        }
+        h[0] = h[0] &+ a; h[1] = h[1] &+ b; h[2] = h[2] &+ c; h[3] = h[3] &+ d
+        h[4] = h[4] &+ e; h[5] = h[5] &+ f; h[6] = h[6] &+ g; h[7] = h[7] &+ hh
+    }
+    return h.map { String(format: "%08x", $0) }.joined()
+}
+
+func binaryRuns(_ p: String) -> Bool {
+    // runnable is tested by running: bytes say nothing about which platform a
+    // judge was built for, so the one question with an answer is asked once
+    guard FileManager.default.fileExists(atPath: p) else { return false }
+    let proc = Process()
+    proc.executableURL = URL(fileURLWithPath: p)
+    proc.arguments = ["judge"]
+    proc.standardOutput = Pipe()
+    proc.standardError = Pipe()
+    do { try proc.run() } catch { return false }
+    proc.waitUntilExit()
+    return true
+}
+
+func vendoredGuards(_ w: WorldState) -> [(address: String, claim: String)] {
+    // .gate/ is a materialized shelf like any other: the judge it carries must
+    // be the judge it says it carries, and a digest says nothing about running
+    guard let f = w.facts else { return [] }
+    let d = (absPath(f) as NSString).deletingLastPathComponent
+    let readme = ((d as NSString).appendingPathComponent(".gate") as NSString)
+        .appendingPathComponent("README.md")
+    let binp = (((d as NSString).appendingPathComponent(".gate") as NSString)
+        .appendingPathComponent("bin") as NSString).appendingPathComponent("gate-judge")
+    guard FileManager.default.fileExists(atPath: readme),
+          FileManager.default.fileExists(atPath: binp),
+          let stated = matches("judge sha256: ([0-9a-f]{64})", readText(readme) ?? "").first
+    else { return [] }
+    let actual = sha256Hex(FileManager.default.contents(atPath: binp) ?? Data())
+    if actual != stated[0] {
+        return [(".gate/README.md",
+                 "the carried judge is not the judge this repository states: "
+               + "sha256 \(actual.prefix(12)) against \(stated[0].prefix(12)). "
+               + "Re-run `gate init . --vendor`, or state the one you mean")]
+    }
+    if !binaryRuns(binp) {
+        return [(".gate/bin/gate-judge",
+                 "the carried judge matches its recorded digest and does not run on "
+               + "this machine: it was built for another platform. The port serves "
+               + "the plain court where node is installed, and `bin/build-judge.sh` "
+               + "builds a judge that runs here")]
+    }
+    return []
+}
+
+func judgeFrom() -> String? {
+    let p = root.appendingPathComponent("bin").appendingPathComponent("gate-judge.from").path
+    let said = (readText(p) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+    return said.isEmpty ? nil : said
+}
+
+func takenJudgeGuard(_ w: WorldState) -> [(address: String, claim: String)] {
+    // the one row this whole document exists to keep honest: the revision the
+    // world says it took the judge at, against the one the judge was built from
+    guard let layout = w.layout,
+          let claimed = layout.rows.first(where: { $0.role == "judge" })?.from else { return [] }
+    let man = (layout.manifest as NSString).lastPathComponent
+    guard let built = judgeFrom() else {
+        return [(man,
+                 "this world says it took the judge at `\(claimed)`, and the judge "
+               + "beside it records no revision at all. `bin/build-judge.sh` writes "
+               + "one down, and until it does the row answers for nothing")]
+    }
+    let said = claimed.components(separatedBy: "@").last ?? claimed
+    if !(built.hasPrefix(said) || said.hasPrefix(built)) {
+        return [(man,
+                 "this world says it took the judge at `\(said)`, and the judge beside "
+               + "it was built from `\(built.prefix(12))` — one of the two is out of date, "
+               + "and a row that names the court may not disagree with the court")]
+    }
+    return []
+}
+
+let CODEOWNERS_HEADER = "// printed by gate import codeowners: who owns what in this repository,\n"
+    + "// written in the grants vocabulary (`gate stdlib show forms-grants`). A zone is\n"
+    + "// a top of the tree, a room is a pattern, and an owner keeps a zone: owning\n"
+    + "// is entry whose key administers, judged like any other claim.\n//\n"
+
+func readCodeowners(_ path: String) -> [(line: Int, pattern: String, owners: [String])] {
+    var rules: [(Int, String, [String])] = []
+    for (n0, raw) in (readText(path) ?? "").components(separatedBy: "\n").enumerated() {
+        let line = raw.components(separatedBy: "#")[0].trimmingCharacters(in: .whitespaces)
+        if line.isEmpty { continue }
+        // a space in a path is escaped as `\ `, and the split happens on the
+        // spaces that are not
+        let parts = line.replacingOccurrences(of: "\\ ", with: "\u{0}")
+            .components(separatedBy: .whitespaces).filter { !$0.isEmpty }
+            .map { $0.replacingOccurrences(of: "\u{0}", with: " ") }
+        let owners = parts.dropFirst().filter { $0.hasPrefix("@") || $0.contains("@") }
+        if !owners.isEmpty { rules.append((n0 + 1, parts[0], Array(owners))) }
+    }
+    return rules
+}
+
+func readOwnersPolicy(_ path: String) -> [(owner: String, zone: String)] {
+    // owner,zone pairs, first spelling of an owner wins. The other carrier
+    // reads this through csv; the two files this guard meets are plain columns
+    var rows = (readText(path) ?? "").components(separatedBy: "\n")
+        .filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+    guard !rows.isEmpty else { return [] }
+    let head = rows.removeFirst().components(separatedBy: ",")
+        .map { $0.trimmingCharacters(in: .whitespaces) }
+    guard let oi = head.firstIndex(of: "owner"), let zi = head.firstIndex(of: "zone")
+    else { return [] }
+    var out: [(String, String)] = []
+    for row in rows {
+        let cells = row.components(separatedBy: ",")
+        guard cells.count > max(oi, zi) else { continue }
+        let owner = String(cells[oi].drop(while: { $0 == "@" }))
+        if !out.contains(where: { $0.0 == owner }) { out.append((owner, cells[zi])) }
+    }
+    return out
+}
+
+func codeownersZone(_ pattern: String) -> String {
+    let p = String(pattern.trimmingCharacters(in: .whitespaces).drop(while: { $0 == "/" }))
+    if p.isEmpty || p.hasPrefix("*") { return "Root" }
+    let z = sanitized(p.components(separatedBy: "/")[0])
+    return z.isEmpty ? "Root" : z
+}
+
+func codeownersWorldLines(_ src: String, _ policy: [(owner: String, zone: String)],
+                          _ saidFrom: String) -> (lines: [String], srcmap: [String: String]) {
+    // one translator, whoever asks: the import prints a world with this, and
+    // the pair guard prints the same world again to compare
+    let rules = readCodeowners(src)
+    var zones = Set(rules.map { codeownersZone($0.pattern) })
+    for (_, z) in policy { zones.insert(sanitized(z)) }
+    var lines = [CODEOWNERS_HEADER + "// from: " + saidFrom + "\n//\n"
+                 + (STDLIB_TEXTS["forms-grants"] ?? ""), ""]
+    for z in zones.sorted() { lines.append("public enum Zone_\(z): Realm {}") }
+    lines.append("")
+    var keepers = Set<String>()
+    var srcmap: [String: String] = [:]
+    for (i, r) in rules.enumerated() {
+        let zone = codeownersZone(r.pattern)
+        let room = "Path_\(i)_" + String(sanitized(r.pattern).prefix(40))
+        lines.append("public enum \(room): Room {")
+        lines.append("    public typealias Place = Zone_\(zone)")
+        lines.append("}")
+        for owner in r.owners {
+            let plain = String(owner.drop(while: { $0 == "@" }))
+            let kept = policy.first(where: { $0.owner == plain })?.zone
+            let keeper = kept != nil ? "Owner_\(sanitized(plain))"
+                                     : "Owner_\(sanitized(plain))_in_\(zone)"
+            if !keepers.contains(keeper) {
+                keepers.insert(keeper)
+                lines.append("public enum \(keeper): Keeper {")
+                lines.append("    public typealias Post = Zone_\(kept.map(sanitized) ?? zone)")
+                lines.append("    public typealias Key = WardenKey")
+                lines.append("}")
+            }
+            let cert = "Owns_\(i)_\(sanitized(plain))"
+            lines.append("public typealias \(cert) = Owns<\(keeper), \(room)>")
+            srcmap[cert] = "\((src as NSString).lastPathComponent):\(r.line) · \(r.pattern) \(owner)"
+        }
+    }
+    return (lines, srcmap)
+}
+
+func codeownersPairGuards(_ w: WorldState) -> [(address: String, claim: String)] {
+    // the print and its source are a pair: the same translator prints the
+    // world again, and the certificates are compared, refusals at the line
+    // that makes them
+    guard let f = w.facts else { return [] }
+    var judged = Set(worldFilesOf(w))
+    judged.insert(absPath(f))
+    if let l = w.layout {
+        let mdir = (l.manifest as NSString).deletingLastPathComponent
+        for r in l.rows { judged.insert((mdir as NSString).appendingPathComponent(r.path)) }
+    }
+    var out: [(address: String, claim: String)] = []
+    for path in judged.sorted() where FileManager.default.fileExists(atPath: path) {
+        // a declared row may be a binary, and a binary is nobody's half of a
+        // printed pair: strict utf-8 here, the way the other carrier reads it
+        guard let data = FileManager.default.contents(atPath: path),
+              let text = String(data: data, encoding: .utf8),
+              text.contains("printed by gate import codeowners"),
+              let m = matchesAt("^// from: (\\S+)(?: --policy (\\S+))?$", text, lines: true)
+                  .first?.groups
+        else { continue }
+        let name = (path as NSString).lastPathComponent
+        let srcp = ((absPath(path) as NSString).deletingLastPathComponent as NSString)
+            .appendingPathComponent(m[0])
+        if !FileManager.default.fileExists(atPath: srcp) {
+            out.append(("\(name):1",
+                        "printed from \(m[0]), and no file of that name is here now"))
+            continue
+        }
+        let policy = m[1].isEmpty ? []
+            : readOwnersPolicy(((absPath(path) as NSString).deletingLastPathComponent as NSString)
+                .appendingPathComponent(m[1]))
+        let (lines, srcmap) = codeownersWorldLines(srcp, policy, "")
+        let fresh = Set(lines.filter { $0.hasPrefix("public typealias Owns_") })
+        let disk = text.components(separatedBy: "\n")
+        let held = Set(disk.filter { $0.hasPrefix("public typealias Owns_") })
+        for lost in fresh.subtracting(held).sorted() {
+            let cert = lost.components(separatedBy: .whitespaces).filter { !$0.isEmpty }[2]
+            let mapped = (srcmap[cert] ?? "").components(separatedBy: " · ")[0]
+            let spot = mapped.isEmpty ? "\(m[0]):1" : mapped
+            out.append((spot,
+                        "\(m[0]) writes this rule, and the world does not "
+                      + "hold it: `\(lost)`. Run the import again, or take the rule out"))
+        }
+        for extra in held.subtracting(fresh).sorted() {
+            out.append(("\(name):\((disk.firstIndex(of: extra) ?? 0) + 1)",
+                        "the world holds this claim, and \(m[0]) no longer "
+                      + "writes it: `\(extra)`. Run the import again, or put the "
+                      + "line back"))
+        }
+    }
+    return out
+}
+
+func judgedRefusals(_ out: String) -> [(address: String, claim: String)] {
+    // the plain verdict has one reader, here as on the other carrier
+    return matches("^\\s+(\\S+\\.swift:\\d+)\\s+(.+)$", out, lines: true)
+        .filter { $0.count == 2 }
+        .map { ($0[0], $0[1].trimmingCharacters(in: .whitespaces)) }
+}
+
+func locateClaim(_ text: String, _ claim: String) -> Int? {
+    // the line where this text actually makes this claim: one entry at a time,
+    // every party inside THAT entry, and the argument the claim turns on
+    let names = findAll("\\b[A-Z]\\w*", claim)
+    guard let form = names.first else { return nil }
+    let parties = matches("\\b([A-Z]\\w*)\\.\\w+", claim).map { $0[0] }
+    let wanted = matches("==\\s*([A-Z]\\w*)", claim).first?.first
+    let inside = parties + (wanted.map { [$0] } ?? [])
+    let lines = text.components(separatedBy: "\n")
+    for (i, ln) in lines.enumerated() {
+        let f = NSRegularExpression.escapedPattern(for: form)
+        if matches("\\b" + f + "\\b", ln).isEmpty { continue }
+        var end = i
+        while end < min(lines.count, i + 10), !lines[end].contains(">") { end += 1 }
+        let entry = Array(lines[i..<min(end + 1, lines.count)])
+        let joined = entry.joined(separator: "\n")
+        let all = inside.allSatisfy {
+            !matches("\\b" + NSRegularExpression.escapedPattern(for: $0) + "\\b", joined).isEmpty
+        }
+        if !all { continue }
+        let want = parties.first ?? form
+        for (k, line) in entry.enumerated() {
+            if !matches("\\b" + NSRegularExpression.escapedPattern(for: want) + "\\b",
+                        line).isEmpty {
+                return i + k + 1
+            }
+        }
+        return i + 1
+    }
+    return nil
+}
+
+func attributeRefusals(_ refusals: [(address: String, claim: String)],
+                       _ sources: [(String, String)]) -> [(address: String, claim: String)] {
+    // a refusal belongs to the file that makes the claim: the judge repeats
+    // one per file it was given, and the broadcast copies are dropped
+    var first: [String: (address: String, claim: String)] = [:]
+    var order: [String] = []
+    for r in refusals where first[r.claim] == nil {
+        first[r.claim] = r
+        order.append(r.claim)
+    }
+    var out: [(address: String, claim: String)] = []
+    for claim in order {
+        let orig = first[claim]!
+        let ofile = orig.address.components(separatedBy: ":")[0]
+        let otail = orig.address.components(separatedBy: ":").dropFirst().first ?? ""
+        let oline = Int(otail)
+        if !claim.contains(" requires ") {
+            out.append(orig)
+            continue
+        }
+        var placed = false
+        for (name, text) in sources {
+            guard var line = locateClaim(text, claim) else { continue }
+            if name == ofile, let ol = oline {
+                line = abs(line - ol) <= 8 ? line : ol
+            }
+            out.append(("\(name):\(line)", claim))
+            placed = true
+        }
+        if !placed { out.append(orig) }
+    }
+    return out
+}
+
+func nextRung(_ w: WorldState, _ refused: Bool) -> String {
+    // ONE next step, chosen by what the repository already has: each rung
+    // names what becomes yours once the step is taken, and a rung already
+    // taken is not offered
+    if refused {
+        return "open the address above, or run `gate serve` and watch the verdict move as you type"
+    }
+    let rootDir = w.facts.map { (absPath($0) as NSString).deletingLastPathComponent } ?? "."
+    let hooked = runGit(["config", "--get", "core.hooksPath"], rootDir)
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+    if hooked.isEmpty {
+        return "run `gate init .` to wire the hook: from here on, what you commit is what holds"
+    }
+    let rows = (w.layout?.rows ?? []).filter { !$0.path.isEmpty }
+    let saidSomething = w.facts.map { FileManager.default.fileExists(atPath: $0) } ?? false
+    func arrivedByTaking(_ rel: String) -> Bool {
+        let p = (rootDir as NSString).appendingPathComponent(rel)
+        return (readText(p) ?? "").contains("Origin: gate's shelf")
+    }
+    if !rows.isEmpty && !saidSomething && rows.allSatisfy({ arrivedByTaking($0.path) })
+        && rows.contains(where: { ($0.path as NSString).lastPathComponent == "readme.swift" }) {
+        return "gate serve"
+    }
+    if policyPathOf(w) == nil {
+        return "say who may merge: gate.policy.swift"
+    }
+    let ci = ((rootDir as NSString).appendingPathComponent(".github") as NSString)
+        .appendingPathComponent("workflows")
+    var isDir: ObjCBool = false
+    if !(FileManager.default.fileExists(atPath: ci, isDirectory: &isDir) && isDir.boolValue) {
+        return "put `gate status` in the CI you already run: from then on nobody reads a diff "
+             + "to know the claims still hold"
+    }
+    return "run `gate serve` for the bench: your world on the left, the verdict on the right, "
+         + "and a page of your own beside them"
+}
+
+// python's json.dumps(..., ensure_ascii=False, indent=2), for the one answer
+// this door prints: keys in the order they were said, non-ascii kept
+indirect enum StatusJSON {
+    case text(String), raw(String), null
+    case list([StatusJSON])
+    case object([(String, StatusJSON)])
+}
+
+func statusDumps(_ v: StatusJSON, _ depth: Int) -> String {
+    let pad = String(repeating: " ", count: (depth + 1) * 2)
+    let close = String(repeating: " ", count: depth * 2)
+    switch v {
+    case .text(let s): return jsonString(s)
+    case .raw(let r): return r
+    case .null: return "null"
+    case .list(let items):
+        if items.isEmpty { return "[]" }
+        return "[\n" + items.map { pad + statusDumps($0, depth + 1) }.joined(separator: ",\n")
+             + "\n" + close + "]"
+    case .object(let pairs):
+        if pairs.isEmpty { return "{}" }
+        return "{\n" + pairs.map { pad + jsonString($0.0) + ": " + statusDumps($0.1, depth + 1) }
+            .joined(separator: ",\n") + "\n" + close + "}"
+    }
+}
+
+func floatRepr(_ s: String) -> String {
+    // the other carrier prints float(times[-1]): the shortest spelling that
+    // round-trips, which is also what Swift's description prints
+    guard let d = Double(s) else { return s }
+    return String(d)
+}
+
+func statusDoor(_ asJson: Bool) -> Never {
+    // ── THE DOOR THE BATTERY OPENS, and no argv a person types: the whole
+    // status answer, byte for byte against the other carrier on the worlds the
+    // battery keeps. The verb itself moves with the asking pack, because the
+    // tables bootstrap (`ensure_world`, python's `cmd_import`) has not moved:
+    // this door reads worlds, it does not seed them.
+    loadStatusShelf()
+    let w = discoverWorld()
+    let files = worldFilesOf(w)
+    let here = FileManager.default.currentDirectoryPath
+    if files.isEmpty && (w.layout?.rows.isEmpty ?? true) {
+        // no world here: the rung the reader is standing on, chosen by what is
+        // actually in the folder
+        let inside = runGit(["rev-parse", "--is-inside-work-tree"], here)
+            .trimmingCharacters(in: .whitespacesAndNewlines) == "true"
+        let commits = runGit(["rev-list", "--count", "HEAD"], here)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let hasPast = !commits.isEmpty && commits.allSatisfy { $0.isNumber }
+            && Int(commits) ?? 0 > 0
+        let next = inside && hasPast
+            ? "run `gate log` to read this repository's own history: nothing to translate"
+            : inside
+            ? "run `gate demo` for a repository to look at: a CODEOWNERS, a policy, and one refusal"
+            : "run `gate init .` to start a world in this folder"
+        let then = FileManager.default.fileExists(atPath: "CODEOWNERS")
+            ? "run `gate import codeowners CODEOWNERS --tree . --policy owners.csv` "
+            + "because this repository already has the file, and two columns of "
+            + "`owner,zone` are the rest"
+            : "run `gate demo` for a repository with one, or drop your own tables "
+            + "into tables/ and run gate status again"
+        if asJson {
+            var pairs: [(String, StatusJSON)] = [
+                ("command", .text("status")),
+                ("verdict", .text("no world here")),
+                ("refusals", .list([])),
+                ("next", .text(next)),
+                ("then", .text(then)),
+                ("mutates", .raw("false")),
+            ]
+            if let ready = commandIn(next) ?? commandIn(then) {
+                pairs.append(("command_to_run", .text(ready)))
+            }
+            out(statusDumps(.object(pairs), 0) + "\n")
+        } else {
+            out("status: no world here\n  next: \(next)\n  then: \(then)\n")
+        }
+        exit(0)
+    }
+    let t0 = Date()
+    let raw = courtSays(files)
+    let wallMs = ((Date().timeIntervalSince(t0) * 1000 * 10).rounded(.toNearestOrEven)) / 10
+    var refusals = judgedRefusals(raw)
+    if files.count > 1 {
+        // the declared list, not the readable list: a ghost row is the layout
+        // guard's to name, and both carriers place claims over what is here
+        let sources = files.filter { FileManager.default.fileExists(atPath: $0) }
+            .map { (($0 as NSString).lastPathComponent, readText($0) ?? "") }
+        refusals = attributeRefusals(refusals, sources)
+    }
+    if !files.isEmpty {
+        refusals += canonGuard(w, raw, raw.contains("THE JUDGE"), "judge")
+    }
+    refusals += manifestGuards(w)
+    var whereSize: [String: Int] = [:]
+    refusals += formsGuards(w, &whereSize)
+    refusals += policyGuards(w)
+    refusals += stdlibGuards(w)
+    refusals += gateShapeGuards(w) + ownSurfaceGuards(w) + opensGuards(w)
+    refusals += vendoredGuards(w) + takenJudgeGuard(w)
+    refusals += codeownersPairGuards(w)
+    refusals += duplicateGuardsOver(diskSources(w))
+    refusals += entryGuardsOver(diskSources(w))
+    let times = matches("([\\d.]+) ms", raw).compactMap { $0.first }
+    var judged = files
+    if judged.isEmpty {
+        judged = Set((w.layout?.rows ?? []).filter { $0.role == "forms" }.map { $0.path }).sorted()
+    }
+    let verdict = refusals.isEmpty ? "holds" : "refused"
+    let worldM = matches("(\\d+) declarations · (\\d+) lookups · (\\d+) premises", raw).first
+    let next = nextRung(w, !refusals.isEmpty)
+    if asJson {
+        var pairs: [(String, StatusJSON)] = [
+            ("command", .text("status")),
+            ("facts", judged.count == 1 ? .text(judged[0])
+                                        : .list(judged.map { .text($0) })),
+            ("verdict", .text(verdict)),
+            ("refusals", .list(refusals.map {
+                .object([("address", .text($0.address)), ("claim", .text($0.claim))]) })),
+            ("judge_ms", times.last.map { .raw(floatRepr($0)) } ?? .null),
+            ("wall_ms", .raw(String(wallMs))),
+            ("mutates", .raw("false")),
+        ]
+        if let m = worldM {
+            pairs.append(("world", .object([("declarations", .raw(m[0])),
+                                            ("lookups", .raw(m[1])),
+                                            ("premises", .raw(m[2]))])))
+        }
+        if whereSize["equalities"] != nil {
+            pairs.append(("forms", .object([
+                ("equalities", .raw(String(whereSize["equalities"] ?? 0))),
+                ("memberships", .raw(String(whereSize["memberships"] ?? 0))),
+                ("uses", .raw(String(whereSize["uses"] ?? 0)))])))
+        }
+        pairs.append(("court", .text("the judge")))
+        pairs.append(("next", .text(next)))
+        if let ready = commandIn(next) { pairs.append(("command_to_run", .text(ready))) }
+        out(statusDumps(.object(pairs), 0) + "\n")
+    } else {
+        let head = refusals.isEmpty ? "holds" : "refused \(refusals.count)"
+        var tail: [String] = []
+        if let m = worldM {
+            tail.append(many(Int(m[0]) ?? 0, "declaration") + " · "
+                      + many(Int(m[1]) ?? 0, "lookup") + " · "
+                      + many(Int(m[2]) ?? 0, "premise"))
+        }
+        if let n = whereSize["equalities"] {
+            if n != 0 {
+                tail.append(many(n, "equality", "equalities"))
+            } else if refusals.isEmpty && worldM == nil {
+                tail.append("nothing claimed here yet, so nothing was checked")
+            }
+        }
+        if let ms = times.last { tail.append(floatRepr(ms) + " ms") }
+        var lines = ["status: " + head + (tail.isEmpty ? "" : " · " + tail.joined(separator: " · "))]
+        for r in refusals { lines.append("  \(r.address) · \(r.claim)") }
+        lines.append("  next: " + next)
+        out(lines.joined(separator: "\n") + "\n")
+    }
+    exit(refusals.isEmpty ? 0 : 1)
+}
+
+// the road's own door: the battery calls this, not a person
+if args.first == "--status-core" {
+    statusDoor(args.contains("--json"))
+}
+
 // ── declare contract SPEC [-o F] · declare carrier DECL.json [-o F]
 //
 // THE ACT OF ENTRY. Everything this tool judges is on this side of it. The two
@@ -1628,15 +3168,20 @@ if args.first == "export" {
 // went red on the linux job already. So the wrapper stays the road everywhere it
 // has not been measured. Both roads are held to the python side's bytes by the
 // parity walk, which runs wherever a toolchain stands, so neither can drift.
-func courtSays(_ path: String) -> String {
+func courtSays(_ asked: [String]) -> String {
     let bin = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath().path
-    let words: [String] = [bin, "judge", "where", path]
+    let words: [String] = [bin, "judge"] + asked
 #if canImport(Darwin)
     var fds: [Int32] = [0, 0]
     guard pipe(&fds) == 0 else { return "" }
     var actions: posix_spawn_file_actions_t?
     posix_spawn_file_actions_init(&actions)
     posix_spawn_file_actions_adddup2(&actions, fds[1], 1)
+    // the court's stderr is captured and dropped, the way the other carrier's
+    // judge_call captures both channels: a court asked about nothing says so
+    // on stderr, and that sentence is the caller's to keep or to swallow
+    let quiet = open("/dev/null", O_WRONLY)
+    if quiet >= 0 { posix_spawn_file_actions_adddup2(&actions, quiet, 2) }
     posix_spawn_file_actions_addclose(&actions, fds[0])
     var argv: [UnsafeMutablePointer<CChar>?] = words.map { strdup($0) }
     argv.append(nil)
@@ -1655,6 +3200,7 @@ func courtSays(_ path: String) -> String {
         said.append(contentsOf: chunk[0..<got])
     }
     close(fds[0])
+    if quiet >= 0 { close(quiet) }
     guard started == 0 else { return "" }
     var status: Int32 = 0
     waitpid(child, &status, 0)
@@ -1665,6 +3211,7 @@ func courtSays(_ path: String) -> String {
     p.arguments = Array(words.dropFirst())
     let pipe = Pipe()
     p.standardOutput = pipe
+    p.standardError = Pipe()
     guard (try? p.run()) != nil else { return "" }
     let said = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
     p.waitUntilExit()
@@ -1726,7 +3273,7 @@ if args.first == "seam" {
         exit(1)
     }
     let started = Date()
-    let said = courtSays(path)
+    let said = courtSays(["where", path])
     let ms = (Date().timeIntervalSince(started) * 10_000).rounded() / 10
     try? FileManager.default.removeItem(atPath: dir)
     var refusals: [(address: String, claim: String)] = []

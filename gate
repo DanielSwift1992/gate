@@ -268,7 +268,11 @@ def world_people():
         p = os.path.join(base, r["path"])
         if r["role"] in ("world", "forms", "seam") and os.path.exists(p) and p not in seen:
             seen.append(p)
+    # the judged list is the declared list, and a declared file may be gone:
+    # that ghost is the layout guard's refusal, not this reader's stack trace
     for p in seen:
+        if not os.path.exists(p):
+            continue
         names |= set(re.findall(r"(?:public\s+)?enum\s+(\w+)\s*:",
                                 open(p, encoding="utf-8", errors="replace").read()))
     return names
@@ -7398,7 +7402,11 @@ def dispatch(cmd, rest):
         wall_ms = round((time.time() - t0) * 1000, 1)
         refusals = judged_refusals(raw)
         if len(files) > 1:  # one claim, one file: the one that makes it
-            refusals = attribute_refusals(refusals, [(os.path.basename(p), open(p).read()) for p in files])
+            # the declared list, not the readable list: a row whose file is gone
+            # is already refused by the layout guard below, and reading it here
+            # met a person with a stack trace two guards before that sentence
+            refusals = attribute_refusals(refusals, [(os.path.basename(p), open(p).read())
+                                                     for p in files if os.path.exists(p)])
         # and the plain court answered in its own voice, or none of the above
         # means anything: a silence parses as nought refusals, which is a green.
         # Asked only when it was handed files, since a world of forms alone hands

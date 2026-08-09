@@ -7069,6 +7069,184 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                   and [f["field"] for f in _openf] == ["nullable", "said", "unsaid"]
                   and [f["shape"] for f in _openf] == ["Text", "Text", None]))
 
+        # ── AND THE LAST BIG ROAD: THE STATUS CORE. The whole answer — the
+        # world discovered by the same walk, the rows routed to their courts by
+        # role, the guards beside the courts, the ladder, the writer, the exit
+        # code — behind a door this battery opens and no argv reaches, because
+        # the verb moves with the asking pack and the tables bootstrap is still
+        # python's. Held byte for byte, the clocks apart, on a world for every
+        # reason a guard exists: the tool's own repository, the refusing demo,
+        # the org world green and with its policy broken, a world with no
+        # manifest, the fresh entry, an empty folder, a parted and a orphaned
+        # codeowners pair, presented forms that override and clash, a stale
+        # judge row, an edited printout, a vendored judge that lies, and one
+        # world thick with a ghost row, a doubled row, a doubled name, an
+        # unpinned taking, a row that leaves the world, a misfiled seam, an
+        # unclosed entry, a one-line gate and a policy naming nobody.
+        _s9 = os.path.join(tmp, "status-core")
+        shutil.rmtree(_s9, ignore_errors=True)
+        os.makedirs(_s9)
+        _s9w = {}
+
+        def _s9mk(name):
+            _s9w[name] = os.path.join(_s9, name)
+            os.makedirs(_s9w[name], exist_ok=True)
+            return _s9w[name]
+        run("demo", _s9mk("demo"))
+        run("demo", "org", _s9mk("org"))
+        _d = _s9mk("init")
+        subprocess.run(["git", "init", "-q", "-b", "main", _d], capture_output=True)
+        run("init", ".", cwd=_d)
+        _d = _s9mk("bare")
+        open(os.path.join(_d, "gate.swift"), "w").write(
+            "public enum Emp1: Employee, Person {\n    public typealias Rank = Manager\n}\n")
+        shutil.copytree(_s9w["org"], _s9mk("policy"), dirs_exist_ok=True)
+        _p = os.path.join(_s9w["policy"], "gate.policy.swift")
+        # read first, then open to write: open(w) truncates before a nested
+        # read runs, and this battery has paid for that spelling twice already
+        _t9 = open(_p, encoding="utf-8").read()
+        open(_p, "w").write(_t9.replace(
+            "public typealias Requires = Manager", "public typealias Requires = Overlord"))
+        _s9mk("empty")
+        # the codeowners pair, parted in both directions and then orphaned
+        shutil.copytree(_s9w["demo"], _s9mk("parted"), dirs_exist_ok=True)
+        with open(os.path.join(_s9w["parted"], "CODEOWNERS"), "a") as _f:
+            _f.write("docs2/     @dave\n")
+        _own = os.path.join(_s9w["parted"], "ownership.swift")
+        _t9 = open(_own, encoding="utf-8").read()
+        _held_line = next(l for l in _t9.split("\n")
+                          if l.startswith("public typealias Owns_1_bob"))
+        open(_own, "w").write(_t9.replace(_held_line + "\n", "")
+                              + "public typealias Owns_9_zed = Owns<Owner_zed, Path_0_src_api_>\n")
+        shutil.copytree(_s9w["demo"], _s9mk("gone"), dirs_exist_ok=True)
+        os.remove(os.path.join(_s9w["gone"], "CODEOWNERS"))
+        # presented forms: a value overridden in a shipped world, a law's form
+        # rewritten, and one name said by two files of one layer
+        shutil.copytree(_s9w["init"], _s9mk("presented"), dirs_exist_ok=True)
+        open(os.path.join(_s9w["presented"], "mine-metrics.swift"), "w").write(
+            "public typealias W2 = Twice<Unit>\n")
+        open(os.path.join(_s9w["presented"], "mine-metrics2.swift"), "w").write(
+            "public typealias W2 = Twice<Unit>\npublic typealias W4 = NotTwice<W2>\n")
+        for _rel in ("mine-metrics.swift", "mine-metrics2.swift"):
+            subprocess.run([sys.executable, GATE, "mine", _rel, "--role", "forms"],
+                           cwd=_s9w["presented"], capture_output=True,
+                           env={**os.environ, "GATE_CLI": "off"})
+        shutil.copytree(_s9w["org"], _s9mk("stale"), dirs_exist_ok=True)
+        _m9 = os.path.join(_s9w["stale"], "gate.manifest.swift")
+        _t9 = open(_m9, encoding="utf-8").read()
+        open(_m9, "w").write(_t9.replace(
+            "verification-is-identification@", "verification-is-identification@stale"))
+        shutil.copytree(_s9w["org"], _s9mk("printout"), dirs_exist_ok=True)
+        _pg = open(os.path.join(STDLIB, "verbs.swift"), encoding="utf-8").read().split("\n")
+        _pg[10] = _pg[10] + " EDITED"
+        open(os.path.join(_s9w["printout"], "verbs.swift"), "w").write("\n".join(_pg))
+        shutil.copytree(_s9w["org"], _s9mk("vendored"), dirs_exist_ok=True)
+        os.makedirs(os.path.join(_s9w["vendored"], ".gate", "bin"), exist_ok=True)
+        shutil.copy(os.path.join(HERE, "bin", "gate-judge"),
+                    os.path.join(_s9w["vendored"], ".gate", "bin", "gate-judge"))
+        open(os.path.join(_s9w["vendored"], ".gate", "README.md"), "w").write(
+            "judge sha256: " + "0" * 64 + "\n")
+        _d = _s9mk("thick")
+        subprocess.run(["git", "init", "-q", "-b", "main", _d], capture_output=True)
+        open(os.path.join(_d, "a.swift"), "w").write(
+            "// opens: nosuch\npublic enum Dup {}\npublic enum Emp1: Employee, Person {\n"
+            "    public typealias Rank = Manager\n    public typealias Home = Legal\n"
+            "    public typealias Given = Wren\n    public typealias Family = Sato\n"
+            "    public typealias Born = Y1990\n    public typealias Site = Remote\n}\n")
+        open(os.path.join(_d, "b.swift"), "w").write(
+            "public enum Dup {}\npublic enum Body {\n"
+            "    public static var body: some Structure {\n        VerifiedView<Emp1\n    }\n}\n")
+        open(os.path.join(_d, "ghostless.swift"), "w").write("public enum Ghost {}\n")
+        open(os.path.join(_d, "shadow.swift"), "w").write("public enum Shadow {}\n")
+        open(os.path.join(_d, "oneline.swift"), "w").write(
+            "public protocol Owned {}\n"
+            "extension Owns: Owned where Who.Key: Administers {}\n")
+        for _rel, _role in (("a.swift", "world"), ("b.swift", "world"),
+                            ("ghostless.swift", "world"), ("oneline.swift", "forms")):
+            subprocess.run([sys.executable, GATE, "mine", _rel, "--role", _role],
+                           cwd=_d, capture_output=True, env={**os.environ, "GATE_CLI": "off"})
+        os.remove(os.path.join(_d, "ghostless.swift"))
+        with open(os.path.join(_d, "gate.manifest.swift"), "a") as _f:
+            _f.write(
+                "public enum SecondA: Mine {\n    public typealias Kind = WorldFile\n}\n"
+                "extension SecondA { public static var typeName: String { \"a.swift\" } }\n"
+                "public protocol Theirs {}\npublic enum Taken: Theirs {\n"
+                "    public typealias Kind = SeamFile\n}\n"
+                "extension Taken { public static var typeName: String { \"a.swift\" } }\n"
+                "public enum Odd: Mine {\n    public typealias Kind = WorldFile\n}\n"
+                "extension Odd { public static var typeName: String { \"../outside.swift\" } }\n")
+        open(os.path.join(_d, "gate.policy.swift"), "w").write(
+            "public enum MailGhost: Identity {\n    public typealias Person = Nobody9\n}\n"
+            "extension MailGhost { public static var typeName: String { \"ghost@x\" } }\n"
+            "public enum MergePolicy {\n    public typealias Requires = lowercase\n}\n")
+
+        _s9noms = lambda b: re.sub(rb"[0-9]+\.[0-9]+ ms", b"MS",
+                                   re.sub(rb'"(judge|wall)_ms": [0-9.]+', rb'"\1_ms": MS', b))
+        _s9apart, _s9said = [], {}
+        for _name in ("demo", "org", "init", "bare", "policy", "empty", "parted", "gone",
+                      "presented", "stale", "printout", "vendored", "thick"):
+            _wd = _s9w[_name]
+            for _shape in ([], ["--json"]):
+                _py = subprocess.run([sys.executable, GATE, "status", *_shape], cwd=_wd,
+                                     capture_output=True, timeout=180,
+                                     env={**os.environ, "GATE_CLI": "off"})
+                _sv = subprocess.run([_cli_bin, "--status-core", *_shape], cwd=_wd,
+                                     capture_output=True, timeout=180)
+                if (_s9noms(_py.stdout), _s9noms(_py.stderr), _py.returncode) != \
+                   (_s9noms(_sv.stdout), _s9noms(_sv.stderr), _sv.returncode):
+                    _s9apart.append(_name + (" --json" if _shape else ""))
+                if not _shape:
+                    _s9said[_name] = (_py.returncode, _py.stdout)
+        # and the tool's own repository, the world the cover's badge is about
+        for _shape in ([], ["--json"]):
+            _py = subprocess.run([sys.executable, GATE, "status", *_shape], cwd=HERE,
+                                 capture_output=True, timeout=180,
+                                 env={**os.environ, "GATE_CLI": "off"})
+            _sv = subprocess.run([_cli_bin, "--status-core", *_shape], cwd=HERE,
+                                 capture_output=True, timeout=180)
+            if (_s9noms(_py.stdout), _s9noms(_py.stderr), _py.returncode) != \
+               (_s9noms(_sv.stdout), _s9noms(_sv.stderr), _sv.returncode):
+                _s9apart.append("the tool's own repository"
+                                + (" --json" if _shape else ""))
+            if not _shape:
+                _s9said["here"] = (_py.returncode, _py.stdout)
+        if _s9apart:
+            print("   the status core answers apart on:", _s9apart[:4])
+        S.append(("the status core answers with the python side's bytes on fourteen worlds",
+                  _s9apart == []))
+        # and the worlds mean what they were built to mean, so a probe that
+        # stopped measuring anything cannot stay green: every guard family is
+        # pinned to the world planted for it, by the refusal's own words
+        _s9has = lambda n, s: s.encode() in _s9said[n][1]
+        S.append(("and every guard family fires on the world planted for it, alike",
+                  _s9said["here"][0] == 0 and b"holds" in _s9said["here"][1]
+                  and _s9said["demo"][0] == 1 and _s9has("demo", "Owns_3_carol")
+                  and _s9said["org"][0] == 0 and _s9has("org", "declarations")
+                  and _s9said["init"][0] == 0 and _s9has("init", "gate serve")
+                  and _s9said["bare"][0] == 1 and _s9has("bare", "states none")
+                  and _s9said["policy"][0] == 1 and _s9has("policy", "can never be met")
+                  and _s9said["empty"][0] == 0 and _s9has("empty", "no world here")
+                  and _s9has("parted", "does not hold it")
+                  and _s9has("parted", "no longer writes it")
+                  and _s9has("gone", "no file of that name is here now")
+                  and _s9has("presented", "not yours to replace")
+                  and _s9has("presented", "One layer, one declaration")
+                  and _s9has("stale", "may not disagree with the court")
+                  and _s9has("printout", "no longer matches the words the judge carries")
+                  and _s9has("vendored", "not the judge this repository states")
+                  and _s9has("thick", "no such file exists")
+                  and _s9has("thick", "is a second row about")
+                  and _s9has("thick", "declared twice")
+                  and _s9has("thick", "does not say which revision")
+                  and _s9has("thick", "outside this world")
+                  and _s9has("thick", "one side of one")
+                  and _s9has("thick", "is not a view")
+                  and _s9has("thick", "written on one line")
+                  and _s9has("thick", "never closes")
+                  and _s9has("thick", "an identity names")
+                  and _s9has("thick", "which is not a name")
+                  and _s9has("thick", "has no row in the manifest")))
+
         # ── AND A READER TAKES A RECORD'S BOUNDARY FROM THE FILE, NOT FROM A
         # PATTERN. One search with the dot matching newlines ran the whole
         # document, so a declaration written on ONE line — `public enum
