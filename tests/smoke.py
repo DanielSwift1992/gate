@@ -6845,6 +6845,37 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                              capture_output=True, env={**os.environ, "GATE_CLI": _cli_bin})
         S.append(("and refuse an absent page with one sentence and one exit code",
                   _se.stderr == _pe.stderr and _se.returncode == _pe.returncode == 1))
+        # ── AND A TEXT THIS TOOL WRITES HAS ONE HOME. The head a layout is born
+        # with was a literal inside the CLI, and the day the Swift carrier had to
+        # write the same head there would have been two copies of one text: the
+        # registry's own kind 9, made by us on purpose. It is a shelf page now,
+        # read by both carriers from one file, and the shelf's card comes off at
+        # a mark the page carries rather than by counting lines.
+        _born = os.path.join(tmp, "born-with-a-head")
+        os.makedirs(os.path.join(_born, "deep"), exist_ok=True)
+        subprocess.run(["git", "init", "-q", "-b", "main", _born], capture_output=True)
+        open(os.path.join(_born, "deep", "side.swift"), "w").write("public enum X {}\n")
+        run("mine", "deep/side.swift", "--role", "forms", cwd=_born)
+        _page = open(os.path.join(HERE, "stdlib", "manifest.swift"), encoding="utf-8").read()
+        _mark = "// ── what is written into a world begins here ──\n"
+        _head = _page.split(_mark, 1)[1]
+        _made = open(os.path.join(_born, "gate.manifest.swift"), encoding="utf-8").read()
+        S.append(("the head a layout is born with is a page, and the page is its one home",
+                  _mark in _page
+                  # what the tool writes is what the page says, to the byte
+                  and _made.startswith(_head)
+                  # and the shelf's own card is not written into somebody's world
+                  and "// role: gate's own" not in _made
+                  and "speaks-for" not in _made
+                  # while the page itself is shown whole, card and all: `show`
+                  # prints a printout, it does not answer with an object
+                  and subprocess.run([sys.executable, GATE, "stdlib", "show", "manifest"],
+                                     cwd=HERE, capture_output=True, text=True,
+                                     env={**os.environ, "GATE_CLI": "off"}).stdout
+                      == _page + "\n"
+                  # and the CLI holds no second copy of that text
+                  and "One list, three columns" not in open(GATE, encoding="utf-8").read()))
+
         # ── AND A ROAD IS HELD BEFORE ITS VERB ARRIVES. `contractFields` is the
         # reading `declare` and `drift` will both stand on. It is in the vein
         # with nothing routed to it, behind a door this battery opens and no
@@ -9650,7 +9681,7 @@ public enum MyWatch: AccessLedger {
                          if f.endswith(".swift"))
     S.append(("every page on the shelf says its sort, and says one of the four",
               sorted(speaks_map) == shelf_pages
-              and len(shelf_pages) == 14
+              and len(shelf_pages) == 15
               and sorted(speaks_map) == sorted(shelf_out.get("modules") or {})
               and set(speaks_map.values()) == {"a-domain", "the-tool", "the-bench", "the-reader"}
               # said by the page in its third line, never guessed from its name

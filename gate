@@ -3239,6 +3239,23 @@ def opens_guards():
     return bad
 
 
+SHELF_MARK = "// ── what is written into a world begins here ──\n"
+
+
+def shelf_template(name):
+    # ── A TEXT THIS TOOL WRITES INTO SOMEBODY'S REPOSITORY HAS ONE HOME. The
+    # head a layout is born with was a literal in this file, and the day the
+    # Swift carrier had to write the same head there would have been two copies
+    # of one text: the registry calls that a second record, and a second record
+    # drifts. It is a shelf page now, read by both carriers from one file.
+    #
+    # The shelf's own card comes off at the mark the page carries: read by a
+    # mark rather than by counting lines, because a count is a guess about a
+    # file somebody may edit.
+    said = STDLIB.get(name, "")
+    return said.split(SHELF_MARK, 1)[1] if SHELF_MARK in said else said
+
+
 def stdlib_role(name):
     # WHICH IT IS, THE FILE SAYS ITSELF — the same rule a seam side already
     # lives by. Sorting these by the shape of their names was a guess dressed
@@ -4087,23 +4104,17 @@ def declare_side(path, kind, role, frm=None, written=None, opens=None):
     # protocol already was — one list, of this world.
     def ensure(text, line):
         return text if line in text else text.rstrip("\n") + "\n" + line + "\n"
-    text = open(mp, encoding="utf-8").read() if os.path.exists(mp) else (
-        "// One list, three columns: whose source a file is, which court reads it,\n"
-        "// and, for anything taken, the revision it was taken at. gate obeys this\n"
-        "// document and never guesses at a row.\n"
-        "//\n"
-        "// If you are looking for the import: a row is the import. The judged set is\n"
-        "// what this document lists, so a file is read because it has a line here and\n"
-        "// for no other reason. The words the rows are written in are declared below,\n"
-        "// in this file, which is why nothing is fetched.\n"
-        "//\n"
-        "// It is written the way every record in this world is written: each column\n"
-        "// is an axis to a declared atom, and the one string is the `typeName`\n"
-        "// literal that spells a name. A revision is an atom of its own, so two\n"
-        "// rows taken at the same revision say the same name, not merely the same\n"
-        "// text. `Written` names another row: the words a page is written in, so the\n"
-        "// two are read together.\n"
-        "public protocol Role {}\n")
+    # ── AND THE HEAD IS THE PAGE'S, WITH NO SECOND COPY BEHIND IT. A literal
+    # kept here "in case the page is missing" is the second record this whole
+    # tool is against: it would be the one that drifts, silently, because
+    # nothing reads it while the page is there.
+    if os.path.exists(mp):
+        text = open(mp, encoding="utf-8").read()
+    else:
+        text = shelf_template("manifest")
+        if not text.strip():
+            cannot("the shelf page a layout is born from is missing: stdlib/manifest.swift",
+                   "restore the file, or run this where the tool's own stdlib/ is beside it")
     # the role atom this row needs, and only that one
     atom = ROLE_ATOM[role]
     if "public enum " + atom + ": Role {}" not in text:

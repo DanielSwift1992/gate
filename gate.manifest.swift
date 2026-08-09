@@ -147,3 +147,7 @@ public enum Ownership: Mine {
     public typealias Kind = FormsFile
 }
 extension Ownership { public static var typeName: String { "ownership.swift" } }
+public enum StdlibManifest: Mine {
+    public typealias Kind = FormsFile
+}
+extension StdlibManifest { public static var typeName: String { "stdlib/manifest.swift" } }
