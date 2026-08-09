@@ -1112,6 +1112,32 @@ def main():
               # and what the file says to the tool is not said to a reader
               and "role: forms" not in _btext and "opens:" not in _btext))
 
+    # ── AND THE COVER'S OWN BLOCK IS A PRINT. It was nine lines of Swift typed
+    # by hand: a page claiming to show what this tool prints, showing what
+    # somebody wrote. Now the four records are asked of the tool by name and the
+    # cover carries its answer, so the day the printing changes the cover is red
+    # rather than quietly wrong. The count in the sentence belongs to the block
+    # it counts, and is read from it here rather than trusted.
+    _bare_shown = subprocess.run([sys.executable, GATE, "bare", "ownership.swift", "Zone_docs",
+                             "Path_2_docs_", "Owner_carol", "Owns_2_carol"], cwd=_bw,
+                            capture_output=True, text=True, timeout=300).stdout
+    _bare_printed = [l for l in _bare_shown.split("\n")]
+    _bare_printed = _bare_printed[:next(i for i, l in enumerate(_bare_printed)
+                              if l.startswith("  a projection"))]
+    while _bare_printed and not _bare_printed[-1].strip():
+        _bare_printed.pop()
+    _bare_cover = open(os.path.join(HERE, "README.md"), encoding="utf-8").read()
+    _bare_block = _bare_cover.split("`gate bare` prints them,\nfrom the demo's `ownership.swift`:")[1]
+    _bare_block = _bare_block.split("```")[1].strip("\n").split("\n")
+    _bare_words = {"seven": 7, "eight": 8, "nine": 9, "ten": 10, "eleven": 11}
+    _bare_saidn = re.search(r"These (\w+)\nlines are that claim", _bare_cover)
+    S.append(("the cover's example block is what the tool prints, and its count is its own",
+              _bare_block == [l for l in _bare_printed if True]
+              and _bare_saidn and _bare_words.get(_bare_saidn.group(1)) == len([l for l in _bare_block if l.strip()])
+              # and the cover says where the full text is, because bare is a view
+              and "`gate bare … --full` prints it" in _bare_cover
+              and "swiftc -typecheck` reads it as it stands" in _bare_cover))
+
     # and the full text is the same bytes that sit on disk: bare is a view over
     # this file, never a second copy of it
     _full = run("bare", "ownership.swift", "--full", cwd=_bw)[1]
@@ -1494,20 +1520,26 @@ def main():
     world = open(os.path.join(tmp, "co-gate.swift")).read()
     S.append(("ownership rides the access crystal, not a set of forms of its own",
               "Owns<" in world and "public protocol Keeper" in world))
-    # ── AND THE NINE LINES ON THE COVER ARE THE DEMO'S OWN PRINT. The cover
-    # shows a pair written out, and a hand-written specimen drifts from the
-    # printer the day the printer changes: the letter's findings quote already
-    # walked that road. Every line of the cover's one swift block must be a
-    # line the demo's own import actually prints.
-    _cover_block = re.search(r"```swift\n(.*?)```", _cover, re.S)
+    # ── AND THE PAIR THE COVER SHOWS IS THE DEMO'S OWN, IN BOTH VIEWS. The cover
+    # shows it stripped, printed by `gate bare` and held to that print above;
+    # the sentence beside it says the same claim lies on disk in full Swift.
+    # That second half is this check: every record the cover names is declared
+    # by the demo's own ownership.swift, in the full text swiftc reads. A cover
+    # showing a projection while the source says something else would be the
+    # drift this repository is about, printed on its own first page.
     _cover_demo = os.path.join(tmp, "cover-demo")
     run("demo", _cover_demo)
     _cover_world = open(os.path.join(_cover_demo, "ownership.swift"),
                         encoding="utf-8").read()
-    S.append(("the cover's written-out pair is the demo's own print, line for line",
-              bool(_cover_block) and all(
-                  ln in _cover_world
-                  for ln in _cover_block.group(1).strip().split("\n"))))
+    S.append(("the pair the cover shows is the demo's own, stripped and in full",
+              all(ln in _cover_world for ln in (
+                  "public enum Zone_docs: Realm {}",
+                  "public enum Path_2_docs_: Room {",
+                  "    public typealias Place = Zone_docs",
+                  "public enum Owner_carol: Keeper {",
+                  "    public typealias Post = Zone_docs",
+                  "    public typealias Key = WardenKey",
+                  "public typealias Owns_2_carol = Owns<Owner_carol, Path_2_docs_>"))))
     # ── AND THE PRINT AND ITS SOURCE ARE A PAIR, HELD FROM BIRTH. The world
     # names its inputs on its `from:` line, and status re-translates and
     # compares certificates: silent on a fresh pair, and a rule written into

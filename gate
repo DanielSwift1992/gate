@@ -5999,15 +5999,22 @@ def bare_note(text, at):
     return " ".join(x for x in said if x)
 
 
-def bare_lines(parsed, text):
+def bare_lines(parsed, text, only=None):
     # ── BARE IS THE RECORD WITHOUT CEREMONY, NEVER THE RECORD WITHOUT ITS
     # CONTENT. The same items the bench's own bare view draws, in the order the
     # document has them: a record with its columns, the holes it opens, the
     # clause it conforms under, the one string it is allowed, and the claims
     # written inside it. The bench decorates these with slots and marks because
     # you write in it; here they are lines, because you read them.
+    # ── AND A BLOCK SOMEBODY QUOTES IS A PRINT, NOT A CUT. Naming records prints
+    # those and nothing else, in the file's own order, so a page showing four of
+    # them shows the tool's own bytes rather than a hand's selection of them.
+    # Without this the cover's example was assembled by fingers, and no check
+    # could hold it to what the tool actually says.
     items = []
     for d in parsed["declarations"]:
+        if only and d["name"] not in only:
+            continue
         head = d["name"]
         if d.get("conformances"):
             head += ": " + ", ".join(d["conformances"])
@@ -6035,9 +6042,11 @@ def bare_lines(parsed, text):
             block.append(f"    {e['head']}" + (f"<{args}>" if args else ""))
         items.append((d["line"], block))
     for name, a in (parsed.get("topAliases") or {}).items():
+        if only and name not in only:
+            continue
         note = bare_note(text, a["line"])
         items.append((a["line"], ([note] if note else []) + [f"{name} = {a['target']}"]))
-    for c in bare_comments(text, parsed):
+    for c in ([] if only else bare_comments(text, parsed)):
         items.append((c["line"], ["── " + c["text"] + " ──"] if c["kind"] == "head"
                       else c["text"].split("\n") if c["kind"] == "set"
                       else [c["text"]]))
@@ -6058,7 +6067,8 @@ def cmd_bare(a):
     paths = [x for x in a if not x.startswith("-")]
     if not paths:
         return {"command": "bare", "asks": True,
-                "note": "bare FILE [--full]  ·  the same world with the ceremony stripped",
+                "note": "bare FILE [NAME ...] [--full]  ·  the same world with the "
+                        "ceremony stripped",
                 "next": "name a world file: `gate bare gate.swift`, or `gate bare "
                         "stdlib/verbs.swift` for a page off the shelf"}
     src = paths[0]
@@ -6070,8 +6080,19 @@ def cmd_bare(a):
         return {"command": "bare", "file": src, "full": text, "mutates": False,
                 "note": "the whole text, as it sits on disk and as swiftc reads it",
                 "next": "`gate bare " + src + "` prints the same world stripped"}
-    lines = bare_lines(world_parse(src), text)
-    return {"command": "bare", "file": src, "lines": lines, "mutates": False,
+    only = paths[1:]
+    parsed = world_parse(src)
+    if only:
+        known = ({d["name"] for d in parsed["declarations"]}
+                 | set(parsed.get("topAliases") or {}))
+        missing = [n for n in only if n not in known]
+        if missing:
+            cannot(f"{src} declares no {'record' if len(missing) == 1 else 'records'} "
+                   + ", ".join(missing),
+                   f"`gate bare {src}` prints every record it does declare")
+    lines = bare_lines(parsed, text, only)
+    return {"command": "bare", "file": src, "only": only or None, "lines": lines,
+            "mutates": False,
             "note": "a projection: the file on disk is unchanged full Swift, and "
                     "`gate bare " + src + " --full` prints it",
             "next": "run `gate serve` to edit this view and watch the verdict move"}
@@ -7226,12 +7247,10 @@ usage (the git-shaped porcelain):
                                        translation at all: any clone has it)
   gate findings [--md]                (what is true of this clone, in sentences:
                                        needs no world and no configuration)
-  gate bare FILE [--full]             (the same world with the ceremony stripped:
+  gate bare FILE [NAME ...] [--full]  (the same world with the ceremony stripped:
                                        a projection, and the file on disk is the
-                                       full Swift it was, which `--full` prints)
-  gate bare FILE [--full]             (the same world with the ceremony stripped:
-                                       a projection, and the file on disk is the
-                                       full Swift it was, which `--full` prints)
+                                       full Swift it was, which `--full` prints.
+                                       Name records to print those alone)
   gate my [clear]                     (your own world: a claim in your git alone)
   gate stdlib [show|materialize] NAME (the words a world may be written in)
   gate --version                      (the tool, and the revision its judge was

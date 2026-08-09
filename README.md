@@ -167,22 +167,27 @@ mock yours. Each side states its half in its own repository, the seam is
 judged, and a disagreement is named at its address on both sides. What
 used to be an integration test is a verdict.
 
-You already write claims: every line of CODEOWNERS is one. These nine
-lines, from the demo's `ownership.swift`, are the same claim with its
-parts named: the
-zone, a path in it, an owner posted to it, and the tie between them:
+You already write claims: every line of CODEOWNERS is one. These seven
+lines are that claim with its parts named: the zone, a path in it, an
+owner posted to it, and the tie between them. `gate bare` prints them,
+from the demo's `ownership.swift`:
 
-```swift
-public enum Zone_docs: Realm {}
-public enum Path_2_docs_: Room {
-    public typealias Place = Zone_docs
-}
-public enum Owner_carol: Keeper {
-    public typealias Post = Zone_docs
-    public typealias Key = WardenKey
-}
-public typealias Owns_2_carol = Owns<Owner_carol, Path_2_docs_>
 ```
+Zone_docs: Realm
+
+Path_2_docs_: Room
+    Place = Zone_docs
+
+Owner_carol: Keeper
+    Post = Zone_docs
+    Key = WardenKey
+
+Owns_2_carol = Owns<Owner_carol, Path_2_docs_>
+```
+
+The file on disk is full Swift, `gate bare … --full` prints it, and
+`swiftc -typecheck` reads it as it stands: this view is a projection
+over that one source, never a second copy of it.
 
 The language is three things: names, claims between names, and the
 rules the claims must satisfy. Realm, Room, Keeper: the zone, the
@@ -297,7 +302,7 @@ web/codemirror.*  the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
 docs/           DETAILS.md, SECURITY.md, CHANGELOG.md, NOTICE.md, and
                 the cover's picture with its provenance
-tests/smoke.py   the battery: 477 checks this repository holds itself
+tests/smoke.py   the battery: 478 checks this repository holds itself
                  to, end-to-end runs through judge parity through
                  documentation contracts; the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts
