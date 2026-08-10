@@ -7706,7 +7706,14 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
             if _tag == "a count that is not one" and (
                     _said[0][2] != 1 or b"is not a number of commits" not in _said[0][1]):
                 _svw.append(_tag + ": a count that is not one is not said")
-            if _tag == "this repository" and b"<->" not in _said[0][0]:
+            # the pin about an old repository is a pin about ITS history, and
+            # CI checks out one commit: a shallow universe cannot carry the
+            # claim. Parity on this repository holds above either way; the
+            # content pin speaks only where the history it speaks of exists.
+            _sv_deep = subprocess.run(["git", "-C", HERE, "rev-list", "--count", "HEAD"],
+                                      capture_output=True, text=True).stdout.strip()
+            if _tag == "this repository" and _sv_deep.isdigit() and int(_sv_deep) > 20 \
+                    and b"<->" not in _said[0][0]:
                 _svw.append(_tag + ": no link at all in a repository this old")
         if _svw:
             print("   the survey parts:", _svw[:4])
