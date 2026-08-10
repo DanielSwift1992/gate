@@ -3136,6 +3136,31 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               and bg.get("commits_judged") == 2
               # and it never claims to have seen what nobody saw
               and "silent" not in (bg.get("note") or "") and "claims" in bg.get("text", "")))
+    # ── AND THE BADGE IS SOMETIMES THE VERB THAT BRINGS THE WORLD INTO BEING.
+    # The check above bootstraps with `status` first, which is exactly why this
+    # was invisible: `badge` asks status, status runs the tables bootstrap, and
+    # the file list badge decided from was read BEFORE that ran. In a repository
+    # holding tables and no world yet it counted the forms side of an answer
+    # that had just judged a plain world: `0 claims · holds` where the court
+    # said eighty-two premises, no history replayed, and the missing days
+    # explained by a note about forms. Found by reading while scouting this
+    # verb's move to the vein, and killed in the carrier that has not moved yet:
+    # a defect mirrored into a second carrier costs twice to find and twice to
+    # fix, and parity would have called the pair of them agreement.
+    _bf = os.path.join(tmp, "badge-first")
+    os.makedirs(_bf, exist_ok=True)
+    run("demo", "org", _bf)
+    os.remove(os.path.join(_bf, "gate.swift"))       # the tables stay, the world goes
+    _bf_badge = run("badge", cwd=_bf)[1]
+    _bf_status = run("status", cwd=_bf)[1]
+    S.append(("a badge that bootstraps the world counts the world it judged",
+              _bf_badge.get("claims", 0) > 0
+              and _bf_badge.get("claims") == (_bf_status.get("world") or {}).get("premises")
+              and _bf_badge.get("verdict") == "holds"
+              # and the days are counted rather than explained away by a note
+              # about a forms world this never was
+              and _bf_badge.get("unbroken_days") is not None
+              and "this world is forms" not in (_bf_badge.get("note") or "")))
     # ── AND A RED BADGE DOES NOT REPORT NOUGHT CLAIMS. The claim count comes
     # from the court's own holding line, and a refusal prints no such line, so a
     # world with eighty-two premises and two refusals wore `0 claims · refused`

@@ -3783,6 +3783,15 @@ def cmd_badge(a):
     # where the where court does; both are claims judged, and neither can be
     # raised by hand.
     said = dispatch("status", [])
+    # ── AND THE WORLD IS READ AFTER THE ANSWER, because the answer may be what
+    # brought it into being. `status` runs the tables bootstrap, so in a
+    # repository holding tables and no world yet the list above was taken before
+    # the world existed: this then counted the forms side of an answer that had
+    # just judged a plain world and printed `0 claims · holds` where the court
+    # said eighty-two premises, replayed no history, and explained the missing
+    # days with a note about forms. One re-read fixes all three, and every
+    # decision below is made from what was actually judged.
+    files = world_files()
     holds = said.get("verdict") == "holds"
     claims = ((said.get("world") or {}).get("premises")
               if files else (said.get("forms") or {}).get("equalities")) or 0
