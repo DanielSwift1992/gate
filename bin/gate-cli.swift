@@ -59,6 +59,11 @@ func cannot(_ note: String, _ then: String) -> Never {
 // with `-o`; `--out` is the guess anybody makes, and swallowing it wrote nothing
 // and said nothing. The python side refuses it in `main`, before any verb reads
 // its argv, and the verbs this vein carries never reach that line.
+// a global for the early branches, declared in the head the way the others are:
+// top-level order is execution order, and a door that runs before its var would
+// read a value that does not exist yet
+var scratchCount = 0
+
 if args.contains("--out") && !args.contains("-o") {
     cannot("this tool writes with `-o`, and `--out` is not a flag it reads",
            "spell it `-o PATH`, the way the usage line for every writing verb does")
@@ -72,7 +77,7 @@ if args.contains("--out") && !args.contains("-o") {
 // argv it does not answer, and the python side would never see it.
 if args == ["--carries"] {
     out("stdlib\nexport\nseam\nlog\naside\ndeclare\nmine\ntheirs\ninit\ndrift\nmy\n"
-        + "status\nfsck\nbadge\nsurvey\nfindings\nreport\nbare\n")
+        + "status\nfsck\nbadge\nsurvey\nfindings\nreport\nbare\nimport\n")
     exit(0)
 }
 
@@ -270,7 +275,15 @@ func theirsText(_ path: String, _ what: String) -> String {
     guard let data = FileManager.default.contents(atPath: path) else {
         cannot("no such file: " + path, "point it at " + what)
     }
-    if let text = String(data: data, encoding: .utf8) { return text }
+    if let text = String(data: data, encoding: .utf8) {
+        // ── AND SOMEBODY ELSE'S FILE IS READ THE WAY THEY SAVED IT. A file a
+        // Windows editor wrote opens with a byte-order mark, and the other
+        // carrier reads through `utf-8-sig`, which drops it. This did not: the
+        // mark travelled into the first CODEOWNERS pattern, so `/src/plain.go`
+        // became a pattern no file matches and the tool refused a rule that was
+        // right. Every reading of somebody else's text comes through here.
+        return text.hasPrefix("\u{feff}") ? String(text.dropFirst()) : text
+    }
     // the first byte that is not utf-8, counted the way the other side counts it
     let bytes = [UInt8](data)
     var i = 0
@@ -1128,7 +1141,13 @@ func readText(_ path: String) -> String? {
     // read with python's errors="replace": a byte that is not utf-8 becomes the
     // replacement character rather than a refusal to read the file at all
     guard let data = FileManager.default.contents(atPath: path) else { return nil }
-    return String(decoding: data, as: UTF8.self)
+    let text = String(decoding: data, as: UTF8.self)
+    // ── AND A MARK AT THE HEAD OF A FILE IS NOT ITS FIRST CHARACTER. A file a
+    // Windows editor wrote opens with a byte-order mark, and the other carrier
+    // reads foreign text through `utf-8-sig`, which drops it. This did not, so
+    // the mark travelled into the first CODEOWNERS pattern and the tool refused
+    // a rule that was right, and into a policy header so no column was found.
+    return text.hasPrefix("\u{feff}") ? String(text.dropFirst()) : text
 }
 
 func matchesAt(_ pattern: String, _ text: String,
@@ -2246,7 +2265,9 @@ func codeownersZone(_ pattern: String) -> String {
 }
 
 func codeownersWorldLines(_ src: String, _ policy: [(owner: String, zone: String)],
-                          _ saidFrom: String) -> (lines: [String], srcmap: [String: String]) {
+                          _ saidFrom: String)
+    -> (lines: [String], srcmap: [String: String],
+        rules: [(line: Int, pattern: String, owners: [String])], keepers: Set<String>) {
     // one translator, whoever asks: the import prints a world with this, and
     // the pair guard prints the same world again to compare
     let rules = readCodeowners(src)
@@ -2281,7 +2302,7 @@ func codeownersWorldLines(_ src: String, _ policy: [(owner: String, zone: String
             srcmap[cert] = "\((src as NSString).lastPathComponent):\(r.line) · \(r.pattern) \(owner)"
         }
     }
-    return (lines, srcmap)
+    return (lines, srcmap, rules, keepers)
 }
 
 func codeownersPairGuards(_ w: WorldState) -> [(address: String, claim: String)] {
@@ -2316,7 +2337,7 @@ func codeownersPairGuards(_ w: WorldState) -> [(address: String, claim: String)]
         let policy = m[1].isEmpty ? []
             : readOwnersPolicy(((absPath(path) as NSString).deletingLastPathComponent as NSString)
                 .appendingPathComponent(m[1]))
-        let (lines, srcmap) = codeownersWorldLines(srcp, policy, "")
+        let (lines, srcmap, _, _) = codeownersWorldLines(srcp, policy, "")
         let fresh = Set(lines.filter { $0.hasPrefix("public typealias Owns_") })
         let disk = text.components(separatedBy: "\n")
         let held = Set(disk.filter { $0.hasPrefix("public typealias Owns_") })
@@ -3141,7 +3162,7 @@ func historyDivergence(_ n: Int, policyName: String?) -> (rows: [HistoryRow], wh
         let cp = (tmp as NSString).appendingPathComponent((here as NSString).lastPathComponent)
         try? text.write(toFile: cp, atomically: false, encoding: .utf8)
         let rules = readCodeowners(cp)
-        let (lines, srcmap) = codeownersWorldLines(cp, policy, here)
+        let (lines, srcmap, _, _) = codeownersWorldLines(cp, policy, here)
         let wp = (tmp as NSString).appendingPathComponent("world.swift")
         try? (lines.joined(separator: "\n") + "\n").write(toFile: wp, atomically: false,
                                                           encoding: .utf8)
@@ -3423,6 +3444,544 @@ func bareLines(_ parsed: Said, _ text: String, _ only: [String]) -> [String] {
         out += block
     }
     return out
+}
+
+// ── THE ACT OF ENTRY, all four heads. Everything this tool judges is on this
+// side of it: a pair of catalogue tables, a repository's own CODEOWNERS, the
+// citations code makes to a tracker, and a cluster's roles and bindings. Each
+// prints a world in the shipped forms and asks the court about it; none of them
+// leaves a file behind unless asked by name with `-o`.
+let REFS_HEADER = """
+    // printed by gate import refs: the citations this code makes to a tracker,
+    // written in the reference vocabulary (`gate stdlib show forms-reference`). A
+    // tracked thing carries its state on an axis, a site is a place in your own
+    // file, and a citation holds only while the thing it cites is open.
+    //
+
+    """.replacingOccurrences(of: "\n    ", with: "\n")
+
+let RBAC_FORMS_HEADER = """
+    // printed by gate import rbac: the K8s access world in the domain forms
+    // (the exemplar: theory corpus Sources/Examples/Grants.swift @ 0fd0b38).
+    // Realms are namespaces plus the cluster scope. A role is a room stating its
+    // realm, a binding is a keeper stating its post, and the gate's equality is the
+    // K8s invariant itself: a RoleBinding and its Role live in one namespace.
+    // The forms below are the stdlib module forms-grants, printed from the shelf.
+
+
+    """.replacingOccurrences(of: "\n    ", with: "\n")
+
+let RBAC_WRITES: Set<String> = ["create", "update", "patch", "delete", "deletecollection"]
+
+func rbacKey(_ rules: [Said]) -> String {
+    var verbs = Set<String>()
+    for r in rules { for v in r.at("verbs")?.asList ?? [] { verbs.insert(v.asText ?? "") } }
+    if verbs.contains("*") || !verbs.isDisjoint(with: ["escalate", "bind", "impersonate"]) {
+        return "WardenKey"
+    }
+    if !verbs.isDisjoint(with: RBAC_WRITES) { return "WriterKey" }
+    return "ReaderKey"
+}
+
+func theirsJson(_ path: String, _ what: String) -> Said {
+    let text = theirsText(path, what)
+    guard let said = readSaid(text) else {
+        cannot(path + " is not the json this reads", "point it at " + what)
+    }
+    return said
+}
+
+// a tracker export, in the shape every tracker can produce: a list of
+// {key, status}. What counts as open is the tracker's word, not ours: anything
+// it does not call done or closed is still open.
+func readTracker(_ path: String) -> [(key: String, state: String)] {
+    let raw = theirsJson(path, "a tracker export: a list of {key, status}")
+    let items = raw.at("issues")?.asList ?? raw.asList ?? []
+    var out: [(key: String, state: String)] = []
+    for it in items {
+        let key = (it.at("key")?.asText ?? it.at("id")?.asText ?? "")
+            .trimmingCharacters(in: .whitespaces)
+        if key.isEmpty { continue }
+        let st = (it.at("status")?.asText ?? it.at("state")?.asText ?? "")
+            .trimmingCharacters(in: .whitespaces).lowercased()
+        let state = ["done", "closed", "resolved", "completed"].contains(st) ? "Closed" : "Open"
+        if let i = out.firstIndex(where: { $0.key == key }) { out[i] = (key, state) }
+        else { out.append((key, state)) }
+    }
+    return out
+}
+
+// every place the code names a ticket: TODO(KEY), FIXME(KEY), or a bare mention
+// in a comment. The address is the reader's own file and line.
+func readCitations(_ root: String) -> [(file: String, line: Int, key: String)] {
+    var hits: [(file: String, line: Int, key: String)] = []
+    let skip: Set<String> = [".git", "node_modules", "__pycache__", ".venv"]
+    let kinds: Set<String> = ["py", "ts", "js", "rs", "go", "rb", "java", "swift", "md"]
+    guard let walk = FileManager.default.enumerator(atPath: root) else { return hits }
+    var found: [String] = []
+    for case let rel as String in walk {
+        if rel.components(separatedBy: "/").contains(where: { skip.contains($0) }) {
+            walk.skipDescendants()
+            continue
+        }
+        if kinds.contains((rel as NSString).pathExtension) { found.append(rel) }
+    }
+    // the other carrier walks with os.walk, whose order is the directory's own;
+    // sorted here so two machines read one order, and the answer is a set anyway
+    for rel in found.sorted() {
+        let p = (root as NSString).appendingPathComponent(rel)
+        guard let text = readText(p) else { continue }
+        for (n, line) in text.components(separatedBy: "\n").enumerated() {
+            for m in matches("\\b(?:TODO|FIXME|HACK|XXX)\\s*[(\\[:]?\\s*([A-Z][A-Z0-9]+-\\d+)",
+                             line) {
+                hits.append((rel, n + 1, m[0]))
+            }
+        }
+    }
+    return hits
+}
+
+// the two catalogue tables, printed as a world and judged: the emitter is the
+// bootstrap's, so the seed and the verb write one text
+func importWorld(_ peoplePath: String, _ grantsPath: String, _ outPath: String)
+    -> (verdict: String, refusals: [(address: String, claim: String)], people: Int,
+        grants: Int, judgeMs: String?, wallMs: Double) {
+    let world = seededWorld(peoplePath, grantsPath)
+    oursWrite(outPath, "the world this reads", world)
+    let t0 = Date()
+    let said = courtSays([outPath])
+    let wallMs = ((Date().timeIntervalSince(t0) * 1000 * 10).rounded(.toNearestOrEven)) / 10
+    let refusals = refineAddresses(world, judgedRefusals(said),
+                                   (outPath as NSString).lastPathComponent)
+    let people = csvTable(peoplePath, "the people this world is seeded from").rows.count
+    let grants = csvTable(grantsPath, "the grants this world is seeded from").rows.count
+    return (said.contains("THE JUDGE holds") && refusals.isEmpty ? "holds" : "refused",
+            refusals, people, grants,
+            matches("([\\d.]+) ms", said).compactMap { $0.first }.last, wallMs)
+}
+
+func scratchDir(_ tag: String) -> String {
+    let d = NSTemporaryDirectory() + "/" + tag + "\(getpid())-\(scratchCount)"
+    scratchCount += 1
+    try? FileManager.default.createDirectory(atPath: d, withIntermediateDirectories: true)
+    return d
+}
+
+if args.first == "import" {
+    let rest = Array(args.dropFirst()).filter { $0 != "--json" }
+    let asJson = args.contains("--json")
+    // the shelf before anything is printed: every head here prints a world in
+    // the shipped forms, and a world printed before the shelf was read is a
+    // world with its own vocabulary missing
+    loadStatusShelf()
+    func after(_ flag: String) -> String? {
+        guard let i = rest.firstIndex(of: flag), i + 1 < rest.count else { return nil }
+        return rest[i + 1]
+    }
+    let head = rest.first ?? ""
+
+    // ── import codeowners CODEOWNERS [--tree DIR] [--policy owners.csv] [-o F]
+    if head == "codeowners" {
+        let tail = Array(rest.dropFirst())
+        // the verb the cover sells finds the file it is named after: typed bare
+        // it read argv[0] of an empty argv and met a person with an IndexError
+        let src = (tail.first.flatMap { $0.hasPrefix("-") ? nil : $0 })
+            ?? CODEOWNERS_PLACES.first(where: { FileManager.default.fileExists(atPath: $0) })
+        guard let src = src else {
+            cannot("this reads a CODEOWNERS, and there is none at "
+                   + CODEOWNERS_PLACES.joined(separator: ", "),
+                   "name the file: `gate import codeowners PATH`, or run `gate demo` for a "
+                   + "repository that has one")
+        }
+        func flag(_ name: String) -> String? {
+            guard let i = tail.firstIndex(of: name), i + 1 < tail.count else { return nil }
+            return tail[i + 1]
+        }
+        let asked = flag("-o")
+        // without -o the world still goes to a path, because the court reads
+        // one: it goes to the scratch this verb sweeps
+        let kept = asked == nil ? scratchDir("gate-codeowners-") : nil
+        let outPath = asked ?? (kept! as NSString)
+            .appendingPathComponent("codeowners-gate.swift")
+        let tree = flag("--tree")
+        let policyPath = flag("--policy")
+        let policy = policyPath.map { readOwnersPolicy($0) } ?? []
+        let saidFrom = src + (policyPath.map { " --policy " + $0 } ?? "")
+        let (lines, srcmap, rules, keepers) = codeownersWorldLines(src, policy, saidFrom)
+        let world = lines.joined(separator: "\n") + "\n"
+        oursWrite(outPath, "the world this prints", world)
+        let t0 = Date()
+        let outp = courtSays(["where", outPath])
+        let ms = ((Date().timeIntervalSince(t0) * 1000 * 10).rounded(.toNearestOrEven)) / 10
+        // ONE FACT, ONE SENTENCE: the words belong to the law, in the file the
+        // law is written in, and both surfaces read them from there
+        let notes = lawNotes([world])
+        var refusals: [(certificate: String, source: String, address: String, claim: String)] = []
+        for (cert, claim) in whereRefused(outp) {
+            guard let cert = cert, let source = srcmap[cert] else { continue }
+            refusals.append((cert, source, source.components(separatedBy: " · ")[0],
+                             plainly(claim, notes)))
+        }
+        // a pattern matching no file in the tree: CODEOWNERS says it, the tree does not
+        var ghosts: [(address: String, claim: String)] = []
+        if let tree = tree {
+            var paths: [String] = []
+            if let walk = FileManager.default.enumerator(atPath: tree) {
+                for case let rel as String in walk {
+                    if rel.components(separatedBy: "/").contains(".git") {
+                        walk.skipDescendants(); continue
+                    }
+                    var isDir: ObjCBool = false
+                    let full = (tree as NSString).appendingPathComponent(rel)
+                    if FileManager.default.fileExists(atPath: full, isDirectory: &isDir),
+                       !isDir.boolValue { paths.append(rel) }
+                }
+            }
+            // the address names the file that makes the claim, relative to the
+            // walked tree, which is how the reader's own editor opens it
+            let rel = relPath(absPath(src), absPath(tree))
+            ghosts = ghostPatterns(rules, paths, rel.hasPrefix("..") ? src : rel)
+        }
+        let zones = Set(rules.map { codeownersZone($0.pattern) }).count
+        let refusedAny = !refusals.isEmpty || !ghosts.isEmpty
+        // A GREEN NOBODY COULD HAVE BROKEN IS NOT A GREEN: without a policy every
+        // rule is its own authority, so the equalities cannot fail
+        let verdict = refusedAny ? "refused" : (policy.isEmpty ? "observed" : "holds")
+        let note = policy.isEmpty
+            ? "no ownership policy given (--policy owner,zone): every rule is its own "
+              + "authority, so the equalities hold trivially. The unmatched patterns above "
+              + "are read from the tree, not judged."
+            : "ownership is the warden's threshold and this run holds both halves of "
+              + "it: the zone equalities against one canon, and the key's class through "
+              + "the ladder this world presents (docs/DETAILS.md, "
+              + "what this road does not judge)"
+        let w = discoverWorld()
+        let declared = (w.layout?.rows ?? []).map { $0.path }
+        let next = asked == nil
+            ? "nothing was written: this read your CODEOWNERS and your tree and left "
+              + "both as they were. Add `-o ownership.swift` to keep the world it printed"
+            : (w.layout != nil && !declared.contains(asked!))
+            ? "declare it: `gate mine \(asked!) --role forms` adds the row the layout "
+              + "in gate.manifest.swift asks for, and then commit. Until it has one, "
+              + "status names it as a file standing beside the judged ones"
+            : "commit it: from here on it is what you have said, and it is judged"
+        if kept != nil { try? FileManager.default.removeItem(atPath: kept!) }
+        let all = refusals.map { (address: $0.address, claim: $0.claim) } + ghosts
+        if asJson {
+            var pairs: [(String, StatusJSON)] = [
+                ("command", .text("import codeowners")),
+                ("world", asked.map { .text($0) } ?? .null),
+                ("wrote", asked.map { .text($0) } ?? .null),
+                ("zones", .raw(String(zones))),
+                ("paths", .raw(String(rules.count))),
+                ("owners", .raw(String(keepers.count))),
+                ("policy", policy.isEmpty ? .null
+                    : .text(many(policy.count, "owner") + " "
+                            + (policy.count == 1 ? "has" : "have") + " a stated zone")),
+                ("verdict", .text(verdict)),
+                ("refusals", .list(refusals.map {
+                    .object([("certificate", .text($0.certificate)),
+                             ("source", .text($0.source)),
+                             ("address", .text($0.address)),
+                             ("claim", .text($0.claim))]) }
+                    + ghosts.map {
+                    .object([("address", .text($0.address)), ("claim", .text($0.claim))]) })),
+                ("judge_ms", .raw(String(ms))),
+                ("canon_handshake", .raw(outp.contains("canon v2") ? "true" : "false")),
+                ("note", .text(note)),
+                ("next", .text(next)),
+            ]
+            if let ready = commandIn(next) { pairs.append(("command_to_run", .text(ready))) }
+            out(statusDumps(.object(pairs), 0) + "\n")
+        } else {
+            let headSaid = verdict == "refused" ? "refused \(all.count)" : verdict
+            var lines = ["import codeowners: " + headSaid + " · " + floatRepr(String(ms)) + " ms"]
+            for r in refusals {
+                let rule = r.source.hasPrefix(r.address + " · ")
+                    ? String(r.source.dropFirst(r.address.count + 3)) : r.source
+                lines.append("  \(r.address) · \(r.claim)" + (rule.isEmpty ? "" : "  (\(rule))"))
+            }
+            for g in ghosts { lines.append("  \(g.address) · \(g.claim)") }
+            lines.append("  note: " + note)
+            lines.append("  next: " + next)
+            out(lines.joined(separator: "\n") + "\n")
+        }
+        exit(refusedAny ? 1 : 0)
+    }
+
+    // ── import refs tracker.json [--code DIR] [-o refs-gate.swift]
+    if head == "refs" {
+        let tail = Array(rest.dropFirst())
+        guard let src = tail.first, !src.hasPrefix("-") else {
+            cannot("this reads a tracker export, and no file was named",
+                   "name it: `gate import refs tracker.json --code .`")
+        }
+        func flag(_ name: String) -> String? {
+            guard let i = tail.firstIndex(of: name), i + 1 < tail.count else { return nil }
+            return tail[i + 1]
+        }
+        let code = flag("--code") ?? "."
+        let keep = tail.contains("-o")
+        let kept = keep ? nil : scratchDir("gate-refs-")
+        let outPath = flag("-o") ?? (kept! as NSString).appendingPathComponent("refs-gate.swift")
+        let tracked = readTracker(src)
+        let cites = readCitations(code)
+        var lines = [REFS_HEADER + (STDLIB_TEXTS["forms-reference"] ?? ""), ""]
+        var keys = Set(cites.map { $0.key })
+        for t in tracked { keys.insert(t.key) }
+        for key in keys.sorted() {
+            guard let state = tracked.first(where: { $0.key == key })?.state else { continue }
+            lines.append("public enum \(sanitized(key)): Tracked {")
+            lines.append("    public typealias State = \(state)")
+            lines.append("}")
+        }
+        var srcmap: [String: (address: String, key: String)] = [:]
+        var seen = Set<String>()
+        for (i, c) in cites.enumerated() {
+            let site = "At_\(sanitized(c.file))_L\(c.line)"
+            if seen.contains(site) { continue }
+            seen.insert(site)
+            lines.append("public enum \(site): Site {}")
+            let cert = "Cite_\(i)"
+            lines.append("public typealias \(cert) = Cites<\(site), \(sanitized(c.key))>")
+            srcmap[cert] = ("\(c.file):\(c.line)", c.key)
+        }
+        let world = lines.joined(separator: "\n") + "\n"
+        oursWrite(outPath, "the world this prints", world)
+        let t0 = Date()
+        let outp = courtSays(["where", outPath])
+        let ms = ((Date().timeIntervalSince(t0) * 1000 * 10).rounded(.toNearestOrEven)) / 10
+        var refusals: [(address: String, claim: String)] = []
+        for m in matches("^✗ '(\\w+)[^']*' requires the types '[^']*' \\(aka '([^']+)'\\)",
+                         outp, lines: true) {
+            guard let where_ = srcmap[m[0]] else { continue }
+            let claim = m[1].hasSuffix(".State")
+                ? "the code cites \(where_.key), and the tracker has no such thing"
+                : "the code cites \(where_.key) as live work, and the tracker calls it "
+                  + m[1].lowercased()
+            refusals.append((where_.address, claim))
+        }
+        if let kept = kept { try? FileManager.default.removeItem(atPath: kept) }
+        let next = refusals.isEmpty
+            ? "wire it into CI: a citation cannot outlive its ticket again"
+            : "open the address above: the citation outlived the thing it cites"
+        if asJson {
+            var pairs: [(String, StatusJSON)] = [
+                ("command", .text("import refs")),
+                ("wrote", keep ? .text(outPath) : .null),
+                ("tracked", .raw(String(tracked.count))),
+                ("citations", .raw(String(cites.count))),
+                ("ms", .raw(String(ms))),
+                ("verdict", .text(refusals.isEmpty ? "holds" : "refused")),
+                ("refusals", .list(refusals.map {
+                    .object([("address", .text($0.address)), ("claim", .text($0.claim))]) })),
+                ("next", .text(next)),
+                ("mutates", .raw("true")),
+            ]
+            if let ready = commandIn(next) { pairs.append(("command_to_run", .text(ready))) }
+            out(statusDumps(.object(pairs), 0) + "\n")
+        } else {
+            var lines = ["import refs: "
+                         + (refusals.isEmpty ? "holds" : "refused \(refusals.count)")]
+            for r in refusals { lines.append("  \(r.address) · \(r.claim)") }
+            lines.append("  next: " + next)
+            out(lines.joined(separator: "\n") + "\n")
+        }
+        exit(refusals.isEmpty ? 0 : 1)
+    }
+
+    // ── import rbac rbac.json [-o gate.swift]
+    if head == "rbac" {
+        let tail = Array(rest.dropFirst())
+        guard let src = tail.first, !src.hasPrefix("-") else {
+            cannot("this reads a kubectl dump of roles and bindings, and no file was named",
+                   "name it: `gate import rbac rbac.json`")
+        }
+        let outPath = { () -> String in
+            guard let i = tail.firstIndex(of: "-o"), i + 1 < tail.count else {
+                return "rbac-gate.swift"
+            }
+            return tail[i + 1]
+        }()
+        let items = theirsJson(src, "a kubectl dump of roles and bindings")
+            .at("items")?.asList ?? []
+        var roleOrder: [String] = [], roles: [String: Said] = [:]
+        var clusterOrder: [String] = [], clusterRoles: [String: Said] = [:]
+        var bindings: [Said] = []
+        var namespaces = Set<String>()
+        for it in items {
+            let kind = it.at("kind")?.asText ?? ""
+            let meta = it.at("metadata")
+            let ns = meta?.at("namespace")?.asText ?? ""
+            let name = meta?.at("name")?.asText ?? ""
+            if kind == "Role" {
+                let key = ns + "\u{0}" + name
+                if roles[key] == nil { roleOrder.append(key) }
+                roles[key] = it
+                namespaces.insert(ns)
+            } else if kind == "ClusterRole" {
+                if clusterRoles[name] == nil { clusterOrder.append(name) }
+                clusterRoles[name] = it
+            } else if kind == "RoleBinding" {
+                bindings.append(it)
+                namespaces.insert(ns)
+            }
+        }
+        var lines = [RBAC_FORMS_HEADER + (STDLIB_TEXTS["forms-grants"] ?? "")]
+        // the read gate, this world's own: a read binding is not entry to work a
+        // room, and pushing it through the writing gate was a lie the court
+        // could not see while it dropped the conjunct
+        lines.append("")
+        lines.append("public protocol Viewed {}")
+        lines.append("public enum View<Who: Keeper, Into: Room> {}")
+        lines.append("extension View: Viewed")
+        lines.append("where Who.Key: Reads, Who.Post == Into.Place {}")
+        var srcmap: [String: String] = [:]
+        for ns in namespaces.sorted() { lines.append("public enum Ns_\(sanitized(ns)): Realm {}") }
+        lines.append("public enum ClusterScope: Realm {}")
+        lines.append("")
+        for key in roleOrder.sorted() {
+            let two = key.components(separatedBy: "\u{0}")
+            lines.append("public enum Role_\(sanitized(two[0]))_\(sanitized(two[1])): Room {")
+            lines.append("    public typealias Place = Ns_\(sanitized(two[0]))")
+            lines.append("}")
+        }
+        for name in clusterOrder.sorted() {
+            lines.append("public enum CR_\(sanitized(name)): Room {")
+            lines.append("    public typealias Place = ClusterScope")
+            lines.append("}")
+        }
+        lines.append("")
+        var checked = 0
+        for b in bindings {
+            let meta = b.at("metadata")
+            let bns = meta?.at("namespace")?.asText ?? ""
+            let bname = meta?.at("name")?.asText ?? ""
+            let ref = b.at("roleRef")
+            let rkind = ref?.at("kind")?.asText ?? ""
+            let rname = ref?.at("name")?.asText ?? ""
+            let keeper = "B_\(sanitized(bns))_\(sanitized(bname))"
+            let cert = "Bind_\(sanitized(bns))_\(sanitized(bname))"
+            var post = "", room = "", key = "", what = ""
+            if rkind == "ClusterRole" {
+                post = "ClusterScope"
+                room = "CR_\(sanitized(rname))"
+                key = rbacKey(clusterRoles[rname]?.at("rules")?.asList ?? [])
+                what = "rolebinding \(bns)/\(bname) -> clusterrole \(rname)"
+            } else {
+                post = "Ns_\(sanitized(bns))"
+                key = rbacKey(roles[bns + "\u{0}" + rname]?.at("rules")?.asList ?? [])
+                if roles[bns + "\u{0}" + rname] != nil {
+                    room = "Role_\(sanitized(bns))_\(sanitized(rname))"
+                } else {
+                    let foreign = roleOrder.compactMap { k -> String? in
+                        let two = k.components(separatedBy: "\u{0}")
+                        return two[1] == rname ? two[0] : nil
+                    }.sorted()
+                    room = "Role_\(sanitized(foreign.first ?? bns))_\(sanitized(rname))"
+                }
+                what = "rolebinding \(bns)/\(bname) -> role \(rname)"
+            }
+            lines.append("public enum \(keeper): Keeper {")
+            lines.append("    public typealias Post = \(post)")
+            lines.append("    public typealias Key = \(key)")
+            lines.append("}")
+            lines.append("public typealias \(cert) = "
+                         + (key == "ReaderKey" ? "View" : "Enter") + "<\(keeper), \(room)>")
+            srcmap[cert] = what
+            checked += 1
+        }
+        let world = lines.joined(separator: "\n") + "\n"
+        oursWrite(outPath, "the world this prints", world)
+        let t0 = Date()
+        let outp = courtSays(["where", outPath])
+        let ms = ((Date().timeIntervalSince(t0) * 1000 * 10).rounded(.toNearestOrEven)) / 10
+        var refusals: [(certificate: String, source: String, address: String, claim: String)] = []
+        for m in matches("^✗ '(\\w+)[^']*' requires the types '[^']*' \\(aka '([^']+)'\\) "
+                         + "and '[^']*' \\(aka '([^']+)'\\) be equivalent", outp, lines: true) {
+            guard let what = srcmap[m[0]] else { continue }
+            let dangling = matchAt(m[2], "^(\\w+)\\.Place$") != nil
+            let claim = dangling
+                ? "roleRef names a Role that exists nowhere (\(m[2]) undeclared)"
+                : "the binding lives in \(m[1]), its Role lives in \(m[2]): a RoleBinding "
+                  + "and its Role must share one namespace"
+            refusals.append((m[0], what, what.components(separatedBy: " · ")[0], claim))
+        }
+        let note = "both tiers of the gate are judged by this run: the posting equalities "
+                 + "against one canon, and the key's class through the ladder the world "
+                 + "presents (the membership court)"
+        if asJson {
+            out(statusDumps(.object([
+                ("command", .text("import rbac")),
+                ("world", .text(outPath)),
+                ("namespaces", .raw(String(namespaces.count))),
+                ("roles", .raw(String(roleOrder.count))),
+                ("cluster_roles", .raw(String(clusterOrder.count))),
+                ("bindings_judged", .raw(String(checked))),
+                ("verdict", .text(refusals.isEmpty ? "holds" : "refused")),
+                ("refusals", .list(refusals.map {
+                    .object([("certificate", .text($0.certificate)),
+                             ("source", .text($0.source)),
+                             ("address", .text($0.address)),
+                             ("claim", .text($0.claim))]) })),
+                ("judge_ms", .raw(String(ms))),
+                ("canon_handshake", .raw(outp.contains("canon v2") ? "true" : "false")),
+                ("note", .text(note)),
+            ]), 0) + "\n")
+        } else {
+            var lines = ["import rbac: "
+                         + (refusals.isEmpty ? "holds" : "refused \(refusals.count)")
+                         + " · " + floatRepr(String(ms)) + " ms"]
+            for r in refusals {
+                let rule = r.source.hasPrefix(r.address + " · ")
+                    ? String(r.source.dropFirst(r.address.count + 3)) : r.source
+                lines.append("  \(r.address) · \(r.claim)" + (rule.isEmpty ? "" : "  (\(rule))"))
+            }
+            lines.append("  note: " + note)
+            out(lines.joined(separator: "\n") + "\n")
+        }
+        exit(refusals.isEmpty ? 0 : 1)
+    }
+
+    // ── import people.csv grants.csv [-o gate.swift]
+    let tables = rest.filter { !$0.hasPrefix("-") }
+    if tables.count < 2 {
+        let note = "import people.csv grants.csv [-o gate.swift]  ·  "
+                 + "import codeowners CODEOWNERS --tree . [--policy owners.csv]  ·  "
+                 + "import rbac rbac.json  ·  import refs FILE"
+        let next = "gate import codeowners CODEOWNERS --tree . reads ownership you "
+                 + "already keep, and writes one small file you commit"
+        if asJson {
+            out("{\n  \"command\": \"import\",\n  \"asks\": true,\n"
+                + "  \"note\": " + jsonString(note) + ",\n"
+                + "  \"next\": " + jsonString(next) + "\n}\n")
+        } else {
+            out("usage: " + note + "\n  next: " + next + "\n")
+        }
+        exit(0)
+    }
+    let outPath = after("-o") ?? "gate.swift"
+    let said = importWorld(tables[0], tables[1], outPath)
+    if asJson {
+        out(statusDumps(.object([
+            ("command", .text("import")),
+            ("world", .text(outPath)),
+            ("people", .raw(String(said.people))),
+            ("grants", .raw(String(said.grants))),
+            ("verdict", .text(said.verdict)),
+            ("refusals", .list(said.refusals.map {
+                .object([("address", .text($0.address)), ("claim", .text($0.claim))]) })),
+            ("judge_ms", said.judgeMs.map { .raw(floatRepr($0)) } ?? .null),
+            ("wall_ms", .raw(String(said.wallMs))),
+        ]), 0) + "\n")
+    } else {
+        var lines = ["import: " + (said.verdict == "holds" ? "holds"
+                                   : "refused \(said.refusals.count)")
+                     + (said.judgeMs.map { " · " + floatRepr($0) + " ms" } ?? "")]
+        for r in said.refusals { lines.append("  \(r.address) · \(r.claim)") }
+        out(lines.joined(separator: "\n") + "\n")
+    }
+    exit(said.verdict == "holds" ? 0 : 1)
 }
 
 // ── bare FILE [NAME ...] [--full]: the world with the ceremony stripped,

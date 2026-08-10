@@ -7944,6 +7944,111 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
             print("   the bare view parts:", _brw[:4])
         S.append(("the stripped world is drawn alike on both carriers", _brw == []))
 
+        # ── AND THE ACT OF ENTRY, all four heads at once, because a vein is a
+        # PREFIX and half a verb would hand this binary an argv it does not
+        # answer. Each head prints a world in the shipped forms and asks the
+        # court about it, so what is held is the answer AND the world it printed:
+        # a translation that renders the same and differs by a byte is two
+        # translations to the judge that reads them.
+        _imw = []
+        def _im_owners(_d):
+            run("demo", _d)
+        def _im_tables(_d):
+            shutil.copy(os.path.join(DEMO, "people.csv"), _d)
+            shutil.copy(os.path.join(DEMO, "grants.csv"), _d)
+        def _im_refs(_d):
+            os.makedirs(os.path.join(_d, "src"), exist_ok=True)
+            open(os.path.join(_d, "tracker.json"), "w").write(
+                '{"issues": [{"key": "PROJ-1", "status": "Done"},'
+                ' {"key": "PROJ-2", "status": "In Progress"}]}\n')
+            open(os.path.join(_d, "src", "a.py"), "w").write(
+                "# TODO(PROJ-1): this one is closed\nx = 1\n"
+                "# FIXME(PROJ-2) still open\n# TODO(PROJ-9) nobody knows this\n")
+        def _im_rbac(_d):
+            open(os.path.join(_d, "rbac.json"), "w").write(json.dumps({"items": [
+                {"kind": "Role", "metadata": {"namespace": "prod", "name": "reader"},
+                 "rules": [{"verbs": ["get", "list"]}]},
+                {"kind": "Role", "metadata": {"namespace": "dev", "name": "writer"},
+                 "rules": [{"verbs": ["create", "delete"]}]},
+                {"kind": "ClusterRole", "metadata": {"name": "admin"},
+                 "rules": [{"verbs": ["*"]}]},
+                # a role whose verbs are none of the write set and still warden:
+                # escalate, bind and impersonate are the class this reading is
+                # for, and a fixture without one leaves that half unmeasured
+                {"kind": "Role", "metadata": {"namespace": "dev", "name": "binder"},
+                 "rules": [{"verbs": ["bind"]}]},
+                {"kind": "RoleBinding", "metadata": {"namespace": "dev", "name": "b5"},
+                 "roleRef": {"kind": "Role", "name": "binder"}},
+                {"kind": "RoleBinding", "metadata": {"namespace": "prod", "name": "b1"},
+                 "roleRef": {"kind": "Role", "name": "reader"}},
+                {"kind": "RoleBinding", "metadata": {"namespace": "prod", "name": "b2"},
+                 "roleRef": {"kind": "Role", "name": "writer"}},
+                {"kind": "RoleBinding", "metadata": {"namespace": "prod", "name": "b3"},
+                 "roleRef": {"kind": "Role", "name": "ghost"}},
+                {"kind": "RoleBinding", "metadata": {"namespace": "dev", "name": "b4"},
+                 "roleRef": {"kind": "ClusterRole", "name": "admin"}}]}))
+        _imnoms = lambda b: re.sub(rb"[0-9]+\.[0-9]+", b"MS", b)
+        for _tag, _make, _argv, _left in (
+                ("no table named", lambda _d: None, ["import"], None),
+                ("two tables", _im_tables,
+                 ["import", "people.csv", "grants.csv", "-o", "w.swift"], "w.swift"),
+                ("two tables, answered", _im_tables,
+                 ["import", "people.csv", "grants.csv", "-o", "w.swift", "--json"], "w.swift"),
+                ("ownership, read only", _im_owners,
+                 ["import", "codeowners", "CODEOWNERS", "--tree", "."], None),
+                ("ownership, with a policy", _im_owners,
+                 ["import", "codeowners", "CODEOWNERS", "--tree", ".",
+                  "--policy", "owners.csv", "-o", "own.swift"], "own.swift"),
+                ("ownership, answered", _im_owners,
+                 ["import", "codeowners", "CODEOWNERS", "--tree", ".",
+                  "--policy", "owners.csv", "--json"], None),
+                ("no CODEOWNERS anywhere", lambda _d: None, ["import", "codeowners"], None),
+                ("citations", _im_refs,
+                 ["import", "refs", "tracker.json", "--code", ".", "-o", "refs.swift"],
+                 "refs.swift"),
+                ("citations, answered", _im_refs,
+                 ["import", "refs", "tracker.json", "--code", ".", "--json"], None),
+                ("a cluster", _im_rbac, ["import", "rbac", "rbac.json", "-o", "k8s.swift"],
+                 "k8s.swift"),
+                ("a cluster, answered", _im_rbac,
+                 ["import", "rbac", "rbac.json", "-o", "k8s.swift", "--json"], "k8s.swift")):
+            _said, _world = [], []
+            for _who in ("py", "sw"):
+                _id = os.path.join(tmp, "import-" + str(abs(hash(_tag)) % 9973) + _who)
+                shutil.rmtree(_id, ignore_errors=True)
+                os.makedirs(_id, exist_ok=True)
+                _make(_id)
+                _r = subprocess.run([sys.executable, GATE, *_argv], cwd=_id,
+                                    capture_output=True, timeout=300,
+                                    env={**os.environ, "GATE_CLI": ("off" if _who == "py"
+                                                                    else _cli_bin)})
+                _said.append((_imnoms(_r.stdout), _imnoms(_r.stderr), _r.returncode))
+                _wf = os.path.join(_id, _left) if _left else None
+                _world.append(open(_wf, "rb").read()
+                              if _wf and os.path.exists(_wf) else None)
+            if _said[0] != _said[1]:
+                _imw.append(_tag + ": the answer")
+            if _world[0] != _world[1]:
+                _imw.append(_tag + ": the world it printed")
+            _out = _said[0][0]
+            if _tag == "ownership, with a policy" and (
+                    b"must share one zone" not in _out or _world[0] is None
+                    or b"public enum Owns<" not in _world[0]):
+                _imw.append(_tag + ": the refusal or the shipped forms are missing")
+            if _tag == "ownership, read only" and b"observed" not in _out:
+                _imw.append(_tag + ": a run with no policy claims to have judged")
+            if _tag == "citations" and b"the tracker calls it closed" not in _out:
+                _imw.append(_tag + ": a citation of closed work is not named")
+            if _tag == "a cluster" and b"exists nowhere" not in _out:
+                _imw.append(_tag + ": a roleRef naming nothing is not named")
+            if _tag == "no CODEOWNERS anywhere" and (
+                    _said[0][2] != 1 or b"there is none at" not in _said[0][1]):
+                _imw.append(_tag + ": a missing pair is not said")
+        if _imw:
+            print("   the act of entry parts:", _imw[:4])
+        S.append(("every head of the act of entry prints one world on both carriers",
+                  _imw == []))
+
         # ── AND THE COURT GUARD, ON THE CARRIER THAT NOW ANSWERS THE VERB. The
         # mutant that holds this guard is planted in the python file, and
         # `status` no longer runs it: that plant holds the other carrier's half
@@ -8163,7 +8268,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                   .stdout.split() == ["stdlib", "export", "seam", "log", "aside", "declare",
                                       "mine", "theirs", "init", "drift", "my",
                                       "status", "fsck", "badge", "survey", "findings",
-                                      "report", "bare"]))
+                                      "report", "bare", "import"]))
         # ── AND THE LEDGER IS READ AGAINST THE ROAD IT IS WALKING. The strangler
         # has a length and a position, and both were feelings: the list of moved
         # veins lived in the binary and the list of verbs lived in the python
@@ -8420,10 +8525,10 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         # spelling left on the far side would be one question answered by two
         # carriers, which is the split this rule exists to forbid.
         _carried_verbs = set(_ledger) & _verbs
-        S.append(("the ledger names verbs the usage offers, 17 of 27 carried",
+        S.append(("the ledger names verbs the usage offers, 18 of 27 carried",
                   set(_ledger) <= _verbs | {"fsck"}
-                  and len(_ledger) == 18
-                  and len(_carried_verbs) == 17
+                  and len(_ledger) == 19
+                  and len(_carried_verbs) == 18
                   and len(_verbs) == 27
                   # and a name on the ledger is a whole verb: a prefix claims
                   # everything under it, so half a verb would take argv nobody
