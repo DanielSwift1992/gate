@@ -72,7 +72,7 @@ if args.contains("--out") && !args.contains("-o") {
 // argv it does not answer, and the python side would never see it.
 if args == ["--carries"] {
     out("stdlib\nexport\nseam\nlog\naside\ndeclare\nmine\ntheirs\ninit\ndrift\nmy\n"
-        + "status\nfsck\nbadge\nsurvey\n")
+        + "status\nfsck\nbadge\nsurvey\nfindings\n")
     exit(0)
 }
 
@@ -2882,6 +2882,295 @@ func repoJournal(_ base: String, _ world: Set<String>, scope: String, limit: Int
     return journal
 }
 
+// ── WHAT IS TRUE OF THIS REPOSITORY, said in sentences a person can act on.
+// One producer behind `findings`, the audit page and the text of an issue: read
+// the clone, name what is worth naming, and mark plainly which of it the judge
+// checked and which was only read. Nothing here needs a translated world: a
+// repository that has never heard of gate still has findings.
+let CODEOWNERS_PLACES = ["CODEOWNERS", ".github/CODEOWNERS", "docs/CODEOWNERS"]
+
+struct Finding { var kind = "", subject = "", sentence = "", evidence = "" }
+
+func repoFindings(_ n: Int) -> [Finding] {
+    var out: [Finding] = []
+    loadStatusShelf()
+    let w = discoverWorld()
+    let base = w.facts.map { (absPath($0) as NSString).deletingLastPathComponent }
+        ?? FileManager.default.currentDirectoryPath
+    // the journal's own default scope is the history OF THE WORLD FILES, which
+    // is right for a workbench and wrong for the one verb whose whole claim is
+    // that a repository which has never heard of gate still has findings
+    let world = journalWorld(base)
+    let journal = repoJournal(base, world, scope: "all", limit: n, onlyMe: false)
+    let commits = journal.commits
+    if commits.isEmpty { return out }
+    let who = identities(base)
+    var authorOrder: [String] = [], authorCommits: [String: Int] = [:]
+    for c in commits {
+        if authorCommits[c.email] == nil { authorOrder.append(c.email) }
+        authorCommits[c.email, default: 0] += 1
+    }
+    // what the world says, if there is one: refusals are findings of the first
+    // order. A world of forms is still a world, which this asked wrong once.
+    if !worldFilesOf(w).isEmpty || !((w.layout?.rows ?? []).isEmpty) {
+        for r in statusAnswer().refusals {
+            out.append(Finding(kind: "judged", subject: r.address,
+                               sentence: r.address + " — " + r.claim,
+                               evidence: "the judge, on this working copy"))
+        }
+    }
+    // who touches the facts, and whether anything checked those edits
+    if !world.isEmpty {
+        var touchers = Set<String>()
+        var edits = 0
+        for c in commits where c.touches { touchers.insert(c.email); edits += 1 }
+        var isDir: ObjCBool = false
+        let ci = FileManager.default.fileExists(
+            atPath: ((base as NSString).appendingPathComponent(".github") as NSString)
+                .appendingPathComponent("workflows"), isDirectory: &isDir) && isDir.boolValue
+        let hooked = runGit(["config", "--get", "core.hooksPath"], base)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if edits > 0 && !(ci || !hooked.isEmpty) {
+            out.append(Finding(
+                kind: "observed", subject: "unchecked edits",
+                sentence: many(touchers.count, "person", "people") + " changed these facts across "
+                        + many(edits, "commit") + ", and nothing checked those edits: "
+                        + "there is no hook and no workflow in this repository.",
+                evidence: "git log over " + world.sorted().joined(separator: ", ")))
+        }
+        let unnamed = Set(commits.filter { $0.touches && who[$0.email] == nil }
+            .map { $0.email }).sorted()
+        if !unnamed.isEmpty {
+            out.append(Finding(
+                kind: "observed", subject: "unnamed authors",
+                sentence: "\(unnamed.count) of the people who changed these facts "
+                        + (unnamed.count == 1 ? "is" : "are") + " not tied to anyone "
+                        + "in the world: an email is not a person until something says it is.",
+                evidence: unnamed.prefix(4).joined(separator: ", ")))
+        }
+    }
+    // ownership, if this repository states any: a stale owner is worth a sentence
+    for place in CODEOWNERS_PLACES {
+        let cand = (base as NSString).appendingPathComponent(place)
+        guard FileManager.default.fileExists(atPath: cand) else { continue }
+        let rules = readCodeowners(cand)
+        var owners = Set<String>()
+        for r in rules { for o in r.owners { owners.insert(o.hasPrefix("@") ? String(o.dropFirst()) : o) } }
+        var seen = Set<String>()
+        for c in commits {
+            seen.insert(c.email.components(separatedBy: "@")[0])
+            seen.insert((who[c.email] ?? "").lowercased())
+        }
+        let quiet = owners.filter { !$0.contains("/") && !seen.contains($0.lowercased()) }.sorted()
+        // a history too short to be evidence proves nothing about anyone
+        if !quiet.isEmpty && commits.count >= 50 {
+            out.append(Finding(
+                kind: "observed", subject: "quiet owners",
+                sentence: "\(quiet.count) of the " + many(owners.count, "owner")
+                        + " named in CODEOWNERS have not appeared in the last "
+                        + many(commits.count, "commit") + ": ownership outlives people, "
+                        + "and nothing here notices.",
+                evidence: quiet.prefix(4).map { "@" + $0 }.joined(separator: ", ")))
+        }
+        let them = rules.count == 1 ? "it" : "them"
+        out.append(Finding(
+            kind: "offer", subject: "CODEOWNERS",
+            // a count reads as a count: one rule is not `1 rules`, and this
+            // sentence is the first thing the letter sends anybody to
+            sentence: "CODEOWNERS states \(rules.count) " + (rules.count == 1 ? "rule" : "rules")
+                    + " over \(owners.count) " + (owners.count == 1 ? "owner" : "owners")
+                    + ", and nothing checks \(them). "
+                    + "`gate import codeowners` reads \(them) as a world: a path "
+                    + "no file matches, or an owner outside their zone, is "
+                    + "named by the line it sits on.",
+            evidence: relPath(cand, base)))
+        break
+    }
+    // the shape of the work, from the history itself
+    let ranked = authorOrder.enumerated().sorted { a, b in
+        let (ca, cb) = (authorCommits[a.element] ?? 0, authorCommits[b.element] ?? 0)
+        return ca == cb ? a.offset < b.offset : ca > cb    // a tie keeps the order it arrived in
+    }
+    if commits.count >= 20, let top = ranked.first {
+        let mine = authorCommits[top.element] ?? 0
+        let share = Int((100.0 * Double(mine) / Double(commits.count)).rounded(.toNearestOrEven))
+        if share >= 50 {
+            out.append(Finding(
+                kind: "observed", subject: "concentration",
+                sentence: "\(share)% of the last " + many(commits.count, "commit")
+                        + " are one person's (\(top.element)): what they know is not written down "
+                        + "anywhere this repository can check.",
+                evidence: "\(mine) of " + many(commits.count, "commit")))
+        }
+    }
+    return out
+}
+
+func findingsMarkdown(_ found: [Finding]) -> String {
+    // the same findings as a note somebody could read in an issue: what was
+    // checked, what was only read, and how to see it for yourself
+    if found.isEmpty {
+        return "Nothing to report: this repository states no facts gate can read yet.\n"
+    }
+    var lines = ["### What this repository says about itself", ""]
+    for f in found {
+        let mark = f.kind == "judged" ? "**checked**" : (f.kind == "offer" ? "**offer**" : "read")
+        lines.append("- \(f.sentence)  \n  <sub>\(mark) · \(f.evidence)</sub>")
+    }
+    lines += ["", "Everything marked *read* comes from the git history and is not a verdict.",
+              "To see it yourself: `gate findings` in a clone. Nothing leaves the machine.", ""]
+    return lines.joined(separator: "\n")
+}
+
+// ONE READER FOR THE HALF THE COURT CANNOT SEE. A pattern that matches no file
+// is a divergence of the pair with no claim to refuse: the world holds, and the
+// rule addresses nothing. The import walks a working tree for its paths and the
+// history walk asks git for a commit's paths, so the matching lives here once
+// and both callers ask it the same question.
+func ghostPatterns(_ rules: [(line: Int, pattern: String, owners: [String])],
+                   _ paths: [String], _ saidName: String) -> [(address: String, claim: String)] {
+    var out: [(address: String, claim: String)] = []
+    for r in rules {
+        var pat = r.pattern
+        while pat.hasPrefix("/") { pat.removeFirst() }
+        while pat.hasSuffix("/") { pat.removeLast() }
+        let hit = paths.contains { p in
+            fnmatch(pat, p, 0) == 0 || fnmatch(pat + "/*", p, 0) == 0
+                || p.hasPrefix(pat + "/")
+                || fnmatch(pat, (p as NSString).lastPathComponent, 0) == 0
+        }
+        if !hit {
+            out.append(("\(saidName):\(r.line)",
+                        "CODEOWNERS names `\(r.pattern)`, and no file in "
+                        + "the tree matches it: the rule matches nothing"))
+        }
+    }
+    return out
+}
+
+struct HistoryRow {
+    var at = "", when = "", file = ""
+    var rules = 0, unmatched = 0
+    var refusals: Int? = nil, divergences: Int? = nil
+    var judged = false, read = false
+}
+
+// ── THE PAIR'S IMAGE, COMMIT BY COMMIT. `findings` says what is true of a
+// repository now; this says what has been true of one pair over its history. At
+// each commit the two sides are read out of git (the rules file, and the tree
+// the rules address), translated by the ONE translator the import verb uses, and
+// the image's divergences counted. Nothing is checked out and nothing is written
+// into the repository: a commit's text goes to a scratch directory that leaves
+// when the walk does.
+//
+// WHAT THIS COUNTS, said here because the number is easy to over-read: the
+// divergences of the pair's JUDGED IMAGE under the declared translation, not the
+// distance between the two records. A divergence of the image is a divergence of
+// the pair; the reverse is not claimed.
+func historyDivergence(_ n: Int, policyName: String?) -> (rows: [HistoryRow], whole: Bool) {
+    loadStatusShelf()
+    let w = discoverWorld()
+    let base = w.facts.map { (absPath($0) as NSString).deletingLastPathComponent }
+        ?? FileManager.default.currentDirectoryPath
+    // ── AND THE WALK IS THE MAIN LINE, WHICH IS THE ONLY ONE THAT IS A TIME.
+    // Plain `git log --reverse` walks the whole graph, so on a repository that
+    // merges, adjacent rows sit on different branches and the same weeks are
+    // read several times over: of 3000 rows on one public repository, 206 step
+    // BACKWARDS in time. `--first-parent` reads five. It is also the right
+    // sequence to claim: the states this repository actually stood in.
+    let log = runGit(["log", "-\(n)", "--format=%H%x1f%aI", "--reverse", "--first-parent"], base)
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+    if log.isEmpty { return ([], true) }
+    // ── AND THE WALK KNOWS WHETHER IT REACHED THE START, which is the whole
+    // difference between `parted before this reading` and `never agreed`. A line
+    // cut by a shallow clone is not a line that ended, so git is asked which it
+    // is rather than guessed at.
+    let seen = log.components(separatedBy: "\n")
+    let whole = seen.count < n
+        && runGit(["rev-parse", "--is-shallow-repository"], base)
+            .trimmingCharacters(in: .whitespacesAndNewlines) != "true"
+    let tmp = NSTemporaryDirectory() + "/gate-history-\(getpid())"
+    try? FileManager.default.createDirectory(atPath: tmp, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(atPath: tmp) }
+    // AND THE PAIR IS LOOKED FOR AT EVERY COMMIT, not once at the tip. A file
+    // moves: a CODEOWNERS written at the root and later filed under `.github` is
+    // the same pair, and a walk that asks one path draws the history of a name
+    // instead. The place that answered last is tried first.
+    var places = CODEOWNERS_PLACES
+    var rows: [HistoryRow] = []
+    for line in seen {
+        let parts = line.components(separatedBy: "\u{1f}")
+        let sha = parts.count > 0 ? parts[0] : ""
+        let when = parts.count > 1 ? String(parts[1].prefix(10)) : ""
+        var said: String? = nil
+        for (i, place) in places.enumerated() {
+            if let text = gitShow(sha + ":" + place, base) {
+                said = text
+                if i != 0 { places.insert(places.remove(at: i), at: 0) }
+                break
+            }
+        }
+        guard let text = said else { continue }   // the pair does not exist at this commit
+        let paths = runGit(["ls-tree", "-r", "--name-only", sha], base)
+            .components(separatedBy: "\n").filter { !$0.isEmpty }
+        var policy: [(owner: String, zone: String)] = []
+        if let name = policyName, let pt = gitShow(sha + ":" + name, base) {
+            let pp = (tmp as NSString).appendingPathComponent("policy.csv")
+            try? pt.write(toFile: pp, atomically: false, encoding: .utf8)
+            policy = readOwnersPolicy(pp)
+        }
+        let here = places[0]
+        let cp = (tmp as NSString).appendingPathComponent((here as NSString).lastPathComponent)
+        try? text.write(toFile: cp, atomically: false, encoding: .utf8)
+        let rules = readCodeowners(cp)
+        let (lines, srcmap) = codeownersWorldLines(cp, policy, here)
+        let wp = (tmp as NSString).appendingPathComponent("world.swift")
+        try? (lines.joined(separator: "\n") + "\n").write(toFile: wp, atomically: false,
+                                                          encoding: .utf8)
+        let out = courtSays(["where", wp])
+        // and the court answered in its own voice, or this row is not a reading
+        // at all: a silence parses as nought refusals, which would draw a flat
+        // curve over a court that never sat
+        let spoke = (out.contains("THE WHERE") && out.contains("canon v")) || out.contains("✗")
+        let refused = whereRefused(out).filter { $0.cert.map { srcmap[$0] != nil } ?? false }
+        let ghosts = ghostPatterns(rules, paths, (here as NSString).lastPathComponent)
+        var row = HistoryRow(at: String(sha.prefix(8)), when: when, file: here,
+                             rules: rules.count, unmatched: ghosts.count)
+        row.refusals = spoke ? refused.count : nil
+        row.divergences = spoke ? refused.count + ghosts.count : nil
+        row.judged = !policy.isEmpty
+        row.read = spoke
+        rows.append(row)
+    }
+    return (rows, whole)
+}
+
+func historyMarkdown(_ rows: [HistoryRow], _ parted: String?) -> String {
+    // the walk as a note somebody could paste into an issue: the sentence first,
+    // and then the TURNING POINTS only. Pasting two hundred rows into a thread is
+    // the same mistake the fold exists against.
+    if rows.isEmpty {
+        return "Nothing to report: no commit in this history carries the file this reads.\n"
+    }
+    var turns: [HistoryRow] = []
+    for (i, r) in rows.enumerated() where i == 0 || r.divergences != rows[i - 1].divergences {
+        turns.append(r)
+    }
+    var lines = ["### The pair over " + many(rows.count, "commit"), ""]
+    lines.append(parted ?? "the two records agree at this repository's tip.")
+    lines += ["", "| commit | date | divergences | rules |", "| --- | --- | --- | --- |"]
+    for r in turns {
+        let n = r.divergences.map { String($0) } ?? "not read"
+        lines.append("| `\(r.at)` | \(r.when) | \(n) | \(r.rules) |")
+    }
+    lines += ["", "<sub>\(turns.count) row\(turns.count == 1 ? "" : "s") where the count "
+              + "changed, of \(rows.count) read. "
+              + "Divergences of the pair's judged image: claims the court refuses, plus "
+              + "rules that address nothing. Read it yourself with "
+              + "`gate findings --history`.</sub>", ""]
+    return lines.joined(separator: "\n")
+}
+
 // every whole match of a pattern, in the order they stand: `matches` hands back
 // capture groups, and a pattern with none of those has nothing to hand back
 func wholeMatches(_ pattern: String, _ text: String) -> [String] {
@@ -2889,6 +3178,196 @@ func wholeMatches(_ pattern: String, _ text: String) -> [String] {
     let ns = text as NSString
     return re.matches(in: text, range: NSRange(location: 0, length: ns.length))
         .map { ns.substring(with: $0.range) }
+}
+
+// ── findings [--md] [--history] [N]: what is true of this repository, in
+// sentences; with --history, what has been true of one pair over its commits.
+if args.first == "findings" {
+    let rest = Array(args.dropFirst()).filter { $0 != "--json" }
+    let asJson = args.contains("--json")
+    let n = rest.first(where: { !$0.isEmpty && $0.allSatisfy { $0.isNumber } }).flatMap { Int($0) }
+    let wantsMarkdown = rest.contains("--md")
+    if rest.contains("--history") {
+        var policyName: String? = nil
+        if let i = rest.firstIndex(of: "--policy"), i + 1 < rest.count {
+            policyName = (rest[i + 1] as NSString).lastPathComponent
+        }
+        // ── AND A DIRECTORY THAT IS NOT A REPOSITORY IS TOLD SO. This read
+        // nought commits there and answered `0 commits carry the pair, read from
+        // git` beside no git at all: a true-sounding sentence about a thing that
+        // is not there. A repository with no commits yet is a different answer.
+        loadStatusShelf()
+        let w0 = discoverWorld()
+        let base = w0.facts.map { (absPath($0) as NSString).deletingLastPathComponent }
+            ?? FileManager.default.currentDirectoryPath
+        if runGit(["rev-parse", "--git-dir"], base)
+            .trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            cannot("this walks a repository's commits, and this directory is not one",
+                   "run it inside a git repository, or ask `gate findings` for what is "
+                   + "true here now")
+        }
+        let (rows, whole) = historyDivergence(n ?? 200, policyName: policyName)
+        // ── AND WHAT A FALL IS, SAID WHERE ONE IS VISIBLE. A curve that drops
+        // reads like a thing that was fixed and stays fixed, and it is not: with
+        // no court in the repository, a drop is somebody who compared the two
+        // records by hand. That comparison is recorded nowhere, so nothing
+        // carries it, and the level comes back.
+        var fell = false
+        for (i, r) in rows.enumerated() where i > 0 {
+            if let a = rows[i - 1].divergences, let b = r.divergences, b < a { fell = true }
+        }
+        // the fold: when it parted, how long ago, and how much has gone past
+        var markIndex: Int? = nil
+        for (i, r) in rows.enumerated() where i > 0 {
+            if rows[i - 1].divergences == 0 && (r.divergences ?? 0) > 0 { markIndex = i }
+        }
+        let standing = rows.last?.divergences
+        let readRows = rows.enumerated().filter { $0.element.read }
+        var parted: [(String, StatusJSON)]? = nil
+        var partedSaid: String? = nil
+        if let standing = standing, standing > 0,
+           markIndex != nil || (readRows.first.map { ($0.element.divergences ?? 0) > 0 } ?? false) {
+            let beyond = markIndex == nil
+            let at = markIndex ?? readRows.first!.offset
+            let mark = rows[at]
+            let since = Array(rows[at...])
+            let days = daysSince(mark.when)
+            // ── AND NEVER AGREED IS NOT THE SAME AS PARTED LONG AGO. If the walk
+            // reached the start of this line, there is no older commit for the
+            // parting to hide in, and the honest reading is that the two records
+            // have not agreed since the pair was written.
+            let said = beyond
+                ? "apart at every one of the "
+                  + many(since.filter { $0.read }.count, "commit") + " this run read, "
+                  + "back to \(mark.when), \(days) days ago; "
+                  + (whole ? "the two records have not agreed since the pair was written"
+                           : "it parted before this run's reading")
+                  + "; \(standing) still apart today"
+                : "parted at \(mark.at) on \(mark.when): \(days) days and "
+                  + many(since.count - 1, "commit") + " carrying the pair ago; "
+                  + "\(standing) still apart today"
+            partedSaid = said
+            parted = [("at", beyond ? .null : .text(mark.at)),
+                      ("when", .text(mark.when)),
+                      ("days", .raw(String(days))),
+                      ("commits_since", .raw(String(since.count - 1))),
+                      ("standing", .raw(String(standing))),
+                      ("beyond", .raw(beyond ? "true" : "false")),
+                      ("never", .raw(beyond && whole ? "true" : "false"))]
+            parted!.append(("said", .text(said)))
+        }
+        let measure = "divergences of the pair's judged image at each commit: "
+                    + "claims the court refuses, plus rules that address nothing. "
+                    + "A divergence of the image is a divergence of the pair; the "
+                    + "distance between the two records is not measured here"
+        let next = rows.isEmpty
+            ? "no commit in this history carries the file this reads"
+            : "run `gate import codeowners` to see one of these commits translated in full"
+        let shape = fell
+            ? "a fall here is somebody comparing the two records by hand. "
+              + "That comparison is recorded nowhere, so nothing carries it "
+              + "and the level comes back: with no court, nothing is obliged "
+              + "to fall and nothing holds a fall either"
+            : nil
+        if asJson {
+            var pairs: [(String, StatusJSON)] = [
+                ("command", .text("findings history")),
+                ("history", .list(rows.map { r in
+                    .object([("at", .text(r.at)), ("when", .text(r.when)),
+                             ("rules", .raw(String(r.rules))), ("file", .text(r.file)),
+                             ("refusals", r.refusals.map { .raw(String($0)) } ?? .null),
+                             ("unmatched", .raw(String(r.unmatched))),
+                             ("divergences", r.divergences.map { .raw(String($0)) } ?? .null),
+                             ("judged", .raw(r.judged ? "true" : "false")),
+                             ("read", .raw(r.read ? "true" : "false"))]) })),
+                ("parted", parted.map { .object($0) } ?? .null),
+                ("markdown", wantsMarkdown ? .text(historyMarkdown(rows, partedSaid)) : .null),
+                ("shape", shape.map { .text($0) } ?? .null),
+                ("measure", .text(measure)),
+                ("commits", .raw(String(rows.count))),
+                ("next", .text(next)),
+                ("mutates", .raw("false")),
+            ]
+            if let ready = commandIn(next) { pairs.append(("command_to_run", .text(ready))) }
+            out(statusDumps(.object(pairs), 0) + "\n")
+        } else {
+            var lines = ["findings history: " + many(rows.count, "commit") + " "
+                         + (rows.count == 1 ? "carries" : "carry") + " the pair, read from git"]
+            // the fold first, because it is the finding and the rows are its evidence
+            if let said = partedSaid { lines.append("  " + said) }
+            lines.append("  " + measure)
+            for r in rows {
+                let said = r.divergences == nil ? "not read: no verdict in the reply"
+                    : r.divergences == 0 ? "in agreement"
+                    : "\(r.divergences!) divergence" + (r.divergences! == 1 ? "" : "s")
+                lines.append("  \(r.at) \(r.when)  "
+                             + said.padding(toLength: max(22, said.count), withPad: " ",
+                                            startingAt: 0)
+                             + " " + many(r.rules, "rule")
+                             + (r.judged ? "" : ", no policy: only unmatched rules can show"))
+            }
+            // where the pair was read, said once rather than on every row, plus
+            // every move: a file that changed place is the same pair, and a
+            // reader who sees only the last path cannot tell that from a pair
+            // that was born there
+            var moves: [(String, String, String)] = []
+            for r in rows where moves.isEmpty || moves[moves.count - 1].0 != r.file {
+                moves.append((r.file, r.at, r.when))
+            }
+            if !moves.isEmpty {
+                lines.append("  read from " + moves[0].0
+                             + moves.dropFirst().map { ", moved to \($0.0) at \($0.1) \($0.2)" }
+                                .joined())
+            }
+            if let shape = shape { lines.append("  " + shape) }
+            if wantsMarkdown {
+                lines.append("")
+                lines.append(historyMarkdown(rows, partedSaid))
+            }
+            lines.append("  next: " + next)
+            out(lines.joined(separator: "\n") + "\n")
+        }
+        exit(0)
+    }
+    let found = repoFindings(n ?? 400)
+    let judged = found.filter { $0.kind == "judged" }.count
+    let next = "run `gate status`: what is judged answers in milliseconds, and this does not"
+    if asJson {
+        var pairs: [(String, StatusJSON)] = [
+            ("command", .text("findings")),
+            ("findings", .list(found.map {
+                .object([("kind", .text($0.kind)), ("subject", .text($0.subject)),
+                         ("sentence", .text($0.sentence)), ("evidence", .text($0.evidence))]) })),
+            ("next", .text(next)),
+            ("judged", .raw(String(judged))),
+            ("observed", .raw(String(found.count - judged))),
+            ("markdown", wantsMarkdown ? .text(findingsMarkdown(found)) : .null),
+            ("mutates", .raw("false")),
+        ]
+        if let ready = commandIn(next) { pairs.append(("command_to_run", .text(ready))) }
+        out(statusDumps(.object(pairs), 0) + "\n")
+    } else {
+        var lines: [String] = []
+        if found.isEmpty {
+            lines.append("findings: nothing to report yet")
+        } else {
+            lines.append("findings: \(found.count) · \(judged) checked by the judge, "
+                         + "\(found.count - judged) read from git")
+            for x in found {
+                let tag = x.kind == "judged" ? "checked"
+                    : (x.kind == "offer" ? "offer  " : "read   ")
+                lines.append("  [\(tag)] \(x.sentence)")
+                lines.append("           \(x.evidence)")
+            }
+        }
+        if wantsMarkdown {
+            lines.append("")
+            lines.append(findingsMarkdown(found))
+        }
+        lines.append("  next: " + next)
+        out(lines.joined(separator: "\n") + "\n")
+    }
+    exit(0)
 }
 
 // ── survey [N]: the t0 gesture, a read-only map of the repository with NO

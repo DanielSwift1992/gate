@@ -7725,6 +7725,99 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                   and _sv_fab.get("refusals") == len(_sv_st.get("refusals", []))
                   and "no world yet" not in str(_sv_fab.get("note", ""))))
 
+        # ── AND WHAT HAS BEEN TRUE OF ONE PAIR OVER ITS COMMITS, which is the
+        # heaviest reading here: at every commit the two sides come out of the
+        # object store, go through the ONE translator the import verb uses, and
+        # the image's divergences are counted. The ways two carriers part on that
+        # are its own: which line the walk takes (first-parent, or the whole
+        # graph, where adjacent rows sit on different branches), whether a pair
+        # that changed place is followed or lost, whether a clone cut short is
+        # read as a line that ended, and how a rule matching nothing is matched.
+        # Built for those: a pair that parts at a known commit and later moves,
+        # and a pair that never agreed at all.
+        _fdw = []
+        def _fd_at(_d, _when, _msg):
+            subprocess.run(["git", "add", "-A"], cwd=_d, capture_output=True)
+            subprocess.run(["git", "-c", "user.email=a@b", "-c", "user.name=t",
+                            "-c", "commit.gpgsign=false", "commit", "-qm", _msg], cwd=_d,
+                           capture_output=True,
+                           env={**os.environ, "GIT_AUTHOR_DATE": _when + "T12:00:00",
+                                "GIT_COMMITTER_DATE": _when + "T12:00:00"})
+        def _fd_parts(_d):
+            # the folder a rule owns is renamed, and nobody reads CODEOWNERS
+            os.makedirs(os.path.join(_d, "src", "api"), exist_ok=True)
+            os.makedirs(os.path.join(_d, "docs"), exist_ok=True)
+            subprocess.run(["git", "init", "-q", "-b", "main", _d], capture_output=True)
+            open(os.path.join(_d, "src", "api", "a.py"), "w").write("x\n")
+            open(os.path.join(_d, "docs", "g.md"), "w").write("d\n")
+            open(os.path.join(_d, "CODEOWNERS"), "w").write("/src/api @alice\n/docs @bob\n")
+            open(os.path.join(_d, "owners.csv"), "w").write("owner,zone\nalice,src\nbob,docs\n")
+            _fd_at(_d, "2026-01-05", "the pair is written")
+            os.makedirs(os.path.join(_d, "services", "api"), exist_ok=True)
+            subprocess.run(["git", "mv", "src/api/a.py", "services/api/a.py"], cwd=_d,
+                           capture_output=True)
+            _fd_at(_d, "2026-02-10", "the folder is renamed and nobody reads CODEOWNERS")
+            open(os.path.join(_d, "docs", "g.md"), "a").write("more\n")
+            _fd_at(_d, "2026-03-15", "work goes on")
+            os.makedirs(os.path.join(_d, ".github"), exist_ok=True)
+            subprocess.run(["git", "mv", "CODEOWNERS", ".github/CODEOWNERS"], cwd=_d,
+                           capture_output=True)
+            _fd_at(_d, "2026-04-01", "the pair is filed under .github")
+        def _fd_never(_d):
+            os.makedirs(os.path.join(_d, "lib"), exist_ok=True)
+            subprocess.run(["git", "init", "-q", "-b", "main", _d], capture_output=True)
+            open(os.path.join(_d, "CODEOWNERS"), "w").write("/nosuch @alice\n")
+            for _when in ("2026-01-05", "2026-02-05", "2026-03-05"):
+                open(os.path.join(_d, "lib", "a.py"), "a").write(_when + "\n")
+                _fd_at(_d, _when, "at " + _when)
+        def _fd_demo(_d):
+            run("demo", _d)
+        for _tag, _make, _argv in (
+                ("a demo world", _fd_demo, ["findings"]),
+                ("a demo world, as an answer", _fd_demo, ["findings", "--json"]),
+                ("a demo world, as a note", _fd_demo, ["findings", "--md"]),
+                ("a pair that parts", _fd_parts, ["findings", "--history"]),
+                ("a pair that parts, answered", _fd_parts, ["findings", "--history", "--json"]),
+                ("a pair that parts, noted", _fd_parts, ["findings", "--history", "--md"]),
+                ("judged by a policy", _fd_parts,
+                 ["findings", "--history", "--policy", "owners.csv"]),
+                ("a pair that never agreed", _fd_never, ["findings", "--history"]),
+                ("a window over it", _fd_never, ["findings", "--history", "2"]),
+                ("no repository at all", lambda _d: None, ["findings", "--history"])):
+            _said = []
+            for _who in ("py", "sw"):
+                _fd = os.path.join(tmp, "findings-" + str(abs(hash(_tag)) % 9973) + _who)
+                shutil.rmtree(_fd, ignore_errors=True)
+                os.makedirs(_fd, exist_ok=True)
+                _make(_fd)
+                _r = subprocess.run([sys.executable, GATE, *_argv], cwd=_fd,
+                                    capture_output=True, timeout=300,
+                                    env={**os.environ, "GATE_CLI": ("off" if _who == "py"
+                                                                    else _cli_bin)})
+                _said.append((_s9noms(_r.stdout), _s9noms(_r.stderr), _r.returncode))
+            if _said[0] != _said[1]:
+                _fdw.append(_tag)
+            # and the shapes mean what they were built to mean
+            _out = _said[0][0]
+            if _tag == "a pair that parts" and (
+                    b"parted at" not in _out or b"2026-02-10" not in _out
+                    or b"moved to .github/CODEOWNERS" not in _out):
+                _fdw.append(_tag + ": the parting or the move is not named")
+            if _tag == "a pair that never agreed" and (
+                    b"have not agreed since the pair was written" not in _out):
+                _fdw.append(_tag + ": a walk that reached the start says something else")
+            if _tag == "a window over it" and b"parted before this run's reading" not in _out:
+                _fdw.append(_tag + ": a bounded reading claims to know the start")
+            if _tag == "a demo world" and b"[checked]" not in _out:
+                _fdw.append(_tag + ": the court's own refusal is not among the findings")
+            if _tag == "no repository at all" and (
+                    _said[0][2] != 1 or b"is not one" not in _said[0][1]):
+                _fdw.append(_tag + ": a directory that is no repository is not told so")
+        if _fdw:
+            print("   the findings part:", _fdw[:4])
+        S.append(("what is true of a repository, and of one pair over its commits, alike",
+                  _fdw == []))
+
         # ── AND THE COURT GUARD, ON THE CARRIER THAT NOW ANSWERS THE VERB. The
         # mutant that holds this guard is planted in the python file, and
         # `status` no longer runs it: that plant holds the other carrier's half
@@ -7943,7 +8036,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                   subprocess.run([_cli_bin, "--carries"], capture_output=True, text=True)
                   .stdout.split() == ["stdlib", "export", "seam", "log", "aside", "declare",
                                       "mine", "theirs", "init", "drift", "my",
-                                      "status", "fsck", "badge", "survey"]))
+                                      "status", "fsck", "badge", "survey", "findings"]))
         # ── AND THE LEDGER IS READ AGAINST THE ROAD IT IS WALKING. The strangler
         # has a length and a position, and both were feelings: the list of moved
         # veins lived in the binary and the list of verbs lived in the python
@@ -8200,10 +8293,10 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         # spelling left on the far side would be one question answered by two
         # carriers, which is the split this rule exists to forbid.
         _carried_verbs = set(_ledger) & _verbs
-        S.append(("the ledger names verbs the usage offers, 14 of 27 carried",
+        S.append(("the ledger names verbs the usage offers, 15 of 27 carried",
                   set(_ledger) <= _verbs | {"fsck"}
-                  and len(_ledger) == 15
-                  and len(_carried_verbs) == 14
+                  and len(_ledger) == 16
+                  and len(_carried_verbs) == 15
                   and len(_verbs) == 27
                   # and a name on the ledger is a whole verb: a prefix claims
                   # everything under it, so half a verb would take argv nobody
