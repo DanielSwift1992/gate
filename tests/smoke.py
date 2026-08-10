@@ -7861,18 +7861,26 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                 ("seeded from tables", _rp_tables, ["report", "-o", "audit.html"]),
                 ("nowhere to write", _rp_adir, ["report", "-o", "adir"]),
                 ("no world at all", lambda _d: None, ["report"])):
+            # ONE repository, both carriers in it. The page names the commits
+            # that last touched the policy, so its bytes carry hashes, and a
+            # base commit `demo` makes with the wall clock differs between two
+            # copies built a second apart: two directories would compare clocks
+            # and pass or fail by luck. Fixed dates fix the commits this walk
+            # writes and cannot fix the ones it inherits.
+            _rd = os.path.join(tmp, "report-" + str(abs(hash(_tag)) % 9973))
+            shutil.rmtree(_rd, ignore_errors=True)
+            os.makedirs(_rd, exist_ok=True)
+            _make(_rd)
             _said, _page = [], []
             for _who in ("py", "sw"):
-                _rd = os.path.join(tmp, "report-" + str(abs(hash(_tag)) % 9973) + _who)
-                shutil.rmtree(_rd, ignore_errors=True)
-                os.makedirs(_rd, exist_ok=True)
-                _make(_rd)
+                _pg = os.path.join(_rd, "audit.html")
+                if os.path.exists(_pg):
+                    os.remove(_pg)
                 _r = subprocess.run([sys.executable, GATE, *_argv], cwd=_rd,
                                     capture_output=True, timeout=300,
                                     env={**os.environ, "GATE_CLI": ("off" if _who == "py"
                                                                     else _cli_bin)})
                 _said.append((_rpnoms(_r.stdout), _rpnoms(_r.stderr), _r.returncode))
-                _pg = os.path.join(_rd, "audit.html")
                 _page.append(_rpnoms(open(_pg, "rb").read()) if os.path.exists(_pg) else None)
             if _said[0] != _said[1]:
                 _rpw.append(_tag + ": the answer")
@@ -7894,6 +7902,47 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         if _rpw:
             print("   the report parts:", _rpw[:4])
         S.append(("the audit page is one page on both carriers, words and bytes", _rpw == []))
+
+        # ── AND THE WORLD WITH THE CEREMONY STRIPPED, which is the one verb here
+        # that does not read the world at all: it reads the JUDGE'S OWN PARSE and
+        # draws a view over it. Both carriers ask the same route for that parse,
+        # so what they can part on is the drawing: the order the document has,
+        # what a `///` above a record belongs to, which comment is a heading and
+        # which is set rather than flowed, and what a named record prints when
+        # nothing else does.
+        _brw = []
+        _br = os.path.join(tmp, "bare-world")
+        shutil.rmtree(_br, ignore_errors=True)
+        os.makedirs(_br, exist_ok=True)
+        run("demo", _br)
+        for _tag, _cwd, _argv in (
+                ("no file named", _br, ["bare"]),
+                ("a whole world", _br, ["bare", "ownership.swift"]),
+                ("as an answer", _br, ["bare", "ownership.swift", "--json"]),
+                ("one record", _br, ["bare", "ownership.swift", "Owns_1_bob"]),
+                ("the file itself", _br, ["bare", "ownership.swift", "--full"]),
+                ("a file that is not there", _br, ["bare", "nosuch.swift"]),
+                ("a record that is not there", _br, ["bare", "ownership.swift", "Nope"]),
+                ("a page off the shelf", HERE, ["bare", "stdlib/verbs.swift"])):
+            _two = [subprocess.run([sys.executable, GATE, *_argv], cwd=_cwd,
+                                   capture_output=True, timeout=300,
+                                   env={**os.environ, "GATE_CLI": _e})
+                    for _e in ("off", _cli_bin)]
+            if [(_x.stdout, _x.stderr, _x.returncode) for _x in _two][0] != \
+               [(_x.stdout, _x.stderr, _x.returncode) for _x in _two][1]:
+                _brw.append(_tag)
+            _out = _two[0].stdout
+            if _tag == "a whole world" and (b"Owns_1_bob = Owns<" not in _out
+                                            or b"a projection" not in _out):
+                _brw.append(_tag + ": the records or the note are missing")
+            if _tag == "one record" and _out.count(b"Owns_") > 3:
+                _brw.append(_tag + ": naming one record printed the others too")
+            if _tag == "a record that is not there" and (
+                    _two[0].returncode != 1 or b"declares no record" not in _two[0].stderr):
+                _brw.append(_tag + ": a record nobody declared is not said")
+        if _brw:
+            print("   the bare view parts:", _brw[:4])
+        S.append(("the stripped world is drawn alike on both carriers", _brw == []))
 
         # ── AND THE COURT GUARD, ON THE CARRIER THAT NOW ANSWERS THE VERB. The
         # mutant that holds this guard is planted in the python file, and
@@ -8114,7 +8163,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                   .stdout.split() == ["stdlib", "export", "seam", "log", "aside", "declare",
                                       "mine", "theirs", "init", "drift", "my",
                                       "status", "fsck", "badge", "survey", "findings",
-                                      "report"]))
+                                      "report", "bare"]))
         # ── AND THE LEDGER IS READ AGAINST THE ROAD IT IS WALKING. The strangler
         # has a length and a position, and both were feelings: the list of moved
         # veins lived in the binary and the list of verbs lived in the python
@@ -8371,10 +8420,10 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         # spelling left on the far side would be one question answered by two
         # carriers, which is the split this rule exists to forbid.
         _carried_verbs = set(_ledger) & _verbs
-        S.append(("the ledger names verbs the usage offers, 16 of 27 carried",
+        S.append(("the ledger names verbs the usage offers, 17 of 27 carried",
                   set(_ledger) <= _verbs | {"fsck"}
-                  and len(_ledger) == 17
-                  and len(_carried_verbs) == 16
+                  and len(_ledger) == 18
+                  and len(_carried_verbs) == 17
                   and len(_verbs) == 27
                   # and a name on the ledger is a whole verb: a prefix claims
                   # everything under it, so half a verb would take argv nobody

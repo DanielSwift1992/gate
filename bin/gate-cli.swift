@@ -72,7 +72,7 @@ if args.contains("--out") && !args.contains("-o") {
 // argv it does not answer, and the python side would never see it.
 if args == ["--carries"] {
     out("stdlib\nexport\nseam\nlog\naside\ndeclare\nmine\ntheirs\ninit\ndrift\nmy\n"
-        + "status\nfsck\nbadge\nsurvey\nfindings\nreport\n")
+        + "status\nfsck\nbadge\nsurvey\nfindings\nreport\nbare\n")
     exit(0)
 }
 
@@ -3234,6 +3234,273 @@ func refineAddresses(_ text: String, _ refusals: [(address: String, claim: Strin
         }
         return ref
     }
+}
+
+// ── THE JUDGE'S OWN READING, ASKED FOR. Nothing here grows a grammar over
+// somebody's world: `judge parse` hands out the parse the court already made,
+// and both carriers ask the same route for it. The route lives in the port's
+// wrapper, so it needs node even where the binary judges.
+func whichNode() -> String? {
+    for dir in (ProcessInfo.processInfo.environment["PATH"] ?? "").components(separatedBy: ":") {
+        let p = (dir as NSString).appendingPathComponent("node")
+        if FileManager.default.isExecutableFile(atPath: p) { return p }
+    }
+    return nil
+}
+
+func worldParse(_ path: String) -> Said {
+    let node = whichNode()
+    let port = root.appendingPathComponent("bin/judge-cli.js").path
+    guard let node = node, FileManager.default.fileExists(atPath: port) else {
+        cannot("this reads the judge's own parse, and that route is the node port",
+               "install node, which serves it through bin/judge-cli.js, or read the "
+               + "file itself: it is plain Swift and `swiftc -typecheck` reads it too")
+    }
+    let p = Process()
+    p.executableURL = URL(fileURLWithPath: node)
+    p.arguments = [port, "judge", "parse", path]
+    let pipe = Pipe(), quiet = Pipe()
+    p.standardOutput = pipe
+    p.standardError = quiet
+    var said = "", why = ""
+    if (try? p.run()) != nil {
+        said = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        why = String(data: quiet.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        p.waitUntilExit()
+    }
+    if p.terminationStatus != 0 || said.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        let first = why.split(separator: "\n").first.map(String.init) ?? "no reason given"
+        cannot("the parse of " + (path as NSString).lastPathComponent + " came back empty: "
+               + String(first.trimmingCharacters(in: .whitespaces).prefix(90)),
+               "check the file is the Swift this judges, or run `gate status` to see "
+               + "what the court says about it")
+    }
+    guard let top = readSaid(said), let one = top.asObject?.first?.1 else {
+        cannot("the parse of " + (path as NSString).lastPathComponent + " is not a reading",
+               "run `gate status` to see what the court says about it")
+    }
+    return one
+}
+
+func saidInt(_ s: Said?) -> Int {
+    guard let s = s else { return 0 }
+    if case .number(let n) = s { return Int(Double(n) ?? 0) }
+    return Int(s.asText ?? "") ?? 0
+}
+
+// the `///` a writer put above a record is that record's own sentence
+func bareNote(_ lines: [String], _ at: Int) -> String {
+    var said: [String] = []
+    var i = at - 2
+    while i >= 0 && i < lines.count && lines[i].trimmingCharacters(in: .whitespaces)
+        .hasPrefix("///") {
+        var one = lines[i].trimmingCharacters(in: .whitespaces)
+        while one.hasPrefix("/") { one.removeFirst() }
+        said.insert(one.trimmingCharacters(in: .whitespaces), at: 0)
+        i -= 1
+    }
+    return said.filter { !$0.isEmpty }.joined(separator: " ")
+}
+
+struct BareComment { var line = 0; var kind = ""; var text = "" }
+
+// ── THE PROSE THE FILE ALREADY CARRIES, READ THE WAY IT WAS WRITTEN. A run of
+// comment lines is one paragraph and a blank `//` is where the writer stopped;
+// `── like this ──` is a heading; four spaces inside a comment is set, not
+// flowed; `role:` and `opens:` are how a file tells this tool what it is, not
+// something it says to a reader; `== word` marks a phrase and is not read out.
+// A `///` line above a record belongs to that record and travels with it.
+func bareComments(_ lines: [String], _ heads: [Int]) -> [BareComment] {
+    var taken = Set<Int>()
+    for at in heads {
+        var i = at - 2
+        while i >= 0 && i < lines.count && lines[i].trimmingCharacters(in: .whitespaces)
+            .hasPrefix("///") { taken.insert(i); i -= 1 }
+    }
+    var out: [BareComment] = []
+    var run: Int? = nil          // index into out
+    for (i, raw) in lines.enumerated() {
+        let stripped = raw.trimmingCharacters(in: .whitespaces)
+        if !stripped.hasPrefix("//") || taken.contains(i) { run = nil; continue }
+        let body = raw.replacingOccurrences(of: "^\\s*/+", with: "",
+                                            options: .regularExpression)
+        let said = body.trimmingCharacters(in: .whitespaces)
+        if said.isEmpty
+            || said.range(of: "^(role|opens):", options: [.regularExpression, .caseInsensitive])
+                != nil
+            || said.hasPrefix("== ") { run = nil; continue }
+        if let head = matchAt(said, "^──+\\s*(.+?)\\s*──+$") {
+            run = nil
+            out.append(BareComment(line: i + 1, kind: "head", text: head[1]))
+            continue
+        }
+        if body.range(of: "^\\s{4,}", options: .regularExpression) != nil {
+            let cut = body.replacingOccurrences(of: "^\\s{1,4}", with: "",
+                                                options: .regularExpression)
+            if let r = run, out[r].kind == "set" { out[r].text += "\n" + cut }
+            else {
+                out.append(BareComment(line: i + 1, kind: "set", text: cut))
+                run = out.count - 1
+            }
+            continue
+        }
+        if let r = run, out[r].kind == "prose" { out[r].text += " " + said }
+        else {
+            out.append(BareComment(line: i + 1, kind: "prose", text: said))
+            run = out.count - 1
+        }
+    }
+    return out.filter { !$0.text.isEmpty }
+}
+
+// ── BARE IS THE RECORD WITHOUT CEREMONY, NEVER THE RECORD WITHOUT ITS CONTENT.
+// The same items the bench's own bare view draws, in the order the document has
+// them: a record with its columns, the holes it opens, the clause it conforms
+// under, the one string it is allowed, and the claims written inside it.
+func bareLines(_ parsed: Said, _ text: String, _ only: [String]) -> [String] {
+    let lines = text.components(separatedBy: "\n")
+    var items: [(Int, [String])] = []
+    let declarations = parsed.at("declarations")?.asList ?? []
+    let topAliases = parsed.at("topAliases")?.asObject ?? []
+    for d in declarations {
+        let name = d.at("name")?.asText ?? ""
+        if !only.isEmpty && !only.contains(name) { continue }
+        var head = name
+        let conformances = (d.at("conformances")?.asList ?? []).compactMap { $0.asText }
+        if !conformances.isEmpty { head += ": " + conformances.joined(separator: ", ") }
+        if let whereText = d.at("whereText")?.asText, !whereText.isEmpty {
+            head += " when " + whereText
+        }
+        var block: [String] = []
+        let at = saidInt(d.at("line"))
+        let note = bareNote(lines, at)
+        if !note.isEmpty { block.append(note) }
+        block.append(head)
+        if let typeName = d.at("typeName")?.asText { block.append("    \"" + typeName + "\"") }
+        for (k, v) in d.at("aliases")?.asObject ?? [] {
+            block.append("    \(k) = " + (v.at("target")?.asText ?? ""))
+        }
+        // a hole is a line, and the line says what may fill it: a gate's
+        // parameter and a protocol's axis are the same act written two ways
+        let kinds = (d.at("paramKinds")?.asList ?? []).map { $0.asText }
+        var holes: [(String, String?)] = []
+        for (i, a) in (d.at("params")?.asList ?? []).enumerated() {
+            holes.append((a.asText ?? "", i < kinds.count ? kinds[i] : nil))
+        }
+        let axisKinds = d.at("axisKinds")?.asObject ?? []
+        for a in d.at("axes")?.asList ?? [] {
+            let name = a.asText ?? ""
+            holes.append((name, axisKinds.first(where: { $0.0 == name })?.1.asText))
+        }
+        for (axis, kind) in holes { block.append("    \(axis) asks for \(kind ?? "anything")") }
+        for e in d.at("entries")?.asList ?? [] {
+            let args = (e.at("args")?.asList ?? []).compactMap { $0.asText }
+            block.append("    " + (e.at("head")?.asText ?? "")
+                         + (args.isEmpty ? "" : "<" + args.joined(separator: ", ") + ">"))
+        }
+        items.append((at, block))
+    }
+    for (name, a) in topAliases {
+        if !only.isEmpty && !only.contains(name) { continue }
+        let at = saidInt(a.at("line"))
+        let note = bareNote(lines, at)
+        items.append((at, (note.isEmpty ? [] : [note])
+                      + ["\(name) = " + (a.at("target")?.asText ?? "")]))
+    }
+    if only.isEmpty {
+        let heads = declarations.map { saidInt($0.at("line")) }
+            + topAliases.map { saidInt($0.1.at("line")) }
+        for c in bareComments(lines, heads) {
+            items.append((c.line, c.kind == "head" ? ["── " + c.text + " ──"]
+                          : c.kind == "set" ? c.text.components(separatedBy: "\n")
+                          : [c.text]))
+        }
+    }
+    items.sort { $0.0 < $1.0 }
+    var out: [String] = []
+    for (_, block) in items {
+        if !out.isEmpty { out.append("") }
+        out += block
+    }
+    return out
+}
+
+// ── bare FILE [NAME ...] [--full]: the world with the ceremony stripped,
+// printed by the tool rather than by hand. A projection over one source: the
+// file on disk stays the full Swift it was, git keeps it, swiftc reads it, and
+// this writes nothing at all.
+if args.first == "bare" {
+    let rest = Array(args.dropFirst()).filter { $0 != "--json" }
+    let asJson = args.contains("--json")
+    let paths = rest.filter { !$0.hasPrefix("-") }
+    if paths.isEmpty {
+        let note = "bare FILE [NAME ...] [--full]  ·  the same world with the ceremony stripped"
+        let next = "name a world file: `gate bare gate.swift`, or `gate bare "
+                 + "stdlib/verbs.swift` for a page off the shelf"
+        if asJson {
+            out("{\n  \"command\": \"bare\",\n  \"asks\": true,\n"
+                + "  \"note\": " + jsonString(note) + ",\n"
+                + "  \"next\": " + jsonString(next) + "\n}\n")
+        } else {
+            out("usage: " + note + "\n  next: " + next + "\n")
+        }
+        exit(0)
+    }
+    let src = paths[0]
+    if !FileManager.default.fileExists(atPath: src) {
+        cannot("no file at " + src,
+               "name a world file this judges, or run `gate demo` for a repository that has one")
+    }
+    let text = theirsText(src, "the world to strip")
+    if rest.contains("--full") {
+        let note = "the whole text, as it sits on disk and as swiftc reads it"
+        let next = "`gate bare " + src + "` prints the same world stripped"
+        if asJson {
+            var pairs: [(String, StatusJSON)] = [
+                ("command", .text("bare")), ("file", .text(src)), ("full", .text(text)),
+                ("mutates", .raw("false")), ("note", .text(note)), ("next", .text(next)),
+            ]
+            if let ready = commandIn(next) { pairs.append(("command_to_run", .text(ready))) }
+            out(statusDumps(.object(pairs), 0) + "\n")
+        } else {
+            var lines = text.hasSuffix("\n")
+                ? String(text.reversed().drop(while: { $0 == "\n" }).reversed())
+                : text
+            lines += "\n\n  " + note + "\n  next: " + next + "\n"
+            out(lines)
+        }
+        exit(0)
+    }
+    let only = Array(paths.dropFirst())
+    let parsed = worldParse(src)
+    if !only.isEmpty {
+        var known = Set((parsed.at("declarations")?.asList ?? [])
+            .compactMap { $0.at("name")?.asText })
+        for (n, _) in parsed.at("topAliases")?.asObject ?? [] { known.insert(n) }
+        let missing = only.filter { !known.contains($0) }
+        if !missing.isEmpty {
+            cannot(src + " declares no " + (missing.count == 1 ? "record" : "records") + " "
+                   + missing.joined(separator: ", "),
+                   "`gate bare " + src + "` prints every record it does declare")
+        }
+    }
+    let lines = bareLines(parsed, text, only)
+    let note = "a projection: the file on disk is unchanged full Swift, and "
+             + "`gate bare " + src + " --full` prints it"
+    let next = "run `gate serve` to edit this view and watch the verdict move"
+    if asJson {
+        var pairs: [(String, StatusJSON)] = [
+            ("command", .text("bare")), ("file", .text(src)),
+            ("only", only.isEmpty ? .null : .list(only.map { .text($0) })),
+            ("lines", .list(lines.map { .text($0) })),
+            ("mutates", .raw("false")), ("note", .text(note)), ("next", .text(next)),
+        ]
+        if let ready = commandIn(next) { pairs.append(("command_to_run", .text(ready))) }
+        out(statusDumps(.object(pairs), 0) + "\n")
+    } else {
+        out((lines + ["", "  " + note, "  next: " + next]).joined(separator: "\n") + "\n")
+    }
+    exit(0)
 }
 
 // ── report [-o report.html]: the printable audit page, the world's tables plus
