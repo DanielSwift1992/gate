@@ -1495,8 +1495,24 @@ def cmd_import(a):
     emit("// the language it is written in: `gate stdlib show forms-organization`.")
     emit("// Those words are carried by the judge, and `materialize` writes them out")
     emit("// beside this file to read: editing that copy adds no word to the language.")
-    people = list(csv.DictReader(theirs_text(people_csv)))
-    grants = list(csv.DictReader(theirs_text(grants_csv)))
+    _pr = csv.DictReader(theirs_text(people_csv))
+    _gr = csv.DictReader(theirs_text(grants_csv))
+    people, grants = list(_pr), list(_gr)
+    # ── AND A TABLE MISSING A COLUMN IS SAID, NOT RAISED. The rows below read
+    # `p['rank']` straight, so a people table without that column met a person
+    # with a KeyError and a stack trace — and not while they were importing, but
+    # inside `gate status`, which runs this as the bootstrap. A column is a name,
+    # and a name is the one thing a reader can check before it reads.
+    for _fields, _path, _need in ((_pr.fieldnames, people_csv,
+                                   ["id", "rank", "home", "given", "family", "born", "site"]),
+                                  (_gr.fieldnames, grants_csv, ["who", "doc"])):
+        _missing = [c for c in _need if c not in (_fields or [])]
+        if _fields and _missing:
+            cannot(f"{os.path.basename(_path)} has no column named "
+                   + ", ".join(f"`{c}`" for c in _missing)
+                   + ", and the world is seeded from those",
+                   "the header line names the columns: " + ", ".join(_need)
+                   + " for people, who, doc for grants")
 
     # the atom pools: distinct given/family/year values from the data, Next rings closed in a circle
     def ring(names, conf, extra=None):

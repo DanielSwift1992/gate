@@ -7484,6 +7484,75 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
             print("   the status core answers apart on:", _s9apart[:4])
         S.append(("the status core answers with the python side's bytes on fourteen worlds",
                   _s9apart == []))
+
+        # ── AND ALL FOURTEEN OF THEM ALREADY HAD A WORLD. The tables bootstrap
+        # runs in the other carrier's dispatcher, above the door that hands an
+        # argv to this vein, so a repository holding tables and no world yet was
+        # the one state where the two could part completely: one seeds and
+        # answers, the other says there is nothing here. It could not be walked
+        # in the loop above either, because the first carrier through leaves a
+        # world behind for the second to find. Two copies, one per carrier, and
+        # what is held is the answer AND the bytes of the world that got written:
+        # a seeder is a writer, and a writer is judged on what it left.
+        _bsw = []
+        for _tag, _people, _grants in (
+                ("plain", "id,rank,home,given,family,born,site,sex\n"
+                          "E1,Manager,Finance,Ada,Lovelace,Y1815,OnSite,Female\n"
+                          "E2,Lead,Finance,Grace,Hopper,Y1906,Remote,Female\n",
+                 "who,doc\nE1,FinanceShare\nE2,FinanceShare\n"),
+                # the shapes a reader gets wrong: an absent column with a default,
+                # a row that stops early, a field carrying the separator, blank
+                # lines between records, and a table that is only a header
+                ("no-sex", "id,rank,home,given,family,born,site\n"
+                           "E1,Manager,Finance,Ada,Lovelace,Y1815,OnSite\n",
+                 "who,doc\nE1,FinanceShare\n"),
+                ("short-row", "id,rank,home,given,family,born,site,sex\n"
+                              "E1,Manager,Finance,Ada,Lovelace,Y1815,OnSite,Female\n"
+                              "E2,Lead,Finance,Grace,Hopper,Y1906,Remote\n",
+                 "who,doc\nE1,FinanceShare\n"),
+                ("quoted", "id,rank,home,given,family,born,site,sex\n"
+                           'E1,Manager,"Finance,North",Ada,Lovelace,Y1815,OnSite,Female\n',
+                 "who,doc\nE1,FinanceShare\n"),
+                ("blank-lines", "id,rank,home,given,family,born,site,sex\n\n"
+                                "E1,Manager,Finance,Ada,Lovelace,Y1815,OnSite,Female\n\n",
+                 "who,doc\nE1,FinanceShare\n"),
+                ("header-only", "id,rank,home,given,family,born,site\n", "who,doc\n"),
+                # and the table that names no column this reads at all
+                ("no-rank-column", "id,home,given,family,born,site\n"
+                                   "E1,Finance,Ada,Lovelace,Y1815,OnSite\n",
+                 "who,doc\nE1,FinanceShare\n")):
+            _said, _wrote = [], []
+            for _who in ("py", "sw"):
+                _bd = os.path.join(tmp, "bootstrap-" + _tag + "-" + _who)
+                os.makedirs(os.path.join(_bd, "tables"), exist_ok=True)
+                subprocess.run(["git", "init", "-q", "-b", "main", _bd], capture_output=True)
+                open(os.path.join(_bd, "tables", "people.csv"), "w").write(_people)
+                open(os.path.join(_bd, "tables", "grants.csv"), "w").write(_grants)
+                _r = (subprocess.run([sys.executable, GATE, "status"], cwd=_bd,
+                                     capture_output=True, timeout=180,
+                                     env={**os.environ, "GATE_CLI": "off"})
+                      if _who == "py" else
+                      subprocess.run([_cli_bin, "--status-core"], cwd=_bd,
+                                     capture_output=True, timeout=180))
+                _said.append((_s9noms(_r.stdout), _s9noms(_r.stderr), _r.returncode))
+                _bw = os.path.join(_bd, "gate.swift")
+                _wrote.append(open(_bw, "rb").read() if os.path.exists(_bw) else None)
+            if _said[0] != _said[1]:
+                _bsw.append(_tag + ": the answer")
+            if _wrote[0] != _wrote[1]:
+                _bsw.append(_tag + ": the world it wrote")
+            # and the pins beside the parity: a seeder that seeded nothing agrees
+            # with a seeder that seeded nothing, and this walk would say so
+            if _tag == "no-rank-column":
+                if _wrote[0] is not None or _said[0][2] != 1 \
+                        or b"has no column named" not in _said[0][1]:
+                    _bsw.append(_tag + ": a missing column is not said, or a world was written")
+            elif _wrote[0] is None or b"public enum ImportedTeam" not in _wrote[0]:
+                _bsw.append(_tag + ": nothing was seeded at all")
+        if _bsw:
+            print("   the tables bootstrap parts:", _bsw[:4])
+        S.append(("the tables bootstrap seeds one world on both carriers, byte for byte",
+                  _bsw == []))
         # and the worlds mean what they were built to mean, so a probe that
         # stopped measuring anything cannot stay green: every guard family is
         # pinned to the world planted for it, by the refusal's own words

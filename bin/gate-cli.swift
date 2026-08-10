@@ -2462,6 +2462,170 @@ func floatRepr(_ s: String) -> String {
     return String(d)
 }
 
+// ── THE TABLES BOOTSTRAP, the one thing that stood between this vein and the
+// verbs that ask about a world. The other carrier runs it in its dispatcher
+// before `status`, and the strangler's door hands an argv over ABOVE that line,
+// so a carried verb never reached it: in a repository holding tables and no
+// world yet, one carrier seeded the world and the other did not. It is not a
+// verb and it does not go on the ledger. It is a precondition, and it is here so
+// that the verb standing on it can move.
+//
+// Seeded ONCE, and never again: from then on the world is the source, and fresh
+// tables come in through an explicit `gate import`. That is the whole reason
+// this is three lines of condition and not a sync.
+func csvRows(_ text: String) -> [[String]] {
+    // read the way the other carrier's csv module reads: a quote protects commas
+    // and newlines, a doubled quote inside a quoted field is one quote, and a
+    // blank line is an empty row rather than a row of one empty field
+    var rows: [[String]] = [], row: [String] = [], field = ""
+    var quoted = false, started = false
+    var i = text.startIndex
+    while i < text.endIndex {
+        let c = text[i]
+        if quoted {
+            if c == "\"" {
+                let n = text.index(after: i)
+                if n < text.endIndex, text[n] == "\"" { field.append("\""); i = n }
+                else { quoted = false }
+            } else { field.append(c) }
+        } else if c == "\"" {
+            quoted = true; started = true
+        } else if c == "," {
+            row.append(field); field = ""; started = true
+        } else if c == "\n" || c == "\r" {
+            let n = text.index(after: i)
+            if c == "\r", n < text.endIndex, text[n] == "\n" { i = n }
+            if started || !field.isEmpty { row.append(field) }
+            rows.append(row)
+            row = []; field = ""; started = false
+        } else { field.append(c); started = true }
+        i = text.index(after: i)
+    }
+    if started || !field.isEmpty { row.append(field); rows.append(row) }
+    return rows
+}
+
+struct CsvTable {
+    var header: [String] = []
+    var rows: [[String]] = []       // the header's row is not among these
+    func has(_ key: String) -> Bool { header.contains(key) }
+    // a row shorter than the header leaves the rest unfilled, and the other
+    // carrier's reader fills those with None, which prints as `None`
+    func at(_ r: Int, _ key: String) -> String? {
+        guard let i = header.firstIndex(of: key), r < rows.count else { return nil }
+        return i < rows[r].count ? rows[r][i] : nil
+    }
+    func text(_ r: Int, _ key: String) -> String { at(r, key) ?? "None" }
+}
+
+func csvTable(_ path: String, _ what: String) -> CsvTable {
+    var all = csvRows(theirsText(path, what))
+    all.removeAll { $0.isEmpty }            // the reader skips an empty row
+    guard let head = all.first else { return CsvTable() }
+    return CsvTable(header: head, rows: Array(all.dropFirst()))
+}
+
+func seededWorld(_ peoplePath: String, _ grantsPath: String) -> String {
+    let people = csvTable(peoplePath, "the people this world is seeded from")
+    let grants = csvTable(grantsPath, "the grants this world is seeded from")
+    // ── AND A TABLE MISSING A COLUMN IS SAID, NOT RAISED. The other carrier
+    // reads `row['rank']` straight, so a table without that column meets a
+    // person with a KeyError and a stack trace, inside the one command they ran
+    // to look at their repository. A column is a name this reader can check.
+    for (table, path, need) in [(people, peoplePath, ["id", "rank", "home", "given",
+                                                      "family", "born", "site"]),
+                                (grants, grantsPath, ["who", "doc"])] {
+        let missing = need.filter { !table.has($0) }
+        if !table.header.isEmpty && !missing.isEmpty {
+            cannot((path as NSString).lastPathComponent + " has no column named "
+                   + missing.map { "`\($0)`" }.joined(separator: ", ")
+                   + ", and the world is seeded from those",
+                   "the header line names the columns: "
+                   + need.joined(separator: ", ") + " for people, who, doc for grants")
+        }
+    }
+    var lines: [String] = []
+    func emit(_ chunk: String) { lines += chunk.components(separatedBy: "\n") }
+    emit("// the facts world, yours: the source you read and edit, and the")
+    emit("// one this tool answers for. Not a generated artifact. The tables")
+    emit("// only seeded it once, below, and from here the world is what is")
+    emit("// edited and judged. A gate.manifest.swift may split it across")
+    emit("// several files, all judged together. git carries the history.")
+    emit("//")
+    emit("// seeded by gate import from: \((peoplePath as NSString).lastPathComponent), "
+         + "\((grantsPath as NSString).lastPathComponent)")
+    emit("//")
+    emit("// the language it is written in: `gate stdlib show forms-organization`.")
+    emit("// Those words are carried by the judge, and `materialize` writes them out")
+    emit("// beside this file to read: editing that copy adds no word to the language.")
+    // the atom pools: distinct values from the data, each ring closed in a circle
+    func ring(_ names: [String], _ conf: String, _ extra: [String: String]? = nil) {
+        var seen = Set<String>(), order: [String] = []
+        for n in names where !seen.contains(n) { seen.insert(n); order.append(n) }
+        for (i, n) in order.enumerated() {
+            let next = order[(i + 1) % order.count]
+            var body = "    public typealias Next = \(next)\n"
+            if let extra = extra { body += "    public typealias Sex = \(extra[n] ?? "None")\n" }
+            emit("\npublic enum \(n): \(conf) {\n\(body)}")
+        }
+    }
+    var sexes: [String: String] = [:]
+    for r in people.rows.indices {
+        sexes[people.text(r, "given")] = people.has("sex") ? people.text(r, "sex") : "Male"
+    }
+    ring(people.rows.indices.map { people.text($0, "given") }, "GivenNameCycle", sexes)
+    ring(people.rows.indices.map { people.text($0, "family") }, "FamilyNameCycle")
+    ring(people.rows.indices.map { people.text($0, "born") }, "BirthYearCycle")
+    for r in people.rows.indices {
+        emit("\npublic enum \(people.text(r, "id")): Employee, Person {\n"
+             + "    public typealias Rank = \(people.text(r, "rank"))\n"
+             + "    public typealias Home = \(people.text(r, "home"))\n"
+             + "    public typealias Given = \(people.text(r, "given"))\n"
+             + "    public typealias Family = \(people.text(r, "family"))\n"
+             + "    public typealias Born = \(people.text(r, "born"))\n"
+             + "    public typealias Site = \(people.text(r, "site"))\n"
+             + "    public typealias Sex = Given.Sex\n}")
+    }
+    emit("\npublic enum ImportedTeam: Team {\n    @StructureBuilder\n"
+         + "    public static var body: some Structure {")
+    for r in people.rows.indices {
+        let id = people.text(r, "id")
+        emit("        VerifiedInDepartment<\n            \(id),\n"
+             + "            \(people.text(r, "home"))\n        >.self")
+        emit("        VerifiedAtRank<\n            \(id),\n"
+             + "            \(people.text(r, "rank"))\n        >.self")
+        emit("        VerifiedAtWorkplace<\n            \(id),\n"
+             + "            \(people.text(r, "site"))\n        >.self")
+    }
+    emit("    }\n}")
+    emit("\npublic enum ImportedAccesses: AccessLedger {\n    @StructureBuilder\n"
+         + "    public static var body: some Structure {")
+    for r in grants.rows.indices {
+        emit("            VerifiedView<\n                \(grants.text(r, "who")),\n"
+             + "                \(grants.text(r, "doc"))\n            >.self")
+    }
+    emit("    }\n}")
+    return lines.joined(separator: "\n") + "\n"
+}
+
+@discardableResult
+func ensureWorld(_ w: WorldState) -> Bool {
+    // bootstrap only: tables present and no world yet. The court is not asked
+    // here, the way the other carrier's bootstrap discards the verdict it takes:
+    // what this owes the caller is the world file, and the caller judges it.
+    guard let tables = w.tables, let facts = w.facts,
+          !FileManager.default.fileExists(atPath: facts) else { return false }
+    let world = seededWorld((tables as NSString).appendingPathComponent("people.csv"),
+                            (tables as NSString).appendingPathComponent("grants.csv"))
+    do { try world.write(toFile: facts, atomically: false, encoding: .utf8) }
+    catch {
+        cannot(facts + " cannot be written here: " + error.localizedDescription.lowercased(),
+               "the world is seeded beside the tables it comes from, so this needs a folder "
+               + "you can write in")
+    }
+    return true
+}
+
 // the whole status answer, assembled once and returned: the door below prints
 // it, and the verbs that ask about a world (`badge` today, its neighbours next)
 // take their counts from the verb that owns them rather than counting again.
@@ -2487,6 +2651,7 @@ func statusAnswer() -> StatusAnswer {
     // reads worlds, it does not seed them.
     loadStatusShelf()
     let w = discoverWorld()
+    ensureWorld(w)                  // tables and no world yet: seed it, once
     let files = worldFilesOf(w)
     let here = FileManager.default.currentDirectoryPath
     var answer = StatusAnswer()
