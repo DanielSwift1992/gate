@@ -3151,8 +3151,23 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     os.makedirs(_bf, exist_ok=True)
     run("demo", "org", _bf)
     os.remove(os.path.join(_bf, "gate.swift"))       # the tables stay, the world goes
-    _bf_badge = run("badge", cwd=_bf)[1]
-    _bf_status = run("status", cwd=_bf)[1]
+
+    # the carrier is named: this holds the half the fix was made in, and the
+    # vein's half is held beside the strangler's own parity, where the two are
+    # compared on the same shape. A check that does not say which carrier it
+    # ran is a check that stops measuring the day the verb moves.
+    def _bf_run(*_argv):
+        _r = subprocess.run([sys.executable, GATE, *_argv, "--json"], cwd=_bf,
+                            capture_output=True, text=True,
+                            env={**os.environ, "GATE_CLI": "off"})
+        for _said in (_r.stdout, _r.stderr):
+            try:
+                return json.loads(_said)
+            except Exception:
+                pass
+        return {"raw": _r.stdout[:200]}
+    _bf_badge = _bf_run("badge")
+    _bf_status = _bf_run("status")
     S.append(("a badge that bootstraps the world counts the world it judged",
               _bf_badge.get("claims", 0) > 0
               and _bf_badge.get("claims") == (_bf_status.get("world") or {}).get("premises")
@@ -3160,7 +3175,15 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               # and the days are counted rather than explained away by a note
               # about a forms world this never was
               and _bf_badge.get("unbroken_days") is not None
-              and "this world is forms" not in (_bf_badge.get("note") or "")))
+              and "this world is forms" not in (_bf_badge.get("note") or "")
+              # ── AND THE ANSWER DOES NOT DEPEND ON HOW OFTEN IT IS ASKED. The
+              # emptiness test read the world's FILES and ran before the court,
+              # so the FIRST run in a tables-and-no-world repository printed `no
+              # world here` and pointed at `gate init .`, and the second printed
+              # the world the first one's own question had seeded. Two answers
+              # to one question, told apart only by how many times you asked.
+              and _bf_badge.get("claims") == _bf_run("badge").get("claims")
+              and _bf_badge.get("verdict") != "no world here"))
     # ── AND A RED BADGE DOES NOT REPORT NOUGHT CLAIMS. The claim count comes
     # from the court's own holding line, and a refusal prints no such line, so a
     # world with eighty-two premises and two refusals wore `0 claims · refused`
@@ -7554,6 +7577,83 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         S.append(("the tables bootstrap seeds one world on both carriers, byte for byte",
                   _bsw == []))
 
+        # ── AND THE SOUVENIR, WHOSE NUMBERS COME FROM TWO PLACES AT ONCE: the
+        # court counts the claims, and git counts the days by REPLAYING the
+        # world's own history through that court. Both carriers walk the same
+        # commits, judge the same past trees, and stop at the same one that did
+        # not hold. Walked by lives, because the ways a badge can part are its
+        # own states: a history with a break in it, a window over that history,
+        # a clone that arrived without one, a red world, a world of forms, a
+        # folder with nothing in it, and a folder holding only tables.
+        _bgw = []
+        # this verb carries its own clock under a name of its own (`ms`), which
+        # the status normalizer does not know: two carriers cannot agree on a
+        # duration, and comparing one is comparing the machine
+        _bgnoms = lambda b: re.sub(rb'"ms": [0-9.]+', rb'"ms": MS', _s9noms(b))
+        def _bg_hist(_d):
+            os.makedirs(os.path.join(_d, "tables"), exist_ok=True)
+            subprocess.run(["git", "init", "-q", "-b", "main", _d], capture_output=True)
+            shutil.copy(os.path.join(DEMO, "people.csv"), os.path.join(_d, "tables"))
+            shutil.copy(os.path.join(DEMO, "grants.csv"), os.path.join(_d, "tables"))
+            subprocess.run([sys.executable, GATE, "status"], cwd=_d, capture_output=True,
+                           env={**os.environ, "GATE_CLI": "off"})
+            _bw = os.path.join(_d, "gate.swift")
+            _good = open(_bw, encoding="utf-8").read()
+            at(_d, "2026-01-10", "the world begins")
+            open(_bw, "w").write(_good.replace("Rank = Manager", "Rank = Nonesuch", 1))
+            at(_d, "2026-02-01", "a rank that is nobody")   # this one does not hold
+            open(_bw, "w").write(_good)
+            at(_d, "2026-03-01", "put it back")
+        def _bg_red(_d):
+            run("demo", "org", _d)
+            _rw = os.path.join(_d, "gate.swift")
+            open(_rw, "w").write(open(_rw, encoding="utf-8").read().replace(
+                "public typealias Home = Engineering", "public typealias Home = Finance", 1))
+        def _bg_tables(_d):
+            os.makedirs(os.path.join(_d, "tables"), exist_ok=True)
+            subprocess.run(["git", "init", "-q", "-b", "main", _d], capture_output=True)
+            shutil.copy(os.path.join(DEMO, "people.csv"), os.path.join(_d, "tables"))
+            shutil.copy(os.path.join(DEMO, "grants.csv"), os.path.join(_d, "tables"))
+        for _tag, _make, _argv in (("history", _bg_hist, ["badge"]),
+                                   ("history --json", _bg_hist, ["badge", "--json"]),
+                                   ("a window", _bg_hist, ["badge", "--since", "2026-02-15"]),
+                                   ("written out", _bg_hist, ["badge", "-o", "gate.svg"]),
+                                   ("nowhere to write", _bg_hist, ["badge", "-o", "tables"]),
+                                   ("a red world", _bg_red, ["badge", "--json"]),
+                                   ("only tables", _bg_tables, ["badge"]),
+                                   ("nothing at all", lambda _d: None, ["badge", "--json"])):
+            _said, _left = [], []
+            for _who in ("py", "sw"):
+                _bd = os.path.join(tmp, "badge-" + _tag.replace(" ", "-").replace("-", "") + _who)
+                shutil.rmtree(_bd, ignore_errors=True)
+                os.makedirs(_bd, exist_ok=True)
+                _make(_bd)
+                _r = subprocess.run([sys.executable, GATE, *_argv], cwd=_bd,
+                                    capture_output=True, timeout=300,
+                                    env={**os.environ, "GATE_CLI": ("off" if _who == "py"
+                                                                    else _cli_bin)})
+                _said.append((_bgnoms(_r.stdout), _bgnoms(_r.stderr), _r.returncode))
+                _svg = os.path.join(_bd, "gate.svg")
+                _wf = os.path.join(_bd, "gate.swift")
+                _left.append((open(_svg, "rb").read() if os.path.exists(_svg) else None,
+                              open(_wf, "rb").read() if os.path.exists(_wf) else None))
+            if _said[0] != _said[1]:
+                _bgw.append(_tag + ": the answer")
+            if _left[0] != _left[1]:
+                _bgw.append(_tag + ": what it left on disk")
+            # and the shapes mean what they were built to mean
+            if _tag == "history" and b"claims" not in _said[0][0]:
+                _bgw.append(_tag + ": no claim count at all")
+            if _tag == "written out" and _left[0][0] is None:
+                _bgw.append(_tag + ": no badge was written")
+            if _tag == "only tables" and b"no world here" in _said[0][0]:
+                _bgw.append(_tag + ": a world that can be seeded was called absent")
+            if _tag == "nothing at all" and b"no world here" not in _said[0][0]:
+                _bgw.append(_tag + ": an empty folder was given a badge")
+        if _bgw:
+            print("   the badge parts:", _bgw[:4])
+        S.append(("the badge counts and replays alike on both carriers, by lives", _bgw == []))
+
         # ── AND THE COURT GUARD, ON THE CARRIER THAT NOW ANSWERS THE VERB. The
         # mutant that holds this guard is planted in the python file, and
         # `status` no longer runs it: that plant holds the other carrier's half
@@ -7772,7 +7872,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                   subprocess.run([_cli_bin, "--carries"], capture_output=True, text=True)
                   .stdout.split() == ["stdlib", "export", "seam", "log", "aside", "declare",
                                       "mine", "theirs", "init", "drift", "my",
-                                      "status", "fsck"]))
+                                      "status", "fsck", "badge"]))
         # ── AND THE LEDGER IS READ AGAINST THE ROAD IT IS WALKING. The strangler
         # has a length and a position, and both were feelings: the list of moved
         # veins lived in the binary and the list of verbs lived in the python
@@ -8029,10 +8129,10 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         # spelling left on the far side would be one question answered by two
         # carriers, which is the split this rule exists to forbid.
         _carried_verbs = set(_ledger) & _verbs
-        S.append(("the ledger names verbs the usage offers, 12 of 27 carried",
+        S.append(("the ledger names verbs the usage offers, 13 of 27 carried",
                   set(_ledger) <= _verbs | {"fsck"}
-                  and len(_ledger) == 13
-                  and len(_carried_verbs) == 12
+                  and len(_ledger) == 14
+                  and len(_carried_verbs) == 13
                   and len(_verbs) == 27
                   # and a name on the ledger is a whole verb: a prefix claims
                   # everything under it, so half a verb would take argv nobody

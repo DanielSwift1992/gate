@@ -72,7 +72,7 @@ if args.contains("--out") && !args.contains("-o") {
 // argv it does not answer, and the python side would never see it.
 if args == ["--carries"] {
     out("stdlib\nexport\nseam\nlog\naside\ndeclare\nmine\ntheirs\ninit\ndrift\nmy\n"
-        + "status\nfsck\n")
+        + "status\nfsck\nbadge\n")
     exit(0)
 }
 
@@ -2799,6 +2799,252 @@ func statusDoor(_ asJson: Bool) -> Never {
 // the road's own door: the battery calls this, not a person
 if args.first == "--status-core" {
     statusDoor(args.contains("--json"))
+}
+
+// somebody else's place to put a file, refused in words rather than raised: the
+// writing half of theirsText, with the same three sentences the other carrier's
+// errno names
+func oursWrite(_ path: String, _ what: String, _ text: String) {
+    let fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0o644)
+    if fd < 0 {
+        let why = errno
+        if why == EISDIR {
+            cannot(path + " is a directory, and this writes " + what,
+                   "name a file inside it, or another path")
+        }
+        if why == EACCES || why == EPERM {
+            cannot(path + " cannot be written here: permission denied",
+                   "name a path you can write, and this will put " + what + " there")
+        }
+        cannot(path + " cannot be written here: "
+               + String(cString: strerror(why)).lowercased(),
+               "name a path whose folder exists, and this will put " + what + " there")
+    }
+    let bytes = Array(text.utf8)
+    _ = bytes.withUnsafeBufferPointer { write(fd, $0.baseAddress, $0.count) }
+    close(fd)
+}
+
+func escXml(_ s: String) -> String {
+    s.replacingOccurrences(of: "&", with: "&amp;")
+        .replacingOccurrences(of: "<", with: "&lt;")
+        .replacingOccurrences(of: ">", with: "&gt;")
+}
+
+// git show, with the failure kept rather than flattened: a file that was not in
+// that tree yet answers `nil`, and an empty file answers an empty string. The
+// plain runGit cannot tell those apart, and the replay below counts on it.
+func gitShow(_ spec: String, _ root: String) -> String? {
+    let p = Process()
+    p.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+    p.arguments = ["git", "-C", root, "show", spec]
+    let pipe = Pipe(), quiet = Pipe()
+    p.standardOutput = pipe
+    p.standardError = quiet
+    do { try p.run() } catch { return nil }
+    let said = pipe.fileHandleForReading.readDataToEndOfFile()
+    quiet.fileHandleForReading.readDataToEndOfFile()
+    p.waitUntilExit()
+    if p.terminationStatus != 0 { return nil }
+    return String(data: said, encoding: .utf8) ?? ""
+}
+
+// whole days from a `YYYY-MM-DD` to today, the way the other carrier's date
+// arithmetic counts them: calendar days in the machine's own zone, never hours
+func daysSince(_ iso: String) -> Int {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone.current
+    let parts = iso.split(separator: "-").compactMap { Int($0) }
+    guard parts.count == 3 else { return 0 }
+    var then = DateComponents()
+    (then.year, then.month, then.day) = (parts[0], parts[1], parts[2])
+    guard let from = calendar.date(from: then) else { return 0 }
+    let today = calendar.startOfDay(for: Date())
+    return calendar.dateComponents([.day], from: calendar.startOfDay(for: from),
+                                   to: today).day ?? 0
+}
+
+let BADGE_SVG = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{w}\" height=\"20\" "
+    + "role=\"img\" aria-label=\"{alt}\"><rect width=\"{lw}\" height=\"20\" rx=\"3\" "
+    + "fill=\"#2F3131\"/><rect x=\"{lw}\" width=\"{rw}\" height=\"20\" rx=\"3\" fill=\"{fill}\"/>"
+    + "<g font-family=\"ui-monospace,Menlo,monospace\" font-size=\"11\">"
+    + "<text x=\"6\" y=\"14\" fill=\"#FDFDFD\">gate</text>"
+    + "<text x=\"{tx}\" y=\"14\" fill=\"#FDFDFD\">{right}</text></g></svg>"
+
+// ── badge [-o FILE.svg] [--since DATE]: the souvenir, and the only numbers on
+// it are ones nobody can raise by hand. A coverage badge is gamed by writing
+// tests that assert nothing; this one counts CLAIMS, which the court counts, and
+// DAYS, which come from REPLAYING the world's own history through the same
+// court. Anybody may re-run it and get the same answer.
+//
+// What it does NOT say is `no silent error`, because that is exactly what nobody
+// saw. It says how many claims were judged and how long every commit that
+// touched them has held: provable, and duller, and true.
+if args.first == "badge" {
+    let rest = Array(args.dropFirst()).filter { $0 != "--json" }
+    let asJson = args.contains("--json")
+    func after(_ flag: String) -> String? {
+        guard let i = rest.firstIndex(of: flag), i + 1 < rest.count else { return nil }
+        return rest[i + 1]
+    }
+    let outPath = after("-o")
+    let since = after("--since")
+    let t0 = Date()
+    // AND THE NUMBER IS THE ONE STATUS COUNTS, asked rather than worked out
+    // again: premises where the plain court sits, equalities where the where
+    // court does. Both are claims judged, and neither can be raised by hand.
+    //
+    // ── AND THE COURT IS ASKED BEFORE THE WORLD IS DECLARED ABSENT. The
+    // emptiness test below reads the world's FILES, and asking it first meant a
+    // repository holding tables and no world yet was told `no world here` while
+    // `status` in the same folder seeded and answered `holds · 82 premises`:
+    // running the verb twice printed two different answers, which is the tell.
+    // The court is asked first, and the court is the thing that seeds.
+    let said = statusAnswer()
+    let w = discoverWorld()          // read after the answer that may have seeded it
+    let files = worldFilesOf(w)
+    // a badge counts JUDGED claims, so it belongs to a world and to nothing
+    // else. A world of forms is still a world, which this was the last place
+    // not to know: the plain court's list rightly holds no forms row, and
+    // reading emptiness there as emptiness altogether printed `no world here`
+    // in this tool's own repository, two lines after `status` said it holds.
+    let formsRows = files.isEmpty
+        ? (w.layout?.rows ?? []).filter { $0.role == "forms" }.filter {
+            FileManager.default.fileExists(atPath:
+                (((w.layout!.manifest as NSString).deletingLastPathComponent) as NSString)
+                    .appendingPathComponent($0.path)) }
+        : []
+    if files.isEmpty && formsRows.isEmpty {
+        let next = "run `gate init .` to start a world in this folder"
+        let then = "then `gate badge -o gate.svg` prints a badge nobody can forge"
+        if asJson {
+            var pairs: [(String, StatusJSON)] = [
+                ("command", .text("badge")),
+                ("verdict", .text("no world here")),
+                ("refusals", .list([])),
+                ("next", .text(next)),
+                ("then", .text(then)),
+                ("mutates", .raw("false")),
+            ]
+            if let ready = commandIn(next) ?? commandIn(then) {
+                pairs.append(("command_to_run", .text(ready)))
+            }
+            out(statusDumps(.object(pairs), 0) + "\n")
+        } else {
+            out("badge: no world here\n  next: \(next)\n  then: \(then)\n")
+        }
+        exit(0)
+    }
+    let holds = said.verdict == "holds"
+    let claims: Int
+    if files.isEmpty { claims = said.whereSize["equalities"] ?? 0 }
+    else if let m = said.world, m.count == 3 { claims = Int(m[2]) ?? 0 }
+    else { claims = 0 }
+    let here = FileManager.default.currentDirectoryPath
+    var root = runGit(["rev-parse", "--show-toplevel"], here)
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+    if !root.isEmpty { root = canonicalPath(root) }
+    let rels = root.isEmpty ? [] : files.map { relPath(canonicalPath($0), root) }
+    let shallow = !root.isEmpty
+        && runGit(["rev-parse", "--is-shallow-repository"], root)
+            .trimmingCharacters(in: .whitespacesAndNewlines) == "true"
+    // ── AND THE RUN OF DAYS IS COUNTED WHERE IT CAN BE COUNTED HONESTLY. The
+    // replay judges each past commit with the plain court over the world's own
+    // files, and a forms world is not judged that way: status reads its pages in
+    // a grouping of its own, and replaying them any other way would print a run
+    // of green days over a period nobody checked, which is the one thing this
+    // badge exists against.
+    //
+    // An empty `rels` means no path filter, so the walk would take the WHOLE
+    // repository's history and print a run of days over commits that never
+    // touched a world.
+    var marks: [(sha: String, when: String)] = []
+    if !root.isEmpty && !shallow && !rels.isEmpty {
+        for line in gitLines(root, ["log", "--format=%H %as"]
+                             + (since.map { ["--since=" + $0] } ?? []) + ["--"] + rels) {
+            let parts = line.split(separator: " ", maxSplits: 1).map(String.init)
+            if parts.count == 2 { marks.append((parts[0], parts[1])) }
+        }
+    }
+    // newest first, back until one refuses: the leash is the run of commits
+    // since the last time this world did not hold
+    var judged = 0
+    var broke: String? = nil
+    for mark in marks {
+        let d = NSTemporaryDirectory() + "/gate-badge-" + mark.sha
+        try? FileManager.default.createDirectory(atPath: d,
+                                                 withIntermediateDirectories: true)
+        var wrote: [String] = []
+        for rel in rels {
+            guard let text = gitShow(mark.sha + ":" + rel, root) else { continue }
+            let p = (d as NSString).appendingPathComponent((rel as NSString).lastPathComponent)
+            try? text.write(toFile: p, atomically: false, encoding: .utf8)
+            wrote.append(p)
+        }
+        let ok = !wrote.isEmpty && courtSays(wrote).contains("THE JUDGE holds")
+        try? FileManager.default.removeItem(atPath: d)
+        if wrote.isEmpty { continue }
+        judged += 1
+        if !ok { broke = mark.when; break }
+    }
+    let days = broke.map { daysSince($0) } ?? marks.last.map { daysSince($0.when) }
+    // ── AND A RED BADGE DOES NOT REPORT NOUGHT CLAIMS. The claim count comes
+    // from the court's own holding line, and a refusal prints no such line, so a
+    // world with eighty-two premises and two refusals wore `0 claims · refused`
+    // in the file people put in a README. This badge exists to say how WIDE the
+    // green is, and on a red world there is no green to be wide: it says how
+    // many were refused, which is the number that is true then.
+    let right = (holds ? many(claims, "claim") + " · holds"
+                       : "refused \(said.refusals.count)")
+        + (days.map { " · \($0)d" } ?? "")
+    if let path = outPath {
+        let lw = 40, rw = 8 + Int(Double(right.count) * 6.2)
+        var svg = BADGE_SVG
+        for (k, v) in [("{w}", String(lw + rw)), ("{lw}", String(lw)), ("{rw}", String(rw)),
+                       ("{tx}", String(lw + 5)), ("{right}", escXml(right)),
+                       ("{fill}", holds ? "#007D36" : "#BF4035"),
+                       ("{alt}", escXml("gate: " + right))] {
+            svg = svg.replacingOccurrences(of: k, with: v)
+        }
+        oursWrite(path, "the badge", svg)
+    }
+    let note = (files.isEmpty
+                ? "this world is forms, and the run of days is not counted for one yet: "
+                + "replaying its pages any way other than the one status reads them in "
+                + "would print green days over a period nothing checked"
+                : shallow || marks.isEmpty
+                ? "this repository arrived without history, so only today is counted"
+                : many(judged, "commit") + " that touched this world were judged again, "
+                + "oldest \(marks[marks.count - 1].when)"
+                + (broke.map { ", and the last that did not hold was \($0)" }
+                   ?? ", and every one held"))
+        + ": the judge counts the claims again on every run"
+    let next = "put it in the README beside the build: it says how WIDE the green is, "
+             + "which a badge that only says green does not"
+    let ms = ((Date().timeIntervalSince(t0) * 1000 * 10).rounded(.toNearestOrEven)) / 10
+    if asJson {
+        var pairs: [(String, StatusJSON)] = [
+            ("command", .text("badge")),
+            ("claims", .raw(String(claims))),
+            ("verdict", .text(holds ? "holds" : "refused")),
+            ("commits_judged", .raw(String(judged))),
+            ("unbroken_days", days.map { .raw(String($0)) } ?? .null),
+            ("last_refusal", broke.map { .text($0) } ?? .null),
+            ("shallow", .raw(shallow ? "true" : "false")),
+            ("wrote", outPath.map { .text($0) } ?? .null),
+            ("text", .text(right)),
+            ("ms", .raw(String(ms))),
+            ("note", .text(note)),
+            ("next", .text(next)),
+            ("mutates", .raw(outPath != nil ? "true" : "false")),
+        ]
+        if let ready = commandIn(next) { pairs.append(("command_to_run", .text(ready))) }
+        out(statusDumps(.object(pairs), 0) + "\n")
+    } else {
+        out("badge: " + right + (outPath.map { " · wrote \($0)" } ?? "")
+            + "\n  note: " + note + "\n  next: " + next + "\n")
+    }
+    exit(holds ? 0 : 1)
 }
 
 // and the verb itself, now that the bootstrap it stood on is here. `fsck` is
