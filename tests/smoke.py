@@ -8292,6 +8292,63 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         S.append(("who owes whom a word is partitioned the same way on both carriers",
                   _atw == []))
 
+        # ── AND THE THREE WORLDS A STRANGER MEETS FIRST, which is the one verb
+        # here that WRITES a whole repository. So the walk holds the tree it
+        # leaves, file for file, not only the sentence it prints: a demo whose
+        # words agree and whose folder differs is two demos. Every world in it
+        # is built by the verb that owns that act, asked of this same tool, so
+        # what is checked here is the orchestration and the fixtures.
+        _dmw = []
+        for _tag, _argv in (("who owns what", ["demo"]),
+                            ("who owns what, answered", ["demo", "--json"]),
+                            ("people and grants", ["demo", "org"]),
+                            ("people and grants, answered", ["demo", "org", "--json"]),
+                            ("a contract and a client", ["demo", "seam"]),
+                            ("a contract and a client, answered", ["demo", "seam", "--json"])):
+            _made = []
+            for _who in ("py", "sw"):
+                _dd = os.path.join(tmp, "demo-" + str(abs(hash(_tag)) % 9973) + _who)
+                shutil.rmtree(_dd, ignore_errors=True)
+                _r = subprocess.run([sys.executable, GATE, *_argv, _dd], cwd=tmp,
+                                    capture_output=True, timeout=300,
+                                    env={**os.environ, "GATE_CLI": ("off" if _who == "py"
+                                                                    else _cli_bin)})
+                _made.append((_dd, _r))
+            # the path is the one thing that differs by construction, so it is
+            # normalized out and everything else is compared whole
+            def _saidly(_p, _r):
+                return (_r.stdout.replace(os.path.basename(_p).encode(), b"W"),
+                        _r.stderr, _r.returncode)
+            if _saidly(*_made[0]) != _saidly(*_made[1]):
+                _dmw.append(_tag + ": the answer")
+            _left = []
+            for _dd, _ in _made:
+                _files = {}
+                for _dirpath, _dirs, _names in os.walk(_dd):
+                    _dirs[:] = [d for d in _dirs if d != ".git"]
+                    for _n in _names:
+                        _fp = os.path.join(_dirpath, _n)
+                        _files[os.path.relpath(_fp, _dd)] = open(_fp, "rb").read()
+                _left.append(_files)
+            if set(_left[0]) != set(_left[1]):
+                _dmw.append(_tag + ": the files it made")
+            else:
+                for _n in sorted(_left[0]):
+                    if _left[0][_n] != _left[1][_n]:
+                        _dmw.append(_tag + ": " + _n)
+                        break
+            _out = _made[0][1].stdout
+            if _tag == "who owns what" and b"must share one zone" not in _out:
+                _dmw.append(_tag + ": the refusal this demo exists for is missing")
+            if _tag == "people and grants" and b"Finance against Engineering" not in _out:
+                _dmw.append(_tag + ": the question it asks for you is not answered")
+            if _tag == "a contract and a client" and b"waits on the library" not in _out:
+                _dmw.append(_tag + ": the pair owes nobody anything")
+        if _dmw:
+            print("   the three demos part:", _dmw[:4])
+        S.append(("the worlds a stranger meets first are made alike, file for file",
+                  _dmw == []))
+
         # ── AND THE COURT GUARD, ON THE CARRIER THAT NOW ANSWERS THE VERB. The
         # mutant that holds this guard is planted in the python file, and
         # `status` no longer runs it: that plant holds the other carrier's half
@@ -8513,7 +8570,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                                       "status", "fsck", "badge", "survey", "findings",
                                       "report", "bare", "import", "verify", "library",
                                       "guard", "check", "ask", "diff", "apply", "change",
-                                      "attention"]))
+                                      "attention", "demo"]))
         # ── AND THE LEDGER IS READ AGAINST THE ROAD IT IS WALKING. The strangler
         # has a length and a position, and both were feelings: the list of moved
         # veins lived in the binary and the list of verbs lived in the python
@@ -8772,10 +8829,10 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         # split this rule exists to forbid.
         _spellings_carried = {"fsck", "ask", "change"}
         _carried_verbs = set(_ledger) & _verbs
-        S.append(("the ledger names verbs the usage offers, 25 of 27 carried",
+        S.append(("the ledger names verbs the usage offers, 26 of 27 carried",
                   set(_ledger) <= _verbs | _spellings_carried
-                  and len(_ledger) == 28
-                  and len(_carried_verbs) == 25
+                  and len(_ledger) == 29
+                  and len(_carried_verbs) == 26
                   and len(_verbs) == 27
                   # and a name on the ledger is a whole verb: a prefix claims
                   # everything under it, so half a verb would take argv nobody

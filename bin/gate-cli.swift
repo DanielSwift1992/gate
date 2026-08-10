@@ -78,7 +78,8 @@ if args.contains("--out") && !args.contains("-o") {
 if args == ["--carries"] {
     out("stdlib\nexport\nseam\nlog\naside\ndeclare\nmine\ntheirs\ninit\ndrift\nmy\n"
         + "status\nfsck\nbadge\nsurvey\nfindings\nreport\nbare\nimport\n"
-        + "verify\nlibrary\nguard\ncheck\nask\ndiff\napply\nchange\nattention\n")
+        + "verify\nlibrary\nguard\ncheck\nask\ndiff\napply\nchange\nattention\n"
+        + "demo\n")
     exit(0)
 }
 
@@ -4087,6 +4088,403 @@ if args.first == "diff" || args.first == "apply" || args.first == "change" {
         out(lines.joined(separator: "\n") + "\n")
     }
     exit(said.verdict == "holds" ? 0 : 1)
+}
+
+// the way a person will type it: relative where a relative path exists
+func saidPath(_ p: String) -> String {
+    let rel = relPath(absPath(p), FileManager.default.currentDirectoryPath)
+    return rel.isEmpty ? p : rel
+}
+
+// this tool, asked of itself, in a folder it has just made. The demo is
+// orchestration and nothing else: every world it builds is built by the verb
+// that owns that act, so there is one translator here and not a second one
+// wearing a demo's clothes.
+func selfSaid(_ words: [String], _ cwd: String) -> String {
+    let bin = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath().path
+    let p = Process()
+    p.executableURL = URL(fileURLWithPath: bin)
+    p.arguments = words
+    p.currentDirectoryURL = URL(fileURLWithPath: cwd)
+    let pipe = Pipe(), quiet = Pipe()
+    p.standardOutput = pipe
+    p.standardError = quiet
+    do { try p.run() } catch { return "" }
+    let said = pipe.fileHandleForReading.readDataToEndOfFile()
+    quiet.fileHandleForReading.readDataToEndOfFile()
+    p.waitUntilExit()
+    return String(data: said, encoding: .utf8) ?? ""
+}
+
+let SEAM_DEMO_SPEC = """
+    {
+     "paths": {
+      "/messages": {
+       "post": {
+        "parameters": [
+         {
+          "name": "sendAt",
+          "in": "query",
+          "schema": {
+           "type": "string"
+          }
+         }
+        ],
+        "requestBody": {
+         "content": {
+          "application/json": {
+           "schema": {
+            "properties": {
+             "to": {
+              "type": "string"
+             },
+             "body": {
+              "type": "string"
+             },
+             "attachments": {
+              "type": "array"
+             }
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+    """
+
+let SEAM_DEMO_SDK = """
+    {
+     "carrier": "MessagesJS",
+     "against": {
+      "contract": "openapi.json",
+      "revision": "a1b2c3d"
+     },
+     "carries": [
+      {
+       "route": "/messages",
+       "field": "to",
+       "as": "Text"
+      },
+      {
+       "route": "/messages",
+       "field": "body",
+       "as": "Text"
+      },
+      {
+       "route": "/messages",
+       "field": "sendAt",
+       "as": "Count"
+      },
+      {
+       "route": "/messages",
+       "field": "replyTo",
+       "as": "Text"
+      }
+     ]
+    }
+    """
+
+let SEAM_DEMO_KNOWN = """
+    {
+     "diverges": [
+      {
+       "route": "/messages",
+       "field": "sendAt",
+       "because": "PROJ-42",
+       "declared_by": "sdk-team"
+      }
+     ]
+    }
+    """
+
+let SEAM_DEMO_TICKETS = """
+    [
+     {
+      "key": "PROJ-42",
+      "status": "In Progress"
+     }
+    ]
+    """
+
+let SEAM_DEMO_MANIFEST = """
+    // what this folder took, and from where. A seam is not found by looking
+    // at what is lying about: it is here because this side said so, at the
+    // revision it was taken at. The columns are axes to declared atoms, and
+    // the one string is the typeName literal. A revision is an atom too.
+    public protocol Role {}
+    public enum SeamFile: Role {}
+    public protocol Theirs {}
+    public enum Rev_messages_api {}
+    extension Rev_messages_api { public static var typeName: String { "messages-api@a1b2c3d" } }
+    public enum TheContract: Theirs {
+        public typealias Kind = SeamFile
+        public typealias At = Rev_messages_api
+    }
+    extension TheContract { public static var typeName: String { "api.swift" } }
+    public enum Rev_messages_js {}
+    extension Rev_messages_js { public static var typeName: String { "messages-js@4f10e22" } }
+    public enum OurSide: Theirs {
+        public typealias Kind = SeamFile
+        public typealias At = Rev_messages_js
+    }
+    extension OurSide { public static var typeName: String { "sdk.swift" } }
+
+    """
+
+// ── demo [dir] · demo org [dir] · demo seam [dir]: three worlds to look at in
+// thirty seconds, and nothing in any of them talks to a network. The first is
+// who owns what, in a repository shaped like the reader's own; the second is
+// people and grants, for a domain with no repository; the third is a contract
+// and a client disagreeing. Every world here is built by the verb that owns
+// that act, asked of this same tool: the demo orchestrates and translates
+// nothing of its own.
+if args.first == "demo" {
+    let rest = Array(args.dropFirst()).filter { $0 != "--json" }
+    let asJson = args.contains("--json")
+    loadStatusShelf()
+    func put(_ root: String, _ name: String, _ text: String) {
+        let p = (root as NSString).appendingPathComponent(name)
+        try? FileManager.default.createDirectory(
+            atPath: (p as NSString).deletingLastPathComponent,
+            withIntermediateDirectories: true)
+        try? text.write(toFile: p, atomically: false, encoding: .utf8)
+    }
+    func commit(_ root: String, _ message: String, _ noVerify: Bool) {
+        _ = runGit(["add", "-A"], root)
+        var words = ["-c", "user.email=you@example.com", "-c", "user.name=You",
+                     "-c", "commit.gpgsign=false", "commit", "-qm", message]
+        if noVerify { words.append("--no-verify") }
+        _ = runGit(words, root)
+    }
+    func answer(_ pairs: [(String, StatusJSON)], _ words: [String]) -> Never {
+        if asJson {
+            out(statusDumps(.object(pairs), 0) + "\n")
+        } else {
+            out(words.joined(separator: "\n") + "\n")
+        }
+        exit(0)
+    }
+
+    // ── demo seam
+    if rest.first == "seam" {
+        let root = absPath(rest.count > 1 ? rest[1] : "gate-seam-demo")
+        try? FileManager.default.createDirectory(atPath: root, withIntermediateDirectories: true)
+        put(root, "openapi.json", SEAM_DEMO_SPEC)
+        put(root, "sdk.declared.json", SEAM_DEMO_SDK)
+        put(root, "known.json", SEAM_DEMO_KNOWN)
+        put(root, "tickets.json", SEAM_DEMO_TICKETS)
+        put(root, "gate.manifest.swift", SEAM_DEMO_MANIFEST)
+        func side(_ what: String, _ from: String, _ to: String) -> Int {
+            let said = selfSaid(["declare", what, (root as NSString).appendingPathComponent(from),
+                                 "-o", (root as NSString).appendingPathComponent(to), "--json"],
+                                root)
+            return saidInt(readSaid(said)?.at("declares"))
+        }
+        let api = side("contract", "openapi.json", "api.swift")
+        let sdk = side("carrier", "sdk.declared.json", "sdk.swift")
+        let att = attentionOver((root as NSString).appendingPathComponent("api.swift"),
+                                (root as NSString).appendingPathComponent("sdk.swift"),
+                                "MessagesJS", nil, nil)
+        func said(_ row: [(String, StatusJSON)], _ key: String) -> String {
+            if case .text(let v)? = row.first(where: { $0.0 == key })?.1 { return v }
+            return ""
+        }
+        let waiting = att.waitsOnYou.map { said($0, "address") }
+        let theirs = att.youWaitOn.map { said($0, "address") }
+        let parted = att.parted.map { said($0, "address") + " · " + said($0, "why") }
+        let next = "cd \(saidPath(root)) && gate attention api.swift sdk.swift --as MessagesJS"
+        let tries = ["gate seam api.swift sdk.swift — the court over the pair, in ms",
+                     "gate attention api.swift sdk.swift --as MessagesJS --known known.json "
+                     + "--tracker tickets.json  the same, with one divergence declared",
+                     "edit tickets.json: mark PROJ-42 done, and watch the exception come back",
+                     "gate declare contract openapi.json  the emitter, on your own spec"]
+        var words = ["demo seam: two sides in \(root) — the contract states \(api), "
+                     + "the library claims \(sdk)"]
+        for x in waiting { words.append("  waits on the library · " + x) }
+        for x in theirs { words.append("  waits on the contract · " + x) }
+        for x in parted { words.append("  parted · " + x) }
+        words.append("  next: " + next)
+        // ONE RUNG: a reader thirty seconds in gets a step, and whoever asked
+        // for the whole ladder reads it in `--json`
+        words.append("  more: \(tries.count) other things to try; `--json` lists them")
+        answer([("command", .text("demo seam")), ("root", .text(root)),
+                ("declared", .object([("contract", .raw(String(api))),
+                                      ("carrier", .raw(String(sdk)))])),
+                ("waiting_on_you", .list(waiting.map { .text($0) })),
+                ("you_wait_on", .list(theirs.map { .text($0) })),
+                ("parted", .list(parted.map { .text($0) })),
+                ("next", .text(next)), ("try", .list(tries.map { .text($0) })),
+                ("mutates", .raw("true"))], words)
+    }
+
+    // ── demo org
+    if rest.first == "org" {
+        // the tool's own folder, kept under a name of its own: the demo's `root`
+        // is the world it is making, and the two are not the same place
+        let toolRoot = root
+        let root = absPath(rest.count > 1 ? rest[1] : "gate-demo")
+        try? FileManager.default.createDirectory(
+            atPath: (root as NSString).appendingPathComponent("tables"),
+            withIntermediateDirectories: true)
+        for f in ["people.csv", "grants.csv"] {
+            let src = toolRoot.appendingPathComponent("demo/" + f).path
+            if FileManager.default.fileExists(atPath: src) {
+                try? FileManager.default.removeItem(
+                    atPath: (root as NSString).appendingPathComponent("tables/" + f))
+                try? FileManager.default.copyItem(
+                    atPath: src,
+                    toPath: (root as NSString).appendingPathComponent("tables/" + f))
+            }
+        }
+        var isDir: ObjCBool = false
+        if !(FileManager.default.fileExists(atPath: (root as NSString)
+            .appendingPathComponent(".git"), isDirectory: &isDir) && isDir.boolValue) {
+            _ = runGit(["init", "-q", root], FileManager.default.currentDirectoryPath)
+        }
+        let world = (root as NSString).appendingPathComponent("gate.swift")
+        _ = selfSaid(["import", (root as NSString).appendingPathComponent("tables/people.csv"),
+                      (root as NSString).appendingPathComponent("tables/grants.csv"),
+                      "-o", world, "--json"], root)
+        // AND THE WORLD PRESENTS THE FORMS IT IS WRITTEN IN: organization was
+        // only ever an example of what somebody might write, and it belongs
+        // beside the world that speaks it, as a file the operator can change.
+        var body = (STDLIB_TEXTS["forms-organization"] ?? "").components(separatedBy: "\n")
+        while let first = body.first, first.hasPrefix("//") { body.removeFirst() }
+        var forms = "// the forms this world is written in: an example of what you might\n"
+                  + "// write, and yours from here: change a rank, add a department, and the\n"
+                  + "// world beside it is judged by what you said rather than by anything\n"
+                  + "// this tool was born knowing.\n"
+        var joined = body.joined(separator: "\n")
+        while joined.hasPrefix("\n") { joined.removeFirst() }
+        forms += joined
+        put(root, "forms-organization.swift", forms)
+        _ = declareSideHere((root as NSString).appendingPathComponent("forms-organization.swift"),
+                            "Mine", "forms", nil)
+        // ── AND THE JUDGE'S OWN ROW, WRITTEN IN YOUR NAME. Nothing stands in
+        // this world without a row, and this is that row for the court itself.
+        if let came = judgeFrom() {
+            let short = String(came.prefix(7))
+            let mp = (root as NSString).appendingPathComponent("gate.manifest.swift")
+            let head = readText(mp) ?? ""
+            let row = "\n// taken at demo setup, in your name. Nothing stands in this world\n"
+                    + "// without a row, and this is that row for the court itself. The\n"
+                    + "// revision is the dependency, not any file. Yours to edit or drop.\n"
+                    + "public protocol Theirs {}\n"
+                    + "public enum JudgeFile: Role {}\n"
+                    + "public enum Rev_vi_\(short) {}\n"
+                    + "extension Rev_vi_\(short) { public static var typeName: String "
+                    + "{ \"verification-is-identification@\(short)\" } }\n"
+                    + "public enum TheJudge: Theirs {\n"
+                    + "    public typealias Kind = JudgeFile\n"
+                    + "    public typealias At = Rev_vi_\(short)\n"
+                    + "}\n"
+                    + "extension TheJudge { public static var typeName: String "
+                    + "{ \"gate-judge\" } }\n"
+            try? (head + row).write(toFile: mp, atomically: false, encoding: .utf8)
+        }
+        put(root, "gate.policy.swift",
+            "// who someone is, and what an action demands: facts of yours,\n"
+            + "// beside the world and yours to change.\n"
+            + "public enum MailYou: Identity {\n    public typealias Person = Emp9000\n}\n"
+            + "extension MailYou { public static var typeName: String { \"you@example.com\" } }\n\n"
+            + "public enum MergePolicy {\n    public typealias Requires = Manager\n}\n")
+        commit(root, "a world of people and grants", false)
+        var shown: [String] = []
+        let asked = readSaid(selfSaid(["check", "view", "Emp9001", "EngineeringShare", "--json"],
+                                      root))
+        for r in asked?.at("refusals")?.asList ?? [] {
+            shown.append((r.at("address")?.asText ?? "") + " · " + (r.at("claim")?.asText ?? ""))
+        }
+        let next = "cd \(saidPath(root)) && gate serve: then change one Home in "
+                 + "gate.swift and watch the judge name the line"
+        let back = "git checkout .  everything as it was, in one word: this world was "
+                 + "committed the moment it was made, so nothing you try here can cost you "
+                 + "anything"
+        let tries = ["gate status  the world holds, in milliseconds",
+                     "gate apply revoke Emp9002 FinanceShare  an edit judged before it lands",
+                     "open gate.swift and change one Home to Engineering, and the judge "
+                     + "names the line"]
+        var words = ["demo: a world in \(root)"]
+        for s in shown {
+            words.append("  asked `gate check view Emp9001 EngineeringShare` for you, "
+                         + "and it answers:")
+            words.append("    " + s)
+        }
+        words.append("  next: " + next)
+        words.append("  back: " + back)
+        words.append("  more: \(tries.count) other things to try; `--json` lists them")
+        answer([("command", .text("demo")), ("root", .text(root)),
+                ("asked", .text("gate check view Emp9001 EngineeringShare")),
+                ("refused", .list(shown.map { .text($0) })),
+                ("next", .text(next)), ("back", .text(back)),
+                ("try", .list(tries.map { .text($0) })),
+                ("mutates", .raw("true"))], words)
+    }
+
+    // ── demo: who owns what, in a repository shaped like the reader's own
+    let root = absPath(rest.first ?? "gate-demo")
+    for rel in ["src/api", "src/ui", "src/db", "docs"] {
+        try? FileManager.default.createDirectory(
+            atPath: (root as NSString).appendingPathComponent(rel),
+            withIntermediateDirectories: true)
+    }
+    for rel in ["src/api/handler.ts", "src/ui/view.tsx", "src/db/schema.sql", "docs/readme.md"] {
+        put(root, rel, "// a file of this repository\n")
+    }
+    put(root, "CODEOWNERS",
+        "# who owns what, the way every repository already writes it\n"
+        + "src/api/    @alice\nsrc/ui/     @bob\ndocs/       @carol\nsrc/db/     @carol\n")
+    // WHO MAY OWN WHAT is the thing CODEOWNERS cannot say, and without it every
+    // rule is its own authority: a file that answers only to itself
+    put(root, "owners.csv", "owner,zone\nalice,src\nbob,src\ncarol,docs\n")
+    _ = runGit(["init", "-q", "-b", "main", "."], root)
+    _ = selfSaid(["init", "."], root)
+    let said = readSaid(selfSaid(["import", "codeowners", "CODEOWNERS", "--tree", ".",
+                                  "--policy", "owners.csv", "-o", "ownership.swift", "--json"],
+                                 root))
+    _ = declareSideHere((root as NSString).appendingPathComponent("ownership.swift"),
+                        "Mine", "forms", nil)
+    // the world ships with its one refusal on purpose, so the commit walks past
+    // the hook the kit just wired: the hook is for the reader's own commits
+    commit(root, "who owns what in this repository", true)
+    // the address in CODEOWNERS is what a person recognises, so it leads
+    var shown: [String] = []
+    for r in (said?.at("refusals")?.asList ?? []).prefix(2) {
+        let where_ = r.at("source")?.asText ?? r.at("address")?.asText ?? ""
+        var claim = r.at("claim")?.asText ?? ""
+        if let m = matchAt(claim, "^\\w+ · ") { claim = String(claim.dropFirst(m[0].count)) }
+        shown.append(where_ + " · " + claim)
+    }
+    let next = "cd \(saidPath(root)) && gate status, for the same answer in a "
+             + "millisecond, from the world rather than from CODEOWNERS"
+    let back = "git checkout . puts everything back, in one word: this world was "
+             + "committed the moment it was made"
+    let tries = ["open ownership.swift at the line gate status names, and give that room to "
+                 + "an owner whose zone matches. The file and the world are a pair: status "
+                 + "compares them on every run",
+                 "or edit CODEOWNERS and run the import again: same command, one line moved",
+                 "gate serve opens the bench, with the world beside its verdict, judged as "
+                 + "you type",
+                 "gate demo org is the same machinery on people and departments, "
+                 + "for a domain that has no repository"]
+    var words = ["demo: a world in \(root)"]
+    for s in shown {
+        words.append("  asked `gate import codeowners CODEOWNERS --tree . --policy owners.csv` "
+                     + "for you, and it answers:")
+        words.append("    " + s)
+    }
+    words.append("  next: " + next)
+    words.append("  back: " + back)
+    words.append("  more: \(tries.count) other things to try; `--json` lists them")
+    answer([("command", .text("demo")), ("root", .text(root)),
+            ("asked", .text("gate import codeowners CODEOWNERS --tree . --policy owners.csv")),
+            ("refused", .list(shown.map { .text($0) })),
+            ("next", .text(next)), ("back", .text(back)),
+            ("try", .list(tries.map { .text($0) })),
+            ("mutates", .raw("true"))], words)
 }
 
 // ── attention CONTRACT.swift CARRIER.swift: NOT what changed, but what waits
