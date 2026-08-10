@@ -2694,7 +2694,15 @@ def cmd_survey(a):
     # statistics), identity, object candidates, fabric coverage.
     import itertools, collections
 
-    n = int(a[0]) if a else 500
+    # ── AND A COUNT THAT IS NOT A NUMBER IS SAID, NOT RAISED. This read argv
+    # straight into `int()`, so `gate survey main` met a person with a
+    # ValueError and a stack trace: the one verb the cover offers for a first
+    # look at a repository, answering a plausible typo with a traceback.
+    try:
+        n = int(a[0]) if a else 500
+    except ValueError:
+        cannot(f"`{a[0]}` is not a number of commits, and this reads how many to walk",
+               "say a count, such as `gate survey 200`, or leave it out for the last 500")
     fmt = subprocess.run(["git", "log", f"-{n}", "--format=%x40%ae %G?", "--name-only"],
                          capture_output=True, text=True).stdout
     commits, authors, signed, cur = [], collections.Counter(), 0, []

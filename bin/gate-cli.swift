@@ -2801,6 +2801,173 @@ if args.first == "--status-core" {
     statusDoor(args.contains("--json"))
 }
 
+// every whole match of a pattern, in the order they stand: `matches` hands back
+// capture groups, and a pattern with none of those has nothing to hand back
+func wholeMatches(_ pattern: String, _ text: String) -> [String] {
+    guard let re = try? NSRegularExpression(pattern: pattern) else { return [] }
+    let ns = text as NSString
+    return re.matches(in: text, range: NSRange(location: 0, length: ns.length))
+        .map { ns.substring(with: $0.range) }
+}
+
+// ── survey [N]: the t0 gesture, a read-only map of the repository with NO
+// translation. Unwritten links out of its own history (co-change, exact
+// statistics), identity, object candidates, and the fabric's own coverage.
+//
+// The verdict is not worked out a second time here: this asks the verb that
+// owns it and prints what it said. A survey that judged on its own would be a
+// second reading of one question, which is the defect this whole tool is about.
+if args.first == "survey" {
+    let rest = Array(args.dropFirst()).filter { $0 != "--json" }
+    let asJson = args.contains("--json")
+    var n = 500
+    if let said = rest.first {
+        guard let asked = Int(said.trimmingCharacters(in: .whitespaces)) else {
+            cannot("`" + said + "` is not a number of commits, and this reads how many to walk",
+                   "say a count, such as `gate survey 200`, or leave it out for the last 500")
+        }
+        n = asked
+    }
+    let here = FileManager.default.currentDirectoryPath
+    // one walk of the log carries both halves: who signed, and what moved together
+    var commits: [[String]] = []
+    var authorOrder: [String] = [], authorCount: [String: Int] = [:]
+    var signed = 0
+    var current: [String] = []
+    for line in runGit(["log", "-\(n)", "--format=%x40%ae %G?", "--name-only"], here)
+        .components(separatedBy: "\n") {
+        if line.hasPrefix("@") {
+            if !current.isEmpty { commits.append(current); current = [] }
+            let said = line.dropFirst().split(separator: " ").map(String.init)
+            let email = said.first ?? ""
+            let mark = said.count > 1 ? said[1] : "N"
+            if authorCount[email] == nil { authorOrder.append(email) }
+            authorCount[email, default: 0] += 1
+            if ["G", "U", "X", "Y"].contains(mark) { signed += 1 }
+        } else if !line.trimmingCharacters(in: .whitespaces).isEmpty {
+            current.append(line.trimmingCharacters(in: .whitespaces))
+        }
+    }
+    if !current.isEmpty { commits.append(current) }
+    // a pair is counted once per commit, and the counters keep the order the
+    // pairs were first seen: the other carrier's most_common is a stable sort
+    // over that order, and a tie printed in another order is another answer
+    var pairOrder: [String] = [], pairCount: [String: Int] = [:]
+    var fileCount: [String: Int] = [:]
+    for files in commits {
+        let distinct = Array(Set(files)).sorted()
+        for f in distinct { fileCount[f, default: 0] += 1 }
+        for i in distinct.indices {
+            for j in distinct.indices where j > i {
+                let key = distinct[i] + "\u{0}" + distinct[j]
+                if pairCount[key] == nil { pairOrder.append(key) }
+                pairCount[key, default: 0] += 1
+            }
+        }
+    }
+    func mostCommon(_ order: [String], _ count: [String: Int], _ take: Int) -> [(String, Int)] {
+        order.enumerated()
+            .sorted { a, b in
+                let (ca, cb) = (count[a.element] ?? 0, count[b.element] ?? 0)
+                return ca == cb ? a.offset < b.offset : ca > cb
+            }
+            .prefix(take).map { ($0.element, count[$0.element] ?? 0) }
+    }
+    var links: [(a: String, b: String, together: Int, confidence: Double)] = []
+    for (key, c) in mostCommon(pairOrder, pairCount, 30) where c >= 5 && links.count < 10 {
+        let two = key.components(separatedBy: "\u{0}")
+        let floor = min(fileCount[two[0]] ?? 1, fileCount[two[1]] ?? 1)
+        let raw = Double(c) / Double(floor)
+        links.append((two[0], two[1], c, (raw * 100).rounded(.toNearestOrEven) / 100))
+    }
+    let subjects = runGit(["log", "-\(n)", "--format=%s %b"], here)
+    var keyOrder: [String] = [], keyCount: [String: Int] = [:]
+    for m in wholeMatches("\\b[A-Z][A-Z0-9]+-\\d+\\b", subjects) {
+        if keyCount[m] == nil { keyOrder.append(m) }
+        keyCount[m, default: 0] += 1
+    }
+    // ── AND A WORLD OF FORMS IS STILL A WORLD, HERE TOO. This asked FACTS, the
+    // plain court's one file, so a repository whose world is a manifest and a
+    // shelf of forms was told `no world yet: coverage 0%` while `status` in the
+    // same folder answered that it holds. That repository is this one.
+    loadStatusShelf()
+    let w = discoverWorld()
+    var fabric: [(String, StatusJSON)] = [("facts", .null),
+        ("note", .text("no world yet: coverage 0%. The links above say where to start"))]
+    var hasWorld = false
+    if !worldFilesOf(w).isEmpty || !((w.layout?.rows ?? []).isEmpty) {
+        hasWorld = true
+        let said = statusAnswer()
+        let facts = w.facts.flatMap { FileManager.default.fileExists(atPath: $0) ? $0 : nil }
+            ?? (w.layout.map { ($0.manifest as NSString).lastPathComponent } ?? "")
+        fabric = [("facts", .text(facts)),
+                  ("verdict", .text(said.verdict)),
+                  ("refusals", .raw(String(said.refusals.count)))]
+    }
+    let next = hasWorld
+        ? "run `gate status`: these are candidates from your history, and a world is what holds them"
+        : "nothing here is judged yet: put a table into tables/ and run `gate status`"
+    if asJson {
+        var pairs: [(String, StatusJSON)] = [
+            ("command", .text("survey")),
+            ("next", .text(next)),
+            ("commits", .raw(String(commits.count))),
+            ("unwritten_links", .list(links.map {
+                .object([("a", .text($0.a)), ("b", .text($0.b)),
+                         ("together", .raw(String($0.together))),
+                         ("confidence", .raw(String($0.confidence)))]) })),
+            ("identity", .object([
+                ("authors", .raw(String(authorOrder.count))),
+                ("top", .list(mostCommon(authorOrder, authorCount, 5).map {
+                    .text("\($0.0) (\($0.1))") })),
+                ("signed_commits", .raw(String(signed)))])),
+            ("object_candidates", .object(mostCommon(keyOrder, keyCount, 10).map {
+                ($0.0, .raw(String($0.1))) })),
+            ("fabric", .object(fabric)),
+        ]
+        if let ready = commandIn(next) { pairs.append(("command_to_run", .text(ready))) }
+        out(statusDumps(.object(pairs), 0) + "\n")
+    } else {
+        var lines = ["survey: " + many(commits.count, "commit") + ", read-only",
+                     "  unwritten links (co-change from your own history):"]
+        for l in links {
+            let pct = Int((l.confidence * 100).rounded(.toNearestOrEven))
+            lines.append("    " + String(repeating: " ", count: max(0, 3 - String(l.together).count))
+                         + "\(l.together)x "
+                         + String(repeating: " ", count: max(0, 4 - (String(pct).count + 1)))
+                         + "\(pct)%  \(l.a) <-> \(l.b)")
+        }
+        lines.append("  identity: \(authorOrder.count) author(s), \(signed) signed commits")
+        for (who, c) in mostCommon(authorOrder, authorCount, 5) { lines.append("    \(who) (\(c))") }
+        let keys = mostCommon(keyOrder, keyCount, 10)
+        if !keys.isEmpty {
+            lines.append("  object candidates in commit messages: "
+                         + keys.map { "\($0.0)(\($0.1))" }.joined(separator: ", "))
+        }
+        if hasWorld {
+            let facts = fabric.first(where: { $0.0 == "facts" }).map { pair -> String in
+                if case .text(let s) = pair.1 { return s }
+                return "no world yet"
+            } ?? "no world yet"
+            let verdict = fabric.first(where: { $0.0 == "verdict" }).map { pair -> String in
+                if case .text(let s) = pair.1 { return s }
+                return ""
+            } ?? ""
+            let refused = fabric.first(where: { $0.0 == "refusals" }).map { pair -> String in
+                if case .raw(let s) = pair.1 { return s }
+                return "0"
+            } ?? "0"
+            lines.append("  fabric: \(facts) · \(verdict), \(refused) refusal(s)")
+        } else {
+            lines.append("  fabric: no world yet · no world yet: coverage 0%. "
+                         + "The links above say where to start")
+        }
+        lines.append("  next: " + next)
+        out(lines.joined(separator: "\n") + "\n")
+    }
+    exit(0)
+}
+
 // somebody else's place to put a file, refused in words rather than raised: the
 // writing half of theirsText, with the same three sentences the other carrier's
 // errno names

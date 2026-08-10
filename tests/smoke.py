@@ -4267,7 +4267,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               # so the tool is not asking of anybody a thing it had not done
               and own_status.get("verdict") == "holds"
               and open(os.path.join(HERE, "bin", "gate-judge.from"),
-                       encoding="utf-8").read().strip().startswith("784831c")
+                       encoding="utf-8").read().strip().startswith("d74e258")
               # AND THE EDITOR IS ACCOUNTED FOR TOO. It arrived the way anything
               # of somebody else's should — named, versioned, unchanged, saying
               # so in its own first line — and it was the one dependency an
@@ -4677,7 +4677,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               and lang.get("names", {}).get("Unit") == 283
               and lang.get("file", "").endswith("Primitive.swift")
               # at the revision the judge was built from, not some other one
-              and (lang.get("at") or "").startswith("784831c")
+              and (lang.get("at") or "").startswith("d74e258")
               # and the way to get it, since this tool will not go and take it
               and "git clone" in lang.get("command", "")
               # the bench reaches them: they join what a click can land on
@@ -5669,7 +5669,7 @@ console.log(JSON.stringify({
     kept = open(jm, encoding="utf-8").read()
     try:
         open(jm, "w", encoding="utf-8").write(
-            kept.replace("verification-is-identification@784831c",
+            kept.replace("verification-is-identification@d74e258",
                          "verification-is-identification@deadbee"))
         lied = run("status", cwd=HERE)[1]
     finally:
