@@ -7654,6 +7654,77 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
             print("   the badge parts:", _bgw[:4])
         S.append(("the badge counts and replays alike on both carriers, by lives", _bgw == []))
 
+        # ── AND THE FIRST LOOK AT A STRANGER'S REPOSITORY, which is the one verb
+        # here that reads history and translates nothing. Its numbers are exact
+        # statistics over the log, so the two carriers part on arithmetic rather
+        # than on wording: how a tie between two equally frequent pairs is
+        # ordered, how a ratio is rounded before it is printed as a percentage,
+        # which commits count when a merge names no file. Walked on histories
+        # built for those: one where a pair moves together every time, one with
+        # two authors and ticket keys in the messages, this repository's own
+        # thousands, and a folder with no history at all.
+        _svw = []
+        def _sv_pairs(_d):
+            subprocess.run(["git", "init", "-q", "-b", "main", _d], capture_output=True)
+            for _i in range(1, 7):
+                for _f, _t in (("a.txt", "a %d\n"), ("b.txt", "b %d\n"), ("c.txt", "c %d\n")):
+                    open(os.path.join(_d, _f), "w").write(_t % _i)
+                subprocess.run(["git", "add", "-A"], cwd=_d, capture_output=True)
+                subprocess.run(["git", "-c", "user.email=p%d@x" % (_i % 2),
+                                "-c", "user.name=t", "-c", "commit.gpgsign=false",
+                                "commit", "-qm", "PROJ-%d and ABC-7: a and b move together" % _i],
+                               cwd=_d, capture_output=True)
+        for _tag, _make, _argv, _where in (
+                ("a pair that always moves", _sv_pairs, ["survey"], None),
+                ("the same, as an answer", _sv_pairs, ["survey", "--json"], None),
+                ("a window over it", _sv_pairs, ["survey", "3"], None),
+                ("no history at all", lambda _d: None, ["survey", "--json"], None),
+                ("a count that is not one", lambda _d: None, ["survey", "main"], None),
+                ("this repository", None, ["survey"], HERE),
+                ("this repository, as an answer", None, ["survey", "--json"], HERE)):
+            _said = []
+            for _who in ("py", "sw"):
+                if _where is None:
+                    _sd = os.path.join(tmp, "survey-" + str(abs(hash(_tag)) % 9973) + _who)
+                    shutil.rmtree(_sd, ignore_errors=True)
+                    os.makedirs(_sd, exist_ok=True)
+                    _make(_sd)
+                else:
+                    _sd = _where
+                _r = subprocess.run([sys.executable, GATE, *_argv], cwd=_sd,
+                                    capture_output=True, timeout=300,
+                                    env={**os.environ, "GATE_CLI": ("off" if _who == "py"
+                                                                    else _cli_bin)})
+                _said.append((_s9noms(_r.stdout), _s9noms(_r.stderr), _r.returncode))
+            if _said[0] != _said[1]:
+                _svw.append(_tag)
+            # and the shapes mean what they were built to mean
+            if _tag == "a pair that always moves" and b"a.txt <-> b.txt" not in _said[0][0]:
+                _svw.append(_tag + ": the co-change table is empty")
+            if _tag == "the same, as an answer" and b'"PROJ-1": 1' not in _said[0][0]:
+                _svw.append(_tag + ": no ticket key was read out of the messages")
+            if _tag == "a count that is not one" and (
+                    _said[0][2] != 1 or b"is not a number of commits" not in _said[0][1]):
+                _svw.append(_tag + ": a count that is not one is not said")
+            if _tag == "this repository" and b"<->" not in _said[0][0]:
+                _svw.append(_tag + ": no link at all in a repository this old")
+        if _svw:
+            print("   the survey parts:", _svw[:4])
+        S.append(("the first look at a repository counts alike on both carriers, by lives",
+                  _svw == []))
+        # and the fabric it prints is the verdict of the verb that owns it, not a
+        # second reading: asked of both, on the world this repository is
+        _sv_fab = json.loads(subprocess.run(
+            [sys.executable, GATE, "survey", "5", "--json"], cwd=HERE, capture_output=True,
+            text=True, env={**os.environ, "GATE_CLI": _cli_bin}).stdout)["fabric"]
+        _sv_st = json.loads(subprocess.run(
+            [sys.executable, GATE, "status", "--json"], cwd=HERE, capture_output=True,
+            text=True, env={**os.environ, "GATE_CLI": _cli_bin}).stdout)
+        S.append(("the survey's fabric is the court's own verdict, never a second reading",
+                  _sv_fab.get("verdict") == _sv_st.get("verdict")
+                  and _sv_fab.get("refusals") == len(_sv_st.get("refusals", []))
+                  and "no world yet" not in str(_sv_fab.get("note", ""))))
+
         # ── AND THE COURT GUARD, ON THE CARRIER THAT NOW ANSWERS THE VERB. The
         # mutant that holds this guard is planted in the python file, and
         # `status` no longer runs it: that plant holds the other carrier's half
@@ -7872,7 +7943,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                   subprocess.run([_cli_bin, "--carries"], capture_output=True, text=True)
                   .stdout.split() == ["stdlib", "export", "seam", "log", "aside", "declare",
                                       "mine", "theirs", "init", "drift", "my",
-                                      "status", "fsck", "badge"]))
+                                      "status", "fsck", "badge", "survey"]))
         # ── AND THE LEDGER IS READ AGAINST THE ROAD IT IS WALKING. The strangler
         # has a length and a position, and both were feelings: the list of moved
         # veins lived in the binary and the list of verbs lived in the python
@@ -8129,10 +8200,10 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         # spelling left on the far side would be one question answered by two
         # carriers, which is the split this rule exists to forbid.
         _carried_verbs = set(_ledger) & _verbs
-        S.append(("the ledger names verbs the usage offers, 13 of 27 carried",
+        S.append(("the ledger names verbs the usage offers, 14 of 27 carried",
                   set(_ledger) <= _verbs | {"fsck"}
-                  and len(_ledger) == 14
-                  and len(_carried_verbs) == 13
+                  and len(_ledger) == 15
+                  and len(_carried_verbs) == 14
                   and len(_verbs) == 27
                   # and a name on the ledger is a whole verb: a prefix claims
                   # everything under it, so half a verb would take argv nobody
