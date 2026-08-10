@@ -8177,6 +8177,69 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
             print("   who may act parts:", _gdw[:4])
         S.append(("who may act is walked to the same verdict on both carriers", _gdw == []))
 
+        # ── AND THE QUESTION AND THE CHANGE, which are one act asked twice: a
+        # probe is written beside the world's own entries and judged, and the
+        # only difference between asking and doing is whether the bytes are kept.
+        # So the walk holds the answer AND the world left behind: a change that
+        # says `applied` over a file it did not touch is the fault this verb was
+        # mended of once already.
+        _cqw = []
+        def _cq_org(_d):
+            run("demo", "org", _d)
+        for _tag, _argv, _keeps in (
+                ("no question at all", ["check"], False),
+                ("half a question", ["check", "view", "Emp9000"], False),
+                ("a view that holds", ["check", "view", "Emp9000", "FinanceShare"], False),
+                ("a view that does not", ["check", "view", "Emp9000", "EngineeringShare"], False),
+                ("the same, spelled ask", ["ask", "view", "Emp9000", "FinanceShare"], False),
+                ("a view, answered",
+                 ["check", "view", "Emp9000", "FinanceShare", "--json"], False),
+                ("no change named", ["diff"], False),
+                ("a transfer, dry", ["diff", "transfer", "Emp9000", "Engineering"], False),
+                ("a change nobody makes", ["diff", "nosuchchange"], False),
+                ("a transfer, written", ["apply", "transfer", "Emp9001", "Engineering"], True),
+                ("a grant, written", ["apply", "grant", "Emp9000", "EngineeringShare"], True),
+                ("a revoke, written", ["apply", "revoke", "Emp9000", "FinanceShare"], True),
+                ("a hire, written",
+                 ["apply", "hire", "Emp9100", "Manager", "Finance", "Ada", "Lovelace",
+                  "Y1815", "OnSite"], True),
+                ("a move to where they already are",
+                 ["apply", "transfer", "Emp9000", "Finance"], True)):
+            _said, _world = [], []
+            for _who in ("py", "sw"):
+                # a writing shape needs its own copy, so the second carrier does
+                # not read what the first one wrote; a reading shape is happy
+                # either way and gets the same treatment for one rule
+                _cd = os.path.join(tmp, "change-" + str(abs(hash(_tag)) % 9973) + _who)
+                shutil.rmtree(_cd, ignore_errors=True)
+                os.makedirs(_cd, exist_ok=True)
+                _cq_org(_cd)
+                _r = subprocess.run([sys.executable, GATE, *_argv], cwd=_cd,
+                                    capture_output=True, timeout=300,
+                                    env={**os.environ, "GATE_CLI": ("off" if _who == "py"
+                                                                    else _cli_bin)})
+                _said.append((_imnoms(_r.stdout), _imnoms(_r.stderr), _r.returncode))
+                _wf = os.path.join(_cd, "gate.swift")
+                _world.append(open(_wf, "rb").read() if os.path.exists(_wf) else None)
+            if _said[0] != _said[1]:
+                _cqw.append(_tag + ": the answer")
+            if _keeps and _world[0] != _world[1]:
+                _cqw.append(_tag + ": the world it left")
+            _out = _said[0][0]
+            if _tag == "a view that holds" and b"ask view: holds" not in _out:
+                _cqw.append(_tag + ": a grant the world states does not hold")
+            if _tag == "a view that does not" and b"refused" not in _out:
+                _cqw.append(_tag + ": a grant nobody stated holds anyway")
+            if _tag == "a revoke, written" and b"applied" not in _out:
+                _cqw.append(_tag + ": a revoke that holds was not written")
+            if _tag == "a move to where they already are" and (
+                    b"nothing to change" not in _out):
+                _cqw.append(_tag + ": a change of nothing calls itself applied")
+        if _cqw:
+            print("   the question and the change part:", _cqw[:4])
+        S.append(("asking and changing reach one answer, and leave one world, on both",
+                  _cqw == []))
+
         # ── AND THE COURT GUARD, ON THE CARRIER THAT NOW ANSWERS THE VERB. The
         # mutant that holds this guard is planted in the python file, and
         # `status` no longer runs it: that plant holds the other carrier's half
@@ -8397,7 +8460,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                                       "mine", "theirs", "init", "drift", "my",
                                       "status", "fsck", "badge", "survey", "findings",
                                       "report", "bare", "import", "verify", "library",
-                                      "guard"]))
+                                      "guard", "check", "ask", "diff", "apply", "change"]))
         # ── AND THE LEDGER IS READ AGAINST THE ROAD IT IS WALKING. The strangler
         # has a length and a position, and both were feelings: the list of moved
         # veins lived in the binary and the list of verbs lived in the python
@@ -8648,16 +8711,18 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         for _r in sorted(_by_road):
             if _r != "carried":
                 print(f"     {_r:18} {' '.join(sorted(_by_road[_r]))[:88]}")
-        # `fsck` is the second spelling of `status`, and a spelling travels with
-        # the verb it spells: the usage counts it after a pipe and this list does
-        # not, so the ledger is one entry longer than the verbs it names. A
-        # spelling left on the far side would be one question answered by two
-        # carriers, which is the split this rule exists to forbid.
+        # A SPELLING TRAVELS WITH THE VERB IT SPELLS. `fsck` is the second name
+        # of `status`, `ask` of `check`, and `change` is what `diff` and `apply`
+        # both are. The usage counts none of the three, and this list does, so
+        # the ledger runs longer than the verbs it names. A spelling left on the
+        # far side would be one question answered by two carriers, which is the
+        # split this rule exists to forbid.
+        _spellings_carried = {"fsck", "ask", "change"}
         _carried_verbs = set(_ledger) & _verbs
-        S.append(("the ledger names verbs the usage offers, 21 of 27 carried",
-                  set(_ledger) <= _verbs | {"fsck"}
-                  and len(_ledger) == 22
-                  and len(_carried_verbs) == 21
+        S.append(("the ledger names verbs the usage offers, 24 of 27 carried",
+                  set(_ledger) <= _verbs | _spellings_carried
+                  and len(_ledger) == 27
+                  and len(_carried_verbs) == 24
                   and len(_verbs) == 27
                   # and a name on the ledger is a whole verb: a prefix claims
                   # everything under it, so half a verb would take argv nobody

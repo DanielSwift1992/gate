@@ -78,7 +78,7 @@ if args.contains("--out") && !args.contains("-o") {
 if args == ["--carries"] {
     out("stdlib\nexport\nseam\nlog\naside\ndeclare\nmine\ntheirs\ninit\ndrift\nmy\n"
         + "status\nfsck\nbadge\nsurvey\nfindings\nreport\nbare\nimport\n"
-        + "verify\nlibrary\nguard\n")
+        + "verify\nlibrary\nguard\ncheck\nask\ndiff\napply\nchange\n")
     exit(0)
 }
 
@@ -3693,11 +3693,16 @@ func judgeFile(_ path: String) -> (verdict: String, refusals: [(address: String,
 // insert a new entry after the LAST entry of the same form: a probe writes
 // beside an existing entry, in the world's own hand
 func lastEntryInsert(_ text: String, _ head: String, _ first: String, _ second: String,
-                     _ indent: Int) -> String {
+                     _ indent: Int, anchoredOn: String? = nil) -> String {
     let ns = text as NSString
     guard let re = try? NSRegularExpression(pattern: head + "<\\s*(\\w+),\\s*(\\w+)\\s*>\\.self;?")
     else { return text }
-    let hits = re.matches(in: text, range: NSRange(location: 0, length: ns.length))
+    var hits = re.matches(in: text, range: NSRange(location: 0, length: ns.length))
+    // an anchor may be asked to share the second axis: a rank entry lands
+    // beside the entries of that rank, not beside whatever came last
+    if let axis = anchoredOn {
+        hits = hits.filter { ns.substring(with: $0.range(at: 2)) == axis }
+    }
     guard let m = hits.last else {
         cannot("no \(head) entries to anchor on",
                "this change writes beside an existing entry, and the world has none")
@@ -3725,6 +3730,330 @@ func lockLine(_ path: String, _ name: String) -> Int {
         }
     }
     return 1
+}
+
+// an anchor the world states a different number of times than the change
+// expects is a sentence, never a silent rewrite of the wrong place
+func mustSub(_ text: String, _ pattern: String, _ repl: String, _ what: String) -> String {
+    let ns = text as NSString
+    guard let re = try? NSRegularExpression(pattern: pattern,
+                                            options: [.dotMatchesLineSeparators]) else {
+        return text
+    }
+    let hits = re.matches(in: text, range: NSRange(location: 0, length: ns.length))
+    if hits.count != 1 {
+        cannot("\(what): anchor x\(hits.count), want 1",
+               "the world says this a different number of times than the change expects")
+    }
+    return re.stringByReplacingMatches(in: text, range: NSRange(location: 0, length: ns.length),
+                                       withTemplate: repl)
+}
+
+// the mechanics of a transfer: Home in the roster and the team entry, both
+// facts. View grants are NOT touched: re-pointing or revoking access is a
+// decision of intent, left to the human.
+func transferText(_ text: String, _ who: String, _ dept: String) -> String {
+    var said = mustSub(text,
+                       "(public enum \(who): Employee, Person \\{[^}]*?public typealias Home = )\\w+",
+                       "$1" + dept, "roster entry of " + who)
+    let ns = said as NSString
+    if let re = try? NSRegularExpression(pattern: "(VerifiedInDepartment<\\s*\(who),\\s*)\\w+") {
+        said = re.stringByReplacingMatches(in: said,
+                                           range: NSRange(location: 0, length: ns.length),
+                                           withTemplate: "$1" + dept)
+    }
+    return said
+}
+
+func grantText(_ text: String, _ who: String, _ doc: String) -> String {
+    lastEntryInsert(text, "VerifiedView", who, doc, 12)
+}
+
+func revokeText(_ text: String, _ who: String, _ doc: String) -> String {
+    let pattern = "\\n\\s*VerifiedView<\\s*\(who),\\s*\(doc)\\s*>\\.self;?"
+    let ns = text as NSString
+    guard let re = try? NSRegularExpression(pattern: pattern) else { return text }
+    let hits = re.matches(in: text, range: NSRange(location: 0, length: ns.length))
+    if hits.count != 1 {
+        cannot("revoke: grant \(who)->\(doc) found x\(hits.count), want 1",
+               "revoke removes one grant, and the world states that one a different "
+               + "number of times")
+    }
+    return ns.replacingCharacters(in: hits[0].range, with: "")
+}
+
+func hireText(_ text: String, _ f: [String: String]) -> String {
+    func said(_ k: String) -> String { f[k] ?? "" }
+    let block = "\n\npublic enum \(said("id")): Employee, Person {\n"
+        + "    public typealias Rank = \(said("rank"))\n"
+        + "    public typealias Home = \(said("home"))\n"
+        + "    public typealias Given = \(said("given"))\n"
+        + "    public typealias Family = \(said("family"))\n"
+        + "    public typealias Born = \(said("born"))\n"
+        + "    public typealias Site = \(said("site"))\n"
+        + "    public typealias Sex = Given.Sex\n}"
+    let ns = text as NSString
+    guard let roster = try? NSRegularExpression(pattern: "public enum \\w+: Employee, Person \\{.*?\\n\\}",
+                                                options: [.dotMatchesLineSeparators]),
+          let last = roster.matches(in: text,
+                                    range: NSRange(location: 0, length: ns.length)).last else {
+        cannot("hire: no roster entries to anchor on",
+               "hire writes beside an existing person, and the world has none")
+    }
+    let at = last.range.location + last.range.length
+    var out = ns.substring(to: at) + block + ns.substring(from: at)
+    // the corpus world carries a Company list; an imported one does not, and the
+    // judge needs none
+    let outNs = out as NSString
+    if let slice = try? NSRegularExpression(pattern: "(Emp\\w+\\.self;?)(?=\\s*\\n\\s*\\})"),
+       let s = slice.matches(in: out, range: NSRange(location: 0, length: outNs.length)).first {
+        let end = s.range.location + s.range.length
+        out = outNs.substring(to: end) + " \(said("id")).self;" + outNs.substring(from: end)
+    }
+    out = lastEntryInsert(out, "VerifiedView", said("id"), said("home") + "Share", 12)
+    out = lastEntryInsert(out, "VerifiedInDepartment", said("id"), said("home"), 8,
+                          anchoredOn: said("home"))
+    out = lastEntryInsert(out, "VerifiedAtRank", said("id"), said("rank"), 8,
+                          anchoredOn: said("rank"))
+    out = lastEntryInsert(out, "VerifiedAtWorkplace", said("id"), said("site"), 8,
+                          anchoredOn: said("site"))
+    return out
+}
+
+// ── check view WHO DOC · check administer|delete WHO DOC. A question about one
+// entry: a probe is written beside the world's own entries and judged, and
+// nothing changes. `ask` is the same question spelled the other way, so it
+// travels with the verb.
+if args.first == "check" || args.first == "ask" {
+    let rest = Array(args.dropFirst()).filter { $0 != "--json" }
+    let asJson = args.contains("--json")
+    loadStatusShelf()
+    let w = discoverWorld()
+    func asked(_ note: String, _ next: String) -> Never {
+        if asJson {
+            out("{\n  \"command\": \"check\",\n  \"asks\": true,\n"
+                + "  \"note\": " + jsonString(note) + ",\n"
+                + "  \"next\": " + jsonString(next) + "\n}\n")
+        } else {
+            out("usage: " + note + "\n  next: " + next + "\n")
+        }
+        exit(0)
+    }
+    if rest.isEmpty {
+        asked("check view WHO WHAT  ·  check administer WHO WHERE  ·  check delete WHO WHAT",
+              "gate check view Emp0042 FinanceShare, with names your world declares "
+              + "(`gate library` lists that vocabulary)")
+    }
+    let kind = rest[0]
+    let tail = Array(rest.dropFirst())
+    if kind == "view" {
+        let asks = "gate check view Emp0042 FinanceShare, with names your world declares "
+                 + "(`gate library` lists that vocabulary)"
+        if tail.isEmpty {
+            asked("check view WHO WHAT  ·  a question about one entry, and nothing changes",
+                  asks)
+        }
+        if tail.count < 2 { cannot("check view WHO WHAT: this names only " + tail[0], asks) }
+        // ── AND A QUESTION OF A WORLD FILE NEEDS ONE, said where the reading is:
+        // a world declared as a layout alone has no facts file, and this read it
+        // unguarded, so the terminal met a FileNotFoundError and the bench
+        // dropped the line with no answer at all.
+        guard let facts = w.facts, FileManager.default.fileExists(atPath: facts) else {
+            cannot("this asks its question of a world file, and there is none here",
+                   "run `gate init .` to start one, or `gate demo` for a repository to look "
+                   + "at. A world declared as a layout alone is judged by `gate status`")
+        }
+        let probe = lastEntryInsert(readText(facts) ?? "", "VerifiedView",
+                                    tail[0], tail[1], 12)
+        let said = judgeFile(withTemp(probe, (facts as NSString).lastPathComponent))
+        var pairs: [(String, StatusJSON)] = [
+            ("command", .text("ask view")), ("who", .text(tail[0])), ("doc", .text(tail[1])),
+            ("verdict", .text(said.verdict)),
+            ("refusals", .list(said.refusals.map {
+                .object([("address", .text($0.address)), ("claim", .text($0.claim))]) })),
+            ("judge_ms", said.judgeMs.map { .raw(floatRepr($0)) } ?? .null),
+            ("wall_ms", .raw(String(said.wallMs))),
+            ("mutates", .raw("false")),
+        ]
+        _ = pairs
+        if asJson {
+            out(statusDumps(.object(pairs), 0) + "\n")
+        } else {
+            var lines = ["ask view: "
+                         + (said.verdict == "holds" ? "holds" : "refused \(said.refusals.count)")
+                         + (said.judgeMs.map { " · " + floatRepr($0) + " ms" } ?? "")]
+            for r in said.refusals { lines.append("  \(r.address) · \(r.claim)") }
+            out(lines.joined(separator: "\n") + "\n")
+        }
+        exit(said.verdict == "holds" ? 0 : 1)
+    }
+    if kind == "administer" || kind == "delete" {
+        // the compiler gates: a probe entry in the corpus's own accesses and a
+        // swift build. Seconds, and the full arbiter.
+        guard let root = ProcessInfo.processInfo.environment["GATE_CORPUS"], !root.isEmpty else {
+            cannot("check " + kind + " needs GATE_CORPUS (a checkout of the theory corpus "
+                   + "with Team.swift)",
+                   "set GATE_CORPUS to that checkout, or ask `gate check view` instead, "
+                   + "which needs none")
+        }
+        let asks = "gate check \(kind) Emp0042 FinanceVault, with names your world declares "
+                 + "(`gate library` lists that vocabulary)"
+        if tail.isEmpty {
+            asked("check \(kind) WHO WHAT  ·  the compiler is the arbiter, and it takes seconds",
+                  asks)
+        }
+        if tail.count < 2 { cannot("check \(kind) WHO WHAT: this names only " + tail[0], asks) }
+        let team = (((root as NSString).appendingPathComponent("Sources") as NSString)
+            .appendingPathComponent("Organization") as NSString)
+            .appendingPathComponent("System/Team.swift")
+        let text = readText(team) ?? ""
+        let anchor = "        Granted<Delete<Alice, FinanceVault>>.self         "
+                   + "// only the owner, and only at manager rank, deletes"
+        // the other carrier asserts this, which is a stack trace; a sentence
+        // says the same thing to a person who can act on it
+        if text.components(separatedBy: anchor).count - 1 != 1 {
+            cannot("the corpus checkout at GATE_CORPUS does not carry the line this probe "
+                   + "writes beside",
+                   "point GATE_CORPUS at a checkout whose Team.swift still states the "
+                   + "delete example, or ask `gate check view` instead")
+        }
+        let gateName = kind.prefix(1).uppercased() + kind.dropFirst()
+        let probe = text.replacingOccurrences(
+            of: anchor,
+            with: anchor + "\n        Granted<\(gateName)<\(tail[0]), \(tail[1])>>.self // gate probe")
+        try? probe.write(toFile: team, atomically: false, encoding: .utf8)
+        let t0 = Date()
+        let built = runSaid("swift build", [])
+        let secs = (Date().timeIntervalSince(t0) * 100).rounded() / 100
+        _ = runGit(["checkout", "--", team], root)
+        var reasons = Set<String>()
+        for m in matches("error: (.+)$", built.said, lines: true) { reasons.insert(m[0]) }
+        let says = Array(reasons.sorted().prefix(3))
+        let verdict = built.code == 0 ? "holds" : "refused"
+        if asJson {
+            out(statusDumps(.object([
+                ("command", .text("ask \(kind)")), ("who", .text(tail[0])),
+                ("doc", .text(tail[1])), ("verdict", .text(verdict)),
+                ("compiler_says", .list(says.map { .text($0) })),
+                ("build_s", .raw(String(secs))),
+                ("mutates", .raw("false")),
+            ]), 0) + "\n")
+        } else {
+            var lines = ["ask \(kind): " + (verdict == "holds" ? "holds" : "refused 0")
+                         + " · build \(secs) s"]
+            for s in says { lines.append("  compiler: " + s) }
+            out(lines.joined(separator: "\n") + "\n")
+        }
+        exit(verdict == "holds" ? 0 : 1)
+    }
+    asked("check view WHO WHAT  ·  check administer WHO WHERE  ·  check delete WHO WHAT",
+          "gate check view Emp0042 FinanceShare, with names your world declares "
+          + "(`gate library` lists that vocabulary)")
+}
+
+// ── diff transfer WHO DEPT · diff hire … · apply the same words. The SINGLE
+// source, the world, is edited, and the diff stays a Swift git diff. `change` is
+// the third spelling of one act and travels with the two doors.
+if args.first == "diff" || args.first == "apply" || args.first == "change" {
+    let applyIt = args.first == "apply" || args.contains("--apply")
+    let rest = Array(args.dropFirst()).filter { $0 != "--json" && $0 != "--apply" }
+    let asJson = args.contains("--json")
+    loadStatusShelf()
+    let w = discoverWorld()
+    guard let facts = w.facts, FileManager.default.fileExists(atPath: facts) else {
+        cannot("this asks its question of a world file, and there is none here",
+               "run `gate init .` to start one, or `gate demo` for a repository to look "
+               + "at. A world declared as a layout alone is judged by `gate status`")
+    }
+    if rest.isEmpty {
+        let note = "diff transfer WHO DEPT  ·  diff hire ID RANK HOME GIVEN FAMILY "
+                 + "BORN SITE  ·  the same words after `apply` write the change"
+        let next = "gate diff transfer Emp0042 Sales shows what would move and what "
+                 + "would stop holding, and writes nothing"
+        if asJson {
+            out("{\n  \"command\": \"change\",\n  \"asks\": true,\n"
+                + "  \"note\": " + jsonString(note) + ",\n"
+                + "  \"next\": " + jsonString(next) + "\n}\n")
+        } else {
+            out("usage: " + note + "\n  next: " + next + "\n")
+        }
+        exit(0)
+    }
+    let text = readText(facts) ?? ""
+    var label: [(String, StatusJSON)] = []
+    var made = ""
+    switch rest[0] {
+    case "transfer":
+        guard rest.count > 2 else { cannot("change transfer WHO DEPT: this names too little",
+                                           "name the person and the department") }
+        made = transferText(text, rest[1], rest[2])
+        label = [("command", .text("change transfer")), ("who", .text(rest[1])),
+                 ("to", .text(rest[2])),
+                 ("note", .text("roster and team entry moved. View grants are intent, so "
+                                + "resolve leftovers with grant/revoke"))]
+    case "grant":
+        guard rest.count > 2 else { cannot("change grant WHO DOC: this names too little",
+                                           "name the person and the document") }
+        made = grantText(text, rest[1], rest[2])
+        label = [("command", .text("change grant")), ("who", .text(rest[1])),
+                 ("doc", .text(rest[2]))]
+    case "revoke":
+        guard rest.count > 2 else { cannot("change revoke WHO DOC: this names too little",
+                                           "name the person and the document") }
+        made = revokeText(text, rest[1], rest[2])
+        label = [("command", .text("change revoke")), ("who", .text(rest[1])),
+                 ("doc", .text(rest[2]))]
+    case "hire":
+        let keys = ["id", "rank", "home", "given", "family", "born", "site"]
+        var f: [String: String] = [:]
+        for (i, k) in keys.enumerated() where i + 1 < rest.count { f[k] = rest[i + 1] }
+        made = hireText(text, f)
+        label = [("command", .text("change hire"))]
+            + keys.compactMap { k in f[k].map { (k, StatusJSON.text($0)) } }
+    default:
+        cannot("unknown change " + rest[0],
+               "the changes this verb makes are `transfer`, `hire`, `grant` and `revoke`")
+    }
+    let said = judgeFile(withTemp(made, (facts as NSString).lastPathComponent))
+    // ── AND `applied` MEANS SOMETHING CHANGED. A transfer to the department
+    // somebody is already in rewrites the file with the bytes it already had,
+    // and this said `applied` while `git status` stayed empty.
+    let moved = (readText(facts) ?? "") != made
+    var applied = false
+    if applyIt && said.verdict == "holds" && moved {
+        oursWrite(facts, "the world this edits", made)
+        applied = true
+    }
+    var pairs = label
+    pairs.append(("verdict", .text(said.verdict)))
+    pairs.append(("refusals", .list(said.refusals.map {
+        .object([("address", .text($0.address)), ("claim", .text($0.claim))]) })))
+    pairs.append(("judge_ms", said.judgeMs.map { .raw(floatRepr($0)) } ?? .null))
+    pairs.append(("wall_ms", .raw(String(said.wallMs))))
+    pairs.append(("dry_run", .raw(applyIt ? "false" : "true")))
+    pairs.append(("applied", .raw(applied ? "true" : "false")))
+    pairs.append(("changed", .raw(moved ? "true" : "false")))
+    if asJson {
+        out(statusDumps(.object(pairs), 0) + "\n")
+    } else {
+        var head = ""
+        for (k, v) in label where k == "command" { if case .text(let s) = v { head = s } }
+        var tail: [String] = []
+        if let ms = said.judgeMs { tail.append(floatRepr(ms) + " ms") }
+        tail.append(applyIt ? (applied ? "applied"
+                               : (!moved && said.verdict == "holds"
+                                  ? "nothing to change: it already says this" : "NOT applied"))
+                            : "dry-run")
+        var lines = [head + ": "
+                     + (said.verdict == "holds" ? "holds" : "refused \(said.refusals.count)")
+                     + " · " + tail.joined(separator: " · ")]
+        for r in said.refusals { lines.append("  \(r.address) · \(r.claim)") }
+        for (k, v) in label where k == "note" {
+            if case .text(let s) = v { lines.append("  note: " + s) }
+        }
+        out(lines.joined(separator: "\n") + "\n")
+    }
+    exit(said.verdict == "holds" ? 0 : 1)
 }
 
 // ── guard [merge] · guard deps [manifest lock]: the repository's OWN action
