@@ -6126,6 +6126,48 @@ if args.first == "my" {
 // format, so one emitter serves everybody and the tool ships it; a library's
 // grammar is its own, so its build emits a small declaration and this renders
 // that into the shared words. Both heads come off the shelf page, one home.
+// ── THE TWO SIDES, PRINTED. What a contract states and what a carrier claims
+// are two texts built out of two documents, and the building is the whole of
+// the act: the door around it names files and writes rows. Pulled out so the
+// demo that makes a pair prints it with the verb's own hand rather than a
+// second one of its own.
+func contractWorld(_ spec: Said) -> (world: String, declares: Int) {
+    let fields = contractFields(spec).filter { $0.shape != nil }
+    var lines = [shelfSection("declare",
+                              "// ── what a contract side is printed under begins here ──\n")
+                 + shelfPage("forms-contract"), ""]
+    for f in fields {
+        let rec = "F_" + sanitized(f.route) + "_" + sanitized(f.field)
+        lines += ["// " + f.route + " · " + f.field,
+                  "public enum " + rec + ": Declared {",
+                  "    public typealias Of = " + (f.shape ?? ""), "}"]
+    }
+    return (lines.joined(separator: "\n") + "\n", fields.count)
+}
+
+func carrierWorld(_ decl: Said) -> (world: String, declares: Int, who: String) {
+    let who = sanitized(decl.at("carrier")?.asText ?? "Carrier")
+    let against = decl.at("against")
+    let contractSaid = against?.at("contract")?.asText ?? "a contract"
+    let revision = against?.at("revision")?.asText
+    var head = shelfSection("declare",
+                            "// ── what a carrier side is printed under begins here ──\n")
+    head += "// " + who + " · against " + contractSaid
+    head += revision.map { " at " + $0 } ?? ""
+    var lines = [head + "\n", "public enum " + who + ": Carrier {}", ""]
+    let carries = decl.at("carries")?.asList ?? []
+    for (i, c) in carries.enumerated() {
+        let route = c.at("route")?.asText ?? "", field = c.at("field")?.asText ?? ""
+        let rec = "F_" + sanitized(route) + "_" + sanitized(field)
+        let mineName = c.at("mine")?.asText
+        lines.append("// " + route + " · " + field
+                     + (mineName.map { " (it calls it " + $0 + ")" } ?? ""))
+        lines.append("public typealias Carry_\(i) = Carries<" + who + ", " + rec + ", "
+                     + (c.at("as")?.asText ?? "") + ">")
+    }
+    return (lines.joined(separator: "\n") + "\n", carries.count, who)
+}
+
 if args.first == "declare" {
     let rest = Array(args.dropFirst()).filter { $0 != "--json" }
     let asJson = args.contains("--json")
@@ -6199,18 +6241,8 @@ if args.first == "declare" {
                    "point it at the document itself. For YAML, `yq -o=json '.' file.yml > "
                    + "file.json` writes the JSON this reads")
         }
-        let fields = contractFields(spec).filter { $0.shape != nil }
-        declares = fields.count
-        var lines = [shelfSection("declare",
-                                  "// ── what a contract side is printed under begins here ──\n")
-                     + shelfPage("forms-contract"), ""]
-        for f in fields {
-            let rec = "F_" + sanitized(f.route) + "_" + sanitized(f.field)
-            lines += ["// " + f.route + " · " + f.field,
-                      "public enum " + rec + ": Declared {",
-                      "    public typealias Of = " + (f.shape ?? ""), "}"]
-        }
-        world = lines.joined(separator: "\n") + "\n"
+        let said = contractWorld(spec)
+        (world, declares) = (said.world, said.declares)
         if let o = outPath { writeWorld(world, o) }
         let pin = after("--at") ?? (src as NSString).lastPathComponent
         let mine = declaredIn(outPath, pin)
@@ -6224,27 +6256,11 @@ if args.first == "declare" {
                    + "Expecting value at line \(at.line), column \(at.column)",
                    "point it at the document itself")
         }
-        let who = sanitized(decl.at("carrier")?.asText ?? "Carrier")
         let against = decl.at("against")
-        let contractSaid = against?.at("contract")?.asText ?? "a contract"
         let revision = against?.at("revision")?.asText
-        var head = shelfSection("declare",
-                                "// ── what a carrier side is printed under begins here ──\n")
-        head += "// " + who + " · against " + contractSaid
-        head += revision.map { " at " + $0 } ?? ""
-        var lines = [head + "\n", "public enum " + who + ": Carrier {}", ""]
-        let carries = decl.at("carries")?.asList ?? []
-        declares = carries.count
-        for (i, c) in carries.enumerated() {
-            let route = c.at("route")?.asText ?? "", field = c.at("field")?.asText ?? ""
-            let rec = "F_" + sanitized(route) + "_" + sanitized(field)
-            let mineName = c.at("mine")?.asText
-            lines.append("// " + route + " · " + field
-                         + (mineName.map { " (it calls it " + $0 + ")" } ?? ""))
-            lines.append("public typealias Carry_\(i) = Carries<" + who + ", " + rec + ", "
-                         + (c.at("as")?.asText ?? "") + ">")
-        }
-        world = lines.joined(separator: "\n") + "\n"
+        let said = carrierWorld(decl)
+        (world, declares) = (said.world, said.declares)
+        let who = said.who
         if let o = outPath { writeWorld(world, o) }
         let pin = after("--at") ?? revision ?? against?.at("contract")?.asText
         let mine = declaredIn(outPath, pin)
