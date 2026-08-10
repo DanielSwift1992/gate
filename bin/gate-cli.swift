@@ -71,7 +71,8 @@ if args.contains("--out") && !args.contains("-o") {
 // `stdlib show` to the verb: half a verb on the list would hand this binary an
 // argv it does not answer, and the python side would never see it.
 if args == ["--carries"] {
-    out("stdlib\nexport\nseam\nlog\naside\ndeclare\nmine\ntheirs\ninit\ndrift\nmy\n")
+    out("stdlib\nexport\nseam\nlog\naside\ndeclare\nmine\ntheirs\ninit\ndrift\nmy\n"
+        + "status\nfsck\n")
     exit(0)
 }
 
@@ -2797,6 +2798,14 @@ func statusDoor(_ asJson: Bool) -> Never {
 
 // the road's own door: the battery calls this, not a person
 if args.first == "--status-core" {
+    statusDoor(args.contains("--json"))
+}
+
+// and the verb itself, now that the bootstrap it stood on is here. `fsck` is
+// the second spelling of the same question, and it travels with it: the other
+// carrier answers both from one branch and names the answer `status` either
+// way, so a spelling left behind would be one word answered by two carriers.
+if args.first == "status" || args.first == "fsck" {
     statusDoor(args.contains("--json"))
 }
 

@@ -7553,6 +7553,54 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
             print("   the tables bootstrap parts:", _bsw[:4])
         S.append(("the tables bootstrap seeds one world on both carriers, byte for byte",
                   _bsw == []))
+
+        # ── AND THE COURT GUARD, ON THE CARRIER THAT NOW ANSWERS THE VERB. The
+        # mutant that holds this guard is planted in the python file, and
+        # `status` no longer runs it: that plant holds the other carrier's half
+        # and can say nothing about this one. A guard nobody exercises is the
+        # registry's oldest species, so the vein is built once more from its own
+        # source with a court that never sits, and asked the same question. One
+        # extra swiftc build, paid because the worst thing this tool could do is
+        # print `holds` over a world nobody judged.
+        _mut = os.path.join(tmp, "mutant-vein")
+        os.makedirs(_mut, exist_ok=True)
+        _mut_src = open(os.path.join(HERE, "bin", "gate-cli.swift"), encoding="utf-8").read()
+        _mut_anchor = "func courtSays(_ asked: [String]) -> String {\n"
+        open(os.path.join(_mut, "main.swift"), "w").write(_mut_src.replace(
+            _mut_anchor,
+            _mut_anchor + '    return "\\u{2713} THE JUDGE holds: 0 claims in 0.0 ms\\ncanon v2\\n"\n',
+            1))
+        _pin = open(os.path.join(HERE, "bin", "gate-judge.from"), encoding="utf-8").read().strip()
+        _mut_bin = os.path.join(_mut, "gate-cli")
+        _mb = subprocess.run(["swiftc", "-O", os.path.join(_mut, "main.swift"),
+                              *sorted(glob.glob(os.path.join(HERE, "bin", ".court",
+                                                             _pin, "*.swift"))),
+                              "-o", _mut_bin], capture_output=True, text=True, timeout=900)
+        if _mb.returncode != 0:
+            print("   the mutant vein did not build:", "\n   ".join(
+                [l for l in _mb.stderr.split("\n") if "error:" in l][:3]))
+        _mut_world = os.path.join(tmp, "mutant-world")
+        os.makedirs(_mut_world, exist_ok=True)
+        run("demo", _mut_world)
+        _mut_said = (subprocess.run([_mut_bin, "status"], cwd=_mut_world, capture_output=True,
+                                    text=True, timeout=180) if _mb.returncode == 0 else None)
+        _mut_real = subprocess.run([_cli_bin, "status"], cwd=_mut_world, capture_output=True,
+                                   text=True, timeout=180)
+        # Which half this holds, measured rather than assumed: taking the PLAIN
+        # court's guard out of the vein leaves this green and reddens the
+        # fourteen-world parity instead, because the demo world's forms are
+        # judged by the where court and that is the guard the substitution meets
+        # here. Both halves are watched, by two different checks, and this line
+        # says which is which so the next reader does not have to plant it again.
+        S.append(("the vein refuses a court that did not sit, never a green",
+                  _mut_anchor in _mut_src and _mb.returncode == 0
+                  and _mut_said is not None and _mut_said.returncode == 1
+                  and "judge where` and did not answer in its own canon" in _mut_said.stdout
+                  # and it speaks only when nobody sat: the same world with the
+                  # real court keeps its own one refusal and gains none of this
+                  and _mut_real.returncode == 1
+                  and "did not answer in its own canon" not in _mut_real.stdout
+                  and "must share one zone" in _mut_real.stdout))
         # and the worlds mean what they were built to mean, so a probe that
         # stopped measuring anything cannot stay green: every guard family is
         # pinned to the world planted for it, by the refusal's own words
@@ -7723,7 +7771,8 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         S.append(("the strangler ledger names a verb, not half of one",
                   subprocess.run([_cli_bin, "--carries"], capture_output=True, text=True)
                   .stdout.split() == ["stdlib", "export", "seam", "log", "aside", "declare",
-                                      "mine", "theirs", "init", "drift", "my"]))
+                                      "mine", "theirs", "init", "drift", "my",
+                                      "status", "fsck"]))
         # ── AND THE LEDGER IS READ AGAINST THE ROAD IT IS WALKING. The strangler
         # has a length and a position, and both were feelings: the list of moved
         # veins lived in the binary and the list of verbs lived in the python
@@ -7974,9 +8023,16 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         for _r in sorted(_by_road):
             if _r != "carried":
                 print(f"     {_r:18} {' '.join(sorted(_by_road[_r]))[:88]}")
-        S.append(("the ledger names verbs the usage offers, 11 of 27 carried",
-                  set(_ledger) <= _verbs
-                  and len(_ledger) == 11
+        # `fsck` is the second spelling of `status`, and a spelling travels with
+        # the verb it spells: the usage counts it after a pipe and this list does
+        # not, so the ledger is one entry longer than the verbs it names. A
+        # spelling left on the far side would be one question answered by two
+        # carriers, which is the split this rule exists to forbid.
+        _carried_verbs = set(_ledger) & _verbs
+        S.append(("the ledger names verbs the usage offers, 12 of 27 carried",
+                  set(_ledger) <= _verbs | {"fsck"}
+                  and len(_ledger) == 13
+                  and len(_carried_verbs) == 12
                   and len(_verbs) == 27
                   # and a name on the ledger is a whole verb: a prefix claims
                   # everything under it, so half a verb would take argv nobody
@@ -10576,13 +10632,29 @@ public enum MyWatch: AccessLedger {
     _fake_court = ('    return subprocess.CompletedProcess(args, 0,\n'
                    '        "\\u2713 THE JUDGE holds: 0 claims in 0.0 ms\\ncanon v2\\n", "")\n')
     _court_anchor = '    if JUDGE_KIND == "binary":'
+    # ── AND A PLANT MEASURES ONLY THE CARRIER IT IS PLANTED IN. `status` moved
+    # to the vein, so this mutant went into a file the verb no longer runs: the
+    # plant landed, the run was clean, and the check went green about a guard it
+    # had stopped exercising. That is the shape of every dead probe in the
+    # registry. The carrier is named here, and the vein's own half is held
+    # separately below.
+    _court_env = {**os.environ, "GATE_CLI": "off"}
+    def _court_says(_w):
+        _r = subprocess.run([sys.executable, GATE, "status", "--json"], cwd=_w,
+                            capture_output=True, text=True, env=_court_env)
+        for _said in (_r.stdout, _r.stderr):
+            try:
+                return json.loads(_said)
+            except Exception:
+                pass
+        return {"raw": _r.stdout[:200]}
     try:
         open(GATE, "w").write(_court_kept.replace(_court_anchor,
                                                   _fake_court + _court_anchor, 1))
-        _substituted = run("status", cwd=_court_world)[1]
+        _substituted = _court_says(_court_world)
     finally:
         open(GATE, "w").write(_court_kept)
-    _court_back = run("status", cwd=_court_world)[1]
+    _court_back = _court_says(_court_world)
     S.append(("a court that did not answer in its own canon is refused, never a green",
               _substituted.get("verdict") == "refused"
               and any("did not answer in its own canon" in r.get("claim", "")
