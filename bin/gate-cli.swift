@@ -77,7 +77,8 @@ if args.contains("--out") && !args.contains("-o") {
 // argv it does not answer, and the python side would never see it.
 if args == ["--carries"] {
     out("stdlib\nexport\nseam\nlog\naside\ndeclare\nmine\ntheirs\ninit\ndrift\nmy\n"
-        + "status\nfsck\nbadge\nsurvey\nfindings\nreport\nbare\nimport\n")
+        + "status\nfsck\nbadge\nsurvey\nfindings\nreport\nbare\nimport\n"
+        + "verify\nlibrary\n")
     exit(0)
 }
 
@@ -3565,6 +3566,269 @@ func scratchDir(_ tag: String) -> String {
     scratchCount += 1
     try? FileManager.default.createDirectory(atPath: d, withIntermediateDirectories: true)
     return d
+}
+
+// ── verify people.csv grants.csv [--against CMD]: the differential rule check.
+// Catalogue seeds are judged by the world AND by the checker the client has
+// today; a verdict split is the address of an untranslated rule.
+struct Seed { var name = ""; var people: [[String: String]] = []
+              var grants: [[String: String]] = [] }
+
+func csvDicts(_ table: CsvTable) -> [[String: String]] {
+    (0..<table.rows.count).map { r in
+        var row: [String: String] = [:]
+        for k in table.header { row[k] = table.at(r, k) ?? "" }
+        return row
+    }
+}
+
+func seedCatalogue(_ people: [[String: String]], _ grants: [[String: String]]) -> [Seed] {
+    // the seed catalogue: one violation per rule form, drawn from the data
+    // itself, so a table with no rows is a sentence rather than an index
+    guard let p0 = people.first, let g0 = grants.first else {
+        cannot("the tables this reads have no rows: a seed is drawn from the data itself",
+               "point it at the two CSVs you imported, people and grants, with their "
+               + "header lines")
+    }
+    guard let otherHome = people.first(where: { $0["home"] != p0["home"] })?["home"] else {
+        cannot("every row of this table keeps one home: a seed is drawn from the data itself",
+               "point it at the two CSVs you imported, people and grants, with their "
+               + "header lines")
+    }
+    var moved = people
+    moved[0]["home"] = otherHome
+    return [
+        Seed(name: "cross-view", people: people,
+             grants: grants + [["who": p0["id"] ?? "", "doc": otherHome + "Share"]]),
+        Seed(name: "duplicate-grant", people: people, grants: grants + [g0]),
+        Seed(name: "dangling-who", people: people,
+             grants: grants + [["who": "Emp9999", "doc": (p0["home"] ?? "") + "Share"]]),
+        Seed(name: "dangling-doc", people: people,
+             grants: grants + [["who": p0["id"] ?? "", "doc": "NoSuchShare"]]),
+        Seed(name: "stale-after-transfer", people: moved, grants: grants),
+    ]
+}
+
+func verifySeeds(_ peoplePath: String, _ grantsPath: String, _ against: String?)
+    -> (dirty: Bool, worldSays: [String], legacySays: [String],
+        rows: [(seed: String, world: String, worldSays: [String], legacy: String,
+                legacySays: [String], reading: String)]) {
+    let people = csvDicts(csvTable(peoplePath, "the people this reads"))
+    let grants = csvDicts(csvTable(grantsPath, "the grants this reads"))
+    let d = scratchDir("gate-verify-")
+    defer { try? FileManager.default.removeItem(atPath: d) }
+    // step 0: the base must be clean on BOTH sides, or a background violation
+    // masks the seeds and `covered` would mean nothing
+    let base = importWorld(peoplePath, grantsPath, (d as NSString)
+        .appendingPathComponent("base.swift"))
+    var legacyBase: (code: Int32, said: String)? = nil
+    if let against = against { legacyBase = runSaid(against, [peoplePath, grantsPath]) }
+    if base.verdict != "holds" || (legacyBase.map { $0.code != 0 } ?? false) {
+        return (true, base.refusals.map { $0.claim + " · " + $0.address },
+                legacyBase.map { $0.said.split(separator: "\n").map(String.init) } ?? [], [])
+    }
+    let columns = ["id", "rank", "home", "given", "family", "born", "site", "sex"]
+    var rows: [(seed: String, world: String, worldSays: [String], legacy: String,
+                legacySays: [String], reading: String)] = []
+    for seed in seedCatalogue(people, grants) {
+        let pp = (d as NSString).appendingPathComponent("people.csv")
+        let gp = (d as NSString).appendingPathComponent("grants.csv")
+        var pText = columns.joined(separator: ",") + "\n"
+        for p in seed.people { pText += columns.map { p[$0] ?? "" }.joined(separator: ",") + "\n" }
+        var gText = "who,doc\n"
+        for g in seed.grants { gText += "\(g["who"] ?? ""),\(g["doc"] ?? "")\n" }
+        try? pText.write(toFile: pp, atomically: false, encoding: .utf8)
+        try? gText.write(toFile: gp, atomically: false, encoding: .utf8)
+        let world = importWorld(pp, gp, (d as NSString).appendingPathComponent("gate.swift"))
+        var legacy = "n/a", legacySays: [String] = [], reading = ""
+        if let against = against {
+            let said = runSaid(against, [pp, gp])
+            legacy = said.code != 0 ? "refused" : "holds"
+            reading = world.verdict == "refused"
+                ? (legacy == "refused" ? "covered: both refuse"
+                                       : "WORLD STRICTER: the client's checker misses this")
+                : (legacy == "refused"
+                   ? "NOT TRANSLATED: the legacy rule has no gate in the world"
+                   : "weak seed: neither side refuses")
+            legacySays = Array(said.said.split(separator: "\n").map(String.init).prefix(2))
+        } else {
+            // --self: seeds against the world alone, which rules hold at all
+            reading = world.verdict == "refused" ? "held by the world" : "NO GATE HOLDS THIS SEED"
+        }
+        rows.append((seed.name, world.verdict, Array(world.refusals.map { $0.claim }.prefix(2)),
+                     legacy, legacySays, reading))
+    }
+    return (false, [], [], rows)
+}
+
+func runSaid(_ command: String, _ arguments: [String]) -> (code: Int32, said: String) {
+    let words = command.split(separator: " ").map(String.init) + arguments
+    guard let first = words.first else { return (0, "") }
+    let p = Process()
+    p.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+    p.arguments = [first] + Array(words.dropFirst())
+    let pipe = Pipe(), quiet = Pipe()
+    p.standardOutput = pipe
+    p.standardError = quiet
+    do { try p.run() } catch { return (127, "") }
+    let said = String(data: pipe.fileHandleForReading.readDataToEndOfFile(),
+                      encoding: .utf8) ?? ""
+    quiet.fileHandleForReading.readDataToEndOfFile()
+    p.waitUntilExit()
+    return (p.terminationStatus, said.trimmingCharacters(in: .whitespacesAndNewlines))
+}
+
+if args.first == "verify" {
+    let rest = Array(args.dropFirst()).filter { $0 != "--json" }
+    let asJson = args.contains("--json")
+    loadStatusShelf()
+    // a verb meets a person with a sentence, never a stack trace: typed in a
+    // world that keeps no tables this answered with an index error
+    if rest.count < 2 || rest[0].hasPrefix("-") || rest[1].hasPrefix("-") {
+        let note = "verify reads two catalogue files and judges their seeds"
+        let next = "gate verify people.csv grants.csv [--against CMD]: the two tables, "
+                 + "and the checker you have today if you want the two answers compared "
+                 + "claim by claim"
+        if !rest.filter({ !$0.hasPrefix("-") }).isEmpty { cannot(note, next) }
+        if asJson {
+            out("{\n  \"command\": \"verify\",\n  \"asks\": true,\n"
+                + "  \"note\": " + jsonString(note) + ",\n"
+                + "  \"next\": " + jsonString(next) + "\n}\n")
+        } else {
+            out("usage: " + note + "\n  next: " + next + "\n")
+        }
+        exit(0)
+    }
+    let against = rest.firstIndex(of: "--against").flatMap {
+        $0 + 1 < rest.count ? rest[$0 + 1] : nil }
+    let said = verifySeeds(rest[0], rest[1], against)
+    if said.dirty {
+        if asJson {
+            out(statusDumps(.object([
+                ("command", .text("verify")),
+                ("base", .text("dirty: fix these before seeding")),
+                ("world_says", .list(said.worldSays.map { .text($0) })),
+                ("legacy_says", .list(said.legacySays.map { .text($0) })),
+            ]), 0) + "\n")
+        } else {
+            var lines = ["verify: base dirty. Fix these before seeding"]
+            for w in said.worldSays { lines.append("  world:  " + w) }
+            for l in said.legacySays { lines.append("  legacy: " + l) }
+            out(lines.joined(separator: "\n") + "\n")
+        }
+        exit(1)
+    }
+    let holes = said.rows.filter { $0.reading.hasPrefix("NOT TRANSLATED")
+                                || $0.reading.hasPrefix("NO GATE") }.count
+    if asJson {
+        out(statusDumps(.object([
+            ("command", .text("verify")),
+            ("seeds", .list(said.rows.map { r in
+                .object([("seed", .text(r.seed)), ("world", .text(r.world)),
+                         ("world_says", .list(r.worldSays.map { .text($0) })),
+                         ("legacy", .text(r.legacy)),
+                         ("legacy_says", .list(r.legacySays.map { .text($0) })),
+                         ("reading", .text(r.reading))]) })),
+            ("translation_holes", .raw(String(holes))),
+        ]), 0) + "\n")
+    } else {
+        var lines = ["verify: \(holes) hole(s)"]
+        for r in said.rows {
+            lines.append("  " + r.seed.padding(toLength: max(22, r.seed.count),
+                                               withPad: " ", startingAt: 0)
+                         + " world=" + r.world.padding(toLength: max(8, r.world.count),
+                                                       withPad: " ", startingAt: 0)
+                         + " legacy=" + r.legacy.padding(toLength: max(8, r.legacy.count),
+                                                         withPad: " ", startingAt: 0)
+                         + " → " + r.reading)
+        }
+        out(lines.joined(separator: "\n") + "\n")
+    }
+    exit(holes > 0 ? 1 : 0)
+}
+
+// ── library [-o lib.json] | library diff a.json b.json: the domain vocabulary.
+// Forms carry no facts, so a library is shareable and client data never is
+// (SAT5: a domain has one canonical vocabulary; two worlds are subsets of it).
+if args.first == "library" {
+    let rest = Array(args.dropFirst()).filter { $0 != "--json" }
+    let asJson = args.contains("--json")
+    if rest.first == "diff" {
+        guard rest.count > 2 else {
+            cannot("library diff reads two libraries printed by `gate library -o`",
+                   "name them: `gate library diff a.json b.json`")
+        }
+        let la = theirsJson(rest[1], "a library printed by `gate library -o`")
+        let lb = theirsJson(rest[2], "a library printed by `gate library -o`")
+        let a = Set((la.at("forms")?.asList ?? []).compactMap { $0.asText })
+        let b = Set((lb.at("forms")?.asList ?? []).compactMap { $0.asText })
+        let note = "the union is safe by construction: one domain has one canonical "
+                 + "vocabulary (SAT5), so a difference is teachable form, never client data"
+        // this head has no line of its own on the other carrier: its answer
+        // falls through to the object, whichever way it was asked
+        out(statusDumps(.object([
+            ("command", .text("library diff")),
+            ("shared", .list(a.intersection(b).sorted().map { .text($0) })),
+            ("only_first", .list(a.subtracting(b).sorted().map { .text($0) })),
+            ("only_second", .list(b.subtracting(a).sorted().map { .text($0) })),
+            ("note", .text(note)),
+        ]), 0) + "\n")
+        exit(0)
+    }
+    // ── AND THE GUARD SITS AT THE READING, NOT AT ONE SPELLING OF THE ARGV. It
+    // asked whether argv was empty, so `library` bare refused in words and
+    // `library -o lib.json` opened a world file that is not there and raised.
+    loadStatusShelf()
+    let w = discoverWorld()
+    guard let facts = w.facts, FileManager.default.fileExists(atPath: facts) else {
+        cannot("library reads the vocabulary a world is written in, and there is no world here",
+               "run `gate init .` to start one, or `gate demo` for a repository to look "
+               + "at. `gate library diff a.json b.json` needs no world")
+    }
+    let outPath = rest.firstIndex(of: "-o").flatMap { $0 + 1 < rest.count ? rest[$0 + 1] : nil }
+    let text = readText(facts) ?? ""
+    let heads = Set(matches("(\\w+)<\\s*\\w+,\\s*\\w+\\s*>\\.self;?", text)
+        .compactMap { $0.first }).sorted()
+    let axes = Set(matches("public typealias (\\w+) = ", text)
+        .compactMap { $0.first }).sorted()
+    var coverage: [(String, String)] = []
+    if let tables = w.tables {
+        let said = verifySeeds((tables as NSString).appendingPathComponent("people.csv"),
+                               (tables as NSString).appendingPathComponent("grants.csv"), nil)
+        for r in said.rows {
+            coverage.append((r.seed, r.world == "refused" ? "held" : "no gate"))
+        }
+    }
+    let next = "run `gate status` to judge what this vocabulary is used to say"
+    var lib: [(String, StatusJSON)] = [("forms", .list(heads.map { .text($0) })),
+                                       ("axes", .list(axes.map { .text($0) }))]
+    if !coverage.isEmpty {
+        lib.append(("coverage", .object(coverage.map { ($0.0, .text($0.1)) })))
+    }
+    if let path = outPath {
+        // sort_keys, indent 2: the shape the other carrier's json.dump writes
+        // sort_keys, indent 2, and no trailing newline: the shape the other
+        // carrier's json.dump leaves on disk
+        var page: [(String, StatusJSON)] = lib.sorted { $0.0 < $1.0 }
+        if let i = page.firstIndex(where: { $0.0 == "coverage" }),
+           case .object(let rows) = page[i].1 {
+            page[i] = ("coverage", .object(rows.sorted { $0.0 < $1.0 }))
+        }
+        oursWrite(path, "this world's vocabulary", statusDumps(.object(page), 0))
+    }
+    var pairs: [(String, StatusJSON)] = [("command", .text("library")),
+                                         ("facts", .text(facts))] + lib
+    pairs.append(("next", .text(next)))
+    if let path = outPath { pairs.append(("wrote", .text(path))) }
+    if let ready = commandIn(next) { pairs.append(("command_to_run", .text(ready))) }
+    if asJson {
+        out(statusDumps(.object(pairs), 0) + "\n")
+    } else {
+        out("library: " + many(heads.count, "form")
+            + (outPath.map { " · wrote " + $0 } ?? "")
+            + "\n  next: " + next + "\n")
+    }
+    exit(0)
 }
 
 if args.first == "import" {

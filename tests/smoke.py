@@ -8049,6 +8049,77 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         S.append(("every head of the act of entry prints one world on both carriers",
                   _imw == []))
 
+        # ── AND THE PAIR THAT STANDS ON ONE ROAD: the seed catalogue. `verify`
+        # plants one violation per rule form, drawn from the data itself, and
+        # judges each by the world and by whatever checker the client has today;
+        # `library` asks the same catalogue which of its own gates hold. Two
+        # verbs, one reading, so they move together and are held together.
+        _vlw = []
+        def _vl_tables(_d):
+            shutil.copy(os.path.join(DEMO, "people.csv"), _d)
+            shutil.copy(os.path.join(DEMO, "grants.csv"), _d)
+            open(os.path.join(_d, "always-refuses"), "w").write("#!/bin/sh\nexit 1\n")
+            os.chmod(os.path.join(_d, "always-refuses"), 0o755)
+            open(os.path.join(_d, "empty.csv"), "w").write(
+                "id,rank,home,given,family,born,site,sex\n")
+            open(os.path.join(_d, "eg.csv"), "w").write("who,doc\n")
+        def _vl_world(_d):
+            run("demo", "org", _d)
+        for _tag, _make, _argv, _left in (
+                ("no table named", _vl_tables, ["verify"], None),
+                ("half a sentence", _vl_tables, ["verify", "people.csv"], None),
+                ("the seeds", _vl_tables, ["verify", "people.csv", "grants.csv"], None),
+                ("the seeds, answered", _vl_tables,
+                 ["verify", "people.csv", "grants.csv", "--json"], None),
+                ("against a checker", _vl_tables,
+                 ["verify", "people.csv", "grants.csv", "--against", "./always-refuses"], None),
+                ("tables with no rows", _vl_tables, ["verify", "empty.csv", "eg.csv"], None),
+                ("the vocabulary", _vl_world, ["library"], None),
+                ("the vocabulary, answered", _vl_world, ["library", "--json"], None),
+                ("written out", _vl_world, ["library", "-o", "lib.json"], "lib.json"),
+                ("no world for it", lambda _d: None, ["library"], None),
+                ("no world, and a name to write", lambda _d: None,
+                 ["library", "-o", "lib.json"], None)):
+            # ONE directory, both carriers in it: `library` names the world by
+            # its absolute path, so two copies would part on where they sit
+            # rather than on what they read. The same trap the audit page set.
+            _vd = os.path.join(tmp, "verify-" + str(abs(hash(_tag)) % 9973))
+            shutil.rmtree(_vd, ignore_errors=True)
+            os.makedirs(_vd, exist_ok=True)
+            _make(_vd)
+            _said, _left_bytes = [], []
+            for _who in ("py", "sw"):
+                if _left and os.path.exists(os.path.join(_vd, _left)):
+                    os.remove(os.path.join(_vd, _left))
+                _r = subprocess.run([sys.executable, GATE, *_argv], cwd=_vd,
+                                    capture_output=True, timeout=300,
+                                    env={**os.environ, "GATE_CLI": ("off" if _who == "py"
+                                                                    else _cli_bin)})
+                _said.append((_imnoms(_r.stdout), _imnoms(_r.stderr), _r.returncode))
+                _lf = os.path.join(_vd, _left) if _left else None
+                _left_bytes.append(open(_lf, "rb").read()
+                                   if _lf and os.path.exists(_lf) else None)
+            if _said[0] != _said[1]:
+                _vlw.append(_tag + ": the answer")
+            if _left_bytes[0] != _left_bytes[1]:
+                _vlw.append(_tag + ": what it left on disk")
+            _out = _said[0][0]
+            if _tag == "the seeds" and b"NO GATE HOLDS THIS SEED" not in _out:
+                _vlw.append(_tag + ": a catalogue that holds every seed is a catalogue "
+                                   "nobody planted")
+            if _tag == "against a checker" and b"base dirty" not in _out:
+                _vlw.append(_tag + ": a checker refusing the base is not said")
+            if _tag == "tables with no rows" and (
+                    _said[0][2] != 1 or b"drawn from the data itself" not in _said[0][1]):
+                _vlw.append(_tag + ": a table with no rows is indexed rather than said")
+            if _tag == "written out" and (_left_bytes[0] is None
+                                          or b'"coverage"' not in _left_bytes[0]):
+                _vlw.append(_tag + ": the vocabulary was not written, or carries no coverage")
+        if _vlw:
+            print("   the seed catalogue parts:", _vlw[:4])
+        S.append(("the seed catalogue reads one way for both verbs and both carriers",
+                  _vlw == []))
+
         # ── AND THE COURT GUARD, ON THE CARRIER THAT NOW ANSWERS THE VERB. The
         # mutant that holds this guard is planted in the python file, and
         # `status` no longer runs it: that plant holds the other carrier's half
@@ -8268,7 +8339,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                   .stdout.split() == ["stdlib", "export", "seam", "log", "aside", "declare",
                                       "mine", "theirs", "init", "drift", "my",
                                       "status", "fsck", "badge", "survey", "findings",
-                                      "report", "bare", "import"]))
+                                      "report", "bare", "import", "verify", "library"]))
         # ── AND THE LEDGER IS READ AGAINST THE ROAD IT IS WALKING. The strangler
         # has a length and a position, and both were feelings: the list of moved
         # veins lived in the binary and the list of verbs lived in the python
@@ -8525,10 +8596,10 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         # spelling left on the far side would be one question answered by two
         # carriers, which is the split this rule exists to forbid.
         _carried_verbs = set(_ledger) & _verbs
-        S.append(("the ledger names verbs the usage offers, 18 of 27 carried",
+        S.append(("the ledger names verbs the usage offers, 20 of 27 carried",
                   set(_ledger) <= _verbs | {"fsck"}
-                  and len(_ledger) == 19
-                  and len(_carried_verbs) == 18
+                  and len(_ledger) == 21
+                  and len(_carried_verbs) == 20
                   and len(_verbs) == 27
                   # and a name on the ledger is a whole verb: a prefix claims
                   # everything under it, so half a verb would take argv nobody
