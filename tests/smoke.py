@@ -8120,6 +8120,56 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         S.append(("the seed catalogue reads one way for both verbs and both carriers",
                   _vlw == []))
 
+        # ── AND WHO MAY ACT, WHICH IS A GIT OBJECT WALKED ALL THE WAY TO A
+        # JUDGEMENT: the HEAD author becomes an identity the world declares,
+        # becomes a probe entry of an existing form, becomes a verdict. CI and
+        # hooks only carry that verdict, so the two carriers must reach it the
+        # same way or the hook says one thing here and another there. The second
+        # head, `guard deps`, is a different soil with the same shape: a lockfile
+        # declares atoms and a manifest references them.
+        _gdw = []
+        def _gd_world(_d):
+            run("demo", "org", _d)
+        def _gd_deps(_d):
+            open(os.path.join(_d, "package.json"), "w").write(json.dumps(
+                {"dependencies": {"left-pad": "1.3.0", "lodash": "^4.0.0"}}) + "\n")
+            open(os.path.join(_d, "package-lock.json"), "w").write(json.dumps(
+                {"packages": {"node_modules/left-pad": {"version": "1.3.0"},
+                              "node_modules/lodash": {"version": "4.17.0"},
+                              "node_modules/ghost": {"version": "0.1.0"}}}) + "\n")
+        for _tag, _make, _argv in (
+                ("the default action", _gd_world, ["guard"]),
+                ("named", _gd_world, ["guard", "merge"]),
+                ("named, answered", _gd_world, ["guard", "merge", "--json"]),
+                ("an action no policy states", _gd_world, ["guard", "nosuchaction"]),
+                ("no world at all", lambda _d: None, ["guard"]),
+                ("a lockfile", _gd_deps, ["guard", "deps"]),
+                ("a lockfile, answered", _gd_deps, ["guard", "deps", "--json"])):
+            _gd = os.path.join(tmp, "guard-" + str(abs(hash(_tag)) % 9973))
+            shutil.rmtree(_gd, ignore_errors=True)
+            os.makedirs(_gd, exist_ok=True)
+            _make(_gd)
+            _said = []
+            for _who in ("py", "sw"):
+                _r = subprocess.run([sys.executable, GATE, *_argv], cwd=_gd,
+                                    capture_output=True, timeout=300,
+                                    env={**os.environ, "GATE_CLI": ("off" if _who == "py"
+                                                                    else _cli_bin)})
+                _said.append((_imnoms(_r.stdout), _imnoms(_r.stderr), _r.returncode))
+            if _said[0] != _said[1]:
+                _gdw.append(_tag)
+            _out, _err = _said[0][0], _said[0][1]
+            if _tag == "named" and b"guard merge: holds" not in _out:
+                _gdw.append(_tag + ": the author of this world may not merge it")
+            if _tag == "an action no policy states" and (
+                    _said[0][2] != 1 or b"no policy states who may" not in _err):
+                _gdw.append(_tag + ": an ungoverned action is not said")
+            if _tag == "a lockfile" and b"required by nothing" not in _out:
+                _gdw.append(_tag + ": a leftover pin is not named")
+        if _gdw:
+            print("   who may act parts:", _gdw[:4])
+        S.append(("who may act is walked to the same verdict on both carriers", _gdw == []))
+
         # ── AND THE COURT GUARD, ON THE CARRIER THAT NOW ANSWERS THE VERB. The
         # mutant that holds this guard is planted in the python file, and
         # `status` no longer runs it: that plant holds the other carrier's half
@@ -8339,7 +8389,8 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                   .stdout.split() == ["stdlib", "export", "seam", "log", "aside", "declare",
                                       "mine", "theirs", "init", "drift", "my",
                                       "status", "fsck", "badge", "survey", "findings",
-                                      "report", "bare", "import", "verify", "library"]))
+                                      "report", "bare", "import", "verify", "library",
+                                      "guard"]))
         # ── AND THE LEDGER IS READ AGAINST THE ROAD IT IS WALKING. The strangler
         # has a length and a position, and both were feelings: the list of moved
         # veins lived in the binary and the list of verbs lived in the python
@@ -8596,10 +8647,10 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         # spelling left on the far side would be one question answered by two
         # carriers, which is the split this rule exists to forbid.
         _carried_verbs = set(_ledger) & _verbs
-        S.append(("the ledger names verbs the usage offers, 20 of 27 carried",
+        S.append(("the ledger names verbs the usage offers, 21 of 27 carried",
                   set(_ledger) <= _verbs | {"fsck"}
-                  and len(_ledger) == 21
-                  and len(_carried_verbs) == 20
+                  and len(_ledger) == 22
+                  and len(_carried_verbs) == 21
                   and len(_verbs) == 27
                   # and a name on the ledger is a whole verb: a prefix claims
                   # everything under it, so half a verb would take argv nobody

@@ -78,7 +78,7 @@ if args.contains("--out") && !args.contains("-o") {
 if args == ["--carries"] {
     out("stdlib\nexport\nseam\nlog\naside\ndeclare\nmine\ntheirs\ninit\ndrift\nmy\n"
         + "status\nfsck\nbadge\nsurvey\nfindings\nreport\nbare\nimport\n"
-        + "verify\nlibrary\n")
+        + "verify\nlibrary\nguard\n")
     exit(0)
 }
 
@@ -3676,6 +3676,277 @@ func runSaid(_ command: String, _ arguments: [String]) -> (code: Int32, said: St
     quiet.fileHandleForReading.readDataToEndOfFile()
     p.waitUntilExit()
     return (p.terminationStatus, said.trimmingCharacters(in: .whitespacesAndNewlines))
+}
+
+// one file, judged, with the addresses refined the way every caller wants them
+func judgeFile(_ path: String) -> (verdict: String, refusals: [(address: String, claim: String)],
+                                   judgeMs: String?, wallMs: Double) {
+    let t0 = Date()
+    let said = courtSays([path])
+    let wallMs = ((Date().timeIntervalSince(t0) * 1000 * 10).rounded(.toNearestOrEven)) / 10
+    let refusals = refineAddresses(readText(path) ?? "", judgedRefusals(said),
+                                   (path as NSString).lastPathComponent)
+    return (said.contains("THE JUDGE holds") ? "holds" : "refused", refusals,
+            matches("([\\d.]+) ms", said).compactMap { $0.first }.last, wallMs)
+}
+
+// insert a new entry after the LAST entry of the same form: a probe writes
+// beside an existing entry, in the world's own hand
+func lastEntryInsert(_ text: String, _ head: String, _ first: String, _ second: String,
+                     _ indent: Int) -> String {
+    let ns = text as NSString
+    guard let re = try? NSRegularExpression(pattern: head + "<\\s*(\\w+),\\s*(\\w+)\\s*>\\.self;?")
+    else { return text }
+    let hits = re.matches(in: text, range: NSRange(location: 0, length: ns.length))
+    guard let m = hits.last else {
+        cannot("no \(head) entries to anchor on",
+               "this change writes beside an existing entry, and the world has none")
+    }
+    let pad = String(repeating: " ", count: indent)
+    let inner = String(repeating: " ", count: indent + 4)
+    let entry = "\n\(pad)\(head)<\n\(inner)\(first),\n\(inner)\(second)\n\(pad)>.self"
+    let at = m.range.location + m.range.length
+    return ns.substring(to: at) + entry + ns.substring(from: at)
+}
+
+func withTemp(_ text: String, _ name: String) -> String {
+    // the probe carries the real world's filename, so addresses read as native
+    let d = scratchDir("gate-")
+    let p = (d as NSString).appendingPathComponent(name)
+    try? text.write(toFile: p, atomically: false, encoding: .utf8)
+    return p
+}
+
+func lockLine(_ path: String, _ name: String) -> Int {
+    guard let text = readText(path) else { return 1 }
+    for spelling in ["\"node_modules/\(name)\"", "\"\(name)\""] {
+        if let r = text.range(of: spelling) {
+            return text[text.startIndex..<r.lowerBound].components(separatedBy: "\n").count
+        }
+    }
+    return 1
+}
+
+// ── guard [merge] · guard deps [manifest lock]: the repository's OWN action
+// policy by the same gates. A git object (the HEAD author) becomes an identity
+// the world declares, becomes a probe entry of an existing form, becomes a
+// judgement. CI and hooks only transport the verdict.
+if args.first == "guard" {
+    let rest = Array(args.dropFirst()).filter { $0 != "--json" }
+    let asJson = args.contains("--json")
+    loadStatusShelf()
+    let w = discoverWorld()
+
+    if rest.first == "deps" {
+        // git's own soil: manifest against lockfile. The lock declares the atoms
+        // and a requirement references its pin through an axis, so a drift
+        // resolves to nothing, with an address. Not one new form.
+        let tail = Array(rest.dropFirst())
+        let manifestPath = tail.first ?? "package.json"
+        let lockPath = tail.count > 1 ? tail[1] : "package-lock.json"
+        let manifest = theirsJson(manifestPath, "a package manifest")
+        let lock = theirsJson(lockPath, "the lockfile your resolver wrote")
+        let deps = manifest.at("dependencies")?.asObject ?? []
+        var pins: [(name: String, version: String)] = []
+        for (name, info) in lock.at("packages")?.asObject ?? []
+        where name.hasPrefix("node_modules/") {
+            pins.append((String(name.dropFirst("node_modules/".count)),
+                         info.at("version")?.asText ?? ""))
+        }
+        func atom(_ n: String, _ v: String) -> String {
+            (n + "_" + v).replacingOccurrences(of: "-", with: "_")
+                .replacingOccurrences(of: ".", with: "_")
+                .replacingOccurrences(of: "@", with: "")
+                .replacingOccurrences(of: "/", with: "_")
+        }
+        var lines = ["// printed by gate guard deps: the lockfile declares the atoms,",
+                     "// the manifest's requirements reference them, so a drift fails to resolve.",
+                     ""]
+        var srcmap: [Int: String] = [:]
+        for p in pins.sorted(by: { $0.name < $1.name }) {
+            lines.append("public enum \(atom(p.name, p.version)): Close {}")
+        }
+        lines.append("")
+        for (n, wantSaid) in deps.sorted(by: { $0.0 < $1.0 }) {
+            let want = wantSaid.asText ?? ""
+            let pinned = pins.first(where: { $0.name == n })?.version
+            let first = want.first
+            let target = (first != nil && (first!.isNumber || want.hasPrefix("=")))
+                ? atom(n, String(want.drop(while: { $0 == "=" || $0 == "v" })))
+                : (pinned.map { atom(n, $0) } ?? atom(n, "unpinned"))
+            let stem = String(atom(n, "").dropLast())
+            lines.append("public enum Req_\(stem): Close {")
+            srcmap[lines.count] = "\((manifestPath as NSString).lastPathComponent) · "
+                + "\"\(n)\": \"\(want)\""
+            lines.append("    public typealias Pin = \(target)")
+            lines.append("}")
+        }
+        let orphans = pins.map { $0.name }.filter { name in
+            !deps.contains(where: { $0.0 == name }) }.sorted()
+        let world = lines.joined(separator: "\n") + "\n"
+        let d = scratchDir("gate-deps-")
+        let p = (d as NSString).appendingPathComponent("deps-gate.swift")
+        try? world.write(toFile: p, atomically: false, encoding: .utf8)
+        var said = judgeFile(p)
+        var sources: [String?] = said.refusals.map { ref in
+            guard let n = Int(ref.address.components(separatedBy: ":").last ?? "")
+            else { return nil }
+            for k in max(0, n - 2)..<(n + 2) { if let s = srcmap[k] { return s } }
+            return nil
+        }
+        try? FileManager.default.removeItem(atPath: d)
+        var verdict = said.verdict
+        if !orphans.isEmpty {
+            verdict = "refused"
+            for o in orphans {
+                let version = pins.first(where: { $0.name == o })?.version ?? ""
+                said.refusals.append((
+                    "\((lockPath as NSString).lastPathComponent):\(lockLine(lockPath, o))",
+                    "pin \(o)@\(version) is required by nothing: a leftover after removal"))
+                sources.append(nil)
+            }
+        }
+        let note = "a sketch, and not a product path: only orphan pins are detected. A missing "
+                 + "pin yields a holds that means nothing, because the judge resolves no axis "
+                 + "without a reading premise. Native ecosystem lockfile checkers already cover "
+                 + "this class"
+        if asJson {
+            var pairs: [(String, StatusJSON)] = [
+                ("command", .text("guard deps")),
+                ("requirements", .raw(String(deps.count))),
+                ("pins", .raw(String(pins.count))),
+                ("verdict", .text(verdict)),
+                ("refusals", .list(said.refusals.enumerated().map { (i, r) in
+                    var one: [(String, StatusJSON)] = [("address", .text(r.address)),
+                                                       ("claim", .text(r.claim))]
+                    if i < sources.count, let s = sources[i] { one.append(("source", .text(s))) }
+                    return .object(one) })),
+                ("judge_ms", said.judgeMs.map { .raw(floatRepr($0)) } ?? .null),
+                ("wall_ms", .raw(String(said.wallMs))),
+            ]
+            if !orphans.isEmpty {
+                pairs.append(("orphan_pins", .list(orphans.map { .text($0) })))
+            }
+            pairs.append(("note", .text(note)))
+            out(statusDumps(.object(pairs), 0) + "\n")
+        } else {
+            var lines = ["guard deps: "
+                         + (verdict == "holds" ? "holds" : "refused \(said.refusals.count)")
+                         + (said.judgeMs.map { " · " + floatRepr($0) + " ms" } ?? "")]
+            for (i, r) in said.refusals.enumerated() {
+                let s = i < sources.count ? (sources[i] ?? "") : ""
+                lines.append("  \(r.address) · \(r.claim)" + (s.isEmpty ? "" : "  (\(s))"))
+            }
+            lines.append("  note: " + note)
+            out(lines.joined(separator: "\n") + "\n")
+        }
+        exit(verdict == "holds" ? 0 : 1)
+    }
+
+    let action = rest.first ?? "merge"
+    guard let facts = w.facts, FileManager.default.fileExists(atPath: facts) else {
+        cannot("guard reads who may act from a world, and there is no world here",
+               "run `gate init .` to start one, or `gate demo` for a repository to look at")
+    }
+    let worldDir = (absPath(facts) as NSString).deletingLastPathComponent
+    let email = runGit(["log", "-1", "--format=%ae"], worldDir)
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+    var policy = readPolicy(w)
+    var statedIn = "gate.policy.swift"
+    if policy.ids.isEmpty && policy.rules.isEmpty, let tables = w.tables {
+        // a world that has not stated them yet: the tables are a seed, and the
+        // sentence says so rather than pretending the world declared it
+        statedIn = "tables (a seed): declare them in the world to put them under review"
+        let idp = (tables as NSString).appendingPathComponent("identities.csv")
+        if FileManager.default.fileExists(atPath: idp) {
+            let t = csvTable(idp, "the identities this world binds")
+            for r in t.rows.indices {
+                policy.ids.append((t.text(r, "email"), t.text(r, "id")))
+            }
+        }
+        let gp = (tables as NSString).appendingPathComponent("guard.csv")
+        if FileManager.default.fileExists(atPath: gp) {
+            let t = csvTable(gp, "the actions this world guards")
+            for r in t.rows.indices {
+                policy.rules.append((t.text(r, "action"), t.text(r, "requires_rank")))
+            }
+        }
+    }
+    guard let required = policy.rules.first(where: { $0.action == action })?.rank else {
+        // capitalize the way the other carrier's str.capitalize does: the first
+        // letter up and the rest DOWN. And the doubled braces are its own, from
+        // an f-string that escapes them twice: a sentence is copied, not fixed.
+        cannot("no policy states who may " + action,
+               "declare `public enum " + action.prefix(1).uppercased()
+               + action.dropFirst().lowercased()
+               + "Policy {{ public typealias Requires = <rank> }}` in gate.policy.swift")
+    }
+    let who = policy.ids.first(where: { $0.mail == email })?.who
+    func answer(_ pairs: [(String, StatusJSON)], _ red: Bool) -> Never {
+        if asJson {
+            out(statusDumps(.object(pairs), 0) + "\n")
+        } else {
+            var lines: [String] = []
+            var head = ""
+            var refusals: [(String, String)] = []
+            var ms: String? = nil
+            for (k, v) in pairs {
+                if k == "verdict", case .text(let s) = v { head = s }
+                if k == "judge_ms", case .raw(let s) = v { ms = s }
+                if k == "refusals", case .list(let items) = v {
+                    for one in items {
+                        guard case .object(let o) = one else { continue }
+                        var a = "", c = ""
+                        for (kk, vv) in o {
+                            if kk == "address", case .text(let s) = vv { a = s }
+                            if kk == "claim", case .text(let s) = vv { c = s }
+                        }
+                        refusals.append((a, c))
+                    }
+                }
+            }
+            lines.append("guard \(action): "
+                         + (head == "holds" ? "holds" : "refused \(refusals.count)")
+                         + (ms.map { " · " + $0 + " ms" } ?? ""))
+            for (a, c) in refusals { lines.append("  \(a) · \(c)") }
+            out(lines.joined(separator: "\n") + "\n")
+        }
+        exit(red ? 1 : 0)
+    }
+    guard let who = who else {
+        answer([("command", .text("guard " + action)), ("author", .text(email)),
+                ("policy_from", .text(statedIn)), ("verdict", .text("refused")),
+                ("refusals", .list([.object([
+                    ("address", .text((facts as NSString).lastPathComponent)),
+                    ("claim", .text("author \(email) is not mapped to any person: an "
+                                    + "unknown identity performs no guarded action"))])]))],
+               true)
+    }
+    // the shared world alone, and literally the same reading `status` makes
+    if !worldPeopleOf(w).contains(who) {
+        let (f, ln) = policy.whereAt[email] ?? ((facts as NSString).lastPathComponent, 1)
+        answer([("command", .text("guard " + action)),
+                ("author", .text("\(email) = \(who)")),
+                ("policy_from", .text(statedIn)), ("verdict", .text("refused")),
+                ("refusals", .list([.object([
+                    ("address", .text("\(f):\(ln)")),
+                    ("claim", .text("an identity names `\(who)`, and the world declares "
+                                    + "no such person"))])]))],
+               true)
+    }
+    let probe = lastEntryInsert(readText(facts) ?? "", "VerifiedAtRank", who, required, 8)
+    let said = judgeFile(withTemp(probe, (facts as NSString).lastPathComponent))
+    answer([("command", .text("guard " + action)),
+            ("author", .text("\(email) = \(who)")),
+            ("requires", .text(required)),
+            ("policy_from", .text(statedIn)),
+            ("verdict", .text(said.verdict)),
+            ("refusals", .list(said.refusals.map {
+                .object([("address", .text($0.address)), ("claim", .text($0.claim))]) })),
+            ("judge_ms", said.judgeMs.map { .raw(floatRepr($0)) } ?? .null),
+            ("wall_ms", .raw(String(said.wallMs))),
+            ("mutates", .raw("false"))],
+           said.verdict != "holds")
 }
 
 if args.first == "verify" {
