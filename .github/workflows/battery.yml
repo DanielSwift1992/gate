@@ -3,6 +3,9 @@ on: [push, pull_request]
 jobs:
   green:
     runs-on: macos-latest
+    permissions:
+      contents: read
+      statuses: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4
       # the runner's own Xcode swift builds the corpus: a pinned separate
@@ -11,7 +14,22 @@ jobs:
       # the judge is rebuilt from the public theory corpus at the pin,
       # so the battery never trusts a stale vendored binary
       - run: bin/build-judge.sh d74e258
-      - run: python3 tests/smoke.py
+      # the same tee as linux: this job went red once with its log closed
+      # and its mouth shut, and a red nobody can read is a red that gets
+      # guessed at. One mechanism, both platforms.
+      - run: |
+          python3 tests/smoke.py 2>&1 | tee /tmp/smoke-out.txt
+          exit ${PIPESTATUS[0]}
+      - if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SAID=$(grep -m3 -E '^FAIL|^   ' /tmp/smoke-out.txt | paste -sd '; ' - || true)
+          [ -n "$SAID" ] || SAID=$(tail -1 /tmp/smoke-out.txt)
+          BODY=$(python3 -c 'import json,sys; print(json.dumps({"state":"failure","context":"macos-first-fail","description":sys.argv[1][:138]}))' "$SAID")
+          curl -s -X POST -H "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -d "$BODY" > /dev/null
       # a fresh shot of the bench on every run, downloadable from the run's
       # artifacts. The battery holds docs/bench.png.from to web/ui.html, so a
       # stale committed picture is already red above; committing the fresh
