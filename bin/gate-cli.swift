@@ -2801,6 +2801,87 @@ if args.first == "--status-core" {
     statusDoor(args.contains("--json"))
 }
 
+// ── THE REPOSITORY'S OWN HISTORY, READ ONCE. `log` prints it, and the verbs
+// that ask what is true of this clone read it rather than walking git a second
+// time with a second set of rules. Observed, never judged: a commit is closed
+// exactly when the default branch reaches it, and open otherwise.
+struct JournalCommit {
+    var hash = "", email = "", when = "", subject = ""
+    var files: [String] = []
+    var touches = false
+    var closed: Bool? = nil
+}
+
+struct Journal {
+    var commits: [JournalCommit] = []
+    var branch = ""
+    var me = ""
+    var narrowed = true
+}
+
+// which files a world is made of, for the purpose of whose history this is: the
+// plain court's own list, the forms rows beside it, and the policy. Whose
+// history a file belongs to does not depend on which court reads it.
+func journalWorld(_ base: String) -> Set<String> {
+    var world = Set<String>()
+    if FileManager.default.fileExists(atPath: (base as NSString)
+        .appendingPathComponent("gate.swift")) { world.insert("gate.swift") }
+    let (rows, manifest) = manifestRows(base)
+    if manifest != nil {
+        for r in rows where r.role == "world" || r.role == "forms" {
+            if FileManager.default.fileExists(atPath:
+                (base as NSString).appendingPathComponent(r.path)) { world.insert(r.path) }
+        }
+    }
+    if FileManager.default.fileExists(atPath: (base as NSString)
+        .appendingPathComponent("gate.policy.swift")) { world.insert("gate.policy.swift") }
+    return world
+}
+
+func repoJournal(_ base: String, _ world: Set<String>, scope: String, limit: Int,
+                 onlyMe: Bool) -> Journal {
+    var journal = Journal()
+    for candidate in ["origin/HEAD", "main", "master"] {
+        let said = runGit(["rev-parse", "--verify", "-q", candidate], base)
+        if !said.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            journal.branch = candidate
+            break
+        }
+    }
+    var merged = Set<String>()
+    if !journal.branch.isEmpty {
+        merged = Set(runGit(["rev-list", journal.branch], base)
+            .split(whereSeparator: { $0 == "\n" || $0 == " " }).map(String.init))
+    }
+    journal.narrowed = !(scope == "world" && world.isEmpty)
+    var arguments = ["log", "--all", "-\(limit)",
+                     "--format=%x01%H%x1f%ae%x1f%aI%x1f%s", "--name-only"]
+    if scope == "world" && !world.isEmpty { arguments += ["--"] + world.sorted() }
+    for line in runGit(arguments, base).components(separatedBy: "\n") {
+        if line.hasPrefix("\u{01}") {
+            let parts = String(line.dropFirst()).components(separatedBy: "\u{1f}")
+            var c = JournalCommit()
+            c.hash = parts.count > 0 ? parts[0] : ""
+            c.email = parts.count > 1 ? parts[1] : ""
+            c.when = parts.count > 2 ? parts[2] : ""
+            c.subject = parts.count > 3 ? parts[3] : ""
+            c.closed = merged.isEmpty ? nil : merged.contains(c.hash)
+            journal.commits.append(c)
+        } else if !line.trimmingCharacters(in: .whitespaces).isEmpty,
+                  !journal.commits.isEmpty {
+            let f = line.trimmingCharacters(in: .whitespaces)
+            journal.commits[journal.commits.count - 1].files.append(f)
+            if world.contains(f) { journal.commits[journal.commits.count - 1].touches = true }
+        }
+    }
+    journal.me = runGit(["config", "user.email"], base)
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+    if onlyMe && !journal.me.isEmpty {
+        journal.commits = journal.commits.filter { $0.email == journal.me }
+    }
+    return journal
+}
+
 // every whole match of a pattern, in the order they stand: `matches` hands back
 // capture groups, and a pattern with none of those has nothing to hand back
 func wholeMatches(_ pattern: String, _ text: String) -> [String] {
@@ -4580,20 +4661,8 @@ if args.first == "log" {
     let base = here
     let limit = rest.compactMap { Int($0) }.first ?? 200
 
-    // which files this world is made of: the plain court's own list, and the
-    // forms rows beside it, because whose history this is does not depend on
-    // which court reads the file
-    var world = Set<String>()
-    if FileManager.default.fileExists(atPath: facts) { world.insert("gate.swift") }
-    if manifest != nil {
-        for r in rows where r.role == "world" || r.role == "forms" {
-            if FileManager.default.fileExists(atPath: (here as NSString).appendingPathComponent(r.path)) {
-                world.insert(r.path)
-            }
-        }
-    }
-    let policy = (here as NSString).appendingPathComponent("gate.policy.swift")
-    if FileManager.default.fileExists(atPath: policy) { world.insert("gate.policy.swift") }
+    let world = journalWorld(here)
+    _ = (rows, manifest, facts)
 
     // a word typed now outranks a standing declaration, the way it does
     // everywhere else; with no word, the wheel the operator turned answers
@@ -4615,45 +4684,9 @@ if args.first == "log" {
     let onlyMe = wheel["Author"] == "Me"
     let who = identities(base)
 
-    var branch = ""
-    for candidate in ["origin/HEAD", "main", "master"] {
-        let said = runGit(["rev-parse", "--verify", "-q", candidate], base)
-        if !said.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            branch = candidate
-            break
-        }
-    }
-    var merged = Set<String>()
-    if !branch.isEmpty {
-        merged = Set(runGit(["rev-list", branch], base)
-            .split(whereSeparator: { $0 == "\n" || $0 == " " }).map(String.init))
-    }
-    let narrowed = !(scope == "world" && world.isEmpty)
-    var arguments = ["log", "--all", "-\(limit)", "--format=%x01%H%x1f%ae%x1f%aI%x1f%s", "--name-only"]
-    if scope == "world" && !world.isEmpty { arguments += ["--"] + world.sorted() }
-    let said = runGit(arguments, base)
-
-    struct Commit { var hash = "", email = "", when = "", subject = ""
-                    var files: [String] = []; var touches = false; var closed: Bool? = nil }
-    var commits: [Commit] = []
-    for line in said.components(separatedBy: "\n") {
-        if line.hasPrefix("\u{01}") {
-            let parts = String(line.dropFirst()).components(separatedBy: "\u{1f}")
-            var c = Commit()
-            c.hash = parts.count > 0 ? parts[0] : ""
-            c.email = parts.count > 1 ? parts[1] : ""
-            c.when = parts.count > 2 ? parts[2] : ""
-            c.subject = parts.count > 3 ? parts[3] : ""
-            c.closed = merged.isEmpty ? nil : merged.contains(c.hash)
-            commits.append(c)
-        } else if !line.trimmingCharacters(in: .whitespaces).isEmpty, !commits.isEmpty {
-            let f = line.trimmingCharacters(in: .whitespaces)
-            commits[commits.count - 1].files.append(f)
-            if world.contains(f) { commits[commits.count - 1].touches = true }
-        }
-    }
-    let me = runGit(["config", "user.email"], base).trimmingCharacters(in: .whitespacesAndNewlines)
-    if onlyMe && !me.isEmpty { commits = commits.filter { $0.email == me } }
+    let journal = repoJournal(base, world, scope: scope, limit: limit, onlyMe: onlyMe)
+    let (commits, branch, me, narrowed) = (journal.commits, journal.branch,
+                                           journal.me, journal.narrowed)
     let nextSaid = world.isEmpty
         ? "run `gate demo` for a repository to look at, or drop a table you already export "
           + "into tables/ and run `gate status`"
