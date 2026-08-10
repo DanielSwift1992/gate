@@ -10554,9 +10554,10 @@ public enum MyWatch: AccessLedger {
     # before the deploy step, so a red there is about publishing and not about
     # this repository, and the status now says which.
     S.append(("a job that can go red posts a status naming itself",
-              _ci.count("if: failure()") == 2
+              _ci.count("if: failure()") == 3
               and "pages-publish" in _ci and "linux-first-fail" in _ci
-              and _ci.count("statuses: write") == 2))
+              and "macos-first-fail" in _ci
+              and _ci.count("statuses: write") == 3))
     # ── AND PUBLISHING IS ASKED ABOUT BEFORE IT IS ATTEMPTED. `deploy-pages`
     # fails with an empty message when Pages is off or its source is a branch,
     # and that is what three runs were: checkout, build, road test and artifact
