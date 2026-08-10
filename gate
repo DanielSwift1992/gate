@@ -6599,7 +6599,12 @@ th{{background:#f5f5f7}}.ok{{color:#248a3d}}.bad li{{color:#c4453b;margin:.3em 0
 {findings_html}
 """
     if out_path:
-        with open(out_path, "w") as f:
+        # ── AND A PLACE THAT CANNOT HOLD A FILE IS SAID HERE TOO. This opened
+        # argv straight, so `report -o adir` met a person with an
+        # IsADirectoryError and a stack trace: the writing half of every other
+        # verb has said this in words for a while, and the audit page was the
+        # one that had not been taken through the same walk.
+        with ours_write(out_path, "the page") as f:
             f.write(html)
     return {"command": "report", "wrote": out_path, "people": len(people), "grants": len(grants),
             **{k: r[k] for k in ("verdict", "judge_ms")}, "refusals": r["refusals"],

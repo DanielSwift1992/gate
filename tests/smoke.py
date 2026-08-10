@@ -7818,6 +7818,83 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         S.append(("what is true of a repository, and of one pair over its commits, alike",
                   _fdw == []))
 
+        # ── AND THE AUDIT PAGE, which is the one answer here that is a FILE
+        # somebody mails. Its words are the verdict, and its bytes are the page:
+        # both are held, because a page that renders the same and differs by a
+        # byte is two pages to whoever diffs them. The clock inside it is a
+        # duration and is normalized away; everything else is compared whole.
+        _rpw = []
+        def _rp_org(_d):
+            run("demo", "org", _d)
+        def _rp_red(_d):
+            run("demo", "org", _d)
+            _rw = os.path.join(_d, "gate.swift")
+            open(_rw, "w").write(open(_rw, encoding="utf-8").read().replace(
+                "public typealias Home = Engineering", "public typealias Home = Finance", 1))
+        def _rp_history(_d):
+            # the page names the commits that last touched the policy, so its
+            # bytes carry hashes: two repositories built a second apart are two
+            # different pages, and comparing them would be comparing clocks
+            # rather than carriers. The dates are given by hand, which makes the
+            # hashes a function of the content, the way the observation walks do.
+            run("demo", "org", _d)
+            for _msg in ("the policy is stated", "the policy changes"):
+                if _msg.endswith("changes"):
+                    open(os.path.join(_d, "gate.policy.swift"), "a").write("\n")
+                _fd_at(_d, "2026-05-0%d" % (1 if _msg.endswith("stated") else 2), _msg)
+        def _rp_tables(_d):
+            os.makedirs(os.path.join(_d, "tables"), exist_ok=True)
+            subprocess.run(["git", "init", "-q", "-b", "main", _d], capture_output=True)
+            shutil.copy(os.path.join(DEMO, "people.csv"), os.path.join(_d, "tables"))
+            shutil.copy(os.path.join(DEMO, "grants.csv"), os.path.join(_d, "tables"))
+        def _rp_adir(_d):
+            run("demo", "org", _d)
+            os.makedirs(os.path.join(_d, "adir"), exist_ok=True)
+        _rpnoms = lambda b: re.sub(rb"[0-9.]+ ms", b"MS",
+                                   re.sub(rb'"judge_ms": [0-9.]+', rb'"judge_ms": MS', b))
+        for _tag, _make, _argv in (
+                ("an organization", _rp_org, ["report"]),
+                ("an organization, as an answer", _rp_org, ["report", "--json"]),
+                ("written out", _rp_org, ["report", "-o", "audit.html"]),
+                ("a red world", _rp_red, ["report", "--json"]),
+                ("a policy with a history", _rp_history, ["report", "-o", "audit.html"]),
+                ("seeded from tables", _rp_tables, ["report", "-o", "audit.html"]),
+                ("nowhere to write", _rp_adir, ["report", "-o", "adir"]),
+                ("no world at all", lambda _d: None, ["report"])):
+            _said, _page = [], []
+            for _who in ("py", "sw"):
+                _rd = os.path.join(tmp, "report-" + str(abs(hash(_tag)) % 9973) + _who)
+                shutil.rmtree(_rd, ignore_errors=True)
+                os.makedirs(_rd, exist_ok=True)
+                _make(_rd)
+                _r = subprocess.run([sys.executable, GATE, *_argv], cwd=_rd,
+                                    capture_output=True, timeout=300,
+                                    env={**os.environ, "GATE_CLI": ("off" if _who == "py"
+                                                                    else _cli_bin)})
+                _said.append((_rpnoms(_r.stdout), _rpnoms(_r.stderr), _r.returncode))
+                _pg = os.path.join(_rd, "audit.html")
+                _page.append(_rpnoms(open(_pg, "rb").read()) if os.path.exists(_pg) else None)
+            if _said[0] != _said[1]:
+                _rpw.append(_tag + ": the answer")
+            if _page[0] != _page[1]:
+                _rpw.append(_tag + ": the page")
+            if _tag == "written out" and (_page[0] is None
+                                          or b"<h2>Verdict</h2>" not in _page[0]):
+                _rpw.append(_tag + ": no page was written")
+            if _tag == "a policy with a history" and b"Last changed" not in (_page[0] or b""):
+                _rpw.append(_tag + ": the policy's own history is missing from the page")
+            if _tag == "seeded from tables" and b"<h2>Grants</h2>" not in (_page[0] or b""):
+                _rpw.append(_tag + ": a world seeded by this very run is not on the page")
+            if _tag == "nowhere to write" and (
+                    _said[0][2] != 1 or b"is a directory" not in _said[0][1]):
+                _rpw.append(_tag + ": a place that cannot hold a file is not said")
+            if _tag == "no world at all" and (
+                    _said[0][2] != 1 or b"there is no world here" not in _said[0][1]):
+                _rpw.append(_tag + ": a page is printed out of no world")
+        if _rpw:
+            print("   the report parts:", _rpw[:4])
+        S.append(("the audit page is one page on both carriers, words and bytes", _rpw == []))
+
         # ── AND THE COURT GUARD, ON THE CARRIER THAT NOW ANSWERS THE VERB. The
         # mutant that holds this guard is planted in the python file, and
         # `status` no longer runs it: that plant holds the other carrier's half
@@ -8036,7 +8113,8 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                   subprocess.run([_cli_bin, "--carries"], capture_output=True, text=True)
                   .stdout.split() == ["stdlib", "export", "seam", "log", "aside", "declare",
                                       "mine", "theirs", "init", "drift", "my",
-                                      "status", "fsck", "badge", "survey", "findings"]))
+                                      "status", "fsck", "badge", "survey", "findings",
+                                      "report"]))
         # ── AND THE LEDGER IS READ AGAINST THE ROAD IT IS WALKING. The strangler
         # has a length and a position, and both were feelings: the list of moved
         # veins lived in the binary and the list of verbs lived in the python
@@ -8293,10 +8371,10 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         # spelling left on the far side would be one question answered by two
         # carriers, which is the split this rule exists to forbid.
         _carried_verbs = set(_ledger) & _verbs
-        S.append(("the ledger names verbs the usage offers, 15 of 27 carried",
+        S.append(("the ledger names verbs the usage offers, 16 of 27 carried",
                   set(_ledger) <= _verbs | {"fsck"}
-                  and len(_ledger) == 16
-                  and len(_carried_verbs) == 15
+                  and len(_ledger) == 17
+                  and len(_carried_verbs) == 16
                   and len(_verbs) == 27
                   # and a name on the ledger is a whole verb: a prefix claims
                   # everything under it, so half a verb would take argv nobody

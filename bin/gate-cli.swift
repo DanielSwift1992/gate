@@ -72,7 +72,7 @@ if args.contains("--out") && !args.contains("-o") {
 // argv it does not answer, and the python side would never see it.
 if args == ["--carries"] {
     out("stdlib\nexport\nseam\nlog\naside\ndeclare\nmine\ntheirs\ninit\ndrift\nmy\n"
-        + "status\nfsck\nbadge\nsurvey\nfindings\n")
+        + "status\nfsck\nbadge\nsurvey\nfindings\nreport\n")
     exit(0)
 }
 
@@ -1789,34 +1789,52 @@ func policyPathOf(_ w: WorldState) -> String? {
     return FileManager.default.fileExists(atPath: p) ? p : nil
 }
 
-func policyGuards(_ w: WorldState) -> [(address: String, claim: String)] {
-    // the policy file is not in the judged list, so status guards it: every
-    // Person an identity names is declared by the world, every Requires is a
-    // name something this world reads declares
-    guard let pp = policyPathOf(w) else { return [] }
-    let text = readText(pp) ?? ""
+// who somebody is, and what an action demands: facts declared in the policy
+// file and travelling through git like every other fact. Read once, here, so
+// the guard that judges them and the page that prints them read one file with
+// one pair of eyes.
+struct PolicyRead {
     var ids: [(mail: String, who: String)] = []
     var rules: [(action: String, rank: String)] = []
     var whereAt: [String: (String, Int)] = [:]
-    let name = (pp as NSString).lastPathComponent
+    var name = ""
+}
+
+func readPolicy(_ w: WorldState) -> PolicyRead {
+    var said = PolicyRead()
+    guard let pp = policyPathOf(w) else { return said }
+    let text = readText(pp) ?? ""
+    said.name = (pp as NSString).lastPathComponent
+    let name = said.name
     for (m, at) in matchesAt("(?:public\\s+)?enum\\s+(\\w+)\\s*:[^{\\n]*\\bIdentity\\b[^{\\n]*"
                              + "\\{(.*?)\\n\\}", text, dotAll: true) {
         guard let who = matches("typealias\\s+Person\\s*=\\s*(\\w+)", m[1]).first?.first,
               let mail = matches("extension\\s+" + m[0] + "\\b.*?typeName.*?\"([^\"]+)\"",
                                  text, dotAll: true).first?.first else { continue }
-        if let i = ids.firstIndex(where: { $0.mail == mail }) { ids[i] = (mail, who) }
-        else { ids.append((mail, who)) }
-        whereAt[mail] = (name, at)
+        if let i = said.ids.firstIndex(where: { $0.mail == mail }) { said.ids[i] = (mail, who) }
+        else { said.ids.append((mail, who)) }
+        said.whereAt[mail] = (name, at)
     }
     for (m, at) in matchesAt("(?:public\\s+)?enum\\s+(\\w+)Policy\\s*\\{(.*?)\\n\\}",
                              text, dotAll: true) {
         guard let req = matches("typealias\\s+Requires\\s*=\\s*(\\w+)", m[1]).first?.first
         else { continue }
         let action = m[0].lowercased()
-        if let i = rules.firstIndex(where: { $0.action == action }) { rules[i] = (action, req) }
-        else { rules.append((action, req)) }
-        whereAt["policy:" + action] = (name, at)
+        if let i = said.rules.firstIndex(where: { $0.action == action }) {
+            said.rules[i] = (action, req)
+        } else { said.rules.append((action, req)) }
+        said.whereAt["policy:" + action] = (name, at)
     }
+    return said
+}
+
+func policyGuards(_ w: WorldState) -> [(address: String, claim: String)] {
+    // the policy file is not in the judged list, so status guards it: every
+    // Person an identity names is declared by the world, every Requires is a
+    // name something this world reads declares
+    guard policyPathOf(w) != nil else { return [] }
+    let said = readPolicy(w)
+    let (ids, rules, whereAt, name) = (said.ids, said.rules, said.whereAt, said.name)
     let people = worldPeopleOf(w)
     var declared = people
     let base = layoutDir(w) ?? "."
@@ -3178,6 +3196,171 @@ func wholeMatches(_ pattern: String, _ text: String) -> [String] {
     let ns = text as NSString
     return re.matches(in: text, range: NSRange(location: 0, length: ns.length))
         .map { ns.substring(with: $0.range) }
+}
+
+// the world's two tables, read back out of the text it is written in
+func worldRows(_ text: String) -> (people: [[(String, String)]], grants: [(String, String)]) {
+    var people: [[(String, String)]] = []
+    for m in matches("public enum (\\w+): Employee, Person \\{(.*?)\\n\\}", text, dotAll: true) {
+        var row: [(String, String)] = [("id", m[0])]
+        for f in matches("public typealias (\\w+) = ([\\w.]+)", m[1]) where f[0] != "Sex" {
+            row.append((f[0].lowercased(), f[1]))
+        }
+        people.append(row)
+    }
+    let grants = matches("VerifiedView<\\s*(\\w+),\\s*(\\w+)\\s*>\\.self;", text)
+        .map { ($0[0], $0[1]) }
+    return (people, grants)
+}
+
+// the judge pins a refusal to the previous drain's line: refine the address to
+// the line holding the refusal's subject, in a window nearby
+func refineAddresses(_ text: String, _ refusals: [(address: String, claim: String)],
+                     _ fname: String) -> [(address: String, claim: String)] {
+    let fileLines = text.components(separatedBy: "\n")
+    return refusals.map { ref in
+        let parts = ref.address.components(separatedBy: ":")
+        guard parts.count > 1, let n = Int(parts[1]) else { return ref }
+        let found = matches("requires (\\w+)\\.", ref.claim).first?.first
+            ?? matches("(\\w+)(?:\\.\\w+)? resolves to nothing", ref.claim).first?.first
+            ?? matchAt(ref.claim, "(\\w+)\\.").map { $0[1] }
+        guard let subject = found else { return ref }
+        for k in max(0, n - 4)..<min(fileLines.count, n + 8) {
+            if !matches("\\b" + subject + "\\b", fileLines[k]).isEmpty
+                || fileLines[k].range(of: "\\b" + subject + "\\b", options: .regularExpression)
+                    != nil {
+                return (address: "\(fname):\(k + 1)", claim: ref.claim)
+            }
+        }
+        return ref
+    }
+}
+
+// ── report [-o report.html]: the printable audit page, the world's tables plus
+// the verdict. No server: one self-contained page, mailable to an audit.
+//
+// AND NOTHING LANDS IN SOMEBODY'S REPOSITORY UNASKED. This defaulted to
+// `report.html` once and dropped the file into the working copy of anybody who
+// typed the verb to see what it did, while the page beside it promised that
+// unless you ask for it by name with `-o`, your repository is left as it was.
+if args.first == "report" {
+    let rest = Array(args.dropFirst()).filter { $0 != "--json" }
+    let asJson = args.contains("--json")
+    let outPath = rest.firstIndex(of: "-o").flatMap { $0 + 1 < rest.count ? rest[$0 + 1] : nil }
+    loadStatusShelf()
+    let w = discoverWorld()
+    ensureWorld(w)
+    // a page is printed OUT OF a world, and this read the facts without asking
+    // whether there is one: in a repository with none it opened nothing and raised
+    guard let facts = w.facts, FileManager.default.fileExists(atPath: facts) else {
+        cannot("report prints a world and its verdict as one page, and there is no world here",
+               "run `gate init .` to start one, or `gate demo` for a repository to look "
+               + "at. `report -o audit.html` writes the page; without `-o` nothing is written")
+    }
+    let text = readText(facts) ?? ""
+    let (people, grants) = worldRows(text)
+    let said = courtSays([facts])
+    let refusals = refineAddresses(text, judgedRefusals(said),
+                                   (facts as NSString).lastPathComponent)
+    let holds = said.contains("THE JUDGE holds")
+    let judgeMs = matches("([\\d.]+) ms", said).compactMap { $0.first }.last
+    func table(_ rows: [[(String, String)]], _ cols: [String]) -> String {
+        let head = cols.map { "<th>\($0)</th>" }.joined()
+        let body = rows.map { row in
+            "<tr>" + cols.map { c in
+                "<td>" + (row.first(where: { $0.0 == c })?.1 ?? "") + "</td>" }.joined() + "</tr>"
+        }.joined()
+        return "<table><tr>\(head)</tr>\(body)</table>"
+    }
+    let verdictHtml = holds && refusals.isEmpty
+        ? "<p class='ok'>holds: every claim checked</p>"
+        : "<ul class='bad'>"
+          + refusals.map { "<li><code>\($0.address)</code> · \($0.claim)</li>" }.joined()
+          + "</ul>"
+    // who may do what, and when that last changed: an audit asks for both, and
+    // git already answers the second out of the policy's own history
+    let policy = readPolicy(w)
+    var policyHtml = ""
+    if !policy.ids.isEmpty || !policy.rules.isEmpty {
+        var rows: [[(String, String)]] = policy.rules.sorted { $0.action < $1.action }
+            .map { [("what", "\($0.action) requires"), ("who", $0.rank)] }
+        rows += policy.ids.sorted { $0.mail < $1.mail }
+            .map { [("what", $0.mail), ("who", $0.who)] }
+        let base = w.facts.map { (absPath($0) as NSString).deletingLastPathComponent }
+            ?? FileManager.default.currentDirectoryPath
+        let journal = repoJournal(base, journalWorld(base), scope: "world", limit: 50,
+                                  onlyMe: false)
+        let who = identities(base)
+        let pf = policyPathOf(w).map { ($0 as NSString).lastPathComponent } ?? ""
+        let changes = journal.commits.filter { !pf.isEmpty && $0.files.contains(pf) }
+        let hist = changes.prefix(10).map { c in
+            "<li><code>\(String(c.hash.prefix(8)))</code> \(String(c.when.prefix(10))) · "
+            + (who[c.email] ?? c.email) + " · \(c.subject)</li>"
+        }.joined()
+        policyHtml = "<h2>Policy</h2>" + table(rows, ["what", "who"])
+            + (hist.isEmpty ? "<p>Stated, and unchanged in the last 50 commits.</p>"
+                            : "<p>Last changed:</p><ul>" + hist + "</ul>")
+    }
+    let found = repoFindings(200)
+    var findingsHtml = ""
+    if !found.isEmpty {
+        let items = found.map { f in
+            "<li>\(f.sentence)<br><small>"
+            + (f.kind == "judged" ? "checked by the judge"
+                                  : "read from git history, not a verdict")
+            + " · \(f.evidence)</small></li>"
+        }.joined()
+        findingsHtml = "<h2>Findings</h2><ul class='findings'>\(items)</ul>"
+    }
+    let html = """
+        <!-- printed by gate report; the table is read from the world, never stored -->
+        <meta charset="utf-8"><title>gate report</title>
+        <style>
+        body{font:14px/1.5 -apple-system,sans-serif;max-width:60em;margin:2em auto;padding:0 1em;color:#1d1d1f}
+        table{border-collapse:collapse;margin:1em 0}td,th{border:1px solid #d2d2d7;padding:.3em .8em;text-align:left}
+        th{background:#f5f5f7}.ok{color:#248a3d}.bad li{color:#c4453b;margin:.3em 0}code{background:#f5f5f7;padding:0 .3em}
+        .findings li{margin:.6em 0}.findings small{color:#8e8e93}
+        </style>
+        <h1>gate report</h1>
+        <p>\(many(people.count, "person", "people")) · \(many(grants.count, "grant")) · judged in \(judgeMs.map { floatRepr($0) } ?? "None") ms</p>
+        <h2>Verdict</h2>\(verdictHtml)
+        <h2>People</h2>\(table(people, ["id", "rank", "home", "site", "given", "family", "born"]))
+        <h2>Grants</h2>\(table(grants.map { [("who", $0.0), ("doc", $0.1)] }, ["who", "doc"]))
+        \(policyHtml)
+        \(findingsHtml)
+
+        """.replacingOccurrences(of: "\n        ", with: "\n")
+        .trimmingCharacters(in: CharacterSet(charactersIn: " "))
+    if let path = outPath { oursWrite(path, "the page", html) }
+    let note = outPath == nil
+        ? "nothing written: name a file to keep this page. `gate report -o report.html`"
+        : nil
+    if asJson {
+        var pairs: [(String, StatusJSON)] = [
+            ("command", .text("report")),
+            ("wrote", outPath.map { .text($0) } ?? .null),
+            ("people", .raw(String(people.count))),
+            ("grants", .raw(String(grants.count))),
+            ("verdict", .text(holds && refusals.isEmpty ? "holds" : "refused")),
+            ("judge_ms", judgeMs.map { .raw(floatRepr($0)) } ?? .null),
+            ("refusals", .list(refusals.map {
+                .object([("address", .text($0.address)), ("claim", .text($0.claim))]) })),
+            ("note", note.map { .text($0) } ?? .null),
+            ("mutates", .raw(outPath != nil ? "true" : "false")),
+        ]
+        // and no `command_to_run` beside it: the other carrier lifts one out of
+        // `next`, `then` or `try`, and this answer carries none of the three.
+        // A note is a sentence about what did not happen, not a step to take.
+        out(statusDumps(.object(pairs), 0) + "\n")
+    } else {
+        let head = holds && refusals.isEmpty ? "holds" : "refused \(refusals.count)"
+        var lines = ["report: " + head
+                     + (judgeMs.map { " · " + floatRepr($0) + " ms" } ?? "")]
+        for r in refusals { lines.append("  \(r.address) · \(r.claim)") }
+        if let n = note { lines.append("  note: " + n) }
+        out(lines.joined(separator: "\n") + "\n")
+    }
+    exit(holds && refusals.isEmpty ? 0 : 1)
 }
 
 // ── findings [--md] [--history] [N]: what is true of this repository, in
