@@ -8240,6 +8240,58 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         S.append(("asking and changing reach one answer, and leave one world, on both",
                   _cqw == []))
 
+        # ── AND WHAT WAITS FOR A WORD, which is the other cut: not what changed
+        # but who owes whom a sentence. The three columns come out of |S|, so the
+        # two carriers must partition the addresses the same way or one of them
+        # has invented a fourth state. Walked on the seam demo, which carries a
+        # declared divergence and a tracker, so the set-aside and the come-back
+        # are both live.
+        _atw = []
+        _at = os.path.join(tmp, "attention-seam")
+        shutil.rmtree(_at, ignore_errors=True)
+        os.makedirs(_at, exist_ok=True)
+        run("demo", "seam", _at)
+        for _tag, _argv in (
+                ("the morning question", ["attention"]),
+                ("the morning question, answered", ["attention", "--json"]),
+                ("one pair", ["attention", "api.swift", "sdk.swift"]),
+                ("one pair, answered", ["attention", "api.swift", "sdk.swift", "--json"]),
+                ("with what was set aside", ["attention", "api.swift", "sdk.swift",
+                                             "--known", "known.json",
+                                             "--tracker", "tickets.json"]),
+                ("read from the other end", ["attention", "api.swift", "sdk.swift",
+                                             "--as", "SdkJs"])):
+            _two = [subprocess.run([sys.executable, GATE, *_argv], cwd=_at,
+                                   capture_output=True, timeout=300,
+                                   env={**os.environ, "GATE_CLI": _e})
+                    for _e in ("off", _cli_bin)]
+            if [(_x.stdout, _x.stderr, _x.returncode) for _x in _two][0] != \
+               [(_x.stdout, _x.stderr, _x.returncode) for _x in _two][1]:
+                _atw.append(_tag)
+            _out = _two[0].stdout
+            if _tag == "one pair" and (b"waiting on you" not in _out
+                                       or b"you are waiting" not in _out):
+                _atw.append(_tag + ": a two-sided ledger reads from one side only")
+            if _tag == "read from the other end" and b"as SdkJs" not in _out:
+                _atw.append(_tag + ": the same seam does not read from the other end")
+        # and no fourth column: every address the answer names is in exactly one
+        # of the three sizes, which is what makes the vocabulary complete
+        _at_said = json.loads(subprocess.run(
+            [sys.executable, GATE, "attention", "api.swift", "sdk.swift", "--json"], cwd=_at,
+            capture_output=True, text=True, env={**os.environ, "GATE_CLI": _cli_bin}).stdout)
+        _at_sizes = _at_said.get("sizes", {})
+        _at_named = {x["address"] for k in ("waits_on_you", "you_wait_on", "parted",
+                                            "known", "expired")
+                     for x in _at_said.get(k, [])}
+        if not _at_sizes or set(_at_sizes.values()) - {0, 1, 2}:
+            _atw.append("a size outside {0, 1, >1} was written")
+        if not _at_named <= set(_at_sizes):
+            _atw.append("a column names an address the sizes do not")
+        if _atw:
+            print("   what waits for a word parts:", _atw[:4])
+        S.append(("who owes whom a word is partitioned the same way on both carriers",
+                  _atw == []))
+
         # ── AND THE COURT GUARD, ON THE CARRIER THAT NOW ANSWERS THE VERB. The
         # mutant that holds this guard is planted in the python file, and
         # `status` no longer runs it: that plant holds the other carrier's half
@@ -8460,7 +8512,8 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                                       "mine", "theirs", "init", "drift", "my",
                                       "status", "fsck", "badge", "survey", "findings",
                                       "report", "bare", "import", "verify", "library",
-                                      "guard", "check", "ask", "diff", "apply", "change"]))
+                                      "guard", "check", "ask", "diff", "apply", "change",
+                                      "attention"]))
         # ── AND THE LEDGER IS READ AGAINST THE ROAD IT IS WALKING. The strangler
         # has a length and a position, and both were feelings: the list of moved
         # veins lived in the binary and the list of verbs lived in the python
@@ -8719,10 +8772,10 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         # split this rule exists to forbid.
         _spellings_carried = {"fsck", "ask", "change"}
         _carried_verbs = set(_ledger) & _verbs
-        S.append(("the ledger names verbs the usage offers, 24 of 27 carried",
+        S.append(("the ledger names verbs the usage offers, 25 of 27 carried",
                   set(_ledger) <= _verbs | _spellings_carried
-                  and len(_ledger) == 27
-                  and len(_carried_verbs) == 24
+                  and len(_ledger) == 28
+                  and len(_carried_verbs) == 25
                   and len(_verbs) == 27
                   # and a name on the ledger is a whole verb: a prefix claims
                   # everything under it, so half a verb would take argv nobody

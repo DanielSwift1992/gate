@@ -78,7 +78,7 @@ if args.contains("--out") && !args.contains("-o") {
 if args == ["--carries"] {
     out("stdlib\nexport\nseam\nlog\naside\ndeclare\nmine\ntheirs\ninit\ndrift\nmy\n"
         + "status\nfsck\nbadge\nsurvey\nfindings\nreport\nbare\nimport\n"
-        + "verify\nlibrary\nguard\ncheck\nask\ndiff\napply\nchange\n")
+        + "verify\nlibrary\nguard\ncheck\nask\ndiff\napply\nchange\nattention\n")
     exit(0)
 }
 
@@ -3732,6 +3732,39 @@ func lockLine(_ path: String, _ name: String) -> Int {
     return 1
 }
 
+// ── THE TWO DECLARATIONS, TAKEN APART: what the contract stated, what the
+// carrier claimed, and whose name is on the claims. One reading, so the verb
+// that judges a pair and the verb that asks what waits on a word see one thing.
+struct SeamSides {
+    var stated: [(route: String, field: String)] = []
+    var claims: [(cert: String, route: String, field: String, mine: String)] = []
+    var carrier = "that library"
+}
+
+func seamRead(_ left: String, _ right: String) -> SeamSides {
+    var said = SeamSides()
+    for m in matches("^// (\\S+) · (\\S+)$", left, lines: true) {
+        if !said.stated.contains(where: { $0.route == m[0] && $0.field == m[1] }) {
+            said.stated.append((m[0], m[1]))
+        }
+    }
+    for m in matches("^// (\\S+) · (\\S+)(?: \\(it calls it (\\S+)\\))?\\npublic typealias (Carry_\\d+)",
+                     right, lines: true) {
+        said.claims.append((m[3], m[0], m[1], m[2]))
+    }
+    if let who = matches("public enum (\\w+): Carrier", right).first?.first { said.carrier = who }
+    return said
+}
+
+// which seams are mine is mine to say: the layout declares them, and each file
+// says in its own first lines which side it is
+func declaredSeamFiles(_ base: String) -> [String] {
+    let (rows, manifest) = layoutRowsFull(base)
+    guard manifest != nil else { return [] }
+    return rows.filter { $0.role == "seam" }
+        .map { (base as NSString).appendingPathComponent($0.path) }
+}
+
 // an anchor the world states a different number of times than the change
 // expects is a sentence, never a silent rewrite of the wrong place
 func mustSub(_ text: String, _ pattern: String, _ repl: String, _ what: String) -> String {
@@ -4054,6 +4087,349 @@ if args.first == "diff" || args.first == "apply" || args.first == "change" {
         out(lines.joined(separator: "\n") + "\n")
     }
     exit(said.verdict == "holds" ? 0 : 1)
+}
+
+// ── attention CONTRACT.swift CARRIER.swift: NOT what changed, but what waits
+// for a word. History is diachronic and git keeps it; this is the other cut, the
+// standing ledger of who owes whom a sentence. It is two-sided by construction:
+// an unanswered address sits on the side that owes the answer.
+//
+// AND THE STATE OF EVERY ADDRESS IS |S|. A seam is the premise V=I §5.4 leaves
+// outside itself, asked as a game one level up: |S| = 1 both spoke and agree,
+// |S| = 0 both spoke and nothing passes, |S| > 1 one is silent. Three sizes,
+// three columns, and no fourth can be written without inventing a fourth size.
+struct AttentionSaid {
+    var me = "", carrier = ""
+    var sizes: [(String, Int)] = []
+    var waitsOnYou: [[(String, StatusJSON)]] = []
+    var youWaitOn: [[(String, StatusJSON)]] = []
+    var parted: [[(String, StatusJSON)]] = []
+    var known: [[(String, StatusJSON)]] = []
+    var expired: [[(String, StatusJSON)]] = []
+    var stated = 0, claimed = 0
+    var note = "", next = ""
+}
+
+func attentionOver(_ leftPath: String, _ rightPath: String, _ asWho: String?,
+                   _ knownPath: String?, _ trackerPath: String?) -> AttentionSaid {
+    let left = theirsText(leftPath, "the contract side of the pair")
+    let right = theirsText(rightPath, "the carrier side of the pair")
+    let sides = seamRead(left, right)
+    let me = asWho ?? sides.carrier
+    let known = knownPath.map { theirsJson($0, "the divergences you declared") }
+    let tracker = trackerPath.map { readTracker($0) } ?? []
+    let d = scratchDir("gate-att-")
+    let path = (d as NSString).appendingPathComponent("seam.swift")
+    try? (left + "\n" + right).write(toFile: path, atomically: false, encoding: .utf8)
+    let outp = courtSays(["where", path])
+    try? FileManager.default.removeItem(atPath: d)
+    let statedKeys = Set(sides.stated.map { $0.route + "\u{1}" + $0.field })
+    let claimedKeys = Set(sides.claims.map { $0.route + "\u{1}" + $0.field })
+    var parted: [String: (want: String, got: String, mine: String)] = [:]
+    for m in matches("^✗ '(\\w+)[^']*' requires the types '[^']*' \\(aka '([^']+)'\\) and "
+                     + "'[^']*' \\(aka '([^']+)'\\)", outp, lines: true) {
+        let it = sides.claims.first(where: { $0.cert == m[0] })
+        let route = it?.route ?? "?", field = it?.field ?? m[0]
+        // a claim about something the contract never stated is not a
+        // DISAGREEMENT: there is nothing to disagree with, and it belongs in
+        // the other column entirely
+        if statedKeys.contains(route + "\u{1}" + field) {
+            parted[route + "\u{1}" + field] = (m[1].lowercased(), m[2].lowercased(),
+                                               it?.mine ?? "")
+        }
+    }
+    let addresses = statedKeys.union(claimedKeys).sorted()
+    var said = AttentionSaid()
+    said.me = me
+    said.carrier = sides.carrier
+    for a in addresses {
+        let n = parted[a] != nil ? 0
+            : (statedKeys.contains(a) && claimedKeys.contains(a)) ? 1 : 2
+        said.sizes.append((a.replacingOccurrences(of: "\u{1}", with: " · "), n))
+    }
+    // the carrier owes an answer where the contract stated and it stayed silent;
+    // the contract owes one the other way: the same size, read from two ends
+    let owesCarrier = addresses.filter { parted[$0] == nil && !claimedKeys.contains($0)
+                                         && statedKeys.contains($0) }
+    let owesContract = addresses.filter { parted[$0] == nil && !statedKeys.contains($0)
+                                          && claimedKeys.contains($0) }
+    func excuse(_ key: String) -> (because: String, by: String, state: String)? {
+        let two = key.components(separatedBy: "\u{1}")
+        for k in known?.at("diverges")?.asList ?? [] {
+            guard k.at("route")?.asText == two[0], k.at("field")?.asText == two[1] else { continue }
+            let why = k.at("because")?.asText ?? ""
+            let state = tracker.first(where: { $0.key == why })?.state
+            return (why, k.at("declared_by")?.asText ?? "somebody",
+                    state ?? (tracker.isEmpty ? "not checked" : "unread"))
+        }
+        return nil
+    }
+    func sort(_ items: [String], _ kind: String)
+        -> (plain: [[(String, StatusJSON)]], live: [[(String, StatusJSON)]],
+            dead: [[(String, StatusJSON)]]) {
+        var plain: [[(String, StatusJSON)]] = [], live: [[(String, StatusJSON)]] = []
+        var dead: [[(String, StatusJSON)]] = []
+        for key in items {
+            let address = key.replacingOccurrences(of: "\u{1}", with: " · ")
+            guard let ex = excuse(key) else {
+                plain.append([("address", .text(address)), ("kind", .text(kind))])
+                continue
+            }
+            let one: [(String, StatusJSON)] = [("address", .text(address)),
+                                               ("because", .text(ex.because)),
+                                               ("declared_by", .text(ex.by)),
+                                               ("state", .text(ex.state)),
+                                               ("kind", .text(kind))]
+            if ex.state == "Closed" { dead.append(one) } else { live.append(one) }
+        }
+        return (plain, live, dead)
+    }
+    let mine = sort(me == sides.carrier ? owesCarrier : owesContract, "unanswered")
+    let theirs = sort(me == sides.carrier ? owesContract : owesCarrier, "unanswered")
+    var parts = sort(parted.keys.sorted(), "parted")
+    func why(_ row: [(String, StatusJSON)]) -> [(String, StatusJSON)] {
+        var out = row
+        guard case .text(let address)? = row.first(where: { $0.0 == "address" })?.1
+        else { return out }
+        let key = address.replacingOccurrences(of: " · ", with: "\u{1}")
+        guard let p = parted[key] else { return out }
+        out.append(("why", .text("the contract states \(p.want); \(sides.carrier) declares "
+                                 + (p.mine.isEmpty ? "" : "its own \(p.mine) as ") + p.got)))
+        return out
+    }
+    parts.plain = parts.plain.map(why)
+    parts.live = parts.live.map(why)
+    parts.dead = parts.dead.map(why)
+    said.waitsOnYou = mine.plain
+    said.youWaitOn = theirs.plain
+    said.parted = parts.plain
+    said.known = mine.live + theirs.live + parts.live
+    said.expired = mine.dead + theirs.dead + parts.dead
+    said.stated = statedKeys.count
+    said.claimed = sides.claims.count
+    said.note = "a standing account of who owes whom a word. An unanswered axis stays with "
+              + "whoever owes the answer, so this reads the same from either side"
+              + (known != nil ? ", and a divergence somebody declared is set aside while the "
+                              + "thing it cites is open, and comes back when that closes" : "")
+    said.next = !said.waitsOnYou.isEmpty
+        ? "answer the first line above, or declare the divergence with something that can close"
+        : (said.youWaitOn.isEmpty && said.parted.isEmpty
+           ? "nothing waits on you here"
+           : "these wait on the other side, and they are listed so you know what you are "
+             + "waiting for")
+    return said
+}
+
+func attentionPairs(_ said: AttentionSaid) -> [(String, StatusJSON)] {
+    [("command", .text("attention")), ("as", .text(said.me)), ("carrier", .text(said.carrier)),
+     ("sizes", .object(said.sizes.map { ($0.0, .raw(String($0.1))) })),
+     ("waits_on_you", .list(said.waitsOnYou.map { .object($0) })),
+     ("you_wait_on", .list(said.youWaitOn.map { .object($0) })),
+     ("parted", .list(said.parted.map { .object($0) })),
+     ("known", .list(said.known.map { .object($0) })),
+     ("expired", .list(said.expired.map { .object($0) })),
+     ("stated", .raw(String(said.stated))), ("claimed", .raw(String(said.claimed))),
+     ("note", .text(said.note)), ("next", .text(said.next)), ("mutates", .raw("false"))]
+}
+
+if args.first == "attention" {
+    let rest = Array(args.dropFirst()).filter { $0 != "--json" }
+    let asJson = args.contains("--json")
+    loadStatusShelf()
+    let w = discoverWorld()
+    func flag(_ name: String) -> String? {
+        guard let i = rest.firstIndex(of: name), i + 1 < rest.count else { return nil }
+        return rest[i + 1]
+    }
+    if rest.count < 2 {
+        // ── AND WITH NO ARGUMENTS IT IS THE MORNING QUESTION. This needed two
+        // files named by hand, so the one thing an owner asks daily could only
+        // be asked one pair at a time, by somebody who already knew the pairs.
+        // The list is declared: this world knows its own seams.
+        let base = w.facts.map { (absPath($0) as NSString).deletingLastPathComponent }
+            ?? FileManager.default.currentDirectoryPath
+        var stated: [String] = [], claimed: [String] = []
+        for full in declaredSeamFiles(base) where FileManager.default.fileExists(atPath: full)
+            && isSeamSide(full) {
+            let head = String((readText(full) ?? "").prefix(4000))
+            if !matches("^public enum \\w+: Carrier \\{\\}", head, lines: true).isEmpty {
+                claimed.append(full)
+            } else { stated.append(full) }
+        }
+        let knownPath = (base as NSString).appendingPathComponent("known.json")
+        let tickPath = (base as NSString).appendingPathComponent("tickets.json")
+        var seams: [[(String, StatusJSON)]] = []
+        if stated.isEmpty || claimed.isEmpty {
+            // A SIDE DECLARED ALONE IS A STATE, NOT A BLANK: whoever moves first
+            // would otherwise see nothing and think the declaration had not taken
+            for f in stated + claimed {
+                let isCarrier = claimed.contains(f)
+                let name = isCarrier
+                    ? (matches("public enum (\\w+): Carrier", readText(f) ?? "").first?.first
+                       ?? (f as NSString).lastPathComponent)
+                    : (f as NSString).lastPathComponent
+                seams.append([("command", .text("attention")),
+                              ("alone", .text(isCarrier ? "carries" : "states")),
+                              ("carrier", .text(name)),
+                              ("contract_file", .text((f as NSString).lastPathComponent)),
+                              ("carrier_file", .text((f as NSString).lastPathComponent)),
+                              ("stated", .raw("0")), ("claimed", .raw("0")),
+                              ("waits_on_you", .list([])), ("you_wait_on", .list([])),
+                              ("parted", .list([])), ("known", .list([])),
+                              ("expired", .list([])), ("against", .null),
+                              ("read_known", .null), ("read_tracker", .null)])
+            }
+        } else {
+            for c in stated {
+                for k in claimed {
+                    let said = attentionOver(
+                        c, k, nil,
+                        FileManager.default.fileExists(atPath: knownPath) ? knownPath : nil,
+                        FileManager.default.fileExists(atPath: tickPath) ? tickPath : nil)
+                    // the pair's own answer entire, and the seam's fields after
+                    // it: the other carrier adds to that dict rather than
+                    // rebuilding it, so `mutates` stays where it was
+                    var one = attentionPairs(said)
+                    let decl = matches("^// \\w+ · against ([^\\n]+)$",
+                                       String((readText(k) ?? "").prefix(2000)), lines: true)
+                    one.append(("against", decl.first.map { .text($0[0]) } ?? .null))
+                    one.append(("contract_file", .text((c as NSString).lastPathComponent)))
+                    one.append(("carrier_file", .text((k as NSString).lastPathComponent)))
+                    // AND THE PIN, WHERE THE OWNER IS LOOKING: what YOU wrote
+                    // down when you took each file, which is the fact you can act
+                    // on, and it was readable only by opening the manifest
+                    let (rows, mp) = layoutRowsFull((absPath(c) as NSString)
+                        .deletingLastPathComponent)
+                    // built a field at a time: one long literal put the
+                    // type-checker past its budget, the way the journal's own
+                    // answer did before it
+                    var took: [StatusJSON] = []
+                    for f in [c, k] {
+                        let name = (f as NSString).lastPathComponent
+                        let row = rows.first(where: { $0.path == name })
+                        var one2: [(String, StatusJSON)] = [("file", .text(name))]
+                        let at: StatusJSON = row?.from.map { .text($0) } ?? .null
+                        one2.append(("at", at))
+                        let claim: StatusJSON = mp.map {
+                            .text(($0 as NSString).lastPathComponent) } ?? .null
+                        one2.append(("claim", claim))
+                        let line: StatusJSON = row.map { .raw(String($0.line)) } ?? .null
+                        one2.append(("line", line))
+                        took.append(.object(one2))
+                    }
+                    one.append(("took", .list(took)))
+                    one.append(("read_known", FileManager.default.fileExists(atPath: knownPath)
+                        ? .text("known.json") : .null))
+                    one.append(("read_tracker", FileManager.default.fileExists(atPath: tickPath)
+                        ? .text("tickets.json") : .null))
+                    seams.append(one)
+                }
+            }
+        }
+        if seams.isEmpty {
+            let note = "no seam is declared here, so nobody is waiting on anybody"
+            let next = "gate theirs their-side.swift --role seam --at REV  say which pair you "
+                     + "are party to, and this becomes the question you ask each morning"
+            if asJson {
+                out("{\n  \"command\": \"attention\",\n  \"asks\": true,\n"
+                    + "  \"note\": " + jsonString(note) + ",\n"
+                    + "  \"next\": " + jsonString(next) + "\n}\n")
+            } else {
+                out("usage: " + note + "\n  next: " + next + "\n")
+            }
+            exit(0)
+        }
+        func count(_ one: [(String, StatusJSON)], _ key: String) -> Int {
+            guard case .list(let items)? = one.first(where: { $0.0 == key })?.1 else { return 0 }
+            return items.count
+        }
+        let waiting = seams.reduce(0) { $0 + count($1, "waits_on_you") }
+        let theirs = seams.reduce(0) { $0 + count($1, "you_wait_on") }
+        let partedN = seams.reduce(0) { $0 + count($1, "parted") }
+        let cameBack = seams.reduce(0) { $0 + count($1, "expired") }
+        let next = "gate attention CONTRACT.swift CARRIER.swift  one pair, in full"
+        if asJson {
+            out(statusDumps(.object([
+                ("command", .text("attention")),
+                ("seams", .list(seams.map { .object($0) })),
+                ("waiting_on_you", .raw(String(waiting))),
+                ("you_wait_on", .raw(String(theirs))),
+                ("parted", .raw(String(partedN))),
+                ("came_back", .raw(String(cameBack))),
+                ("next", .text(next)),
+            ]), 0) + "\n")
+        } else {
+            // the morning cut: counted first, because the count is the answer
+            var lines = ["attention: "
+                         + (waiting > 0 ? "\(waiting) await your word" : "nothing awaits your word")
+                         + " · \(theirs) awaiting theirs"
+                         + (partedN > 0 ? " · parted at \(partedN)" : "")
+                         + (cameBack > 0 ? " · \(cameBack) came back" : "")]
+            for s in seams {
+                var who = "a pair"
+                if case .text(let a)? = s.first(where: { $0.0 == "against" })?.1 { who = a }
+                else if case .text(let c)? = s.first(where: { $0.0 == "carrier" })?.1 { who = c }
+                func rows(_ key: String) -> [[(String, StatusJSON)]] {
+                    guard case .list(let items)? = s.first(where: { $0.0 == key })?.1
+                    else { return [] }
+                    return items.compactMap { if case .object(let o) = $0 { return o }; return nil }
+                }
+                func said(_ row: [(String, StatusJSON)], _ key: String) -> String {
+                    if case .text(let v)? = row.first(where: { $0.0 == key })?.1 { return v }
+                    return ""
+                }
+                for x in rows("expired") {
+                    lines.append("  came back · \(said(x, "address")) · \(said(x, "because"))")
+                }
+                for x in rows("parted") { lines.append("  parted · \(said(x, "address")) · \(who)") }
+                for x in rows("waits_on_you") {
+                    lines.append("  your word · \(said(x, "address")) · \(who)")
+                }
+            }
+            lines.append("  next: " + next)
+            out(lines.joined(separator: "\n") + "\n")
+        }
+        exit(0)
+    }
+    let said = attentionOver(rest[0], rest[1], flag("--as"), flag("--known"), flag("--tracker"))
+    if asJson {
+        out(statusDumps(.object(attentionPairs(said)), 0) + "\n")
+    } else {
+        func said2(_ row: [(String, StatusJSON)], _ key: String) -> String {
+            if case .text(let v)? = row.first(where: { $0.0 == key })?.1 { return v }
+            return ""
+        }
+        var lines = ["attention: as \(said.me) · \(said.waitsOnYou.count) waiting on you · "
+                     + "\(said.youWaitOn.count) you are waiting for · \(said.parted.count) parted"
+                     + (said.expired.isEmpty ? "" : " · \(said.expired.count) came back")]
+        for x in said.expired {
+            lines.append("  came back · \(said2(x, "address")) · it was set aside for "
+                         + "\(said2(x, "because")), and \(said2(x, "because")) is closed")
+        }
+        for x in said.waitsOnYou {
+            let why = said2(x, "why")
+            lines.append("  waits on you · \(said2(x, "address")) · "
+                         + (why.isEmpty ? "stated by the contract, and you have not said "
+                            + "whether you carry it" : why))
+        }
+        for x in said.youWaitOn {
+            let why = said2(x, "why")
+            lines.append("  you are waiting · \(said2(x, "address")) · "
+                         + (why.isEmpty ? "you carry it, and the contract has not stated it" : why))
+        }
+        for x in said.parted {
+            lines.append("  parted · \(said2(x, "address")) · \(said2(x, "why"))")
+        }
+        for x in said.known {
+            lines.append("  known · \(said2(x, "address")) · set aside by "
+                         + "\(said2(x, "declared_by")) for \(said2(x, "because")) "
+                         + "(\(said2(x, "state").lowercased()))")
+        }
+        lines.append("  note: " + said.note)
+        lines.append("  next: " + said.next)
+        out(lines.joined(separator: "\n") + "\n")
+    }
+    exit(0)
 }
 
 // ── guard [merge] · guard deps [manifest lock]: the repository's OWN action
