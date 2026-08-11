@@ -118,8 +118,17 @@ jobs:
           branch: swift-6.1.2-release
           tag: 6.1.2-RELEASE
       - run: swift --version
+      # ── AND THE COMPILER IS TOLD WHERE TO PUT ITS OWN SCRATCH, in the
+      # spelling it reads. The shell here exports a posix `TMP`, the linker
+      # takes that at its word, and it fails to create `lnk{...}.tmp` in a
+      # directory that does not exist for it. The runner's own temp is a native
+      # path, and naming it is the whole fix: the error never mentioned an
+      # environment, only a file it could not open.
       - name: build the vein
         shell: bash
+        env:
+          TMP: ${{ runner.temp }}
+          TEMP: ${{ runner.temp }}
         run: bin/build-cli.sh 2>&1 | tee /tmp/vein-out.txt; exit ${PIPESTATUS[0]}
       - if: failure()
         name: what the build actually said
