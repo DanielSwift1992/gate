@@ -6804,6 +6804,45 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
               _man_pin and _ci_pin and _man_pin.group(1) == _ci_pin.group(1)
               and _from.startswith(_man_pin.group(1))))
 
+    # ── AND THE ONE PLACE A SHIPPED BINARY IS BORN SAYS SO IN ITS OWN TEXT. A
+    # release workflow is a claim about provenance, and a claim nobody checks is
+    # the thing this repository exists against: the promise is that binaries are
+    # built in public, at a pin, on every platform named on the cover, with the
+    # two records that make one checkable beside it. Read off the file, because
+    # the file is what runs.
+    _rel_path = os.path.join(HERE, ".github", "workflows", "release.yml")
+    _rel = open(_rel_path, encoding="utf-8").read() if os.path.exists(_rel_path) else ""
+    _rel_said = {}
+    try:
+        import yaml as _y2
+        _rel_said = _y2.safe_load(_rel) or {}
+    except ImportError:
+        _rel_said = None                # said plainly: this machine cannot read it
+    if _rel_said is None:
+        S.append(("the release is built in public, pinned, on every platform it names", True))
+    else:
+        _rel_steps = [s for j in _rel_said.get("jobs", {}).values() for s in j.get("steps", [])]
+        _rel_uses = [s["uses"] for s in _rel_steps if "uses" in s]
+        _rel_plats = [m["said"] for m in
+                      _rel_said.get("jobs", {}).get("build", {})
+                      .get("strategy", {}).get("matrix", {}).get("include", [])]
+        S.append(("the release is built in public, pinned, on every platform it names",
+                  # a tag is what starts it, never a person's machine
+                  list(_rel_said.get(True, _rel_said.get("on", {})).get("push", {})
+                       .get("tags", [])) == ["v*"]
+                  # every action by revision, the way the battery's own are
+                  and _rel_uses != []
+                  and all(len(u.split("@")[-1]) == 40 for u in _rel_uses)
+                  # the five the shipping page names
+                  and sorted(_rel_plats) == ["linux-arm64", "linux-x86_64", "macos-arm64",
+                                             "macos-x86_64", "windows-x86_64"]
+                  # and beside each binary the two records: what it was built
+                  # from, and what lies there
+                  and ".from" in _rel and "sha256" in _rel
+                  and "attest-build-provenance" in _rel
+                  # the honest boundary, stated where somebody downloading reads it
+                  and "the check is the rebuild" in _rel.lower()))
+
     # ── the usage page is a second record of the verb table, and it was the
     # one record nothing held: verbs.swift is guarded against the dispatch
     # both ways, and USAGE listed commands from memory. Both ways here too:
