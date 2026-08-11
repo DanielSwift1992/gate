@@ -10846,10 +10846,10 @@ public enum MyWatch: AccessLedger {
     # naming itself, and that is the count of contexts and of the permission
     # each needs.
     _mouths = ["pages-publish", "linux-first-fail", "macos-first-fail",
-               "windows-vein-first-fail"]
+               "windows-vein-first-fail", "windows-vein-machine"]
     S.append(("a job that can go red posts a status naming itself",
               all(m in _ci for m in _mouths)
-              and _ci.count("statuses: write") == len(_mouths)
+              and _ci.count("statuses: write") == 4
               # and each one is posted from a step that runs only on failure
               and _ci.count("if: failure()") >= len(_mouths)))
     # ── AND PUBLISHING IS ASKED ABOUT BEFORE IT IS ATTEMPTED. `deploy-pages`

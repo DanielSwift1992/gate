@@ -133,7 +133,16 @@ jobs:
         env:
           TMP: ${{ runner.temp }}
           TEMP: ${{ runner.temp }}
-        run: bin/build-cli.sh 2>&1 | tee vein-out.txt; exit ${PIPESTATUS[0]}
+        run: |
+          # ── AND THE FACTS TRAVEL WITH THE FAILURE. Three fixes in a row were
+          # guesses because the only thing that left this machine was one line
+          # naming a file. What the linker is actually given is an environment,
+          # and it is written down here so the mouth can carry it out: a guess
+          # costs a run in the queue, and printing four values costs nothing.
+          echo "TMP=$TMP TEMP=$TEMP" | tee vein-out.txt
+          echo "temp exists: $([ -d "$TMP" ] && echo yes || echo no)" | tee -a vein-out.txt
+          echo "cwd=$(pwd) free=$(df -h . | tail -1 | tr -s ' ' | cut -d' ' -f4)" | tee -a vein-out.txt
+          bin/build-cli.sh 2>&1 | tee -a vein-out.txt; exit ${PIPESTATUS[0]}
       - if: failure()
         name: what the build actually said
         shell: bash
@@ -168,6 +177,13 @@ jobs:
           curl -s -X POST -H "Authorization: Bearer $GH_TOKEN" \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
             -d "$BODY" > /dev/null
+          # and a second status carrying what the machine was, because the job
+          # log is unreadable without a token and one sentence is not a state
+          SAW=$(head -3 vein-out.txt | paste -sd '; ' - || true)
+          BODY2=$(python -c 'import json,sys; print(json.dumps({"state":"failure","context":"windows-vein-machine","description":sys.argv[1][:138]}))' "$SAW")
+          curl -s -X POST -H "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -d "$BODY2" > /dev/null
   pages:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
