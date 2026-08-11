@@ -3140,6 +3140,46 @@ func findingsMarkdown(_ found: [Finding]) -> String {
 // rule addresses nothing. The import walks a working tree for its paths and the
 // history walk asks git for a commit's paths, so the matching lives here once
 // and both callers ask it the same question.
+// ── SHELL-STYLE MATCHING, WRITTEN HERE. `fnmatch` is a libc call and windows
+// has no such name, so a vein that carried it built on two platforms out of
+// three. Writing it once is also the honest reading: the other carrier matches
+// with python's `fnmatch`, whose `*` crosses separators exactly as a zero-flag
+// libc call does, and two implementations of one matching would be two
+// behaviours the battery would have to hold apart.
+func globMatch(_ pattern: String, _ name: String) -> Bool {
+    var expr = "^"
+    var chars = Array(pattern)
+    var i = 0
+    while i < chars.count {
+        let c = chars[i]
+        switch c {
+        case "*": expr += ".*"
+        case "?": expr += "."
+        case "[":
+            var j = i + 1
+            if j < chars.count, chars[j] == "!" || chars[j] == "^" { j += 1 }
+            if j < chars.count, chars[j] == "]" { j += 1 }
+            while j < chars.count, chars[j] != "]" { j += 1 }
+            if j >= chars.count {
+                expr += "\\["            // an unclosed bracket is a literal one
+            } else {
+                var body = String(chars[(i + 1)...(j - 1)])
+                if body.hasPrefix("!") { body = "^" + body.dropFirst() }
+                expr += "[" + body + "]"
+                i = j
+            }
+        default:
+            expr += NSRegularExpression.escapedPattern(for: String(c))
+        }
+        i += 1
+    }
+    expr += "$"
+    guard let re = try? NSRegularExpression(pattern: expr, options: [.dotMatchesLineSeparators])
+    else { return false }
+    let ns = name as NSString
+    return re.firstMatch(in: name, range: NSRange(location: 0, length: ns.length)) != nil
+}
+
 func ghostPatterns(_ rules: [(line: Int, pattern: String, owners: [String])],
                    _ paths: [String], _ saidName: String) -> [(address: String, claim: String)] {
     var out: [(address: String, claim: String)] = []
@@ -3148,9 +3188,9 @@ func ghostPatterns(_ rules: [(line: Int, pattern: String, owners: [String])],
         while pat.hasPrefix("/") { pat.removeFirst() }
         while pat.hasSuffix("/") { pat.removeLast() }
         let hit = paths.contains { p in
-            fnmatch(pat, p, 0) == 0 || fnmatch(pat + "/*", p, 0) == 0
+            globMatch(pat, p) || globMatch(pat + "/*", p)
                 || p.hasPrefix(pat + "/")
-                || fnmatch(pat, (p as NSString).lastPathComponent, 0) == 0
+                || globMatch(pat, (p as NSString).lastPathComponent)
         }
         if !hit {
             out.append(("\(saidName):\(r.line)",
