@@ -13,6 +13,11 @@
 // line in the repository stays text, and a clone without a Swift toolchain
 // runs the python side of every vein, unchanged.
 import Foundation
+// the socket calls the bench is served over. Foundation carries them on Darwin
+// and does not on linux, and this vein builds on both.
+#if canImport(Glibc)
+import Glibc
+#endif
 
 let root = URL(fileURLWithPath: CommandLine.arguments[0])
     .resolvingSymlinksInPath()
@@ -2434,12 +2439,17 @@ func attributeRefusals(_ refusals: [(address: String, claim: String)],
     return out
 }
 
-func nextRung(_ w: WorldState, _ refused: Bool) -> String {
+func nextRung(_ w: WorldState, _ refused: Bool, serving: Bool = false) -> String {
     // ONE next step, chosen by what the repository already has: each rung
     // names what becomes yours once the step is taken, and a rung already
-    // taken is not offered
+    // taken is not offered.
+    // ── AND A STEP IS A STEP FROM WHERE THE READER IS STANDING. `serving` says
+    // the asking came from the bench, so the bench counts as taken: the same
+    // ladder, with the rung naming the room you are already in dropped.
     if refused {
-        return "open the address above, or run `gate serve` and watch the verdict move as you type"
+        return serving
+            ? "the refusal names its line: click it and the file opens there"
+            : "open the address above, or run `gate serve` and watch the verdict move as you type"
     }
     let rootDir = w.facts.map { (absPath($0) as NSString).deletingLastPathComponent } ?? "."
     let hooked = runGit(["config", "--get", "core.hooksPath"], rootDir)
@@ -2454,7 +2464,8 @@ func nextRung(_ w: WorldState, _ refused: Bool) -> String {
         return (readText(p) ?? "").contains("Origin: gate's shelf")
     }
     if !rows.isEmpty && !saidSomething && rows.allSatisfy({ arrivedByTaking($0.path) })
-        && rows.contains(where: { ($0.path as NSString).lastPathComponent == "readme.swift" }) {
+        && rows.contains(where: { ($0.path as NSString).lastPathComponent == "readme.swift" })
+        && !serving {
         return "gate serve"
     }
     if policyPathOf(w) == nil {
@@ -2467,7 +2478,10 @@ func nextRung(_ w: WorldState, _ refused: Bool) -> String {
         return "put `gate status` in the CI you already run: from then on nobody reads a diff "
              + "to know the claims still hold"
     }
-    return "run `gate serve` for the bench: your world on the left, the verdict on the right, "
+    // and on the bench that last rung is the room itself: a ladder whose steps
+    // are all taken says nothing rather than inventing a step
+    return serving ? ""
+         : "run `gate serve` for the bench: your world on the left, the verdict on the right, "
          + "and a page of your own beside them"
 }
 
@@ -2681,6 +2695,9 @@ struct StatusAnswer {
     var world: [String]? = nil          // declarations, lookups, premises
     var whereSize: [String: Int] = [:]
     var next = ""
+    // the same ladder read from the bench: the room the reader is in is a rung
+    // already taken, so it is not offered back to them (`serve`, below)
+    var servingNext = ""
     var then = ""
     var verdict: String { noWorld ? "no world here" : (refusals.isEmpty ? "holds" : "refused") }
 }
@@ -2758,7 +2775,63 @@ func statusAnswer() -> StatusAnswer {
     answer.world = matches("(\\d+) declarations · (\\d+) lookups · (\\d+) premises", raw).first
     answer.whereSize = whereSize
     answer.next = nextRung(w, !refusals.isEmpty)
+    answer.servingNext = nextRung(w, !refusals.isEmpty, serving: true)
     return answer
+}
+
+// the object the answer is said as, in the order the keys were said. Written
+// once: the door below prints it indented, and the bench (`serve`) prints the
+// same pairs compact, so a key added here is added to both by construction.
+// ── AND THE LAST MILE IS NOT PART OF THE ANSWER. `command_to_run` is added
+// where the answer is PRINTED, which is what the other carrier does in its own
+// main; the bench recomputes the step for the room it is in and lifts the
+// command out of THAT one, so the field cannot arrive here already spent.
+func statusPairs(_ a: StatusAnswer) -> [(String, StatusJSON)] {
+    if a.noWorld {
+        return [
+            ("command", .text("status")),
+            ("verdict", .text("no world here")),
+            ("refusals", .list([])),
+            ("next", .text(a.next)),
+            ("then", .text(a.then)),
+            ("mutates", .raw("false")),
+        ]
+    }
+    var pairs: [(String, StatusJSON)] = [
+        ("command", .text("status")),
+        ("facts", a.judged.count == 1 ? .text(a.judged[0])
+                                      : .list(a.judged.map { .text($0) })),
+        ("verdict", .text(a.verdict)),
+        ("refusals", .list(a.refusals.map {
+            .object([("address", .text($0.address)), ("claim", .text($0.claim))]) })),
+        ("judge_ms", a.judgeMs.map { .raw(floatRepr($0)) } ?? .null),
+        ("wall_ms", .raw(String(a.wallMs))),
+        ("mutates", .raw("false")),
+    ]
+    if let m = a.world {
+        pairs.append(("world", .object([("declarations", .raw(m[0])),
+                                        ("lookups", .raw(m[1])),
+                                        ("premises", .raw(m[2]))])))
+    }
+    if a.whereSize["equalities"] != nil {
+        pairs.append(("forms", .object([
+            ("equalities", .raw(String(a.whereSize["equalities"] ?? 0))),
+            ("memberships", .raw(String(a.whereSize["memberships"] ?? 0))),
+            ("uses", .raw(String(a.whereSize["uses"] ?? 0)))])))
+    }
+    pairs.append(("court", .text("the judge")))
+    pairs.append(("next", .text(a.next)))
+    return pairs
+}
+
+// the step, lifted out beside the sentence that names it: ready as it stands,
+// for a person to copy and for an agent to read without parsing prose
+func statusPrinted(_ a: StatusAnswer) -> [(String, StatusJSON)] {
+    var pairs = statusPairs(a)
+    if let ready = commandIn(a.next) ?? commandIn(a.then) {
+        pairs.append(("command_to_run", .text(ready)))
+    }
+    return pairs
 }
 
 // the door: it prints what the answer above assembled, and decides nothing
@@ -2766,53 +2839,16 @@ func statusDoor(_ asJson: Bool) -> Never {
     let a = statusAnswer()
     if a.noWorld {
         if asJson {
-            var pairs: [(String, StatusJSON)] = [
-                ("command", .text("status")),
-                ("verdict", .text("no world here")),
-                ("refusals", .list([])),
-                ("next", .text(a.next)),
-                ("then", .text(a.then)),
-                ("mutates", .raw("false")),
-            ]
-            if let ready = commandIn(a.next) ?? commandIn(a.then) {
-                pairs.append(("command_to_run", .text(ready)))
-            }
-            out(statusDumps(.object(pairs), 0) + "\n")
+            out(statusDumps(.object(statusPrinted(a)), 0) + "\n")
         } else {
             out("status: no world here\n  next: \(a.next)\n  then: \(a.then)\n")
         }
         exit(0)
     }
-    let (judged, refusals, whereSize) = (a.judged, a.refusals, a.whereSize)
-    let (verdict, worldM, next, times) = (a.verdict, a.world, a.next, a.judgeMs)
-    let wallMs = a.wallMs
+    let (refusals, whereSize) = (a.refusals, a.whereSize)
+    let (worldM, next, times) = (a.world, a.next, a.judgeMs)
     if asJson {
-        var pairs: [(String, StatusJSON)] = [
-            ("command", .text("status")),
-            ("facts", judged.count == 1 ? .text(judged[0])
-                                        : .list(judged.map { .text($0) })),
-            ("verdict", .text(verdict)),
-            ("refusals", .list(refusals.map {
-                .object([("address", .text($0.address)), ("claim", .text($0.claim))]) })),
-            ("judge_ms", times.map { .raw(floatRepr($0)) } ?? .null),
-            ("wall_ms", .raw(String(wallMs))),
-            ("mutates", .raw("false")),
-        ]
-        if let m = worldM {
-            pairs.append(("world", .object([("declarations", .raw(m[0])),
-                                            ("lookups", .raw(m[1])),
-                                            ("premises", .raw(m[2]))])))
-        }
-        if whereSize["equalities"] != nil {
-            pairs.append(("forms", .object([
-                ("equalities", .raw(String(whereSize["equalities"] ?? 0))),
-                ("memberships", .raw(String(whereSize["memberships"] ?? 0))),
-                ("uses", .raw(String(whereSize["uses"] ?? 0)))])))
-        }
-        pairs.append(("court", .text("the judge")))
-        pairs.append(("next", .text(next)))
-        if let ready = commandIn(next) { pairs.append(("command_to_run", .text(ready))) }
-        out(statusDumps(.object(pairs), 0) + "\n")
+        out(statusDumps(.object(statusPrinted(a)), 0) + "\n")
     } else {
         let head = refusals.isEmpty ? "holds" : "refused \(refusals.count)"
         var tail: [String] = []
@@ -8203,6 +8239,370 @@ if args.first == "seam" {
         out(lines.joined(separator: "\n") + "\n")
     }
     exit(refusals.isEmpty ? 0 : 1)
+}
+
+// ── THE BENCH, SERVED FROM THIS CARRIER: the socket, the request, the answer.
+// The routes are the verbs this vein already carries, said over a wire; the
+// contract they answer is the one written at the head of the other carrier's
+// `serve`, and that head is the list this door is held to.
+//
+// POSIX and not Network.framework: the latter is Darwin's alone, and this vein
+// builds wherever swiftc does. One request at a time, the way the other carrier
+// answers, and the loopback address is written here rather than configured:
+// nothing about this server is reachable from a network.
+//
+// WHAT THE BATTERY HOLDS IS THE CODE, THE CONTENT TYPE AND THE BODY, never the
+// raw headers: the other carrier's http server writes a Server and a Date line
+// of its own, so those two differ by construction and say nothing about either
+// answer.
+
+// python's json.dumps(obj, ensure_ascii=False): no indent, and python's own
+// separators. The indented spelling of the same pairs is `statusDumps`, and
+// both read the one object `statusPairs` assembles.
+func compactDumps(_ v: StatusJSON) -> String {
+    switch v {
+    case .text(let s): return jsonString(s)
+    case .raw(let r): return r
+    case .null: return "null"
+    case .list(let items):
+        return "[" + items.map { compactDumps($0) }.joined(separator: ", ") + "]"
+    case .object(let pairs):
+        return "{" + pairs.map { jsonString($0.0) + ": " + compactDumps($0.1) }
+            .joined(separator: ", ") + "}"
+    }
+}
+
+// the version is declared once, in the other carrier's own file, and this reads
+// it there. A literal here would be a second copy of one number, which is the
+// registry's kind 9 written by hand; when that file goes, the declaration moves
+// with it and this reads wherever it lands.
+func gateVersion() -> String {
+    let text = readText(root.appendingPathComponent("gate").path) ?? ""
+    return matches("^VERSION = \"([^\"]+)\"", text, lines: true).first?.first ?? ""
+}
+
+func percentDecoded(_ s: String) -> String {
+    let plus = s.replacingOccurrences(of: "+", with: " ")
+    return plus.removingPercentEncoding ?? plus
+}
+
+// python's `{k: v[0] for k, v in parse_qs(query).items()}`: a name said twice
+// answers with its FIRST value, and a name said with no value is empty, which
+// every route here reads as absent the same way the other carrier does.
+func queryOf(_ raw: String) -> [String: String] {
+    var q: [String: String] = [:]
+    for part in raw.split(separator: "&", omittingEmptySubsequences: true) {
+        let kv = part.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
+        let name = percentDecoded(String(kv[0]))
+        let said = kv.count > 1 ? percentDecoded(String(kv[1])) : ""
+        if q[name] == nil { q[name] = said }
+    }
+    return q
+}
+
+func serveRead(_ conn: Int32) -> (method: String, path: String,
+                                  query: [String: String], body: Data)? {
+    var buf = Data()
+    var chunk = [UInt8](repeating: 0, count: 4096)
+    var head: Range<Data.Index>? = nil
+    while head == nil {
+        let n = chunk.withUnsafeMutableBytes { read(conn, $0.baseAddress, 4096) }
+        if n <= 0 { return nil }
+        buf.append(contentsOf: chunk[0..<n])
+        head = buf.range(of: Data("\r\n\r\n".utf8))
+    }
+    guard let mark = head else { return nil }
+    let headText = String(decoding: buf[buf.startIndex..<mark.lowerBound], as: UTF8.self)
+    let lines = headText.components(separatedBy: "\r\n")
+    let said = (lines.first ?? "").split(separator: " ", omittingEmptySubsequences: true)
+        .map(String.init)
+    guard said.count >= 2 else { return nil }
+    // the path is NOT percent-decoded: urlparse does not decode one either, and
+    // only the query is read through a parse that does
+    var path = said[1], query = ""
+    if let q = said[1].firstIndex(of: "?") {
+        path = String(said[1][said[1].startIndex..<q])
+        query = String(said[1][said[1].index(after: q)...])
+    }
+    var want = 0
+    for line in lines.dropFirst() where line.lowercased().hasPrefix("content-length:") {
+        want = Int(line.dropFirst("content-length:".count)
+            .trimmingCharacters(in: .whitespaces)) ?? 0
+    }
+    var body = Data(buf[mark.upperBound...])
+    while body.count < want {
+        let n = chunk.withUnsafeMutableBytes { read(conn, $0.baseAddress, 4096) }
+        if n <= 0 { break }
+        body.append(contentsOf: chunk[0..<n])
+    }
+    return (said[0], path, queryOf(query), body)
+}
+
+func serveSay(_ conn: Int32, _ code: Int, _ ctype: String?, _ body: Data) {
+    let reason = [200: "OK", 400: "Bad Request", 404: "Not Found",
+                  409: "Conflict"][code] ?? "OK"
+    var head = "HTTP/1.0 \(code) \(reason)\r\n"
+    if let c = ctype { head += "Content-Type: \(c)\r\n" }
+    // never cached: an updated gate must not be hidden behind a bench the
+    // browser kept from the last version
+    head += "Cache-Control: no-store\r\n"
+    head += "Content-Length: \(body.count)\r\n\r\n"
+    var whole = Data(head.utf8)
+    whole.append(body)
+    whole.withUnsafeBytes { raw in
+        var sent = 0
+        while sent < raw.count, let base = raw.baseAddress {
+            let n = write(conn, base.advanced(by: sent), raw.count - sent)
+            if n <= 0 { break }
+            sent += n
+        }
+    }
+}
+
+func serveJSON(_ conn: Int32, _ text: String) {
+    serveSay(conn, 200, "application/json", Data(text.utf8))
+}
+
+// ── THE WORLDS THE PAGE PAINTS WITH, READ WHERE THEY ARE DECLARED. The
+// stylesheet holds no number of its own: every colour, every step and every
+// face comes off a world this repository judges, so the page and the verdict
+// cannot part.
+
+func presentedWorld(_ w: WorldState, _ shelfName: String) -> String {
+    return presentedOver(w, shelfName).text
+}
+
+// every number in these worlds is spelled on the file's own ladder from Unit,
+// so reading one is walking that spelling, never a table kept beside it.
+// ── TWO READINGS, AND BOTH ARE THE OTHER CARRIER'S. The palette and the faces
+// read `W12` and `N12` alike and let the FIRST speaker win, because what is
+// presented outranks what shipped; the steps read `W12` alone and let the last
+// win. Copied as they stand rather than reconciled: one reading here would be
+// this vein inventing a rule neither carrier has.
+func ladderValues(_ text: String, bothLiterals: Bool, firstWins: Bool) -> [String: Int] {
+    var vals: [String: Int] = [:]
+    func ev(_ raw: String) -> Int? {
+        let e = raw.trimmingCharacters(in: .whitespaces)
+        if e == "Unit" { return 1 }
+        if e == "Never" { return 0 }
+        if let said = vals[e] { return said }
+        if let m = matchAt(e, (bothLiterals ? "[WN]" : "W") + "(\\d+)$") { return Int(m[1]) }
+        if e.hasPrefix("Twice<") && e.hasSuffix(">") {
+            return ev(String(e.dropFirst(6).dropLast())).map { 2 * $0 }
+        }
+        if e.hasPrefix("Plus<") && e.hasSuffix(">") {
+            let inner = Array(String(e.dropFirst(5).dropLast()))
+            var depth = 0
+            for (i, c) in inner.enumerated() {
+                if c == "<" { depth += 1 }
+                else if c == ">" { depth -= 1 }
+                else if c == "," && depth == 0 {
+                    guard let left = ev(String(inner[0..<i])),
+                          let right = ev(String(inner[(i + 1)...])) else { return nil }
+                    return left + right
+                }
+            }
+        }
+        return nil
+    }
+    for m in matches("^public typealias (\\w+) = (.+)$", text, lines: true) {
+        let name = m[0]
+        if firstWins && vals[name] != nil { continue }
+        let expr = m[1].components(separatedBy: "//")[0].trimmingCharacters(in: .whitespaces)
+        if let said = ev(expr) { vals[name] = said }
+    }
+    return vals
+}
+
+// a hex fallback for anything that cannot read color(): a rendering of the
+// declared fact, never a second statement of it
+func srgbHex(_ x: Double, _ y: Double, _ z: Double) -> String {
+    let lin = [3.2406 * x - 1.5372 * y - 0.4986 * z,
+               -0.9689 * x + 1.8758 * y + 0.0415 * z,
+               0.0557 * x - 0.2040 * y + 1.0570 * z]
+    let eight = lin.map { c -> Int in
+        let s = c <= 0.0031308 ? 12.92 * c : 1.055 * pow(max(c, 0), 1 / 2.4) - 0.055
+        // python's round, which goes to the even neighbour on a half: the
+        // number this page has always painted is the other carrier's
+        return max(0, min(255, Int((s * 255).rounded(.toNearestOrEven))))
+    }
+    return String(format: "#%02X%02X%02X", eight[0], eight[1], eight[2])
+}
+
+func paletteTokens(_ w: WorldState) -> String {
+    let text = presentedWorld(w, "bench-palette")
+    let vals = ladderValues(text, bothLiterals: true, firstWins: true)
+    let names = Set(matches("^public typealias (\\w+)(?:Lit|Dim)X = ", text, lines: true)
+        .map { $0[0] }).sorted()
+    func block(_ half: String) -> String {
+        var rows: [String] = []
+        for n in names {
+            guard let x = vals[n + half + "X"], let y = vals[n + half + "Y"],
+                  let z = vals[n + half + "Z"] else { continue }
+            // the name in the page's own spelling: every capital goes down,
+            // which is the whole of the other carrier's substitution
+            let varName = "--" + n.lowercased()
+            rows.append("  \(varName): "
+                      + srgbHex(Double(x) / 1000, Double(y) / 1000, Double(z) / 1000) + ";"
+                      + " \(varName): color(xyz-d65 calc(\(x)/1000) calc(\(y)/1000) calc(\(z)/1000));")
+        }
+        return rows.joined(separator: "\n")
+    }
+    return ":root {\n" + block("Lit") + "\n}\n"
+         + ":root[data-theme=\"dark\"] {\n" + block("Dim") + "\n}\n"
+}
+
+func ladderTokens(_ w: WorldState) -> String {
+    let vals = ladderValues(presentedWorld(w, "bench-metrics"),
+                            bothLiterals: false, firstWins: false)
+    // `Line` is left out: the page already spends that name on a border colour,
+    // and one word may not mean two things in one document
+    var rows: [String] = []
+    for name in ["Tight", "Snug", "Near", "Step", "Room", "Apart", "Edge", "Wide", "Indent"] {
+        if let said = vals[name] {
+            rows.append("  --\(name.lowercased()): calc(var(--u) * \(said));")
+        }
+    }
+    return ":root {\n" + rows.joined(separator: "\n") + "\n}\n"
+}
+
+func registerTokens(_ w: WorldState) -> String {
+    let text = presentedWorld(w, "bench-registers")
+    let vals = ladderValues(text, bothLiterals: true, firstWins: true)
+    var faces: [String: String] = [:]
+    for m in matches("public enum (\\w+): Register \\{\\s*\\n\\s*public typealias On = (\\w+)",
+                     text) {
+        faces[m[0]] = m[1]
+    }
+    // how hard a register is set, read off the same declaration: a register you
+    // present is treated exactly like the ones this tool ships, because the
+    // declaration says and no name is written into the mechanism
+    var stresses: [String: String] = [:]
+    for m in matches("public enum (\\w+): Register \\{[^}]*?public typealias Set = (\\w+)",
+                     text, dotAll: true) {
+        stresses[m[0]] = m[1]
+    }
+    var rows: [String] = []
+    for name in faces.keys.sorted() {
+        guard let size = vals[name + "Size"] else { continue }
+        let stack = faces[name] == "Mono" ? "ui-monospace,Menlo,monospace"
+                                          : "-apple-system,sans-serif"
+        let weight = stresses[name] == "Firm" ? "600 " : ""
+        let px = String(format: "%g", Double(size) / 10)
+        let lead = vals[name + "Lead"] ?? 0
+        let leading = lead != 0 ? "/" + String(format: "%g", Double(lead) / 100) : ""
+        rows.append("  --\(name.lowercased()): \(weight)\(px)px\(leading) \(stack);")
+    }
+    // and the two faces on their own, for a rule that changes the face and keeps
+    // whatever size it stands in: still a name, never a stack written by hand
+    for (face, stack) in [("Mono", "ui-monospace,Menlo,monospace"),
+                          ("Sans", "-apple-system,sans-serif")] {
+        if text.contains("public enum " + face + ": Face {}") {
+            rows.append("  --\(face.lowercased()): \(stack);")
+        }
+    }
+    return ":root {\n" + rows.joined(separator: "\n") + "\n}\n"
+}
+
+func serveDoor(_ a: [String]) -> Never {
+    let nums = a.filter { !$0.isEmpty && $0.allSatisfy { $0.isNumber } }
+    let port = nums.first.flatMap { Int($0) } ?? 4744
+    let openIt = !a.contains("--no-open")
+
+    #if canImport(Glibc)
+    let stream = Int32(SOCK_STREAM.rawValue)
+    #else
+    let stream = SOCK_STREAM
+    #endif
+    let listener = socket(AF_INET, stream, 0)
+    if listener < 0 {
+        cannot("this machine would not give the bench a socket",
+               "run `gate status` in the terminal: the same answers, no port needed")
+    }
+    var yes: Int32 = 1
+    setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes,
+               socklen_t(MemoryLayout<Int32>.size))
+    var addr = sockaddr_in()
+    addr.sin_family = sa_family_t(AF_INET)
+    addr.sin_port = UInt16(truncatingIfNeeded: port).bigEndian
+    addr.sin_addr = in_addr(s_addr: UInt32(0x7f00_0001).bigEndian)   // 127.0.0.1, never a network
+    let bound = withUnsafePointer(to: &addr) { raw in
+        raw.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+            bind(listener, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
+        }
+    }
+    if bound != 0 || listen(listener, 16) != 0 {
+        cannot("port \(port) is already spoken for on this machine",
+               "run `gate serve PORT` with a port nothing else is holding")
+    }
+
+    out(compactDumps(.object([
+        ("command", .text("serve")),
+        ("url", .text("http://127.0.0.1:\(port)")),
+        ("routes", .list([.text("/status"), .text("/log"), .text("/show?hash=&f="),
+                          .text("/check/view?who=&doc="), .text("/diff/transfer?who=&to=")])),
+        ("mutating_routes", .text("none, by design")),
+    ])) + "\n")
+    fflush(stdout)
+
+    if openIt {
+        // the bench is the point of serve, and the listener is already up by
+        // this line, so the page has something to reach the moment it opens
+        let opener = Process()
+        #if canImport(Glibc)
+        opener.executableURL = URL(fileURLWithPath: "/usr/bin/xdg-open")
+        #else
+        opener.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        #endif
+        opener.arguments = ["http://127.0.0.1:\(port)/ui"]
+        try? opener.run()
+    }
+
+    while true {
+        var from = sockaddr()
+        var size = socklen_t(MemoryLayout<sockaddr>.size)
+        let conn = accept(listener, &from, &size)
+        if conn < 0 { continue }
+        if let asked = serveRead(conn) {
+            switch (asked.method, asked.path) {
+            case ("GET", "/ladder.css"):
+                // the named steps, emitted from the judged worlds so the page
+                // can say `var(--apart)` and never a number of its own
+                loadStatusShelf()
+                let w = discoverWorld()
+                let sheet = paletteTokens(w) + ladderTokens(w) + registerTokens(w)
+                serveSay(conn, 200, "text/css; charset=utf-8", Data(sheet.utf8))
+            case ("GET", "/version"):
+                // WHAT IS ACTUALLY RUNNING. The bench serves its page off the
+                // disk and its answers out of memory, so a gate updated while it
+                // runs leaves a new page talking to an old server.
+                serveJSON(conn, compactDumps(.object([
+                    ("gate", .text(gateVersion())),
+                    ("judge_from", judgeFrom().map { StatusJSON.text($0) } ?? .null)])))
+            case ("GET", "/status"):
+                let answer = statusAnswer()
+                var pairs = statusPairs(answer)
+                // the ladder, read from this room: whoever is asking is looking
+                // at the bench, so the rung that opens the bench is taken. The
+                // no-world answer carries its own step and neither names a room.
+                if !answer.noWorld, let at = pairs.firstIndex(where: { $0.0 == "next" }) {
+                    pairs[at].1 = .text(answer.servingNext)
+                }
+                let saidNext = answer.noWorld ? answer.next : answer.servingNext
+                if let ready = commandIn(saidNext) ?? commandIn(answer.then) {
+                    pairs.append(("command_to_run", .text(ready)))
+                }
+                serveJSON(conn, compactDumps(.object(pairs)))
+            default:
+                serveSay(conn, 404, nil, Data())
+            }
+        }
+        close(conn)
+    }
+}
+
+if args.first == "serve" {
+    serveDoor(args)
 }
 
 // an argv this binary never claimed: refuse loudly rather than guess. The

@@ -7508,6 +7508,76 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         S.append(("the status core answers with the python side's bytes on fourteen worlds",
                   _s9apart == []))
 
+        # ── AND THE SAME ANSWERS OVER A SOCKET. The bench is the one surface
+        # where a verb is asked for by a wire rather than by an argv, so the two
+        # carriers are held the way a page holds them: both servers up, on their
+        # own ports, over this repository, and every route asked of both. What
+        # is compared is the code, the content type and the body — the other
+        # carrier's http server writes a Server and a Date header of its own,
+        # and those differ by construction and say nothing about the answer.
+        # Both are shut in this same step, whatever the walk finds.
+        _sv_ports = []
+        for _ in range(2):
+            _sp = _sock.socket(); _sp.bind(("127.0.0.1", 0))
+            _sv_ports.append(_sp.getsockname()[1]); _sp.close()
+        _sv_py = subprocess.Popen(
+            [sys.executable, GATE, "serve", str(_sv_ports[0]), "--no-open"], cwd=HERE,
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
+            env={**os.environ, "GATE_CLI": "off"})
+        _sv_sw = subprocess.Popen(
+            [_cli_bin, "serve", str(_sv_ports[1]), "--no-open"], cwd=HERE,
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+        _sv_apart, _sv_seen = [], {}
+        try:
+            import urllib.request as _uq
+            for _p in _sv_ports:
+                wait_serve(_p, "/version")
+
+            def _over(port, route):
+                try:
+                    _r = _uq.urlopen(f"http://127.0.0.1:{port}{route}", timeout=60)
+                    return (_r.status, _r.headers.get("Content-Type"), _r.read().decode())
+                except Exception as _e:
+                    return (getattr(_e, "code", "dropped"), None, "")
+
+            for _route in ("/version", "/status", "/ladder.css", "/nosuchroute"):
+                _a, _b = _over(_sv_ports[0], _route), _over(_sv_ports[1], _route)
+                _sv_seen[_route] = _a
+                if (_a[0], _a[1], _s9noms(_a[2].encode())) != \
+                   (_b[0], _b[1], _s9noms(_b[2].encode())):
+                    _sv_apart.append(_route)
+        finally:
+            for _proc in (_sv_py, _sv_sw):
+                _proc.terminate()
+            for _proc in (_sv_py, _sv_sw):
+                try:
+                    _proc.wait(timeout=5)
+                except Exception:
+                    _proc.kill()
+        # the line each server prints as it comes up, port aside: it names the
+        # routes that mutate nothing, and a reader takes the tool at that word
+        _sv_said = [re.sub(r":\d+", ":PORT", (_p.stdout.read() or "").strip().split("\n")[0])
+                    for _p in (_sv_py, _sv_sw)]
+        if _sv_apart:
+            print("   the bench answers apart on:", _sv_apart)
+        S.append(("the bench answers over a socket with the python side's own bytes",
+                  _sv_apart == [] and _sv_said[0] == _sv_said[1]
+                  and '"mutating_routes": "none, by design"' in _sv_said[0]
+                  # and the control, known before the walk from another source:
+                  # the version is the one literal in the python file, and the
+                  # verdict is this repository's own, so two empty answers
+                  # could not have passed for agreement
+                  and json.loads(_sv_seen["/version"][2])["gate"] == re.search(
+                      r'^VERSION = "([^"]+)"', open(GATE, encoding="utf-8").read(),
+                      re.M).group(1)
+                  and '"court": "the judge"' in _sv_seen["/status"][2]
+                  # and the stylesheet carries the worlds it is emitted from:
+                  # a step named on the ladder and a colour said as the judged
+                  # record says it, so two empty sheets could not agree either
+                  and "--apart: calc(var(--u) *" in _sv_seen["/ladder.css"][2]
+                  and "color(xyz-d65 calc(" in _sv_seen["/ladder.css"][2]
+                  and _sv_seen["/nosuchroute"][0] == 404))
+
         # ── AND ALL FOURTEEN OF THEM ALREADY HAD A WORLD. The tables bootstrap
         # runs in the other carrier's dispatcher, above the door that hands an
         # argv to this vein, so a repository holding tables and no world yet was
