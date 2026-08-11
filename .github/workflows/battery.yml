@@ -121,6 +121,10 @@ jobs:
       - name: build the vein
         shell: bash
         run: bin/build-cli.sh 2>&1 | tee /tmp/vein-out.txt; exit ${PIPESTATUS[0]}
+      - if: failure()
+        name: what the build actually said
+        shell: bash
+        run: tail -40 /tmp/vein-out.txt
       - name: the binary answers what it carries
         shell: bash
         run: |
@@ -135,9 +139,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # the path a windows compiler prints is longer than the whole
-          # status, so the sentence is kept and the drive letters are not
-          SAID=$(grep -m2 -E 'error:|the ledger this binary' /tmp/vein-out.txt \
+          # ── AND THE LINE THAT TRAVELS IS THE ONE THAT NAMES SOMETHING. A
+          # linker says `cannot open file X` on one line and `link command
+          # failed` on the next, and only the second is an `error:`, so the
+          # status carried the sentence that names nothing twice over. What is
+          # looked for first is a line that names a file or a symbol; the
+          # generic failure is the fallback. The drive letters go either way:
+          # a windows path is longer than the whole status field.
+          SAID=$(grep -m2 -E 'LNK[0-9]+|cannot open|undefined symbol|unresolved external' \
+                 /tmp/vein-out.txt | sed 's|.*[\\/]||' | paste -sd '; ' - || true)
+          [ -n "$SAID" ] || SAID=$(grep -m2 -E 'error:|the ledger this binary' /tmp/vein-out.txt \
                  | sed 's|.*[\\/]||' | paste -sd '; ' - || true)
           [ -n "$SAID" ] || SAID=$(tail -1 /tmp/vein-out.txt)
           BODY=$(python -c 'import json,sys; print(json.dumps({"state":"failure","context":"windows-vein-first-fail","description":sys.argv[1][:138]}))' "$SAID")

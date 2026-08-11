@@ -10839,11 +10839,19 @@ public enum MyWatch: AccessLedger {
     # and the job had to be named by asking the API. The page is built and walked
     # before the deploy step, so a red there is about publishing and not about
     # this repository, and the status now says which.
+    # ── AND WHAT IS COUNTED IS MOUTHS, NOT STEPS. This counted `if: failure()`
+    # blocks, so a job that grew a second failure step — one that prints the
+    # build's own tail into the log for a person — went red for having said
+    # MORE. The thing held is that every job which can go red posts a status
+    # naming itself, and that is the count of contexts and of the permission
+    # each needs.
+    _mouths = ["pages-publish", "linux-first-fail", "macos-first-fail",
+               "windows-vein-first-fail"]
     S.append(("a job that can go red posts a status naming itself",
-              _ci.count("if: failure()") == 4
-              and "pages-publish" in _ci and "linux-first-fail" in _ci
-              and "macos-first-fail" in _ci and "windows-vein-first-fail" in _ci
-              and _ci.count("statuses: write") == 4))
+              all(m in _ci for m in _mouths)
+              and _ci.count("statuses: write") == len(_mouths)
+              # and each one is posted from a step that runs only on failure
+              and _ci.count("if: failure()") >= len(_mouths)))
     # ── AND PUBLISHING IS ASKED ABOUT BEFORE IT IS ATTEMPTED. `deploy-pages`
     # fails with an empty message when Pages is off or its source is a branch,
     # and that is what three runs were: checkout, build, road test and artifact
