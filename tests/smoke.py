@@ -106,15 +106,24 @@ def main():
     # because no subprocess here carries a timeout. One wall clock for the
     # whole run turns that class into a red line with a sentence. Twenty
     # minutes is ten times the slowest run on record.
+    #
+    # ── AND THE CLOCK IS RAISED WHILE TWO CARRIERS ARE ALIVE, with a return
+    # ticket written here. The middle of the strangler is the maximum of this
+    # cost by construction: every moved verb is judged twice, once on each side,
+    # so the run grows until the python half dies and then shrinks at a stroke.
+    # The mac job went red on this alarm rather than on a verdict, which is the
+    # clock doing the wrong job: it exists to catch a hang. Temporary, until the
+    # death commit; after it, measure the new worst day and put the tenfold
+    # margin back.
     if hasattr(signal, "alarm"):
         def _overdue(sig, frame):
             # os._exit skips every buffer, so the sentence is flushed by hand:
             # a red with no words would be the silence this clock exists against
-            print("FAIL the battery ran past twenty minutes: something hangs", flush=True)
+            print("FAIL the battery ran past thirty-five minutes: something hangs", flush=True)
             print("RED", flush=True)
             os._exit(1)
         signal.signal(signal.SIGALRM, _overdue)
-        signal.alarm(1200)
+        signal.alarm(2100)
     tmp = tempfile.mkdtemp(prefix="gate-smoke-")
     # ── AND THIS BATTERY DOES NOT WRITE IN THE HOUSE OF WHOEVER RUNS IT. A personal
     # world lives in `~/.gate/me` unless `GATE_ME` says otherwise, and that was set
@@ -1474,7 +1483,7 @@ def main():
     import socket as _lksock          # `_sock` is bound further down this file
     _lkp = _lksock.socket(); _lkp.bind(("127.0.0.1", 0))
     _lk_port = _lkp.getsockname()[1]; _lkp.close()
-    _lkb = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_lk_port)],
+    _lkb = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_lk_port), "--no-open"],
                             cwd=_lk, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     import urllib.request as _lku
     try:
@@ -4914,7 +4923,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     open(os.path.join(sv, "my-values.swift"), "w").write("// role: forms\n")
     no_forms = None
     _s2 = _sock.socket(); _s2.bind(("127.0.0.1", 0)); _vp = _s2.getsockname()[1]; _s2.close()
-    _vb = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_vp)], cwd=sv,
+    _vb = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_vp), "--no-open"], cwd=sv,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
         wait_serve(_vp)
@@ -4928,7 +4937,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
         _vb.terminate()
     run("mine", "my-values.swift", "--role", "forms", cwd=sv)
     _s3 = _sock.socket(); _s3.bind(("127.0.0.1", 0)); _vp2 = _s3.getsockname()[1]; _s3.close()
-    _vb2 = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_vp2)], cwd=sv,
+    _vb2 = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_vp2), "--no-open"], cwd=sv,
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     said_value = {}
     try:
@@ -5691,7 +5700,7 @@ console.log(JSON.stringify({
     # beside it and never asked. It went unseen for as long as it did because we
     # always opened a sandbox to look, never this repository.
     _s = _sock.socket(); _s.bind(("127.0.0.1", 0)); _bench_port = _s.getsockname()[1]; _s.close()
-    _bench = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_bench_port)],
+    _bench = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_bench_port), "--no-open"],
                               cwd=HERE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
         agreed = None
@@ -5747,7 +5756,7 @@ console.log(JSON.stringify({
         # went green on the next push.
         _s4 = _sock.socket(); _s4.bind(("127.0.0.1", 0))
         _nwp = _s4.getsockname()[1]; _s4.close()
-        _nwb = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_nwp)],
+        _nwb = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_nwp), "--no-open"],
                                 cwd=_nw, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         try:
             _page = ask_bench(_nwp, "/status")
@@ -5772,7 +5781,7 @@ console.log(JSON.stringify({
         _lp = _bench_port
         _s5 = _sock.socket(); _s5.bind(("127.0.0.1", 0))
         _lp = _s5.getsockname()[1]; _s5.close()
-        _lb = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_lp)],
+        _lb = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_lp), "--no-open"],
                                cwd=_lay, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         try:
             _page_said = ask_bench(_lp, "/check/view?who=Emp9000&doc=FinanceShare")
@@ -5848,7 +5857,7 @@ console.log(JSON.stringify({
     dw = os.path.join(tmp, "bothsurfaces")
     run("demo", "org", dw)
     _s4 = _sock.socket(); _s4.bind(("127.0.0.1", 0)); _dp = _s4.getsockname()[1]; _s4.close()
-    _db = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_dp)], cwd=dw,
+    _db = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_dp), "--no-open"], cwd=dw,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     both = None
     _ref_line = ""
@@ -7520,13 +7529,32 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         # seam, so those two branches of `/files` would be walked empty and
         # agree by having nothing to say. The worlds the status parity already
         # built carry both, and the bench is asked over them too.
-        _sv_routes = ("/version", "/status", "/ladder.css", "/files", "/shelf",
-                      "/shelf?m=courts", "/shelf?m=nosuch", "/gitstatus",
-                      "/gitstatus?f=nosuchfile.swift", "/seamside?f=nosuch.swift",
-                      "/nosuchroute")
+        # ── AND A ROOM IS ASKED WHAT IT WAS ADDED FOR. Every route in every room
+        # is 20 minutes of wall clock on the slowest runner and the battery has
+        # a clock of its own: the first spelling of this walk cost the whole run
+        # its budget and the mac job went red on the alarm, not on a verdict.
+        # The full contract is walked here, where the world is richest; each
+        # other room answers the routes it alone can exercise.
+        _sv_here = ("/version", "/status", "/ladder.css", "/files", "/shelf",
+                    "/shelf?m=courts", "/shelf?m=nosuch", "/gitstatus",
+                    "/gitstatus?f=nosuchfile.swift", "/seamside?f=nosuch.swift",
+                    "/attention", "/check/view", "/nosuchroute")
+        _sv_seamroom = os.path.join(tmp, "bench-seam")
+        run("demo", "seam", _sv_seamroom)
         _sv_apart, _sv_seen, _sv_said = [], {}, []
-        for _tag, _room in (("here", HERE), ("presented", _s9w["presented"]),
-                            ("parted", _s9w["parted"])):
+        for _tag, _room, _sv_routes in (
+                ("here", HERE, _sv_here),
+                # a world that presents a value of its own: the override branch
+                ("presented", _s9w["presented"], ("/files",)),
+                # a world with people in it: the question and the change, each
+                # asked of somebody the world declares and somebody it does not
+                ("org", _s9w["org"], ("/check/view?who=Emp9000&doc=FinanceShare",
+                                      "/check/view?who=Nobody&doc=FinanceShare",
+                                      "/diff/transfer?who=Emp9000&to=Finance",
+                                      "/diff/transfer?who=Nobody&to=Finance")),
+                # and a world that declares a seam, because the morning question
+                # is walked empty in every room above
+                ("seam", _sv_seamroom, ("/attention", "/files"))):
             _sv_ports = []
             for _ in range(2):
                 _sp = _sock.socket(); _sp.bind(("127.0.0.1", 0))
@@ -7556,6 +7584,10 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                         _sv_seen[_route] = _a
                     if _tag == "presented" and _route == "/files":
                         _sv_seen["presented /files"] = _a
+                    if _tag == "seam" and _route == "/attention":
+                        _sv_seen["seam /attention"] = _a
+                    if _tag == "org" and _route == "/diff/transfer?who=Emp9000&to=Finance":
+                        _sv_seen["org /diff"] = _a
                     if (_a[0], _a[1], _s9noms(_a[2].encode())) != \
                        (_b[0], _b[1], _s9noms(_b[2].encode())):
                         _sv_apart.append(_tag + " " + _route)
@@ -7595,6 +7627,12 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                   # exercised where they exist: a world that presents a value of
                   # its own says so at the name it overrules
                   and json.loads(_sv_seen["presented /files"][2])["overridden"]
+                  # and the morning question was asked where a pair is declared,
+                  # and the change was asked of a world that has people in it:
+                  # an empty seam list and an unanswerable question agree with
+                  # themselves anywhere
+                  and json.loads(_sv_seen["seam /attention"][2])["seams"]
+                  and json.loads(_sv_seen["org /diff"][2]).get("command") == "change transfer"
                   and _sv_seen["/nosuchroute"][0] == 404))
 
         # ── AND ALL FOURTEEN OF THEM ALREADY HAD A WORLD. The tables bootstrap
@@ -10094,7 +10132,7 @@ public enum MyWatch: AccessLedger {
     liveworld = os.path.join(tmp, "liveforms")
     run("demo", liveworld)
     _s5 = _sock.socket(); _s5.bind(("127.0.0.1", 0)); _lp = _s5.getsockname()[1]; _s5.close()
-    _lb = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_lp)], cwd=liveworld,
+    _lb = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_lp), "--no-open"], cwd=liveworld,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     live_said = broke_said = None
     try:
@@ -10187,7 +10225,7 @@ public enum MyWatch: AccessLedger {
     sd = os.path.join(tmp, "seamrail")
     run("demo", "seam", sd)
     _s6 = _sock.socket(); _s6.bind(("127.0.0.1", 0)); _sp = _s6.getsockname()[1]; _s6.close()
-    _sb = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_sp)], cwd=sd,
+    _sb = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_sp), "--no-open"], cwd=sd,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     rail = side_text = None
     try:
@@ -10264,7 +10302,7 @@ public enum MyWatch: AccessLedger {
     run("demo", "seam", putw)
     kept_man = open(os.path.join(putw, "gate.manifest.swift"), encoding="utf-8").read()
     _s7 = _sock.socket(); _s7.bind(("127.0.0.1", 0)); _pp = _s7.getsockname()[1]; _s7.close()
-    _pb = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_pp)], cwd=putw,
+    _pb = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_pp), "--no-open"], cwd=putw,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     codes = []
     try:
@@ -10853,7 +10891,7 @@ public enum MyWatch: AccessLedger {
     run("init", ".", cwd=rung)
     _, term = run("status", cwd=rung)
     _s10 = _sock.socket(); _s10.bind(("127.0.0.1", 0)); _rp = _s10.getsockname()[1]; _s10.close()
-    _rb = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_rp)], cwd=rung,
+    _rb = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_rp), "--no-open"], cwd=rung,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     bench = {}
     try:
@@ -10875,7 +10913,7 @@ public enum MyWatch: AccessLedger {
     # the friendlier one was the wrong one. Driven through the server, because
     # what is claimed here is what the page is handed, not what the source says.
     _s9 = _sock.socket(); _s9.bind(("127.0.0.1", 0)); _up = _s9.getsockname()[1]; _s9.close()
-    _ub = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_up)], cwd=undecl,
+    _ub = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_up), "--no-open"], cwd=undecl,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     seen = {}
     try:

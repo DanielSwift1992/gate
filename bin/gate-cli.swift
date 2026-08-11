@@ -3747,8 +3747,18 @@ func judgeFile(_ path: String) -> (verdict: String, refusals: [(address: String,
 
 // insert a new entry after the LAST entry of the same form: a probe writes
 // beside an existing entry, in the world's own hand
+// ── AND THE REFUSAL IS THROWN, NOT EXITED. Both writers below are read by two
+// surfaces now: the terminal, which prints a refusal and leaves, and the bench,
+// which must answer the request and stay up. `cannot` ends the process, so a
+// question the bench could not satisfy would have shut the server on the person
+// asking it. The refusal travels as a value, and each surface ends it its way.
+struct CannotSay: Error {
+    let note: String
+    let next: String
+}
+
 func lastEntryInsert(_ text: String, _ head: String, _ first: String, _ second: String,
-                     _ indent: Int, anchoredOn: String? = nil) -> String {
+                     _ indent: Int, anchoredOn: String? = nil) throws -> String {
     let ns = text as NSString
     guard let re = try? NSRegularExpression(pattern: head + "<\\s*(\\w+),\\s*(\\w+)\\s*>\\.self;?")
     else { return text }
@@ -3759,8 +3769,8 @@ func lastEntryInsert(_ text: String, _ head: String, _ first: String, _ second: 
         hits = hits.filter { ns.substring(with: $0.range(at: 2)) == axis }
     }
     guard let m = hits.last else {
-        cannot("no \(head) entries to anchor on",
-               "this change writes beside an existing entry, and the world has none")
+        throw CannotSay(note: "no \(head) entries to anchor on",
+                        next: "this change writes beside an existing entry, and the world has none")
     }
     let pad = String(repeating: " ", count: indent)
     let inner = String(repeating: " ", count: indent + 4)
@@ -3822,7 +3832,7 @@ func declaredSeamFiles(_ base: String) -> [String] {
 
 // an anchor the world states a different number of times than the change
 // expects is a sentence, never a silent rewrite of the wrong place
-func mustSub(_ text: String, _ pattern: String, _ repl: String, _ what: String) -> String {
+func mustSub(_ text: String, _ pattern: String, _ repl: String, _ what: String) throws -> String {
     let ns = text as NSString
     guard let re = try? NSRegularExpression(pattern: pattern,
                                             options: [.dotMatchesLineSeparators]) else {
@@ -3830,8 +3840,9 @@ func mustSub(_ text: String, _ pattern: String, _ repl: String, _ what: String) 
     }
     let hits = re.matches(in: text, range: NSRange(location: 0, length: ns.length))
     if hits.count != 1 {
-        cannot("\(what): anchor x\(hits.count), want 1",
-               "the world says this a different number of times than the change expects")
+        throw CannotSay(note: "\(what): anchor x\(hits.count), want 1",
+                        next: "the world says this a different number of times than the "
+                            + "change expects")
     }
     return re.stringByReplacingMatches(in: text, range: NSRange(location: 0, length: ns.length),
                                        withTemplate: repl)
@@ -3840,8 +3851,8 @@ func mustSub(_ text: String, _ pattern: String, _ repl: String, _ what: String) 
 // the mechanics of a transfer: Home in the roster and the team entry, both
 // facts. View grants are NOT touched: re-pointing or revoking access is a
 // decision of intent, left to the human.
-func transferText(_ text: String, _ who: String, _ dept: String) -> String {
-    var said = mustSub(text,
+func transferText(_ text: String, _ who: String, _ dept: String) throws -> String {
+    var said = try mustSub(text,
                        "(public enum \(who): Employee, Person \\{[^}]*?public typealias Home = )\\w+",
                        "$1" + dept, "roster entry of " + who)
     let ns = said as NSString
@@ -3853,24 +3864,24 @@ func transferText(_ text: String, _ who: String, _ dept: String) -> String {
     return said
 }
 
-func grantText(_ text: String, _ who: String, _ doc: String) -> String {
-    lastEntryInsert(text, "VerifiedView", who, doc, 12)
+func grantText(_ text: String, _ who: String, _ doc: String) throws -> String {
+    try lastEntryInsert(text, "VerifiedView", who, doc, 12)
 }
 
-func revokeText(_ text: String, _ who: String, _ doc: String) -> String {
+func revokeText(_ text: String, _ who: String, _ doc: String) throws -> String {
     let pattern = "\\n\\s*VerifiedView<\\s*\(who),\\s*\(doc)\\s*>\\.self;?"
     let ns = text as NSString
     guard let re = try? NSRegularExpression(pattern: pattern) else { return text }
     let hits = re.matches(in: text, range: NSRange(location: 0, length: ns.length))
     if hits.count != 1 {
-        cannot("revoke: grant \(who)->\(doc) found x\(hits.count), want 1",
-               "revoke removes one grant, and the world states that one a different "
-               + "number of times")
+        throw CannotSay(note: "revoke: grant \(who)->\(doc) found x\(hits.count), want 1",
+                        next: "revoke removes one grant, and the world states that one a "
+                            + "different number of times")
     }
     return ns.replacingCharacters(in: hits[0].range, with: "")
 }
 
-func hireText(_ text: String, _ f: [String: String]) -> String {
+func hireText(_ text: String, _ f: [String: String]) throws -> String {
     func said(_ k: String) -> String { f[k] ?? "" }
     let block = "\n\npublic enum \(said("id")): Employee, Person {\n"
         + "    public typealias Rank = \(said("rank"))\n"
@@ -3898,14 +3909,78 @@ func hireText(_ text: String, _ f: [String: String]) -> String {
         let end = s.range.location + s.range.length
         out = outNs.substring(to: end) + " \(said("id")).self;" + outNs.substring(from: end)
     }
-    out = lastEntryInsert(out, "VerifiedView", said("id"), said("home") + "Share", 12)
-    out = lastEntryInsert(out, "VerifiedInDepartment", said("id"), said("home"), 8,
-                          anchoredOn: said("home"))
-    out = lastEntryInsert(out, "VerifiedAtRank", said("id"), said("rank"), 8,
-                          anchoredOn: said("rank"))
-    out = lastEntryInsert(out, "VerifiedAtWorkplace", said("id"), said("site"), 8,
-                          anchoredOn: said("site"))
+    out = try lastEntryInsert(out, "VerifiedView", said("id"), said("home") + "Share", 12)
+    out = try lastEntryInsert(out, "VerifiedInDepartment", said("id"), said("home"), 8,
+                              anchoredOn: said("home"))
+    out = try lastEntryInsert(out, "VerifiedAtRank", said("id"), said("rank"), 8,
+                              anchoredOn: said("rank"))
+    out = try lastEntryInsert(out, "VerifiedAtWorkplace", said("id"), said("site"), 8,
+                              anchoredOn: said("site"))
     return out
+}
+
+// ── AN ANSWER, BEFORE ANYBODY SAYS IT. Two surfaces ask these questions: the
+// terminal prints the answer and exits, the bench answers a request with it and
+// stays up. So the asking hands back what it found, and each surface says it in
+// its own way. The refusal travels the same road for the same reason: a `cannot`
+// that exits the process would take the bench down with the first incomplete
+// request, where the other carrier answers `{"error": …, "next": …}` and lives.
+enum Answered {
+    case said([(String, StatusJSON)])
+    case cannot(note: String, next: String?)
+}
+
+// reading a field back out of an assembled answer: the human line is printed
+// from the same pairs the object is printed from, so the two cannot drift
+func textIn(_ pairs: [(String, StatusJSON)], _ key: String) -> String? {
+    if case .text(let s)? = pairs.first(where: { $0.0 == key })?.1 { return s }
+    return nil
+}
+
+func rawIn(_ pairs: [(String, StatusJSON)], _ key: String) -> String? {
+    if case .raw(let r)? = pairs.first(where: { $0.0 == key })?.1 { return r }
+    return nil
+}
+
+func rowsIn(_ pairs: [(String, StatusJSON)], _ key: String) -> [[(String, StatusJSON)]] {
+    guard case .list(let items)? = pairs.first(where: { $0.0 == key })?.1 else { return [] }
+    return items.compactMap { if case .object(let o) = $0 { return o }; return nil }
+}
+
+func refusalLines(_ pairs: [(String, StatusJSON)]) -> [String] {
+    return rowsIn(pairs, "refusals").map {
+        "  \(textIn($0, "address") ?? "") · \(textIn($0, "claim") ?? "")"
+    }
+}
+
+// the question of one entry: a probe written beside the world's own entries and
+// judged, with nothing changed
+func askViewAnswer(_ w: WorldState, _ who: String, _ doc: String) -> Answered {
+    // ── AND A QUESTION OF A WORLD FILE NEEDS ONE, said where the reading is: a
+    // world declared as a layout alone has no facts file, and this read it
+    // unguarded, so the terminal met a FileNotFoundError and the bench dropped
+    // the line with no answer at all.
+    guard let facts = w.facts, FileManager.default.fileExists(atPath: facts) else {
+        return .cannot(
+            note: "this asks its question of a world file, and there is none here",
+            next: "run `gate init .` to start one, or `gate demo` for a repository to look "
+                + "at. A world declared as a layout alone is judged by `gate status`")
+    }
+    guard let probe = try? lastEntryInsert(readText(facts) ?? "", "VerifiedView", who, doc, 12)
+    else {
+        return .cannot(note: "no VerifiedView entries to anchor on",
+                       next: "this change writes beside an existing entry, and the world has none")
+    }
+    let said = judgeFile(withTemp(probe, (facts as NSString).lastPathComponent))
+    return .said([
+        ("command", .text("ask view")), ("who", .text(who)), ("doc", .text(doc)),
+        ("verdict", .text(said.verdict)),
+        ("refusals", .list(said.refusals.map {
+            .object([("address", .text($0.address)), ("claim", .text($0.claim))]) })),
+        ("judge_ms", said.judgeMs.map { .raw(floatRepr($0)) } ?? .null),
+        ("wall_ms", .raw(String(said.wallMs))),
+        ("mutates", .raw("false")),
+    ])
 }
 
 // ── check view WHO DOC · check administer|delete WHO DOC. A question about one
@@ -3942,38 +4017,24 @@ if args.first == "check" || args.first == "ask" {
                   asks)
         }
         if tail.count < 2 { cannot("check view WHO WHAT: this names only " + tail[0], asks) }
-        // ── AND A QUESTION OF A WORLD FILE NEEDS ONE, said where the reading is:
-        // a world declared as a layout alone has no facts file, and this read it
-        // unguarded, so the terminal met a FileNotFoundError and the bench
-        // dropped the line with no answer at all.
-        guard let facts = w.facts, FileManager.default.fileExists(atPath: facts) else {
-            cannot("this asks its question of a world file, and there is none here",
-                   "run `gate init .` to start one, or `gate demo` for a repository to look "
-                   + "at. A world declared as a layout alone is judged by `gate status`")
+        let answered = askViewAnswer(w, tail[0], tail[1])
+        guard case .said(let pairs) = answered else {
+            if case .cannot(let note, let next) = answered { cannot(note, next ?? "") }
+            exit(1)
         }
-        let probe = lastEntryInsert(readText(facts) ?? "", "VerifiedView",
-                                    tail[0], tail[1], 12)
-        let said = judgeFile(withTemp(probe, (facts as NSString).lastPathComponent))
-        var pairs: [(String, StatusJSON)] = [
-            ("command", .text("ask view")), ("who", .text(tail[0])), ("doc", .text(tail[1])),
-            ("verdict", .text(said.verdict)),
-            ("refusals", .list(said.refusals.map {
-                .object([("address", .text($0.address)), ("claim", .text($0.claim))]) })),
-            ("judge_ms", said.judgeMs.map { .raw(floatRepr($0)) } ?? .null),
-            ("wall_ms", .raw(String(said.wallMs))),
-            ("mutates", .raw("false")),
-        ]
-        _ = pairs
+        let verdict = textIn(pairs, "verdict") ?? ""
         if asJson {
             out(statusDumps(.object(pairs), 0) + "\n")
         } else {
             var lines = ["ask view: "
-                         + (said.verdict == "holds" ? "holds" : "refused \(said.refusals.count)")
-                         + (said.judgeMs.map { " · " + floatRepr($0) + " ms" } ?? "")]
-            for r in said.refusals { lines.append("  \(r.address) · \(r.claim)") }
+                         + (verdict == "holds" ? "holds"
+                            : "refused \(rowsIn(pairs, "refusals").count)")
+                         + ((rawIn(pairs, "judge_ms").flatMap { $0 == "null" ? nil : $0 })
+                            .map { " · " + $0 + " ms" } ?? "")]
+            lines += refusalLines(pairs)
             out(lines.joined(separator: "\n") + "\n")
         }
-        exit(said.verdict == "holds" ? 0 : 1)
+        exit(verdict == "holds" ? 0 : 1)
     }
     if kind == "administer" || kind == "delete" {
         // the compiler gates: a probe entry in the corpus's own accesses and a
@@ -4042,6 +4103,83 @@ if args.first == "check" || args.first == "ask" {
 // ── diff transfer WHO DEPT · diff hire … · apply the same words. The SINGLE
 // source, the world, is edited, and the diff stays a Swift git diff. `change` is
 // the third spelling of one act and travels with the two doors.
+// the change itself, assembled once for both surfaces: what the world would say
+// after the edit, and whether the edit was written. `apply` is the same act as
+// `diff` with the bytes kept, which is why one reading answers both.
+func changeAnswer(_ w: WorldState, _ facts: String, _ rest: [String],
+                  applyIt: Bool) -> Answered {
+    let text = readText(facts) ?? ""
+    var label: [(String, StatusJSON)] = []
+    var made = ""
+    switch rest[0] {
+    case "transfer":
+        guard rest.count > 2 else {
+            return .cannot(note: "change transfer WHO DEPT: this names too little",
+                           next: "name the person and the department")
+        }
+        do { made = try transferText(text, rest[1], rest[2]) }
+        catch let e as CannotSay { return .cannot(note: e.note, next: e.next) }
+        catch { return .cannot(note: "this change could not be written", next: nil) }
+        label = [("command", .text("change transfer")), ("who", .text(rest[1])),
+                 ("to", .text(rest[2])),
+                 ("note", .text("roster and team entry moved. View grants are intent, so "
+                                + "resolve leftovers with grant/revoke"))]
+    case "grant":
+        guard rest.count > 2 else {
+            return .cannot(note: "change grant WHO DOC: this names too little",
+                           next: "name the person and the document")
+        }
+        do { made = try grantText(text, rest[1], rest[2]) }
+        catch let e as CannotSay { return .cannot(note: e.note, next: e.next) }
+        catch { return .cannot(note: "this change could not be written", next: nil) }
+        label = [("command", .text("change grant")), ("who", .text(rest[1])),
+                 ("doc", .text(rest[2]))]
+    case "revoke":
+        guard rest.count > 2 else {
+            return .cannot(note: "change revoke WHO DOC: this names too little",
+                           next: "name the person and the document")
+        }
+        do { made = try revokeText(text, rest[1], rest[2]) }
+        catch let e as CannotSay { return .cannot(note: e.note, next: e.next) }
+        catch { return .cannot(note: "this change could not be written", next: nil) }
+        label = [("command", .text("change revoke")), ("who", .text(rest[1])),
+                 ("doc", .text(rest[2]))]
+    case "hire":
+        let keys = ["id", "rank", "home", "given", "family", "born", "site"]
+        var f: [String: String] = [:]
+        for (i, k) in keys.enumerated() where i + 1 < rest.count { f[k] = rest[i + 1] }
+        do { made = try hireText(text, f) }
+        catch let e as CannotSay { return .cannot(note: e.note, next: e.next) }
+        catch { return .cannot(note: "this change could not be written", next: nil) }
+        label = [("command", .text("change hire"))]
+            + keys.compactMap { k in f[k].map { (k, StatusJSON.text($0)) } }
+    default:
+        return .cannot(note: "unknown change " + rest[0],
+                       next: "the changes this verb makes are `transfer`, `hire`, `grant` "
+                           + "and `revoke`")
+    }
+    let said = judgeFile(withTemp(made, (facts as NSString).lastPathComponent))
+    // ── AND `applied` MEANS SOMETHING CHANGED. A transfer to the department
+    // somebody is already in rewrites the file with the bytes it already had,
+    // and this said `applied` while `git status` stayed empty.
+    let moved = (readText(facts) ?? "") != made
+    var applied = false
+    if applyIt && said.verdict == "holds" && moved {
+        oursWrite(facts, "the world this edits", made)
+        applied = true
+    }
+    var pairs = label
+    pairs.append(("verdict", .text(said.verdict)))
+    pairs.append(("refusals", .list(said.refusals.map {
+        .object([("address", .text($0.address)), ("claim", .text($0.claim))]) })))
+    pairs.append(("judge_ms", said.judgeMs.map { .raw(floatRepr($0)) } ?? .null))
+    pairs.append(("wall_ms", .raw(String(said.wallMs))))
+    pairs.append(("dry_run", .raw(applyIt ? "false" : "true")))
+    pairs.append(("applied", .raw(applied ? "true" : "false")))
+    pairs.append(("changed", .raw(moved ? "true" : "false")))
+    return .said(pairs)
+}
+
 if args.first == "diff" || args.first == "apply" || args.first == "change" {
     let applyIt = args.first == "apply" || args.contains("--apply")
     let rest = Array(args.dropFirst()).filter { $0 != "--json" && $0 != "--apply" }
@@ -4067,81 +4205,33 @@ if args.first == "diff" || args.first == "apply" || args.first == "change" {
         }
         exit(0)
     }
-    let text = readText(facts) ?? ""
-    var label: [(String, StatusJSON)] = []
-    var made = ""
-    switch rest[0] {
-    case "transfer":
-        guard rest.count > 2 else { cannot("change transfer WHO DEPT: this names too little",
-                                           "name the person and the department") }
-        made = transferText(text, rest[1], rest[2])
-        label = [("command", .text("change transfer")), ("who", .text(rest[1])),
-                 ("to", .text(rest[2])),
-                 ("note", .text("roster and team entry moved. View grants are intent, so "
-                                + "resolve leftovers with grant/revoke"))]
-    case "grant":
-        guard rest.count > 2 else { cannot("change grant WHO DOC: this names too little",
-                                           "name the person and the document") }
-        made = grantText(text, rest[1], rest[2])
-        label = [("command", .text("change grant")), ("who", .text(rest[1])),
-                 ("doc", .text(rest[2]))]
-    case "revoke":
-        guard rest.count > 2 else { cannot("change revoke WHO DOC: this names too little",
-                                           "name the person and the document") }
-        made = revokeText(text, rest[1], rest[2])
-        label = [("command", .text("change revoke")), ("who", .text(rest[1])),
-                 ("doc", .text(rest[2]))]
-    case "hire":
-        let keys = ["id", "rank", "home", "given", "family", "born", "site"]
-        var f: [String: String] = [:]
-        for (i, k) in keys.enumerated() where i + 1 < rest.count { f[k] = rest[i + 1] }
-        made = hireText(text, f)
-        label = [("command", .text("change hire"))]
-            + keys.compactMap { k in f[k].map { (k, StatusJSON.text($0)) } }
-    default:
-        cannot("unknown change " + rest[0],
-               "the changes this verb makes are `transfer`, `hire`, `grant` and `revoke`")
+    let answered = changeAnswer(w, facts, rest, applyIt: applyIt)
+    guard case .said(let pairs) = answered else {
+        if case .cannot(let note, let next) = answered { cannot(note, next ?? "") }
+        exit(1)
     }
-    let said = judgeFile(withTemp(made, (facts as NSString).lastPathComponent))
-    // ── AND `applied` MEANS SOMETHING CHANGED. A transfer to the department
-    // somebody is already in rewrites the file with the bytes it already had,
-    // and this said `applied` while `git status` stayed empty.
-    let moved = (readText(facts) ?? "") != made
-    var applied = false
-    if applyIt && said.verdict == "holds" && moved {
-        oursWrite(facts, "the world this edits", made)
-        applied = true
-    }
-    var pairs = label
-    pairs.append(("verdict", .text(said.verdict)))
-    pairs.append(("refusals", .list(said.refusals.map {
-        .object([("address", .text($0.address)), ("claim", .text($0.claim))]) })))
-    pairs.append(("judge_ms", said.judgeMs.map { .raw(floatRepr($0)) } ?? .null))
-    pairs.append(("wall_ms", .raw(String(said.wallMs))))
-    pairs.append(("dry_run", .raw(applyIt ? "false" : "true")))
-    pairs.append(("applied", .raw(applied ? "true" : "false")))
-    pairs.append(("changed", .raw(moved ? "true" : "false")))
+    let label = pairs
     if asJson {
         out(statusDumps(.object(pairs), 0) + "\n")
     } else {
-        var head = ""
-        for (k, v) in label where k == "command" { if case .text(let s) = v { head = s } }
+        let head = textIn(label, "command") ?? ""
+        let verdict = textIn(pairs, "verdict") ?? ""
+        let applied = rawIn(pairs, "applied") == "true"
+        let moved = rawIn(pairs, "changed") == "true"
         var tail: [String] = []
-        if let ms = said.judgeMs { tail.append(floatRepr(ms) + " ms") }
+        if let ms = rawIn(pairs, "judge_ms"), ms != "null" { tail.append(ms + " ms") }
         tail.append(applyIt ? (applied ? "applied"
-                               : (!moved && said.verdict == "holds"
+                               : (!moved && verdict == "holds"
                                   ? "nothing to change: it already says this" : "NOT applied"))
                             : "dry-run")
         var lines = [head + ": "
-                     + (said.verdict == "holds" ? "holds" : "refused \(said.refusals.count)")
+                     + (verdict == "holds" ? "holds" : "refused \(rowsIn(pairs, "refusals").count)")
                      + " · " + tail.joined(separator: " · ")]
-        for r in said.refusals { lines.append("  \(r.address) · \(r.claim)") }
-        for (k, v) in label where k == "note" {
-            if case .text(let s) = v { lines.append("  note: " + s) }
-        }
+        lines += refusalLines(pairs)
+        if let note = textIn(label, "note") { lines.append("  note: " + note) }
         out(lines.joined(separator: "\n") + "\n")
     }
-    exit(said.verdict == "holds" ? 0 : 1)
+    exit((textIn(pairs, "verdict") ?? "") == "holds" ? 0 : 1)
 }
 
 // the way a person will type it: relative where a relative path exists
@@ -4684,6 +4774,95 @@ func attentionPairs(_ said: AttentionSaid) -> [(String, StatusJSON)] {
      ("note", .text(said.note)), ("next", .text(said.next)), ("mutates", .raw("false"))]
 }
 
+// ── THE SEAMS THIS FOLDER IS PARTY TO, assembled for both surfaces. A
+// declaration is a world in the contract grammar, so a pair is found by what
+// the files SAY they are rather than by where they sit: one states records, the
+// other claims them, and a repository may be either side or both. The door
+// counts over these and the bench prints them as they are.
+func seamsHere(_ w: WorldState) -> [[(String, StatusJSON)]] {
+    let base = w.facts.map { (absPath($0) as NSString).deletingLastPathComponent }
+        ?? FileManager.default.currentDirectoryPath
+    var stated: [String] = [], claimed: [String] = []
+    for full in declaredSeamFiles(base) where FileManager.default.fileExists(atPath: full)
+        && isSeamSide(full) {
+        let head = String((readText(full) ?? "").prefix(4000))
+        if !matches("^public enum \\w+: Carrier \\{\\}", head, lines: true).isEmpty {
+            claimed.append(full)
+        } else { stated.append(full) }
+    }
+    let knownPath = (base as NSString).appendingPathComponent("known.json")
+    let tickPath = (base as NSString).appendingPathComponent("tickets.json")
+    var seams: [[(String, StatusJSON)]] = []
+    if stated.isEmpty || claimed.isEmpty {
+        // A SIDE DECLARED ALONE IS A STATE, NOT A BLANK: whoever moves first
+        // would otherwise see nothing and think the declaration had not taken
+        for f in stated + claimed {
+            let isCarrier = claimed.contains(f)
+            let name = isCarrier
+                ? (matches("public enum (\\w+): Carrier", readText(f) ?? "").first?.first
+                   ?? (f as NSString).lastPathComponent)
+                : (f as NSString).lastPathComponent
+            seams.append([("command", .text("attention")),
+                          ("alone", .text(isCarrier ? "carries" : "states")),
+                          ("carrier", .text(name)),
+                          ("contract_file", .text((f as NSString).lastPathComponent)),
+                          ("carrier_file", .text((f as NSString).lastPathComponent)),
+                          ("stated", .raw("0")), ("claimed", .raw("0")),
+                          ("waits_on_you", .list([])), ("you_wait_on", .list([])),
+                          ("parted", .list([])), ("known", .list([])),
+                          ("expired", .list([])), ("against", .null),
+                          ("read_known", .null), ("read_tracker", .null)])
+        }
+    } else {
+        for c in stated {
+            for k in claimed {
+                let said = attentionOver(
+                    c, k, nil,
+                    FileManager.default.fileExists(atPath: knownPath) ? knownPath : nil,
+                    FileManager.default.fileExists(atPath: tickPath) ? tickPath : nil)
+                // the pair's own answer entire, and the seam's fields after
+                // it: the other carrier adds to that dict rather than
+                // rebuilding it, so `mutates` stays where it was
+                var one = attentionPairs(said)
+                let decl = matches("^// \\w+ · against ([^\\n]+)$",
+                                   String((readText(k) ?? "").prefix(2000)), lines: true)
+                one.append(("against", decl.first.map { .text($0[0]) } ?? .null))
+                one.append(("contract_file", .text((c as NSString).lastPathComponent)))
+                one.append(("carrier_file", .text((k as NSString).lastPathComponent)))
+                // AND THE PIN, WHERE THE OWNER IS LOOKING: what YOU wrote
+                // down when you took each file, which is the fact you can act
+                // on, and it was readable only by opening the manifest
+                let (rows, mp) = layoutRowsFull((absPath(c) as NSString)
+                    .deletingLastPathComponent)
+                // built a field at a time: one long literal put the
+                // type-checker past its budget, the way the journal's own
+                // answer did before it
+                var took: [StatusJSON] = []
+                for f in [c, k] {
+                    let name = (f as NSString).lastPathComponent
+                    let row = rows.first(where: { $0.path == name })
+                    var one2: [(String, StatusJSON)] = [("file", .text(name))]
+                    let at: StatusJSON = row?.from.map { .text($0) } ?? .null
+                    one2.append(("at", at))
+                    let claim: StatusJSON = mp.map {
+                        .text(($0 as NSString).lastPathComponent) } ?? .null
+                    one2.append(("claim", claim))
+                    let line: StatusJSON = row.map { .raw(String($0.line)) } ?? .null
+                    one2.append(("line", line))
+                    took.append(.object(one2))
+                }
+                one.append(("took", .list(took)))
+                one.append(("read_known", FileManager.default.fileExists(atPath: knownPath)
+                    ? .text("known.json") : .null))
+                one.append(("read_tracker", FileManager.default.fileExists(atPath: tickPath)
+                    ? .text("tickets.json") : .null))
+                seams.append(one)
+            }
+        }
+    }
+    return seams
+}
+
 if args.first == "attention" {
     let rest = Array(args.dropFirst()).filter { $0 != "--json" }
     let asJson = args.contains("--json")
@@ -4698,86 +4877,7 @@ if args.first == "attention" {
         // files named by hand, so the one thing an owner asks daily could only
         // be asked one pair at a time, by somebody who already knew the pairs.
         // The list is declared: this world knows its own seams.
-        let base = w.facts.map { (absPath($0) as NSString).deletingLastPathComponent }
-            ?? FileManager.default.currentDirectoryPath
-        var stated: [String] = [], claimed: [String] = []
-        for full in declaredSeamFiles(base) where FileManager.default.fileExists(atPath: full)
-            && isSeamSide(full) {
-            let head = String((readText(full) ?? "").prefix(4000))
-            if !matches("^public enum \\w+: Carrier \\{\\}", head, lines: true).isEmpty {
-                claimed.append(full)
-            } else { stated.append(full) }
-        }
-        let knownPath = (base as NSString).appendingPathComponent("known.json")
-        let tickPath = (base as NSString).appendingPathComponent("tickets.json")
-        var seams: [[(String, StatusJSON)]] = []
-        if stated.isEmpty || claimed.isEmpty {
-            // A SIDE DECLARED ALONE IS A STATE, NOT A BLANK: whoever moves first
-            // would otherwise see nothing and think the declaration had not taken
-            for f in stated + claimed {
-                let isCarrier = claimed.contains(f)
-                let name = isCarrier
-                    ? (matches("public enum (\\w+): Carrier", readText(f) ?? "").first?.first
-                       ?? (f as NSString).lastPathComponent)
-                    : (f as NSString).lastPathComponent
-                seams.append([("command", .text("attention")),
-                              ("alone", .text(isCarrier ? "carries" : "states")),
-                              ("carrier", .text(name)),
-                              ("contract_file", .text((f as NSString).lastPathComponent)),
-                              ("carrier_file", .text((f as NSString).lastPathComponent)),
-                              ("stated", .raw("0")), ("claimed", .raw("0")),
-                              ("waits_on_you", .list([])), ("you_wait_on", .list([])),
-                              ("parted", .list([])), ("known", .list([])),
-                              ("expired", .list([])), ("against", .null),
-                              ("read_known", .null), ("read_tracker", .null)])
-            }
-        } else {
-            for c in stated {
-                for k in claimed {
-                    let said = attentionOver(
-                        c, k, nil,
-                        FileManager.default.fileExists(atPath: knownPath) ? knownPath : nil,
-                        FileManager.default.fileExists(atPath: tickPath) ? tickPath : nil)
-                    // the pair's own answer entire, and the seam's fields after
-                    // it: the other carrier adds to that dict rather than
-                    // rebuilding it, so `mutates` stays where it was
-                    var one = attentionPairs(said)
-                    let decl = matches("^// \\w+ · against ([^\\n]+)$",
-                                       String((readText(k) ?? "").prefix(2000)), lines: true)
-                    one.append(("against", decl.first.map { .text($0[0]) } ?? .null))
-                    one.append(("contract_file", .text((c as NSString).lastPathComponent)))
-                    one.append(("carrier_file", .text((k as NSString).lastPathComponent)))
-                    // AND THE PIN, WHERE THE OWNER IS LOOKING: what YOU wrote
-                    // down when you took each file, which is the fact you can act
-                    // on, and it was readable only by opening the manifest
-                    let (rows, mp) = layoutRowsFull((absPath(c) as NSString)
-                        .deletingLastPathComponent)
-                    // built a field at a time: one long literal put the
-                    // type-checker past its budget, the way the journal's own
-                    // answer did before it
-                    var took: [StatusJSON] = []
-                    for f in [c, k] {
-                        let name = (f as NSString).lastPathComponent
-                        let row = rows.first(where: { $0.path == name })
-                        var one2: [(String, StatusJSON)] = [("file", .text(name))]
-                        let at: StatusJSON = row?.from.map { .text($0) } ?? .null
-                        one2.append(("at", at))
-                        let claim: StatusJSON = mp.map {
-                            .text(($0 as NSString).lastPathComponent) } ?? .null
-                        one2.append(("claim", claim))
-                        let line: StatusJSON = row.map { .raw(String($0.line)) } ?? .null
-                        one2.append(("line", line))
-                        took.append(.object(one2))
-                    }
-                    one.append(("took", .list(took)))
-                    one.append(("read_known", FileManager.default.fileExists(atPath: knownPath)
-                        ? .text("known.json") : .null))
-                    one.append(("read_tracker", FileManager.default.fileExists(atPath: tickPath)
-                        ? .text("tickets.json") : .null))
-                    seams.append(one)
-                }
-            }
-        }
+        let seams = seamsHere(w)
         if seams.isEmpty {
             let note = "no seam is declared here, so nobody is waiting on anybody"
             let next = "gate theirs their-side.swift --role seam --at REV  say which pair you "
@@ -5091,7 +5191,12 @@ if args.first == "guard" {
                                     + "no such person"))])]))],
                true)
     }
-    let probe = lastEntryInsert(readText(facts) ?? "", "VerifiedAtRank", who, required, 8)
+    // this door has one surface, the terminal, so a refusal here still ends the
+    // run: it is said in the same words the writer hands back
+    let probe: String
+    do { probe = try lastEntryInsert(readText(facts) ?? "", "VerifiedAtRank", who, required, 8) }
+    catch let e as CannotSay { cannot(e.note, e.next) }
+    catch { cannot("this check could not be written", "run `gate status` and read the world") }
     let said = judgeFile(withTemp(probe, (facts as NSString).lastPathComponent))
     answer([("command", .text("guard " + action)),
             ("author", .text("\(email) = \(who)")),
@@ -8381,6 +8486,20 @@ func serveJSON(_ conn: Int32, _ text: String) {
     serveSay(conn, 200, "application/json", Data(text.utf8))
 }
 
+// an answer as the bench says it: the object entire, or the refusal as the
+// object the other carrier's exception carries. Both leave with a 200, because
+// the page asked a question and got one answered.
+func benchSaid(_ answered: Answered) -> String {
+    switch answered {
+    case .said(let pairs):
+        return compactDumps(.object(pairs))
+    case .cannot(let note, let next):
+        var pairs: [(String, StatusJSON)] = [("error", .text(note))]
+        if let step = next, !step.isEmpty { pairs.append(("next", .text(step))) }
+        return compactDumps(.object(pairs))
+    }
+}
+
 // ── AND NOTHING LEAVES THIS ROOM WITHOUT WORDS. A file the bench asks for and
 // cannot read answers with the sentence the other carrier answers with, rather
 // than a bare code: the page's own fetch shows a network error for a dropped
@@ -8662,6 +8781,50 @@ func serveDoor(_ a: [String]) -> Never {
                         ("speaks", .object(pages.map {
                             ($0, shelfHeadLine($0, "// speaks-for:").map { StatusJSON.text($0) } ?? .null) })),
                     ])))
+                }
+            case ("GET", "/attention"):
+                // where nobody has declared anything there is nothing to show
+                // and the bench says so: an empty account is a fact, and
+                // inventing a specimen to fill it would be the one lie this
+                // thing cannot afford
+                loadStatusShelf()
+                let w = discoverWorld()
+                serveJSON(conn, compactDumps(.object([
+                    ("command", .text("attention")),
+                    ("seams", .list(seamsHere(w).map { .object($0) }))])))
+            case ("GET", "/check/view"):
+                // ── AND A QUESTION MISSING A WORD IS ANSWERED, NOT DROPPED.
+                // These read the query straight, so a request without `who`
+                // raised inside the handler and the connection died with no
+                // response at all: the page saw a network error where a
+                // sentence belonged.
+                loadStatusShelf()
+                let w = discoverWorld()
+                let who = asked.query["who"] ?? "", doc = asked.query["doc"] ?? ""
+                if who.isEmpty || doc.isEmpty {
+                    serveJSON(conn, benchSaid(.cannot(
+                        note: "check view asks who, and about what",
+                        next: "/check/view?who=Emp0042&doc=FinanceShare")))
+                } else {
+                    serveJSON(conn, benchSaid(askViewAnswer(w, who, doc)))
+                }
+            case ("GET", "/diff/transfer"):
+                loadStatusShelf()
+                let w = discoverWorld()
+                let who = asked.query["who"] ?? "", to = asked.query["to"] ?? ""
+                if who.isEmpty || to.isEmpty {
+                    serveJSON(conn, benchSaid(.cannot(
+                        note: "diff transfer asks who moves, and where to",
+                        next: "/diff/transfer?who=Emp0042&to=Sales")))
+                } else if let facts = w.facts, FileManager.default.fileExists(atPath: facts) {
+                    serveJSON(conn, benchSaid(
+                        changeAnswer(w, facts, ["transfer", who, to], applyIt: false)))
+                } else {
+                    serveJSON(conn, benchSaid(.cannot(
+                        note: "this asks its question of a world file, and there is none here",
+                        next: "run `gate init .` to start one, or `gate demo` for a repository "
+                            + "to look at. A world declared as a layout alone is judged by "
+                            + "`gate status`")))
                 }
             case ("GET", "/files"):
                 loadStatusShelf()
