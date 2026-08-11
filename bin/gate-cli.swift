@@ -8403,6 +8403,63 @@ func gateVersion() -> String {
     return matches("^VERSION = \"([^\"]+)\"", text, lines: true).first?.first ?? ""
 }
 
+// the page a personal world opens with, read where it is declared: the other
+// carrier's own file. A copy here would be one text in two places, which is the
+// registry's kind 9 written by hand; when that file goes, the text goes to the
+// shelf with every other thing this tool writes into somebody's repository.
+func personalTemplate() -> String {
+    let text = readText(root.appendingPathComponent("gate").path) ?? ""
+    guard let start = text.range(of: "PERSONAL_TEMPLATE = \"\"\"\\\n"),
+          let end = text.range(of: "\n\"\"\"", range: start.upperBound..<text.endIndex)
+    else { return "" }
+    return String(text[start.upperBound..<end.lowerBound]) + "\n"
+}
+
+// ── THE LANGUAGE, AND WHERE IT IS DECLARED. These are the words the mechanism
+// must know as grammar, so knowing them is the one place a name may sit inside
+// a tool by right. They are declared once, in the other carrier's file, and read
+// from there for the same reason the version and the personal page are: one
+// text, one home, until that file goes.
+func pythonSaid() -> String {
+    return readText(root.appendingPathComponent("gate").path) ?? ""
+}
+
+func languageNames() -> [(String, Int)] {
+    let text = pythonSaid()
+    guard let open = text.range(of: "LANGUAGE_AT = {"),
+          let close = text.range(of: "}", range: open.upperBound..<text.endIndex) else { return [] }
+    return matches("\"(\\w+)\": (\\d+)", String(text[open.upperBound..<close.lowerBound]))
+        .compactMap { m in Int(m[1]).map { (m[0], $0) } }
+}
+
+func languageFile() -> String {
+    return matches("^LANGUAGE_FILE = \"([^\"]+)\"", pythonSaid(), lines: true).first?.first ?? ""
+}
+
+// counted from the checkout when there is one, and said to be uncounted when
+// there is not: never a number written here, which would be a claim about
+// somebody else's file that nothing checks
+func courtShape() -> StatusJSON {
+    guard let root = ProcessInfo.processInfo.environment["GATE_CORPUS"], !root.isEmpty
+    else { return .null }
+    let text = pythonSaid()
+    guard let open = text.range(of: "COURT_FILES = ("),
+          let close = text.range(of: ")", range: open.upperBound..<text.endIndex) else { return .null }
+    let files = matches("\"([^\"]+)\"", String(text[open.upperBound..<close.lowerBound]))
+        .compactMap { $0.first }
+    var lines = 0
+    var seen: [StatusJSON] = []
+    for rel in files {
+        let p = (root as NSString).appendingPathComponent(rel)
+        guard let body = readText(p) else { return .null }
+        // python counts the lines a file iterates: the last line counts only
+        // when the file does not end on a newline
+        lines += body.components(separatedBy: "\n").count - (body.hasSuffix("\n") ? 1 : 0)
+        seen.append(.text(rel))
+    }
+    return .object([("files", .list(seen)), ("lines", .raw(String(lines)))])
+}
+
 func percentDecoded(_ s: String) -> String {
     let plus = s.replacingOccurrences(of: "+", with: " ")
     return plus.removingPercentEncoding ?? plus
@@ -9026,6 +9083,21 @@ func serveDoor(_ a: [String]) -> Never {
                     personal.map { !FileManager.default.fileExists(atPath: $0) } ?? false
                         ? "true" : "false")))
                 serveJSON(conn, compactDumps(.object(pairs)))
+            case ("GET", "/world"):
+                // the page obeys the declared layout: `?f=` names a file FROM
+                // that list, and a name the world does not carry is a miss
+                let w = discoverWorld()
+                guard let p = servePick(w, asked.query) else {
+                    serveSay(conn, 404, nil, Data())
+                    break
+                }
+                if FileManager.default.fileExists(atPath: p) {
+                    serveFile(conn, p, "text/plain; charset=utf-8")
+                } else {
+                    // yours, and nobody has written in it yet
+                    serveSay(conn, 200, "text/plain; charset=utf-8",
+                             Data(personalTemplate().utf8))
+                }
             case ("GET", "/gitstatus"):
                 // the honest state: a write lands in the working copy and git
                 // carries the history, so this says whether the file is
@@ -9069,6 +9141,44 @@ func serveDoor(_ a: [String]) -> Never {
                 } else {
                     serveSay(conn, 404, nil, Data())
                 }
+            case ("GET", "/language"):
+                let corpus = ProcessInfo.processInfo.environment["GATE_CORPUS"]
+                if let want = asked.query["f"], !want.isEmpty {
+                    // SHOWN, NOT ONLY TOLD, for whoever has the corpus. gate
+                    // still fetches nothing: this reads a checkout already on
+                    // the machine and refuses anything outside it rather than
+                    // serving a path it was given.
+                    let full = ((corpus ?? "") as NSString).appendingPathComponent(want)
+                    let real = URL(fileURLWithPath: full).resolvingSymlinksInPath().path
+                    let base = corpus.map { URL(fileURLWithPath: $0)
+                        .resolvingSymlinksInPath().path } ?? ""
+                    if !base.isEmpty, real.hasPrefix(base + "/"),
+                       FileManager.default.fileExists(atPath: real) {
+                        serveFile(conn, real, "text/plain; charset=utf-8")
+                    } else {
+                        serveSay(conn, 404, nil, Data())
+                    }
+                    break
+                }
+                // the words the mechanism knows by right, and the file that
+                // declares them, so a name in a world can point at its floor
+                let came = judgeFrom()
+                let short = String((came ?? "").prefix(12))
+                let here = corpus.map {
+                    ($0 as NSString).appendingPathComponent(languageFile()) }
+                serveJSON(conn, compactDumps(.object([
+                    ("names", .object(languageNames().map { ($0.0, .raw(String($0.1))) })),
+                    ("file", .text(languageFile())),
+                    ("court", courtShape()),
+                    ("at", came.map { StatusJSON.text($0) } ?? .null),
+                    ("short", short.isEmpty ? .null : .text(short)),
+                    ("present", .raw(here.map {
+                        FileManager.default.fileExists(atPath: $0) } ?? false ? "true" : "false")),
+                    ("command", .text("git clone https://github.com/DanielSwift1992/"
+                                    + "verification-is-identification && cd "
+                                    + "verification-is-identification"
+                                    + (came != nil ? " && git checkout " + short : ""))),
+                ])))
             case ("GET", "/version"):
                 // WHAT IS ACTUALLY RUNNING. The bench serves its page off the
                 // disk and its answers out of memory, so a gate updated while it

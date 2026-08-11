@@ -7539,7 +7539,9 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                     "/shelf?m=courts", "/shelf?m=nosuch", "/gitstatus",
                     "/gitstatus?f=nosuchfile.swift", "/seamside?f=nosuch.swift",
                     "/attention", "/check/view", "/log", "/log?n=5", "/log?n=all",
-                    "/log?scope=all&n=3", "/nosuchroute")
+                    "/log?scope=all&n=3", "/world", "/world?f=ownership.swift",
+                    "/world?f=my.swift", "/world?f=nosuch.swift", "/language",
+                    "/language?f=README.md", "/nosuchroute")
         _sv_seamroom = os.path.join(tmp, "bench-seam")
         run("demo", "seam", _sv_seamroom)
         # ── AND A COMMIT THAT CHANGES A FACT, or the reading that pairs a
