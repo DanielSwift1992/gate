@@ -84,11 +84,113 @@ if args.contains("--out") && !args.contains("-o") {
 // claims `stdlib materialize` with it. That is why this line grew from
 // `stdlib show` to the verb: half a verb on the list would hand this binary an
 // argv it does not answer, and the python side would never see it.
+// ── THE PAGE A PERSON MEETS FIRST, carried here because the other carrier is
+// about to stop being a file. It travels byte for byte: what the terminal
+// printed yesterday is what it prints tomorrow, and the battery holds the two
+// to each other while both are alive. It goes to stderr with a non-zero code,
+// the way asking for nothing has always answered here.
+let USAGE = """
+git verifies bytes: change one and the hash changes. Nothing verifies the
+words a repository runs on. A CODEOWNERS, a schema, a list of who may deploy were
+true the day somebody wrote them. The day that stopped is recorded nowhere. Here
+those words are claims, re-read every time a file changes, and a claim that stops
+holding is named at its line.
+
+usage (the git-shaped porcelain):
+  gate init [dir]                     · gate status | fsck
+  gate mine FILE [--role R]           (a file you emit: judged with your world,
+                                       and changing it changes the verdict)
+  gate theirs FILE --at REV [--role R]
+                                      (a file you took, at the revision you took
+                                       it at. You read it, never rewrite it, and
+                                       gate never fetches it: you brought it
+                                       here. There are no ranges anywhere in
+                                       this tool, so there is nothing to solve,
+                                       to move, take it again at a newer one.
+                                       R is world|seam|forms, which court reads
+                                       the row, and a row gate cannot place is
+                                       refused rather than guessed at)
+  gate check view WHO DOC             · gate check administer|delete WHO DOC
+  gate diff  transfer WHO DEPT        · gate diff  grant|revoke WHO DOC
+  gate diff  hire ID RANK HOME GIVEN FAMILY BORN SITE
+  gate apply transfer|grant|revoke|hire ...   (writes only on holds, like a commit)
+  gate declare contract SPEC [-o F]   (the act of entry: a view of a document
+  gate declare carrier DECL.json [-o F] you publish, or of what your build says
+                                       your library carries. After this it is
+                                       what you have SAID, and judged)
+  gate demo | gate demo seam | gate demo org
+                                      (thirty seconds each: a repository whose
+                                       CODEOWNERS is judged, two sides with one
+                                       disagreement between them, or people and
+                                       departments for a domain with no repo)
+  gate attention CONTRACT.swift CARRIER.swift [--as WHO] [--known K.json]
+                 [--tracker T.json]     (what waits for a word, not what changed:
+                                       who owes whom a sentence, read the same
+                                       from either side. A declared divergence
+                                       is set aside while what it cites is open,
+                                       and comes back by itself when that closes)
+  gate aside ROUTE FIELD --because KEY (say a divergence is meant, naming what
+                                       will end it, and it stands out of the way
+                                       while that is open and returns by itself)
+  gate seam CONTRACT.swift CARRIER.swift
+                                      (the one court over a pair: two
+                                       declarations, each signed by whoever made
+                                       it, refused at an address when they part)
+  gate drift SPEC --client DIR [--since DATE] [--fail-over DAYS]
+                                      (OBSERVATION of a world that has not
+                                       entered: git objects and a walk whose
+                                       bounds are printed. No verdict: judgement
+                                       is behind the gate. The exit code is the
+                                       operator's own threshold, never a court's)
+  gate badge [-o gate.svg]            (claims judged, and how long every commit
+                                       that touched them has held, replayed)
+  gate import people.csv grants.csv [-o gate.swift]
+  gate export gate.swift -o people.csv grants.csv
+  gate verify people.csv grants.csv --against CMD
+  gate serve [port]                   (local read-only JSON surface)
+  gate report [-o report.html]        (printable audit page. Nothing is written
+                                       unless you name the file)
+  gate guard [merge]                  (repo policy by the same gates: HEAD author
+                                       via tables/identities.csv must hold the
+                                       rank stated in tables/guard.csv)
+  gate library [-o lib.json]          (the domain vocabulary: forms, axes, seed coverage)
+  gate library diff a.json b.json     (set operations between vocabularies: forms, never facts)
+  gate survey [N]                     (t0, read-only: unwritten links from your own
+                                       history, identity, object candidates, fabric)
+  gate log                            (the repository's own history, with no
+                                       translation at all: any clone has it)
+  gate findings [--md]                (what is true of this clone, in sentences:
+                                       needs no world and no configuration)
+  gate bare FILE [NAME ...] [--full]  (the same world with the ceremony stripped:
+                                       a projection, and the file on disk is the
+                                       full Swift it was, which `--full` prints.
+                                       Name records to print those alone)
+  gate my [clear]                     (your own world: a claim in your git alone)
+  gate stdlib [show|materialize] NAME (the words a world may be written in)
+  gate --version                      (the tool, and the revision its judge was
+                                       built from)
+(ask = check, change = diff/apply: old names stay as aliases)
+
+  ── and if this is the first time: `gate demo` builds a repository with a
+     CODEOWNERS and one owner reaching past their zone, and prints the refusal.
+     Thirty seconds, `git checkout .` is the whole way back.
+"""
+
+if args.isEmpty || args == ["--help"] || args == ["-h"] {
+    err(USAGE + "\n")
+    exit(1)
+}
+
+// the veins, one argv prefix per line, said once: `--carries` prints this and
+// the guard over the shelf's verbs page reads it, so what this binary answers
+// to is one list rather than two that drift.
+let CARRIES = ["stdlib", "export", "seam", "log", "aside", "declare", "mine", "theirs",
+               "init", "drift", "my", "status", "fsck", "badge", "survey", "findings",
+               "report", "bare", "import", "verify", "library", "guard", "check", "ask",
+               "diff", "apply", "change", "attention", "demo", "serve"]
+
 if args == ["--carries"] {
-    out("stdlib\nexport\nseam\nlog\naside\ndeclare\nmine\ntheirs\ninit\ndrift\nmy\n"
-        + "status\nfsck\nbadge\nsurvey\nfindings\nreport\nbare\nimport\n"
-        + "verify\nlibrary\nguard\ncheck\nask\ndiff\napply\nchange\nattention\n"
-        + "demo\nserve\n")
+    out(CARRIES.joined(separator: "\n") + "\n")
     exit(0)
 }
 
@@ -2116,16 +2218,13 @@ func ownSurfaceGuards(_ w: WorldState) -> [(address: String, claim: String)] {
             at[spelt[0]] = i0 + 1
         }
     }
-    let src = readText(root.appendingPathComponent("gate").path) ?? ""
-    var verbs = Set(matches("cmd\\s*==\\s*\"([a-z-]+)\"", src).map { $0[0] })
-    for grp in matches("cmd\\s+in\\s+\\(([^)]*)\\)", src) {
-        for m in matches("\"([a-z-]+)\"", grp[0]) { verbs.insert(m[0]) }
-    }
-    for grp in matches("args\\[0\\]\\s+in\\s+\\(([^)]*)\\)", src) {
-        for m in matches("\"([a-z-]+)\"", grp[0]) {
-            verbs.insert(String(m[0].drop(while: { $0 == "-" })))
-        }
-    }
+    // ── AND THE WORDS ARE THIS BINARY'S OWN. The dispatch used to live in the
+    // other carrier's file, so this guard read that file; the dispatch is here
+    // now, and what it answers to is the ledger it prints. One list, read by
+    // the guard and by whoever asks `--carries`.
+    var verbs = Set(CARRIES)
+    // the two spellings of asking what runs here, which the shelf page records
+    verbs.formUnion(["version", "v"])
     var bad: [(address: String, claim: String)] = []
     for word in Set(said.keys).subtracting(verbs).sorted() {
         bad.append(("\(name):\(at[word]!)",
@@ -8575,9 +8674,10 @@ func jsonStringASCII(_ s: String) -> String {
 // it there. A literal here would be a second copy of one number, which is the
 // registry's kind 9 written by hand; when that file goes, the declaration moves
 // with it and this reads wherever it lands.
+let VERSION = "0.1.0"
+
 func gateVersion() -> String {
-    let text = readText(root.appendingPathComponent("gate").path) ?? ""
-    return matches("^VERSION = \"([^\"]+)\"", text, lines: true).first?.first ?? ""
+    return VERSION
 }
 
 // the page a personal world opens with, read where it is declared: the other
@@ -8585,32 +8685,55 @@ func gateVersion() -> String {
 // registry's kind 9 written by hand; when that file goes, the text goes to the
 // shelf with every other thing this tool writes into somebody's repository.
 func personalTemplate() -> String {
-    let text = readText(root.appendingPathComponent("gate").path) ?? ""
-    guard let start = text.range(of: "PERSONAL_TEMPLATE = \"\"\"\\\n"),
-          let end = text.range(of: "\n\"\"\"", range: start.upperBound..<text.endIndex)
-    else { return "" }
-    return String(text[start.upperBound..<end.lowerBound]) + "\n"
+    return PERSONAL_PAGE
 }
+
+let PERSONAL_PAGE = """
+// Yours. It is judged together with the files beside it, and it is never in the
+// shared repository: your colleagues and CI do not have it. Write a claim you
+// want to keep true, and the judge names the line when somebody else's change
+// breaks it. Left as it is, it is not stored anywhere.
+//
+// It lives on this machine, in a git of its own at ~/.gate/me, and every state
+// that holds is kept there. It goes nowhere else: no clone of the shared
+// repository will have it, and neither will your other computer, unless you
+// give that repository a remote of your own.
+//
+// One thing about the page: the record below names its theme. Change Dark to
+// Light and the page follows on the next keystroke, which is the whole
+// mechanism of this place in one line: the file is the panel. Delete the
+// record and the page follows this machine's own setting instead. For a
+// while these lines were left commented, so that your first word here would
+// be yours; written out they show where changing something lands, and that
+// is worth more.
+
+public enum MyBench: Bench {
+    public typealias Theme = Dark
+}
+
+"""
 
 // ── THE LANGUAGE, AND WHERE IT IS DECLARED. These are the words the mechanism
 // must know as grammar, so knowing them is the one place a name may sit inside
 // a tool by right. They are declared once, in the other carrier's file, and read
 // from there for the same reason the version and the personal page are: one
 // text, one home, until that file goes.
-func pythonSaid() -> String {
-    return readText(root.appendingPathComponent("gate").path) ?? ""
-}
+// ── THE LANGUAGE, AND WHERE IT IS DECLARED. These are the words the mechanism
+// must know as grammar: it cannot count without them, so knowing them here is
+// the one place a name may sit inside a tool by right. Everything else a world
+// says is presented rather than built in.
+let LANGUAGE_AT: [(String, Int)] = [("Unit", 283), ("Plus", 287), ("Times", 303), ("Twice", 299), ("Paired", 227), ("Close", 88), ("Open", 87), ("Structure", 86)]
+let LANGUAGE_FILE = "Sources/VerificationIsIdentification/Primitive.swift"
+// what the court itself is, by name: the two files that decide every verdict
+// this tool prints
+let COURT_FILES = ["Sources/Tools/Judge.swift", "Sources/Tools/WhereJudge.swift"]
 
 func languageNames() -> [(String, Int)] {
-    let text = pythonSaid()
-    guard let open = text.range(of: "LANGUAGE_AT = {"),
-          let close = text.range(of: "}", range: open.upperBound..<text.endIndex) else { return [] }
-    return matches("\"(\\w+)\": (\\d+)", String(text[open.upperBound..<close.lowerBound]))
-        .compactMap { m in Int(m[1]).map { (m[0], $0) } }
+    return LANGUAGE_AT
 }
 
 func languageFile() -> String {
-    return matches("^LANGUAGE_FILE = \"([^\"]+)\"", pythonSaid(), lines: true).first?.first ?? ""
+    return LANGUAGE_FILE
 }
 
 // counted from the checkout when there is one, and said to be uncounted when
@@ -8619,11 +8742,7 @@ func languageFile() -> String {
 func courtShape() -> StatusJSON {
     guard let root = ProcessInfo.processInfo.environment["GATE_CORPUS"], !root.isEmpty
     else { return .null }
-    let text = pythonSaid()
-    guard let open = text.range(of: "COURT_FILES = ("),
-          let close = text.range(of: ")", range: open.upperBound..<text.endIndex) else { return .null }
-    let files = matches("\"([^\"]+)\"", String(text[open.upperBound..<close.lowerBound]))
-        .compactMap { $0.first }
+    let files = COURT_FILES
     var lines = 0
     var seen: [StatusJSON] = []
     for rel in files {
@@ -9725,6 +9844,44 @@ func serveDoor(_ a: [String]) -> Never {
         }
         gateClose(conn)
     }
+}
+
+// ── WHAT IS ACTUALLY RUNNING, said by the thing that runs. The identity of a
+// court is its bytes, and the court that sits here is this binary: the vein
+// carries the judge in-process, so the digest it names is its own rather than a
+// file that judged nothing. The revision beside it is the corpus the court was
+// compiled from, and both are checkable: build at that pin and run the battery
+// against what you get. The linker is not byte-stable, so the hash names what
+// is here and the rebuild is the check.
+if args.first == "--version" || args.first == "-v" || args.first == "version" {
+    let mine = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath().path
+    let digest = FileManager.default.contents(atPath: mine).map { sha256Hex($0) } ?? ""
+    let short = "sha256:" + String(digest.prefix(12))
+    let came = judgeFrom()
+    if args.contains("--json") {
+        var pairs: [(String, StatusJSON)] = [
+            ("command", .text("version")), ("gate", .text(gateVersion())),
+            ("judge", .text(short)),
+        ]
+        pairs.append(("judge_from", came.map { StatusJSON.text($0) } ?? .null))
+        out(compactDumps(.object(pairs)) + "\n")
+        exit(0)
+    }
+    var lines = ["gate " + gateVersion() + " · judge " + short + " (canon v2)"]
+    if case .object(let shape) = courtShape(),
+       case .raw(let count)? = shape.first(where: { $0.0 == "lines" })?.1 {
+        lines.append("  the court is " + count + " lines in Judge.swift and WhereJudge.swift"
+                   + " and the rest of that repository is worlds it shows itself on, and the "
+                   + "theory it comes from")
+    }
+    if let came = came {
+        lines.append("  judge built from verification-is-identification "
+                   + String(came.prefix(12)) + ". `bin/build-cli.sh` builds the same court: "
+                   + "check yours by running the battery against it. The linker is not "
+                   + "byte-stable, so the hash names what is here and is not the check")
+    }
+    out(lines.joined(separator: "\n") + "\n")
+    exit(0)
 }
 
 if args.first == "serve" {
