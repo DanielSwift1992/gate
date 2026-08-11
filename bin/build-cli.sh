@@ -28,7 +28,17 @@ cp "$HERE/bin/gate-cli.swift" "$BUILD/main.swift"
 # a windows binary is named with its extension or the system will not run it,
 # and every other platform names its executables without one
 EXT=""
-case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*|Windows_NT) EXT=".exe" ;; esac
-swiftc -O "$BUILD/main.swift" "$CACHE"/*.swift -o "$HERE/bin/gate-cli$EXT"
+LINK=""
+case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*|Windows_NT)
+        EXT=".exe"
+        # the bench's socket calls live in winsock, which is a library the
+        # linker must be told about by name: without it the compile is clean
+        # and the link stops with `cannot open file`, which says nothing about
+        # what is missing
+        LINK="-lws2_32"
+        ;;
+esac
+swiftc -O "$BUILD/main.swift" "$CACHE"/*.swift $LINK -o "$HERE/bin/gate-cli$EXT"
 rm -rf "$BUILD"
 echo "built bin/gate-cli$EXT (court at $(printf %.7s "$PIN"))"

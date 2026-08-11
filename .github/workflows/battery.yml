@@ -183,7 +183,7 @@ jobs:
             2>/tmp/road-err.txt | grep -q "ROAD ALL GREEN" \
             || { echo "the road test did not reach ROAD ALL GREEN. What the browser said:"; \
                  tail -5 /tmp/road-err.txt; exit 1; }
-      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa   # v3
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9   # v5.0.0
         with:
           path: _site
       # ── AND PUBLISHING IS ASKED ABOUT BEFORE IT IS ATTEMPTED. `deploy-pages`
@@ -212,7 +212,7 @@ jobs:
           fi
       - if: steps.site.outputs.on == 'true'
         id: deployment
-        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e   # v4
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128   # v5.0.0
       # ── AND A RED FROM THIS JOB SAYS IT IS THIS JOB. Only the linux battery
       # posted a commit status, so a failing deployment left none at all and the
       # run read as a mystery: three of them in a row, with the battery green on
