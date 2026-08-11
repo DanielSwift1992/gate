@@ -4,3 +4,7 @@ __pycache__/
 private/
 bin/gate-cli
 bin/.court/
+# the windows build makes its scratch inside the clone, because the compiler
+# there cannot find a posix temp: it is made and removed by bin/build-cli.sh
+bin/.build/
+bin/gate-cli.exe
