@@ -93,6 +93,49 @@ jobs:
       - run: python tests/windows.py
         env:
           PYTHONUTF8: "1"
+  # ── AND THE VEIN IS BUILT WHERE IT HAS NEVER BEEN BUILT. The shipping plan is
+  # one binary per platform, and windows is the one this vein has never met: its
+  # socket calls come from WinSDK under names of their own, and Foundation
+  # differs where paths and processes are concerned. A build is not a battery
+  # and does not pretend to be one: what this job says is that the source
+  # compiles there and the binary answers the one question the python side asks
+  # it. Everything past that is measured by the battery on the platforms that
+  # have one, until this one grows its own.
+  windows-vein:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+      statuses: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4
+      - uses: compnerd/gha-setup-swift@eeda069c5bc95ac8a9ac5cea7d4f588ae5420ca5   # v0.4.0
+        with:
+          branch: swift-6.0.3-release
+          tag: 6.0.3-RELEASE
+      - run: swift --version
+      - name: build the vein
+        shell: bash
+        run: bin/build-cli.sh 2>&1 | tee /tmp/vein-out.txt; exit ${PIPESTATUS[0]}
+      - name: the binary answers what it carries
+        shell: bash
+        run: |
+          CARRIED=$(bin/gate-cli.exe --carries | tr -d '\r' | wc -l | tr -d ' ')
+          echo "the vein carries $CARRIED veins" | tee -a /tmp/vein-out.txt
+          [ "$CARRIED" = "30" ] || { echo "the ledger this binary prints is not the one the battery holds" | tee -a /tmp/vein-out.txt; exit 1; }
+      # the compiler's own first line travels out as a status: a build that
+      # fails on the one platform nobody here can reproduce is a red somebody
+      # guesses at, and the guessing is what this line exists against
+      - if: failure()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SAID=$(grep -m2 -E 'error:|the ledger this binary' /tmp/vein-out.txt | paste -sd '; ' - || true)
+          [ -n "$SAID" ] || SAID=$(tail -1 /tmp/vein-out.txt)
+          BODY=$(python -c 'import json,sys; print(json.dumps({"state":"failure","context":"windows-vein-first-fail","description":sys.argv[1][:138]}))' "$SAID")
+          curl -s -X POST -H "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -d "$BODY" > /dev/null
   pages:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest

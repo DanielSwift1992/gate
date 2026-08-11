@@ -8134,7 +8134,12 @@ def main():
     # answer would drift the day a vein lands. No binary, or GATE_CLI=off,
     # and every vein runs its python side, unchanged: the same door the
     # judge's port walks, from the other side.
-    _cli = os.environ.get("GATE_CLI") or os.path.join(_HERE, "bin", "gate-cli")
+    # ── AND A WINDOWS BINARY WEARS ITS EXTENSION. The vein builds there too
+    # now, and the file it leaves is `gate-cli.exe`: looking for the bare name
+    # found nothing, so every verb ran its python side on that platform alone
+    # while the binary sat beside it, built and unasked.
+    _cli = os.environ.get("GATE_CLI") or os.path.join(
+        _HERE, "bin", "gate-cli" + (".exe" if os.name == "nt" else ""))
     if os.environ.get("GATE_CLI") != "off" and os.path.isfile(_cli) and os.access(_cli, os.X_OK):
         try:
             _said = subprocess.run([_cli, "--carries"], capture_output=True,

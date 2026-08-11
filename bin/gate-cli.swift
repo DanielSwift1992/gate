@@ -13,10 +13,14 @@
 // line in the repository stays text, and a clone without a Swift toolchain
 // runs the python side of every vein, unchanged.
 import Foundation
-// the socket calls the bench is served over. Foundation carries them on Darwin
-// and does not on linux, and this vein builds on both.
+// the socket calls the bench is served over. Foundation carries them on Darwin,
+// linux keeps them in Glibc, and Windows in WinSDK under names of its own: this
+// vein builds on all three, so each says where its calls come from.
 #if canImport(Glibc)
 import Glibc
+#endif
+#if canImport(WinSDK)
+import WinSDK
 #endif
 
 let root = URL(fileURLWithPath: CommandLine.arguments[0])
@@ -3198,7 +3202,7 @@ func historyDivergence(_ n: Int, policyName: String?) -> (rows: [HistoryRow], wh
     let whole = seen.count < n
         && runGit(["rev-parse", "--is-shallow-repository"], base)
             .trimmingCharacters(in: .whitespacesAndNewlines) != "true"
-    let tmp = NSTemporaryDirectory() + "/gate-history-\(getpid())"
+    let tmp = NSTemporaryDirectory() + "/gate-history-\(ProcessInfo.processInfo.processIdentifier)"
     try? FileManager.default.createDirectory(atPath: tmp, withIntermediateDirectories: true)
     defer { try? FileManager.default.removeItem(atPath: tmp) }
     // AND THE PAIR IS LOOKED FOR AT EVERY COMMIT, not once at the tip. A file
@@ -3631,7 +3635,7 @@ func importWorld(_ peoplePath: String, _ grantsPath: String, _ outPath: String)
 }
 
 func scratchDir(_ tag: String) -> String {
-    let d = NSTemporaryDirectory() + "/" + tag + "\(getpid())-\(scratchCount)"
+    let d = NSTemporaryDirectory() + "/" + tag + "\(ProcessInfo.processInfo.processIdentifier)-\(scratchCount)"
     scratchCount += 1
     try? FileManager.default.createDirectory(atPath: d, withIntermediateDirectories: true)
     return d
@@ -8599,13 +8603,44 @@ func queryOf(_ raw: String) -> [String: String] {
     return q
 }
 
-func serveRead(_ conn: Int32) -> (method: String, path: String,
+// ── ONE NAME FOR A CONNECTION, THREE PLATFORMS. A socket is an `Int32` where
+// the calls come from libc and a 64-bit handle where they come from WinSDK, and
+// the reading and writing calls are spelled differently too. The door below is
+// written once, in these names.
+#if canImport(WinSDK)
+typealias GateSocket = SOCKET
+let gateNoSocket = INVALID_SOCKET
+func gateRead(_ c: GateSocket, _ buf: UnsafeMutableRawPointer?, _ n: Int) -> Int {
+    return Int(recv(c, buf?.assumingMemoryBound(to: CChar.self), Int32(n), 0))
+}
+func gateWrite(_ c: GateSocket, _ buf: UnsafeRawPointer, _ n: Int) -> Int {
+    return Int(send(c, buf.assumingMemoryBound(to: CChar.self), Int32(n), 0))
+}
+func gateClose(_ c: GateSocket) { closesocket(c) }
+func gateSocketsReady() {
+    var data = WSADATA()
+    _ = WSAStartup(0x0202, &data)     // the winsock version this asks for
+}
+#else
+typealias GateSocket = Int32
+let gateNoSocket: GateSocket = -1
+func gateRead(_ c: GateSocket, _ buf: UnsafeMutableRawPointer?, _ n: Int) -> Int {
+    return read(c, buf, n)
+}
+func gateWrite(_ c: GateSocket, _ buf: UnsafeRawPointer, _ n: Int) -> Int {
+    return write(c, buf, n)
+}
+func gateClose(_ c: GateSocket) { close(c) }
+func gateSocketsReady() {}
+#endif
+
+func serveRead(_ conn: GateSocket) -> (method: String, path: String,
                                   query: [String: String], body: Data)? {
     var buf = Data()
     var chunk = [UInt8](repeating: 0, count: 4096)
     var head: Range<Data.Index>? = nil
     while head == nil {
-        let n = chunk.withUnsafeMutableBytes { read(conn, $0.baseAddress, 4096) }
+        let n = chunk.withUnsafeMutableBytes { gateRead(conn, $0.baseAddress, 4096) }
         if n <= 0 { return nil }
         buf.append(contentsOf: chunk[0..<n])
         head = buf.range(of: Data("\r\n\r\n".utf8))
@@ -8630,14 +8665,14 @@ func serveRead(_ conn: Int32) -> (method: String, path: String,
     }
     var body = Data(buf[mark.upperBound...])
     while body.count < want {
-        let n = chunk.withUnsafeMutableBytes { read(conn, $0.baseAddress, 4096) }
+        let n = chunk.withUnsafeMutableBytes { gateRead(conn, $0.baseAddress, 4096) }
         if n <= 0 { break }
         body.append(contentsOf: chunk[0..<n])
     }
     return (said[0], path, queryOf(query), body)
 }
 
-func serveSay(_ conn: Int32, _ code: Int, _ ctype: String?, _ body: Data) {
+func serveSay(_ conn: GateSocket, _ code: Int, _ ctype: String?, _ body: Data) {
     let reason = [200: "OK", 400: "Bad Request", 404: "Not Found",
                   409: "Conflict"][code] ?? "OK"
     var head = "HTTP/1.0 \(code) \(reason)\r\n"
@@ -8651,14 +8686,14 @@ func serveSay(_ conn: Int32, _ code: Int, _ ctype: String?, _ body: Data) {
     whole.withUnsafeBytes { raw in
         var sent = 0
         while sent < raw.count, let base = raw.baseAddress {
-            let n = write(conn, base.advanced(by: sent), raw.count - sent)
+            let n = gateWrite(conn, base.advanced(by: sent), raw.count - sent)
             if n <= 0 { break }
             sent += n
         }
     }
 }
 
-func serveJSON(_ conn: Int32, _ text: String) {
+func serveJSON(_ conn: GateSocket, _ text: String) {
     serveSay(conn, 200, "application/json", Data(text.utf8))
 }
 
@@ -8681,7 +8716,7 @@ func benchSaid(_ answered: Answered) -> String {
 // than a bare code: the page's own fetch shows a network error for a dropped
 // connection, which reads as "the bench is gone" instead of "that request was
 // wrong".
-func serveFile(_ conn: Int32, _ path: String, _ ctype: String) {
+func serveFile(_ conn: GateSocket, _ path: String, _ ctype: String) {
     guard let body = FileManager.default.contents(atPath: path) else {
         serveJSON(conn, compactDumps(.object([
             ("error", .text("this request was not one the bench could read: FileNotFoundError")),
@@ -8935,13 +8970,16 @@ func serveDoor(_ a: [String]) -> Never {
     let port = nums.first.flatMap { Int($0) } ?? 4744
     let openIt = !a.contains("--no-open")
 
+    gateSocketsReady()
     #if canImport(Glibc)
     let stream = Int32(SOCK_STREAM.rawValue)
+    #elseif canImport(WinSDK)
+    let stream = Int32(SOCK_STREAM)
     #else
     let stream = SOCK_STREAM
     #endif
     let listener = socket(AF_INET, stream, 0)
-    if listener < 0 {
+    if listener == gateNoSocket {
         cannot("this machine would not give the bench a socket",
                "run `gate status` in the terminal: the same answers, no port needed")
     }
@@ -8949,9 +8987,14 @@ func serveDoor(_ a: [String]) -> Never {
     setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes,
                socklen_t(MemoryLayout<Int32>.size))
     var addr = sockaddr_in()
+    #if canImport(WinSDK)
+    addr.sin_family = ADDRESS_FAMILY(AF_INET)
+    addr.sin_addr.S_un.S_addr = UInt32(0x7f00_0001).bigEndian        // 127.0.0.1, never a network
+    #else
     addr.sin_family = sa_family_t(AF_INET)
-    addr.sin_port = UInt16(truncatingIfNeeded: port).bigEndian
     addr.sin_addr = in_addr(s_addr: UInt32(0x7f00_0001).bigEndian)   // 127.0.0.1, never a network
+    #endif
+    addr.sin_port = UInt16(truncatingIfNeeded: port).bigEndian
     let bound = withUnsafePointer(to: &addr) { raw in
         raw.withMemoryRebound(to: sockaddr.self, capacity: 1) {
             bind(listener, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
@@ -8977,10 +9020,16 @@ func serveDoor(_ a: [String]) -> Never {
         let opener = Process()
         #if canImport(Glibc)
         opener.executableURL = URL(fileURLWithPath: "/usr/bin/xdg-open")
+        #elseif canImport(WinSDK)
+        opener.executableURL = URL(fileURLWithPath: "C:/Windows/System32/cmd.exe")
         #else
         opener.executableURL = URL(fileURLWithPath: "/usr/bin/open")
         #endif
+        #if canImport(WinSDK)
+        opener.arguments = ["/c", "start", "", "http://127.0.0.1:\(port)/ui"]
+        #else
         opener.arguments = ["http://127.0.0.1:\(port)/ui"]
+        #endif
         try? opener.run()
     }
 
@@ -8988,7 +9037,7 @@ func serveDoor(_ a: [String]) -> Never {
         var from = sockaddr()
         var size = socklen_t(MemoryLayout<sockaddr>.size)
         let conn = accept(listener, &from, &size)
-        if conn < 0 { continue }
+        if conn == gateNoSocket { continue }
         if let asked = serveRead(conn) {
             switch (asked.method, asked.path) {
             case ("GET", "/"), ("GET", "/ui"):
@@ -9519,7 +9568,7 @@ func serveDoor(_ a: [String]) -> Never {
                 serveSay(conn, 404, nil, Data())
             }
         }
-        close(conn)
+        gateClose(conn)
     }
 }
 

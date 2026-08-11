@@ -25,6 +25,10 @@ fi
 # tree and wears main.swift for the length of the build
 BUILD=$(mktemp -d)
 cp "$HERE/bin/gate-cli.swift" "$BUILD/main.swift"
-swiftc -O "$BUILD/main.swift" "$CACHE"/*.swift -o "$HERE/bin/gate-cli"
+# a windows binary is named with its extension or the system will not run it,
+# and every other platform names its executables without one
+EXT=""
+case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*|Windows_NT) EXT=".exe" ;; esac
+swiftc -O "$BUILD/main.swift" "$CACHE"/*.swift -o "$HERE/bin/gate-cli$EXT"
 rm -rf "$BUILD"
-echo "built bin/gate-cli (court at $(printf %.7s "$PIN"))"
+echo "built bin/gate-cli$EXT (court at $(printf %.7s "$PIN"))"
