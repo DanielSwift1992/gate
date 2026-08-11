@@ -263,10 +263,35 @@ func matches(_ pattern: String, _ text: String,
 // The manifest is read by the same targeted patterns the python side uses, not
 // by a second grammar: a row is a declaration with a `Kind` axis and a
 // `typeName` literal, and both sides read exactly those.
+// ── FINDING A TOOL THE WAY A SHELL DOES. Every launch here went through
+// `/usr/bin/env`, which is a path and not a mechanism: windows has no such
+// file, so a vein that spells it that way builds there and then fails to run
+// git at all. PATH is the list a shell walks, and walking it is the portable
+// spelling of the same act.
+func toolPath(_ name: String) -> String {
+    #if canImport(WinSDK)
+    let sep: Character = ";"
+    let suffixes = [".exe", ".cmd", ".bat", ""]
+    #else
+    let sep: Character = ":"
+    let suffixes = [""]
+    #endif
+    let said = ProcessInfo.processInfo.environment["PATH"] ?? ""
+    for dir in said.split(separator: sep, omittingEmptySubsequences: true) {
+        for suffix in suffixes {
+            let full = (String(dir) as NSString).appendingPathComponent(name + suffix)
+            if FileManager.default.isExecutableFile(atPath: full) { return full }
+        }
+    }
+    // said plainly rather than guessed: a launch of a name PATH does not carry
+    // fails with the name in the message
+    return name
+}
+
 func runGit(_ arguments: [String], _ cwd: String) -> String {
     let p = Process()
-    p.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-    p.arguments = ["git"] + arguments
+    p.executableURL = URL(fileURLWithPath: toolPath("git"))
+    p.arguments = [] + arguments
     p.currentDirectoryURL = URL(fileURLWithPath: cwd)
     let pipe = Pipe(), quiet = Pipe()
     p.standardOutput = pipe
@@ -283,8 +308,8 @@ func runGit(_ arguments: [String], _ cwd: String) -> String {
 // and says nothing on stdout worth reading
 func gitExitCode(_ arguments: [String], _ cwd: String) -> Int32 {
     let p = Process()
-    p.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-    p.arguments = ["git"] + arguments
+    p.executableURL = URL(fileURLWithPath: toolPath("git"))
+    p.arguments = [] + arguments
     p.currentDirectoryURL = URL(fileURLWithPath: cwd)
     let quiet = Pipe(), alsoQuiet = Pipe()
     p.standardOutput = quiet
@@ -3778,8 +3803,10 @@ func runSaid(_ command: String, _ arguments: [String]) -> (code: Int32, said: St
     let words = command.split(separator: " ").map(String.init) + arguments
     guard let first = words.first else { return (0, "") }
     let p = Process()
-    p.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-    p.arguments = [first] + Array(words.dropFirst())
+    // the command is the operator's own word, so the tool it names is found the
+    // same way a shell would find it rather than assumed to sit at one path
+    p.executableURL = URL(fileURLWithPath: toolPath(first))
+    p.arguments = Array(words.dropFirst())
     let pipe = Pipe(), quiet = Pipe()
     p.standardOutput = pipe
     p.standardError = quiet
@@ -6412,7 +6439,15 @@ func oursWrite(_ path: String, _ what: String, _ text: String) {
                "name a path whose folder exists, and this will put " + what + " there")
     }
     let bytes = Array(text.utf8)
-    _ = bytes.withUnsafeBufferPointer { write(fd, $0.baseAddress, $0.count) }
+    _ = bytes.withUnsafeBufferPointer { buf -> Int in
+        // the count is a machine word where this call comes from libc and a
+        // 32-bit unsigned where it comes from the windows runtime
+        #if canImport(WinSDK)
+        return Int(write(fd, buf.baseAddress, UInt32(buf.count)))
+        #else
+        return write(fd, buf.baseAddress, buf.count)
+        #endif
+    }
     close(fd)
 }
 
@@ -6427,8 +6462,8 @@ func escXml(_ s: String) -> String {
 // plain runGit cannot tell those apart, and the replay below counts on it.
 func gitShow(_ spec: String, _ root: String) -> String? {
     let p = Process()
-    p.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-    p.arguments = ["git", "-C", root, "show", spec]
+    p.executableURL = URL(fileURLWithPath: toolPath("git"))
+    p.arguments = ["-C", root, "show", spec]
     let pipe = Pipe(), quiet = Pipe()
     p.standardOutput = pipe
     p.standardError = quiet
@@ -7064,8 +7099,8 @@ func contractRevisions(_ path: String, _ since: String?) -> (root: String?, revs
     }
     if marks.isEmpty { return (rootDir, []) }
     let p = Process()
-    p.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-    p.arguments = ["git", "-C", rootDir, "cat-file", "--batch"]
+    p.executableURL = URL(fileURLWithPath: toolPath("git"))
+    p.arguments = ["-C", rootDir, "cat-file", "--batch"]
     let put = Pipe(), got = Pipe()
     p.standardInput = put
     p.standardOutput = got
@@ -7139,8 +7174,8 @@ func firstMentions(_ rootDir: String, _ names: [String],
     }
     var seen: [String: String] = [:]
     let p = Process()
-    p.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-    p.arguments = ["git", "-C", rootDir, "log", "--reverse", "-p", "--no-color",
+    p.executableURL = URL(fileURLWithPath: toolPath("git"))
+    p.arguments = ["-C", rootDir, "log", "--reverse", "-p", "--no-color",
                    "--format=~gate~ %as"] + whereArgs
     let got = Pipe()
     p.standardOutput = got
