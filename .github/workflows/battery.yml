@@ -108,10 +108,15 @@ jobs:
       statuses: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4
+      # ── AND THE TOOLCHAIN IS A CHOICE THAT WAS MEASURED. 6.0.3 met the
+      # runner's Visual Studio headers and stopped at a cyclic dependency in
+      # `mm_malloc.h`, which is the compiler's own include and nothing this
+      # repository writes. The version is the first thing to move when that
+      # happens, and the red line said so by name.
       - uses: compnerd/gha-setup-swift@eeda069c5bc95ac8a9ac5cea7d4f588ae5420ca5   # v0.4.0
         with:
-          branch: swift-6.0.3-release
-          tag: 6.0.3-RELEASE
+          branch: swift-6.1.2-release
+          tag: 6.1.2-RELEASE
       - run: swift --version
       - name: build the vein
         shell: bash
@@ -130,7 +135,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SAID=$(grep -m2 -E 'error:|the ledger this binary' /tmp/vein-out.txt | paste -sd '; ' - || true)
+          # the path a windows compiler prints is longer than the whole
+          # status, so the sentence is kept and the drive letters are not
+          SAID=$(grep -m2 -E 'error:|the ledger this binary' /tmp/vein-out.txt \
+                 | sed 's|.*[\\/]||' | paste -sd '; ' - || true)
           [ -n "$SAID" ] || SAID=$(tail -1 /tmp/vein-out.txt)
           BODY=$(python -c 'import json,sys; print(json.dumps({"state":"failure","context":"windows-vein-first-fail","description":sys.argv[1][:138]}))' "$SAID")
           curl -s -X POST -H "Authorization: Bearer $GH_TOKEN" \
