@@ -118,6 +118,10 @@ jobs:
           branch: swift-6.1.2-release
           tag: 6.1.2-RELEASE
       - run: swift --version
+      # ── AND THE BUILD'S OWN WORDS ARE KEPT IN THE CLONE, not in the shell's
+      # temp: the step below renames what `/tmp` means, and a log written there
+      # went nowhere, taking the mouth down with it. That run said nothing at
+      # all, which is the one failure mode this job exists against.
       # ── AND THE COMPILER IS TOLD WHERE TO PUT ITS OWN SCRATCH, in the
       # spelling it reads. The shell here exports a posix `TMP`, the linker
       # takes that at its word, and it fails to create `lnk{...}.tmp` in a
@@ -129,17 +133,17 @@ jobs:
         env:
           TMP: ${{ runner.temp }}
           TEMP: ${{ runner.temp }}
-        run: bin/build-cli.sh 2>&1 | tee /tmp/vein-out.txt; exit ${PIPESTATUS[0]}
+        run: bin/build-cli.sh 2>&1 | tee vein-out.txt; exit ${PIPESTATUS[0]}
       - if: failure()
         name: what the build actually said
         shell: bash
-        run: tail -40 /tmp/vein-out.txt
+        run: tail -40 vein-out.txt
       - name: the binary answers what it carries
         shell: bash
         run: |
           CARRIED=$(bin/gate-cli.exe --carries | tr -d '\r' | wc -l | tr -d ' ')
-          echo "the vein carries $CARRIED veins" | tee -a /tmp/vein-out.txt
-          [ "$CARRIED" = "30" ] || { echo "the ledger this binary prints is not the one the battery holds" | tee -a /tmp/vein-out.txt; exit 1; }
+          echo "the vein carries $CARRIED veins" | tee -a vein-out.txt
+          [ "$CARRIED" = "30" ] || { echo "the ledger this binary prints is not the one the battery holds" | tee -a vein-out.txt; exit 1; }
       # the compiler's own first line travels out as a status: a build that
       # fails on the one platform nobody here can reproduce is a red somebody
       # guesses at, and the guessing is what this line exists against
@@ -156,10 +160,10 @@ jobs:
           # generic failure is the fallback. The drive letters go either way:
           # a windows path is longer than the whole status field.
           SAID=$(grep -m2 -E 'LNK[0-9]+|cannot open|undefined symbol|unresolved external' \
-                 /tmp/vein-out.txt | sed 's|.*[\\/]||' | paste -sd '; ' - || true)
-          [ -n "$SAID" ] || SAID=$(grep -m2 -E 'error:|the ledger this binary' /tmp/vein-out.txt \
+                 vein-out.txt | sed 's|.*[\\/]||' | paste -sd '; ' - || true)
+          [ -n "$SAID" ] || SAID=$(grep -m2 -E 'error:|the ledger this binary' vein-out.txt \
                  | sed 's|.*[\\/]||' | paste -sd '; ' - || true)
-          [ -n "$SAID" ] || SAID=$(tail -1 /tmp/vein-out.txt)
+          [ -n "$SAID" ] || SAID=$(tail -1 vein-out.txt)
           BODY=$(python -c 'import json,sys; print(json.dumps({"state":"failure","context":"windows-vein-first-fail","description":sys.argv[1][:138]}))' "$SAID")
           curl -s -X POST -H "Authorization: Bearer $GH_TOKEN" \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
