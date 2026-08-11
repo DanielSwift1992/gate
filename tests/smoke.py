@@ -7538,9 +7538,28 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         _sv_here = ("/version", "/status", "/ladder.css", "/files", "/shelf",
                     "/shelf?m=courts", "/shelf?m=nosuch", "/gitstatus",
                     "/gitstatus?f=nosuchfile.swift", "/seamside?f=nosuch.swift",
-                    "/attention", "/check/view", "/nosuchroute")
+                    "/attention", "/check/view", "/log", "/log?n=5", "/log?n=all",
+                    "/log?scope=all&n=3", "/nosuchroute")
         _sv_seamroom = os.path.join(tmp, "bench-seam")
         run("demo", "seam", _sv_seamroom)
+        # ── AND A COMMIT THAT CHANGES A FACT, or the reading that pairs a
+        # removal with the addition restating it is never walked: every commit
+        # in a fresh demo adds files, and a pair needs a line that MOVED. Its
+        # own copy of the room, because a world edited here would answer
+        # differently to every check that comes after.
+        _sv_org = os.path.join(tmp, "bench-org")
+        shutil.copytree(_s9w["org"], _sv_org, dirs_exist_ok=True)
+        _sv_gs = os.path.join(_sv_org, "gate.swift")
+        _sv_t = open(_sv_gs, encoding="utf-8").read()
+        open(_sv_gs, "w", encoding="utf-8").write(_sv_t.replace(
+            "public typealias Rank = IndividualContributor",
+            "public typealias Rank = Lead", 1))
+        subprocess.run(["git", "add", "-A"], cwd=_sv_org, capture_output=True)
+        subprocess.run(["git", "-c", "user.email=probe@example.invalid",
+                        "-c", "user.name=probe", "commit", "-q", "-m", "world: a rank changes"],
+                       cwd=_sv_org, capture_output=True)
+        _sv_sha = subprocess.run(["git", "log", "--format=%H", "-1"], cwd=_sv_org,
+                                 capture_output=True, text=True).stdout.strip()
         _sv_apart, _sv_seen, _sv_said = [], {}, []
         for _tag, _room, _sv_routes in (
                 ("here", HERE, _sv_here),
@@ -7548,10 +7567,11 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                 ("presented", _s9w["presented"], ("/files",)),
                 # a world with people in it: the question and the change, each
                 # asked of somebody the world declares and somebody it does not
-                ("org", _s9w["org"], ("/check/view?who=Emp9000&doc=FinanceShare",
-                                      "/check/view?who=Nobody&doc=FinanceShare",
-                                      "/diff/transfer?who=Emp9000&to=Finance",
-                                      "/diff/transfer?who=Nobody&to=Finance")),
+                ("org", _sv_org, ("/check/view?who=Emp9000&doc=FinanceShare",
+                                  "/check/view?who=Nobody&doc=FinanceShare",
+                                  "/diff/transfer?who=Emp9000&to=Finance",
+                                  "/diff/transfer?who=Nobody&to=Finance",
+                                  "/show?hash=" + _sv_sha, "/show?hash=nosuchcommit")),
                 # and a world that declares a seam, because the morning question
                 # is walked empty in every room above
                 ("seam", _sv_seamroom, ("/attention", "/files"))):
@@ -7588,6 +7608,8 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                         _sv_seen["seam /attention"] = _a
                     if _tag == "org" and _route == "/diff/transfer?who=Emp9000&to=Finance":
                         _sv_seen["org /diff"] = _a
+                    if _tag == "org" and _route == "/show?hash=" + _sv_sha:
+                        _sv_seen["org /show"] = _a
                     if (_a[0], _a[1], _s9noms(_a[2].encode())) != \
                        (_b[0], _b[1], _s9noms(_b[2].encode())):
                         _sv_apart.append(_tag + " " + _route)
@@ -7633,6 +7655,12 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                   # themselves anywhere
                   and json.loads(_sv_seen["seam /attention"][2])["seams"]
                   and json.loads(_sv_seen["org /diff"][2]).get("command") == "change transfer"
+                  # and the commit reading paired the removal with the addition
+                  # that restates the same fact, which is the whole point of
+                  # reading a commit as facts rather than as a diff
+                  and any(c.get("kind") == "fact"
+                          for f in json.loads(_sv_seen["org /show"][2])["files"]
+                          for c in f["changes"])
                   and _sv_seen["/nosuchroute"][0] == 404))
 
         # ── AND ALL FOURTEEN OF THEM ALREADY HAD A WORLD. The tables bootstrap

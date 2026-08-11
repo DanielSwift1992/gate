@@ -7938,6 +7938,45 @@ if args.first == "mine" || args.first == "theirs" {
 // which is why this needed the reader above; asking for a world's history where
 // no file is declared one narrows nothing, and the line says so rather than
 // printing the repository under the word `the world`.
+// the journal as an object, said once for both surfaces. This was the last
+// answer in this vein assembled by concatenating text, and a shape written that
+// way cannot be printed a second way without being written twice.
+// ── AND THE LAST MILE IS THE DOOR'S. `command_to_run` is added where the
+// answer is printed, the way the other carrier's main does it; the bench asks
+// for the object alone.
+func journalPairs(_ journal: Journal, scope: String, limit: Int, onlyMe: Bool,
+                  world: Set<String>, who: [String: String], nextSaid: String,
+                  lastMile: Bool) -> [(String, StatusJSON)] {
+    var pairs: [(String, StatusJSON)] = [
+        ("command", .text("log")),
+        ("default_branch", journal.branch.isEmpty ? .null : .text(journal.branch)),
+        ("scope", .text(scope)),
+        ("limit", .raw(String(limit))),
+        ("mine_only", .raw(onlyMe ? "true" : "false")),
+        ("narrowed", .raw(journal.narrowed ? "true" : "false")),
+        ("next", .text(nextSaid)),
+        ("me", .text(journal.me)),
+        ("world_files", .list(world.sorted().map { .text($0) })),
+        ("commits", .list(journal.commits.map { c in
+            .object([
+                ("hash", .text(c.hash)),
+                ("short", .text(String(c.hash.prefix(8)))),
+                ("email", .text(c.email)),
+                ("person", who[c.email].map { StatusJSON.text($0) } ?? .null),
+                ("when", .text(c.when)),
+                ("subject", .text(c.subject)),
+                ("files", .list(c.files.map { .text($0) })),
+                ("touches_world", .raw(c.touches ? "true" : "false")),
+                ("closed", c.closed.map { StatusJSON.raw($0 ? "true" : "false") } ?? .null),
+            ])
+        })),
+    ]
+    if lastMile, let ready = commandIn(nextSaid) {
+        pairs.append(("command_to_run", .text(ready)))
+    }
+    return pairs
+}
+
 if args.first == "log" {
     let rest = Array(args.dropFirst()).filter { $0 != "--json" }
     let asJson = args.contains("--json")
@@ -7994,49 +8033,9 @@ if args.first == "log" {
         : "run `gate status` to have the judge read what these commits changed"
 
     if asJson {
-        // built in pieces: one long concatenation put the type-checker past its
-        // budget, and a shape this exact is easier to read a line at a time
-        func arrayOf(_ items: [String], _ pad: String) -> String {
-            if items.isEmpty { return "[]" }
-            let inner = items.map { pad + "  " + jsonString($0) }.joined(separator: ",\n")
-            return "[\n" + inner + "\n" + pad + "]"
-        }
-        var text = "{\n"
-        text += "  \"command\": \"log\",\n"
-        let branchSaid: String = branch.isEmpty ? "null" : jsonString(branch)
-        text += "  \"default_branch\": " + branchSaid + ",\n"
-        text += "  \"scope\": " + jsonString(scope) + ",\n"
-        text += "  \"limit\": " + String(limit) + ",\n"
-        text += "  \"mine_only\": " + (onlyMe ? "true" : "false") + ",\n"
-        text += "  \"narrowed\": " + (narrowed ? "true" : "false") + ",\n"
-        text += "  \"next\": " + jsonString(nextSaid) + ",\n"
-        text += "  \"me\": " + jsonString(me) + ",\n"
-        text += "  \"world_files\": " + arrayOf(world.sorted(), "  ") + ",\n"
-        var blocks: [String] = []
-        for c in commits {
-            var one = "    {\n"
-            one += "      \"hash\": " + jsonString(c.hash) + ",\n"
-            one += "      \"short\": " + jsonString(String(c.hash.prefix(8))) + ",\n"
-            one += "      \"email\": " + jsonString(c.email) + ",\n"
-            let personSaid: String = who[c.email].map { jsonString($0) } ?? "null"
-            one += "      \"person\": " + personSaid + ",\n"
-            one += "      \"when\": " + jsonString(c.when) + ",\n"
-            one += "      \"subject\": " + jsonString(c.subject) + ",\n"
-            one += "      \"files\": " + arrayOf(c.files, "      ") + ",\n"
-            one += "      \"touches_world\": " + (c.touches ? "true" : "false") + ",\n"
-            let closedSaid: String = c.closed == nil ? "null" : (c.closed! ? "true" : "false")
-            one += "      \"closed\": " + closedSaid + "\n"
-            one += "    }"
-            blocks.append(one)
-        }
-        let commitsSaid: String = blocks.isEmpty ? "[]"
-            : "[\n" + blocks.joined(separator: ",\n") + "\n  ]"
-        text += "  \"commits\": " + commitsSaid
-        if let ready = commandIn(nextSaid) {
-            text += ",\n  \"command_to_run\": " + jsonString(ready)
-        }
-        text += "\n}\n"
-        out(text)
+        out(statusDumps(.object(journalPairs(journal, scope: scope, limit: limit,
+                                             onlyMe: onlyMe, world: world, who: who,
+                                             nextSaid: nextSaid, lastMile: true)), 0) + "\n")
         exit(0)
     }
     var what = (scope == "world" && !world.isEmpty) ? "the world's history" : "the repository"
@@ -8675,6 +8674,85 @@ func servePick(_ w: WorldState, _ query: [String: String]) -> String? {
         ?? w.facts
 }
 
+// ── WHAT A COMMIT DID, READ AS FACTS WHERE IT CAN BE. This is a world, so
+// `Rank: Manager -> Lead` is what changed, never `-`/`+` around plumbing. Lines
+// that are not a fact change stay lines; git's own noise (index, ---/+++, @@) is
+// never shown, because nobody reads a world through it.
+func commitChange(_ base: String, _ sha: String, _ path: String?) -> [(String, StatusJSON)] {
+    let said = runGit(["show", "--format=%H%x1f%an%x1f%ae%x1f%aI%x1f%s", "--no-color", sha]
+                      + (path.map { ["--", $0] } ?? []), base)
+    let lines = said.components(separatedBy: "\n")
+    let head = ((lines.first ?? "").components(separatedBy: "\u{1f}") + ["", "", "", "", ""])
+        .prefix(5).map { $0 }
+    struct Changed { var name: String; var changes: [[(String, StatusJSON)]] }
+    var files: [Changed] = []
+    var owner: String? = nil
+    let skips = ["index ", "--- ", "+++ ", "new file", "deleted file",
+                 "old mode", "new mode", "similarity", "rename "]
+    for ln in lines.dropFirst() {
+        if ln.hasPrefix("diff --git") {
+            files.append(Changed(name: (ln.components(separatedBy: " b/").last ?? "")
+                .trimmingCharacters(in: .whitespaces), changes: []))
+            owner = nil
+        } else if files.isEmpty || ln.isEmpty {
+            continue
+        } else if skips.contains(where: { ln.hasPrefix($0) }) {
+            continue
+        } else if ln.hasPrefix("@@") {
+            let after = matches("@@.*@@\\s*(.*)$", ln).first?.first ?? ""
+            owner = matches("(?:enum|protocol|struct)\\s+(\\w+)", after).first?.first
+        } else if let sign = ln.first, sign == " " || sign == "-" || sign == "+" {
+            let body = String(ln.dropFirst())
+            if let named = matches("(?:public\\s+)?(?:enum|protocol|struct)\\s+(\\w+)", body)
+                .first?.first {
+                owner = named
+            }
+            if sign == " " { continue }
+            files[files.count - 1].changes.append([
+                ("kind", .text("line")), ("sign", .text(String(sign))),
+                ("text", .text(body.replacingOccurrences(of: "\\s+$", with: "",
+                                                         options: .regularExpression))),
+                ("owner", owner.map { StatusJSON.text($0) } ?? .null),
+            ])
+        }
+    }
+    // pair a removal with the addition that restates the same fact
+    func saidName(_ row: [(String, StatusJSON)]) -> [String]? {
+        return matchAt(textIn(row, "text") ?? "",
+                       "\\s*(?:public\\s+)?typealias\\s+(\\w+)\\s*=\\s*(.+?)\\s*$")
+    }
+    for i in files.indices {
+        var paired: [[(String, StatusJSON)]] = []
+        var at = 0
+        let cs = files[i].changes
+        while at < cs.count {
+            let a = cs[at]
+            let b = at + 1 < cs.count ? cs[at + 1] : nil
+            if let ma = saidName(a), let bb = b, let mb = saidName(bb),
+               textIn(a, "sign") == "-", textIn(bb, "sign") == "+", ma[1] == mb[1] {
+                paired.append([("kind", .text("fact")),
+                               ("owner", a.first(where: { $0.0 == "owner" })?.1 ?? .null),
+                               ("key", .text(ma[1])), ("from", .text(ma[2])),
+                               ("to", .text(mb[2]))])
+                at += 2
+                continue
+            }
+            paired.append(a)
+            at += 1
+        }
+        files[i].changes = paired
+    }
+    return [
+        ("hash", .text(head[0])), ("short", .text(String(head[0].prefix(8)))),
+        ("author", .text(head[1])), ("email", .text(head[2])),
+        ("date", .text(head[3])), ("subject", .text(head[4])),
+        ("files", .list(files.map { f in
+            .object([("name", .text(f.name)),
+                     ("changes", .list(f.changes.map { .object($0) }))])
+        })),
+    ]
+}
+
 func serveDoor(_ a: [String]) -> Never {
     let nums = a.filter { !$0.isEmpty && $0.allSatisfy { $0.isNumber } }
     let port = nums.first.flatMap { Int($0) } ?? 4744
@@ -8782,6 +8860,40 @@ func serveDoor(_ a: [String]) -> Never {
                             ($0, shelfHeadLine($0, "// speaks-for:").map { StatusJSON.text($0) } ?? .null) })),
                     ])))
                 }
+            case ("GET", "/log"):
+                // ── AND A NUMBER THAT IS NOT ONE IS SAID, NOT DROPPED. `?n=`
+                // comes off a URL, which is a place anybody can type into, and
+                // reading it straight closed the socket with no response at
+                // all: the page's own fetch showed a network error with no
+                // words in it. Silence is the thing this tool exists against.
+                let saidN = asked.query["n"] ?? "200"
+                let n = Int(saidN)
+                if !(saidN.allSatisfy { $0.isNumber } && !saidN.isEmpty
+                     && (n ?? 0) > 0 && (n ?? 0) <= 100000) {
+                    serveJSON(conn, benchSaid(.cannot(
+                        note: "the history is read in commits, and `n=\(saidN)` is not a count",
+                        next: "ask for a whole number of commits, such as `?n=200`")))
+                    break
+                }
+                let base = FileManager.default.currentDirectoryPath
+                let scope = asked.query["scope"] ?? "world"
+                let world = journalWorld(base)
+                let journal = repoJournal(base, world, scope: scope, limit: n ?? 200,
+                                          onlyMe: false)
+                let nextSaid = world.isEmpty
+                    ? "run `gate demo` for a repository to look at, or drop a table you "
+                      + "already export into tables/ and run `gate status`"
+                    : "run `gate status` to have the judge read what these commits changed"
+                serveJSON(conn, compactDumps(.object(journalPairs(
+                    journal, scope: scope, limit: n ?? 200, onlyMe: false, world: world,
+                    who: identities(base), nextSaid: nextSaid, lastMile: false))))
+            case ("GET", "/show"):
+                let w = discoverWorld()
+                let base = w.facts.map { (absPath($0) as NSString).deletingLastPathComponent }
+                    ?? FileManager.default.currentDirectoryPath
+                let want = asked.query["f"]
+                serveJSON(conn, compactDumps(.object(commitChange(
+                    base, asked.query["hash"] ?? "", (want?.isEmpty ?? true) ? nil : want))))
             case ("GET", "/attention"):
                 // where nobody has declared anything there is nothing to show
                 // and the bench says so: an empty account is a fact, and
