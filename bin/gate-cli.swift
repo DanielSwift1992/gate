@@ -84,7 +84,7 @@ if args == ["--carries"] {
     out("stdlib\nexport\nseam\nlog\naside\ndeclare\nmine\ntheirs\ninit\ndrift\nmy\n"
         + "status\nfsck\nbadge\nsurvey\nfindings\nreport\nbare\nimport\n"
         + "verify\nlibrary\nguard\ncheck\nask\ndiff\napply\nchange\nattention\n"
-        + "demo\n")
+        + "demo\nserve\n")
     exit(0)
 }
 
@@ -1222,9 +1222,12 @@ func layoutDir(_ w: WorldState) -> String? {
     return w.layout.map { ($0.manifest as NSString).deletingLastPathComponent }
 }
 
-func layoutRowsFull(_ dir: String) -> (rows: [LayoutRow], manifest: String?) {
+// `said`, when given, is the document as somebody is typing it rather than as
+// it sits on disk: the bench judges the layout the way it judges every other
+// file it opens, and the saved copy would be a second, older answer
+func layoutRowsFull(_ dir: String, said: String? = nil) -> (rows: [LayoutRow], manifest: String?) {
     let mp = (dir as NSString).appendingPathComponent("gate.manifest.swift")
-    guard let text = readText(mp) else { return ([], nil) }
+    guard let text = said ?? readText(mp) else { return ([], nil) }
     let code = uncommented(text)
     var lit: [String: String] = [:]
     for m in matches("extension (\\w+)\\b[^{]*\\{(.*?)\\n(?=public |extension |\\z)",
@@ -1411,7 +1414,12 @@ func undeclaredHere(_ w: WorldState) -> [String] {
     return out
 }
 
-func manifestGuards(_ w: WorldState) -> [(address: String, claim: String)] {
+// `liveRows` and `liveText` override the document on disk, for the same reason
+// the forms guard takes a live text: the layout is judged as it is typed, and
+// two of the checks below ask what the DOCUMENT says rather than what its rows
+// say, so the text comes with them.
+func manifestGuards(_ w: WorldState, liveRows: [LayoutRow]? = nil,
+                    liveText: String? = nil) -> [(address: String, claim: String)] {
     // layout guards, both directions: a declared file exists, a neighbouring
     // *.swift is declared, a row says which court reads it, and every claim
     // below is the other carrier's, word for word
@@ -1419,8 +1427,8 @@ func manifestGuards(_ w: WorldState) -> [(address: String, claim: String)] {
     var bad: [(address: String, claim: String)] = []
     let man = (layout.manifest as NSString).lastPathComponent
     let d = (layout.manifest as NSString).deletingLastPathComponent
-    let live = layout.rows
-    let liveText = uncommented(readText(layout.manifest) ?? "")
+    let live = liveRows ?? layout.rows
+    let liveText = uncommented(liveText ?? (readText(layout.manifest) ?? ""))
     var seenPaths: [String: String] = [:]
     for r in live {
         let said = r.name ?? "None"
@@ -1764,7 +1772,12 @@ func whereRefused(_ out: String) -> [(cert: String?, claim: String)] {
     return found
 }
 
-func formsGuards(_ w: WorldState, _ size: inout [String: Int]) -> [(address: String, claim: String)] {
+// `live` overrides what is on disk for the files it names, so the bench can
+// hold a forms row to the same promise as every other file it opens: judged as
+// you type. Reading the saved copy while somebody edits an unsaved one shows
+// green over a lie.
+func formsGuards(_ w: WorldState, _ size: inout [String: Int],
+                 live: [String: String] = [:]) -> [(address: String, claim: String)] {
     // the forms rows of one layout are one world laid out in files: glued and
     // judged together by the where court, with the shelf worlds an operator
     // overrides judged each as its own stream
@@ -1775,6 +1788,7 @@ func formsGuards(_ w: WorldState, _ size: inout [String: Int]) -> [(address: Str
     if rows.isEmpty { return [] }
     var bad: [(address: String, claim: String)] = []
     func bodyOf(_ r: LayoutRow) -> String {
+        if let typed = live[r.path] { return typed }
         return readText((d as NSString).appendingPathComponent(r.path)) ?? ""
     }
     var streams: [(shelf: String?, text: String, mine: [(String, String)])] = []
@@ -7905,12 +7919,7 @@ if args.first == "mine" || args.first == "theirs" {
     let roleMeans = STATUS_ROLES.first(where: { $0.0 == role })!.1
     let file = (path as NSString).lastPathComponent
     if kind == "Mine" {
-        answer([("command", .text(word)), ("file", .text(file)),
-                ("declared_in", .text(mp!)), ("role", .text(role!)),
-                ("role_means", .text(roleMeans)), ("mutates", .raw("true")),
-                ("note", .text("mine: I emit it, it is judged with the rest of my world, and "
-                             + "changing it changes the verdict")),
-                ("next", .text("gate status: it is judged from here on"))],
+        answer(minePairs(file, mp!, role!, roleMeans),
                ["\(word): \(file) · written down in \(mp!)",
                 "  role `\(role!)` — \(roleMeans)",
                 "  next: gate status: it is judged from here on"])
@@ -8381,17 +8390,50 @@ if args.first == "seam" {
 // python's json.dumps(obj, ensure_ascii=False): no indent, and python's own
 // separators. The indented spelling of the same pairs is `statusDumps`, and
 // both read the one object `statusPairs` assembles.
-func compactDumps(_ v: StatusJSON) -> String {
+func compactDumps(_ v: StatusJSON, ascii: Bool = false) -> String {
+    func say(_ s: String) -> String { return ascii ? jsonStringASCII(s) : jsonString(s) }
     switch v {
-    case .text(let s): return jsonString(s)
+    case .text(let s): return say(s)
     case .raw(let r): return r
     case .null: return "null"
     case .list(let items):
-        return "[" + items.map { compactDumps($0) }.joined(separator: ", ") + "]"
+        return "[" + items.map { compactDumps($0, ascii: ascii) }.joined(separator: ", ") + "]"
     case .object(let pairs):
-        return "{" + pairs.map { jsonString($0.0) + ": " + compactDumps($0.1) }
+        return "{" + pairs.map { say($0.0) + ": " + compactDumps($0.1, ascii: ascii) }
             .joined(separator: ", ") + "}"
     }
+}
+
+// ── AND ONE ANSWER IS SPELLED IN ASCII, because the other carrier spells it
+// that way: its verdict route dumps without `ensure_ascii=False`, so a `·` in a
+// refusal travels as `\u00b7`. Two spellings of one character are two different
+// answers to a page that compares bytes.
+func jsonStringASCII(_ s: String) -> String {
+    var out = "\""
+    for ch in s.unicodeScalars {
+        switch ch {
+        case "\"": out += "\\\""
+        case "\\": out += "\\\\"
+        case "\n": out += "\\n"
+        case "\t": out += "\\t"
+        case "\r": out += "\\r"
+        default:
+            if ch.value < 0x20 || ch.value > 0x7e {
+                if ch.value > 0xFFFF {
+                    // python writes a surrogate pair for anything past the
+                    // basic plane, which is what json.dumps does by default
+                    let v = ch.value - 0x10000
+                    out += String(format: "\\u%04x\\u%04x",
+                                  0xD800 + (v >> 10), 0xDC00 + (v & 0x3FF))
+                } else {
+                    out += String(format: "\\u%04x", ch.value)
+                }
+            } else {
+                out.unicodeScalars.append(ch)
+            }
+        }
+    }
+    return out + "\""
 }
 
 // the version is declared once, in the other carrier's own file, and this reads
@@ -8458,6 +8500,84 @@ func courtShape() -> StatusJSON {
         seen.append(.text(rel))
     }
     return .object([("files", .list(seen)), ("lines", .raw(String(lines)))])
+}
+
+// ── SAYING A NUMBER, which is reading one run backwards. These worlds spell a
+// value on their own ladder from Unit, so writing 760 means writing the rungs it
+// is made of: ascending, right-nested, `Unit` where the ladder has no name for
+// one. Without it the bench could show a value and never let anybody say one,
+// which is a table you may read and not answer.
+func spellNumber(_ n: Int) -> String {
+    if n <= 0 { return "Never" }
+    var parts: [String] = []
+    var bit = 1
+    while bit <= n {
+        if n & bit != 0 { parts.append(bit == 1 ? "Unit" : "W\(bit)") }
+        bit <<= 1
+    }
+    var said = parts[parts.count - 1]
+    for piece in parts.dropLast().reversed() { said = "Plus<\(piece), \(said)>" }
+    return said
+}
+
+// WHERE A VALUE OF MINE GOES: a row of mine, read by the where court, that is
+// not one of the files this tool ships. Writing into those would be editing
+// somebody else's world, which is what the mine/theirs split exists to prevent.
+// One such file is an answer; none and several are not, and both say so rather
+// than picking.
+func myFormsFiles(_ w: WorldState) -> [String] {
+    let base = layoutDir(w) ?? "."
+    let shipped = Set(shelf().map { $0.name + ".swift" })
+    return (w.layout?.rows ?? [])
+        .filter { $0.role == "forms" && $0.source == "mine"
+                  && !shipped.contains(($0.path as NSString).lastPathComponent) }
+        .map { (base as NSString).appendingPathComponent($0.path) }
+}
+
+// what `mine` answers when a row is written: said once, because the panel
+// declares through the very same verb and may not spell its words a second time
+func minePairs(_ file: String, _ declaredIn: String, _ role: String,
+               _ roleMeans: String) -> [(String, StatusJSON)] {
+    return [
+        ("command", .text("mine")), ("file", .text(file)),
+        ("declared_in", .text(declaredIn)), ("role", .text(role)),
+        ("role_means", .text(roleMeans)), ("mutates", .raw("true")),
+        ("note", .text("mine: I emit it, it is judged with the rest of my world, and "
+                     + "changing it changes the verdict")),
+        ("next", .text("gate status: it is judged from here on")),
+    ]
+}
+
+func personalRootPath() -> String {
+    return ProcessInfo.processInfo.environment["GATE_ME"]
+        ?? ((NSHomeDirectory() as NSString).appendingPathComponent(".gate/me"))
+}
+
+// ── WRITING IS WHAT BRINGS A PERSONAL WORLD INTO BEING, and emptying it takes
+// it away: text still equal to the page it started with means nobody wrote
+// anything, so there is nothing to keep. It lives in a git of its own, in the
+// operator's home, never in the shared clone: colleagues and CI do not have it,
+// and privacy here is the repository boundary rather than a policy.
+func writePersonal(_ w: WorldState, _ text: String) {
+    guard let p = personalPathOf(w) else { return }
+    let said = text.trimmingCharacters(in: .whitespacesAndNewlines)
+    let page = personalTemplate().trimmingCharacters(in: .whitespacesAndNewlines)
+    if said.isEmpty || said == page {
+        try? FileManager.default.removeItem(atPath: p)
+        return
+    }
+    let home = personalRootPath()
+    try? FileManager.default.createDirectory(
+        atPath: (p as NSString).deletingLastPathComponent, withIntermediateDirectories: true)
+    if !FileManager.default.fileExists(atPath: (home as NSString).appendingPathComponent(".git")) {
+        _ = runGit(["init", "-q", home], home)
+    }
+    try? text.write(toFile: p, atomically: true, encoding: .utf8)
+    // only text that holds is ever written here, so every commit is a state
+    // that held: this is gate's own repository, not the operator's
+    _ = runGit(["add", "-A"], home)
+    _ = runGit(["-c", "user.email=you@localhost", "-c", "user.name=you",
+                "-c", "commit.gpgsign=false", "commit", "-qm", "your world"], home)
 }
 
 func percentDecoded(_ s: String) -> String {
@@ -9200,6 +9320,201 @@ func serveDoor(_ a: [String]) -> Never {
                     pairs.append(("command_to_run", .text(ready)))
                 }
                 serveJSON(conn, compactDumps(.object(pairs)))
+            case ("POST", "/verdict"):
+                // the whole declared list, judged with the active file replaced
+                // by the editor's unsaved text: cross-file, on this side, so the
+                // page never says holds where a hook would refuse
+                loadStatusShelf()
+                let w = discoverWorld()
+                let text = String(decoding: asked.body, as: UTF8.self)
+                let base = w.facts.map { (absPath($0) as NSString).deletingLastPathComponent }
+                    ?? FileManager.default.currentDirectoryPath
+                let active = servePick(w, asked.query)
+                let d = scratchDir("gate-bench-")
+                let layout = w.layout?.manifest
+                let formsHere = Set((w.layout?.rows ?? []).filter { $0.role == "forms" }
+                    .map { $0.path })
+                var paths: [String] = []
+                for (name, p) in benchFilesOf(w) {
+                    if p != active && !FileManager.default.fileExists(atPath: p) { continue }
+                    let tp = (d as NSString).appendingPathComponent(
+                        name.replacingOccurrences(of: "/", with: "__"))
+                    let body = p == active ? text : (readText(p) ?? "")
+                    try? body.write(toFile: tp, atomically: false, encoding: .utf8)
+                    // the layout declares protocols and the policy carries a
+                    // typeName, and the plain court refuses both on sight: each
+                    // has a guard of its own, and listing them here turned every
+                    // row into a refusal
+                    if p != layout && !formsHere.contains(name)
+                        && absPath(p) != absPath(policyPathOf(w) ?? "") {
+                        paths.append(tp)
+                    }
+                }
+                // `courtSays` names the court itself: passing it again made the
+                // judge take `judge` for a file, and a run with a file that is
+                // not there says nothing about the files that are
+                let raw = courtSays(paths)
+                var refusals = judgedRefusals(raw).map {
+                    (address: $0.address.replacingOccurrences(of: "__", with: "/"),
+                     claim: $0.claim)
+                }
+                let sources = oneStream(w, benchFilesOf(w))
+                    .filter { $0.1 == active || FileManager.default.fileExists(atPath: $0.1) }
+                    .map { (($0.0 as NSString).lastPathComponent,
+                            $0.1 == active ? text : (readText($0.1) ?? "")) }
+                if sources.count > 1 {
+                    refusals = attributeRefusals(refusals, sources)
+                } else {
+                    for (name, src) in sources {
+                        refusals = refineAddresses(src, refusals, name)
+                    }
+                }
+                // the same guards the terminal runs, over the text in the editor
+                refusals += duplicateGuardsOver(sources)
+                refusals += entryGuardsOver(sources)
+                let typedLayout = active == layout ? text : nil
+                let liveRows = typedLayout.map { layoutRowsFull(base, said: $0).rows }
+                var typed: [String: String] = [:]
+                for (name, p) in benchFilesOf(w) where p == active && formsHere.contains(name) {
+                    typed[name] = text
+                }
+                var size: [String: Int] = [:]
+                refusals += manifestGuards(w, liveRows: liveRows, liveText: typedLayout)
+                refusals += formsGuards(w, &size, live: typed)
+                refusals += policyGuards(w) + stdlibGuards(w) + vendoredGuards(w)
+                refusals += takenJudgeGuard(w) + codeownersPairGuards(w)
+                let times = matches("([\\d.]+) ms", raw).compactMap { $0.first }
+                // AND THE WIDTH OF IT: the judge counts what it checked and says
+                // so, and dropping that left a green over several files saying
+                // only `judged together`, which is a verdict with no measure
+                let measured = matches("(\\d+) declarations · (\\d+) lookups · (\\d+) premises",
+                                       raw).first
+                serveJSON(conn, compactDumps(.object([
+                    ("verdict", .text(refusals.isEmpty ? "holds" : "refused")),
+                    ("refusals", .list(refusals.map {
+                        .object([("address", .text($0.address)), ("claim", .text($0.claim))]) })),
+                    ("declarations", measured.map { StatusJSON.raw($0[0]) } ?? .null),
+                    ("premises", measured.map { StatusJSON.raw($0[2]) } ?? .null),
+                    ("judge_ms", times.last.map { StatusJSON.raw($0) } ?? .null)]),
+                    ascii: true))
+                // ── AND THE PANEL DOES NOT GROW ON SOMEBODY'S DISK: one
+                // directory per keystroke, removed none, thirty-four thousand
+                // standing in the temp of the machine this was written on
+                try? FileManager.default.removeItem(atPath: d)
+            case ("PUT", "/declare"):
+                // ── AND THE GESTURE IS A ROW, WRITTEN WHERE YOU CAN READ IT.
+                // This page may not hold state the files do not hold: a button
+                // that changed the world through a channel outside it would be
+                // exactly the drift this tool exists against. So declaring is
+                // the verb already spelled, and the answer says which file it
+                // wrote and at which line, so the panel can put you in front of
+                // the line rather than announce it in a bar that fades.
+                loadStatusShelf()
+                let w = discoverWorld()
+                let rel = asked.query["f"] ?? "", role = asked.query["role"] ?? ""
+                var pairs: [(String, StatusJSON)] = []
+                if !undeclaredHere(w).contains(rel) {
+                    pairs = [("asks", .raw("true")),
+                             ("note", .text("\(rel) is not an undeclared file here"))]
+                } else if !STATUS_ROLES.contains(where: { $0.0 == role }) {
+                    pairs = [("asks", .raw("true")),
+                             ("roles", .object(STATUS_ROLES.map { ($0.0, .text($0.1)) })),
+                             ("note", .text("a row says which court reads the file, and "
+                                          + "this says none"))]
+                } else {
+                    let dir = layoutDir(w) ?? "."
+                    let full = (dir as NSString).appendingPathComponent(rel)
+                    let (mp, refused) = declareSideHere(full, "Mine", role, nil)
+                    if let refused = refused {
+                        pairs = [("asks", .raw("true")), ("note", .text(refused))]
+                    } else {
+                        let means = STATUS_ROLES.first(where: { $0.0 == role })?.1 ?? ""
+                        pairs = minePairs((full as NSString).lastPathComponent, mp ?? "",
+                                          role, means)
+                        let (rows, _) = layoutRowsFull(dir)
+                        if let mp = mp, let said = rows.first(where: { $0.path == rel }) {
+                            pairs.append(("wrote_in", .text(relPath(mp, dir))))
+                            pairs.append(("at_line", .raw(String(said.line))))
+                        }
+                    }
+                }
+                let wrote = pairs.contains(where: { $0.0 == "wrote_in" })
+                serveSay(conn, wrote ? 200 : 400, "application/json",
+                         Data(compactDumps(.object(pairs)).utf8))
+            case ("PUT", "/value"):
+                // ── SAYING A VALUE IS WRITING A DECLARATION IN A FILE OF MINE.
+                // The bench could show what a world holds and never let anybody
+                // answer: a table you may read and not write in. Answering does
+                // not edit the world that shipped the name, it puts your own
+                // declaration in your own file, which is what an override has
+                // always been.
+                loadStatusShelf()
+                let w = discoverWorld()
+                let name = asked.query["name"] ?? "", to = asked.query["to"] ?? ""
+                func refuseValue(_ why: String) {
+                    serveSay(conn, 409, "application/json", Data(compactDumps(.object([
+                        ("asks", .raw("true")), ("note", .text(why))])).utf8))
+                }
+                guard matchAt(name, "\\w+$") != nil, matchAt(to, "-?\\d+$") != nil,
+                      let said = Int(to) else {
+                    refuseValue("a value is a name and a number")
+                    break
+                }
+                let mine = myFormsFiles(w)
+                if mine.isEmpty {
+                    refuseValue("no file of yours is read by the where court yet, so there is "
+                              + "nowhere for your answer to live. Make one and say so: "
+                              + "gate mine my-values.swift --role forms")
+                    break
+                }
+                if mine.count > 1 {
+                    refuseValue("you present more than one file to that court, "
+                              + mine.map { ($0 as NSString).lastPathComponent }
+                                    .joined(separator: ", ")
+                              + ", and this cannot choose between them")
+                    break
+                }
+                let path = mine[0]
+                let wrote = "public typealias \(name) = \(spellNumber(said))"
+                var lines = (readText(path) ?? "").components(separatedBy: "\n")
+                let at = lines.firstIndex(where: {
+                    matchAt($0.trimmingCharacters(in: .whitespaces),
+                            "public typealias " + name + " = ") != nil })
+                if let at = at {
+                    lines[at] = wrote
+                } else if let last = lines.last, last.isEmpty {
+                    lines[lines.count - 1] = wrote
+                    lines.append("")
+                } else {
+                    lines.append(wrote)
+                }
+                try? lines.joined(separator: "\n").write(toFile: path, atomically: true,
+                                                         encoding: .utf8)
+                serveJSON(conn, compactDumps(.object([
+                    ("wrote", .text(wrote)),
+                    ("file", .text(relPath(path, layoutDir(w) ?? "."))),
+                    ("line", .raw(String((at ?? (lines.count - 1)) + 1)))])))
+            case ("PUT", "/world"):
+                // ── A WRITE NAMES ITS FILE OR IT DOES NOT HAPPEN. Reading may
+                // fall back to something sensible; writing may not. In a world
+                // laid out entirely by manifest the fallback is the FIRST file
+                // that exists, which is the manifest, so a PUT with an empty
+                // name overwrote the document that says what the world is. The
+                // writable names are the bench's own list and nothing else.
+                let w = discoverWorld()
+                let text = String(decoding: asked.body, as: UTF8.self)
+                let named = Dictionary(benchFilesOf(w).map { ($0.0, $0.1) },
+                                       uniquingKeysWith: { a, _ in a })
+                guard let p = named[asked.query["f"] ?? ""] else {
+                    serveSay(conn, 404, nil, Data())
+                    break
+                }
+                if p == personalPathOf(w) {
+                    writePersonal(w, text)      // empty means gone, not an empty file
+                } else {
+                    try? text.write(toFile: p, atomically: true, encoding: .utf8)
+                }
+                serveSay(conn, 200, nil, Data())
             default:
                 serveSay(conn, 404, nil, Data())
             }

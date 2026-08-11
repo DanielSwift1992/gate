@@ -7665,6 +7665,93 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                           for c in f["changes"])
                   and _sv_seen["/nosuchroute"][0] == 404))
 
+        # ── AND THE ROUTES THAT WRITE, each carrier in its own copy of one
+        # world: a writer is judged on what it LEFT, so the answers are held
+        # beside the bytes of every file both rooms end up with. They cannot
+        # share a room, because the second carrier through would be answering
+        # about the first one's edits.
+        _wr_said, _wr_left = {}, {}
+        for _who in ("py", "sw"):
+            _wr_room = os.path.join(tmp, "bench-writes-" + _who)
+            run("demo", _wr_room)
+            open(os.path.join(_wr_room, "extra.swift"), "w").write("public enum Extra: Close {}\n")
+            _wr_me = os.path.join(tmp, "bench-me-" + _who)
+            _wr_env = {**os.environ, "GATE_ME": _wr_me, "GATE_CLI": "off"}
+            _wr_port = _sock.socket(); _wr_port.bind(("127.0.0.1", 0))
+            _wp = _wr_port.getsockname()[1]; _wr_port.close()
+            _wr_cmd = ([sys.executable, GATE, "serve", str(_wp), "--no-open"] if _who == "py"
+                       else [_cli_bin, "serve", str(_wp), "--no-open"])
+            _wr_sv = subprocess.Popen(_wr_cmd, cwd=_wr_room, stdout=subprocess.DEVNULL,
+                                      stderr=subprocess.DEVNULL, env=_wr_env)
+            try:
+                wait_serve(_wp, "/version")
+                import urllib.request as _uw
+
+                def _send(route, body, method):
+                    _rq = _uw.Request(f"http://127.0.0.1:{_wp}{route}",
+                                      data=body.encode(), method=method)
+                    try:
+                        _rr = _uw.urlopen(_rq, timeout=60)
+                        return (_rr.status, _rr.read().decode())
+                    except Exception as _e:
+                        return (getattr(_e, "code", "dropped"),
+                                _e.read().decode() if hasattr(_e, "read") else "")
+                _own = open(os.path.join(_wr_room, "ownership.swift")).read()
+                _wr_said[_who] = [
+                    _send("/verdict?f=ownership.swift", _own, "POST"),
+                    _send("/verdict?f=ownership.swift",
+                          _own.replace("Zone_docs", "Zone_nowhere", 1), "POST"),
+                    _send("/verdict?f=my.swift",
+                          "public enum MyBench: Bench {\n    public typealias Theme = Dark\n}\n",
+                          "POST"),
+                    _send("/world?f=ownership.swift", _own + "// a line from the bench\n", "PUT"),
+                    _send("/world?f=nosuch.swift", "x", "PUT"),
+                    _send("/world?f=my.swift",
+                          "public enum MyBench: Bench {\n    public typealias Theme = Dark\n}\n",
+                          "PUT"),
+                    _send("/value?name=Room&to=24", "", "PUT"),
+                    _send("/value?name=not-a-name&to=24", "", "PUT"),
+                    _send("/declare?f=extra.swift&role=nocourt", "", "PUT"),
+                    _send("/declare?f=extra.swift&role=forms", "", "PUT"),
+                    _send("/declare?f=extra.swift&role=forms", "", "PUT"),
+                ]
+            finally:
+                _wr_sv.terminate()
+                try:
+                    _wr_sv.wait(timeout=5)
+                except Exception:
+                    _wr_sv.kill()
+            _wr_left[_who] = {}
+            for _root, _dirs, _names in os.walk(_wr_room):
+                if ".git" in _root:
+                    continue
+                for _n in _names:
+                    _full = os.path.join(_root, _n)
+                    _wr_left[_who][os.path.relpath(_full, _wr_room)] = open(_full, "rb").read()
+            _wr_left[_who]["THE PERSONAL WORLD"] = (
+                open(os.path.join(_wr_me, "worlds", os.listdir(
+                    os.path.join(_wr_me, "worlds"))[0], "my.swift"), "rb").read()
+                if os.path.isdir(os.path.join(_wr_me, "worlds")) else None)
+        _wr_apart = [i for i, (_a, _b) in enumerate(zip(_wr_said["py"], _wr_said["sw"]))
+                     if (_a[0], _s9noms(_a[1].encode())) != (_b[0], _s9noms(_b[1].encode()))]
+        _wr_files = sorted(set(_wr_left["py"]) | set(_wr_left["sw"]))
+        _wr_left_apart = [f for f in _wr_files
+                          if _wr_left["py"].get(f) != _wr_left["sw"].get(f)]
+        if _wr_apart or _wr_left_apart:
+            print("   the writing routes part on:", _wr_apart, _wr_left_apart[:4])
+        S.append(("the bench writes what the python side writes, and leaves the same bytes",
+                  _wr_apart == [] and _wr_left_apart == []
+                  # and the controls: the verdict measured a world, the value
+                  # was spelled on the ladder, and the row reached the layout
+                  # the verdict that measured a world is the one over the
+                  # personal file: the demo's own pages are all read by the
+                  # where court, so the plain court has nothing to count there
+                  and json.loads(_wr_said["sw"][2][1])["declarations"]
+                  and "Plus<W8, W16>" in _wr_said["sw"][6][1]
+                  and json.loads(_wr_said["sw"][9][1])["wrote_in"] == "gate.manifest.swift"
+                  and b"a line from the bench" in _wr_left["sw"]["ownership.swift"]
+                  and _wr_left["sw"]["THE PERSONAL WORLD"] is not None))
+
         # ── AND ALL FOURTEEN OF THEM ALREADY HAD A WORLD. The tables bootstrap
         # runs in the other carrier's dispatcher, above the door that hands an
         # argv to this vein, so a repository holding tables and no world yet was
@@ -8727,7 +8814,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                                       "status", "fsck", "badge", "survey", "findings",
                                       "report", "bare", "import", "verify", "library",
                                       "guard", "check", "ask", "diff", "apply", "change",
-                                      "attention", "demo"]))
+                                      "attention", "demo", "serve"]))
         # ── AND THE LEDGER IS READ AGAINST THE ROAD IT IS WALKING. The strangler
         # has a length and a position, and both were feelings: the list of moved
         # veins lived in the binary and the list of verbs lived in the python
@@ -8960,7 +9047,6 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
             _fn = "cmd_" + _v.replace("-", "_")
             _needs = _reaches(_fn) if _fn in _defs else set()
             _roads[_v] = ("carried" if _v in _ledger else
-                          "the bench" if _v == "serve" else
                           "the status core" if _v in ("status", "fsck") else
                           # a verb whose body is written in the dispatcher itself
                           # has no function to walk; it is read by hand or moved
@@ -8986,10 +9072,14 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         # split this rule exists to forbid.
         _spellings_carried = {"fsck", "ask", "change"}
         _carried_verbs = set(_ledger) & _verbs
-        S.append(("the ledger names verbs the usage offers, 26 of 27 carried",
+        # ── AND THE TWO NUMBERS MET. The day the ledger names every verb the
+        # usage offers, the road is walked: from here the python side is a
+        # decision rather than a dependency, and what is left of it is the
+        # death commit.
+        S.append(("the ledger names verbs the usage offers, 27 of 27 carried",
                   set(_ledger) <= _verbs | _spellings_carried
-                  and len(_ledger) == 29
-                  and len(_carried_verbs) == 26
+                  and len(_ledger) == 30
+                  and len(_carried_verbs) == 27
                   and len(_verbs) == 27
                   # and a name on the ledger is a whole verb: a prefix claims
                   # everything under it, so half a verb would take argv nobody
