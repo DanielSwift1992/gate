@@ -31,16 +31,34 @@ case "$(uname -s)" in
         ;;
 esac
 
+# ── AND THE COMPILER IS HANDED A TEMP IT CAN OPEN. The shell here keeps `TMP`
+# in its own spelling (`/tmp`), the linker takes that at its word, and it fails
+# to create `lnk{...}.tmp` in a directory that does not exist for it. Measured
+# rather than guessed: the job printed `TMP=/tmp TEMP=/tmp` beside 147G free and
+# a temp that exists, which named the spelling as the whole of the problem.
+if [ -n "$WINDOWS" ] && command -v cygpath >/dev/null 2>&1; then
+    NATIVE_TMP="$(cygpath -w "${RUNNER_TEMP:-${TMP:-/tmp}}" 2>/dev/null || true)"
+    if [ -n "$NATIVE_TMP" ]; then
+        export TMP="$NATIVE_TMP"
+        export TEMP="$NATIVE_TMP"
+    fi
+fi
+
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
 PIN="$(cat "$HERE/bin/gate-judge.from" | tr -d '[:space:]')"
 CACHE="$HERE/bin/.court/$PIN"
 if [ ! -d "$CACHE" ]; then
-    TMP=$(mktemp -d)
-    git clone --depth 50 -q https://github.com/DanielSwift1992/verification-is-identification "$TMP/vi"
-    git -C "$TMP/vi" checkout -q "$PIN"
+    # ── AND THE FETCH DOES NOT TAKE THE COMPILER'S NAME. This directory was
+    # called `TMP`, which is the variable the linker reads for its own scratch:
+    # on a runner, where the cache is never warm, the fetch overwrote the
+    # spelling handed over above and the link failed exactly as before. One
+    # name, two meanings, and the second one silent.
+    FETCH=$(mktemp -d)
+    git clone --depth 50 -q https://github.com/DanielSwift1992/verification-is-identification "$FETCH/vi"
+    git -C "$FETCH/vi" checkout -q "$PIN"
     mkdir -p "$CACHE"
-    cp "$TMP/vi/Sources/Court/"*.swift "$CACHE/"
-    rm -rf "$TMP"
+    cp "$FETCH/vi/Sources/Court/"*.swift "$CACHE/"
+    rm -rf "$FETCH"
 fi
 
 # top-level statements are legal only in a file named main.swift when more

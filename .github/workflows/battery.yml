@@ -139,7 +139,7 @@ jobs:
           # naming a file. What the linker is actually given is an environment,
           # and it is written down here so the mouth can carry it out: a guess
           # costs a run in the queue, and printing four values costs nothing.
-          echo "TMP=$TMP TEMP=$TEMP" | tee vein-out.txt
+          echo "shell says TMP=$TMP TEMP=$TEMP RUNNER_TEMP=$RUNNER_TEMP" | tee vein-out.txt
           echo "temp exists: $([ -d "$TMP" ] && echo yes || echo no)" | tee -a vein-out.txt
           echo "cwd=$(pwd) free=$(df -h . | tail -1 | tr -s ' ' | cut -d' ' -f4)" | tee -a vein-out.txt
           bin/build-cli.sh 2>&1 | tee -a vein-out.txt; exit ${PIPESTATUS[0]}
