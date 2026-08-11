@@ -37,7 +37,16 @@ jobs:
       # the cover's cost sentence, held rather than measured once:
       # ten times the claims may cost more, and not by a different order
       - run: python3 bin/bench.py --check
-      - run: bash bin/shoot-bench.sh
+      # ── AND THE CAMERA HAS A CLOCK. This step took seven minutes on the
+      # runner against fifteen seconds here, and with no bound of its own a
+      # slow shot reads as a hung job: the run sat past an hour before anybody
+      # asked. Ten minutes is forty times the local shot; past that, something
+      # is wrong rather than slow, and the red says so.
+      - run: |
+          ( sleep 600; echo "shoot-bench: past ten minutes, something is wrong rather than slow" >&2; pkill -f shoot-bench.sh ) &
+          WATCH=$!
+          bash bin/shoot-bench.sh
+          kill $WATCH || true
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02   # v4
         with:
           name: bench-shot

@@ -7556,6 +7556,29 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         S.append(("the status core answers with the python side's bytes on fourteen worlds",
                   _s9apart == []))
 
+        # ── AND THE PRICE OF A VERB IS COUNTED, NOT TIMED. Words and bytes are
+        # held above; the third parity is cost, and it went unheld through the
+        # whole strangler: `status` on this vein spent 541ms of its own work
+        # against the other carrier's 110, and the bench paid it on every
+        # request. The money was repeated outside work, so what is pinned is the
+        # count of spawns, which is deterministic, machine-independent and
+        # outlives the other carrier. A time threshold on somebody else's runner
+        # would be a flake factory; this is arithmetic.
+        _sp_room = os.path.join(tmp, "spawn-ledger")
+        run("demo", _sp_room)
+        _sp = subprocess.run([_cli_bin, "--status-core", "--json"], cwd=_sp_room,
+                             capture_output=True, text=True,
+                             env={**os.environ, "GATE_SPAWN_LEDGER": "1"})
+        _sp_said = _sp.stderr.strip().split("\n")[-1] if _sp.stderr.strip() else ""
+        if "spawns" in _sp_said and _sp_said != "gate-cli: spawns 5 (git 2, court 3)":
+            print("   the status verb spawns:", _sp_said)
+        S.append(("the status verb spawns what it is built to need, and no more",
+                  # two gits: the repository key, asked once and remembered, and
+                  # its fallback where a clone carries no remote. three courts:
+                  # the world and the two forms streams. A spawn in a loop shows
+                  # up here as 47 against 5 rather than as a slow afternoon.
+                  _sp_said == "gate-cli: spawns 5 (git 2, court 3)"))
+
         # ── AND THE SAME ANSWERS OVER A SOCKET. The bench is the one surface
         # where a verb is asked for by a wire rather than by an argv, so the two
         # carriers are held the way a page holds them: both servers up, on their

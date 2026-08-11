@@ -239,12 +239,29 @@ if args.first == "stdlib" {
 
 // ── export WORLD -o people.csv grants.csv: the tables printed back out of a
 // world, which is the round trip that proves the fact translation ──
+// ── AND A PATTERN IS COMPILED ONCE, the way the other carrier's regex module
+// keeps its own cache. Said out loud here rather than inherited. Measured
+// honestly: this is NOT where this vein's cost sits. `status` spends 538ms of
+// its own work against the other carrier's 110ms, the judge is 4ms of either,
+// and this cache moved none of it. It stays because rebuilding a pattern for
+// nothing is still rebuilding it; where the cost does sit is an open question
+// with a name in the journal.
+var PATTERNS: [String: NSRegularExpression] = [:]
+
+func compiled(_ pattern: String, _ options: NSRegularExpression.Options) -> NSRegularExpression? {
+    let key = "\(options.rawValue)\u{1}" + pattern
+    if let held = PATTERNS[key] { return held }
+    guard let made = try? NSRegularExpression(pattern: pattern, options: options) else { return nil }
+    PATTERNS[key] = made
+    return made
+}
+
 func matches(_ pattern: String, _ text: String,
              dotAll: Bool = false, lines: Bool = false) -> [[String]] {
     var opts: NSRegularExpression.Options = []
     if dotAll { opts.insert(.dotMatchesLineSeparators) }
     if lines { opts.insert(.anchorsMatchLines) }   // python's re.M
-    guard let re = try? NSRegularExpression(pattern: pattern, options: opts) else { return [] }
+    guard let re = compiled(pattern, opts) else { return [] }
     let ns = text as NSString
     return re.matches(in: text, range: NSRange(location: 0, length: ns.length)).map { m in
         (1..<m.numberOfRanges).map { i in
@@ -288,7 +305,29 @@ func toolPath(_ name: String) -> String {
     return name
 }
 
+// ── AND EVERY SPAWN IS COUNTED. The cost of this vein turned out to be
+// repeated outside work rather than anything it computes, and a count of
+// spawns is the honest measure of that: it is deterministic, it does not
+// depend on the machine, and it outlives the other carrier. Under
+// `GATE_SPAWN_LEDGER=1` the total is printed on the way out, and the battery
+// pins the exact number a verb is built to need.
+var SPAWNS = 0
+var SPAWNS_GIT = 0
+var SPAWNS_COURT = 0
+
+func spawnCounted(_ kind: String) {
+    SPAWNS += 1
+    if kind == "court" { SPAWNS_COURT += 1 } else { SPAWNS_GIT += 1 }
+}
+
+func spawnLedger() {
+    if ProcessInfo.processInfo.environment["GATE_SPAWN_LEDGER"] == "1" {
+        err("gate-cli: spawns \(SPAWNS) (git \(SPAWNS_GIT), court \(SPAWNS_COURT))\n")
+    }
+}
+
 func runGit(_ arguments: [String], _ cwd: String) -> String {
+    spawnCounted("git")
     let p = Process()
     p.executableURL = URL(fileURLWithPath: toolPath("git"))
     p.arguments = [] + arguments
@@ -307,6 +346,7 @@ func runGit(_ arguments: [String], _ cwd: String) -> String {
 // --error-unmatch` says whether git tracks a path by the code it exits with,
 // and says nothing on stdout worth reading
 func gitExitCode(_ arguments: [String], _ cwd: String) -> Int32 {
+    spawnCounted("git")
     let p = Process()
     p.executableURL = URL(fileURLWithPath: toolPath("git"))
     p.arguments = [] + arguments
@@ -499,7 +539,22 @@ func identities(_ base: String) -> [String: String] {
     return out
 }
 
+// ── AND THE KEY OF A REPOSITORY IS ASKED FOR ONCE. This spawns git, twice
+// where a clone has no remote, and it is called from the walk that lists the
+// bench's files: `status` paid for about sixty spawns of about nine
+// milliseconds, which was ninety per cent of what this verb cost. The other
+// carrier computes this once per process and remembers it. Same key, same
+// answer, one question.
+var REPO_KEYS: [String: String] = [:]
+
 func repoKey(_ base: String) -> String {
+    if let held = REPO_KEYS[base] { return held }
+    let said = repoKeyRead(base)
+    REPO_KEYS[base] = said
+    return said
+}
+
+func repoKeyRead(_ base: String) -> String {
     let url = runGit(["config", "--get", "remote.origin.url"], base)
         .trimmingCharacters(in: .whitespacesAndNewlines)
     if !url.isEmpty {
@@ -1212,7 +1267,7 @@ func matchesAt(_ pattern: String, _ text: String,
     var opts: NSRegularExpression.Options = []
     if dotAll { opts.insert(.dotMatchesLineSeparators) }
     if lines { opts.insert(.anchorsMatchLines) }
-    guard let re = try? NSRegularExpression(pattern: pattern, options: opts) else { return [] }
+    guard let re = compiled(pattern, opts) else { return [] }
     let ns = text as NSString
     return re.matches(in: text, range: NSRange(location: 0, length: ns.length)).map { m in
         let groups = (1..<m.numberOfRanges).map { i in
@@ -1225,7 +1280,7 @@ func matchesAt(_ pattern: String, _ text: String,
 
 func matchAt(_ text: String, _ pattern: String) -> [String]? {
     // python's re.match: anchored at the start, groups from the whole match on
-    guard let re = try? NSRegularExpression(pattern: "^(?:" + pattern + ")") else { return nil }
+    guard let re = compiled("^(?:" + pattern + ")", []) else { return nil }
     let ns = text as NSString
     guard let m = re.firstMatch(in: text, range: NSRange(location: 0, length: ns.length)),
           m.range.location == 0 else { return nil }
@@ -2908,6 +2963,7 @@ func statusDoor(_ asJson: Bool) -> Never {
     }
     let (refusals, whereSize) = (a.refusals, a.whereSize)
     let (worldM, next, times) = (a.world, a.next, a.judgeMs)
+    spawnLedger()
     if asJson {
         out(statusDumps(.object(statusPrinted(a)), 0) + "\n")
     } else {
@@ -3199,8 +3255,7 @@ func globMatch(_ pattern: String, _ name: String) -> Bool {
         i += 1
     }
     expr += "$"
-    guard let re = try? NSRegularExpression(pattern: expr, options: [.dotMatchesLineSeparators])
-    else { return false }
+    guard let re = compiled(expr, [.dotMatchesLineSeparators]) else { return false }
     let ns = name as NSString
     return re.firstMatch(in: name, range: NSRange(location: 0, length: ns.length)) != nil
 }
@@ -8274,6 +8329,7 @@ if args.first == "export" {
 // has not been measured. Both roads are held to the python side's bytes by the
 // parity walk, which runs wherever a toolchain stands, so neither can drift.
 func courtSays(_ asked: [String]) -> String {
+    spawnCounted("court")
     let bin = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath().path
     let words: [String] = [bin, "judge"] + asked
 #if canImport(Darwin)
@@ -9040,6 +9096,34 @@ func commitChange(_ base: String, _ sha: String, _ path: String?) -> [(String, S
     ]
 }
 
+// ── AND THE BENCH REMEMBERS WHAT IT READ. Every route here opened the shelf
+// and built the world again, which is right for a command that runs once and
+// wrong for a server: the page asks for a dozen things to open one file, and
+// each answer paid for a shelf of sixteen pages and a walk of the layout. The
+// other carrier keeps both and re-reads the layout only when its BYTES change,
+// so the disk stays the authority and the parse is what is skipped. Measured
+// before this: `/files` 26 times dearer than the other carrier, `/status` 28,
+// and the cover's camera took seven minutes on a runner where it takes fifteen
+// seconds here.
+var SERVED_WORLD: WorldState? = nil
+var SERVED_LAYOUT: Data? = nil
+var SHELF_READ = false
+
+func servedWorld() -> WorldState {
+    let dir = FileManager.default.currentDirectoryPath
+    let mp = (dir as NSString).appendingPathComponent("gate.manifest.swift")
+    let raw = FileManager.default.contents(atPath: mp)
+    if let held = SERVED_WORLD, raw == SERVED_LAYOUT { return held }
+    if !SHELF_READ {
+        loadStatusShelf()
+        SHELF_READ = true
+    }
+    let w = discoverWorld()
+    SERVED_WORLD = w
+    SERVED_LAYOUT = raw
+    return w
+}
+
 func serveDoor(_ a: [String]) -> Never {
     let nums = a.filter { !$0.isEmpty && $0.allSatisfy { $0.isNumber } }
     let port = nums.first.flatMap { Int($0) } ?? 4744
@@ -9113,6 +9197,7 @@ func serveDoor(_ a: [String]) -> Never {
         var size = socklen_t(MemoryLayout<sockaddr>.size)
         let conn = accept(listener, &from, &size)
         if conn == gateNoSocket { continue }
+        let spawnsBefore = SPAWNS
         if let asked = serveRead(conn) {
             switch (asked.method, asked.path) {
             case ("GET", "/"), ("GET", "/ui"):
@@ -9131,15 +9216,14 @@ func serveDoor(_ a: [String]) -> Never {
             case ("GET", "/ladder.css"):
                 // the named steps, emitted from the judged worlds so the page
                 // can say `var(--apart)` and never a number of its own
-                loadStatusShelf()
-                let w = discoverWorld()
+                let w = servedWorld()
                 let sheet = paletteTokens(w) + ladderTokens(w) + registerTokens(w)
                 serveSay(conn, 200, "text/css; charset=utf-8", Data(sheet.utf8))
             case ("GET", "/shelf"):
                 // what the shelf carries, and each page's own card: the sort it
                 // says it is and the voice it says it speaks in, read off the
                 // page itself rather than guessed from the shape of its name
-                loadStatusShelf()
+                _ = servedWorld()
                 let pages = shelf().map { $0.name }
                 if let want = asked.query["m"], !want.isEmpty {
                     if STDLIB_TEXTS[want] == nil {
@@ -9148,7 +9232,7 @@ func serveDoor(_ a: [String]) -> Never {
                         // THE WORLD AS IT STANDS, not the text as it shipped:
                         // what governs is your declarations put where the
                         // shelf's stood, and that is what the judge reads
-                        let w = discoverWorld()
+                        let w = servedWorld()
                         serveSay(conn, 200, "text/plain; charset=utf-8",
                                  Data(presentedWorld(w, want).utf8))
                     }
@@ -9189,7 +9273,7 @@ func serveDoor(_ a: [String]) -> Never {
                     journal, scope: scope, limit: n ?? 200, onlyMe: false, world: world,
                     who: identities(base), nextSaid: nextSaid, lastMile: false))))
             case ("GET", "/show"):
-                let w = discoverWorld()
+                let w = servedWorld()
                 let base = w.facts.map { (absPath($0) as NSString).deletingLastPathComponent }
                     ?? FileManager.default.currentDirectoryPath
                 let want = asked.query["f"]
@@ -9200,8 +9284,7 @@ func serveDoor(_ a: [String]) -> Never {
                 // and the bench says so: an empty account is a fact, and
                 // inventing a specimen to fill it would be the one lie this
                 // thing cannot afford
-                loadStatusShelf()
-                let w = discoverWorld()
+                let w = servedWorld()
                 serveJSON(conn, compactDumps(.object([
                     ("command", .text("attention")),
                     ("seams", .list(seamsHere(w).map { .object($0) }))])))
@@ -9211,8 +9294,7 @@ func serveDoor(_ a: [String]) -> Never {
                 // raised inside the handler and the connection died with no
                 // response at all: the page saw a network error where a
                 // sentence belonged.
-                loadStatusShelf()
-                let w = discoverWorld()
+                let w = servedWorld()
                 let who = asked.query["who"] ?? "", doc = asked.query["doc"] ?? ""
                 if who.isEmpty || doc.isEmpty {
                     serveJSON(conn, benchSaid(.cannot(
@@ -9222,8 +9304,7 @@ func serveDoor(_ a: [String]) -> Never {
                     serveJSON(conn, benchSaid(askViewAnswer(w, who, doc)))
                 }
             case ("GET", "/diff/transfer"):
-                loadStatusShelf()
-                let w = discoverWorld()
+                let w = servedWorld()
                 let who = asked.query["who"] ?? "", to = asked.query["to"] ?? ""
                 if who.isEmpty || to.isEmpty {
                     serveJSON(conn, benchSaid(.cannot(
@@ -9240,8 +9321,7 @@ func serveDoor(_ a: [String]) -> Never {
                             + "`gate status`")))
                 }
             case ("GET", "/files"):
-                loadStatusShelf()
-                let w = discoverWorld()
+                let w = servedWorld()
                 let named = benchFilesOf(w)
                 let names = named.map { $0.0 }
                 let rows = w.layout?.rows ?? []
@@ -9330,7 +9410,7 @@ func serveDoor(_ a: [String]) -> Never {
             case ("GET", "/world"):
                 // the page obeys the declared layout: `?f=` names a file FROM
                 // that list, and a name the world does not carry is a miss
-                let w = discoverWorld()
+                let w = servedWorld()
                 guard let p = servePick(w, asked.query) else {
                     serveSay(conn, 404, nil, Data())
                     break
@@ -9346,7 +9426,7 @@ func serveDoor(_ a: [String]) -> Never {
                 // the honest state: a write lands in the working copy and git
                 // carries the history, so this says whether the file is
                 // committed or has uncommitted changes, never our own save
-                let w = discoverWorld()
+                let w = servedWorld()
                 guard let facts = w.facts else {
                     serveSay(conn, 404, nil, Data())
                     break
@@ -9374,7 +9454,7 @@ func serveDoor(_ a: [String]) -> Never {
                 // should be reachable: a line you cannot open is a line you are
                 // asked to take on trust, which is the one thing nothing here
                 // asks for.
-                let w = discoverWorld()
+                let w = servedWorld()
                 let base = w.facts.map { (absPath($0) as NSString).deletingLastPathComponent }
                     ?? FileManager.default.currentDirectoryPath
                 let want = (base as NSString).appendingPathComponent(
@@ -9448,8 +9528,7 @@ func serveDoor(_ a: [String]) -> Never {
                 // the whole declared list, judged with the active file replaced
                 // by the editor's unsaved text: cross-file, on this side, so the
                 // page never says holds where a hook would refuse
-                loadStatusShelf()
-                let w = discoverWorld()
+                let w = servedWorld()
                 let text = String(decoding: asked.body, as: UTF8.self)
                 let base = w.facts.map { (absPath($0) as NSString).deletingLastPathComponent }
                     ?? FileManager.default.currentDirectoryPath
@@ -9533,8 +9612,7 @@ func serveDoor(_ a: [String]) -> Never {
                 // the verb already spelled, and the answer says which file it
                 // wrote and at which line, so the panel can put you in front of
                 // the line rather than announce it in a bar that fades.
-                loadStatusShelf()
-                let w = discoverWorld()
+                let w = servedWorld()
                 let rel = asked.query["f"] ?? "", role = asked.query["role"] ?? ""
                 var pairs: [(String, StatusJSON)] = []
                 if !undeclaredHere(w).contains(rel) {
@@ -9572,8 +9650,7 @@ func serveDoor(_ a: [String]) -> Never {
                 // not edit the world that shipped the name, it puts your own
                 // declaration in your own file, which is what an override has
                 // always been.
-                loadStatusShelf()
-                let w = discoverWorld()
+                let w = servedWorld()
                 let name = asked.query["name"] ?? "", to = asked.query["to"] ?? ""
                 func refuseValue(_ why: String) {
                     serveSay(conn, 409, "application/json", Data(compactDumps(.object([
@@ -9625,7 +9702,7 @@ func serveDoor(_ a: [String]) -> Never {
                 // that exists, which is the manifest, so a PUT with an empty
                 // name overwrote the document that says what the world is. The
                 // writable names are the bench's own list and nothing else.
-                let w = discoverWorld()
+                let w = servedWorld()
                 let text = String(decoding: asked.body, as: UTF8.self)
                 let named = Dictionary(benchFilesOf(w).map { ($0.0, $0.1) },
                                        uniquingKeysWith: { a, _ in a })
@@ -9642,6 +9719,9 @@ func serveDoor(_ a: [String]) -> Never {
             default:
                 serveSay(conn, 404, nil, Data())
             }
+        }
+        if ProcessInfo.processInfo.environment["GATE_SPAWN_LEDGER"] == "1" {
+            err("gate-cli: spawns \(SPAWNS - spawnsBefore) this request\n")
         }
         gateClose(conn)
     }
