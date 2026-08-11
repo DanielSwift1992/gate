@@ -7516,48 +7516,63 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         # carrier's http server writes a Server and a Date header of its own,
         # and those differ by construction and say nothing about the answer.
         # Both are shut in this same step, whatever the walk finds.
-        _sv_ports = []
-        for _ in range(2):
-            _sp = _sock.socket(); _sp.bind(("127.0.0.1", 0))
-            _sv_ports.append(_sp.getsockname()[1]); _sp.close()
-        _sv_py = subprocess.Popen(
-            [sys.executable, GATE, "serve", str(_sv_ports[0]), "--no-open"], cwd=HERE,
-            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
-            env={**os.environ, "GATE_CLI": "off"})
-        _sv_sw = subprocess.Popen(
-            [_cli_bin, "serve", str(_sv_ports[1]), "--no-open"], cwd=HERE,
-            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
-        _sv_apart, _sv_seen = [], {}
-        try:
-            import urllib.request as _uq
-            for _p in _sv_ports:
-                wait_serve(_p, "/version")
+        # ── AND NOT OVER THIS REPOSITORY ALONE. It carries no override and no
+        # seam, so those two branches of `/files` would be walked empty and
+        # agree by having nothing to say. The worlds the status parity already
+        # built carry both, and the bench is asked over them too.
+        _sv_routes = ("/version", "/status", "/ladder.css", "/files", "/shelf",
+                      "/shelf?m=courts", "/shelf?m=nosuch", "/gitstatus",
+                      "/gitstatus?f=nosuchfile.swift", "/seamside?f=nosuch.swift",
+                      "/nosuchroute")
+        _sv_apart, _sv_seen, _sv_said = [], {}, []
+        for _tag, _room in (("here", HERE), ("presented", _s9w["presented"]),
+                            ("parted", _s9w["parted"])):
+            _sv_ports = []
+            for _ in range(2):
+                _sp = _sock.socket(); _sp.bind(("127.0.0.1", 0))
+                _sv_ports.append(_sp.getsockname()[1]); _sp.close()
+            _sv_py = subprocess.Popen(
+                [sys.executable, GATE, "serve", str(_sv_ports[0]), "--no-open"], cwd=_room,
+                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
+                env={**os.environ, "GATE_CLI": "off"})
+            _sv_sw = subprocess.Popen(
+                [_cli_bin, "serve", str(_sv_ports[1]), "--no-open"], cwd=_room,
+                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+            try:
+                import urllib.request as _uq
+                for _p in _sv_ports:
+                    wait_serve(_p, "/version")
 
-            def _over(port, route):
-                try:
-                    _r = _uq.urlopen(f"http://127.0.0.1:{port}{route}", timeout=60)
-                    return (_r.status, _r.headers.get("Content-Type"), _r.read().decode())
-                except Exception as _e:
-                    return (getattr(_e, "code", "dropped"), None, "")
+                def _over(port, route):
+                    try:
+                        _r = _uq.urlopen(f"http://127.0.0.1:{port}{route}", timeout=60)
+                        return (_r.status, _r.headers.get("Content-Type"), _r.read().decode())
+                    except Exception as _e:
+                        return (getattr(_e, "code", "dropped"), None, "")
 
-            for _route in ("/version", "/status", "/ladder.css", "/nosuchroute"):
-                _a, _b = _over(_sv_ports[0], _route), _over(_sv_ports[1], _route)
-                _sv_seen[_route] = _a
-                if (_a[0], _a[1], _s9noms(_a[2].encode())) != \
-                   (_b[0], _b[1], _s9noms(_b[2].encode())):
-                    _sv_apart.append(_route)
-        finally:
-            for _proc in (_sv_py, _sv_sw):
-                _proc.terminate()
-            for _proc in (_sv_py, _sv_sw):
-                try:
-                    _proc.wait(timeout=5)
-                except Exception:
-                    _proc.kill()
-        # the line each server prints as it comes up, port aside: it names the
-        # routes that mutate nothing, and a reader takes the tool at that word
-        _sv_said = [re.sub(r":\d+", ":PORT", (_p.stdout.read() or "").strip().split("\n")[0])
-                    for _p in (_sv_py, _sv_sw)]
+                for _route in _sv_routes:
+                    _a, _b = _over(_sv_ports[0], _route), _over(_sv_ports[1], _route)
+                    if _tag == "here":
+                        _sv_seen[_route] = _a
+                    if _tag == "presented" and _route == "/files":
+                        _sv_seen["presented /files"] = _a
+                    if (_a[0], _a[1], _s9noms(_a[2].encode())) != \
+                       (_b[0], _b[1], _s9noms(_b[2].encode())):
+                        _sv_apart.append(_tag + " " + _route)
+            finally:
+                for _proc in (_sv_py, _sv_sw):
+                    _proc.terminate()
+                for _proc in (_sv_py, _sv_sw):
+                    try:
+                        _proc.wait(timeout=5)
+                    except Exception:
+                        _proc.kill()
+            # the line each server prints as it comes up, port aside: it names
+            # the routes that mutate nothing, and a reader takes it at that word
+            if _tag == "here":
+                _sv_said = [re.sub(r":\d+", ":PORT",
+                                   (_p.stdout.read() or "").strip().split("\n")[0])
+                            for _p in (_sv_py, _sv_sw)]
         if _sv_apart:
             print("   the bench answers apart on:", _sv_apart)
         S.append(("the bench answers over a socket with the python side's own bytes",
@@ -7576,6 +7591,10 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                   # record says it, so two empty sheets could not agree either
                   and "--apart: calc(var(--u) *" in _sv_seen["/ladder.css"][2]
                   and "color(xyz-d65 calc(" in _sv_seen["/ladder.css"][2]
+                  # and the branches this repository cannot exercise were
+                  # exercised where they exist: a world that presents a value of
+                  # its own says so at the name it overrules
+                  and json.loads(_sv_seen["presented /files"][2])["overridden"]
                   and _sv_seen["/nosuchroute"][0] == 404))
 
         # ── AND ALL FOURTEEN OF THEM ALREADY HAD A WORLD. The tables bootstrap

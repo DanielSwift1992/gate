@@ -274,6 +274,24 @@ func runGit(_ arguments: [String], _ cwd: String) -> String {
     return String(data: said, encoding: .utf8) ?? ""
 }
 
+// and the same call read for its verdict rather than its words: `ls-files
+// --error-unmatch` says whether git tracks a path by the code it exits with,
+// and says nothing on stdout worth reading
+func gitExitCode(_ arguments: [String], _ cwd: String) -> Int32 {
+    let p = Process()
+    p.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+    p.arguments = ["git"] + arguments
+    p.currentDirectoryURL = URL(fileURLWithPath: cwd)
+    let quiet = Pipe(), alsoQuiet = Pipe()
+    p.standardOutput = quiet
+    p.standardError = alsoQuiet
+    do { try p.run() } catch { return 1 }
+    quiet.fileHandleForReading.readDataToEndOfFile()
+    alsoQuiet.fileHandleForReading.readDataToEndOfFile()
+    p.waitUntilExit()
+    return p.terminationStatus
+}
+
 func theirsText(_ path: String, _ what: String) -> String {
     // ── THE ONE DOOR, ON THIS SIDE TOO. A file that is not there and a file that
     // is not text are two different sentences, and this vein said the first one
@@ -8363,6 +8381,22 @@ func serveJSON(_ conn: Int32, _ text: String) {
     serveSay(conn, 200, "application/json", Data(text.utf8))
 }
 
+// ── AND NOTHING LEAVES THIS ROOM WITHOUT WORDS. A file the bench asks for and
+// cannot read answers with the sentence the other carrier answers with, rather
+// than a bare code: the page's own fetch shows a network error for a dropped
+// connection, which reads as "the bench is gone" instead of "that request was
+// wrong".
+func serveFile(_ conn: Int32, _ path: String, _ ctype: String) {
+    guard let body = FileManager.default.contents(atPath: path) else {
+        serveJSON(conn, compactDumps(.object([
+            ("error", .text("this request was not one the bench could read: FileNotFoundError")),
+            ("next", .text("the terminal answers the same questions and says more: "
+                         + "`gate status`, `gate log`, `gate findings`"))])))
+        return
+    }
+    serveSay(conn, 200, ctype, body)
+}
+
 // ── THE WORLDS THE PAGE PAINTS WITH, READ WHERE THEY ARE DECLARED. The
 // stylesheet holds no number of its own: every colour, every step and every
 // face comes off a world this repository judges, so the page and the verdict
@@ -8504,6 +8538,24 @@ func registerTokens(_ w: WorldState) -> String {
     return ":root {\n" + rows.joined(separator: "\n") + "\n}\n"
 }
 
+// only the judged list is servable: the manifest's files, your own world, and a
+// file that is here and undeclared, which cannot be judged and can still be
+// read. A name this world does not carry is a miss, never another file: the
+// door opening on the wrong room while saying nothing is the one thing this
+// page may not do. The fallback below is for the question that named nothing.
+func servePick(_ w: WorldState, _ query: [String: String]) -> String? {
+    let named = Dictionary(benchFilesOf(w).map { ($0.0, $0.1) }, uniquingKeysWith: { a, _ in a })
+    let want = query["f"] ?? ""
+    if let hit = named[want] { return hit }
+    if undeclaredHere(w).contains(want), let dir = layoutDir(w) {
+        return (dir as NSString).appendingPathComponent(want)
+    }
+    if !want.isEmpty { return nil }
+    if let facts = w.facts, FileManager.default.fileExists(atPath: facts) { return facts }
+    return benchFilesOf(w).first(where: { FileManager.default.fileExists(atPath: $0.1) })?.1
+        ?? w.facts
+}
+
 func serveDoor(_ a: [String]) -> Never {
     let nums = a.filter { !$0.isEmpty && $0.allSatisfy { $0.isNumber } }
     let port = nums.first.flatMap { Int($0) } ?? 4744
@@ -8565,6 +8617,19 @@ func serveDoor(_ a: [String]) -> Never {
         if conn < 0 { continue }
         if let asked = serveRead(conn) {
             switch (asked.method, asked.path) {
+            case ("GET", "/"), ("GET", "/ui"):
+                serveFile(conn, root.appendingPathComponent("web/ui.html").path,
+                          "text/html; charset=utf-8")
+            case ("GET", "/judge.js"):
+                // the judge this page reads with, served whole
+                serveFile(conn, root.appendingPathComponent("bin/judge.js").path,
+                          "text/javascript")
+            case ("GET", "/codemirror.js"):
+                serveFile(conn, root.appendingPathComponent("web/codemirror.js").path,
+                          "text/javascript")
+            case ("GET", "/codemirror.css"):
+                serveFile(conn, root.appendingPathComponent("web/codemirror.css").path,
+                          "text/css")
             case ("GET", "/ladder.css"):
                 // the named steps, emitted from the judged worlds so the page
                 // can say `var(--apart)` and never a number of its own
@@ -8572,6 +8637,163 @@ func serveDoor(_ a: [String]) -> Never {
                 let w = discoverWorld()
                 let sheet = paletteTokens(w) + ladderTokens(w) + registerTokens(w)
                 serveSay(conn, 200, "text/css; charset=utf-8", Data(sheet.utf8))
+            case ("GET", "/shelf"):
+                // what the shelf carries, and each page's own card: the sort it
+                // says it is and the voice it says it speaks in, read off the
+                // page itself rather than guessed from the shape of its name
+                loadStatusShelf()
+                let pages = shelf().map { $0.name }
+                if let want = asked.query["m"], !want.isEmpty {
+                    if STDLIB_TEXTS[want] == nil {
+                        serveSay(conn, 404, nil, Data())
+                    } else {
+                        // THE WORLD AS IT STANDS, not the text as it shipped:
+                        // what governs is your declarations put where the
+                        // shelf's stood, and that is what the judge reads
+                        let w = discoverWorld()
+                        serveSay(conn, 200, "text/plain; charset=utf-8",
+                                 Data(presentedWorld(w, want).utf8))
+                    }
+                } else {
+                    serveJSON(conn, compactDumps(.object([
+                        ("modules", .list(pages.map { .text($0) })),
+                        ("roles", .object(pages.map {
+                            ($0, shelfHeadLine($0, "// role:").map { StatusJSON.text($0) } ?? .null) })),
+                        ("speaks", .object(pages.map {
+                            ($0, shelfHeadLine($0, "// speaks-for:").map { StatusJSON.text($0) } ?? .null) })),
+                    ])))
+                }
+            case ("GET", "/files"):
+                loadStatusShelf()
+                let w = discoverWorld()
+                let named = benchFilesOf(w)
+                let names = named.map { $0.0 }
+                let rows = w.layout?.rows ?? []
+                let factsDir = w.facts.map { (absPath($0) as NSString).deletingLastPathComponent }
+                let layoutPath = w.layout?.manifest
+                let lay = (layoutPath.flatMap { p -> String? in
+                    guard FileManager.default.fileExists(atPath: p), let d = factsDir else { return nil }
+                    return relPath(p, d)
+                })
+                let formsRows = rows.filter { $0.role == "forms" && names.contains($0.path) }
+                    .map { $0.path }
+                // AND WHICH OF YOUR FILES OVERRULES SOMETHING WE SHIPPED, and
+                // what the name was before somebody said otherwise: an override
+                // that is judged and invisible is still a surprise, and in a
+                // month "why is my colour different" is answered by feel.
+                var overridden: [(String, StatusJSON)] = []
+                for page in shelf().map({ $0.name }).sorted() {
+                    for (name, path) in presentedOver(w, page).placed {
+                        // the world a name overrides is the one that SAYS it,
+                        // and a name several shelves speak of is ONE row, held
+                        // at the place it first took: the other carrier keeps
+                        // these in a dictionary, so a later shelf rewrites the
+                        // row rather than standing beside it. A list here said
+                        // `W2` three times over, which no reader of this page
+                        // could make sense of.
+                        guard let was = matches("^public typealias " + name + " = (.+)$",
+                                                STDLIB_TEXTS[page] ?? "", lines: true).first else { continue }
+                        let row = StatusJSON.object([
+                            ("file", .text(path)), ("world", .text(page)),
+                            ("was", .text(was[0].replacingOccurrences(
+                                of: "\\s+$", with: "", options: .regularExpression)))])
+                        if let at = overridden.firstIndex(where: { $0.0 == name }) {
+                            overridden[at].1 = row
+                        } else {
+                            overridden.append((name, row))
+                        }
+                    }
+                }
+                // AND HOW EACH FILE ASKS TO BE FIRST MET, in its own words
+                var opens: [(String, StatusJSON)] = []
+                for (name, path) in named
+                where FileManager.default.fileExists(atPath: path) {
+                    if let view = opensAs(w, path).view { opens.append((name, .text(view))) }
+                }
+                // ── AND THE SIDES OF A SEAM, which the layout declares: a seam
+                // side is not a fragment of this world, and it is still a row of
+                // the document on the screen. Read-only, by the route that
+                // already exists for exactly this.
+                let hereRoot = layoutDir(w) ?? "."
+                let seamRows = rows.filter {
+                    $0.role == "seam" && FileManager.default.fileExists(
+                        atPath: (hereRoot as NSString).appendingPathComponent($0.path))
+                }.map { $0.path }
+                let personal = personalPathOf(w)
+                var pairs: [(String, StatusJSON)] = [
+                    ("files", .list(names.map { .text($0) })),
+                    ("layout", lay.flatMap { names.contains($0) ? StatusJSON.text($0) : nil } ?? .null),
+                    ("forms", .list(formsRows.map { .text($0) })),
+                    // here and nobody declared: readable, not judged, and one
+                    // gesture from being either
+                    ("undeclared", .list(undeclaredHere(w).map { .text($0) })),
+                    // and the courts a row may name, said once, here, so the
+                    // page never keeps a second list of them to drift from this
+                    ("roles", .object(STATUS_ROLES.map { ($0.0, .text($0.1)) })),
+                    ("opens", .object(opens)),
+                    ("seams", .list(seamRows.map { .text($0) })),
+                    ("overridden", .object(overridden)),
+                ]
+                // WHERE THE COURT WAS TAKEN, so the one line a stranger asks
+                // about, "why is this already here, I took nothing", can be
+                // clicked through to the row that says so, in their own file
+                if let judgeRow = rows.first(where: { $0.role == "judge" }),
+                   let p = layoutPath, let factsAt = w.facts {
+                    pairs.append(("judge_claim", .object([
+                        ("file", .text(relPath(p, (factsAt as NSString).deletingLastPathComponent))),
+                        ("line", .raw(String(judgeRow.line)))])))
+                } else {
+                    pairs.append(("judge_claim", .null))
+                }
+                pairs.append(("personal", personal != nil && !names.isEmpty
+                                          ? .text(names[names.count - 1]) : .null))
+                pairs.append(("personal_empty", .raw(
+                    personal.map { !FileManager.default.fileExists(atPath: $0) } ?? false
+                        ? "true" : "false")))
+                serveJSON(conn, compactDumps(.object(pairs)))
+            case ("GET", "/gitstatus"):
+                // the honest state: a write lands in the working copy and git
+                // carries the history, so this says whether the file is
+                // committed or has uncommitted changes, never our own save
+                let w = discoverWorld()
+                guard let facts = w.facts else {
+                    serveSay(conn, 404, nil, Data())
+                    break
+                }
+                let base = (absPath(facts) as NSString).deletingLastPathComponent
+                if let p = servePick(w, asked.query) {
+                    let dirty = runGit(["status", "--porcelain", "--", p], base)
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                    let tracked = gitExitCode(["ls-files", "--error-unmatch", p], base)
+                    let state = tracked != 0 ? "untracked" : (dirty.isEmpty ? "committed" : "modified")
+                    serveJSON(conn, compactDumps(.object([
+                        ("file", .text(relPath(p, base))),
+                        ("git", .text(state))])))
+                } else {
+                    // the other carrier hands `None` to a path join here and
+                    // meets its own reader with the sentence every unread
+                    // request gets: said, never dropped
+                    serveJSON(conn, compactDumps(.object([
+                        ("error", .text("this request was not one the bench could read: TypeError")),
+                        ("next", .text("the terminal answers the same questions and says more: "
+                                     + "`gate status`, `gate log`, `gate findings`"))])))
+                }
+            case ("GET", "/seamside"):
+                // one side of a seam, to READ. Every address this bench prints
+                // should be reachable: a line you cannot open is a line you are
+                // asked to take on trust, which is the one thing nothing here
+                // asks for.
+                let w = discoverWorld()
+                let base = w.facts.map { (absPath($0) as NSString).deletingLastPathComponent }
+                    ?? FileManager.default.currentDirectoryPath
+                let want = (base as NSString).appendingPathComponent(
+                    ((asked.query["f"] ?? "") as NSString).lastPathComponent)
+                if want.hasSuffix(".swift"), FileManager.default.fileExists(atPath: want),
+                   isSeamSide(want) {
+                    serveFile(conn, want, "text/plain; charset=utf-8")
+                } else {
+                    serveSay(conn, 404, nil, Data())
+                }
             case ("GET", "/version"):
                 // WHAT IS ACTUALLY RUNNING. The bench serves its page off the
                 // disk and its answers out of memory, so a gate updated while it
