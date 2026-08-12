@@ -28,6 +28,14 @@ def run(*args, cwd=None):
     # itself: named through it, the door is entered the way a person on
     # that platform enters it, and its exit code comes back whole.
     _door = (["cmd", "/c", GATE] if sys.platform == "win32" else [GATE])
+    # ── AND A ROAD THAT LOST ITS GROUND SAYS SO. A step that did not make the
+    # world the next one works in leaves this pointing at a directory that is
+    # not there, and subprocess RAISES where this file is meant to answer: on a
+    # machine nobody sits at, one traceback replaced every sentence this walk
+    # had to say, and the status that travels out carried its last line.
+    if cwd is not None and not os.path.isdir(cwd):
+        return subprocess.CompletedProcess(
+            args, 127, "", "the step before this one never made " + cwd)
     return subprocess.run([*_door, *args], cwd=cwd,
                           capture_output=True, text=True,
                           encoding="utf-8", errors="replace",
@@ -44,6 +52,14 @@ def voice(label, proc):
     # exit code and both streams. The tail, not the head: a traceback names
     # its cause on its last lines, and the first cut of this printed the top
     # of one, which is a riddle with the answer trimmed off.
+    # one line first, short enough to travel as a commit status from a machine
+    # whose log needs rights to read
+    _first = ""
+    for _t in (proc.stderr, proc.stdout):
+        _first = next((l.strip() for l in (_t or "").split("\n") if l.strip()), "")
+        if _first:
+            break
+    print("FAIL " + label + ": exit=" + str(proc.returncode) + " said=" + _first[:90])
     print("  " + label + " exit=" + str(proc.returncode))
     for stream, text in (("out", proc.stdout), ("err", proc.stderr)):
         for line in (text or "").strip().split("\n")[-8:]:
