@@ -217,6 +217,12 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4
+      # ── AND THE PAGE IS BUILT BY THE TOOL, SO THE TOOL IS BUILT FIRST. This
+      # job asked the shim on a clean checkout, which can only say where to get
+      # a binary: it worked while the CLI was python and needed nothing built.
+      # Swift comes with the runner image, the same way the linux job leans on
+      # it, and the guard there says so loudly if it ever leaves.
+      - run: bin/build-cli.sh
       # the published bench: the same page, the same browser judges, and the
       # server's own answers recorded from a live serve at build time. The
       # build itself is a Linux measure: a demo is born and served under the

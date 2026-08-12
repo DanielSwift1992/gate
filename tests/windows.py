@@ -23,8 +23,12 @@ S = []
 
 def run(*args, cwd=None):
     # the tool is a binary and the shim finds it: running the shim under
-    # python worked while the CLI itself was python, and finds nothing now
-    return subprocess.run([GATE, *args], cwd=cwd,
+    # python worked while the CLI itself was python, and finds nothing now.
+    # That platform's door is a .cmd, and the interpreter for one is cmd
+    # itself: named through it, the door is entered the way a person on
+    # that platform enters it, and its exit code comes back whole.
+    _door = (["cmd", "/c", GATE] if sys.platform == "win32" else [GATE])
+    return subprocess.run([*_door, *args], cwd=cwd,
                           capture_output=True, text=True,
                           encoding="utf-8", errors="replace",
                           env=dict(os.environ, PYTHONUTF8="1"))

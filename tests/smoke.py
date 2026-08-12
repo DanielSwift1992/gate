@@ -2123,6 +2123,34 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
                           cwd=clone, capture_output=True, text=True)
     S.append(("a fresh clone judges with no installation at all",
               json.loads(shim.stdout or "{}").get("verdict") == "holds"))
+
+    # ── AND BOTH DOORS HAND BACK THE CODE THE TOOL EXITED WITH. The posix shim
+    # ends in `exec`, so the tool REPLACES it and there is no code left to lose.
+    # The other platform cannot exec: it calls, then exits with what the call
+    # said, and that line has to stand on its own. cmd expands a variable when
+    # it READS a bracketed block, so `( tool %* & exit /b %errorlevel% )` exits
+    # with the value from before the tool ran, which is nought: every refusal
+    # this tool made on that platform came back to a hook as success. Nothing
+    # here saw it, because the measure on that platform ran the posix shim
+    # under python, which is not the door anybody uses there.
+    _posix_shim = open(os.path.join(HERE, "gate"), encoding="utf-8").read()
+    _win_shim = open(os.path.join(HERE, "gate.cmd"), encoding="utf-8").read()
+    _win_lines = [l.strip() for l in _win_shim.split("\n")]
+    S.append(("both doors hand back the tool's own code, and look for it in one order",
+              # posix: the tool replaces the shim, so the code is the tool's
+              'exec "$CANDIDATE" "$@"' in _posix_shim
+              # windows: the call stands alone, and the code is read after it
+              and '"%GATE_BIN%" %*' in _win_lines
+              and "exit /b %errorlevel%" in _win_lines
+              # and no rung calls the tool inside a block that eats that code
+              and "& exit /b %errorlevel%" not in _win_shim
+              # one ladder, one order, on both: an explicit path, this clone's
+              # own build, a copy carried in, then one on PATH
+              and all(_r in _posix_shim for _r in
+                      ("GATE_CLI", "bin/gate-cli", ".gate/bin/gate-cli", "command -v gate-cli"))
+              and all(_r in _win_shim for _r in
+                      ("GATE_CLI", "bin\\gate-cli.exe", ".gate\\bin\\gate-cli.exe",
+                       "$PATH:I"))))
     t = open(os.path.join(clone, "gate.swift")).read().replace(
         "public typealias Home = Finance", "public typealias Home = Engineering", 1)
     open(os.path.join(clone, "gate.swift"), "w").write(t)
