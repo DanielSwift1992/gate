@@ -29,12 +29,13 @@ default. Verify it yourself, in about a minute:
 python3 tests/smoke.py                      # all green, offline
 
 # 2. read the source for outbound primitives; the battery greps for these
+grep -nE "URLSession|NWConnection|^[[:space:]]*import Network|getaddrinfo" bin/gate-cli.swift
 grep -nE "urllib\.request|^[[:space:]]*import socket|socket\.socket|http\.client|requests\.(get|post|put)" gate
 grep -nE "XMLHttpRequest|new WebSocket|fetch\([[:space:]]*['\"\`]https?:|(src|href)[[:space:]]*=[[:space:]]*['\"]https?:" \
     web/ui.html bin/judge.js bin/judge-where.js bin/judge-cli.js
 
 # 3. the server listens on the loopback, and nowhere else
-grep -n 'HTTPServer((' gate                 # 127.0.0.1
+grep -n '0x7f00_0001' bin/gate-cli.swift    # 127.0.0.1, written in, not configured
 lsof -iTCP -sTCP:LISTEN -P | grep 4744      # while `gate serve` runs
 
 # 4. the judge binary links nothing that opens a socket
@@ -48,15 +49,15 @@ The bench declares a Content-Security-Policy with `connect-src 'self'`, so
 the browser refuses any external request even if one were ever written.
 Everything above is a check in the battery, so it stays true. What gate
 reads is your working copy and `git`. What it writes is your working copy.
-The CLI is one file of standard-library Python and the bench is one file
-of HTML: small enough that reading them is a reasonable afternoon, which
-is the point. A tool that checks by reading should be checkable by
-reading.
+The CLI is one file of Swift, built against the platform's own library,
+and the bench is one file of HTML: small enough that reading them is a
+reasonable afternoon, which is the point. A tool that checks by reading
+should be checkable by reading.
 
 Two more facts a review leans on, both held by the battery. The CLI's
-imports are a white list, named in the battery itself: twenty modules of
-the standard library, with no package manager and no lockfile in the
-repository. And the one piece that is not text, `bin/gate-judge`, is
+imports are a white list, named in the battery itself: four modules of
+the platform's own library, with no package manager and no lockfile in
+the repository. And the one piece that is not text, `bin/gate-judge`, is
 not a dependency: delete it and every court still answers through the node
 ports, which are ordinary files in `bin/` you can read. CI rebuilds the
 binary from the pinned public corpus on every push and runs the whole

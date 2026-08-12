@@ -25,13 +25,15 @@ The working prototype, end to end:
   server and on the published page, held word for word by the road. The
   cover's death-to-drift is a mirror of the reader, before and after,
   and its two new sentences are spine, word for word in the letter.
-- The strangler stands: a Swift CLI grows beside the python one, vein by
-  vein. The binary alone states what it carries, the python door asks and
-  forwards a carried argv whole, so no second list exists to drift. The
-  first vein is the shelf: `stdlib show` answers from Swift with the very
-  bytes python answers with, page and refusal alike, and the battery
-  builds the binary and holds the pair on every run. The binary itself is not
-  committed: a clone without a toolchain runs the python side unchanged.
+- The strangler is done, and the python side is gone. Every verb the usage
+  offers is answered by the Swift binary: twenty-seven of twenty-seven,
+  carried vein by vein and held at each step against the bytes python
+  answered with, until there was nothing left on that side to hold. `gate`
+  is a shim now, a ladder that finds the binary and says so in one sentence
+  when there is none. The binary itself is still not committed, because
+  every executable line in this repository stays text: `bin/build-cli.sh`
+  builds it from the one Swift file, with the court compiled in at the
+  judge's own pin.
 - One lexer for the eye and for the hand. The page had spellings of its
   own for where a note begins and where a body ends, beside the tokens
   the highlight already reads, and a gate spelled after `//` once opened

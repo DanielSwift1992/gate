@@ -268,8 +268,10 @@ away, each where you would look for it:
 
 ```
 LICENSE         MIT · docs/NOTICE.md lists the bundled pieces and their terms
-gate            the CLI (python prototype; the judge does the judging)
-gate.cmd        the same CLI on Windows
+gate            the shim that finds the binary: an explicit GATE_CLI, this
+                clone's own build, a copy carried in by `gate init --vendor`,
+                or one on PATH. It says so in one sentence when there is none
+gate.cmd        the same shim on Windows, in that platform's own spelling
 gate.manifest.swift
                 this repository's own declared layout: its worlds, their
                 roles, and the judge's row, judged like anybody's
@@ -292,17 +294,17 @@ bin/judge.js · bin/judge-cli.js · bin/judge-where.js
                 both courts as a node port, for machines the binary
                 was not built for, held to it line for line
 bin/gate-cli.swift
-                the Swift CLI, growing beside the python one verb by
-                verb: it alone states what it carries, and a carried
-                verb answers with the python side's own bytes
-                (bin/build-cli.sh builds it; the binary is not committed)
+                the CLI, one file of Swift: every verb this tool answers,
+                with the court compiled in at the judge's own pin
+                (bin/build-cli.sh builds it; the binary is not committed,
+                because every executable line here stays text)
 stdlib/         the judge's own words, printed as real Swift files, self-judged
 web/ui.html     the workbench; bin/judge.js judges it in the browser
 web/codemirror.*  the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
 docs/           DETAILS.md, SECURITY.md, CHANGELOG.md, NOTICE.md, and
                 the cover's picture with its provenance
-tests/smoke.py   the battery: 520 checks this repository holds itself
+tests/smoke.py   the battery: 519 checks this repository holds itself
                  to, end-to-end runs through judge parity through
                  documentation contracts; the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts
@@ -321,13 +323,14 @@ run.
 Working prototype under active development, MIT licensed: see LICENSE,
 and docs/NOTICE.md for the bundled pieces and their terms. The judge is a
 native binary with a versioned verdict contract (canon v2). The CLI is
-python and will be rewritten in Swift to ship as a single static binary
-(the way git is one tool). We want to hear
+one file of Swift, built into a single binary the way git is one tool.
+We want to hear
 about a wrong verdict before anything else: see docs/SECURITY.md.
 
-**Where it runs.** The CLI is one python3
-file and the bench is a page, so both go wherever python3 and a browser
-go. The judge is a native binary built for one platform: `bin/gate-judge`
+**Where it runs.** The CLI is one binary, built from one Swift file by
+bin/build-cli.sh, and the bench is a page. `gate` is a shim that finds that
+binary, so a clone that has not built one says so in a sentence with the
+two ways out. The judge is a native binary built for one platform: `bin/gate-judge`
 here is `Mach-O arm64`, and on any other machine it does not execute. On
 such a machine node runs both courts instead: `bin/judge-cli.js` runs the
 plain court, `bin/judge-where.js` runs the certificate court, both ported

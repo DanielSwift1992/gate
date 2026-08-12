@@ -1,17 +1,17 @@
-// The Swift CLI, growing beside the python one vein by vein: the strangler.
+// The CLI: one file, every verb this tool answers, with the court compiled in
+// at the judge's own pin.
 //
-// The contract with the python side is one question and one promise. Asked
-// `--carries`, this binary prints the veins it carries, one per line, each a
-// prefix of an argv; the python side asks once and forwards any argv that
-// starts with a carried vein, whole, by exec. So the list of what moved
-// lives here alone, next to the code that answers for it, and the python
-// side never grows a second copy of it. The promise: on a carried vein this
-// binary answers with the same bytes the python CLI answers with, and the
-// battery holds the two to each other on every run.
+// It arrived here by a strangler. A python CLI answered these verbs first, and
+// each one moved across held byte for byte against the side it was leaving,
+// until the ledger below named all twenty-seven and there was nothing left on
+// that side to hold. `--carries` still prints that ledger, one vein per line,
+// each a prefix of an argv: the list of what this binary answers lives here,
+// next to the code that answers for it, and nothing else keeps a second copy.
 //
 // bin/build-cli.sh builds it. The binary is not committed: every executable
-// line in the repository stays text, and a clone without a Swift toolchain
-// runs the python side of every vein, unchanged.
+// line in the repository stays text. `gate` is a shim that finds a built
+// binary, a vendored one, or one on PATH, and says so in one sentence when
+// there is none.
 import Foundation
 // the socket calls the bench is served over. Foundation carries them on Darwin,
 // linux keeps them in Glibc, and Windows in WinSDK under names of its own: this
@@ -1642,7 +1642,7 @@ func manifestGuards(_ w: WorldState, liveRows: [LayoutRow]? = nil,
         if r.role == nil || r.role!.isEmpty {
             bad.append(("\(man):\(r.line)",
                         "`\(said)` does not say what it is for. A row names its court: "
-                      + STATUS_ROLES.map { "`\($0.0)` — \($0.1)" }.joined(separator: " · ")))
+                      + STATUS_ROLES.map { "`\($0.0)`: \($0.1)" }.joined(separator: " · ")))
         } else if r.role == "seam",
                   FileManager.default.fileExists(
                       atPath: (d as NSString).appendingPathComponent(r.path)),
@@ -1903,7 +1903,7 @@ func presentedOver(_ w: WorldState, _ shelfName: String)
             if let had = mine.first(where: { $0.name == name }), had.path != r.path {
                 clash.append(("\(r.path):\(i)",
                               "`\(name)` is said here and at \(had.path):"
-                            + "\(had.line) — two worlds you present, one name, "
+                            + "\(had.line): two worlds you present, one name, "
                             + "and nothing but the order they are listed in to choose "
                             + "between them. One layer, one declaration"))
                 continue
@@ -2432,7 +2432,7 @@ func takenJudgeGuard(_ w: WorldState) -> [(address: String, claim: String)] {
     if !(built.hasPrefix(said) || said.hasPrefix(built)) {
         return [(man,
                  "this world says it took the judge at `\(said)`, and the judge beside "
-               + "it was built from `\(built.prefix(12))` — one of the two is out of date, "
+               + "it was built from `\(built.prefix(12))`: one of the two is out of date, "
                + "and a row that names the court may not disagree with the court")]
     }
     return []
@@ -2444,8 +2444,15 @@ let CODEOWNERS_HEADER = "// printed by gate import codeowners: who owns what in 
     + "// is entry whose key administers, judged like any other claim.\n//\n"
 
 func readCodeowners(_ path: String) -> [(line: Int, pattern: String, owners: [String])] {
+    // ── AND SOMEBODY ELSE'S FILE IS READ THROUGH THE ONE DOOR. This read it
+    // with the reader that replaces a byte it cannot decode, so a file that is
+    // not text at all came back as text full of replacement characters and the
+    // verb answered `observed` over it. The other carrier read it through the
+    // door that says what is wrong, and while it was alive its answer covered
+    // this one. Found the day it stopped covering.
     var rules: [(Int, String, [String])] = []
-    for (n0, raw) in (readText(path) ?? "").components(separatedBy: "\n").enumerated() {
+    for (n0, raw) in theirsText(path, "a CODEOWNERS")
+        .components(separatedBy: "\n").enumerated() {
         let line = raw.components(separatedBy: "#")[0].trimmingCharacters(in: .whitespaces)
         if line.isEmpty { continue }
         // a space in a path is escaped as `\ `, and the split happens on the
@@ -2670,6 +2677,13 @@ func nextRung(_ w: WorldState, _ refused: Bool, serving: Bool = false) -> String
     let hooked = runGit(["config", "--get", "core.hooksPath"], rootDir)
         .trimmingCharacters(in: .whitespacesAndNewlines)
     if hooked.isEmpty {
+        // ── AND A RUNG NAMES WHAT BECOMES YOURS, NEVER WHAT WILL BE REFUSED.
+        // This step used to end by naming what cannot be committed once the
+        // hook is wired: the tool's act on the reader, and a word for whatever
+        // they have today. What the hook actually gives them is the other half
+        // of the same fact, said from their own side: what you commit is what
+        // holds. The old wording survives in this comment, which is the
+        // decision, and nowhere a terminal prints.
         return "run `gate init .` to wire the hook: from here on, what you commit is what holds"
     }
     let rows = (w.layout?.rows ?? []).filter { !$0.path.isEmpty }
@@ -3208,7 +3222,7 @@ func repoFindings(_ n: Int) -> [Finding] {
     if !worldFilesOf(w).isEmpty || !((w.layout?.rows ?? []).isEmpty) {
         for r in statusAnswer().refusals {
             out.append(Finding(kind: "judged", subject: r.address,
-                               sentence: r.address + " — " + r.claim,
+                               sentence: r.address + " · " + r.claim,
                                evidence: "the judge, on this working copy"))
         }
     }
@@ -4679,12 +4693,12 @@ if args.first == "demo" {
         let theirs = att.youWaitOn.map { said($0, "address") }
         let parted = att.parted.map { said($0, "address") + " · " + said($0, "why") }
         let next = "cd \(saidPath(root)) && gate attention api.swift sdk.swift --as MessagesJS"
-        let tries = ["gate seam api.swift sdk.swift — the court over the pair, in ms",
+        let tries = ["gate seam api.swift sdk.swift: the court over the pair, in ms",
                      "gate attention api.swift sdk.swift --as MessagesJS --known known.json "
-                     + "--tracker tickets.json  the same, with one divergence declared",
+                     + "--tracker tickets.json: the same, with one divergence declared",
                      "edit tickets.json: mark PROJ-42 done, and watch the exception come back",
                      "gate declare contract openapi.json  the emitter, on your own spec"]
-        var words = ["demo seam: two sides in \(root) — the contract states \(api), "
+        var words = ["demo seam: two sides in \(root): the contract states \(api), "
                      + "the library claims \(sdk)"]
         for x in waiting { words.append("  waits on the library · " + x) }
         for x in theirs { words.append("  waits on the contract · " + x) }
@@ -6835,7 +6849,7 @@ if args.first == "status" || args.first == "fsck" {
     statusDoor(args.contains("--json"))
 }
 
-// ── my — your personal world: where it is, and its verdict WITH the shared
+// ── my: your personal world, where it is, and its verdict WITH the shared
 // world (the claims you keep, judged against facts other people own)
 //
 // This one moves as a verb and not as a door: nothing here seeds a world, so
@@ -7194,7 +7208,7 @@ if args.first == "aside" {
     let address = route + " · " + field
     let noteSaid = by + " says this one is meant, while " + because + " is open. It stands out of "
                  + "the way until " + because + " closes, and comes back by itself when it does"
-    let nextSaid = "point a tracker export at it — `gate attention … --known " + path
+    let nextSaid = "point a tracker export at it: `gate attention … --known " + path
                  + " --tracker tickets.json`, and the day it closes this returns first"
     if asJson {
         var text = "{\n"
@@ -7600,7 +7614,7 @@ if args.first == "drift" {
     }
     if red {
         lines.append("  threshold: you set --fail-over \(over!), and the median is "
-                   + "\(median) — this exits non-zero by your rule, not by a verdict")
+                   + "\(median): this exits non-zero by your rule, not by a verdict")
     }
     lines.append("  note: " + noteSaid)
     lines.append("  next: " + nextSaid)
@@ -7647,7 +7661,12 @@ func vendorInto(_ rootDir: String) -> (carried: [String], digest: String?, shim:
             atPath: (dst as NSString).appendingPathComponent(sub),
             withIntermediateDirectories: true)
     }
-    for rel in ["gate", "bin/judge.js", "bin/judge-where.js", "web/ui.html",
+    // ── AND WHAT IS CARRIED IS WHAT JUDGES. This carried the other carrier's
+    // file, which was the tool while it lived; the tool is this binary now, so
+    // that is what a repository takes in hand. The node port travels with it
+    // because the bench's parse route is still asked of it, and because a
+    // platform this binary was not built for still has a court that way.
+    for rel in ["bin/judge.js", "bin/judge-where.js", "web/ui.html",
                 "web/codemirror.js", "web/codemirror.css", "LICENSE", "docs/NOTICE.md"] {
         let src = (here as NSString).appendingPathComponent(rel)
         if FileManager.default.fileExists(atPath: src) {
@@ -7667,6 +7686,18 @@ func vendorInto(_ rootDir: String) -> (carried: [String], digest: String?, shim:
         }
         carried.append("stdlib/")
     }
+    // the tool itself, and its digest: the court is compiled into it, so the
+    // hash a vendored README carries names the thing that judges
+    for name in ["gate-cli", "gate-cli.exe"] {
+        let mine = (here as NSString).appendingPathComponent("bin/" + name)
+        if FileManager.default.fileExists(atPath: mine) {
+            let there = (dst as NSString).appendingPathComponent("bin/" + name)
+            copyItem(mine, there)
+            try? FileManager.default.setAttributes([.posixPermissions: 0o755],
+                                                   ofItemAtPath: there)
+            carried.append("bin/" + name)
+        }
+    }
     let jsrc = (here as NSString).appendingPathComponent("bin/gate-judge")
     var digest: String? = nil
     if FileManager.default.fileExists(atPath: jsrc) {
@@ -7680,12 +7711,14 @@ func vendorInto(_ rootDir: String) -> (carried: [String], digest: String?, shim:
             carried.append("bin/gate-judge.from")
         }
     }
-    try? FileManager.default.setAttributes(
-        [.posixPermissions: 0o755],
-        ofItemAtPath: (dst as NSString).appendingPathComponent("gate"))
     let shim = (rootDir as NSString).appendingPathComponent("gatew")
     try? ("#!/bin/sh\n# gate, carried by this repository. Nothing to install.\n"
-          + "exec python3 \"$(dirname \"$0\")/.gate/gate\" \"$@\"\n")
+          + "HERE=\"$(cd \"$(dirname \"$0\")\" && pwd)\"\n"
+          + "for C in \"$HERE/.gate/bin/gate-cli\" \"$HERE/.gate/bin/gate-cli.exe\"; do\n"
+          + "    [ -x \"$C\" ] && exec \"$C\" \"$@\"\ndone\n"
+          + "echo \"gate: the copy in .gate carries no binary for this platform\" >&2\n"
+          + "echo \"  take one from the releases, or build with bin/build-cli.sh\" >&2\n"
+          + "exit 1\n")
         .write(toFile: shim, atomically: false, encoding: .utf8)
     try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: shim)
     let readme = "# gate, carried by this repository\n\n"
@@ -8059,7 +8092,7 @@ if args.first == "mine" || args.first == "theirs" {
         let (mp, row) = forgetSide(relPath(absPath(path), d), d)
         guard let mp = mp, let row = row else {
             asks("\((path as NSString).lastPathComponent) is not in your list",
-                 "gate \(word) — what is in it")
+                 "gate \(word): what is in it")
         }
         answer([("command", .text(word)), ("forgot", .text(row.path)),
                 ("declared_in", .text(mp)), ("mutates", .raw("true")),
@@ -8080,7 +8113,7 @@ if args.first == "mine" || args.first == "theirs" {
         let (took, _) = takeShelf(path)
         guard let took = took else {
             asks("\(path).swift is already here",
-                 "gate \(word) \(path).swift — declare the copy you have, or move it "
+                 "gate \(word) \(path).swift: declare the copy you have, or move it "
                  + "aside first: nothing here overwrites a file you wrote")
         }
         answer([("command", .text(word)), ("made_mine", .text(path)),
@@ -8113,7 +8146,7 @@ if args.first == "mine" || args.first == "theirs" {
     if !STATUS_ROLES.contains(where: { $0.0 == role }) {
         cannot("`\(role ?? "None")` is not a court anything here reads",
                "a row says what it is for: "
-               + STATUS_ROLES.map { "`\($0.0)` — \($0.1)" }.joined(separator: " · "))
+               + STATUS_ROLES.map { "`\($0.0)`: \($0.1)" }.joined(separator: " · "))
     }
     if kind == "Theirs", let at = at, !at.isEmpty, let moving = movingPin(at) {
         asks(moving,
@@ -8124,7 +8157,7 @@ if args.first == "mine" || args.first == "theirs" {
     }
     if kind == "Theirs" && (at == nil || at!.isEmpty) {
         cannot("what is taken is taken at a revision, and this one says none",
-               "gate theirs \((path as NSString).lastPathComponent) --at REV — a commit, a "
+               "gate theirs \((path as NSString).lastPathComponent) --at REV: a commit, a "
                + "tag, a release: whatever the source calls the thing you actually took")
     }
     let here = absPath(".")
@@ -8140,7 +8173,7 @@ if args.first == "mine" || args.first == "theirs" {
     if let said = rows2.first(where: { $0.path == rel2 }) {
         asks("\(rel2) is already declared, as `\(said.name ?? "None")` "
              + "(\(said.source), \(said.role ?? "None"))",
-             "gate \(word) \(rel2) --forget, then say it again — a file is declared "
+             "gate \(word) \(rel2) --forget, then say it again: a file is declared "
              + "once, or the list stops being an account of anything")
     }
     let (mp, refused) = declareSideHere(path, kind, role!, at)
@@ -8154,7 +8187,7 @@ if args.first == "mine" || args.first == "theirs" {
     if kind == "Mine" {
         answer(minePairs(file, mp!, role!, roleMeans),
                ["\(word): \(file) · written down in \(mp!)",
-                "  role `\(role!)` — \(roleMeans)",
+                "  role `\(role!)`: \(roleMeans)",
                 "  next: gate status: it is judged from here on"])
     }
     let nextSaid = role == "seam"
@@ -8169,7 +8202,7 @@ if args.first == "mine" || args.first == "theirs" {
                          + "solve")),
             ("next", .text(nextSaid))],
            ["\(word): \(file) · took it at \(at!) · written down in \(mp!)",
-            "  role `\(role!)` — \(roleMeans)",
+            "  role `\(role!)`: \(roleMeans)",
             "  next: " + nextSaid])
 }
 
@@ -8607,9 +8640,36 @@ if args.first == "seam" {
 }
 
 // ── THE BENCH, SERVED FROM THIS CARRIER: the socket, the request, the answer.
-// The routes are the verbs this vein already carries, said over a wire; the
-// contract they answer is the one written at the head of the other carrier's
-// `serve`, and that head is the list this door is held to.
+// The routes are the verbs this vein already carries, said over a wire. The
+// contract they answer is written here, and this head is the list this door is
+// held to: the battery reads it and the routes below, and refuses a door that
+// answers something nobody promised or promises something it does not answer.
+// It used to live at the head of the other carrier's `serve`; that carrier is
+// gone, and a contract kept in a file that no longer exists is a contract with
+// nobody.
+//
+//   GET  /                     the bench itself
+//   GET  /attention            what waits for a word, seam by seam
+//   GET  /check/view           does this grant hold, asked without writing
+//   GET  /codemirror.css       the editor's own stylesheet, carried here
+//   GET  /codemirror.js        the editor, carried here: nothing is fetched
+//   GET  /diff/transfer        what a change would do, and nothing done
+//   GET  /files                the world's files, their roles and verdicts
+//   GET  /gitstatus            what git says about this working copy
+//   GET  /judge.js             the ported court, for the page to judge with
+//   GET  /ladder.css           the ladder and the palette, as this world says
+//   GET  /language             the grammar the page highlights and offers by
+//   GET  /log                  the journal of this world
+//   GET  /seamside             one side of a seam, read-only
+//   GET  /shelf                the shelf's pages, by name
+//   GET  /show                 a commit, read as facts
+//   GET  /status               the verdict over this world
+//   GET  /version              the gate a page is talking to
+//   GET  /world                a file of this world, as text
+//   POST /verdict              judge the text in the editor, unsaved
+//   PUT  /declare              write a row into the layout
+//   PUT  /value                write a value into a world you present
+//   PUT  /world                write a file of this world back to disk
 //
 // POSIX and not Network.framework: the latter is Darwin's alone, and this vein
 // builds wherever swiftc does. One request at a time, the way the other carrier
@@ -9286,7 +9346,11 @@ func serveDoor(_ a: [String]) -> Never {
     out(compactDumps(.object([
         ("command", .text("serve")),
         ("url", .text("http://127.0.0.1:\(port)")),
+        // every route this door answers is promised here, `/attention` with the
+        // rest: a route a caller can reach and the roster does not name is a
+        // surface nobody agreed to, and the roster is where they would look
         ("routes", .list([.text("/status"), .text("/log"), .text("/show?hash=&f="),
+                          .text("/attention"),
                           .text("/check/view?who=&doc="), .text("/diff/transfer?who=&to=")])),
         ("mutating_routes", .text("none, by design")),
     ])) + "\n")
@@ -9879,6 +9943,16 @@ if args.first == "--version" || args.first == "-v" || args.first == "version" {
                    + String(came.prefix(12)) + ". `bin/build-cli.sh` builds the same court: "
                    + "check yours by running the battery against it. The linker is not "
                    + "byte-stable, so the hash names what is here and is not the check")
+    } else {
+        // ── AND WHERE THE PROVENANCE IS MISSING, IT IS SAID. Bytes say what a
+        // thing IS and never what it was made from, so a judge with no `.from`
+        // beside it can name its own hash and nothing else. Printing the hash
+        // and stopping there reads as "there is nothing more to tell", which is
+        // the one gloss this tool may not make about its own one dependency.
+        lines.append("  judge built from verification-is-identification: the revision "
+                   + "is not recorded beside this binary. `bin/build-cli.sh` writes it "
+                   + "down as it builds; a judge carried in without it names its own "
+                   + "bytes and nothing about where they came from")
     }
     out(lines.joined(separator: "\n") + "\n")
     exit(0)

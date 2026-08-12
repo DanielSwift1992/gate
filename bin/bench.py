@@ -35,7 +35,10 @@ def measure(claims):
     times = []
     for _ in range(RUNS):
         t0 = time.perf_counter()
-        r = subprocess.run([sys.executable, GATE, "status", "--json"],
+        # the tool is a binary and `gate` is the shim that finds it: running
+        # the shim under python worked while the CLI itself was python, and
+        # measures nothing now
+        r = subprocess.run([GATE, "status", "--json"],
                            cwd=d, capture_output=True, text=True)
         times.append((time.perf_counter() - t0) * 1000)
         assert '"verdict": "holds"' in r.stdout, r.stdout[:200]
@@ -64,7 +67,7 @@ def main():
     ratio = large["p50"] / small["p50"]
     out += ["",
             f"Ten times the claims cost {ratio:.2f}x the p50 time. The run",
-            "includes python start-up and the judge process; the judgement",
+            "includes starting the binary and the judge process; the judgement",
             "itself is the smaller share of every number above."]
     open(os.path.join(HERE, "docs", "BENCH.md"), "w").write("\n".join(out) + "\n")
     print(f"1x p50 {small['p50']:.0f}ms · 10x p50 {large['p50']:.0f}ms "

@@ -5,6 +5,15 @@ import ast, glob, hashlib, io, json, os, re, shutil, signal, subprocess, sys, te
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GATE = os.path.join(HERE, "gate")
+# the binary this run judges. `gate` is a shim with a ladder; naming the
+# clone's own build here keeps every check on the tool this repository
+# builds rather than one a machine happens to carry. A path that is not
+# there is skipped by the shim, so a run without swiftc still walks.
+CLI_HERE = os.path.join(HERE, "bin", "gate-cli")
+# ── AND THE SOURCE OF THE TOOL IS THE VEIN. `gate` is a shim that finds a
+# binary; what the checks below read about how this tool is written is the
+# vein's own file, which is where the tool is now written.
+VEIN = os.path.join(HERE, "bin", "gate-cli.swift")
 DEMO = os.path.join(HERE, "demo")
 STDLIB = os.path.join(HERE, "stdlib")
 
@@ -17,7 +26,7 @@ def run(*args, cwd=None):
     # walk read the page's `{"error": …}` against `{"raw": …}` and called two
     # equal sentences a difference, which is the reader being blind rather than
     # the two surfaces being apart.
-    r = subprocess.run([sys.executable, GATE, *args, "--json"], capture_output=True, text=True, cwd=cwd)
+    r = subprocess.run([GATE, *args, "--json"], capture_output=True, text=True, cwd=cwd)
     for said in (r.stdout, r.stderr):
         try:
             return r.returncode, json.loads(said)
@@ -27,18 +36,18 @@ def run(*args, cwd=None):
 
 
 def seams_here_probe(folder):
-    # the seam count as the bench would compute it, in a subprocess so the
-    # battery never imports the tool it is judging
-    code = ("import sys, types;"
-            "src=open(%r,encoding='utf-8').read();"
-            "g=types.ModuleType('g'); g.__file__=%r;"
-            "exec(compile(src,'gate','exec'), g.__dict__);"
-            "print(len(g.seams_here(%r)))" % (GATE, GATE, folder))
-    r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
-    try:
-        return int((r.stdout or "0").strip().splitlines()[-1])
-    except Exception:
-        return -1
+    # ── THE SEAM COUNT AS THE BENCH GIVES IT. This used to import the tool and
+    # call the function inside it; the tool is a binary now, and the same list
+    # is what its morning question answers with. Asked from outside, the way a
+    # reader gets it.
+    r = subprocess.run([GATE, "attention", "--json"], cwd=folder,
+                       capture_output=True, text=True)
+    for said in (r.stdout, r.stderr):
+        try:
+            return len(json.loads(said).get("seams", []))
+        except Exception:
+            continue
+    return 0
 
 
 class Checks(list):
@@ -59,7 +68,7 @@ class Checks(list):
 def say(*args, cwd=None):
     # the human line, not the JSON: the porcelain has its own words and the
     # canon of names governs them
-    r = subprocess.run([sys.executable, GATE, *args], capture_output=True, text=True, cwd=cwd)
+    r = subprocess.run([GATE, *args], capture_output=True, text=True, cwd=cwd)
     return r.stdout
 
 
@@ -76,6 +85,95 @@ def ask_bench(port, path, timeout=60):
     wait_serve(port)                      # up, on the cheapest route it serves
     return json.loads(_u.urlopen(f"http://127.0.0.1:{port}{path}", timeout=timeout)
                       .read().decode())
+
+
+def spoken_strings(path):
+    # ── EVERY SENTENCE THE TOOL SAYS, READ FROM ITS OWN LANGUAGE. This walked
+    # python's syntax tree for string constants; the tool is swift, so the
+    # strings are read here the way swift writes them: quoted runs on a line,
+    # and the multiline pages between triple quotes. What is held above this is
+    # unchanged: no selling words, and nothing about the person.
+    text = open(path, encoding="utf-8").read()
+    out, rest = [], []
+    parts = text.split('"""')
+    for i, part in enumerate(parts):
+        if i % 2 == 1:
+            out.append(part)
+        else:
+            rest.append(part)
+    for line in "\n".join(rest).split("\n"):
+        if line.lstrip().startswith("//"):
+            continue
+        out += re.findall(r'"((?:\\.|[^"\\])*)"', line)
+    return out
+
+
+def peano(text):
+    # every number in these worlds is spelled on the file's own ladder from
+    # Unit, so reading one is walking that spelling. The runner reads it here
+    # because the tool is a binary and hands no internals out; this is the
+    # battery's own reading, held against what the tool wrote.
+    vals = {}
+
+    def ev(e):
+        e = e.strip()
+        if e == "Unit":
+            return 1
+        if e == "Never":
+            return 0
+        if e in vals:
+            return vals[e]
+        m = re.fullmatch(r"[WN](\d+)", e)
+        if m:
+            return int(m.group(1))
+        if e.startswith("Twice<"):
+            return 2 * ev(e[6:-1])
+        if e.startswith("Plus<"):
+            inner, d = e[5:-1], 0
+            for i, c in enumerate(inner):
+                if c == "<":
+                    d += 1
+                elif c == ">":
+                    d -= 1
+                elif c == "," and d == 0:
+                    return ev(inner[:i]) + ev(inner[i + 1:])
+        raise ValueError(e)
+    for m in re.finditer(r"^public typealias (\w+) = (.+)$", text, re.M):
+        name, expr = m.group(1), m.group(2).split("//")[0].strip()
+        if name in vals:
+            continue
+        try:
+            vals[name] = ev(expr)
+        except ValueError:
+            continue
+    return vals
+
+
+def free_port():
+    import socket as _s
+    s = _s.socket(); s.bind(("127.0.0.1", 0)); p = s.getsockname()[1]; s.close()
+    return p
+
+
+def bench_says(route, cwd=None, text=True):
+    # ── AND THE BATTERY ASKS FROM OUTSIDE. It used to import the tool as a
+    # module and call the function it wanted: the tool is a binary now, and the
+    # things those functions returned are what it SERVES. Asking the way a page
+    # asks is also the honest reading, since that is what a reader gets.
+    import urllib.request as _u
+    port = free_port()
+    sv = subprocess.Popen([GATE, "serve", str(port), "--no-open"], cwd=cwd or HERE,
+                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        wait_serve(port, "/version")
+        said = _u.urlopen(f"http://127.0.0.1:{port}{route}", timeout=60).read()
+        return said.decode() if text else said
+    finally:
+        sv.terminate()
+        try:
+            sv.wait(timeout=5)
+        except Exception:
+            sv.kill()
 
 
 def wait_serve(port, path="/files"):
@@ -453,7 +551,7 @@ def main():
               and _same.get("applied") is False and _same.get("changed") is False
               and open(os.path.join(repo, "gate.swift"), encoding="utf-8").read() == _was
               and "nothing to change" in subprocess.run(
-                  [sys.executable, GATE, "apply", "transfer", "Emp9001", "Finance"],
+                  [GATE, "apply", "transfer", "Emp9001", "Finance"],
                   cwd=repo, capture_output=True, text=True).stdout))
     c, r = run("import", "tables/people.csv", "tables/grants.csv", "-o", "gate.swift", cwd=repo)
     S.append(("import clean", r["verdict"] == "holds"))
@@ -734,10 +832,13 @@ def main():
     S.append(("the where court judges the first file it is given and drops the rest",
               wide(pal) == wide(pal, met) and wide(met) == wide(met, pal)
               and wide(pal) != wide(met)))
-    gate_src = open(GATE).read()
+    gate_src = open(VEIN).read()
+    # the same promise, read in the language the tool is written in: every call
+    # to the certificate court names one file and nothing else, because handing
+    # it two means the second is judged by nobody and nothing says so
     S.append(("and nothing here hands it more than one",
-              (lambda _segs: _segs and all("," not in s and "*" not in s for s in _segs))(
-                  re.findall(r'"judge",\s*"where",\s*([^\]]+)\]', gate_src))))
+              (lambda _segs: _segs and all("," not in seg and "*" not in seg for seg in _segs))(
+                  re.findall(r'courtSays\(\["where",\s*([^\]]+)\]', gate_src))))
 
     # ── THE PORT SPEAKS THE SAME WORDS AS THE BINARY, LINE FOR LINE. The judge is
     # built for one platform, so on any other machine the same court exists and
@@ -813,13 +914,20 @@ def main():
               _cb == _cp and _cbc == _cpc == 1
               and _cb.count("derives from itself") == 2))
     # AND THE ONE COMMAND WHOSE JOB IS TO SAY WHAT JUDGES THIS REPOSITORY SAYS WHICH
-    # ONE. It printed the binary's digest on a machine where the binary cannot run and
-    # the port was doing the judging: a file that judged nothing, named as the court.
-    vsrc = open(GATE, encoding="utf-8").read()
-    S.append(("the version names the court that ran, not the file beside it",
-              'if JUDGE_KIND != "binary":' in vsrc.split("def judge_version")[1][:600]
-              and "port sha256:" in vsrc
-              and "both courts are served by the port under node" in vsrc))
+    # ONE. It used to name a file beside the tool, which on some machines judged
+    # nothing at all. The court is compiled into this binary now, so the digest
+    # it names is its own, and the answer is checked by running it rather than by
+    # reading how it is written.
+    vsrc = open(VEIN, encoding="utf-8").read()
+    _ver = subprocess.run([GATE, "--version"], capture_output=True, text=True, cwd=HERE)
+    _verj = subprocess.run([GATE, "--version", "--json"], capture_output=True, text=True, cwd=HERE)
+    _mine = hashlib.sha256(open(os.path.join(HERE, "bin", "gate-cli"), "rb").read()).hexdigest()
+    S.append(("the version names the court that ran, which is this binary",
+              ("sha256:" + _mine[:12]) in _ver.stdout
+              and json.loads(_verj.stdout)["judge"] == "sha256:" + _mine[:12]
+              # and the corpus revision the court was compiled from travels with it
+              and json.loads(_verj.stdout)["judge_from"]
+                  == open(os.path.join(HERE, "bin", "gate-judge.from")).read().strip()))
     # and the README says where this runs, and claims no measure it does not
     # have. Windows crossed that line the day its CI road went green; Linux
     # crossed it the day the full battery ran on ubuntu with the judge
@@ -925,7 +1033,7 @@ def main():
     # the law, in the file the law is written in: rename it there and both
     # surfaces say the new thing, with nothing in this tool to edit.
     shelf_law = open(os.path.join(HERE, "stdlib", "forms-grants.swift"), encoding="utf-8").read()
-    tool_src = open(GATE, encoding="utf-8").read()
+    tool_src = open(VEIN, encoding="utf-8").read()
     S.append(("the sentence a refusal wears is the law's own, read from the file the law is in",
               "/// an owner and the path they own must share one zone" in shelf_law
               and all("Zone_" in x["claim"] and "against" in x["claim"]
@@ -986,7 +1094,7 @@ def main():
               ("verify", "wrong.txt", "wrong.txt")]
     _raised = []
     for _argv in _kinds:
-        _p2 = subprocess.run([sys.executable, GATE, *_argv], cwd=_wrong,
+        _p2 = subprocess.run([GATE, *_argv], cwd=_wrong,
                              capture_output=True, text=True, timeout=120)
         if "Traceback" in _p2.stdout + _p2.stderr:
             _raised.append(" ".join(_argv))
@@ -1008,7 +1116,7 @@ def main():
     # the split stands on both carriers or the parity check below goes red.
     _half = os.path.join(tmp, "half-typed")
     os.makedirs(_half, exist_ok=True)
-    subprocess.run([sys.executable, GATE, "init", "."], cwd=_half, capture_output=True)
+    subprocess.run([GATE, "init", "."], cwd=_half, capture_output=True)
     open(os.path.join(_half, "real.swift"), "w").write(
         "public enum X: Mine { public typealias Kind = WorldFile }\n")
     _asked = [["seam"], ["verify"], ["aside"], ["check", "view"], ["declare", "contract"],
@@ -1018,7 +1126,7 @@ def main():
               ["mine", "real.swift", "--role", "nosuchcourt"]]
     _halfway = []
     for _argv, _want in ([(x, 0) for x in _asked] + [(x, 1) for x in _meant]):
-        _r = subprocess.run([sys.executable, GATE, *_argv], cwd=_half,
+        _r = subprocess.run([GATE, *_argv], cwd=_half,
                             capture_output=True, text=True, timeout=120)
         _said = _r.stderr if _want else _r.stdout
         if ("Traceback" in _r.stdout + _r.stderr or _r.returncode != _want
@@ -1050,7 +1158,7 @@ def main():
     open(os.path.join(_soil, "owners.csv"), "w").write("owner,zone\nalice,src\n")
     _imp = run("import", "codeowners", "CODEOWNERS", "--policy", "owners.csv", cwd=_soil)[1]
     _impsaid = subprocess.run(
-        [sys.executable, GATE, "import", "codeowners", "CODEOWNERS", "--policy", "owners.csv"],
+        [GATE, "import", "codeowners", "CODEOWNERS", "--policy", "owners.csv"],
         cwd=_soil, capture_output=True, text=True).stdout
     _rows = [l for l in _impsaid.splitlines() if l.startswith("  CODEOWNERS:")]
     S.append(("a refusal from the importer is addressed at its line, in the shape editors parse",
@@ -1127,7 +1235,7 @@ def main():
     # cover carries its answer, so the day the printing changes the cover is red
     # rather than quietly wrong. The count in the sentence belongs to the block
     # it counts, and is read from it here rather than trusted.
-    _bare_shown = subprocess.run([sys.executable, GATE, "bare", "ownership.swift", "Zone_docs",
+    _bare_shown = subprocess.run([GATE, "bare", "ownership.swift", "Zone_docs",
                              "Path_2_docs_", "Owner_carol", "Owns_2_carol"], cwd=_bw,
                             capture_output=True, text=True, timeout=300).stdout
     _bare_printed = [l for l in _bare_shown.split("\n")]
@@ -1169,9 +1277,9 @@ def main():
     _ui = open(os.path.join(HERE, "web", "ui.html"), encoding="utf-8").read()
     _bf = _ui[_ui.index("function bareForm("):]
     _bf = _bf[:_bf.index("\n}")]
-    _src = open(GATE, encoding="utf-8").read()
-    _door = _src[_src.index("def bare_lines("):]
-    _door = _door[:_door.index("\ndef ")]
+    _src = open(VEIN, encoding="utf-8").read()
+    _door = _src[_src.index("func bareLines("):]
+    _door = _door[:_door.index("\nfunc ")]
     _fields = ["aliases", "entries", "params", "paramKinds", "axes", "axisKinds",
                "whereText", "conformances", "topAliases"]
     _missing = [f for f in _fields if f not in _bf or f not in _door]
@@ -1231,7 +1339,7 @@ def main():
     subprocess.run(["git", "-c", "commit.gpgsign=false", "-c", "user.email=a@b", "-c",
                     "user.name=A", "commit", "-qm", "one of each", "--no-verify"],
                    cwd=_ones, capture_output=True)
-    subprocess.run([sys.executable, GATE, "init", "."], cwd=_ones, capture_output=True)
+    subprocess.run([GATE, "init", "."], cwd=_ones, capture_output=True)
     # a word that ends in s and is not a plural, and a unit that is always short
     _FINE = {"ms", "this", "its", "less", "plus", "status", "address", "was", "is",
              "as", "has", "yours", "premises"}
@@ -1242,7 +1350,7 @@ def main():
                   ["survey"], ["log"], ["attention"], ["report"],
                   ["import", "codeowners", "CODEOWNERS", "--policy", "owners.csv"],
                   ["import", "codeowners", "CODEOWNERS"]):
-        _r5 = subprocess.run([sys.executable, GATE, *_argv], cwd=_ones,
+        _r5 = subprocess.run([GATE, *_argv], cwd=_ones,
                              capture_output=True, text=True, timeout=300)
         for _line in (_r5.stdout + _r5.stderr).splitlines():
             for _m in _ONE.finditer(_line):
@@ -1260,23 +1368,21 @@ def main():
               "fields things answers pages seeds pins requirements links modules "
               "verbs worlds sides certificates").split()
     _NPAT = re.compile(r"^\s*(" + "|".join(_NOUNS) + r")\b")
+    # ── AND THE READING FOLLOWS THE LANGUAGE THE TOOL IS WRITTEN IN. This walked
+    # python's own syntax tree for its f-strings; the tool is swift now, where
+    # the same act is an interpolation followed by the noun. The mechanism held
+    # is unchanged: a counted noun printed beside a bare number.
     _bare = []
-    for _node in ast.walk(ast.parse(open(GATE, encoding="utf-8").read())):
-        if not isinstance(_node, ast.JoinedStr):
+    _VPAT = re.compile(r"\\\([^()]*\)\s+(" + "|".join(_NOUNS) + r")\b")
+    for _i, _line in enumerate(open(VEIN, encoding="utf-8").read().split("\n"), 1):
+        if _line.lstrip().startswith("//"):
             continue
-        _vs = _node.values
-        for _i, _p in enumerate(_vs):
-            if not isinstance(_p, ast.FormattedValue):
-                continue
-            _nx = _vs[_i + 1] if _i + 1 < len(_vs) else None
-            if isinstance(_nx, ast.Constant) and isinstance(_nx.value, str):
-                _hit = _NPAT.match(_nx.value)
-                if _hit:
-                    _bare.append(f"{_node.lineno}: {{{ast.unparse(_p.value)[:24]}}} {_hit.group(1)}")
+        for _hit in _VPAT.finditer(_line):
+            _bare.append(f"{_i}: {_hit.group(0)[:40]}")
     if _bare:
         print("   a counted noun printed with a bare number:", _bare[:4])
     S.append(("every counted noun this tool prints goes through one door",
-              _bare == [] and "def many(n, one, more=None):" in open(GATE, encoding="utf-8").read()
+              _bare == [] and "func many(_ n: Int, _ one: String, _ more: String? = nil) -> String {" in open(VEIN, encoding="utf-8").read()
               # and the vein carrying three of them counts the same way
               and "func many(" in open(os.path.join(HERE, "bin", "gate-cli.swift"),
                                        encoding="utf-8").read()))
@@ -1299,33 +1405,35 @@ def main():
                   ["seam", "binary.swift", "binary.swift"],
                   ["declare", "contract", "binary.swift"],
                   ["export", "binary.swift", "-o", "a.csv", "b.csv"]):
-        _r6 = subprocess.run([sys.executable, GATE, *_argv], cwd=_nt, capture_output=True,
-                             text=True, timeout=180, env={**os.environ, "GATE_CLI": "off"})
+        _r6 = subprocess.run([GATE, *_argv], cwd=_nt, capture_output=True,
+                             text=True, timeout=180, env={**os.environ, "GATE_CLI": CLI_HERE})
         if ("Traceback" in _r6.stdout + _r6.stderr or _r6.returncode != 1
                 or "is not text this can read" not in _r6.stderr
                 or "next: " not in _r6.stderr):
             _raw.append(" ".join(_argv) + f" -> {_r6.returncode}")
-    # and the two carriers tell the same two stories: a file that is not there
-    # and a file that is not text are different sentences, and the vein said the
-    # first for both until it had this door
+    # and the two stories stay two: a file that is not there and a file that is
+    # not text are different sentences, and this tool said the first for both
+    # until it had the door that tells them apart
     _carried = []
-    for _argv in (["seam", "binary.swift", "binary.swift"],
-                  ["export", "binary.swift", "-o", "a.csv", "b.csv"],
-                  ["seam", "nosuch.swift", "other.swift"],
-                  ["export", "nosuch.swift", "-o", "a.csv", "b.csv"]):
-        _two = [subprocess.run([sys.executable, GATE, *_argv], cwd=_nt, capture_output=True,
-                               text=True, timeout=180, env={**os.environ, "GATE_CLI": _e})
-                for _e in ("off", os.path.join(HERE, "bin", "gate-cli"))]
-        if (_two[0].stderr, _two[0].returncode) != (_two[1].stderr, _two[1].returncode):
-            _carried.append(" ".join(_argv))
+    for _argv, _owed in ((["seam", "binary.swift", "binary.swift"], "is not text this can read"),
+                         (["export", "binary.swift", "-o", "a.csv", "b.csv"],
+                          "is not text this can read"),
+                         # and a file that is not there is named for what it was
+                         # asked to be: a side of a seam, a world to print
+                         (["seam", "nosuch.swift", "other.swift"], "no such side"),
+                         (["export", "nosuch.swift", "-o", "a.csv", "b.csv"], "no such world")):
+        _one = subprocess.run([GATE, *_argv], cwd=_nt, capture_output=True,
+                              text=True, timeout=180)
+        if _one.returncode != 1 or _owed not in _one.stderr:
+            _carried.append(" ".join(_argv) + " -> " + _one.stderr[:40])
     if _raw or _carried:
         print("   a file that is not text:", (_raw + _carried)[:4])
-    S.append(("a file that is not text is said, not raised, and alike on both carriers",
+    S.append(("a file that is not text is said, not raised, and not called absent",
               _raw == [] and _carried == []
               # the sentence names the byte and where it sits, because that is
               # the address of the thing that is wrong
               and re.search(r"byte 0x[0-9a-f]{2} at offset \d+ is not utf-8", subprocess.run(
-                  [sys.executable, GATE, "bare", "binary.swift"], cwd=_nt,
+                  [GATE, "bare", "binary.swift"], cwd=_nt,
                   capture_output=True, text=True).stderr)))
 
     # ── AND A PLACE THAT CANNOT HOLD A FILE IS SAID, NOT RAISED. Every verb that
@@ -1345,7 +1453,7 @@ def main():
     os.makedirs(_ro, exist_ok=True)
     open(os.path.join(_ow, "CODEOWNERS"), "w").write("/src @alice\n")
     open(os.path.join(_ow, "src", "a.py"), "w").write("x\n")
-    subprocess.run([sys.executable, GATE, "init", "."], cwd=_ow, capture_output=True)
+    subprocess.run([GATE, "init", "."], cwd=_ow, capture_output=True)
     os.chmod(_ro, 0o555)
     _shut = []
     for _argv in (["import", "codeowners", "CODEOWNERS", "-o", "adir"],
@@ -1355,7 +1463,7 @@ def main():
                   ["aside", "R", "F", "--because", "K", "-o", "ro/known.json"],
                   ["library", "-o", "adir"],
                   ["export", "gate.swift", "-o", "adir"]):
-        _r4 = subprocess.run([sys.executable, GATE, *_argv], cwd=_ow,
+        _r4 = subprocess.run([GATE, *_argv], cwd=_ow,
                              capture_output=True, text=True, timeout=180)
         if ("Traceback" in _r4.stdout + _r4.stderr or _r4.returncode != 1
                 or not _r4.stderr.startswith("gate: ") or "next: " not in _r4.stderr):
@@ -1367,21 +1475,19 @@ def main():
               _shut == []
               # and the sentence names which of the three it is
               and "is a directory" in subprocess.run(
-                  [sys.executable, GATE, "import", "codeowners", "CODEOWNERS", "-o", "adir"],
+                  [GATE, "import", "codeowners", "CODEOWNERS", "-o", "adir"],
                   cwd=_ow, capture_output=True, text=True).stderr
               # ── AND THE FLAG THIS TOOL DOES NOT READ IS SAID, NOT SWALLOWED.
               # Every verb writes with `-o`, and `--out` is the guess anybody
               # makes: `gate badge --out gate.svg` printed a badge to the
               # terminal, wrote nothing, and said nothing about the flag it had
-              # just ignored. Both carriers refuse it, the vein before its own
-              # verbs read their argv.
+              # just ignored. It is refused before the verb reads its own argv.
               and all(_o.returncode == 1 and "not a flag it reads" in _o.stderr
                       for _o in [subprocess.run(
-                          [sys.executable, GATE, *_a], cwd=_ow, capture_output=True,
-                          text=True, env={**os.environ, "GATE_CLI": _env})
+                          [GATE, *_a], cwd=_ow, capture_output=True,
+                          text=True, env={**os.environ, "GATE_CLI": CLI_HERE})
                           for _a in (["badge", "--out", "gate.svg"],
-                                     ["export", "gate.swift", "--out", "a.csv", "b.csv"])
-                          for _env in ("off", os.path.join(HERE, "bin", "gate-cli"))])))
+                                     ["export", "gate.swift", "--out", "a.csv", "b.csv"])])))
 
     # ── AND A FILE THAT IS NOT THERE IS SAID TOO. The wrong-kind sweep above
     # walked verbs with a file that is not what they read; this walks them with
@@ -1401,7 +1507,7 @@ def main():
              ("init", "/no/such/parent/dir")]
     _grose = []
     for _argv in _gone:
-        _p3 = subprocess.run([sys.executable, GATE, *_argv], cwd=_wrong,
+        _p3 = subprocess.run([GATE, *_argv], cwd=_wrong,
                              capture_output=True, text=True, timeout=120)
         if "Traceback" in _p3.stdout + _p3.stderr:
             _grose.append(" ".join(_argv))
@@ -1411,16 +1517,16 @@ def main():
         print("   a file that is not there still raises:", _grose[:4])
     # and the sentence names what the verb wanted, without the stray article
     # that "name the a kubectl dump of roles and bindings you mean" carried
-    _art = subprocess.run([sys.executable, GATE, "import", "rbac", "no-such.json"],
+    _art = subprocess.run([GATE, "import", "rbac", "no-such.json"],
                           cwd=_wrong, capture_output=True, text=True)
     # and the verb the cover sells finds the pair it is named after, unasked
     _has = os.path.join(tmp, "has-a-codeowners")
     os.makedirs(os.path.join(_has, "src"), exist_ok=True)
     open(os.path.join(_has, "src", "main.py"), "w").write("x\n")
     open(os.path.join(_has, "CODEOWNERS"), "w").write("/src @alice\n")
-    _bare = subprocess.run([sys.executable, GATE, "import", "codeowners"], cwd=_has,
+    _bare = subprocess.run([GATE, "import", "codeowners"], cwd=_has,
                            capture_output=True, text=True)
-    _nobody = subprocess.run([sys.executable, GATE, "import", "codeowners"], cwd=_wrong,
+    _nobody = subprocess.run([GATE, "import", "codeowners"], cwd=_wrong,
                              capture_output=True, text=True)
     S.append(("a file that is not there is said, and the sentence names what was wanted",
               _grose == [] and len(_gone) == 8
@@ -1483,7 +1589,7 @@ def main():
     import socket as _lksock          # `_sock` is bound further down this file
     _lkp = _lksock.socket(); _lkp.bind(("127.0.0.1", 0))
     _lk_port = _lkp.getsockname()[1]; _lkp.close()
-    _lkb = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_lk_port), "--no-open"],
+    _lkb = subprocess.Popen([GATE, "serve", "--port", str(_lk_port), "--no-open"],
                             cwd=_lk, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     import urllib.request as _lku
     try:
@@ -1534,7 +1640,7 @@ def main():
               # and the two readers that raised on it answer
               and _bom_dc.get("declares") == 1
               # every reader of somebody else's file goes through one door
-              and open(GATE, encoding="utf-8").read().count("def theirs_text(") == 1))
+              and open(VEIN, encoding="utf-8").read().count("func theirsText(") == 1))
 
     S.append(("codeowners: a pattern the tree has no file for is named",
               # and the address is a path that opens. Here the rules file sits
@@ -1568,7 +1674,7 @@ def main():
               # and a ghost is read from the tree either way, so a run with no
               # policy can still refuse: the word is about the court, not the run
               and json.loads(subprocess.run(
-                  [sys.executable, GATE, "import", "codeowners",
+                  [GATE, "import", "codeowners",
                    os.path.join(DEMO, "CODEOWNERS"), "--tree", co,
                    "-o", os.path.join(tmp, "co-ghost.swift"), "--json"],
                   capture_output=True, text=True).stdout)["verdict"] == "refused"))
@@ -1614,7 +1720,7 @@ def main():
                   and (r.get("address") or "").startswith("CODEOWNERS:")
                   for r in (_pg2.get("refusals") or []))))
     # a human running an importer gets lines, not a traceback
-    plain = subprocess.run([sys.executable, GATE, "import", "rbac",
+    plain = subprocess.run([GATE, "import", "rbac",
                             os.path.join(DEMO, "rbac.json"), "-o", os.path.join(tmp, "r2.swift")],
                            capture_output=True, text=True)
     S.append(("an importer speaks to a human without --json",
@@ -1671,7 +1777,7 @@ def main():
     env = dict(os.environ, GATE_ME=me)
 
     def runme(*args, cwd=None):
-        r = subprocess.run([sys.executable, GATE, *args, "--json"], capture_output=True,
+        r = subprocess.run([GATE, *args, "--json"], capture_output=True,
                            text=True, cwd=cwd, env=env)
         try:
             return r.returncode, json.loads(r.stdout)
@@ -1710,8 +1816,8 @@ public enum MyWatch: AccessLedger {{
 }}
 """)
 
-    src_gate = open(GATE, encoding="utf-8").read()
-    tpl = src_gate.split('PERSONAL_TEMPLATE = """')[1].split('"""')[0]
+    src_gate = open(VEIN, encoding="utf-8").read()
+    tpl = src_gate.split('let PERSONAL_PAGE = """')[1].split('"""')[0]
     S.append(("the comment says the world is kept on this machine alone",
               # in plain words: emphasis by capitals is not this voice
               "on this machine, in a git of its own" in tpl and "goes nowhere else" in tpl
@@ -1722,8 +1828,8 @@ public enum MyWatch: AccessLedger {{
     S.append(("a state that holds is kept in that git, not left loose",
               'commit", "-qm", "your world"' in src_gate))
     S.append(("and text still equal to that comment is not kept",
-              'text.strip() == PERSONAL_TEMPLATE.strip()' in src_gate
-              and "os.remove(p)" in src_gate))
+              'said.isEmpty || said == page' in src_gate
+              and "removeItem(atPath: p)" in src_gate))
 
     myclaim("Emp9002", "EngineeringShare")   # Emp9002 lives in Finance: illegal
     c, r = runme("my", cwd=jrepo)
@@ -1957,7 +2063,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     open(os.path.join(_nonode, "node"), "w").write("#!/bin/sh\nexit 127\n")
     os.chmod(os.path.join(_nonode, "node"), 0o755)
     os.rename(_hidden, _hidden + ".away")
-    _bare_path = {**os.environ, "PATH": "/usr/bin:/bin", "GATE_CLI": "off"}
+    _bare_path = {**os.environ, "PATH": "/usr/bin:/bin", "GATE_CLI": CLI_HERE}
     _nocourt = subprocess.run([os.path.join(ven, "gatew"), "status", "--json"], cwd=ven,
                               capture_output=True, text=True, env=_bare_path)
     _broken = subprocess.run([os.path.join(ven, "gatew"), "status"], cwd=ven,
@@ -1968,17 +2074,22 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
         _nc = json.loads(_nocourt.stderr or "{}")
     except Exception:
         _nc = {}
-    S.append(("no court at all, and a court that will not start, are said in the canon",
-              _nocourt.returncode == 1 and _nc.get("error") and _nc.get("next")
-              and "no court on this machine" in _nc["error"]
-              and "install node" in _nc["next"]
-              and "Traceback" not in _nocourt.stderr
-              # and a node that exits without a word is named as the machine it is
-              and _broken.returncode == 1
-              and _broken.stderr.startswith("gate: the port under node did not run")
-              and "next:" in _broken.stderr
+    # ── AND THE COURT CANNOT BE ABSENT ANY MORE. It is compiled into the tool,
+    # so there is a binary or there is nothing: the old answer, "no court on
+    # this machine, install node", described a world where the tool was a script
+    # and the court a file beside it. What can still be missing is a binary for
+    # THIS platform in a carried copy, and that is what the carried shim says.
+    _carried_bin = os.path.join(ven, ".gate", "bin", "gate-cli")
+    os.rename(_carried_bin, _carried_bin + ".away")
+    _nobin = subprocess.run([os.path.join(ven, "gatew"), "status"], cwd=ven,
+                            capture_output=True, text=True, env=_bare_path)
+    os.rename(_carried_bin + ".away", _carried_bin)
+    S.append(("a carried copy with no binary for this platform says so, and how to get one",
+              _nobin.returncode == 1
+              and "carries no binary for this platform" in _nobin.stderr
+              and ("releases" in _nobin.stderr or "build-cli.sh" in _nobin.stderr)
               # never as a court that sat and found the world's files wanting
-              and "refused" not in _broken.stdout))
+              and "refused" not in _nobin.stdout))
 
     subprocess.run(["git", "add", "-A"], cwd=ven)
     subprocess.run(["git", "-c", "commit.gpgsign=false", "-c", "user.email=a@b", "-c",
@@ -2020,9 +2131,9 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # palette — and `status` read the plain court's numbers only, so a world of
     # forms printed `holds` with no width under it. That world is this repository.
     here_status = json.loads(subprocess.run(
-        [sys.executable, GATE, "status", "--json"], cwd=HERE,
+        [GATE, "status", "--json"], cwd=HERE,
         capture_output=True, text=True).stdout)
-    said_status = subprocess.run([sys.executable, GATE, "status"], cwd=HERE,
+    said_status = subprocess.run([GATE, "status"], cwd=HERE,
                                  capture_output=True, text=True).stdout
     S.append(("a green says how wide it is in the where court too, not only the plain one",
               here_status.get("forms", {}).get("equalities", 0) > 0
@@ -2121,7 +2232,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     S.append(("a printed world carries no semicolon where nothing is separated",
               ">.self;" not in printed and ">.self" in printed))
     S.append(("and a world written either way is read the same",
-              'r">\\s*\\.self\\s*;?"' in open(GATE, encoding="utf-8").read()))
+              '">\\\\s*\\\\.self\\\\s*;?"' in open(VEIN, encoding="utf-8").read()))
 
     # an axis says what may stand in it, and the offer says only that
     forms_page = open(os.path.join(HERE, "stdlib", "forms-organization.swift")).read()
@@ -2701,7 +2812,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     # judge's own parse (axisKinds/paramKinds), so the gate carries no second
     # regex over the shelf and the bench never fetches a server-built vocabulary
     S.append(("the shelf's vocabulary has one reader: the judge, not a second regex",
-              "proto_axes" not in open(GATE, encoding="utf-8").read()
+              "proto_axes" not in open(VEIN, encoding="utf-8").read()
               and 'fetch("/vocabulary")' not in ui
               and "function loadVocabulary(" in ui and "judge(mod" in ui))
 
@@ -2746,7 +2857,8 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     # so this was the ordinary case.
     S.append(("the bench says how much was checked, and says it where several files are judged at once",
               # the server keeps the judge's own count instead of discarding it
-              '"premises": int(size.group(3)) if size else None' in open(GATE).read()
+              '("premises", measured.map { StatusJSON.raw($0[2]) } ?? .null)'
+              in open(VEIN).read()
               # and the bench prints it in the multi-file line, where it used to vanish
               and "r.wide = r.premises" in ui
               and '(r.wide ? " · <b>" + r.wide + "</b> claims checked" : "")' in ui))
@@ -2838,12 +2950,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     # world that declares it, so there is nothing left to compare. What is
     # checked now is that the page states no colour at all, and that what is
     # served is what is declared.
-    served = subprocess.run(
-        [sys.executable, "-c",
-         "import types;src=open(%r,encoding='utf-8').read();g=types.ModuleType('g');"
-         "g.__file__=%r;exec(compile(src,'gate','exec'),g.__dict__);"
-         "print(g.palette_tokens())" % (GATE, GATE)],
-        capture_output=True, text=True).stdout
+    served = bench_says("/ladder.css")
 
     def _block(sel, text):
         return text.split(sel, 1)[1].split("}", 1)[0] if sel in text else ""
@@ -3166,9 +3273,9 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     # compared on the same shape. A check that does not say which carrier it
     # ran is a check that stops measuring the day the verb moves.
     def _bf_run(*_argv):
-        _r = subprocess.run([sys.executable, GATE, *_argv, "--json"], cwd=_bf,
+        _r = subprocess.run([GATE, *_argv, "--json"], cwd=_bf,
                             capture_output=True, text=True,
-                            env={**os.environ, "GATE_CLI": "off"})
+                            env={**os.environ, "GATE_CLI": CLI_HERE})
         for _said in (_r.stdout, _r.stderr):
             try:
                 return json.loads(_said)
@@ -3619,14 +3726,15 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     # Where nobody has declared anything the account is empty, and an empty
     # account is a fact: inventing a specimen to fill the screen would be the one
     # lie this thing cannot afford, so the empty state teaches instead.
-    seam_src = open(GATE, encoding="utf-8").read()
+    seam_src = open(VEIN, encoding="utf-8").read()
     S.append(("the bench shows the seams this folder is party to, and says plainly when there are none",
-              # the route exists and is promised where the others are promised
-              '#   GET  /attention' in seam_src and 'u.path == "/attention"' in seam_src
-              and "def seams_here(" in seam_src
+              # the route exists and is promised where the others are promised:
+              # the roster this door answers `serve` with
+              '.text("/attention"),' in seam_src and 'case ("GET", "/attention")' in seam_src
+              and "func seamsHere(" in seam_src
               # a pair is recognised by what the files say they are
-              and r'public enum \w+: Carrier \{\}' in seam_src
-              and r'public enum F_\w+: Declared \{' in seam_src
+              and r'public enum \\w+: Carrier \\{\\}' in seam_src
+              and r'public enum F_\\w+: Declared \\{' in seam_src
               # AND IT LIVES AT THE CLAIM THAT CONCLUDED IT. This was a zone in
               # the left panel: a heading, a held count, a row per waiting field.
               # An instrument, standing beside the file list and telling a
@@ -3645,7 +3753,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               and "const gone = sizes.filter(n => n === 0).length;" in ui
               and "const open = sizes.filter(n => n > 1).length;" in ui
               and 'gone ? "parted at " + gone' in ui
-              and '"sizes": {f"{r} · {f}": n for (r, f), n in sizes.items()},' in seam_src
+              and '("sizes", .object(said.sizes.map { ($0.0, .raw(String($0.1))) })),' in seam_src
               and 'const hasSeams = group.rows.some(seamRow);' in ui
               # it borrows the rail's own grammar rather than inventing a second
               # one: a row is a commit's row, the address is a fact, the kind is
@@ -3661,7 +3769,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               and "a.onclick = () => openSeamSide(" in ui
               and "async function openSeamSide(" in ui
               and 'cm.setOption("readOnly", true)' in ui
-              and 'u.path == "/seamside"' in seam_src and "#   GET  /seamside" in seam_src
+              and 'case ("GET", "/seamside")' in seam_src and "//   GET  /seamside" in seam_src
               # and a badge is a word that stands alone: `you` and `them` needed
               # the tooltip to mean anything, which is a term used before it is
               # introduced. These are the product's own words for the same thing.
@@ -3859,7 +3967,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     # `Department` with no file of that name near it — so a shelf page is a
     # printout, and the dependency is the judge, named by revision.
     shelf_said = say("stdlib", cwd=ent)
-    shelf_src = open(GATE, encoding="utf-8").read()
+    shelf_src = open(VEIN, encoding="utf-8").read()
     S.append(("the shelf is one list of printouts, and says it is not yours",
               "all of it theirs" in shelf_said
               and "forms-organization" in shelf_said and "bench-palette" in shelf_said
@@ -3883,7 +3991,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               and '"took at " + v.judge_from.slice(0, 7)' in ui
               and '"taken at nothing written down"' in ui
               and "r.onclick = () => openShelf(m);" in ui
-              and '"judge_from": judge_from()' in shelf_src))
+              and '("judge_from", judgeFrom()' in shelf_src))
 
     # ── AND THE OPERATOR'S RAIL SHOWS WHAT THE OPERATOR CAN SPEAK. The shelf
     # carries two unlike things and calling them one was a category invented to
@@ -3978,7 +4086,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     # document, and the document is mine either way: it is where I say which
     # files I write and which I only read.
     two = tempfile.mkdtemp(dir=tmp)
-    two_src = open(GATE, encoding="utf-8").read()
+    two_src = open(VEIN, encoding="utf-8").read()
     open(os.path.join(two, "gate.swift"), "w").write("public enum Sales: Department {}\n")
     open(os.path.join(two, "more.swift"), "w").write("public enum Ops: Department {}\n")
     open(os.path.join(two, "api.swift"), "w").write(
@@ -4011,8 +4119,10 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               and after.get("world", {}).get("declarations") == 2
               and "public enum More: Mine {" in manifest
               and "public typealias Kind = WorldFile" in manifest
-              # theirs is the other value of the same column, not a second document
-              and 'cmd_side(rest, "Theirs")' in two_src and 'cmd_side(rest, "Mine")' in two_src
+              # theirs is the other value of the same column, not a second
+              # document: one road, and the kind is which end of it you entered
+              and 'if args.first == "mine" || args.first == "theirs" {' in two_src
+              and 'let kind = args.first == "mine" ? "Mine" : "Theirs"' in two_src
               # ── AND A NAMED FILE THAT IS NOT THERE IS A MISTAKE, NOT A QUESTION.
               # This answered with a usage note and exit nought, so a Makefile
               # step reading only the code was told the world now holds a file
@@ -4238,8 +4348,10 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
                       and (r.get("address") or "").startswith("forms-b.swift:")
                       for r in caught.get("refusals", []))
               and mended.get("verdict") == "holds"
-              # one stream, ordered by the document rather than by the folder
-              and "in the order the manifest gives" in shelf_src.lower()))
+              # one stream, and one place that says which: a forms file is its
+              # own stream, so a law split across two of them is read together
+              and "func oneStream(" in shelf_src
+              and "one namespace is one stream" in shelf_src))
 
     # ── GATE IS THE FIRST INHABITANT, and the tool that refuses a world which
     # has not declared itself had not declared its own. Its facts about its own
@@ -4356,18 +4468,18 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
         pair_at = os.path.join(demo_pair, "gate-seam-demo")
 
     def _took(folder):
-        code = ("import types, json;"
-                "src=open(%r,encoding='utf-8').read();"
-                "g=types.ModuleType('g'); g.__file__=%r;"
-                "exec(compile(src,'gate','exec'), g.__dict__);"
-                "s=g.seams_here(%r);"
-                "print(json.dumps((s[0].get('took') if s else None) or []))"
-                % (GATE, GATE, folder))
-        r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+        # what each side was taken at, as the morning question reports it. The
+        # answer is one object carrying a seam per pair, and the taken rows sit
+        # on the seam: reading the LAST LINE of it and hoping for a list was a
+        # reader written for an answer this tool no longer gives, and it failed
+        # by returning nothing, which reads exactly like nothing was taken.
+        r = subprocess.run([GATE, "attention", "--json"], cwd=folder,
+                           capture_output=True, text=True)
         try:
-            return json.loads((r.stdout or "[]").strip().splitlines()[-1])
+            said = json.loads(r.stdout or "{}")
         except Exception:
             return []
+        return [_t for _s in said.get("seams", []) for _t in (_s.get("took") or [])]
     took = _took(pair_at)
     S.append(("what is taken points back at the line that took it",
               len(took) == 2
@@ -4552,8 +4664,8 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               and not open(pres_forms, encoding="utf-8").read().startswith("// gate stdlib")
               and pres_status.get("verdict") == "holds"
               # the bench opens it, and the plain stream never sees it
-              and 'if r["role"] == "forms"' in shelf_src
-              and "name not in forms_here" in shelf_src
+              and '$0.role == "forms"' in shelf_src
+              and "!formsHere.contains(name)" in shelf_src
               # its words reach what the bench offers
               and "for (const f of formsFiles)" in ui
               and 'sources.push([f, await (await fetch("/world?f="' in ui))
@@ -4577,9 +4689,9 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               # the machine half: the command beside the sentence, not inside it
               mile_out.get("command_to_run") == "gate init ."
               and "`gate init .`" in mile_out.get("next", "")
-              and "def command_in(" in shelf_src
+              and "func commandIn(" in shelf_src
               # only a command is lifted, never an arbitrary backticked word
-              and 'r"(gate|git|bin/|yq|swift)\\b"' in shelf_src
+              and '["gate", "git", "bin/", "yq", "swift"]' in shelf_src
               # the human half: it goes to the clipboard, and says where it runs
               and "navigator.clipboard.writeText(ready)" in ui
               and "It runs in your terminal, not here" in ui
@@ -4637,12 +4749,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     # at least as tall as the letters it sets, because a line that overlaps the
     # next is not a line. Twenty-two equalities, probed by breaking one.
     reg = open(os.path.join(HERE, "stdlib", "bench-registers.swift"), encoding="utf-8").read()
-    served = subprocess.run(
-        [sys.executable, "-c",
-         "import types;src=open(%r,encoding='utf-8').read();g=types.ModuleType('g');"
-         "g.__file__=%r;exec(compile(src,'gate','exec'),g.__dict__);"
-         "print(g.register_tokens())" % (GATE, GATE)],
-        capture_output=True, text=True).stdout
+    served = bench_says("/ladder.css")
     style_only = ui.split("<style>", 1)[1].split("</style>", 1)[0]
     S.append(("the page names a register and states none of its own",
               # every face in the stylesheet is a name, not a stack
@@ -4652,7 +4759,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               # served from the declared world, faces and registers both
               and "--fact: 12.5px/1.45 ui-monospace" in served
               and "--mono: ui-monospace,Menlo,monospace;" in served
-              and "def register_tokens(" in shelf_src
+              and "func registerTokens(" in shelf_src
               # and that world holds a ladder and a floor, not just a list
               and "public enum Taller<Hi, Lo, Slack>: Close {}" in reg
               and "public enum AtLeast<Have, Floor, Slack>: Close {}" in reg
@@ -4673,13 +4780,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     # With the corpus on the machine the declaration opens, read-only. Without
     # it, the name is placed exactly — file, line, revision — and the command
     # that brings it is handed over. Named beats a dead end; shown beats named.
-    lang = subprocess.run(
-        [sys.executable, "-c",
-         "import types;src=open(%r,encoding='utf-8').read();g=types.ModuleType('g');"
-         "g.__file__=%r;exec(compile(src,'gate','exec'),g.__dict__);"
-         "import json;print(json.dumps(g.language_origin()))" % (GATE, GATE)],
-        capture_output=True, text=True).stdout.strip().splitlines()
-    lang = json.loads(lang[-1]) if lang else {}
+    lang = json.loads(bench_says("/language"))
     S.append(("a word of the language says where it is declared, and opens if it is here",
               # the floor is named, with the line each word stands on
               lang.get("names", {}).get("Twice") == 299
@@ -4695,7 +4796,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               # shown when present, named when not — never a silent nothing
               and "language.present ? openLanguage(name, at) : sayLanguage(name, at)" in ui
               # and reading a checkout may not climb out of it
-              and 'want.startswith(os.path.realpath(root) + os.sep)' in shelf_src))
+              and 'real.hasPrefix(base + "/")' in shelf_src))
 
     # ── A WORLD MAY BE LAID OUT IN FOLDERS, and it could not be. Declaring
     # `people/roster.swift` wrote a SECOND manifest inside `people/` and recorded
@@ -4745,11 +4846,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     open(os.path.join(twice, "gate.swift"), "w").write(
         "public enum Sales: Department {}\n"
         "public enum MyBench: Bench { public typealias Theme = Dark }\n")
-    pers = subprocess.run(
-        [sys.executable, "-c",
-         "import types;src=open(%r,encoding='utf-8').read();g=types.ModuleType('g');"
-         "g.__file__=%r;exec(compile(src,'gate','exec'),g.__dict__);print(g.personal_path())"
-         % (GATE, GATE)], cwd=twice, capture_output=True, text=True).stdout.strip()
+    pers = (run("my", cwd=twice)[1] or {}).get("personal") or ""
     said_my, said_status = {}, {}
     if pers:
         os.makedirs(os.path.dirname(pers), exist_ok=True)
@@ -4771,7 +4868,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
                       for r in said_my.get("refusals", []))
               # by running the same guards, not by a second opinion of its own
               and "A court that answers about a world may" in shelf_src
-              and shelf_src.count("refusals += duplicate_guards_over(sources)") >= 1))
+              and shelf_src.count("refusals += duplicateGuardsOver(sources)") >= 1))
 
     # ── A SLOT IS A SLOT WHEREVER IT IS WRITTEN. `associatedtype Next: Cycle`
     # opens a hole and `Enter<Who: Keeper, Into: Room>` opens two — the same
@@ -4832,11 +4929,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
         "public typealias KnownNameDimX = Plus<W2, Plus<W4, Plus<W16, W256>>>\n"
         "public typealias KnownNameDimZ = Plus<W16, Plus<W64, Plus<W128, Plus<W256, W512>>>>\n")
     run("mine", "my-colours.swift", "--role", "forms", cwd=ovr)
-    served_here = subprocess.run(
-        [sys.executable, "-c",
-         "import types;src=open(%r,encoding='utf-8').read();g=types.ModuleType('g');"
-         "g.__file__=%r;exec(compile(src,'gate','exec'),g.__dict__);print(g.palette_tokens())"
-         % (GATE, GATE)], cwd=ovr, capture_output=True, text=True).stdout
+    served_here = bench_says("/ladder.css", cwd=ovr)
     dark_here = served_here.split(':root[data-theme="dark"]', 1)[-1]
     S.append(("a world you present outranks the one this tool ships, with nothing anticipating it",
               # the operator's two numbers are what the page is served
@@ -4848,8 +4941,10 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               # by LAYER, never by position: reordering the list may not change
               # what the page paints, because correctness is order-invariant and
               # this is exactly where order had crept back in as truth
-              and "def presented_over(" in shelf_src
-              and "PRIORITY IS A PROPERTY OF THE LAYER, NEVER OF POSITION" in shelf_src))
+              and "func presentedOver(" in shelf_src
+              # by layer, never by position: two declarations inside one layer
+              # are refused with both addresses rather than settled by order
+              and "rather than settled by list order" in shelf_src))
 
     # ── THE LEFT PANEL UNDER THE SAME COURTS AS THE PAGE. Built before this, it
     # was the one surface that answered to nobody: six lengths written as bare
@@ -4923,7 +5018,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     open(os.path.join(sv, "my-values.swift"), "w").write("// role: forms\n")
     no_forms = None
     _s2 = _sock.socket(); _s2.bind(("127.0.0.1", 0)); _vp = _s2.getsockname()[1]; _s2.close()
-    _vb = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_vp), "--no-open"], cwd=sv,
+    _vb = subprocess.Popen([GATE, "serve", "--port", str(_vp), "--no-open"], cwd=sv,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
         wait_serve(_vp)
@@ -4937,7 +5032,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
         _vb.terminate()
     run("mine", "my-values.swift", "--role", "forms", cwd=sv)
     _s3 = _sock.socket(); _s3.bind(("127.0.0.1", 0)); _vp2 = _s3.getsockname()[1]; _s3.close()
-    _vb2 = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_vp2), "--no-open"], cwd=sv,
+    _vb2 = subprocess.Popen([GATE, "serve", "--port", str(_vp2), "--no-open"], cwd=sv,
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     said_value = {}
     try:
@@ -4948,13 +5043,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     finally:
         _vb2.terminate()
     wrote = open(os.path.join(sv, "my-values.swift")).read()
-    read_back = json.loads(subprocess.run(
-        [sys.executable, "-c",
-         "import types,json;src=open(%r,encoding='utf-8').read();g=types.ModuleType('g');"
-         "g.__file__=%r;exec(compile(src,'gate','exec'),g.__dict__);"
-         "print(json.dumps(g._peano(open(%r,encoding='utf-8').read())))"
-         % (GATE, GATE, os.path.join(sv, "my-values.swift"))],
-        capture_output=True, text=True).stdout or "{}")
+    read_back = peano(open(os.path.join(sv, "my-values.swift"), encoding="utf-8").read())
     S.append(("saying a value writes it in a file of mine, spelled on the world's own ladder",
               # with nowhere of mine to put it, it says so and names the command
               no_forms and no_forms.get("asks")
@@ -5070,14 +5159,12 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
             "// role: forms\npublic typealias Line = Plus<W2, W8>\n")
         for f in order:
             run("mine", f, "--role", "forms", cwd=w)
-        lib[who] = subprocess.run(
-            [sys.executable, "-c",
-             "import types,json;src=open(%r,encoding='utf-8').read();g=types.ModuleType('g');"
-             "g.__file__=%r;exec(compile(src,'gate','exec'),g.__dict__);"
-             "print(json.dumps({'w':{k:g.presented_world(k) for k in sorted(g.STDLIB)},"
-             "'p':g.palette_tokens(),'l':g.ladder_tokens(),'r':g.register_tokens()},"
-             "sort_keys=True))" % (GATE, GATE)],
-            cwd=w, capture_output=True, text=True).stdout
+        # the same library, asked from outside: every shelf world as it stands
+        # after what this agent presented, and the stylesheet those worlds make
+        _worlds = {k: say("stdlib", "show", k, cwd=w)
+                   for k in sorted(json.loads(bench_says("/shelf", cwd=w))["modules"])}
+        lib[who] = json.dumps({"w": _worlds, "s": bench_says("/ladder.css", cwd=w)},
+                              sort_keys=True)
     S.append(("two agents, one domain, opposite orders: the same library to the byte",
               lib["A"] and lib["A"] == lib["B"]
               # and the override still takes — order-invariance that achieved
@@ -5170,29 +5257,25 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     # that nothing checks. It is counted from the checkout when there is one and
     # left unsaid when there is not, the same as the revision beside the binary.
     corpus = os.environ.get("GATE_CORPUS")
-    counted = json.loads(subprocess.run(
-        [sys.executable, "-c",
-         "import types,json;src=open(%r,encoding='utf-8').read();g=types.ModuleType('g');"
-         "g.__file__=%r;exec(compile(src,'gate','exec'),g.__dict__);"
-         "print(json.dumps(g.court_shape()))" % (GATE, GATE)],
-        capture_output=True, text=True,
-        env=dict(os.environ, GATE_CORPUS=corpus) if corpus else os.environ).stdout or "null")
-    silent_court = json.loads(subprocess.run(
-        [sys.executable, "-c",
-         "import types,json;src=open(%r,encoding='utf-8').read();g=types.ModuleType('g');"
-         "g.__file__=%r;exec(compile(src,'gate','exec'),g.__dict__);"
-         "print(json.dumps(g.court_shape()))" % (GATE, GATE)],
-        capture_output=True, text=True,
-        env={k: v for k, v in os.environ.items() if k != "GATE_CORPUS"}).stdout or "null")
+    counted = subprocess.run([GATE, "--version"], capture_output=True, text=True,
+                             env=dict(os.environ, GATE_CORPUS=corpus) if corpus
+                             else os.environ).stdout
+    silent_court = subprocess.run(
+        [GATE, "--version"], capture_output=True, text=True,
+        env={k: v for k, v in os.environ.items() if k != "GATE_CORPUS"}).stdout
+    # ── AND THE SIZE IS READ WHERE A PERSON READS IT. This used to call the
+    # function inside the tool; the answer a person gets is the version line, so
+    # that is what is held: with a checkout it names the court's lines, and with
+    # none it says nothing about somebody else's files rather than guessing.
     S.append(("the court's size is counted from the checkout, and unsaid without one",
-              silent_court is None
+              "the court is" not in silent_court
               # the two files that decide every verdict are named, not guessed at
-              and 'COURT_FILES = ("Sources/Tools/Judge.swift", "Sources/Tools/WhereJudge.swift")' in shelf_src
+              and 'let COURT_FILES = ["Sources/Tools/Judge.swift", "Sources/Tools/WhereJudge.swift"]' in shelf_src
               # no number about somebody else's files is written in this tool
               and not re.search(r"court[^\n]*\b1021\b", shelf_src)
-              and (counted is None or (counted["lines"] > 0 and len(counted["files"]) == 2))
+              and (not corpus or re.search(r"the court is \d+ lines", counted))
               # and it reaches both places a person asks the question
-              and 'the court is " + str(court_shape()["lines"])' in shelf_src
+              and 'the court is " + count + " lines' in shelf_src
               and "language.court" in ui))
 
     # ── THE MORNING QUESTION, ASKED OF THE WHOLE WORLD. `attention` needed two
@@ -5238,11 +5321,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     said = re.sub(r"public typealias SelectDimZ = .*",
                   "public typealias SelectDimZ = Plus<W8, W32>", open(copy).read(), count=1)
     open(copy, "w").write(said)
-    painted = subprocess.run(
-        [sys.executable, "-c",
-         "import types;src=open(%r,encoding='utf-8').read();g=types.ModuleType('g');"
-         "g.__file__=%r;exec(compile(src,'gate','exec'),g.__dict__);print(g.palette_tokens())"
-         % (GATE, GATE)], cwd=tv, capture_output=True, text=True).stdout
+    painted = bench_says("/ladder.css", cwd=tv)
     S.append(("making a shelf world yours is one word, and what you then say is what is painted",
               took.get("made_mine") == "bench-palette"
               and took.get("wrote") == "bench-palette.swift"
@@ -5254,7 +5333,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               # a second call does not overwrite what you have since written
               and again.get("asks") and "already here" in again.get("note", "")
               # and the merge takes it as an override: by path, never by name
-              and "SHIPPED_PATHS" in shelf_src
+              and "SHIPPED_SET" in shelf_src
               and "calc(38/1000) calc(40/1000) calc(40/1000)" in painted))
 
     # ── AND A REFUSAL IS VISIBLE IN THE VIEW YOU WRITE IN. Bare is a surface
@@ -5380,8 +5459,8 @@ console.log(JSON.stringify(out));
               and 'const SHELF_SORTS = ["a-domain", "the-tool", "the-bench", "the-reader"];' in ui
               and "mods.sort((a, b) => shelfRank(speaks[a]) - shelfRank(speaks[b])" in ui
               # and the words come from the files themselves, never from a list here
-              and "def stdlib_speaks(" in shelf_src
-              and 'm = re.match(r"// speaks-for: (.+)", line.strip())' in shelf_src))
+              and "// speaks-for:" in shelf_src
+              and 'shelfHeadLine(name, "// speaks-for:")' in shelf_src))
 
     # ── AND THE ORDER IS ASKED OF THE RAIL, NOT OF A STRING INSIDE IT. The check
     # above pins the line that spells the sort, which is what keeps a second
@@ -5498,9 +5577,9 @@ console.log(JSON.stringify({
               # product listing the whole ladder teaches nothing, and both demos
               # printed five doors at once to somebody thirty seconds in. The
               # rest is still there for whoever asked for all of it.
-              and 'lines.append(f"  more: {len(out[\'try\'])} other things to try' in shelf_src
+              and 'words.append("  more: \\(tries.count) other things to try' in shelf_src
               # nothing shown to a person calls them a liar for a world that does not hold
-              and "a lie cannot be committed" not in open(GATE, encoding="utf-8").read()))
+              and "a lie cannot be committed" not in open(VEIN, encoding="utf-8").read()))
 
     # ── A POLICY MAY NOT REQUIRE A RANK NOBODY HAS. Found by walking a
     # newcomer's path: `gate demo`, then a lie in each file to see which are
@@ -5533,12 +5612,7 @@ console.log(JSON.stringify({
     # newcomer who ran demo, listed the folder and looked at the panel found a
     # file on disk the tool did not own up to. Being outside the plain judged
     # stream says which court reads it, never that it should be invisible.
-    listed = [n for n, _ in json.loads(subprocess.run(
-        [sys.executable, "-c",
-         "import types,json;src=open(%r,encoding='utf-8').read();g=types.ModuleType('g');"
-         "g.__file__=%r;exec(compile(src,'gate','exec'),g.__dict__);"
-         "print(json.dumps(g.bench_files()))" % (GATE, GATE)],
-        cwd=pol, capture_output=True, text=True).stdout or "[]")]
+    listed = json.loads(bench_says("/files", cwd=pol))["files"]
     S.append(("a policy requiring a rank nobody declares is refused, not waved through",
               real.get("verdict") == "holds"
               and unreal.get("verdict") == "refused"
@@ -5600,11 +5674,11 @@ console.log(JSON.stringify({
     only_said = run("log", cwd=wj)[1]
     S.append(("a wheel shown in a comment turns nothing, including the one this tool documents",
               only_said.get("scope") == "world"
-              and "if not ln.strip().startswith" in shelf_src
+              and 'trimmingCharacters(in: .whitespaces).hasPrefix("//")' in shelf_src
               # and this repository is the case that proved it: it documents the
               # wheel and declares none, so its own journal must not be widened
               and json.loads(subprocess.run(
-                  [sys.executable, GATE, "log", "1", "--json"], cwd=HERE,
+                  [GATE, "log", "1", "--json"], cwd=HERE,
                   capture_output=True, text=True).stdout).get("scope") == "world"))
 
     # ── A WORD THIS COMMAND DOES NOT KNOW IS A REFUSAL, BY THE WORD. `gate log
@@ -5617,10 +5691,7 @@ console.log(JSON.stringify({
     S.append(("a word this command does not know is refused by name, not swallowed",
               helped.get("asks") and "`--help`" in helped.get("note", "")
               and mistyped.get("asks") and "`--wrold`" in mistyped.get("note", "")
-              and "gate log all" in mistyped.get("next", "")
-              # and it prints, whoever made it: one branch before every command's
-              # own, so a refusal from a command that never had one still speaks
-              and 'if out.get("asks") and out.get("note") and "verdict" not in out:' in shelf_src))
+              and "gate log all" in mistyped.get("next", "")))
 
     # ── AND A SCOPE THAT CANNOT BE HONOURED SAYS SO. Asking for the world's
     # history where no file is declared a world file narrowed nothing and printed
@@ -5646,10 +5717,10 @@ console.log(JSON.stringify({
                     "-c", "commit.gpgsign=false", "commit", "-qm", "tables"],
                    cwd=seedonly, capture_output=True)
     flat_log = run("log", "world", "1", cwd=seedonly)[1]
-    said_flat = subprocess.run([sys.executable, GATE, "log", "world", "1"], cwd=seedonly,
+    said_flat = subprocess.run([GATE, "log", "world", "1"], cwd=seedonly,
                                capture_output=True, text=True).stdout
     here_log = json.loads(subprocess.run(
-        [sys.executable, GATE, "log", "world", "1", "--json"], cwd=HERE,
+        [GATE, "log", "world", "1", "--json"], cwd=HERE,
         capture_output=True, text=True).stdout)
     S.append(("a scope that cannot be honoured says which word did nothing, and why",
               flat_log.get("scope") == "world" and flat_log.get("narrowed") is False
@@ -5700,7 +5771,7 @@ console.log(JSON.stringify({
     # beside it and never asked. It went unseen for as long as it did because we
     # always opened a sandbox to look, never this repository.
     _s = _sock.socket(); _s.bind(("127.0.0.1", 0)); _bench_port = _s.getsockname()[1]; _s.close()
-    _bench = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_bench_port), "--no-open"],
+    _bench = subprocess.Popen([GATE, "serve", "--port", str(_bench_port), "--no-open"],
                               cwd=HERE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
         agreed = None
@@ -5756,7 +5827,7 @@ console.log(JSON.stringify({
         # went green on the next push.
         _s4 = _sock.socket(); _s4.bind(("127.0.0.1", 0))
         _nwp = _s4.getsockname()[1]; _s4.close()
-        _nwb = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_nwp), "--no-open"],
+        _nwb = subprocess.Popen([GATE, "serve", "--port", str(_nwp), "--no-open"],
                                 cwd=_nw, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         try:
             _page = ask_bench(_nwp, "/status")
@@ -5781,13 +5852,13 @@ console.log(JSON.stringify({
         _lp = _bench_port
         _s5 = _sock.socket(); _s5.bind(("127.0.0.1", 0))
         _lp = _s5.getsockname()[1]; _s5.close()
-        _lb = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_lp), "--no-open"],
+        _lb = subprocess.Popen([GATE, "serve", "--port", str(_lp), "--no-open"],
                                cwd=_lay, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         try:
             _page_said = ask_bench(_lp, "/check/view?who=Emp9000&doc=FinanceShare")
         finally:
             _lb.terminate()
-        _term_said = subprocess.run([sys.executable, GATE, "check", "view",
+        _term_said = subprocess.run([GATE, "check", "view",
                                      "Emp9000", "FinanceShare", "--json"], cwd=_lay,
                                     capture_output=True, text=True)
         S.append(("a verb with no world file to read says so on both surfaces, in the same words",
@@ -5857,7 +5928,7 @@ console.log(JSON.stringify({
     dw = os.path.join(tmp, "bothsurfaces")
     run("demo", "org", dw)
     _s4 = _sock.socket(); _s4.bind(("127.0.0.1", 0)); _dp = _s4.getsockname()[1]; _s4.close()
-    _db = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_dp), "--no-open"], cwd=dw,
+    _db = subprocess.Popen([GATE, "serve", "--port", str(_dp), "--no-open"], cwd=dw,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     both = None
     _ref_line = ""
@@ -5980,12 +6051,7 @@ console.log(JSON.stringify(out));
         if not w.endswith(".swift"):
             continue
         wp = os.path.join(HERE, "stdlib", w)
-        tool = json.loads(subprocess.run(
-            [sys.executable, "-c",
-             "import types,json;src=open(%r,encoding='utf-8').read();g=types.ModuleType('g');"
-             "g.__file__=%r;exec(compile(src,'gate','exec'),g.__dict__);"
-             "print(json.dumps(g._peano(open(%r,encoding='utf-8').read())))"
-             % (GATE, GATE, wp)], capture_output=True, text=True).stdout)
+        tool = peano(open(wp, encoding="utf-8").read())
         page = json.loads(subprocess.run(
             ["node", harness, os.path.join(HERE, "web", "ui.html"),
              os.path.join(HERE, "bin", "judge.js"), wp], capture_output=True, text=True).stdout or "{}")
@@ -6005,7 +6071,7 @@ console.log(JSON.stringify(out));
     S.append(("a register says how hard it is set, and the tool only reads it",
               "public protocol Stress {}" in registers_src
               and "public typealias Set = Firm" in registers_src
-              and 'weight = "600 " if stresses.get(name) == "Firm" else ""' in shelf_src
+              and 'let weight = stresses[name] == "Firm" ? "600 " : ""' in shelf_src
               and '"Brand", "Headline", "Headsmall"' not in shelf_src))
 
     # ── AND AN OVERRIDE IS VISIBLE FROM THE LIST. It is judged now — the shipped
@@ -6013,24 +6079,20 @@ console.log(JSON.stringify(out));
     # still green silence about values: in a month "why is this colour different
     # here" gets answered by feel, or by grep. The file says how many names it
     # overrules, in the rail, before it is opened.
-    over_seen = subprocess.run(
-        [sys.executable, "-c",
-         "import types,json;src=open(%r,encoding='utf-8').read();g=types.ModuleType('g');"
-         "g.__file__=%r;exec(compile(src,'gate','exec'),g.__dict__);"
-         "o={}\n"
-         "for s in sorted(g.STDLIB):\n"
-         " for n,p in (g.presented_over(s)[1] or {}).items(): o.setdefault(p,[]).append(n)\n"
-         "print(json.dumps({k:sorted(v) for k,v in o.items()}))"
-         % (GATE, GATE)], cwd=ovr, capture_output=True, text=True).stdout
+    _over = json.loads(bench_says("/files", cwd=ovr))["overridden"]
+    _by_file = {}
+    for _name, _said in _over.items():
+        _by_file.setdefault(_said["file"], []).append(_name)
+    over_seen = json.dumps({k: sorted(v) for k, v in _by_file.items()})
     S.append(("what a name was before somebody said otherwise is answerable at the name",
               "my-colours.swift" in over_seen and "KnownNameDimZ" in over_seen
               # and the rail asks for exactly that, and paints it in the quiet
               # register — two questions live in a name's hue and this is neither
-              and '"overridden": overridden,' in shelf_src
+              and '("overridden", .object(overridden)),' in shelf_src
               # keyed by NAME, and carrying what the name was — because the fact
               # is owed at the value, in the table of the world that declares it,
               # not as a badge on a file in a side panel
-              and '"was": was.group(1).rstrip()}' in shelf_src
+              and '("was", .text(was[0].replacingOccurrences(' in shelf_src
               # and where it hurts is seen without opening the file
               and ".file.bad .name{text-decoration:underline wavy var(--bad)" in ui))
 
@@ -6175,7 +6237,8 @@ console.log(JSON.stringify(out));
     S.append(("the judge says which revision of the corpus it was built from, and says so when it cannot",
               "is not recorded" in silent
               and "verification-is-identification 1f4c0a9d3e7b" in spoken
-              and "build-judge.sh 1f4c0a9d3e7b" in spoken
+              # and the command that rebuilds the same court from that revision
+              and "bin/build-cli.sh" in spoken
               # and the build writes it down rather than leaving it to be guessed
               and "git rev-parse HEAD" in open(os.path.join(HERE, "bin", "build-judge.sh")).read()))
 
@@ -6191,8 +6254,7 @@ console.log(JSON.stringify(out));
     # word is a fence in the wrong place.
     PITCH = re.compile(r"\b(blind\w*|prayer\w*|candle\w*|illuminat\w*|darkness|eyesight"
                        r"|vision|sight|hearing)\b", re.I)
-    spoken = [n.value for n in ast.walk(ast.parse(open(GATE).read()))
-              if isinstance(n, ast.Constant) and isinstance(n.value, str)]
+    spoken = spoken_strings(VEIN)
     shipped = [open(os.path.join(STDLIB, f)).read()
                for f in os.listdir(STDLIB) if f.endswith(".swift")] if os.path.isdir(STDLIB) else []
     S.append(("the words that sell stay out of what the tool says",
@@ -6232,12 +6294,12 @@ console.log(JSON.stringify(out));
         {"issues": [{"key": "PROJ-7", "status": "Done"}]}))
     open(os.path.join(ci, "repo", "src", "app.py"), "w").write(
         "def go():\n    # TODO(PROJ-7): the ticket is done, the note is not\n    return 1\n")
-    drift = subprocess.run([sys.executable, GATE, "import", "refs",
+    drift = subprocess.run([GATE, "import", "refs",
                             os.path.join(ci, "elsewhere", "export.json"), "--code", "."],
                            capture_output=True, text=True, cwd=os.path.join(ci, "repo"))
     open(os.path.join(ci, "elsewhere", "live.json"), "w").write(json.dumps(
         {"issues": [{"key": "PROJ-7", "status": "In Progress"}]}))
-    clean = subprocess.run([sys.executable, GATE, "import", "refs",
+    clean = subprocess.run([GATE, "import", "refs",
                             os.path.join(ci, "elsewhere", "live.json"), "--code", "."],
                            capture_output=True, text=True, cwd=os.path.join(ci, "repo"))
     S.append(("the check is one command with the other side wherever it lies, and it leaves nothing behind",
@@ -6256,11 +6318,14 @@ console.log(JSON.stringify(out));
     # future judge learns to read a list, this half fails and says the guard may
     # retire — a rule that cannot say when it stopped being needed is a rule that
     # outlives its reason.
-    gate_src = open(GATE, encoding="utf-8").read()
+    gate_src = open(VEIN, encoding="utf-8").read()
     # the call moved into one place that picks a court (binary or port) and the law
     # about it is unchanged: no caller hands the certificate court a list
-    where_calls = re.findall(r"judge_call\(\[\"judge\", \"where\",([^\]]*)\]", gate_src)
-    one_path = all("*" not in c for c in where_calls)
+    where_calls = re.findall(r'courtSays\(\["where", ([^\]]*)\]', gate_src)
+    # one path per call, and never a list spread into one: a caller that handed
+    # the certificate court `["where"] + paths` is the blindness this guards
+    one_path = all("," not in c and "+" not in c and "..." not in c for c in where_calls) \
+        and 'courtSays(["where"] +' not in gate_src
     pal_text = open(os.path.join(HERE, "stdlib", "bench-palette.swift"), encoding="utf-8").read()
     cut = pal_text.index("// ── the light theme")
     machinery, values = pal_text[:cut], pal_text[cut:]
@@ -6698,8 +6763,8 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
     # the bench may not say holds where a hook would refuse: the guards run on
     # the unsaved text as well, not only in the CLI
     S.append(("the bench runs the same guards the CLI does",
-              "duplicate_guards_over(sources)" in open(GATE, encoding="utf-8").read()
-              and "entry_guards_over(sources)" in open(GATE, encoding="utf-8").read()))
+              "duplicateGuardsOver(sources)" in open(VEIN, encoding="utf-8").read()
+              and "entryGuardsOver(sources)" in open(VEIN, encoding="utf-8").read()))
 
     # ── the two judges say the same words ──
     # The bench judges a single-file world in the browser, with the ported
@@ -6852,7 +6917,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
     # never a regex of ours: one grammar, one reader, and this vector is the
     # channel's first client. USAGE itself is prose of the CLI, not swift,
     # so its two-space anchor is the one textual read left here.
-    _usage = re.search(r'USAGE = """(.*?)"""', open(GATE).read(), re.S).group(1)
+    _usage = re.search(r'USAGE = """(.*?)"""', open(VEIN).read(), re.S).group(1)
     _pj = json.loads(subprocess.run(
         [shutil.which("node"), os.path.join(HERE, "bin", "judge-cli.js"),
          "judge", "parse", os.path.join(STDLIB, "verbs.swift")],
@@ -6891,14 +6956,14 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
               _carriers and _carriers == _tree
               and all(os.path.exists(os.path.join(HERE, p)) for p in _carriers)))
 
-    # ── the strangler: the Swift CLI answers a carried vein with the very
-    # bytes the python CLI answers with. The door is proven with a stub
-    # first, a fake binary that claims the vein and speaks a marker, so the
-    # test knows delegation happened and is not watching python twice; then
-    # the real binary is built and held to the python side byte for byte,
-    # on the page and on the refusal. GATE_CLI names the binary, off means
-    # the python side: the same lever a reader uses to compare by hand.
-    # wherever a toolchain stands, not wherever a mac does: the vein is one
+    # ── what the strangler left: the Swift CLI answers every verb, and this
+    # block walks them. The door is proven with a stub first, a fake binary
+    # that claims a vein and speaks a marker, so the run knows delegation
+    # happened rather than assuming it; then the real binary is built and
+    # asked what each verb owes. GATE_CLI names the binary a run judges,
+    # which is the same lever a reader uses to try one by hand.
+    # It runs wherever a toolchain stands, not wherever a mac does: the vein
+    # is one
     # swiftc build, the court's sources at the judge's pin compiled beside
     # its file, and the linux job carries swiftc too. The platform
     # lock made the battery a different SIZE per machine, and the README
@@ -6923,24 +6988,29 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                     'if [ "$1" = "--carries" ]; then echo "stdlib show"; exit 0; fi\n'
                     "echo MARK; exit 0\n")
         os.chmod(_stub, 0o755)
-        _m = subprocess.run([sys.executable, GATE, "stdlib", "show", "verbs"],
+        _m = subprocess.run([GATE, "stdlib", "show", "verbs"],
                             capture_output=True, text=True,
                             env={**os.environ, "GATE_CLI": _stub})
         S.append(("the door hands a carried vein to the binary that claims it",
                   _m.stdout.strip() == "MARK"))
-        _py = subprocess.run([sys.executable, GATE, "stdlib", "show", "verbs"],
-                             capture_output=True, env={**os.environ, "GATE_CLI": "off"})
-        _sw = subprocess.run([sys.executable, GATE, "stdlib", "show", "verbs"],
+        # ── AND THE PAIR THAT HELD THIS ROAD IS DOWN TO ONE SIDE. Every check
+        # from here to the ledger below used to run the verb twice, once with
+        # GATE_CLI off for the python side and once at the binary, and hold the
+        # two byte for byte. The python side is gone, and `off` now falls
+        # through the shim's ladder to that same binary: the comparison would
+        # be the binary against itself, which is green whatever the verb does.
+        # What each of those checks ALSO said about the answer is kept, asked
+        # of the one carrier that is left.
+        _sw = subprocess.run([GATE, "stdlib", "show", "verbs"],
                              capture_output=True, env={**os.environ, "GATE_CLI": _cli_bin})
-        S.append(("both CLIs print the shelf page byte for byte",
-                  os.path.exists(_cli_bin) and _sw.stdout == _py.stdout
-                  and _py.stdout.startswith(b"// gate stdlib verbs")))
-        _pe = subprocess.run([sys.executable, GATE, "stdlib", "show", "nosuch"],
-                             capture_output=True, env={**os.environ, "GATE_CLI": "off"})
-        _se = subprocess.run([sys.executable, GATE, "stdlib", "show", "nosuch"],
+        S.append(("the shelf page comes off the binary whole, its own head first",
+                  os.path.exists(_cli_bin)
+                  and _sw.stdout.startswith(b"// gate stdlib verbs")))
+        _se = subprocess.run([GATE, "stdlib", "show", "nosuch"],
                              capture_output=True, env={**os.environ, "GATE_CLI": _cli_bin})
-        S.append(("and refuse an absent page with one sentence and one exit code",
-                  _se.stderr == _pe.stderr and _se.returncode == _pe.returncode == 1))
+        S.append(("and an absent page is refused by name, with the way on and code 1",
+                  _se.returncode == 1 and b"no such stdlib module: nosuch" in _se.stderr
+                  and b"next: `gate stdlib` lists them" in _se.stderr))
         # ── AND A TEXT THIS TOOL WRITES HAS ONE HOME. The head a layout is born
         # with was a literal inside the CLI, and the day the Swift carrier had to
         # write the same head there would have been two copies of one text: the
@@ -6978,8 +7048,8 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                   and _kworld.startswith(_dpage.split(
                       "// ── what a carrier side is printed under begins here ──\n", 1)[1])
                   # and no second copy of either text is kept in the CLI
-                  and "printed by gate declare:" not in open(GATE, encoding="utf-8").read()
-                  and "printed by gate declare carrier:" not in open(GATE, encoding="utf-8").read()))
+                  and "printed by gate declare:" not in open(VEIN, encoding="utf-8").read()
+                  and "printed by gate declare carrier:" not in open(VEIN, encoding="utf-8").read()))
 
         S.append(("the head a layout is born with is a page, and the page is its one home",
                   _mark in _page
@@ -6990,12 +7060,12 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                   and "speaks-for" not in _made
                   # while the page itself is shown whole, card and all: `show`
                   # prints a printout, it does not answer with an object
-                  and subprocess.run([sys.executable, GATE, "stdlib", "show", "manifest"],
+                  and subprocess.run([GATE, "stdlib", "show", "manifest"],
                                      cwd=HERE, capture_output=True, text=True,
-                                     env={**os.environ, "GATE_CLI": "off"}).stdout
+                                     env={**os.environ, "GATE_CLI": CLI_HERE}).stdout
                       == _page + "\n"
                   # and the CLI holds no second copy of that text
-                  and "One list, three columns" not in open(GATE, encoding="utf-8").read()))
+                  and "One list, three columns" not in open(VEIN, encoding="utf-8").read()))
 
         # ── AND THE ACT OF ENTRY MOVES, WHICH IS THE FIRST VERB THE ROADS CARRY.
         # `declare` needed four of them at once: the contract reading, the
@@ -7012,7 +7082,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                                                 "revision": "a1b2c3d"},
                   "carries": [{"route": "/a", "field": "f", "as": "Text"},
                               {"route": "/a", "field": "g", "as": "Flag", "mine": "flagged"}]}
-        _dapart = []
+        _dsaid = {}
         for _argv in (["declare", "contract", "spec.json"],
                       ["declare", "contract", "spec.json", "--json"],
                       ["declare", "carrier", "decl.json"],
@@ -7020,43 +7090,66 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                       ["declare", "contract", "spec.json", "-o", "api.swift", "--theirs"],
                       ["declare", "carrier", "decl.json", "-o", "sdk.swift", "--theirs"],
                       ["declare", "contract", "no-such.json"]):
-            _two = []
-            for _tag, _env in (("py", "off"), ("sw", _cli_bin)):
-                _dw = os.path.join(tmp, "declared-" + _tag)
-                shutil.rmtree(_dw, ignore_errors=True)
-                os.makedirs(_dw)
-                subprocess.run(["git", "init", "-q", "-b", "main", _dw], capture_output=True)
-                open(os.path.join(_dw, "spec.json"), "w").write(json.dumps(_dec))
-                open(os.path.join(_dw, "decl.json"), "w").write(json.dumps(_carry))
-                _rd = subprocess.run([sys.executable, GATE, *_argv], cwd=_dw, text=True,
-                                     capture_output=True, timeout=180,
-                                     env={**os.environ, "GATE_CLI": _env})
-                _left = {_f: open(os.path.join(_dw, _f), encoding="utf-8").read()
-                         for _f in sorted(os.listdir(_dw)) if _f.endswith(".swift")}
-                _two.append((_rd.returncode, _rd.stdout, _rd.stderr, _left))
-            if _two[0] != _two[1]:
-                _dapart.append(" ".join(_argv))
-        if _dapart:
-            print("   the act of entry differs between carriers:", _dapart[:3])
-        S.append(("the act of entry is one on both carriers, in what it says and what it leaves",
-                  _dapart == []))
+            _dw = os.path.join(tmp, "declared-one")
+            shutil.rmtree(_dw, ignore_errors=True)
+            os.makedirs(_dw)
+            subprocess.run(["git", "init", "-q", "-b", "main", _dw], capture_output=True)
+            open(os.path.join(_dw, "spec.json"), "w").write(json.dumps(_dec))
+            open(os.path.join(_dw, "decl.json"), "w").write(json.dumps(_carry))
+            _rd = subprocess.run([GATE, *_argv], cwd=_dw, text=True,
+                                 capture_output=True, timeout=180,
+                                 env={**os.environ, "GATE_CLI": _cli_bin})
+            _left = {_f: open(os.path.join(_dw, _f), encoding="utf-8").read()
+                     for _f in sorted(os.listdir(_dw)) if _f.endswith(".swift")}
+            _dsaid[" ".join(_argv)] = (_rd.returncode, _rd.stdout, _rd.stderr, _left)
+        # what the parity held was that the two carriers agreed; what it never
+        # said was what either of them ANSWERS. Asked here of the one that is
+        # left, shape by shape, because these seven argvs are the whole surface
+        # of the verb and a road that carries nothing would still have agreed.
+        _dtold = lambda _k: _dsaid[_k][1] + _dsaid[_k][2]
+        S.append(("the act of entry answers every shape of its argv, and leaves what it wrote",
+                  # a contract read prints a side, and the road on from it
+                  _dsaid["declare contract spec.json"][0] == 0
+                  # three records off this document: the two body fields and the
+                  # query parameter, which is a field of the call like any other
+                  and "declare contract: 3 declared" in _dtold("declare contract spec.json")
+                  and "next:" in _dtold("declare contract spec.json")
+                  # the json shape answers with an object carrying the world
+                  and json.loads(_dsaid["declare contract spec.json --json"][1]).get("world")
+                  # a carrier side is its own text, and says where the pair is judged
+                  and "declare carrier: 2 declared" in _dtold("declare carrier decl.json")
+                  and "gate seam" in _dtold("declare carrier decl.json")
+                  and json.loads(_dsaid["declare carrier decl.json --json"][1]).get("world")
+                  # -o writes the file it names, and --theirs the row beside it
+                  and "wrote api.swift" in _dtold(
+                      "declare contract spec.json -o api.swift --theirs")
+                  and {"api.swift", "gate.manifest.swift"} <= set(
+                      _dsaid["declare contract spec.json -o api.swift --theirs"][3])
+                  and "sdk.swift" in _dsaid[
+                      "declare carrier decl.json -o sdk.swift --theirs"][3]
+                  # and a document that is not there is refused by name, with a way on
+                  and _dsaid["declare contract no-such.json"][0] == 1
+                  and "no such file: no-such.json" in _dtold("declare contract no-such.json")))
 
-        # ── AND THE WRITING SIDE OF A LAYOUT IS ONE ON BOTH CARRIERS. `declare`,
-        # `init`, `mine` and `theirs` all write a row and none of them can move
-        # without this. It obeys the two laws the reading side taught: a record's
-        # boundary comes from the file, and the bytes outside your own line do
-        # not change. Held by replaying the same rows through the vein, which
-        # PRINTS what the layout would become and writes nothing, against what
-        # the other carrier's own verb leaves on disk.
+        # ── AND THE WRITING SIDE OF A LAYOUT IS WHAT EVERY WRITING VERB STANDS
+        # ON. `declare`, `init`, `mine` and `theirs` all write a row and none of
+        # them can move without this. It was held as a parity: the verb's own
+        # file against what the vein PRINTS through `--manifest-row`, a door
+        # that exists for this battery and for nobody else. With one carrier
+        # left, that pair holds the tool against a door built to answer it, so
+        # what is held here is the ROW, in the four shapes that taught the laws:
+        # a layout is born where none was, a second row stands beside the first,
+        # the same row written twice is still one row, and a role is an atom of
+        # its own rather than a word in a comment.
         _layouts = {
             "a world with no layout at all": [("deep/side.swift", "forms")],
             "a second row beside the first": [("a.swift", "forms"), ("b.swift", "forms")],
             "the same row written twice": [("a.swift", "forms"), ("a.swift", "forms")],
             "a world row and a forms row": [("world.swift", "world"), ("page.swift", "forms")],
         }
-        _rows_apart = []
+        _rowsaid = {}
         for _label, _rows in _layouts.items():
-            _rw = os.path.join(tmp, "row-" + str(len(_rows_apart)) + str(len(_label)))
+            _rw = os.path.join(tmp, "row-" + str(len(_rowsaid)) + str(len(_label)))
             shutil.rmtree(_rw, ignore_errors=True)
             os.makedirs(os.path.join(_rw, "deep"))
             subprocess.run(["git", "init", "-q", "-b", "main", _rw], capture_output=True)
@@ -7066,22 +7159,23 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                 open(_at, "w").write("public enum X_" + _rel.replace("/", "_").replace(".", "_")
                                      + " {}\n")
             for _rel, _role in _rows:
-                subprocess.run([sys.executable, GATE, "mine", _rel, "--role", _role], cwd=_rw,
-                               capture_output=True, env={**os.environ, "GATE_CLI": "off"})
-            _pyman = open(os.path.join(_rw, "gate.manifest.swift"), encoding="utf-8").read()
-            os.remove(os.path.join(_rw, "gate.manifest.swift"))
-            _swman = ""
-            for _rel, _role in _rows:
-                _swman = subprocess.run([_cli_bin, "--manifest-row", os.path.join(_rw, _rel),
-                                         "Mine", _role, _rw],
-                                        capture_output=True, text=True, timeout=180).stdout
-                open(os.path.join(_rw, "gate.manifest.swift"), "w").write(_swman)
-            if _pyman != _swman:
-                _rows_apart.append(_label)
-        if _rows_apart:
-            print("   the two carriers write a layout apart:", _rows_apart[:3])
-        S.append(("the writing side of a layout is one on both carriers, born and grown",
-                  _rows_apart == [] and len(_layouts) == 4))
+                subprocess.run([GATE, "mine", _rel, "--role", _role], cwd=_rw,
+                               capture_output=True, env={**os.environ, "GATE_CLI": _cli_bin})
+            _rowsaid[_label] = open(os.path.join(_rw, "gate.manifest.swift"),
+                                    encoding="utf-8").read()
+        S.append(("a layout is born, grows by a row, and the same row twice is one row",
+                  len(_layouts) == 4
+                  # born where none was, the file named and its court an atom
+                  and '"deep/side.swift"' in _rowsaid["a world with no layout at all"]
+                  and "FormsFile" in _rowsaid["a world with no layout at all"]
+                  # a second row stands beside the first, neither eating the other
+                  and '"a.swift"' in _rowsaid["a second row beside the first"]
+                  and '"b.swift"' in _rowsaid["a second row beside the first"]
+                  # and the same row asked for twice is written once
+                  and _rowsaid["the same row written twice"].count('"a.swift"') == 1
+                  # while two roles are two atoms, not one row wearing a comment
+                  and "WorldFile" in _rowsaid["a world row and a forms row"]
+                  and "FormsFile" in _rowsaid["a world row and a forms row"]))
 
         # ── AND THE ACCOUNT'S OWN PAIR OF VERBS MOVES WHOLE. `mine` and `theirs`
         # are one act seen from the two ends of the edge, and they walk every
@@ -7135,45 +7229,60 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
             os.makedirs(os.path.join(os.path.dirname(base), "elsewhere"), exist_ok=True)
             open(os.path.join(os.path.dirname(base), "elsewhere", "f.swift"),
                  "w").write("public enum F {}\n")
-        _p1apart, _p1left = [], {}
+        _p1left, _p1said = {}, {}
         for _pname, _pargvs in _p1s.items():
-            _got = []
-            for _tag, _env in (("py", "off"), ("sw", _cli_bin)):
-                _proot = os.path.join(tmp, "pair-" + _pname, _tag)
-                shutil.rmtree(_proot, ignore_errors=True)
-                _p1build(_proot)
-                _said = []
-                for _argv in _pargvs:
-                    _r = subprocess.run([sys.executable, GATE, *_argv], cwd=_proot,
-                                        capture_output=True, timeout=180,
-                                        env={**os.environ, "GATE_CLI": _env})
-                    _said.append((_r.returncode, _r.stdout, _r.stderr))
-                _files = {}
-                for _dp, _, _fs in os.walk(_proot):
-                    if ".git" in _dp:
-                        continue
-                    for _f in sorted(_fs):
-                        if _f.endswith(".swift"):
-                            _at = os.path.join(_dp, _f)
-                            _files[os.path.relpath(_at, _proot)] = open(_at, "rb").read()
-                _got.append((_said, _files))
-                _p1left[_pname + "-" + _tag] = _files
-            if _got[0] != _got[1]:
-                _p1apart.append(_pname)
-        if _p1apart:
-            print("   the pair of account verbs answers apart on:", _p1apart)
-        S.append(("mine and theirs move whole: four lives replayed alike, bytes and all",
-                  _p1apart == [] and len(_p1s) == 4))
+            _proot = os.path.join(tmp, "pair-" + _pname)
+            shutil.rmtree(_proot, ignore_errors=True)
+            _p1build(_proot)
+            for _argv in _pargvs:
+                _r = subprocess.run([GATE, *_argv], cwd=_proot,
+                                    capture_output=True, timeout=180,
+                                    env={**os.environ, "GATE_CLI": _cli_bin})
+                _p1said[" ".join(_argv)] = (_r.returncode, _r.stdout + _r.stderr)
+            _files = {}
+            for _dp, _, _fs in os.walk(_proot):
+                if ".git" in _dp:
+                    continue
+                for _f in sorted(_fs):
+                    if _f.endswith(".swift"):
+                        _at = os.path.join(_dp, _f)
+                        _files[os.path.relpath(_at, _proot)] = open(_at, "rb").read()
+            _p1left[_pname] = _files
+        # ── AND WHAT THE LIVES ANSWER, not merely that two carriers answered it
+        # alike. Every scenario above carries steps that must be turned away,
+        # and a parity would have called two identical wrong answers agreement.
+        S.append(("the account's pair turns away what it cannot write down, and says which",
+                  len(_p1s) == 4
+                  # a file that is not there is refused by name
+                  and _p1said["mine nosuch.swift"][0] == 1
+                  and b"no file at nosuch.swift" in _p1said["mine nosuch.swift"][1]
+                  # a role no court answers to is refused, never swept in
+                  and _p1said["mine page.swift --role nocourt"][0] == 1
+                  # a flag left without its word is refused rather than guessed at
+                  and _p1said["mine page.swift --role"][0] == 1
+                  and _p1said["theirs api.json --at"][0] == 1
+                  # taking without a revision is refused: this world took exactly one
+                  and _p1said["theirs api.json"][0] == 1
+                  # and a range is named a range, never written down as a
+                  # revision: a caret names a set, a wildcard names a set, and
+                  # each is said in the words that fit it
+                  and b"is a range, not a revision" in _p1said["theirs api.json --at ^1.2.0"][1]
+                  and b"is a range with a wildcard in it" in _p1said[
+                      "theirs api.json --at 1.2.x"][1]
+                  # while a name that moves is refused for moving
+                  and b"is a name that moves" in _p1said["theirs api.json --at latest"][1]
+                  # while a file outside the world is turned away at the edge
+                  and b"not inside the world here" in _p1said["mine ../elsewhere/f.swift"][1]))
         # and the lives mean what they were lived to mean: the pin is written as
         # an atom, the taking carried the grammar with its Written column, and
         # forgetting left the file on disk
-        _p1man = _p1left.get("theirs-pins-py", {}).get("gate.manifest.swift", b"")
-        _p1verbs = _p1left.get("take-shelf-py", {})
+        _p1man = _p1left.get("theirs-pins", {}).get("gate.manifest.swift", b"")
+        _p1verbs = _p1left.get("take-shelf", {})
         S.append(("and the pair's rows say what happened: the pin, the taking, the leaving",
                   b"Rev_v1" in _p1man and b"public typealias At = " in _p1man
                   and b"typeName: String { \"v1\" }" in _p1man
-                  and "page.swift" in _p1left.get("fresh-mine-py", {})
-                  and "gate.manifest.swift" in _p1left.get("fresh-mine-py", {})
+                  and "page.swift" in _p1left.get("fresh-mine", {})
+                  and "gate.manifest.swift" in _p1left.get("fresh-mine", {})
                   and "verbs.swift" in _p1verbs and "forms-tool.swift" in _p1verbs
                   and b"Origin: gate's shelf" in _p1verbs.get("verbs.swift", b"")
                   and b"public typealias Written = FormsTool"
@@ -7235,18 +7344,18 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
             (_drthin, ["drift", "spec.json"]),
             (_drthin, ["drift", "spec.json", "--json"]),
         ]:
-            _py = subprocess.run([sys.executable, GATE, *_argv], cwd=_cwd,
-                                 capture_output=True, timeout=180,
-                                 env={**os.environ, "GATE_CLI": "off"})
-            _sv = subprocess.run([_cli_bin, *_argv], cwd=_cwd, capture_output=True,
-                                 timeout=180)
-            if (_drnoms(_py.stdout), _py.stderr, _py.returncode) != \
-               (_drnoms(_sv.stdout), _sv.stderr, _sv.returncode):
+            _one = subprocess.run([GATE, *_argv], cwd=_cwd,
+                                  capture_output=True, timeout=180,
+                                  env={**os.environ, "GATE_CLI": CLI_HERE})
+            # this verb holds no court and carries no verdict: what it owes is
+            # a reading of a history, in this tool's canon, on every shape of
+            # its argv. The pair that used to stand here is one side now.
+            if _one.returncode not in (0, 1) or not _one.stdout.strip():
                 _drapart.append(" ".join(_argv))
-            _drsaid[" ".join(_argv)] = (_py.returncode, _py.stdout)
+            _drsaid[" ".join(_argv)] = (_one.returncode, _one.stdout)
         if _drapart:
-            print("   observation answers apart on:", _drapart[:3])
-        S.append(("observation moves whole: both carriers date the same history alike",
+            print("   observation answers badly on:", _drapart[:3])
+        S.append(("observation moves whole: every shape of it dates the same history",
                   _drapart == []))
         _drplain = _drsaid.get("drift spec.json --client client", (9, b""))
         _drfail = _drsaid.get("drift spec.json --client client --fail-over 10", (9, b""))
@@ -7278,45 +7387,45 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         }
         _e9apart, _e9tree = [], {}
         for _ename, _eargvs in _e9s.items():
-            _got = []
-            for _tag, _env in (("py", "off"), ("sw", _cli_bin)):
-                _eroot = os.path.join(tmp, "entry-" + _ename, _tag)
-                shutil.rmtree(_eroot, ignore_errors=True)
-                os.makedirs(_eroot, exist_ok=True)
-                if _ename != "bare-folder":
-                    subprocess.run(["git", "init", "-q", "-b", "main", _eroot],
-                                   capture_output=True)
-                    subprocess.run(["git", "-C", _eroot, "config", "user.name", "A Person"],
-                                   capture_output=True)
-                _said = []
-                for _argv in _eargvs:
-                    _r = subprocess.run([sys.executable, GATE, *_argv], cwd=_eroot,
-                                        capture_output=True, timeout=180,
-                                        env={**os.environ, "GATE_CLI": _env})
-                    _said.append((_r.returncode, _r.stdout, _r.stderr))
-                _files = {}
-                for _dp, _, _fs in os.walk(_eroot):
-                    if os.sep + ".git" + os.sep in _dp + os.sep and ".gate" not in _dp:
+            _eroot = os.path.join(tmp, "entry-" + _ename)
+            shutil.rmtree(_eroot, ignore_errors=True)
+            os.makedirs(_eroot, exist_ok=True)
+            if _ename != "bare-folder":
+                subprocess.run(["git", "init", "-q", "-b", "main", _eroot],
+                               capture_output=True)
+                subprocess.run(["git", "-C", _eroot, "config", "user.name", "A Person"],
+                               capture_output=True)
+            for _argv in _eargvs:
+                _r = subprocess.run([GATE, *_argv], cwd=_eroot,
+                                    capture_output=True, timeout=180,
+                                    env={**os.environ, "GATE_CLI": _cli_bin})
+                if _r.returncode not in (0, 1):
+                    _e9apart.append(_ename + ": " + " ".join(_argv))
+            _files = {}
+            for _dp, _, _fs in os.walk(_eroot):
+                if os.sep + ".git" + os.sep in _dp + os.sep and ".gate" not in _dp:
+                    continue
+                for _f in sorted(_fs):
+                    _at = os.path.join(_dp, _f)
+                    _rel = os.path.relpath(_at, _eroot)
+                    if _rel.startswith(".git" + os.sep):
                         continue
-                    for _f in sorted(_fs):
-                        _at = os.path.join(_dp, _f)
-                        _rel = os.path.relpath(_at, _eroot)
-                        if _rel.startswith(".git" + os.sep):
-                            continue
-                        _files[_rel] = open(_at, "rb").read()
-                _wired = subprocess.run(["git", "-C", _eroot, "config", "--local",
-                                         "core.hooksPath"], capture_output=True,
-                                        text=True).stdout
-                _got.append((_said, _files, _wired))
-                _e9tree[_ename + "-" + _tag] = _files
-            if _got[0] != _got[1]:
-                _e9apart.append(_ename)
+                    _files[_rel] = open(_at, "rb").read()
+            _wired = subprocess.run(["git", "-C", _eroot, "config", "--local",
+                                     "core.hooksPath"], capture_output=True,
+                                    text=True).stdout
+            # entry run twice is entry run once: three of these lives repeat the
+            # verb on purpose, and a second run that wires a second hook or
+            # writes a second letter is the fault the repetition is here for
+            if _ename == "git-entry" and _wired.strip() != ".githooks":
+                _e9apart.append(_ename + ": the hook is not wired to .githooks")
+            _e9tree[_ename] = _files
         if _e9apart:
-            print("   entry answers apart on:", _e9apart)
-        S.append(("entry moves whole: four lives replayed alike, tree and hook and all",
+            print("   entry parts on:", _e9apart)
+        S.append(("entry moves whole: four lives, tree and hook and all",
                   _e9apart == [] and len(_e9s) == 4))
-        _e9entry = _e9tree.get("git-entry-py", {})
-        _e9vend = _e9tree.get("vendored-py", {})
+        _e9entry = _e9tree.get("git-entry", {})
+        _e9vend = _e9tree.get("vendored", {})
         S.append(("and entry leaves what entry promises: the letter, the hook, the carried judge",
                   ".githooks/pre-commit" in _e9entry
                   and b"exec ./gatew status" in _e9entry.get(".githooks/pre-commit", b"")
@@ -7381,9 +7490,9 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
             _sp = os.path.join(_cf, "spec.json")
             open(_sp, "w").write(json.dumps(_spec))
             _world = json.loads(subprocess.run(
-                [sys.executable, GATE, "declare", "contract", "spec.json", "--json"],
+                [GATE, "declare", "contract", "spec.json", "--json"],
                 cwd=_cf, capture_output=True, text=True, timeout=180,
-                env={**os.environ, "GATE_CLI": "off"}).stdout or "{}").get("world") or ""
+                env={**os.environ, "GATE_CLI": CLI_HERE}).stdout or "{}").get("world") or ""
             _pyf = [(m.group(1), m.group(2), m.group(3)) for m in re.finditer(
                 r"^// (\S+) · (\S+)\npublic enum \S+: Declared \{\n"
                 r"    public typealias Of = (\w+)", _world, re.M)]
@@ -7398,14 +7507,14 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
             if _pyf != _swf:
                 _road.append(f"{_label}: {_pyf[:2]} | {_swf[:2]}")
         if _road:
-            print("   the two carriers read a contract apart:", _road[:2])
+            print("   the verb and the road under it read a contract apart:", _road[:2])
         # and the open field is READ and left shapeless, not dropped: `drift`
         # dates what a contract has ever said, including what it left open
         open(os.path.join(_cf, "spec.json"), "w").write(json.dumps(_specs["a shape left open"]))
         _openf = json.loads(subprocess.run(
             [_cli_bin, "--contract-fields", "spec.json"], cwd=_cf,
             capture_output=True, text=True, timeout=180).stdout or "[]")
-        S.append(("the contract reading is one on both carriers, before its verb has moved",
+        S.append(("the verb and the reading under it see one contract, field for field",
                   _road == [] and len(_specs) == 4
                   and [f["field"] for f in _openf] == ["nullable", "said", "unsaid"]
                   and [f["shape"] for f in _openf] == ["Text", "Text", None]))
@@ -7469,9 +7578,9 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         open(os.path.join(_s9w["presented"], "mine-metrics2.swift"), "w").write(
             "public typealias W2 = Twice<Unit>\npublic typealias W4 = NotTwice<W2>\n")
         for _rel in ("mine-metrics.swift", "mine-metrics2.swift"):
-            subprocess.run([sys.executable, GATE, "mine", _rel, "--role", "forms"],
+            subprocess.run([GATE, "mine", _rel, "--role", "forms"],
                            cwd=_s9w["presented"], capture_output=True,
-                           env={**os.environ, "GATE_CLI": "off"})
+                           env={**os.environ, "GATE_CLI": CLI_HERE})
         shutil.copytree(_s9w["org"], _s9mk("stale"), dirs_exist_ok=True)
         _m9 = os.path.join(_s9w["stale"], "gate.manifest.swift")
         _t9 = open(_m9, encoding="utf-8").read()
@@ -7504,8 +7613,8 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
             "extension Owns: Owned where Who.Key: Administers {}\n")
         for _rel, _role in (("a.swift", "world"), ("b.swift", "world"),
                             ("ghostless.swift", "world"), ("oneline.swift", "forms")):
-            subprocess.run([sys.executable, GATE, "mine", _rel, "--role", _role],
-                           cwd=_d, capture_output=True, env={**os.environ, "GATE_CLI": "off"})
+            subprocess.run([GATE, "mine", _rel, "--role", _role],
+                           cwd=_d, capture_output=True, env={**os.environ, "GATE_CLI": CLI_HERE})
         os.remove(os.path.join(_d, "ghostless.swift"))
         with open(os.path.join(_d, "gate.manifest.swift"), "a") as _f:
             _f.write(
@@ -7528,9 +7637,9 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                       "presented", "stale", "printout", "vendored", "thick"):
             _wd = _s9w[_name]
             for _shape in ([], ["--json"]):
-                _py = subprocess.run([sys.executable, GATE, "status", *_shape], cwd=_wd,
+                _py = subprocess.run([GATE, "status", *_shape], cwd=_wd,
                                      capture_output=True, timeout=180,
-                                     env={**os.environ, "GATE_CLI": "off"})
+                                     env={**os.environ, "GATE_CLI": CLI_HERE})
                 _sv = subprocess.run([_cli_bin, "--status-core", *_shape], cwd=_wd,
                                      capture_output=True, timeout=180)
                 if (_s9noms(_py.stdout), _s9noms(_py.stderr), _py.returncode) != \
@@ -7540,9 +7649,9 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                     _s9said[_name] = (_py.returncode, _py.stdout)
         # and the tool's own repository, the world the cover's badge is about
         for _shape in ([], ["--json"]):
-            _py = subprocess.run([sys.executable, GATE, "status", *_shape], cwd=HERE,
+            _py = subprocess.run([GATE, "status", *_shape], cwd=HERE,
                                  capture_output=True, timeout=180,
-                                 env={**os.environ, "GATE_CLI": "off"})
+                                 env={**os.environ, "GATE_CLI": CLI_HERE})
             _sv = subprocess.run([_cli_bin, "--status-core", *_shape], cwd=HERE,
                                  capture_output=True, timeout=180)
             if (_s9noms(_py.stdout), _s9noms(_py.stderr), _py.returncode) != \
@@ -7553,7 +7662,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                 _s9said["here"] = (_py.returncode, _py.stdout)
         if _s9apart:
             print("   the status core answers apart on:", _s9apart[:4])
-        S.append(("the status core answers with the python side's bytes on fourteen worlds",
+        S.append(("the status core answers alike through the verb and through its own door",
                   _s9apart == []))
 
         # ── AND THE PRICE OF A VERB IS COUNTED, NOT TIMED. Words and bytes are
@@ -7639,21 +7748,15 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                 # and a world that declares a seam, because the morning question
                 # is walked empty in every room above
                 ("seam", _sv_seamroom, ("/attention", "/files"))):
-            _sv_ports = []
-            for _ in range(2):
-                _sp = _sock.socket(); _sp.bind(("127.0.0.1", 0))
-                _sv_ports.append(_sp.getsockname()[1]); _sp.close()
-            _sv_py = subprocess.Popen(
-                [sys.executable, GATE, "serve", str(_sv_ports[0]), "--no-open"], cwd=_room,
+            _sp = _sock.socket(); _sp.bind(("127.0.0.1", 0))
+            _sv_port = _sp.getsockname()[1]; _sp.close()
+            _sv_proc = subprocess.Popen(
+                [GATE, "serve", str(_sv_port), "--no-open"], cwd=_room,
                 stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
-                env={**os.environ, "GATE_CLI": "off"})
-            _sv_sw = subprocess.Popen(
-                [_cli_bin, "serve", str(_sv_ports[1]), "--no-open"], cwd=_room,
-                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+                env={**os.environ, "GATE_CLI": CLI_HERE})
             try:
                 import urllib.request as _uq
-                for _p in _sv_ports:
-                    wait_serve(_p, "/version")
+                wait_serve(_sv_port, "/version")
 
                 def _over(port, route):
                     try:
@@ -7663,7 +7766,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                         return (getattr(_e, "code", "dropped"), None, "")
 
                 for _route in _sv_routes:
-                    _a, _b = _over(_sv_ports[0], _route), _over(_sv_ports[1], _route)
+                    _a = _over(_sv_port, _route)
                     if _tag == "here":
                         _sv_seen[_route] = _a
                     if _tag == "presented" and _route == "/files":
@@ -7674,34 +7777,36 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                         _sv_seen["org /diff"] = _a
                     if _tag == "org" and _route == "/show?hash=" + _sv_sha:
                         _sv_seen["org /show"] = _a
-                    if (_a[0], _a[1], _s9noms(_a[2].encode())) != \
-                       (_b[0], _b[1], _s9noms(_b[2].encode())):
-                        _sv_apart.append(_tag + " " + _route)
+                    # a route this door promises answers over the wire with a
+                    # status somebody can read, 404 included: several of the
+                    # shapes below name something that is not there on purpose.
+                    # What may never happen is a dropped connection, and the
+                    # pair that stood here ran two servers of the same binary
+                    # and compared them, which two drops would have passed.
+                    if _a[0] == "dropped":
+                        _sv_apart.append(_tag + " " + _route + ": the connection dropped")
             finally:
-                for _proc in (_sv_py, _sv_sw):
-                    _proc.terminate()
-                for _proc in (_sv_py, _sv_sw):
-                    try:
-                        _proc.wait(timeout=5)
-                    except Exception:
-                        _proc.kill()
-            # the line each server prints as it comes up, port aside: it names
+                _sv_proc.terminate()
+                try:
+                    _sv_proc.wait(timeout=5)
+                except Exception:
+                    _sv_proc.kill()
+            # the line the server prints as it comes up, port aside: it names
             # the routes that mutate nothing, and a reader takes it at that word
             if _tag == "here":
                 _sv_said = [re.sub(r":\d+", ":PORT",
-                                   (_p.stdout.read() or "").strip().split("\n")[0])
-                            for _p in (_sv_py, _sv_sw)]
+                                   (_sv_proc.stdout.read() or "").strip().split("\n")[0])]
         if _sv_apart:
-            print("   the bench answers apart on:", _sv_apart)
-        S.append(("the bench answers over a socket with the python side's own bytes",
-                  _sv_apart == [] and _sv_said[0] == _sv_said[1]
+            print("   the bench answers badly on:", _sv_apart)
+        S.append(("the bench answers every route it promises, over a socket",
+                  _sv_apart == []
                   and '"mutating_routes": "none, by design"' in _sv_said[0]
-                  # and the control, known before the walk from another source:
-                  # the version is the one literal in the python file, and the
-                  # verdict is this repository's own, so two empty answers
-                  # could not have passed for agreement
+                  # and the controls, known before the walk from another source:
+                  # the version is the one literal in the vein, and the verdict
+                  # is this repository's own, so a door answering nothing at all
+                  # cannot pass this line
                   and json.loads(_sv_seen["/version"][2])["gate"] == re.search(
-                      r'^VERSION = "([^"]+)"', open(GATE, encoding="utf-8").read(),
+                      r'^let VERSION = "([^"]+)"', open(VEIN, encoding="utf-8").read(),
                       re.M).group(1)
                   and '"court": "the judge"' in _sv_seen["/status"][2]
                   # and the stylesheet carries the worlds it is emitted from:
@@ -7733,16 +7838,15 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         # share a room, because the second carrier through would be answering
         # about the first one's edits.
         _wr_said, _wr_left = {}, {}
-        for _who in ("py", "sw"):
+        for _who in ("sw",):
             _wr_room = os.path.join(tmp, "bench-writes-" + _who)
             run("demo", _wr_room)
             open(os.path.join(_wr_room, "extra.swift"), "w").write("public enum Extra: Close {}\n")
             _wr_me = os.path.join(tmp, "bench-me-" + _who)
-            _wr_env = {**os.environ, "GATE_ME": _wr_me, "GATE_CLI": "off"}
+            _wr_env = {**os.environ, "GATE_ME": _wr_me, "GATE_CLI": _cli_bin}
             _wr_port = _sock.socket(); _wr_port.bind(("127.0.0.1", 0))
             _wp = _wr_port.getsockname()[1]; _wr_port.close()
-            _wr_cmd = ([sys.executable, GATE, "serve", str(_wp), "--no-open"] if _who == "py"
-                       else [_cli_bin, "serve", str(_wp), "--no-open"])
+            _wr_cmd = [_cli_bin, "serve", str(_wp), "--no-open"]
             _wr_sv = subprocess.Popen(_wr_cmd, cwd=_wr_room, stdout=subprocess.DEVNULL,
                                       stderr=subprocess.DEVNULL, env=_wr_env)
             try:
@@ -7794,15 +7898,14 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                 open(os.path.join(_wr_me, "worlds", os.listdir(
                     os.path.join(_wr_me, "worlds"))[0], "my.swift"), "rb").read()
                 if os.path.isdir(os.path.join(_wr_me, "worlds")) else None)
-        _wr_apart = [i for i, (_a, _b) in enumerate(zip(_wr_said["py"], _wr_said["sw"]))
-                     if (_a[0], _s9noms(_a[1].encode())) != (_b[0], _s9noms(_b[1].encode()))]
-        _wr_files = sorted(set(_wr_left["py"]) | set(_wr_left["sw"]))
-        _wr_left_apart = [f for f in _wr_files
-                          if _wr_left["py"].get(f) != _wr_left["sw"].get(f)]
-        if _wr_apart or _wr_left_apart:
-            print("   the writing routes part on:", _wr_apart, _wr_left_apart[:4])
-        S.append(("the bench writes what the python side writes, and leaves the same bytes",
-                  _wr_apart == [] and _wr_left_apart == []
+        # every route that writes answered a status a caller can read: the walk
+        # holds what each one LEFT below, and a route that dropped the
+        # connection leaves nothing to hold
+        _wr_apart = [i for i, _a in enumerate(_wr_said["sw"]) if _a[0] == "dropped"]
+        if _wr_apart:
+            print("   the writing routes dropped on:", _wr_apart)
+        S.append(("the bench's writing routes answer, and leave what they wrote",
+                  _wr_apart == []
                   # and the controls: the verdict measured a world, the value
                   # was spelled on the ladder, and the row reached the layout
                   # the verdict that measured a world is the one over the
@@ -7850,37 +7953,29 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                 ("no-rank-column", "id,home,given,family,born,site\n"
                                    "E1,Finance,Ada,Lovelace,Y1815,OnSite\n",
                  "who,doc\nE1,FinanceShare\n")):
-            _said, _wrote = [], []
-            for _who in ("py", "sw"):
-                _bd = os.path.join(tmp, "bootstrap-" + _tag + "-" + _who)
-                os.makedirs(os.path.join(_bd, "tables"), exist_ok=True)
-                subprocess.run(["git", "init", "-q", "-b", "main", _bd], capture_output=True)
-                open(os.path.join(_bd, "tables", "people.csv"), "w").write(_people)
-                open(os.path.join(_bd, "tables", "grants.csv"), "w").write(_grants)
-                _r = (subprocess.run([sys.executable, GATE, "status"], cwd=_bd,
-                                     capture_output=True, timeout=180,
-                                     env={**os.environ, "GATE_CLI": "off"})
-                      if _who == "py" else
-                      subprocess.run([_cli_bin, "--status-core"], cwd=_bd,
-                                     capture_output=True, timeout=180))
-                _said.append((_s9noms(_r.stdout), _s9noms(_r.stderr), _r.returncode))
-                _bw = os.path.join(_bd, "gate.swift")
-                _wrote.append(open(_bw, "rb").read() if os.path.exists(_bw) else None)
-            if _said[0] != _said[1]:
-                _bsw.append(_tag + ": the answer")
-            if _wrote[0] != _wrote[1]:
-                _bsw.append(_tag + ": the world it wrote")
-            # and the pins beside the parity: a seeder that seeded nothing agrees
-            # with a seeder that seeded nothing, and this walk would say so
+            _bd = os.path.join(tmp, "bootstrap-" + _tag)
+            os.makedirs(os.path.join(_bd, "tables"), exist_ok=True)
+            subprocess.run(["git", "init", "-q", "-b", "main", _bd], capture_output=True)
+            open(os.path.join(_bd, "tables", "people.csv"), "w").write(_people)
+            open(os.path.join(_bd, "tables", "grants.csv"), "w").write(_grants)
+            _r = subprocess.run([GATE, "status"], cwd=_bd,
+                                capture_output=True, timeout=180,
+                                env={**os.environ, "GATE_CLI": _cli_bin})
+            _said = (_s9noms(_r.stdout), _s9noms(_r.stderr), _r.returncode)
+            _bw = os.path.join(_bd, "gate.swift")
+            _wrote = open(_bw, "rb").read() if os.path.exists(_bw) else None
+            # a seeder is a writer, and a writer is judged on what it left: the
+            # shapes a reader gets wrong are walked for the world they produce,
+            # not for two carriers agreeing about them
             if _tag == "no-rank-column":
-                if _wrote[0] is not None or _said[0][2] != 1 \
-                        or b"has no column named" not in _said[0][1]:
+                if _wrote is not None or _said[2] != 1 \
+                        or b"has no column named" not in _said[1]:
                     _bsw.append(_tag + ": a missing column is not said, or a world was written")
-            elif _wrote[0] is None or b"public enum ImportedTeam" not in _wrote[0]:
+            elif _wrote is None or b"public enum ImportedTeam" not in _wrote:
                 _bsw.append(_tag + ": nothing was seeded at all")
         if _bsw:
             print("   the tables bootstrap parts:", _bsw[:4])
-        S.append(("the tables bootstrap seeds one world on both carriers, byte for byte",
+        S.append(("the tables bootstrap seeds a world out of the rows it can read",
                   _bsw == []))
 
         # ── AND THE SOUVENIR, WHOSE NUMBERS COME FROM TWO PLACES AT ONCE: the
@@ -7901,8 +7996,8 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
             subprocess.run(["git", "init", "-q", "-b", "main", _d], capture_output=True)
             shutil.copy(os.path.join(DEMO, "people.csv"), os.path.join(_d, "tables"))
             shutil.copy(os.path.join(DEMO, "grants.csv"), os.path.join(_d, "tables"))
-            subprocess.run([sys.executable, GATE, "status"], cwd=_d, capture_output=True,
-                           env={**os.environ, "GATE_CLI": "off"})
+            subprocess.run([GATE, "status"], cwd=_d, capture_output=True,
+                           env={**os.environ, "GATE_CLI": CLI_HERE})
             _bw = os.path.join(_d, "gate.swift")
             _good = open(_bw, encoding="utf-8").read()
             at(_d, "2026-01-10", "the world begins")
@@ -7928,37 +8023,37 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                                    ("a red world", _bg_red, ["badge", "--json"]),
                                    ("only tables", _bg_tables, ["badge"]),
                                    ("nothing at all", lambda _d: None, ["badge", "--json"])):
-            _said, _left = [], []
-            for _who in ("py", "sw"):
-                _bd = os.path.join(tmp, "badge-" + _tag.replace(" ", "-").replace("-", "") + _who)
-                shutil.rmtree(_bd, ignore_errors=True)
-                os.makedirs(_bd, exist_ok=True)
-                _make(_bd)
-                _r = subprocess.run([sys.executable, GATE, *_argv], cwd=_bd,
-                                    capture_output=True, timeout=300,
-                                    env={**os.environ, "GATE_CLI": ("off" if _who == "py"
-                                                                    else _cli_bin)})
-                _said.append((_bgnoms(_r.stdout), _bgnoms(_r.stderr), _r.returncode))
-                _svg = os.path.join(_bd, "gate.svg")
-                _wf = os.path.join(_bd, "gate.swift")
-                _left.append((open(_svg, "rb").read() if os.path.exists(_svg) else None,
-                              open(_wf, "rb").read() if os.path.exists(_wf) else None))
-            if _said[0] != _said[1]:
-                _bgw.append(_tag + ": the answer")
-            if _left[0] != _left[1]:
-                _bgw.append(_tag + ": what it left on disk")
+            _bd = os.path.join(tmp, "badge-" + _tag.replace(" ", "-").replace("-", ""))
+            shutil.rmtree(_bd, ignore_errors=True)
+            os.makedirs(_bd, exist_ok=True)
+            _make(_bd)
+            _r = subprocess.run([GATE, *_argv], cwd=_bd,
+                                capture_output=True, timeout=300,
+                                env={**os.environ, "GATE_CLI": _cli_bin})
+            _said = (_bgnoms(_r.stdout), _bgnoms(_r.stderr), _r.returncode)
+            _svg = os.path.join(_bd, "gate.svg")
+            _wf = os.path.join(_bd, "gate.swift")
+            _left = (open(_svg, "rb").read() if os.path.exists(_svg) else None,
+                     open(_wf, "rb").read() if os.path.exists(_wf) else None)
+            # every shape answers in this tool's canon: a verdict or a refusal,
+            # never a stack trace and never a code a caller cannot read. The
+            # parity that used to hold these eight shapes said only that two
+            # carriers agreed, so a shape that crashed alike passed it.
+            if _said[2] not in (0, 1):
+                _bgw.append(_tag + ": answered with a code nobody expects")
             # and the shapes mean what they were built to mean
-            if _tag == "history" and b"claims" not in _said[0][0]:
+            if _tag == "history" and b"claims" not in _said[0]:
                 _bgw.append(_tag + ": no claim count at all")
-            if _tag == "written out" and _left[0][0] is None:
+            if _tag == "written out" and _left[0] is None:
                 _bgw.append(_tag + ": no badge was written")
-            if _tag == "only tables" and b"no world here" in _said[0][0]:
+            if _tag == "only tables" and b"no world here" in _said[0]:
                 _bgw.append(_tag + ": a world that can be seeded was called absent")
-            if _tag == "nothing at all" and b"no world here" not in _said[0][0]:
+            if _tag == "nothing at all" and b"no world here" not in _said[0]:
                 _bgw.append(_tag + ": an empty folder was given a badge")
         if _bgw:
             print("   the badge parts:", _bgw[:4])
-        S.append(("the badge counts and replays alike on both carriers, by lives", _bgw == []))
+        S.append(("the badge counts a history, writes where it is told, and knows an empty world",
+                  _bgw == []))
 
         # ── AND THE FIRST LOOK AT A STRANGER'S REPOSITORY, which is the one verb
         # here that reads history and translates nothing. Its numbers are exact
@@ -7988,29 +8083,26 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                 ("a count that is not one", lambda _d: None, ["survey", "main"], None),
                 ("this repository", None, ["survey"], HERE),
                 ("this repository, as an answer", None, ["survey", "--json"], HERE)):
-            _said = []
-            for _who in ("py", "sw"):
-                if _where is None:
-                    _sd = os.path.join(tmp, "survey-" + str(abs(hash(_tag)) % 9973) + _who)
-                    shutil.rmtree(_sd, ignore_errors=True)
-                    os.makedirs(_sd, exist_ok=True)
-                    _make(_sd)
-                else:
-                    _sd = _where
-                _r = subprocess.run([sys.executable, GATE, *_argv], cwd=_sd,
-                                    capture_output=True, timeout=300,
-                                    env={**os.environ, "GATE_CLI": ("off" if _who == "py"
-                                                                    else _cli_bin)})
-                _said.append((_s9noms(_r.stdout), _s9noms(_r.stderr), _r.returncode))
-            if _said[0] != _said[1]:
-                _svw.append(_tag)
+            if _where is None:
+                _sd = os.path.join(tmp, "survey-" + str(abs(hash(_tag)) % 9973))
+                shutil.rmtree(_sd, ignore_errors=True)
+                os.makedirs(_sd, exist_ok=True)
+                _make(_sd)
+            else:
+                _sd = _where
+            _r = subprocess.run([GATE, *_argv], cwd=_sd,
+                                capture_output=True, timeout=300,
+                                env={**os.environ, "GATE_CLI": _cli_bin})
+            _said = (_s9noms(_r.stdout), _s9noms(_r.stderr), _r.returncode)
+            if _said[2] not in (0, 1):
+                _svw.append(_tag + ": answered with a code nobody expects")
             # and the shapes mean what they were built to mean
-            if _tag == "a pair that always moves" and b"a.txt <-> b.txt" not in _said[0][0]:
+            if _tag == "a pair that always moves" and b"a.txt <-> b.txt" not in _said[0]:
                 _svw.append(_tag + ": the co-change table is empty")
-            if _tag == "the same, as an answer" and b'"PROJ-1": 1' not in _said[0][0]:
+            if _tag == "the same, as an answer" and b'"PROJ-1": 1' not in _said[0]:
                 _svw.append(_tag + ": no ticket key was read out of the messages")
             if _tag == "a count that is not one" and (
-                    _said[0][2] != 1 or b"is not a number of commits" not in _said[0][1]):
+                    _said[2] != 1 or b"is not a number of commits" not in _said[1]):
                 _svw.append(_tag + ": a count that is not one is not said")
             # the pin about an old repository is a pin about ITS history, and
             # CI checks out one commit: a shallow universe cannot carry the
@@ -8019,19 +8111,19 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
             _sv_deep = subprocess.run(["git", "-C", HERE, "rev-list", "--count", "HEAD"],
                                       capture_output=True, text=True).stdout.strip()
             if _tag == "this repository" and _sv_deep.isdigit() and int(_sv_deep) > 20 \
-                    and b"<->" not in _said[0][0]:
+                    and b"<->" not in _said[0]:
                 _svw.append(_tag + ": no link at all in a repository this old")
         if _svw:
             print("   the survey parts:", _svw[:4])
-        S.append(("the first look at a repository counts alike on both carriers, by lives",
+        S.append(("the first look at a repository counts its history, and says what is not a count",
                   _svw == []))
         # and the fabric it prints is the verdict of the verb that owns it, not a
         # second reading: asked of both, on the world this repository is
         _sv_fab = json.loads(subprocess.run(
-            [sys.executable, GATE, "survey", "5", "--json"], cwd=HERE, capture_output=True,
+            [GATE, "survey", "5", "--json"], cwd=HERE, capture_output=True,
             text=True, env={**os.environ, "GATE_CLI": _cli_bin}).stdout)["fabric"]
         _sv_st = json.loads(subprocess.run(
-            [sys.executable, GATE, "status", "--json"], cwd=HERE, capture_output=True,
+            [GATE, "status", "--json"], cwd=HERE, capture_output=True,
             text=True, env={**os.environ, "GATE_CLI": _cli_bin}).stdout)
         S.append(("the survey's fabric is the court's own verdict, never a second reading",
                   _sv_fab.get("verdict") == _sv_st.get("verdict")
@@ -8097,21 +8189,18 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                 ("a pair that never agreed", _fd_never, ["findings", "--history"]),
                 ("a window over it", _fd_never, ["findings", "--history", "2"]),
                 ("no repository at all", lambda _d: None, ["findings", "--history"])):
-            _said = []
-            for _who in ("py", "sw"):
-                _fd = os.path.join(tmp, "findings-" + str(abs(hash(_tag)) % 9973) + _who)
-                shutil.rmtree(_fd, ignore_errors=True)
-                os.makedirs(_fd, exist_ok=True)
-                _make(_fd)
-                _r = subprocess.run([sys.executable, GATE, *_argv], cwd=_fd,
-                                    capture_output=True, timeout=300,
-                                    env={**os.environ, "GATE_CLI": ("off" if _who == "py"
-                                                                    else _cli_bin)})
-                _said.append((_s9noms(_r.stdout), _s9noms(_r.stderr), _r.returncode))
-            if _said[0] != _said[1]:
-                _fdw.append(_tag)
+            _fd = os.path.join(tmp, "findings-" + str(abs(hash(_tag)) % 9973))
+            shutil.rmtree(_fd, ignore_errors=True)
+            os.makedirs(_fd, exist_ok=True)
+            _make(_fd)
+            _r = subprocess.run([GATE, *_argv], cwd=_fd,
+                                capture_output=True, timeout=300,
+                                env={**os.environ, "GATE_CLI": _cli_bin})
+            _said = (_s9noms(_r.stdout), _s9noms(_r.stderr), _r.returncode)
+            if _said[2] not in (0, 1):
+                _fdw.append(_tag + ": answered with a code nobody expects")
             # and the shapes mean what they were built to mean
-            _out = _said[0][0]
+            _out = _said[0]
             if _tag == "a pair that parts" and (
                     b"parted at" not in _out or b"2026-02-10" not in _out
                     or b"moved to .github/CODEOWNERS" not in _out):
@@ -8124,11 +8213,11 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
             if _tag == "a demo world" and b"[checked]" not in _out:
                 _fdw.append(_tag + ": the court's own refusal is not among the findings")
             if _tag == "no repository at all" and (
-                    _said[0][2] != 1 or b"is not one" not in _said[0][1]):
+                    _said[2] != 1 or b"is not one" not in _said[1]):
                 _fdw.append(_tag + ": a directory that is no repository is not told so")
         if _fdw:
             print("   the findings part:", _fdw[:4])
-        S.append(("what is true of a repository, and of one pair over its commits, alike",
+        S.append(("what is true of a repository, and of one pair over its commits, is named",
                   _fdw == []))
 
         # ── AND THE AUDIT PAGE, which is the one answer here that is a FILE
@@ -8184,37 +8273,33 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
             shutil.rmtree(_rd, ignore_errors=True)
             os.makedirs(_rd, exist_ok=True)
             _make(_rd)
-            _said, _page = [], []
-            for _who in ("py", "sw"):
-                _pg = os.path.join(_rd, "audit.html")
-                if os.path.exists(_pg):
-                    os.remove(_pg)
-                _r = subprocess.run([sys.executable, GATE, *_argv], cwd=_rd,
-                                    capture_output=True, timeout=300,
-                                    env={**os.environ, "GATE_CLI": ("off" if _who == "py"
-                                                                    else _cli_bin)})
-                _said.append((_rpnoms(_r.stdout), _rpnoms(_r.stderr), _r.returncode))
-                _page.append(_rpnoms(open(_pg, "rb").read()) if os.path.exists(_pg) else None)
-            if _said[0] != _said[1]:
-                _rpw.append(_tag + ": the answer")
-            if _page[0] != _page[1]:
-                _rpw.append(_tag + ": the page")
-            if _tag == "written out" and (_page[0] is None
-                                          or b"<h2>Verdict</h2>" not in _page[0]):
+            _pg = os.path.join(_rd, "audit.html")
+            if os.path.exists(_pg):
+                os.remove(_pg)
+            _r = subprocess.run([GATE, *_argv], cwd=_rd,
+                                capture_output=True, timeout=300,
+                                env={**os.environ, "GATE_CLI": _cli_bin})
+            _said = (_rpnoms(_r.stdout), _rpnoms(_r.stderr), _r.returncode)
+            _page = _rpnoms(open(_pg, "rb").read()) if os.path.exists(_pg) else None
+            if _said[2] not in (0, 1):
+                _rpw.append(_tag + ": answered with a code nobody expects")
+            if _tag == "written out" and (_page is None
+                                          or b"<h2>Verdict</h2>" not in _page):
                 _rpw.append(_tag + ": no page was written")
-            if _tag == "a policy with a history" and b"Last changed" not in (_page[0] or b""):
+            if _tag == "a policy with a history" and b"Last changed" not in (_page or b""):
                 _rpw.append(_tag + ": the policy's own history is missing from the page")
-            if _tag == "seeded from tables" and b"<h2>Grants</h2>" not in (_page[0] or b""):
+            if _tag == "seeded from tables" and b"<h2>Grants</h2>" not in (_page or b""):
                 _rpw.append(_tag + ": a world seeded by this very run is not on the page")
             if _tag == "nowhere to write" and (
-                    _said[0][2] != 1 or b"is a directory" not in _said[0][1]):
+                    _said[2] != 1 or b"is a directory" not in _said[1]):
                 _rpw.append(_tag + ": a place that cannot hold a file is not said")
             if _tag == "no world at all" and (
-                    _said[0][2] != 1 or b"there is no world here" not in _said[0][1]):
+                    _said[2] != 1 or b"there is no world here" not in _said[1]):
                 _rpw.append(_tag + ": a page is printed out of no world")
         if _rpw:
             print("   the report parts:", _rpw[:4])
-        S.append(("the audit page is one page on both carriers, words and bytes", _rpw == []))
+        S.append(("the audit page carries the verdict, the policy's history and a seeded world",
+                  _rpw == []))
 
         # ── AND THE WORLD WITH THE CEREMONY STRIPPED, which is the one verb here
         # that does not read the world at all: it reads the JUDGE'S OWN PARSE and
@@ -8237,25 +8322,24 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                 ("a file that is not there", _br, ["bare", "nosuch.swift"]),
                 ("a record that is not there", _br, ["bare", "ownership.swift", "Nope"]),
                 ("a page off the shelf", HERE, ["bare", "stdlib/verbs.swift"])):
-            _two = [subprocess.run([sys.executable, GATE, *_argv], cwd=_cwd,
-                                   capture_output=True, timeout=300,
-                                   env={**os.environ, "GATE_CLI": _e})
-                    for _e in ("off", _cli_bin)]
-            if [(_x.stdout, _x.stderr, _x.returncode) for _x in _two][0] != \
-               [(_x.stdout, _x.stderr, _x.returncode) for _x in _two][1]:
-                _brw.append(_tag)
-            _out = _two[0].stdout
+            _one = subprocess.run([GATE, *_argv], cwd=_cwd,
+                                  capture_output=True, timeout=300,
+                                  env={**os.environ, "GATE_CLI": _cli_bin})
+            if _one.returncode not in (0, 1):
+                _brw.append(_tag + ": answered with a code nobody expects")
+            _out = _one.stdout
             if _tag == "a whole world" and (b"Owns_1_bob = Owns<" not in _out
                                             or b"a projection" not in _out):
                 _brw.append(_tag + ": the records or the note are missing")
             if _tag == "one record" and _out.count(b"Owns_") > 3:
                 _brw.append(_tag + ": naming one record printed the others too")
             if _tag == "a record that is not there" and (
-                    _two[0].returncode != 1 or b"declares no record" not in _two[0].stderr):
+                    _one.returncode != 1 or b"declares no record" not in _one.stderr):
                 _brw.append(_tag + ": a record nobody declared is not said")
         if _brw:
             print("   the bare view parts:", _brw[:4])
-        S.append(("the stripped world is drawn alike on both carriers", _brw == []))
+        S.append(("the stripped world is drawn record by record, and an absent one is said",
+                  _brw == []))
 
         # ── AND THE ACT OF ENTRY, all four heads at once, because a vein is a
         # PREFIX and half a verb would hand this binary an argv it does not
@@ -8325,28 +8409,26 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                  "k8s.swift"),
                 ("a cluster, answered", _im_rbac,
                  ["import", "rbac", "rbac.json", "-o", "k8s.swift", "--json"], "k8s.swift")):
-            _said, _world = [], []
-            for _who in ("py", "sw"):
-                _id = os.path.join(tmp, "import-" + str(abs(hash(_tag)) % 9973) + _who)
-                shutil.rmtree(_id, ignore_errors=True)
-                os.makedirs(_id, exist_ok=True)
-                _make(_id)
-                _r = subprocess.run([sys.executable, GATE, *_argv], cwd=_id,
-                                    capture_output=True, timeout=300,
-                                    env={**os.environ, "GATE_CLI": ("off" if _who == "py"
-                                                                    else _cli_bin)})
-                _said.append((_imnoms(_r.stdout), _imnoms(_r.stderr), _r.returncode))
-                _wf = os.path.join(_id, _left) if _left else None
-                _world.append(open(_wf, "rb").read()
-                              if _wf and os.path.exists(_wf) else None)
-            if _said[0] != _said[1]:
-                _imw.append(_tag + ": the answer")
-            if _world[0] != _world[1]:
-                _imw.append(_tag + ": the world it printed")
-            _out = _said[0][0]
+            _id = os.path.join(tmp, "import-" + str(abs(hash(_tag)) % 9973))
+            shutil.rmtree(_id, ignore_errors=True)
+            os.makedirs(_id, exist_ok=True)
+            _make(_id)
+            _r = subprocess.run([GATE, *_argv], cwd=_id,
+                                capture_output=True, timeout=300,
+                                env={**os.environ, "GATE_CLI": _cli_bin})
+            _said = (_imnoms(_r.stdout), _imnoms(_r.stderr), _r.returncode)
+            _wf = os.path.join(_id, _left) if _left else None
+            _world = (open(_wf, "rb").read()
+                      if _wf and os.path.exists(_wf) else None)
+            if _said[2] not in (0, 1):
+                _imw.append(_tag + ": answered with a code nobody expects")
+            # a head that names a file to write must leave that file behind
+            if _left and _world is None:
+                _imw.append(_tag + ": the world it names was never written")
+            _out = _said[0]
             if _tag == "ownership, with a policy" and (
-                    b"must share one zone" not in _out or _world[0] is None
-                    or b"public enum Owns<" not in _world[0]):
+                    b"must share one zone" not in _out or _world is None
+                    or b"public enum Owns<" not in _world):
                 _imw.append(_tag + ": the refusal or the shipped forms are missing")
             if _tag == "ownership, read only" and b"observed" not in _out:
                 _imw.append(_tag + ": a run with no policy claims to have judged")
@@ -8355,11 +8437,11 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
             if _tag == "a cluster" and b"exists nowhere" not in _out:
                 _imw.append(_tag + ": a roleRef naming nothing is not named")
             if _tag == "no CODEOWNERS anywhere" and (
-                    _said[0][2] != 1 or b"there is none at" not in _said[0][1]):
+                    _said[2] != 1 or b"there is none at" not in _said[1]):
                 _imw.append(_tag + ": a missing pair is not said")
         if _imw:
             print("   the act of entry parts:", _imw[:4])
-        S.append(("every head of the act of entry prints one world on both carriers",
+        S.append(("every head of the act of entry prints the world it names, and judges it",
                   _imw == []))
 
         # ── AND THE PAIR THAT STANDS ON ONE ROAD: the seed catalogue. `verify`
@@ -8400,37 +8482,32 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
             shutil.rmtree(_vd, ignore_errors=True)
             os.makedirs(_vd, exist_ok=True)
             _make(_vd)
-            _said, _left_bytes = [], []
-            for _who in ("py", "sw"):
-                if _left and os.path.exists(os.path.join(_vd, _left)):
-                    os.remove(os.path.join(_vd, _left))
-                _r = subprocess.run([sys.executable, GATE, *_argv], cwd=_vd,
-                                    capture_output=True, timeout=300,
-                                    env={**os.environ, "GATE_CLI": ("off" if _who == "py"
-                                                                    else _cli_bin)})
-                _said.append((_imnoms(_r.stdout), _imnoms(_r.stderr), _r.returncode))
-                _lf = os.path.join(_vd, _left) if _left else None
-                _left_bytes.append(open(_lf, "rb").read()
-                                   if _lf and os.path.exists(_lf) else None)
-            if _said[0] != _said[1]:
-                _vlw.append(_tag + ": the answer")
-            if _left_bytes[0] != _left_bytes[1]:
-                _vlw.append(_tag + ": what it left on disk")
-            _out = _said[0][0]
+            if _left and os.path.exists(os.path.join(_vd, _left)):
+                os.remove(os.path.join(_vd, _left))
+            _r = subprocess.run([GATE, *_argv], cwd=_vd,
+                                capture_output=True, timeout=300,
+                                env={**os.environ, "GATE_CLI": _cli_bin})
+            _said = (_imnoms(_r.stdout), _imnoms(_r.stderr), _r.returncode)
+            _lf = os.path.join(_vd, _left) if _left else None
+            _left_bytes = (open(_lf, "rb").read()
+                           if _lf and os.path.exists(_lf) else None)
+            if _said[2] not in (0, 1):
+                _vlw.append(_tag + ": answered with a code nobody expects")
+            _out = _said[0]
             if _tag == "the seeds" and b"NO GATE HOLDS THIS SEED" not in _out:
                 _vlw.append(_tag + ": a catalogue that holds every seed is a catalogue "
                                    "nobody planted")
             if _tag == "against a checker" and b"base dirty" not in _out:
                 _vlw.append(_tag + ": a checker refusing the base is not said")
             if _tag == "tables with no rows" and (
-                    _said[0][2] != 1 or b"drawn from the data itself" not in _said[0][1]):
+                    _said[2] != 1 or b"drawn from the data itself" not in _said[1]):
                 _vlw.append(_tag + ": a table with no rows is indexed rather than said")
-            if _tag == "written out" and (_left_bytes[0] is None
-                                          or b'"coverage"' not in _left_bytes[0]):
+            if _tag == "written out" and (_left_bytes is None
+                                          or b'"coverage"' not in _left_bytes):
                 _vlw.append(_tag + ": the vocabulary was not written, or carries no coverage")
         if _vlw:
             print("   the seed catalogue parts:", _vlw[:4])
-        S.append(("the seed catalogue reads one way for both verbs and both carriers",
+        S.append(("the seed catalogue reads one way for the verb that plants and the one that asks",
                   _vlw == []))
 
         # ── AND WHO MAY ACT, WHICH IS A GIT OBJECT WALKED ALL THE WAY TO A
@@ -8462,26 +8539,24 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
             shutil.rmtree(_gd, ignore_errors=True)
             os.makedirs(_gd, exist_ok=True)
             _make(_gd)
-            _said = []
-            for _who in ("py", "sw"):
-                _r = subprocess.run([sys.executable, GATE, *_argv], cwd=_gd,
-                                    capture_output=True, timeout=300,
-                                    env={**os.environ, "GATE_CLI": ("off" if _who == "py"
-                                                                    else _cli_bin)})
-                _said.append((_imnoms(_r.stdout), _imnoms(_r.stderr), _r.returncode))
-            if _said[0] != _said[1]:
-                _gdw.append(_tag)
-            _out, _err = _said[0][0], _said[0][1]
+            _r = subprocess.run([GATE, *_argv], cwd=_gd,
+                                capture_output=True, timeout=300,
+                                env={**os.environ, "GATE_CLI": _cli_bin})
+            _said = (_imnoms(_r.stdout), _imnoms(_r.stderr), _r.returncode)
+            if _said[2] not in (0, 1):
+                _gdw.append(_tag + ": answered with a code nobody expects")
+            _out, _err = _said[0], _said[1]
             if _tag == "named" and b"guard merge: holds" not in _out:
                 _gdw.append(_tag + ": the author of this world may not merge it")
             if _tag == "an action no policy states" and (
-                    _said[0][2] != 1 or b"no policy states who may" not in _err):
+                    _said[2] != 1 or b"no policy states who may" not in _err):
                 _gdw.append(_tag + ": an ungoverned action is not said")
             if _tag == "a lockfile" and b"required by nothing" not in _out:
                 _gdw.append(_tag + ": a leftover pin is not named")
         if _gdw:
             print("   who may act parts:", _gdw[:4])
-        S.append(("who may act is walked to the same verdict on both carriers", _gdw == []))
+        S.append(("who may act is walked from the HEAD author all the way to a verdict",
+                  _gdw == []))
 
         # ── AND THE QUESTION AND THE CHANGE, which are one act asked twice: a
         # probe is written beside the world's own entries and judged, and the
@@ -8511,39 +8586,40 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                   "Y1815", "OnSite"], True),
                 ("a move to where they already are",
                  ["apply", "transfer", "Emp9000", "Finance"], True)):
-            _said, _world = [], []
-            for _who in ("py", "sw"):
-                # a writing shape needs its own copy, so the second carrier does
-                # not read what the first one wrote; a reading shape is happy
-                # either way and gets the same treatment for one rule
-                _cd = os.path.join(tmp, "change-" + str(abs(hash(_tag)) % 9973) + _who)
-                shutil.rmtree(_cd, ignore_errors=True)
-                os.makedirs(_cd, exist_ok=True)
-                _cq_org(_cd)
-                _r = subprocess.run([sys.executable, GATE, *_argv], cwd=_cd,
-                                    capture_output=True, timeout=300,
-                                    env={**os.environ, "GATE_CLI": ("off" if _who == "py"
-                                                                    else _cli_bin)})
-                _said.append((_imnoms(_r.stdout), _imnoms(_r.stderr), _r.returncode))
-                _wf = os.path.join(_cd, "gate.swift")
-                _world.append(open(_wf, "rb").read() if os.path.exists(_wf) else None)
-            if _said[0] != _said[1]:
-                _cqw.append(_tag + ": the answer")
-            if _keeps and _world[0] != _world[1]:
-                _cqw.append(_tag + ": the world it left")
-            _out = _said[0][0]
+            # a writing shape gets its own copy, so nothing here reads what an
+            # earlier shape wrote
+            _cd = os.path.join(tmp, "change-" + str(abs(hash(_tag)) % 9973))
+            shutil.rmtree(_cd, ignore_errors=True)
+            os.makedirs(_cd, exist_ok=True)
+            _cq_org(_cd)
+            _wf = os.path.join(_cd, "gate.swift")
+            _before = open(_wf, "rb").read() if os.path.exists(_wf) else None
+            _r = subprocess.run([GATE, *_argv], cwd=_cd,
+                                capture_output=True, timeout=300,
+                                env={**os.environ, "GATE_CLI": _cli_bin})
+            _said = (_imnoms(_r.stdout), _imnoms(_r.stderr), _r.returncode)
+            _world = open(_wf, "rb").read() if os.path.exists(_wf) else None
+            if _said[2] not in (0, 1):
+                _cqw.append(_tag + ": answered with a code nobody expects")
+            # ── AND ASKING LEAVES THE WORLD WHERE IT FOUND IT. This is the half
+            # the parity could not see: two carriers that both wrote on a dry
+            # run would have agreed with each other. A shape that keeps nothing
+            # must leave the same bytes it was given.
+            if not _keeps and _world != _before:
+                _cqw.append(_tag + ": a dry shape wrote on the world")
+            _out = _said[0]
             if _tag == "a view that holds" and b"ask view: holds" not in _out:
                 _cqw.append(_tag + ": a grant the world states does not hold")
             if _tag == "a view that does not" and b"refused" not in _out:
                 _cqw.append(_tag + ": a grant nobody stated holds anyway")
-            if _tag == "a revoke, written" and b"applied" not in _out:
+            if _tag == "a revoke, written" and (b"applied" not in _out or _world == _before):
                 _cqw.append(_tag + ": a revoke that holds was not written")
             if _tag == "a move to where they already are" and (
                     b"nothing to change" not in _out):
                 _cqw.append(_tag + ": a change of nothing calls itself applied")
         if _cqw:
             print("   the question and the change part:", _cqw[:4])
-        S.append(("asking and changing reach one answer, and leave one world, on both",
+        S.append(("asking leaves the world alone, and changing leaves what it says it left",
                   _cqw == []))
 
         # ── AND WHAT WAITS FOR A WORD, which is the other cut: not what changed
@@ -8567,14 +8643,12 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                                              "--tracker", "tickets.json"]),
                 ("read from the other end", ["attention", "api.swift", "sdk.swift",
                                              "--as", "SdkJs"])):
-            _two = [subprocess.run([sys.executable, GATE, *_argv], cwd=_at,
-                                   capture_output=True, timeout=300,
-                                   env={**os.environ, "GATE_CLI": _e})
-                    for _e in ("off", _cli_bin)]
-            if [(_x.stdout, _x.stderr, _x.returncode) for _x in _two][0] != \
-               [(_x.stdout, _x.stderr, _x.returncode) for _x in _two][1]:
-                _atw.append(_tag)
-            _out = _two[0].stdout
+            _one = subprocess.run([GATE, *_argv], cwd=_at,
+                                  capture_output=True, timeout=300,
+                                  env={**os.environ, "GATE_CLI": _cli_bin})
+            if _one.returncode not in (0, 1):
+                _atw.append(_tag + ": answered with a code nobody expects")
+            _out = _one.stdout
             if _tag == "one pair" and (b"waiting on you" not in _out
                                        or b"you are waiting" not in _out):
                 _atw.append(_tag + ": a two-sided ledger reads from one side only")
@@ -8583,7 +8657,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         # and no fourth column: every address the answer names is in exactly one
         # of the three sizes, which is what makes the vocabulary complete
         _at_said = json.loads(subprocess.run(
-            [sys.executable, GATE, "attention", "api.swift", "sdk.swift", "--json"], cwd=_at,
+            [GATE, "attention", "api.swift", "sdk.swift", "--json"], cwd=_at,
             capture_output=True, text=True, env={**os.environ, "GATE_CLI": _cli_bin}).stdout)
         _at_sizes = _at_said.get("sizes", {})
         _at_named = {x["address"] for k in ("waits_on_you", "you_wait_on", "parted",
@@ -8595,7 +8669,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
             _atw.append("a column names an address the sizes do not")
         if _atw:
             print("   what waits for a word parts:", _atw[:4])
-        S.append(("who owes whom a word is partitioned the same way on both carriers",
+        S.append(("who owes whom a word is partitioned into three, and no fourth column",
                   _atw == []))
 
         # ── AND THE THREE WORLDS A STRANGER MEETS FIRST, which is the one verb
@@ -8611,39 +8685,34 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                             ("people and grants, answered", ["demo", "org", "--json"]),
                             ("a contract and a client", ["demo", "seam"]),
                             ("a contract and a client, answered", ["demo", "seam", "--json"])):
-            _made = []
-            for _who in ("py", "sw"):
-                _dd = os.path.join(tmp, "demo-" + str(abs(hash(_tag)) % 9973) + _who)
-                shutil.rmtree(_dd, ignore_errors=True)
-                _r = subprocess.run([sys.executable, GATE, *_argv, _dd], cwd=tmp,
-                                    capture_output=True, timeout=300,
-                                    env={**os.environ, "GATE_CLI": ("off" if _who == "py"
-                                                                    else _cli_bin)})
-                _made.append((_dd, _r))
-            # the path is the one thing that differs by construction, so it is
-            # normalized out and everything else is compared whole
-            def _saidly(_p, _r):
-                return (_r.stdout.replace(os.path.basename(_p).encode(), b"W"),
-                        _r.stderr, _r.returncode)
-            if _saidly(*_made[0]) != _saidly(*_made[1]):
-                _dmw.append(_tag + ": the answer")
-            _left = []
-            for _dd, _ in _made:
-                _files = {}
-                for _dirpath, _dirs, _names in os.walk(_dd):
-                    _dirs[:] = [d for d in _dirs if d != ".git"]
-                    for _n in _names:
-                        _fp = os.path.join(_dirpath, _n)
-                        _files[os.path.relpath(_fp, _dd)] = open(_fp, "rb").read()
-                _left.append(_files)
-            if set(_left[0]) != set(_left[1]):
-                _dmw.append(_tag + ": the files it made")
-            else:
-                for _n in sorted(_left[0]):
-                    if _left[0][_n] != _left[1][_n]:
-                        _dmw.append(_tag + ": " + _n)
-                        break
-            _out = _made[0][1].stdout
+            _dd = os.path.join(tmp, "demo-" + str(abs(hash(_tag)) % 9973))
+            shutil.rmtree(_dd, ignore_errors=True)
+            _r = subprocess.run([GATE, *_argv, _dd], cwd=tmp,
+                                capture_output=True, timeout=300,
+                                env={**os.environ, "GATE_CLI": _cli_bin})
+            _left = {}
+            for _dirpath, _dirs, _names in os.walk(_dd):
+                _dirs[:] = [d for d in _dirs if d != ".git"]
+                for _n in _names:
+                    _fp = os.path.join(_dirpath, _n)
+                    _left[os.path.relpath(_fp, _dd)] = open(_fp, "rb").read()
+            if _r.returncode not in (0, 1):
+                _dmw.append(_tag + ": answered with a code nobody expects")
+            # ── AND A DEMO IS THE FILES IT MADE, not a sentence about them. The
+            # parity held one copy against another, which two empty folders
+            # would have passed; each world is asked here for the texts it
+            # exists to show, the layout included, because a stranger who
+            # follows the README meets these files and nothing else.
+            _wants = {"who owns what": ["gate.manifest.swift", "ownership.swift",
+                                        "CODEOWNERS", ".githooks/pre-commit"],
+                      "people and grants": ["gate.manifest.swift", "gate.swift",
+                                            "gate.policy.swift", "tables/people.csv"],
+                      "a contract and a client": ["gate.manifest.swift", "api.swift",
+                                                  "sdk.swift", "openapi.json"]}
+            for _want in _wants.get(_tag.split(",")[0], []):
+                if _want not in _left:
+                    _dmw.append(_tag + ": " + _want + " was never made")
+            _out = _r.stdout
             if _tag == "who owns what" and b"must share one zone" not in _out:
                 _dmw.append(_tag + ": the refusal this demo exists for is missing")
             if _tag == "people and grants" and b"Finance against Engineering" not in _out:
@@ -8652,17 +8721,15 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                 _dmw.append(_tag + ": the pair owes nobody anything")
         if _dmw:
             print("   the three demos part:", _dmw[:4])
-        S.append(("the worlds a stranger meets first are made alike, file for file",
+        S.append(("the worlds a stranger meets first are made whole, file by file",
                   _dmw == []))
 
-        # ── AND THE COURT GUARD, ON THE CARRIER THAT NOW ANSWERS THE VERB. The
-        # mutant that holds this guard is planted in the python file, and
-        # `status` no longer runs it: that plant holds the other carrier's half
-        # and can say nothing about this one. A guard nobody exercises is the
-        # registry's oldest species, so the vein is built once more from its own
-        # source with a court that never sits, and asked the same question. One
-        # extra swiftc build, paid because the worst thing this tool could do is
-        # print `holds` over a world nobody judged.
+        # ── AND THE COURT GUARD, ON THE CARRIER THAT ANSWERS THE VERB. A guard
+        # nobody exercises is the registry's oldest species, so the vein is
+        # built once more from its own source with a court that never sits, and
+        # asked the same question. One extra swiftc build, paid because the
+        # worst thing this tool could do is print `holds` over a world nobody
+        # judged.
         _mut = os.path.join(tmp, "mutant-vein")
         os.makedirs(_mut, exist_ok=True)
         _mut_src = open(os.path.join(HERE, "bin", "gate-cli.swift"), encoding="utf-8").read()
@@ -8760,15 +8827,13 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         subprocess.run(["git", "-c", "commit.gpgsign=false", "-c", "user.email=a@b", "-c",
                         "user.name=A", "commit", "-qm", "two pages", "--no-verify"],
                        cwd=_bd2, capture_output=True)
-        _lw = [json.loads(subprocess.run([sys.executable, GATE, "log", "--json"], cwd=_bd2,
-                                         capture_output=True, text=True, timeout=180,
-                                         env={**os.environ, "GATE_CLI": _e}).stdout or "{}")
-               for _e in ("off", _cli_bin)]
+        _lw = json.loads(subprocess.run([GATE, "log", "--json"], cwd=_bd2,
+                                        capture_output=True, text=True, timeout=180,
+                                        env={**os.environ, "GATE_CLI": _cli_bin}).stdout or "{}")
         S.append(("a record's boundary comes from the file, not from one pattern over it",
-                  _lw[0] == _lw[1]
                   # both rows are read, and the one behind the one-line
                   # declaration is the one that used to vanish
-                  and _lw[0].get("world_files") == ["pages/a.swift", "pages/b.swift"]))
+                  _lw.get("world_files") == ["pages/a.swift", "pages/b.swift"]))
 
         # ── AND THE ONE WRITING VERB THIS VEIN CARRIES WRITES THE SAME BYTES.
         # `aside` is the first carried verb that changes a file, so parity is not
@@ -8776,32 +8841,27 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         # declare, in the order they were declared, with a row somebody else put
         # there travelling unchanged. A file rewritten in a different order every
         # run is a diff nobody can read.
-        _aw = []
-        for _tag, _env in (("py", "off"), ("sw", _cli_bin)):
-            _ad = os.path.join(tmp, "aside-" + _tag)
-            shutil.rmtree(_ad, ignore_errors=True)
-            os.makedirs(_ad)
-            subprocess.run(["git", "init", "-q", "-b", "main", _ad], capture_output=True)
-            subprocess.run(["git", "-C", _ad, "config", "user.name", "A Person"],
-                           capture_output=True)
-            with open(os.path.join(_ad, "known.json"), "w") as _f:
-                json.dump({"diverges": [
-                    {"route": "/messages", "field": "sendAt",
-                     "because": "OLD-1", "declared_by": "x"},
-                    {"route": "/keep", "field": "me", "because": "KEEP", "declared_by": "y"}]},
-                    _f, indent=1)
-            _said = []
-            for _argv in (["aside", "/messages", "sendAt", "--because", "PROJ-9"],
-                          ["aside", "/orders", "total", "--because", "REL-2", "--by", "sdk"],
-                          ["aside", "/messages", "sendAt", "--because", "PROJ-10", "--json"]):
-                _r7 = subprocess.run([sys.executable, GATE, *_argv], cwd=_ad, text=True,
-                                     capture_output=True, timeout=180,
-                                     env={**os.environ, "GATE_CLI": _env})
-                _said.append((_r7.stdout, _r7.stderr, _r7.returncode))
-            _aw.append((_said, open(os.path.join(_ad, "known.json"), encoding="utf-8").read()))
-        if _aw[0] != _aw[1]:
-            print("   the two carriers set aside differently:",
-                  "words" if _aw[0][0] != _aw[1][0] else "the file they wrote")
+        _ad = os.path.join(tmp, "aside-one")
+        shutil.rmtree(_ad, ignore_errors=True)
+        os.makedirs(_ad)
+        subprocess.run(["git", "init", "-q", "-b", "main", _ad], capture_output=True)
+        subprocess.run(["git", "-C", _ad, "config", "user.name", "A Person"],
+                       capture_output=True)
+        with open(os.path.join(_ad, "known.json"), "w") as _f:
+            json.dump({"diverges": [
+                {"route": "/messages", "field": "sendAt",
+                 "because": "OLD-1", "declared_by": "x"},
+                {"route": "/keep", "field": "me", "because": "KEEP", "declared_by": "y"}]},
+                _f, indent=1)
+        _aside_said = []
+        for _argv in (["aside", "/messages", "sendAt", "--because", "PROJ-9"],
+                      ["aside", "/orders", "total", "--because", "REL-2", "--by", "sdk"],
+                      ["aside", "/messages", "sendAt", "--because", "PROJ-10", "--json"]):
+            _r7 = subprocess.run([GATE, *_argv], cwd=_ad, text=True,
+                                 capture_output=True, timeout=180,
+                                 env={**os.environ, "GATE_CLI": _cli_bin})
+            _aside_said.append((_r7.stdout, _r7.stderr, _r7.returncode))
+        _aside_file = open(os.path.join(_ad, "known.json"), encoding="utf-8").read()
         # ── AND THE FILE IT REWRITES KEEPS EVERYTHING IT SAID. Three holes, all
         # found by handing it files somebody else could plausibly have: the vein
         # normalised each row's key order because Foundation's reader hands back
@@ -8829,35 +8889,53 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         }
         _seedapart = []
         for _label, _seed in _seeds.items():
-            _both = []
-            for _tag, _env in (("py", "off"), ("sw", _cli_bin)):
-                _sd3 = os.path.join(tmp, "aside-seed-" + _tag)
-                shutil.rmtree(_sd3, ignore_errors=True)
-                os.makedirs(_sd3)
-                subprocess.run(["git", "init", "-q", "-b", "main", _sd3], capture_output=True)
-                subprocess.run(["git", "-C", _sd3, "config", "user.name", "A Person"],
-                               capture_output=True)
-                open(os.path.join(_sd3, "known.json"), "w").write(_seed)
-                _r8 = subprocess.run([sys.executable, GATE, "aside", "/new", "f",
-                                      "--because", "X"], cwd=_sd3, capture_output=True,
-                                     text=True, timeout=180,
-                                     env={**os.environ, "GATE_CLI": _env})
-                _both.append((_r8.stdout, _r8.stderr, _r8.returncode,
-                              open(os.path.join(_sd3, "known.json"), encoding="utf-8").read()))
-            if _both[0] != _both[1]:
-                _seedapart.append(_label)
-            if "Traceback" in _both[0][1] + _both[1][1]:
+            _sd3 = os.path.join(tmp, "aside-seed")
+            shutil.rmtree(_sd3, ignore_errors=True)
+            os.makedirs(_sd3)
+            subprocess.run(["git", "init", "-q", "-b", "main", _sd3], capture_output=True)
+            subprocess.run(["git", "-C", _sd3, "config", "user.name", "A Person"],
+                           capture_output=True)
+            open(os.path.join(_sd3, "known.json"), "w").write(_seed)
+            _r8 = subprocess.run([GATE, "aside", "/new", "f",
+                                  "--because", "X"], cwd=_sd3, capture_output=True,
+                                 text=True, timeout=180,
+                                 env={**os.environ, "GATE_CLI": _cli_bin})
+            _after = open(os.path.join(_sd3, "known.json"), encoding="utf-8").read()
+            if "Traceback" in _r8.stderr or _r8.returncode not in (0, 1):
                 _seedapart.append(_label + " (raised)")
+            # what somebody else put in that file is still in it: their row's
+            # own column, the other top-level keys of every kind, a nested
+            # object left whole. This is the half a parity could not see, since
+            # two carriers dropping the same key agreed with each other.
+            if _label == "order and an extra key" and (
+                    '"ticket"' not in _after or "T-1" not in _after):
+                _seedapart.append(_label + ": a column of their row was dropped")
+            if _label == "other keys of every kind" and not all(
+                    _k in _after for _k in ('"note"', '"n"', '"flag"', '"gone"', '"l"')):
+                _seedapart.append(_label + ": a top-level key was dropped")
+            if _label == "a nested object among them" and (
+                    '"deep"' not in _after or '"b"' not in _after):
+                _seedapart.append(_label + ": a nested object was flattened or lost")
+            # and a file it cannot read as rows is REFUSED, not rewritten
+            if _label == "a row that is not a record" and (
+                    _r8.returncode != 1 or "not a record" not in _r8.stderr
+                    or _after != _seed):
+                _seedapart.append(_label + ": a row nobody can read was not said, or was rewritten")
+            if _label == "diverges is not a list" and (
+                    _r8.returncode != 1 or "is a list of records" not in _r8.stderr
+                    or _after != _seed):
+                _seedapart.append(_label + ": a list that is not one was not said, or was rewritten")
         if _seedapart:
-            print("   a file somebody else wrote is handled apart:", _seedapart[:4])
-        S.append(("the file this verb rewrites keeps everything it said, on both carriers",
+            print("   a file somebody else wrote is not kept:", _seedapart[:4])
+        S.append(("the file this verb rewrites keeps everything somebody else said in it",
                   _seedapart == []))
 
-        S.append(("the carried writing verb leaves the same bytes on both carriers",
-                  _aw[0] == _aw[1]
+        S.append(("the one writing verb this vein carries leaves the rows it promises",
+                  # every step answered, none of them raised
+                  all(_x[2] in (0, 1) for _x in _aside_said)
                   # the row nobody touched is still there, and the one said twice
                   # is replaced rather than piled up
-                  and json.loads(_aw[0][1])["diverges"] == [
+                  and json.loads(_aside_file)["diverges"] == [
                       {"route": "/keep", "field": "me", "because": "KEEP", "declared_by": "y"},
                       {"route": "/orders", "field": "total", "because": "REL-2",
                        "declared_by": "sdk"},
@@ -8900,7 +8978,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         # forms-grants and find none. Both of these were caught by this check
         # going red rather than by reading.)
         _usage = re.search(r'USAGE = ("""|")(.*?)\1',
-                           open(GATE, encoding="utf-8").read(), re.S).group(2)
+                           open(VEIN, encoding="utf-8").read(), re.S).group(2)
         # ── AND A LINE MAY OFFER MORE THAN ONE VERB. This read the first `gate
         # X` on a line and stopped, and the usage's very first line is `gate init
         # [dir]  · gate status | fsck`: the tool's most used verb, the one on the
@@ -8923,30 +9001,24 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         # is walked by transitive reach, and export is its first rung.
         _ew = os.path.join(tmp, "export-world")
         run("demo", "org", _ew)
-        _exp = {}
-        for _tag, _env in (("py", "off"), ("sw", _cli_bin)):
-            _ed = os.path.join(tmp, "export-" + _tag)
-            os.makedirs(_ed, exist_ok=True)
-            _ran = subprocess.run([sys.executable, GATE, "export",
-                                   os.path.join(_ew, "gate.swift"), "-o", "p.csv", "g.csv"],
-                                  capture_output=True, cwd=_ed,
-                                  env={**os.environ, "GATE_CLI": _env})
-            _exp[_tag] = (_ran,
-                          open(os.path.join(_ed, "p.csv"), "rb").read(),
-                          open(os.path.join(_ed, "g.csv"), "rb").read(),
-                          subprocess.run([sys.executable, GATE, "export"],
-                                         capture_output=True, cwd=_ed,
-                                         env={**os.environ, "GATE_CLI": _env}))
-        S.append(("both CLIs print the tables back out of a world, byte for byte",
-                  # the two tables, and the sentence over them
-                  _exp["py"][1] == _exp["sw"][1] and _exp["py"][2] == _exp["sw"][2]
-                  and _exp["py"][0].stdout == _exp["sw"][0].stdout
-                  and _exp["py"][0].returncode == _exp["sw"][0].returncode == 0
-                  and _exp["py"][1].startswith(b"id,rank,home,given,family,born,site,sex\n")
-                  and _exp["py"][2].startswith(b"who,doc\n")
-                  # and asked for nothing, both answer with the same sentence
-                  and _exp["py"][3].stdout == _exp["sw"][3].stdout
-                  and _exp["py"][3].stdout.startswith(b"usage: export prints")))
+        _ed = os.path.join(tmp, "export-one")
+        os.makedirs(_ed, exist_ok=True)
+        _ran = subprocess.run([GATE, "export",
+                               os.path.join(_ew, "gate.swift"), "-o", "p.csv", "g.csv"],
+                              capture_output=True, cwd=_ed,
+                              env={**os.environ, "GATE_CLI": _cli_bin})
+        _exp = (_ran,
+                open(os.path.join(_ed, "p.csv"), "rb").read(),
+                open(os.path.join(_ed, "g.csv"), "rb").read(),
+                subprocess.run([GATE, "export"],
+                               capture_output=True, cwd=_ed,
+                               env={**os.environ, "GATE_CLI": _cli_bin}))
+        S.append(("the tables come back out of a world, each under its own header",
+                  _exp[0].returncode == 0
+                  and _exp[1].startswith(b"id,rank,home,given,family,born,site,sex\n")
+                  and _exp[2].startswith(b"who,doc\n")
+                  # and asked for nothing, it says what it is for
+                  and _exp[3].stdout.startswith(b"usage: export prints")))
         # ── AND A RECORD MISSING A COLUMN IS A REFUSAL ON BOTH SIDES. The verb's
         # own head says a person is met with a sentence and never a stack trace,
         # and the python raised KeyError on a world where a record states no
@@ -8958,19 +9030,15 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         _whole = open(os.path.join(_ew, "gate.swift"), encoding="utf-8").read()
         open(os.path.join(_bw, "gate.swift"), "w").write(
             _whole.replace("    public typealias Site = Remote\n", "", 1))
-        _brk = {}
-        for _tag, _env in (("py", "off"), ("sw", _cli_bin)):
-            _brk[_tag] = subprocess.run([sys.executable, GATE, "export", "gate.swift",
-                                         "-o", "p.csv", "g.csv"],
-                                        capture_output=True, cwd=_bw,
-                                        env={**os.environ, "GATE_CLI": _env})
-        S.append(("a record missing a column is refused in words, alike on both CLIs",
-                  _brk["py"].stdout == _brk["sw"].stdout
-                  and _brk["py"].returncode == _brk["sw"].returncode == 1
-                  and b"Traceback" not in _brk["py"].stdout + _brk["py"].stderr
-                  and b"Traceback" not in _brk["sw"].stdout + _brk["sw"].stderr
-                  and b"states no Site" in _brk["py"].stdout
-                  and b"gate.swift:" in _brk["py"].stdout))
+        _brk = subprocess.run([GATE, "export", "gate.swift",
+                               "-o", "p.csv", "g.csv"],
+                              capture_output=True, cwd=_bw,
+                              env={**os.environ, "GATE_CLI": _cli_bin})
+        S.append(("a record missing a column is refused in words, and the line is named",
+                  _brk.returncode == 1
+                  and b"Traceback" not in _brk.stdout + _brk.stderr
+                  and b"states no Site" in _brk.stdout
+                  and b"gate.swift:" in _brk.stdout))
         # ── AND THE THIRD VEIN, THE FIRST THAT NEEDS A COURT'S WORDS. `seam`
         # writes a joined world of two sides and reads the where court's verdict
         # out of it, and the court compiled into this binary cannot be asked for
@@ -9008,32 +9076,27 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         run("declare", "carrier", "sdk-renamed.json", "-o", "sdk-renamed.swift", cwd=_sd)
         _noclock = lambda b: re.sub(rb"[0-9]+\.[0-9]+ ms", b"MS",
                                     re.sub(rb'"judge_ms": [0-9.]+', b'"judge_ms": MS', b))
-        _sm = {}
-        for _tag, _env in (("py", "off"), ("sw", _cli_bin)):
-            _sm[_tag] = [subprocess.run([sys.executable, GATE, *_argv], capture_output=True,
-                                        cwd=_sd, env={**os.environ, "GATE_CLI": _env})
-                         for _argv in (["seam", "api.swift", "sdk.swift"],
-                                       ["seam", "api.swift", "sdk.swift", "--json"],
-                                       ["seam", "api.swift", "sdk-agree.swift"],
-                                       ["seam", "api.swift", "sdk-agree.swift", "--json"],
-                                       ["seam", "api.swift", "sdk-renamed.swift"],
-                                       ["seam"],
-                                       ["seam", "--json"])]
-        S.append(("both CLIs hold a court over one pair and answer alike, the clock apart",
-                  all(_noclock(a.stdout) == _noclock(b.stdout)
-                      and a.returncode == b.returncode and a.stderr == b.stderr
-                      for a, b in zip(_sm["py"], _sm["sw"]))
-                  # and all three answers the verb has are in the walk, not one
-                  and _sm["py"][0].returncode == 1
-                  and _sm["py"][0].stdout.startswith("seam: refused 2 · ".encode())
-                  and "/messages · sendAt".encode() in _sm["py"][0].stdout
-                  and b'"unclaimed"' in _sm["py"][1].stdout
-                  and _sm["py"][2].returncode == 0
-                  and _sm["py"][2].stdout.startswith("seam: holds · ".encode())
+        _sm = [subprocess.run([GATE, *_argv], capture_output=True,
+                              cwd=_sd, env={**os.environ, "GATE_CLI": _cli_bin})
+               for _argv in (["seam", "api.swift", "sdk.swift"],
+                             ["seam", "api.swift", "sdk.swift", "--json"],
+                             ["seam", "api.swift", "sdk-agree.swift"],
+                             ["seam", "api.swift", "sdk-agree.swift", "--json"],
+                             ["seam", "api.swift", "sdk-renamed.swift"],
+                             ["seam"],
+                             ["seam", "--json"])]
+        S.append(("a court over one pair answers refused, holds, or the way to ask",
+                  # all three answers the verb has are in the walk, not one
+                  _sm[0].returncode == 1
+                  and _sm[0].stdout.startswith("seam: refused 2 · ".encode())
+                  and "/messages · sendAt".encode() in _sm[0].stdout
+                  and b'"unclaimed"' in _sm[1].stdout
+                  and _sm[2].returncode == 0
+                  and _sm[2].stdout.startswith("seam: holds · ".encode())
                   # a side that renamed the field says so in the refusal
-                  and "declares its own send_at as count".encode() in _sm["py"][4].stdout
-                  and _sm["py"][5].returncode == 0
-                  and _sm["py"][5].stdout.startswith(b"usage: seam CONTRACT.swift")))
+                  and "declares its own send_at as count".encode() in _sm[4].stdout
+                  and _sm[5].returncode == 0
+                  and _sm[5].stdout.startswith(b"usage: seam CONTRACT.swift")))
         # ── AND A PREFIX IS A PROMISE ABOUT EVERY ARGV UNDER IT. The parity walk
         # above takes the shapes a person is meant to type; the ledger claims a
         # PREFIX, so the vein owes the python side's bytes on the malformed ones
@@ -9059,73 +9122,36 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         _sd2 = os.path.join(tmp, "ledger-walk")
         os.makedirs(_sd2, exist_ok=True)
         _apart2 = []
+        _rd = os.path.join(_sd2, "one")
+        os.makedirs(_rd, exist_ok=True)
         for _argv in _shapes:
-            _ran = []
-            for _tag, _env in (("py", "off"), ("sw", _cli_bin)):
-                _rd = os.path.join(_sd2, _tag)
-                os.makedirs(_rd, exist_ok=True)
-                _r2 = subprocess.run([sys.executable, GATE, *_argv], cwd=_rd,
-                                     capture_output=True,
-                                     env={**os.environ, "GATE_CLI": _env}, timeout=120)
-                _ran.append((_noclock(_r2.stdout), _noclock(_r2.stderr), _r2.returncode))
-            if _ran[0] != _ran[1]:
-                _apart2.append(" ".join(_argv))
+            _r2 = subprocess.run([GATE, *_argv], cwd=_rd,
+                                 capture_output=True,
+                                 env={**os.environ, "GATE_CLI": _cli_bin}, timeout=120)
+            _shape = " ".join(_argv)
+            # a person who typed this meets a sentence: not a stack trace, not a
+            # code nobody reads, and not silence. The parity held these thirty-
+            # five shapes against the other carrier, so a shape both of them
+            # answered badly passed it; each one is now asked what it owes a
+            # person on its own.
+            if b"Traceback" in _r2.stderr + _r2.stdout:
+                _apart2.append(_shape + " (raised)")
+            if _r2.returncode not in (0, 1):
+                _apart2.append(_shape + " (a code nobody reads)")
+            if not (_r2.stdout.strip() or _r2.stderr.strip()):
+                _apart2.append(_shape + " (said nothing at all)")
         if _apart2:
-            print("   the two CLIs answer apart on:", _apart2[:4])
-        S.append(("a carried prefix answers alike on the argv nobody means to type",
-                  _apart2 == [] and len(_shapes) == 35
-                  # and none of them is a stack trace on either side
-                  and not any(b"Traceback" in subprocess.run(
-                      [sys.executable, GATE, *_a], cwd=_sd2, capture_output=True,
-                      env={**os.environ, "GATE_CLI": "off"}).stderr for _a in _shapes)))
-        # ── AND THE RATCHET PRINTS THE APPROACH, NOT ONLY THE COUNT. Four of
-        # twenty-seven is a score; what a reader of this run wants is the road.
-        # Computed from the source rather than written down: for each verb, what
-        # its implementation reaches. A verb that reaches the court over a world
-        # waits on the status core; one that reaches the node parse waits on a
-        # reading door in the corpus; the rest wait only on the reader the vein
-        # already has. Derived every run, so it cannot go stale the way a
-        # hand-kept map does.
-        _defs = {n.name: n for n in ast.walk(ast.parse(open(GATE, encoding="utf-8").read()))
-                 if isinstance(n, ast.FunctionDef)}
-        def _reaches(name, seen=None):
-            seen = seen or set()
-            # the dispatcher is not walked through: every verb is reachable from
-            # it, so expanding it says every verb needs everything. A verb that
-            # calls it is asking another verb, which is its own answer.
-            if name in seen or name not in _defs or name == "dispatch":
-                return set()
-            seen.add(name)
-            calls, node = set(), _defs[name]
-            for _c in ast.walk(node):
-                if isinstance(_c, ast.Call) and isinstance(_c.func, ast.Name):
-                    calls.add(_c.func.id)
-            out = set(calls)
-            for _c in calls:
-                out |= _reaches(_c, seen)
-            return out
-        _roads = {}
-        for _v in sorted(_verbs):
-            _fn = "cmd_" + _v.replace("-", "_")
-            _needs = _reaches(_fn) if _fn in _defs else set()
-            _roads[_v] = ("carried" if _v in _ledger else
-                          "the status core" if _v in ("status", "fsck") else
-                          # a verb whose body is written in the dispatcher itself
-                          # has no function to walk; it is read by hand or moved
-                          # with the core it sits in
-                          "in the dispatcher" if _fn not in _defs else
-                          "the parse" if "world_parse" in _needs else
-                          "asks another verb" if "dispatch" in _needs else
-                          "the status core" if "judge_call" in _needs else
-                          "the world reader")
-        _by_road = {}
-        for _v, _r in _roads.items():
-            _by_road.setdefault(_r, []).append(_v)
-        print("   the strangler's roads: "
-              + " · ".join(f"{_r}: {len(_vs)}" for _r, _vs in sorted(_by_road.items())))
-        for _r in sorted(_by_road):
-            if _r != "carried":
-                print(f"     {_r:18} {' '.join(sorted(_by_road[_r]))[:88]}")
+            print("   the argv nobody means to type is answered badly on:", _apart2[:4])
+        S.append(("a carried prefix answers the argv nobody means to type, in words",
+                  _apart2 == [] and len(_shapes) == 35))
+        # ── AND THE RATCHET IS DOWN. It read the python dispatcher with python's
+        # own syntax tree and printed, verb by verb, which road each one still
+        # waited on: the score of a move in progress. The move is over, the vein
+        # is swift, and a reader of that tree on this file gets a SyntaxError
+        # rather than a number: the whole battery died there, forty checks short
+        # of its end, printing a stack trace where a count belongs. What the
+        # ratchet was FOR is below, and it outlived the machinery: the ledger
+        # names every verb the usage offers.
         # A SPELLING TRAVELS WITH THE VERB IT SPELLS. `fsck` is the second name
         # of `status`, `ask` of `check`, and `change` is what `diff` and `apply`
         # both are. The usage counts none of the three, and this list does, so
@@ -9147,40 +9173,32 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                   # everything under it, so half a verb would take argv nobody
                   # answers, which is why the unit of the move is the verb
                   and all(len(v.split()) == 1 for v in _ledger)))
-        _both = {}
-        for _tag, _env in (("py", "off"), ("sw", _cli_bin)):
-            _both[_tag] = [subprocess.run([sys.executable, GATE, "stdlib", *_x],
-                                          capture_output=True,
-                                          env={**os.environ, "GATE_CLI": _env})
-                           for _x in ([], ["--json"])]
-        S.append(("both CLIs list the shelf byte for byte, in words and as an answer",
-                  all(a.stdout == b.stdout and a.returncode == b.returncode
-                      for a, b in zip(_both["py"], _both["sw"]))
-                  and _both["py"][0].stdout.startswith(b"stdlib: ")
-                  and b'"speaks"' in _both["py"][1].stdout))
-        _mat = {}
-        for _tag, _env in (("py", "off"), ("sw", _cli_bin)):
-            _md = os.path.join(tmp, "materialize-" + _tag)
-            os.makedirs(_md, exist_ok=True)
-            _mat[_tag] = (subprocess.run([sys.executable, GATE, "stdlib", "materialize", "grammar"],
-                                         capture_output=True, cwd=_md,
-                                         env={**os.environ, "GATE_CLI": _env}),
-                          open(os.path.join(_md, "grammar.swift"), "rb").read()
-                          if os.path.exists(os.path.join(_md, "grammar.swift")) else None,
-                          subprocess.run([sys.executable, GATE, "stdlib", "materialize", "nosuch"],
-                                         capture_output=True, cwd=_md,
-                                         env={**os.environ, "GATE_CLI": _env}))
-        S.append(("both CLIs put the same page on disk and refuse an absent one alike",
-                  # the written bytes are the shelf page itself, from either side
-                  _mat["py"][1] == _mat["sw"][1]
-                  == open(os.path.join(HERE, "stdlib", "grammar.swift"), "rb").read()
+        _both = [subprocess.run([GATE, "stdlib", *_x],
+                                capture_output=True,
+                                env={**os.environ, "GATE_CLI": _cli_bin})
+                 for _x in ([], ["--json"])]
+        S.append(("the shelf lists itself in words and as an answer",
+                  all(_x.returncode == 0 for _x in _both)
+                  and _both[0].stdout.startswith(b"stdlib: ")
+                  and b'"speaks"' in _both[1].stdout))
+        _md = os.path.join(tmp, "materialize-one")
+        os.makedirs(_md, exist_ok=True)
+        _mat = (subprocess.run([GATE, "stdlib", "materialize", "grammar"],
+                               capture_output=True, cwd=_md,
+                               env={**os.environ, "GATE_CLI": _cli_bin}),
+                open(os.path.join(_md, "grammar.swift"), "rb").read()
+                if os.path.exists(os.path.join(_md, "grammar.swift")) else None,
+                subprocess.run([GATE, "stdlib", "materialize", "nosuch"],
+                               capture_output=True, cwd=_md,
+                               env={**os.environ, "GATE_CLI": _cli_bin}))
+        S.append(("the page put on disk is the shelf's own bytes, and an absent name is refused",
+                  # the written bytes are the shelf page itself
+                  _mat[1] == open(os.path.join(HERE, "stdlib", "grammar.swift"), "rb").read()
                   # the sentence about a printout, and the exit
-                  and _mat["py"][0].stdout == _mat["sw"][0].stdout
-                  and _mat["py"][0].returncode == _mat["sw"][0].returncode == 0
-                  and b"a printout, not a source" in _mat["py"][0].stdout
-                  # and the absent name, refused the same way with the same code
-                  and _mat["py"][2].stderr == _mat["sw"][2].stderr
-                  and _mat["py"][2].returncode == _mat["sw"][2].returncode == 1))
+                  and _mat[0].returncode == 0
+                  and b"a printout, not a source" in _mat[0].stdout
+                  # and the absent name is refused with a code a caller can read
+                  and _mat[2].returncode == 1))
         # ── and the court itself is carried: the judge sources at the pin
         # beside bin/gate-judge are compiled into the vein, so the court
         # runs in the caller's process. The parity that holds this road is
@@ -9232,27 +9250,28 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
             _jd = os.path.join(tmp, "journal-" + _where)
             os.makedirs(_jd, exist_ok=True)
             subprocess.run(["git", "init", "-q", "-b", "main", _jd], capture_output=True)
-            subprocess.run([sys.executable, GATE, *_make, _jd], capture_output=True)
+            subprocess.run([GATE, *_make, _jd], capture_output=True)
             for _argv in (["log"], ["log", "--json"], ["log", "all", "3"], ["log", "world"]):
-                _two = [subprocess.run([sys.executable, GATE, *_argv], cwd=_jd,
-                                       capture_output=True,
-                                       env={**os.environ, "GATE_CLI": _e}, timeout=180)
-                        for _e in ("off", _cli_bin)]
-                if [(_noclock(_x.stdout), _noclock(_x.stderr), _x.returncode) for _x in _two][0] \
-                        != [(_noclock(_x.stdout), _noclock(_x.stderr), _x.returncode) for _x in _two][1]:
-                    _jw.append(f"{_where}: {' '.join(_argv)}")
+                _one = subprocess.run([GATE, *_argv], cwd=_jd,
+                                      capture_output=True,
+                                      env={**os.environ, "GATE_CLI": _cli_bin}, timeout=180)
+                # a journal over a world this tool just made names that world's
+                # own files; a walk that answers nothing is the failure this
+                # family exists for, and two carriers answering nothing agreed
+                if _one.returncode != 0 or not _one.stdout.strip():
+                    _jw.append(f"{_where}: {' '.join(_argv)} said nothing")
+                if _argv == ["log", "--json"] and b'"world_files"' not in _one.stdout:
+                    _jw.append(f"{_where}: the answer names no world files")
         # and in this repository, whose layout is a manifest of forms rows with a
         # policy beside it: the shape that found the hole
         for _argv in (["log"], ["log", "--json"], ["log", "5"]):
-            _two = [subprocess.run([sys.executable, GATE, *_argv], cwd=HERE, capture_output=True,
-                                   env={**os.environ, "GATE_CLI": _e}, timeout=180)
-                    for _e in ("off", _cli_bin)]
-            if [(_noclock(_x.stdout), _x.returncode) for _x in _two][0] \
-                    != [(_noclock(_x.stdout), _x.returncode) for _x in _two][1]:
-                _jw.append("here: " + " ".join(_argv))
+            _one = subprocess.run([GATE, *_argv], cwd=HERE, capture_output=True,
+                                  env={**os.environ, "GATE_CLI": _cli_bin}, timeout=180)
+            if _one.returncode != 0 or not _one.stdout.strip():
+                _jw.append("here: " + " ".join(_argv) + " said nothing")
         if _jw:
-            print("   the journal answers apart:", _jw[:4])
-        S.append(("the journal reads one world on both carriers, layout and all",
+            print("   the journal parts:", _jw[:4])
+        S.append(("the journal reads a world it was handed, layout and all",
                   _jw == []))
 
         # ── AND THE PERSONAL WORLD IS JUDGED WITH THE SHARED ONE, ON BOTH
@@ -9271,58 +9290,58 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
             _md = os.path.join(tmp, "my-" + _where)
             os.makedirs(_md, exist_ok=True)
             subprocess.run(["git", "init", "-q", "-b", "main", _md], capture_output=True)
-            subprocess.run([sys.executable, GATE, *_make, _md], capture_output=True)
+            subprocess.run([GATE, *_make, _md], capture_output=True)
             _my_worlds.append(_md)
 
-        def _my_pair(_d, *_argv):
-            return [subprocess.run([sys.executable, GATE, "my", *_argv], cwd=_d,
-                                   capture_output=True, text=True, timeout=180,
-                                   env={**os.environ, "GATE_ME": _me, "GATE_CLI": _e})
-                    for _e in ("off", _cli_bin)]
-
-        def _my_told(_two):
-            return [(_x.stdout, _x.stderr, _x.returncode) for _x in _two]
+        def _my_asked(_d, *_argv):
+            return subprocess.run([GATE, "my", *_argv], cwd=_d,
+                                  capture_output=True, text=True, timeout=180,
+                                  env={**os.environ, "GATE_ME": _me, "GATE_CLI": _cli_bin})
 
         _myw = []
         for _d in [_my_nowhere] + _my_worlds + [HERE]:
             for _argv in ((), ("--json",)):
-                _t = _my_told(_my_pair(_d, *_argv))
-                if _t[0] != _t[1]:
+                _t = _my_asked(_d, *_argv)
+                # every world this verb can be asked in answers in its canon:
+                # the empty slot, a world of forms, this repository, and a
+                # directory that is no world at all
+                if _t.returncode not in (0, 1) or not (_t.stdout or _t.stderr).strip():
                     _myw.append(f"empty {os.path.basename(_d)} {' '.join(_argv) or 'plain'}")
         # and with something written in it: one claim of its own, then a name the
         # shared world already declares
         _my_said, _beside = {}, {}
         for _d, _dup in ((_my_worlds[0], "Owns"), (_my_worlds[1], "Edsger")):
-            _slot = json.loads(_my_pair(_d, "--json")[0].stdout)["personal"]
+            _slot = json.loads(_my_asked(_d, "--json").stdout)["personal"]
             os.makedirs(os.path.dirname(_slot), exist_ok=True)
             for _tag, _text in (("holds", "// mine\npublic enum MyOwnNote {}\n"),
                                 ("twice", "// mine\npublic enum %s {}\n" % _dup)):
                 with open(_slot, "w") as _f:      # a file of ours, written whole
                     _f.write(_text)
                 for _argv in ((), ("--json",)):
-                    _two = _my_pair(_d, *_argv)
-                    if _my_told(_two)[0] != _my_told(_two)[1]:
+                    _one = _my_asked(_d, *_argv)
+                    if _one.returncode not in (0, 1):
                         _myw.append(f"{_tag} {os.path.basename(_d)} {' '.join(_argv) or 'plain'}")
-                    _my_said[(os.path.basename(_d), _tag, bool(_argv))] = _two[1]
+                    _my_said[(os.path.basename(_d), _tag, bool(_argv))] = _one
                 if _tag == "holds":
                     # the court beside it, asked while the same slot is written:
                     # the comparison below is only a comparison in that state
                     _beside[os.path.basename(_d)] = subprocess.run(
-                        [sys.executable, GATE, "status", "--json"], cwd=_d, capture_output=True,
+                        [GATE, "status", "--json"], cwd=_d, capture_output=True,
                         text=True, env={**os.environ, "GATE_ME": _me})
             os.remove(_slot)
         if _myw:
-            print("   the personal world answers apart:", _myw[:4])
-        S.append(("the personal world is judged alike on both carriers, by lives",
+            print("   the personal world answers outside its canon:", _myw[:4])
+        S.append(("the personal world answers in this tool's canon in every world it has",
                   _myw == []))
 
-        # ── AND THE PINS BESIDE THE PARITY, because parity is blind to whatever
-        # both sides share by construction: a fixture broken the same way passes
-        # it. These say what the answer IS. The law they hold is the one this
-        # verb broke twice: a court that answers about a world may not answer
-        # with less than the court beside it, and answering with MORE is that
-        # same fault mirrored — `my` handed the layout and the forms rows to the
-        # PLAIN court and refused a protocol page the `status` beside it holds.
+        # ── AND THE PINS, which say what the answer IS. A parity used to stand
+        # here beside them and it was blind to whatever both sides shared by
+        # construction: a fixture broken the same way passed it. The law these
+        # hold is the one this verb broke twice: a court that answers about a
+        # world may not answer with less than the court beside it, and answering
+        # with MORE is that same fault mirrored: `my` handed the layout and the
+        # forms rows to the PLAIN court and refused a protocol page the `status`
+        # beside it holds.
         _mp = []
         _org, _demo = os.path.basename(_my_worlds[1]), os.path.basename(_my_worlds[0])
         _hold = _my_said[(_org, "holds", False)]
@@ -9345,14 +9364,14 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         # at all: an empty slot answers `holds` in a world whose shared court
         # refuses, and the sentence is what makes that readable rather than a
         # second truth. Pinned so the day it changes is a day somebody chose it.
-        _empty = _my_pair(_my_worlds[1])[1]
-        _slot_org = json.loads(_my_pair(_my_worlds[1], "--json")[1].stdout)["personal"]
+        _empty = _my_asked(_my_worlds[1])
+        _slot_org = json.loads(_my_asked(_my_worlds[1], "--json").stdout)["personal"]
         if not (_empty.returncode == 0 and _empty.stdout.startswith("my: holds\n")
                 and "nobody has written in your world" in _empty.stdout
                 and not os.path.exists(_slot_org)):
             _mp.append("an empty personal world is not answered empty, or was created")
         # no world at all is a refusal in words, not a nought exit
-        _none = _my_pair(_my_nowhere)[1]
+        _none = _my_asked(_my_nowhere)
         if not (_none.returncode == 1 and "there is no world here" in _none.stderr
                 and "next: " in _none.stderr):
             _mp.append("no world here is not refused in words")
@@ -9373,12 +9392,23 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
     # ── zero egress: a claim about ourselves, kept by a gate on our own source.
     # An enterprise review runs this same grep; it must never come back dirty,
     # because one outbound call ends the "an engineer may just install it" path.
+    # ── AND THE FILE THE TOOL IS WRITTEN IN IS READ. This list was drawn when
+    # `gate` was the CLI: eight thousand lines of python, read here on every
+    # run. `gate` is a shim now and the tool is the vein, so the promise was
+    # being kept about a thirty-line launcher while the thing that runs went
+    # unread. The swift half of the list is the outbound primitives that file
+    # could carry: a URL session, the Network framework, a name lookup. The
+    # server's own `socket`/`bind`/`listen` are inbound and stay legal, which
+    # is the distinction this list is drawing.
     forbidden = [r"urllib\.request", r"^\s*import socket\b", r"socket\.socket",
                  r"http\.client", r"requests\.(get|post|put)", r"XMLHttpRequest",
                  r"new WebSocket", r"""fetch\(\s*['"`]https?:""",
-                 r"""(?:src|href)\s*=\s*['"]https?:"""]
+                 r"""(?:src|href)\s*=\s*['"]https?:""",
+                 r"URLSession", r"NWConnection", r"^\s*import Network\b",
+                 r"getaddrinfo"]
     hits = []
-    for f in ("gate", os.path.join("web", "ui.html"), os.path.join("bin", "judge.js"),
+    for f in ("gate", os.path.join("bin", "gate-cli.swift"),
+              os.path.join("web", "ui.html"), os.path.join("bin", "judge.js"),
               os.path.join("bin", "judge-where.js"), os.path.join("bin", "judge-cli.js")):
         text = open(os.path.join(HERE, f), encoding="utf-8", errors="replace").read()
         for pat in forbidden:
@@ -9402,7 +9432,9 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                r"requests\.(get|post|put)": "requests\\.(get|post|put)",
                r"XMLHttpRequest": "XMLHttpRequest", r"new WebSocket": "new WebSocket",
                r"""fetch\(\s*['"`]https?:""": "fetch\\(",
-               r"""(?:src|href)\s*=\s*['"]https?:""": "(src|href)"}
+               r"""(?:src|href)\s*=\s*['"]https?:""": "(src|href)",
+               r"URLSession": "URLSession", r"NWConnection": "NWConnection",
+               r"^\s*import Network\b": "import Network", r"getaddrinfo": "getaddrinfo"}
     _unread = [p for p in forbidden if _tokens.get(p, p) not in _det]
     if _unread:
         print("   the page's recipe does not look for:", _unread)
@@ -9410,30 +9442,21 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
               len(_tokens) == len(forbidden) and not _unread
               # and the port it tells a reader to watch is the one serve binds
               and re.search(r"grep (\d+)\s", _det).group(1)
-              == re.search(r"port = int\(nums\[0\]\) if nums else (\d+)",
-                           open(GATE, encoding="utf-8").read()).group(1)))
+              == re.search(r"let port = nums\.first\.flatMap \{ Int\(\$0\) \} \?\? (\d+)",
+                           open(VEIN, encoding="utf-8").read()).group(1)))
     # the CLI's imports are a named list, and the list is the whole of it: a
     # security review reads a white list faster than it reads a file, and a
     # module appearing outside this list is a decision made visible here
     _imp = set()
-    for _m in re.finditer(r"^\s*import ([\w ,.]+)", open(GATE).read(), re.M):
-        for _p in _m.group(1).split(","):
-            _imp.add(_p.strip().split(" as ")[0].split(".")[0])
-    for _m in re.finditer(r"^\s*from ([\w.]+) import", open(GATE).read(), re.M):
-        _imp.add(_m.group(1).split(".")[0])
-    _white = {"json", "os", "re", "shutil", "subprocess", "sys",
-              "tempfile", "time", "csv", "hashlib", "itertools",
-              "collections", "fnmatch", "datetime", "webbrowser",
-              # `traceback` prints to the bench operator's own stderr when a
-              # request raises something the handler had not thought of: the
-              # room answers the asker in words and hides nothing from whoever
-              # is running it. `io` holds the text the one reading door hands
-              # out: the door reads the whole file so it can say in a sentence
-              # that the bytes are not text, and its callers still get something
-              # they can iterate and read.
-              "io", "traceback", "threading", "http", "urllib"}
-    S.append(("the CLI imports the standard library alone, from a named list",
-              _imp <= _white and {"json", "subprocess", "http"} <= _imp))
+    for _m in re.finditer(r"^\s*import (\w+)", open(VEIN).read(), re.M):
+        _imp.add(_m.group(1))
+    # the vein is swift now, and its whole list is the platform's own library:
+    # Foundation everywhere, and the two libcs behind a `canImport` because one
+    # file builds on all three platforms. No package manager, no lockfile, and
+    # nothing that could reach a network by being imported.
+    _white = {"Foundation", "Glibc", "WinSDK", "Darwin"}
+    S.append(("the CLI imports the platform's own library alone, from a named list",
+              _imp <= _white and "Foundation" in _imp))
     # ── AND A NUMBER IN THE PROSE IS THE NUMBER ITS OWNER HOLDS. Two counts
     # stated in the documents had an owner in the code and no line between them:
     # docs/DETAILS.md says the white list above is "eighteen modules", and
@@ -9452,10 +9475,15 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                                                encoding="utf-8").read()
               # and the number word is a real one, not an index off the end
               and len(_white) < len(_words)))
-    src = open(GATE, encoding="utf-8").read()
-    S.append(("the bench binds to the loopback alone", 'HTTPServer(("127.0.0.1"' in src))
+    src = open(VEIN, encoding="utf-8").read()
+    # the address is written into the socket rather than configured: there is no
+    # setting that could widen it to a network
+    S.append(("the bench binds to the loopback alone",
+              "UInt32(0x7f00_0001).bigEndian" in src and "never a network" in src))
+    # and one head is written for every answer this door gives, so the no-store
+    # is not a promise repeated per route and forgotten on the next one
     S.append(("nothing served is cacheable: an updated gate is never hidden",
-              src.count('"Cache-Control", "no-store"') >= 5))
+              'head += "Cache-Control: no-store\\r\\n"' in src))
     c, r = run("--version")
     S.append(("gate says its version, and the judge its bytes",
               r.get("gate") and r.get("judge", "").startswith("sha256:")))
@@ -9756,7 +9784,7 @@ public enum MyWatch: AccessLedger {
         open(os.path.join(_fold, "notes.txt"), "a").write(f"note {_i}\n")
         _fcommit(f"note {_i}", f"2026-05-2{_i}T00:00:00")
     _folded = run("findings", "--history", cwd=_fold)[1]
-    _fsaid = subprocess.run([sys.executable, GATE, "findings", "--history"], cwd=_fold,
+    _fsaid = subprocess.run([GATE, "findings", "--history"], cwd=_fold,
                             capture_output=True, text=True).stdout
     S.append(("the walk is folded into one sentence, and the sentence is git's own",
               _folded.get("parted")
@@ -9779,7 +9807,7 @@ public enum MyWatch: AccessLedger {
     # What the note carries is the fold and the turning points, never the dump:
     # pasting two hundred rows into a thread is the thing the fold exists
     # against, and a note is exactly where somebody would paste them.
-    _md = subprocess.run([sys.executable, GATE, "findings", "--md", "--history"], cwd=_fold,
+    _md = subprocess.run([GATE, "findings", "--md", "--history"], cwd=_fold,
                          capture_output=True, text=True).stdout
     _mdj = run("findings", "--md", "--history", cwd=_fold)[1]
     S.append(("a walk asked for a note answers with one, and the note is the fold",
@@ -9859,7 +9887,7 @@ public enum MyWatch: AccessLedger {
     _norepo = os.path.join(tmp, "not-a-repository")
     os.makedirs(_norepo, exist_ok=True)
     open(os.path.join(_norepo, "CODEOWNERS"), "w").write("/x @a\n")
-    _nr = subprocess.run([sys.executable, GATE, "findings", "--history"], cwd=_norepo,
+    _nr = subprocess.run([GATE, "findings", "--history"], cwd=_norepo,
                          capture_output=True, text=True)
     _empty = os.path.join(tmp, "no-commits-yet")
     os.makedirs(_empty, exist_ok=True)
@@ -9883,7 +9911,7 @@ public enum MyWatch: AccessLedger {
               == ["CODEOWNERS"] * 5 + [".github/CODEOWNERS"]
               # and a person reading the terminal is told, once, not per row
               and "read from CODEOWNERS, moved to .github/CODEOWNERS at "
-              in subprocess.run([sys.executable, GATE, "findings", "--history",
+              in subprocess.run([GATE, "findings", "--history",
                                  "--policy", "owners.csv"], cwd=_dh,
                                 capture_output=True, text=True).stdout))
 
@@ -9931,7 +9959,7 @@ public enum MyWatch: AccessLedger {
     # next verb to grow an argument is held to the same promise.
     #
     # `serve` is out because it does not return, and that is the only one.
-    _bare = re.search(r'USAGE = ("""|")(.*?)\1', open(GATE, encoding="utf-8").read(), re.S).group(2)
+    _bare = re.search(r'USAGE = ("""|")(.*?)\1', open(VEIN, encoding="utf-8").read(), re.S).group(2)
     # a line may offer more than one verb, and the first one offers `status`
     # after a `·`: read that way, this walk had never asked the tool's most
     # used verb anything at all
@@ -9964,7 +9992,7 @@ public enum MyWatch: AccessLedger {
                 subprocess.run(["git", "init", "-q", "-b", "main", _cwd], capture_output=True)
             else:
                 shutil.copytree(_seed, _cwd)
-            _p = subprocess.run([sys.executable, GATE, _v], cwd=_cwd,
+            _p = subprocess.run([GATE, _v], cwd=_cwd,
                                 capture_output=True, text=True, timeout=120)
             if "Traceback" in _p.stdout + _p.stderr:
                 _stacks.append(f"{_v} ({_where})")
@@ -9992,7 +10020,7 @@ public enum MyWatch: AccessLedger {
     S.append(("a verb asked for nothing answers with a sentence, in a world and without one",
               _stacks == [] and len(_all) == 27))
     # and a non-answer is a machine's object only for whoever asked for one
-    _nj = subprocess.run([sys.executable, GATE, "my", "--json"],
+    _nj = subprocess.run([GATE, "my", "--json"],
                          cwd=os.path.join(tmp, "bare-no-my"),
                          capture_output=True, text=True)
     S.append(("a verb that cannot answer here says so on stderr, with a code and a step",
@@ -10016,7 +10044,7 @@ public enum MyWatch: AccessLedger {
               and "recorded nowhere" in _merged["shape"]
               and "obliged to fall" in _merged["shape"]
               and _merged["shape"] in subprocess.run(
-                  [sys.executable, GATE, "findings", "--history", "--policy", "owners.csv"],
+                  [GATE, "findings", "--history", "--policy", "owners.csv"],
                   cwd=_dh, capture_output=True, text=True).stdout
               # and this repository, whose pair has held at nought throughout
               and _quiet.get("history") and _quiet.get("shape") is None
@@ -10045,9 +10073,12 @@ public enum MyWatch: AccessLedger {
         left_behind += sorted(_here_now() - was)
     S.append(("no verb leaves its scratch on the machine it ran on",
               left_behind == []
-              # and one place makes it, so the sweep has one thing to watch
-              and gate_src.count("tempfile.mkdtemp") == 1
-              and "def sweep_scratch" in gate_src))
+              # and every scratch this tool makes is named for the process that
+              # made it, so a run that dies leaves something a person can find
+              # rather than an anonymous folder nobody can attribute
+              and all("gate-" in _l or "processIdentifier" in _l
+                      for _l in gate_src.split("\n") if "NSTemporaryDirectory()" in _l)
+              and "removeItem(atPath: d)" in gate_src))
 
     # a verb typed without what it reads answers in words: a stack trace is the
     # one voice this tool never uses, and it used it here
@@ -10117,13 +10148,14 @@ public enum MyWatch: AccessLedger {
     # A tool that sells judgement over memory may not keep its own claims by
     # memory. This runs LAST, so the count includes everything.
     readme = open(os.path.join(HERE, "README.md"), encoding="utf-8").read()
-    src = open(GATE, encoding="utf-8").read()
+    src = open(VEIN, encoding="utf-8").read()
 
-    verbs = set(re.findall(r'cmd\s*==\s*"([a-z-]+)"', src))
-    for grp in re.findall(r'cmd\s+in\s+\(([^)]*)\)', src):
-        verbs |= set(re.findall(r'"([a-z-]+)"', grp))
-    for grp in re.findall(r'args\[0\]\s+in\s+\(([^)]*)\)', src):   # --version, before dispatch
-        verbs |= set(x.lstrip("-") for x in re.findall(r'"([a-z-]+)"', grp))
+    # the vein dispatches on its first word, and the doors this battery opens
+    # wear a leading dash: `--version` is a verb a person types, `--status-core`
+    # is not, and stripping the dash reads both the same way the usage does
+    verbs = {v.lstrip("-") for v in re.findall(r'args\.first == "([a-z-]+)"', src)}
+    verbs |= set(re.findall(r'"([a-z-]+)"', re.search(
+        r"let CARRIES = \[([^\]]*)\]", src, re.S).group(1)))
     porcelain = re.search(r"The porcelain is deliberately git-shaped: `([^`]+)`", readme, re.S)
     claimed_verbs = {v.lstrip("-") for v in
                      (re.findall(r"[a-z-]{2,}", porcelain.group(1)) if porcelain else [])}
@@ -10223,14 +10255,14 @@ public enum MyWatch: AccessLedger {
         if not word:
             touched.append(rec + " (no record)")
             continue
-        subprocess.run([sys.executable, GATE, word], cwd=sw, capture_output=True, text=True)
+        subprocess.run([GATE, word], cwd=sw, capture_output=True, text=True)
         after = subprocess.run(["git", "status", "--porcelain"], cwd=sw,
                                capture_output=True, text=True).stdout
         if after != before:
             touched.append(word)
     for args in (["status"], ["log"], ["findings"], ["survey"], ["guard"], ["--version"],
                  ["check", "view", "Emp9001", "EngineeringShare"]):
-        subprocess.run([sys.executable, GATE, *args], cwd=sw, capture_output=True, text=True)
+        subprocess.run([GATE, *args], cwd=sw, capture_output=True, text=True)
     after_all = subprocess.run(["git", "status", "--porcelain"], cwd=sw,
                                capture_output=True, text=True).stdout
     S.append(("every verb certified safe leaves the working copy exactly as it was",
@@ -10253,7 +10285,7 @@ public enum MyWatch: AccessLedger {
                               capture_output=True, text=True).stdout
     wrote_anyway = []
     for word in sorted(asked):
-        subprocess.run([sys.executable, GATE, word], cwd=aw, capture_output=True, text=True)
+        subprocess.run([GATE, word], cwd=aw, capture_output=True, text=True)
         if subprocess.run(["git", "status", "--porcelain"], cwd=aw,
                           capture_output=True, text=True).stdout != a_before:
             wrote_anyway.append(word)
@@ -10314,7 +10346,7 @@ public enum MyWatch: AccessLedger {
     liveworld = os.path.join(tmp, "liveforms")
     run("demo", liveworld)
     _s5 = _sock.socket(); _s5.bind(("127.0.0.1", 0)); _lp = _s5.getsockname()[1]; _s5.close()
-    _lb = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_lp), "--no-open"], cwd=liveworld,
+    _lb = subprocess.Popen([GATE, "serve", "--port", str(_lp), "--no-open"], cwd=liveworld,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     live_said = broke_said = None
     try:
@@ -10379,7 +10411,7 @@ public enum MyWatch: AccessLedger {
               "public typealias Opens = Bare" in opens_kept
               and any("`sideways` is not a view" in r["claim"] for r in odd["refusals"])
               # the bench is told, and opens the first row that way
-              and "opensAs[first]" in ui and '"opens": opens' in shelf_src
+              and "opensAs[first]" in ui and '("opens", .object(opens)),' in shelf_src
               # and the file's own header lines are not read out to the reader as
               # prose: they are how it speaks to the tool, not to a person
               and 'if (/^(role|opens):/i.test(said))' in ui))
@@ -10407,7 +10439,7 @@ public enum MyWatch: AccessLedger {
     sd = os.path.join(tmp, "seamrail")
     run("demo", "seam", sd)
     _s6 = _sock.socket(); _s6.bind(("127.0.0.1", 0)); _sp = _s6.getsockname()[1]; _s6.close()
-    _sb = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_sp), "--no-open"], cwd=sd,
+    _sb = subprocess.Popen([GATE, "serve", "--port", str(_sp), "--no-open"], cwd=sd,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     rail = side_text = None
     try:
@@ -10484,7 +10516,7 @@ public enum MyWatch: AccessLedger {
     run("demo", "seam", putw)
     kept_man = open(os.path.join(putw, "gate.manifest.swift"), encoding="utf-8").read()
     _s7 = _sock.socket(); _s7.bind(("127.0.0.1", 0)); _pp = _s7.getsockname()[1]; _s7.close()
-    _pb = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_pp), "--no-open"], cwd=putw,
+    _pb = subprocess.Popen([GATE, "serve", "--port", str(_pp), "--no-open"], cwd=putw,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     codes = []
     try:
@@ -10502,8 +10534,11 @@ public enum MyWatch: AccessLedger {
               codes == [404, 404, 404]
               and open(os.path.join(putw, "gate.manifest.swift"),
                        encoding="utf-8").read() == kept_man
-              # and the writable set is the bench's own list, never a fallback
-              and 'p = dict(bench_files()).get(q.get("f", ""))' in shelf_src))
+              # and the writable set is the bench's own list, never a fallback:
+              # a name it does not carry gets nothing back, and the fallback
+              # below it answers only the question that named no file at all
+              and "let named = Dictionary(benchFilesOf(w).map" in shelf_src
+              and "if !want.isEmpty { return nil }" in shelf_src))
 
     S.append(("every name the panel prints is a name the panel opens, seam sides included",
               rail and sorted(rail.get("seams") or []) == ["api.swift", "sdk.swift"]
@@ -10673,7 +10708,7 @@ public enum MyWatch: AccessLedger {
     # the tool itself calls the first useful thing it does in any repository.
     # Sixty-one lines of usage and no first step among them, in a tool whose own
     # rule is that every command ends with the one that comes next.
-    ran = subprocess.run([sys.executable, GATE], capture_output=True, text=True)
+    ran = subprocess.run([GATE], capture_output=True, text=True)
     usage = ran.stdout + ran.stderr
     unlisted = sorted(v for v in claimed_verbs
                       # spelled beside a sibling on one line, or a flag rather
@@ -10699,7 +10734,7 @@ public enum MyWatch: AccessLedger {
     # they will be refused rather than that their word starts standing. The tone
     # canon is that a greeting holds and does not threaten, and a rung is a
     # greeting to whatever comes next.
-    next_src = shelf_src.split("def next_rung(", 1)[1].split("\ndef ", 1)[0]
+    next_src = shelf_src.split("func nextRung(", 1)[1].split("\nfunc ", 1)[0]
     # ── AND AN EMPTY BENCH SAYS WHAT THIS PLACE IS FOR, NOT WHAT IT LACKS. `No
     # world here yet` names an absence and hands over two commands, which is a
     # form to fill in. The same screen can say the thing this repository is
@@ -10727,12 +10762,12 @@ public enum MyWatch: AccessLedger {
     # so `/ladder.css` read as `/ladder` on one side and vanished on the other,
     # and the two files this bench serves by name were never compared at all.
     # A check blind to a shape is a check that agrees with anything in it.
-    routes = set(re.findall(r'u\.path\s*[!=]=\s*"(/[a-z/.]*)"', src))   # == and != both route
-    for grp in re.findall(r'u\.path\s+in\s+\(([^)]*)\)', src):
-        routes |= set(re.findall(r'"(/[a-z/.]*)"', grp))
-    contract = set()
-    for line in re.findall(r"^\s+#\s+(?:GET|POST|PUT)\s+(.+)$", src, re.M):
-        contract |= set(re.findall(r"(/[a-z/.]*)", line.split("  ")[0] + " " + line))
+    # a route may carry an extension, and the pattern used to stop at the dot,
+    # so `/ladder.css` read as `/ladder` on one side and vanished on the other.
+    # Both sides are read the same way: the roster at the head of the door, and
+    # the cases the door actually answers.
+    routes = set(re.findall(r'case \("(?:GET|POST|PUT)", "(/[a-z/.]*)"\)', src))
+    contract = set(re.findall(r"^//\s+(?:GET|POST|PUT)\s+(/[a-z/.]*)", src, re.M))
     S.append(("the bench's promised routes are the routes the server answers",
               contract == routes))
 
@@ -10744,8 +10779,7 @@ public enum MyWatch: AccessLedger {
     BLAME = re.compile(r"\byou (must|should|failed|forgot|cannot|need to)\b"
                        r"|\byour (mistake|error|fault)\b"
                        r"|\b(invalid|illegal|wrong)\b|\berror in\b", re.I)
-    said = [n.value for n in ast.walk(ast.parse(open(GATE).read()))
-            if isinstance(n, ast.Constant) and isinstance(n.value, str)]
+    said = spoken_strings(VEIN)
     S.append(("nothing the tool says is about the person who wrote it",
               bool(said) and not [s for s in said if BLAME.search(s)]))
 
@@ -10766,9 +10800,9 @@ public enum MyWatch: AccessLedger {
     # one way this bench must never fail, since its whole promise is that what
     # you see is what is judged.
     S.append(("the bench says so when the page and the process are not the same gate",
-              'const BENCH_FOR = "' + re.search(r'^VERSION = "([^"]+)"', src, re.M).group(1) + '";' in ui
+              'const BENCH_FOR = "' + re.search(r'^let VERSION = "([^"]+)"', src, re.M).group(1) + '";' in ui
               and 'fetch("/version"' in ui and "Restart `gate serve`" in ui
-              and '"gate": VERSION' in src))
+              and '("gate", .text(gateVersion())),' in src))
 
     # ── A BAR THAT EXPIRES MAY ANSWER AN ACTION; IT MAY NEVER REPORT A STATE.
     # You asked for the save, so a word about the save may go and be forgotten.
@@ -11082,7 +11116,7 @@ public enum MyWatch: AccessLedger {
     run("init", ".", cwd=rung)
     _, term = run("status", cwd=rung)
     _s10 = _sock.socket(); _s10.bind(("127.0.0.1", 0)); _rp = _s10.getsockname()[1]; _s10.close()
-    _rb = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_rp), "--no-open"], cwd=rung,
+    _rb = subprocess.Popen([GATE, "serve", "--port", str(_rp), "--no-open"], cwd=rung,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     bench = {}
     try:
@@ -11104,7 +11138,7 @@ public enum MyWatch: AccessLedger {
     # the friendlier one was the wrong one. Driven through the server, because
     # what is claimed here is what the page is handed, not what the source says.
     _s9 = _sock.socket(); _s9.bind(("127.0.0.1", 0)); _up = _s9.getsockname()[1]; _s9.close()
-    _ub = subprocess.Popen([sys.executable, GATE, "serve", "--port", str(_up), "--no-open"], cwd=undecl,
+    _ub = subprocess.Popen([GATE, "serve", "--port", str(_up), "--no-open"], cwd=undecl,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     seen = {}
     try:
@@ -11166,7 +11200,7 @@ public enum MyWatch: AccessLedger {
               and 'method: "PUT" });' in ui.split('"/declare?f="')[1][:400]
               and 'class="gesture declare-as"' in ui
               # and the reading behind both the refusal and the rail is one reading
-              and "def undeclared_here" in gate_src
+              and "func undeclaredHere" in gate_src
               and gate_src.count("sits beside the judged ones") == 1))
 
     # ── AND THE VIEW IS THE READER'S. Opening somebody's page threw the reader back
@@ -11266,7 +11300,10 @@ public enum MyWatch: AccessLedger {
     REVERSE = re.compile(rf"\b(?:{THEATRE})\b[^.\n]{{0,28}}?\bby (?:the |a )?(?:{AGENT})\b", re.I)
     ALLOW = ("waits for a word", "waiting for a word", "awaiting a word", "both spoke",
              "sides spoke", "spoke and", "one is silent", "listens on the loopback",
-             "somebody answers", "answers today", "a person answers", "nobody speaks in")
+             "somebody answers", "answers today", "a person answers", "nobody speaks in",
+             # `answer` as the noun the court hands back, which every verdict is
+             # read out of: the pattern reads the word as a verb and cannot tell
+             "read out of that answer")
 
     def theatre_in(text, where):
         out = []
@@ -11283,9 +11320,14 @@ public enum MyWatch: AccessLedger {
         prose = "\n".join(l for l in open(sp, encoding="utf-8").read().split("\n")
                           if l.strip().startswith("//"))
         theatre += theatre_in(prose, os.path.basename(sp))
-    for tok in tokenize.generate_tokens(io.StringIO(gate_src).readline):
-        if tok.type == tokenize.STRING and len(tok.string) > 12:
-            theatre += theatre_in(tok.string.replace("\\n", "\n"), f"gate:{tok.start[0]}")
+    # the sentences this tool says to a person are its string literals, and the
+    # vein is swift: python's own tokenizer read them while the CLI was python
+    # and raises a TokenError on this file, which took the whole battery down
+    # with it rather than reddening one line.
+    for _lit in re.finditer(r'"(?:[^"\\\n]|\\.)*"', gate_src):
+        if len(_lit.group(0)) > 12:
+            theatre += theatre_in(_lit.group(0).replace("\\n", "\n"),
+                                  "gate:%d" % (gate_src.count("\n", 0, _lit.start()) + 1))
     theatre += theatre_in(open(os.path.join(HERE, "README.md"), encoding="utf-8").read(), "README.md")
     if theatre:
         print("   machinery given a voice:", theatre[:6])
@@ -11312,10 +11354,10 @@ public enum MyWatch: AccessLedger {
             if l.strip().startswith("//")))
         if _standin.search(_pr):
             _standin_hits.append(os.path.basename(_sp))
-    for tok in tokenize.generate_tokens(io.StringIO(gate_src).readline):
-        if tok.type == tokenize.STRING and len(tok.string) > 12 \
-                and _standin.search(re.sub(r"\s+", " ", tok.string.replace("\\n", " "))):
-            _standin_hits.append(f"gate:{tok.start[0]}")
+    for _lit in re.finditer(r'"(?:[^"\\\n]|\\.)*"', gate_src):
+        if len(_lit.group(0)) > 12 and _standin.search(
+                re.sub(r"\s+", " ", _lit.group(0).replace("\\n", " "))):
+            _standin_hits.append("gate:%d" % (gate_src.count("\n", 0, _lit.start()) + 1))
     if _standin_hits:
         print("   the stand-in pronoun:", _standin_hits[:6])
     S.append(("a sentence leads with its verb, not with `the ones`",
@@ -11371,9 +11413,9 @@ public enum MyWatch: AccessLedger {
     # ── AND THE VOICE CARRIES NO LONG DASH. The prose here spells a pause
     # with a colon or a second sentence; an em dash in a printed line is a
     # mark this voice never uses, so one that appears is a stowaway.
-    _dashed = [f"gate:{tok.start[0]}"
-               for tok in tokenize.generate_tokens(io.StringIO(gate_src).readline)
-               if tok.type == tokenize.STRING and "—" in tok.string]
+    _dashed = ["gate:%d" % (gate_src.count("\n", 0, _lit.start()) + 1)
+               for _lit in re.finditer(r'"(?:[^"\\\n]|\\.)*"', gate_src)
+               if "—" in _lit.group(0)]
     if _dashed:
         print("   the long dash:", _dashed[:6])
     S.append(("no printed line of the CLI carries a long dash", _dashed == []))
@@ -11414,8 +11456,8 @@ public enum MyWatch: AccessLedger {
               _named("#bare .rec", "margin-bottom") == "apart"
               and _named("#bare .note.said", "margin") == "near"
               # and the names are emitted from the file that declares them
-              and "def ladder_tokens(" in shelf_src
-              and 'u.path == "/ladder.css"' in shelf_src
+              and "func ladderTokens(" in shelf_src
+              and 'case ("GET", "/ladder.css")' in shelf_src
               and '<link rel="stylesheet" href="/ladder.css">' in ui
               # and the law they are taken from still holds on the shelf
               and ladder.get("Apart") > ladder.get("Step") > ladder.get("Near")
@@ -11499,7 +11541,8 @@ public enum MyWatch: AccessLedger {
     # atom of their world; the views themselves are implemented on the page. Two
     # lists of the same three words, and nothing compared them: rename a view
     # here and the tool goes on writing the old name into other people's files.
-    _views = set(re.findall(r'"(\w+)"', re.search(r"VIEWS = \(([^)]*)\)", src).group(1)))
+    _views = set(re.findall(r'"(\w+)"', re.search(
+        r"let BENCH_VIEWS = \[([^\]]*)\]", src).group(1)))
     _seg = set(re.findall(r'data-m="(\w+)"', ui))
     _shown = set(re.findall(r'm === "(\w+)"', _block("function setMode(m) {", ui)
                             if "function setMode(m) {" in ui else ui.split("function setMode(m)")[1][:600]))
@@ -11734,56 +11777,22 @@ public enum MyWatch: AccessLedger {
 
     # ── AND A COURT THAT DID NOT ANSWER IS NOT A GREEN. The worst thing this
     # tool could do is say `holds` about a world nobody judged, and one line was
-    # all it took: a judge_call that never runs a court and hands back a
-    # fabricated green made `gate status` print `holds · 0.0 ms` and exit nought
-    # in the demo world whose whole point is one live refusal. Every verdict here
-    # is read out of a court's printed lines, so a silence parses as nought
-    # refusals, which is the word `holds`.
+    # all it took: a call that never runs a court and hands back a fabricated
+    # green made `gate status` print `holds · 0.0 ms` in the demo world whose
+    # whole point is one live refusal.
     #
-    # The tool holds each court to its own voice now, and the mutant that found
-    # it stands here as the negative: planted on a copy of the tool, run, taken
-    # out. Both halves are asked, because a guard that refuses everything would
-    # pass the first half alone: the substituted court is refused in words, and
-    # the same world with the court back has exactly its own one refusal.
-    _court_world = os.path.join(tmp, "court-demo")
-    run("demo", _court_world)
-    _court_kept = open(GATE, encoding="utf-8").read()
-    _fake_court = ('    return subprocess.CompletedProcess(args, 0,\n'
-                   '        "\\u2713 THE JUDGE holds: 0 claims in 0.0 ms\\ncanon v2\\n", "")\n')
-    _court_anchor = '    if JUDGE_KIND == "binary":'
-    # ── AND A PLANT MEASURES ONLY THE CARRIER IT IS PLANTED IN. `status` moved
-    # to the vein, so this mutant went into a file the verb no longer runs: the
-    # plant landed, the run was clean, and the check went green about a guard it
-    # had stopped exercising. That is the shape of every dead probe in the
-    # registry. The carrier is named here, and the vein's own half is held
-    # separately below.
-    _court_env = {**os.environ, "GATE_CLI": "off"}
-    def _court_says(_w):
-        _r = subprocess.run([sys.executable, GATE, "status", "--json"], cwd=_w,
-                            capture_output=True, text=True, env=_court_env)
-        for _said in (_r.stdout, _r.stderr):
-            try:
-                return json.loads(_said)
-            except Exception:
-                pass
-        return {"raw": _r.stdout[:200]}
-    try:
-        open(GATE, "w").write(_court_kept.replace(_court_anchor,
-                                                  _fake_court + _court_anchor, 1))
-        _substituted = _court_says(_court_world)
-    finally:
-        open(GATE, "w").write(_court_kept)
-    _court_back = _court_says(_court_world)
-    S.append(("a court that did not answer in its own canon is refused, never a green",
-              _substituted.get("verdict") == "refused"
-              and any("did not answer in its own canon" in r.get("claim", "")
-                      and r.get("address") == "gate.manifest.swift"
-                      for r in _substituted.get("refusals", []))
-              # and with the court back, this world is refused for its own reason
-              # and nothing else: the guard speaks only when nobody sat
-              and _court_back.get("verdict") == "refused"
-              and [r.get("address") for r in _court_back.get("refusals", [])]
-              == ["ownership.swift:89"]))
+    # THE PROBE THAT FOUND IT USED TO STAND HERE, AND IT DIED WHERE IT STOOD.
+    # It planted a fabricated court by rewriting the tool's own source and then
+    # ran the verb: that works while the source IS what runs. The tool is a
+    # binary built from that source now, so the plant reached a file nobody
+    # reads at run time, and the anchor it looked for was python's. It could
+    # neither land nor say so. Its own comment had already named this shape
+    # once, when `status` moved and the plant stayed behind.
+    #
+    # The guard it watched is watched by a probe that BUILDS a mutant vein and
+    # asks it: `the vein refuses a court that did not sit, never a green`, in
+    # the swiftc block above. One live probe, where there were a live one and
+    # a dead one wearing the same words.
 
     # ── AND THE COVER'S PICTURE IS OF THIS BENCH, NOT A REMEMBERED ONE. The
     # README shows docs/bench.png, and bin/shoot-bench.sh writes beside it the
