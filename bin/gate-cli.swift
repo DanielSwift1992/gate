@@ -428,6 +428,28 @@ func spawnLedger() {
     }
 }
 
+// ── AND WAITING IS NOT WORK, SO IT MAY NOT COST LIKE WORK. `waitUntilExit`
+// runs a run loop and wakes on ITS timer, not on the child: a git that answers
+// in nine milliseconds was billed about a hundred and fifteen, and `status`
+// spawns five. The verb spent 331 ms of which 47 was user and system time
+// together: the rest was this tool asleep beside a finished process, and the
+// cover promises milliseconds on every keystroke.
+//
+// The child says when it is done, so the wake comes from the child: a
+// termination handler signals, and the caller waits on that. Every spawn in
+// this file goes through here, so the ledger the battery holds (`spawns 5`)
+// is unchanged and the price is paid once, at the door.
+func waitDone(_ p: Process) {
+    let done = DispatchSemaphore(value: 0)
+    p.terminationHandler = { _ in done.signal() }
+    // a process that already exited before the handler was set never signals,
+    // and `isRunning` is false by then: the handler is the fast path and this
+    // is the truth beside it
+    if !p.isRunning { p.terminationHandler = nil; return }
+    done.wait()
+    p.terminationHandler = nil
+}
+
 func runGit(_ arguments: [String], _ cwd: String) -> String {
     spawnCounted("git")
     let p = Process()
@@ -440,7 +462,7 @@ func runGit(_ arguments: [String], _ cwd: String) -> String {
     do { try p.run() } catch { return "" }
     let said = pipe.fileHandleForReading.readDataToEndOfFile()
     quiet.fileHandleForReading.readDataToEndOfFile()
-    p.waitUntilExit()
+    waitDone(p)
     return String(data: said, encoding: .utf8) ?? ""
 }
 
@@ -459,7 +481,7 @@ func gitExitCode(_ arguments: [String], _ cwd: String) -> Int32 {
     do { try p.run() } catch { return 1 }
     quiet.fileHandleForReading.readDataToEndOfFile()
     alsoQuiet.fileHandleForReading.readDataToEndOfFile()
-    p.waitUntilExit()
+    waitDone(p)
     return p.terminationStatus
 }
 
@@ -1249,50 +1271,22 @@ func asideJSON(_ rows: [[(String, String)]], _ others: [(String, String)]) -> St
 // the writing road, opened by the battery and by no argv: it prints what the
 // layout WOULD become, and writes nothing, so the comparison is byte for byte
 // against what the other carrier's own writing verb leaves on disk
-if args.first == "--manifest-row" {
-    guard args.count > 4 else {
-        cannot("--manifest-row takes a file, a kind, a role and a world",
-               "the battery calls this, not a person")
-    }
-    let path = args[1], kind = args[2], role = args[3], root = args[4]
-    let mp = (root as NSString).appendingPathComponent("gate.manifest.swift")
-    let text = FileManager.default.fileExists(atPath: mp)
-        ? theirsText(mp, "the layout of this world") : manifestHead()
-    let rel = path.hasPrefix(root + "/") ? String(path.dropFirst(root.count + 1)) : path
-    out(upsertRow(text, name: rowAtom(rel), rel: rel, kind: kind, role: role))
-    exit(0)
-}
+// ── AND THE DOORS THE STRANGLER NEEDED ARE GONE. `--manifest-row`,
 
-if args.first == "--contract-fields" {
-    guard args.count > 1 else { cannot("--contract-fields takes a document", "name one") }
-    let text = theirsText(args[1], "an OpenAPI document")
-    guard let spec = readSaid(text) else {
-        cannot(args[1] + " is not the JSON this reads", "point it at an OpenAPI document")
-    }
-    var blocks: [String] = []
-    for f in contractFields(spec) {
-        var one = "  {\n"
-        one += "    \"route\": " + jsonString(f.route) + ",\n"
-        one += "    \"field\": " + jsonString(f.field) + ",\n"
-        one += "    \"where\": " + jsonString(f.where_) + ",\n"
-        one += "    \"shape\": " + (f.shape.map { jsonString($0) } ?? "null") + "\n"
-        one += "  }"
-        blocks.append(one)
-    }
-    out(blocks.isEmpty ? "[]\n" : "[\n" + blocks.joined(separator: ",\n") + "\n]\n")
-    exit(0)
-}
+// `--contract-fields` and `--status-core` were entrances this file opened
+// for the battery alone, so a python verb could ask this binary for one
+// piece of work and the two answers could be held to each other. There is
+// one carrier now, and a door a tool answers only for its own tests holds
+// the tool against something built to agree with it: the checks that used
+// them ask the verbs a person types, which is what they were about.
 
 // ── THE STATUS CORE: the last big road, and the one every asking verb will
-// stand on. The world is discovered the way the other carrier discovers it,
-// each row is routed to its court by role, the courts are the ones compiled
-// into this binary, and the guards beside them are the python side's, spelled
-// a second time and held to the first by the battery's parity on worlds that
-// refuse for every reason a guard exists. Nothing here is reached by a carried
-// argv: the door at the end of the section is the battery's, the way
-// `--contract-fields` and `--manifest-row` are, because the verb itself moves
-// with the pack that asks it, and the tables bootstrap (`ensure_world`) stays
-// on the python side until the import family moves.
+// stand on. The world is discovered by one walk, each row is routed to its
+// court by role, the courts are the ones compiled into this binary, and the
+// guards stand beside them. The battery walks it on a world that refuses for
+// every reason a guard exists, through `status`, which is the verb a person
+// types: the door that used to stand here for the battery is gone with the
+// carrier it was built to be compared against.
 
 // the roles a row may have, in the order the refusal lists them
 let STATUS_ROLES: [(String, String)] = [
@@ -1617,7 +1611,7 @@ func manifestGuards(_ w: WorldState, liveRows: [LayoutRow]? = nil,
     let liveText = uncommented(liveText ?? (readText(layout.manifest) ?? ""))
     var seenPaths: [String: String] = [:]
     for r in live {
-        let said = r.name ?? "None"
+        let said = r.name ?? "a row with no name"
         if let role = r.role, let atom = ROLE_ATOM[role],
            liveText.contains("public typealias Kind = " + atom),
            !liveText.contains("public enum " + atom + ": Role {}") {
@@ -1701,7 +1695,7 @@ func manifestGuards(_ w: WorldState, liveRows: [LayoutRow]? = nil,
         let row = live.first(where: { $0.name == r.written })
         if row == nil || (row!.path as NSString).lastPathComponent != wantFile {
             bad.append(("\(man):\(r.line)",
-                        "`\(r.name ?? "None")` says in its own head that it is written in "
+                        "`\(r.name ?? "a row with no name")` says in its own head that it is written in "
                       + "\(wantFile), and this row does not declare it: add "
                       + "`public typealias Written = <the row for \(wantFile)>`. Which laws a "
                       + "page is judged under is a column, not a comment"))
@@ -2376,7 +2370,7 @@ func binaryRuns(_ p: String) -> Bool {
     proc.standardOutput = Pipe()
     proc.standardError = Pipe()
     do { try proc.run() } catch { return false }
-    proc.waitUntilExit()
+    waitDone(proc)
     return true
 }
 
@@ -2794,13 +2788,16 @@ struct CsvTable {
     var header: [String] = []
     var rows: [[String]] = []       // the header's row is not among these
     func has(_ key: String) -> Bool { header.contains(key) }
-    // a row shorter than the header leaves the rest unfilled, and the other
-    // carrier's reader fills those with None, which prints as `None`
+    // a row shorter than the header leaves the rest unfilled: `at` says so
+    // with nil, and every caller that writes a world out of these cells is
+    // held to asking first. The filler used to be the string `None`, which
+    // is what the other carrier printed for nothing, and it travelled into
+    // worlds as a name no shelf declares.
     func at(_ r: Int, _ key: String) -> String? {
         guard let i = header.firstIndex(of: key), r < rows.count else { return nil }
         return i < rows[r].count ? rows[r][i] : nil
     }
-    func text(_ r: Int, _ key: String) -> String { at(r, key) ?? "None" }
+    func text(_ r: Int, _ key: String) -> String { at(r, key) ?? "" }
 }
 
 func csvTable(_ path: String, _ what: String) -> CsvTable {
@@ -2850,13 +2847,36 @@ func seededWorld(_ peoplePath: String, _ grantsPath: String) -> String {
         for (i, n) in order.enumerated() {
             let next = order[(i + 1) % order.count]
             var body = "    public typealias Next = \(next)\n"
-            if let extra = extra { body += "    public typealias Sex = \(extra[n] ?? "None")\n" }
+            if let extra = extra { let said = extra[n] ?? ""
+                body += "    public typealias Sex = \(said.isEmpty ? "Male" : said)\n" }
             emit("\npublic enum \(n): \(conf) {\n\(body)}")
         }
     }
+    // ── AND A ROW THAT STOPS EARLY IS SAID, NOT SEEDED. A cell the reader
+    // could not find was written into somebody's world as `None`, which is
+    // python's word for nothing and a name no shelf declares: the seeding
+    // produced a world that refuses itself at the lines it had just written
+    // (`the name None resolves to nothing`), in a repository that was empty a
+    // second before. This tool's own law about columns is the law about this:
+    // a column is an axis to a declared atom, and a name nothing declares
+    // names nothing. `sex` is not owed, because a table without that column
+    // has a stated default; a column that IS there and left empty is a hole.
+    let owed = ["id", "rank", "home", "given", "family", "born", "site"]
+    for r in people.rows.indices {
+        for key in owed where (people.at(r, key) ?? "").isEmpty {
+            cannot("row \(r + 1) of \((peoplePath as NSString).lastPathComponent) "
+                 + "states no \(key), and a world cannot be written from it",
+                   "every column a world is written from is an axis to a name: fill that "
+                 + "cell in, or take the column out of the table and nothing will ask for it")
+        }
+    }
+    // a table with no `sex` column has a stated default, and so does a row
+    // whose own cell is empty: the two are the same absence, and one of
+    // them used to reach the world as an empty name
     var sexes: [String: String] = [:]
     for r in people.rows.indices {
-        sexes[people.text(r, "given")] = people.has("sex") ? people.text(r, "sex") : "Male"
+        let saidSex = people.has("sex") ? people.text(r, "sex") : ""
+        sexes[people.text(r, "given")] = saidSex.isEmpty ? "Male" : saidSex
     }
     ring(people.rows.indices.map { people.text($0, "given") }, "GivenNameCycle", sexes)
     ring(people.rows.indices.map { people.text($0, "family") }, "FamilyNameCycle")
@@ -3104,9 +3124,6 @@ func statusDoor(_ asJson: Bool) -> Never {
 }
 
 // the road's own door: the battery calls this, not a person
-if args.first == "--status-core" {
-    statusDoor(args.contains("--json"))
-}
 
 // ── THE REPOSITORY'S OWN HISTORY, READ ONCE. `log` prints it, and the verbs
 // that ask what is true of this clone read it rather than walking git a second
@@ -3594,7 +3611,7 @@ func worldParse(_ path: String) -> Said {
     if (try? p.run()) != nil {
         said = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
         why = String(data: quiet.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-        p.waitUntilExit()
+        waitDone(p)
     }
     if p.terminationStatus != 0 || said.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
         let first = why.split(separator: "\n").first.map(String.init) ?? "no reason given"
@@ -3982,7 +3999,7 @@ func runSaid(_ command: String, _ arguments: [String]) -> (code: Int32, said: St
     let said = String(data: pipe.fileHandleForReading.readDataToEndOfFile(),
                       encoding: .utf8) ?? ""
     quiet.fileHandleForReading.readDataToEndOfFile()
-    p.waitUntilExit()
+    waitDone(p)
     return (p.terminationStatus, said.trimmingCharacters(in: .whitespacesAndNewlines))
 }
 
@@ -4509,7 +4526,7 @@ func selfSaid(_ words: [String], _ cwd: String) -> String {
     do { try p.run() } catch { return "" }
     let said = pipe.fileHandleForReading.readDataToEndOfFile()
     quiet.fileHandleForReading.readDataToEndOfFile()
-    p.waitUntilExit()
+    waitDone(p)
     return String(data: said, encoding: .utf8) ?? ""
 }
 
@@ -6198,7 +6215,7 @@ if args.first == "report" {
         .findings li{margin:.6em 0}.findings small{color:#8e8e93}
         </style>
         <h1>gate report</h1>
-        <p>\(many(people.count, "person", "people")) · \(many(grants.count, "grant")) · judged in \(judgeMs.map { floatRepr($0) } ?? "None") ms</p>
+        <p>\(many(people.count, "person", "people")) · \(many(grants.count, "grant")) · judged in \(judgeMs.map { floatRepr($0) + " ms" } ?? "an unread clock")</p>
         <h2>Verdict</h2>\(verdictHtml)
         <h2>People</h2>\(table(people, ["id", "rank", "home", "site", "given", "family", "born"]))
         <h2>Grants</h2>\(table(grants.map { [("who", $0.0), ("doc", $0.1)] }, ["who", "doc"]))
@@ -6638,7 +6655,7 @@ func gitShow(_ spec: String, _ root: String) -> String? {
     do { try p.run() } catch { return nil }
     let said = pipe.fileHandleForReading.readDataToEndOfFile()
     quiet.fileHandleForReading.readDataToEndOfFile()
-    p.waitUntilExit()
+    waitDone(p)
     if p.terminationStatus != 0 { return nil }
     return String(data: said, encoding: .utf8) ?? ""
 }
@@ -7167,6 +7184,20 @@ if args.first == "aside" {
     var others: [(String, String)] = []
     if FileManager.default.fileExists(atPath: path) {
         let text = theirsText(path, "the divergences you declared")
+        // ── AND A FILE THIS CANNOT READ IS NOT A FILE THIS MAY REWRITE. Every
+        // shape below is careful with somebody else's bytes: the other keys
+        // travel, a row that is not a record is refused, a `diverges` that is
+        // not a list is refused. A file that is not json at all fell past all
+        // three and was written over from nothing, which is the one outcome
+        // this verb's own care exists to prevent: the care was spelled for
+        // files it could read, and silence for the rest.
+        guard readSaid(text) != nil else {
+            cannot(path + " is not the json this verb keeps, so rewriting it would "
+                   + "take whatever it does hold with it",
+                   "this verb keeps every key it did not put there, and it can only do "
+                   + "that for a file it can read: move that one aside and let this write "
+                   + "a new one, or name another with `-o`")
+        }
         if let top = readSaid(text), let pairsTop = top.asObject {
             // every other key the file states, kept as it was written
             for (k, v) in pairsTop where k != "diverges" {
@@ -7282,7 +7313,7 @@ func contractRevisions(_ path: String, _ since: String?) -> (root: String?, revs
         put.fileHandleForWriting.closeFile()
     }
     let blob = got.fileHandleForReading.readDataToEndOfFile()
-    p.waitUntilExit()
+    waitDone(p)
     var out: [(String, Data)] = []
     var i = 0
     for (_, when) in marks {
@@ -7726,7 +7757,7 @@ func vendorInto(_ rootDir: String) -> (carried: [String], digest: String?, shim:
         + "itself, pinned by the commit that added it, so every clone judges with\n"
         + "the same judge and an old commit is judged by the judge it was written\n"
         + "with.\n\n"
-        + "judge sha256: \(digest ?? "None")\n\n"
+        + "judge sha256: \(digest ?? "not recorded")\n\n"
         + "The judge is rebuilt from a public corpus: `bin/build-judge.sh <pin>`\n"
         + "builds the same judge, and the battery checks a build,\n"
         + "`GATE_JUDGE=path tests/smoke.py`. The linker is not byte-stable, so\n"
@@ -8044,15 +8075,21 @@ if args.first == "mine" || args.first == "theirs" {
     let usage = "gate \(word) PATH" + (kind == "Mine" ? "" : " --at REV")
               + " [--role " + roleList + "] · gate \(word) PATH --forget"
 
-    func answer(_ pairs: [(String, StatusJSON)], _ human: [String]) -> Never {
+    func answer(_ pairs: [(String, StatusJSON)], _ human: [String],
+                _ code: Int32 = 0) -> Never {
         if asJson { out(statusDumps(.object(pairs), 0) + "\n") }
         else { out(human.joined(separator: "\n") + "\n") }
-        exit(0)
+        exit(code)
     }
-    func asks(_ note: String, _ next: String) -> Never {
+    // ── AND A NAMED ASK THAT WAS NOT DONE EXITS LIKE ONE. Typing the verb
+    // bare is a question and answers nought; naming a file, a revision or a
+    // range and being turned away is a refusal, and it left nought too, so a
+    // hook or a Makefile step reading only the code was told the work was
+    // done. The words are unchanged: what changes is what a caller reads.
+    func asks(_ note: String, _ next: String, asked: Bool = true) -> Never {
         answer([("command", .text(word)), ("asks", .raw("true")),
                 ("note", .text(note)), ("next", .text(next))],
-               ["usage: " + note, "  next: " + next])
+               ["usage: " + note, "  next: " + next], asked ? 1 : 0)
     }
     if rest.isEmpty {
         // the same word asks and answers: with a path it declares, with none
@@ -8065,7 +8102,8 @@ if args.first == "mine" || args.first == "theirs" {
         if held.isEmpty {
             asks(usage, kind == "Mine"
                  ? "a file you emit, judged with the rest of your world"
-                 : "a file you took from somewhere, at the revision you took it at")
+                 : "a file you took from somewhere, at the revision you took it at",
+                 asked: false)
         }
         var lines = ["\(word): \(held.count)"]
         for h in held {
@@ -8144,7 +8182,11 @@ if args.first == "mine" || args.first == "theirs" {
                  + "arrives by a checkout, a copy, a vendor step you already trust")
     }
     if !STATUS_ROLES.contains(where: { $0.0 == role }) {
-        cannot("`\(role ?? "None")` is not a court anything here reads",
+        // a flag left without its word named nothing, and this said so with
+        // python's word for nothing: `None` is not a court, and it is not a
+        // word this tool speaks either
+        cannot(role.map { "`\($0)` is not a court anything here reads" }
+               ?? "`--role` names the court that reads a row, and it was given without one",
                "a row says what it is for: "
                + STATUS_ROLES.map { "`\($0.0)`: \($0.1)" }.joined(separator: " · "))
     }
@@ -8171,8 +8213,8 @@ if args.first == "mine" || args.first == "theirs" {
     let (rows2, _) = layoutRowsFull(worldRootFor(path))
     let rel2 = relPath(absPath(path), worldRootFor(path))
     if let said = rows2.first(where: { $0.path == rel2 }) {
-        asks("\(rel2) is already declared, as `\(said.name ?? "None")` "
-             + "(\(said.source), \(said.role ?? "None"))",
+        asks("\(rel2) is already declared, as `\(said.name ?? "a row with no name")` "
+             + "(\(said.source), \(said.role ?? "no court"))",
              "gate \(word) \(rel2) --forget, then say it again: a file is declared "
              + "once, or the list stops being an account of anything")
     }
@@ -8507,7 +8549,7 @@ func courtSays(_ asked: [String]) -> String {
     p.standardError = Pipe()
     guard (try? p.run()) != nil else { return "" }
     let said = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-    p.waitUntilExit()
+    waitDone(p)
     return said
 #endif
 }

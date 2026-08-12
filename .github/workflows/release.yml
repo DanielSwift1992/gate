@@ -1,7 +1,8 @@
 # ── THE ONLY PLACE A SHIPPED BINARY IS BORN. Every executable line in this
-# repository stays text, and that rule outlives the python side: a binary is
-# never committed, it is built. So the ones people download are built here, in
-# public, from the public text at a pin, and never on anybody's machine.
+# repository stays text, and that rule outlived the carrier it was written for:
+# a binary is never committed, it is built. So the ones people download are
+# built here, in public, from the public text at a pin, and never on anybody's
+# machine.
 #
 # Beside each binary go the two things that make it checkable: `.from`, the
 # revision of the theory corpus its court was compiled from, and a sha256, which
@@ -49,9 +50,9 @@ jobs:
       - name: build the vein at the judge's pin
         shell: bash
         run: bin/build-cli.sh
-      # the binary answers the one question the python side asks it before it is
-      # allowed to leave this job: a build that produced something unaskable is
-      # not a release, it is a file
+      # the binary answers for what it carries before it is allowed to leave this
+      # job: `--carries` is the ledger of every verb this tool answers, and a
+      # build that produced something unaskable is not a release, it is a file
       - name: it answers what it carries
         shell: bash
         run: |

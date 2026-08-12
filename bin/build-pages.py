@@ -37,10 +37,10 @@ def post(port, path, body):
 def main():
     tmp = tempfile.mkdtemp(prefix="gate-pages-")
     demo = os.path.join(tmp, "demo")
-    subprocess.run([sys.executable, GATE, "demo", demo],
+    subprocess.run([GATE, "demo", demo],
                    capture_output=True, check=True)
     s = socket.socket(); s.bind(("127.0.0.1", 0)); port = s.getsockname()[1]; s.close()
-    serve = subprocess.Popen([sys.executable, GATE, "serve", str(port), "--no-open"],
+    serve = subprocess.Popen([GATE, "serve", str(port), "--no-open"],
                              cwd=demo, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
         for _ in range(60):

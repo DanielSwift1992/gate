@@ -304,7 +304,7 @@ web/codemirror.*  the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
 docs/           DETAILS.md, SECURITY.md, CHANGELOG.md, NOTICE.md, and
                 the cover's picture with its provenance
-tests/smoke.py   the battery: 519 checks this repository holds itself
+tests/smoke.py   the battery: 521 checks this repository holds itself
                  to, end-to-end runs through judge parity through
                  documentation contracts; the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts
@@ -336,13 +336,14 @@ such a machine node runs both courts instead: `bin/judge-cli.js` runs the
 plain court, `bin/judge-where.js` runs the certificate court, both ported
 line for line, and the battery holds the port to the binary's own lines.
 `gate --version` says which court ran on your machine. On macOS, CI runs
-the full battery on every push. On Windows, CI runs `tests/windows.py` on
+the full battery on every push. On Windows, CI builds this same one file
+into that platform's own binary and runs `tests/windows.py` against it on
 every push: it makes the demo, takes the kit, breaks a claim, and the
-break is refused at its line, all under the port. So Windows is measured on every push.
+break is refused at its line. So Windows is measured on every push.
 On Linux, CI rebuilds the judge at the same pin and runs the full
 battery on every push, so every platform named here is measured.
 
-Roadmap, next: single-binary Swift CLI (Linux/Windows included) ·
+Roadmap, next: a release carrying the binary per platform ·
 editable bare view in the bench · apply routing over the declared
 layout · more domain forms.
 

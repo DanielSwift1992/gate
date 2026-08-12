@@ -15,12 +15,16 @@ import sys
 import tempfile
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-GATE = os.path.join(HERE, "gate")
+# the shim this platform reads: `gate.cmd` speaks that platform's own
+# spelling of the same ladder, and `gate` is the posix one
+GATE = os.path.join(HERE, "gate.cmd" if sys.platform == "win32" else "gate")
 S = []
 
 
 def run(*args, cwd=None):
-    return subprocess.run([sys.executable, GATE, *args], cwd=cwd,
+    # the tool is a binary and the shim finds it: running the shim under
+    # python worked while the CLI itself was python, and finds nothing now
+    return subprocess.run([GATE, *args], cwd=cwd,
                           capture_output=True, text=True,
                           encoding="utf-8", errors="replace",
                           env=dict(os.environ, PYTHONUTF8="1"))
@@ -46,14 +50,15 @@ def voice(label, proc):
 with tempfile.TemporaryDirectory(prefix="gate-win-") as tmp:
     os.environ["GATE_ME"] = os.path.join(tmp, "me")
 
-    # the version answers, and on a machine without the binary it names the
-    # port as the court that ran
+    # the version answers, and it names the court it was built with: this
+    # platform builds the vein from the one Swift file, and the judge's
+    # sources are compiled into it at the pin the manifest states. The
+    # port used to answer here, on a machine the judge binary was not
+    # built for; a binary built HERE has its own court and says which.
     v = run("--version")
     S.append(("gate answers on this machine", v.returncode == 0 and "gate " in v.stdout))
-    if not os.access(os.path.join(HERE, "bin", "gate-judge"), os.X_OK) \
-            or sys.platform == "win32":
-        S.append(("the version names the port as the court",
-                  "both courts are served by the port under node" in v.stdout))
+    S.append(("the version names the court this binary was built with",
+              "judge built from verification-is-identification" in v.stdout))
 
     # the certificate court through the port: a shelf page holds
     w = sh("node", os.path.join(HERE, "bin", "judge-cli.js"), "judge", "where",

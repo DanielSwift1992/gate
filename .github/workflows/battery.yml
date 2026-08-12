@@ -93,15 +93,11 @@ jobs:
           curl -s -X POST -H "Authorization: Bearer $GH_TOKEN" \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
             -d "$BODY" > /dev/null
-  windows:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4
-      # the reviewer's road on the platform the binary does not run on:
-      # both courts through the node port, from entry to a red line
-      - run: python tests/windows.py
-        env:
-          PYTHONUTF8: "1"
+  # ── AND THE REVIEWER'S ROAD RUNS WHERE THE TOOL IS. This walk had a job of
+  # its own that checked out and ran, because the CLI was python and needed
+  # nothing built. The tool is a binary now, so the road runs in the job that
+  # builds one: a checkout with no binary can only be told where to get one,
+  # which is not a measurement of anything.
   # ── AND THE VEIN IS BUILT WHERE IT HAS NEVER BEEN BUILT. The shipping plan is
   # one binary per platform, and windows is the one this vein has never met: its
   # socket calls come from WinSDK under names of their own, and Foundation
@@ -162,6 +158,13 @@ jobs:
           CARRIED=$(bin/gate-cli.exe --carries | tr -d '\r' | wc -l | tr -d ' ')
           echo "the vein carries $CARRIED veins" | tee -a vein-out.txt
           [ "$CARRIED" = "30" ] || { echo "the ledger this binary prints is not the one the battery holds" | tee -a vein-out.txt; exit 1; }
+      # the reviewer's road on this platform, walked against the binary this
+      # job just built: the demo made, the kit taken, a claim broken, and the
+      # break refused at its line
+      - name: the reviewer's road
+        run: python tests/windows.py
+        env:
+          PYTHONUTF8: "1"
       # the compiler's own first line travels out as a status: a build that
       # fails on the one platform nobody here can reproduce is a red somebody
       # guesses at, and the guessing is what this line exists against

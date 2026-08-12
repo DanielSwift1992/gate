@@ -6,9 +6,9 @@ worlds: every claim is one `Owns` lookup.
 
 | world | claims | p50 | p95 |
 |---|---|---|---|
-| 1x | 50 | 358 ms | 377 ms |
-| 10x | 500 | 370 ms | 378 ms |
+| 1x | 50 | 44 ms | 48 ms |
+| 10x | 500 | 54 ms | 55 ms |
 
-Ten times the claims cost 1.03x the p50 time. The run
+Ten times the claims cost 1.22x the p50 time. The run
 includes starting the binary and the judge process; the judgement
 itself is the smaller share of every number above.

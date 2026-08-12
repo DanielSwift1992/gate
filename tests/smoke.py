@@ -205,23 +205,46 @@ def main():
     # whole run turns that class into a red line with a sentence. Twenty
     # minutes is ten times the slowest run on record.
     #
-    # ── AND THE CLOCK IS RAISED WHILE TWO CARRIERS ARE ALIVE, with a return
-    # ticket written here. The middle of the strangler is the maximum of this
-    # cost by construction: every moved verb is judged twice, once on each side,
-    # so the run grows until the python half dies and then shrinks at a stroke.
-    # The mac job went red on this alarm rather than on a verdict, which is the
-    # clock doing the wrong job: it exists to catch a hang. Temporary, until the
-    # death commit; after it, measure the new worst day and put the tenfold
-    # margin back.
+    # ── AND THE RETURN TICKET IS SPENT. The clock was raised to thirty-five
+    # minutes while two carriers were alive, because every moved verb was judged
+    # twice, once on each side; the note here said to measure the new worst day
+    # after the death commit and put the tenfold margin back. Measured: 144
+    # seconds on the machine that wrote this, with the parity gone and the wait
+    # in every spawn fixed, against about ten minutes before. Twenty-four
+    # minutes is ten times that, which leaves a CI runner room to be four times
+    # slower and still fail only on a hang, which is the one thing this catches.
     if hasattr(signal, "alarm"):
         def _overdue(sig, frame):
             # os._exit skips every buffer, so the sentence is flushed by hand:
             # a red with no words would be the silence this clock exists against
-            print("FAIL the battery ran past thirty-five minutes: something hangs", flush=True)
+            print("FAIL the battery ran past twenty-four minutes: something hangs", flush=True)
             print("RED", flush=True)
             os._exit(1)
         signal.signal(signal.SIGALRM, _overdue)
-        signal.alarm(2100)
+        signal.alarm(1440)
+    # ── AND THE TOOL EXISTS BEFORE THE FIRST QUESTION IS ASKED OF IT. The tool
+    # is a binary now and `gate` is a shim that finds one; a fresh clone has
+    # none, so every check up to the swiftc block asked a launcher that could
+    # only say where to get one. Locally this never showed: a built binary sits
+    # in the clone. CI checks out clean, and the run went red three hundred
+    # times over one missing minute of build. Built here once, at the top,
+    # where it is one sentence rather than three hundred.
+    if not os.path.exists(CLI_HERE):
+        if shutil.which("swiftc") is None:
+            print("FAIL this tool is one binary, and there is neither one here nor a "
+                  "swiftc to build it: bin/build-cli.sh, or a release", flush=True)
+            print("RED", flush=True)
+            sys.exit(1)
+        print("   no binary in this clone: building it once, about a minute", flush=True)
+        _built = subprocess.run(["bash", os.path.join(HERE, "bin", "build-cli.sh")],
+                                capture_output=True, text=True)
+        if _built.returncode != 0 or not os.path.exists(CLI_HERE):
+            print("FAIL the vein did not build, and every check below would blame "
+                  "the tool for it: " + "; ".join(
+                      [l for l in _built.stderr.split("\n") if "error:" in l][:3]
+                      or _built.stderr.strip().split("\n")[-3:]), flush=True)
+            print("RED", flush=True)
+            sys.exit(1)
     tmp = tempfile.mkdtemp(prefix="gate-smoke-")
     # ── AND THIS BATTERY DOES NOT WRITE IN THE HOUSE OF WHOEVER RUNS IT. A personal
     # world lives in `~/.gate/me` unless `GATE_ME` says otherwise, and that was set
@@ -7251,6 +7274,24 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         # ── AND WHAT THE LIVES ANSWER, not merely that two carriers answered it
         # alike. Every scenario above carries steps that must be turned away,
         # and a parity would have called two identical wrong answers agreement.
+        # ── AND A REFUSAL EXITS LIKE A REFUSAL. Typing the verb bare is a
+        # question and answers nought; naming a file, a revision or a range and
+        # being turned away is a refusal, and it left nought too. A hook or a
+        # Makefile step reads the code and nothing else, so it was told the work
+        # was done every time this verb declined to do it.
+        S.append(("a question exits nought and a named ask that was refused does not",
+                  # the bare verb is the account, and answers it
+                  _p1said["mine"][0] == 0 and _p1said["theirs"][0] == 0
+                  # while every named ask below was turned away in words
+                  and _p1said["mine ../elsewhere/f.swift"][0] == 1
+                  and _p1said["theirs api.json --at ^1.2.0"][0] == 1
+                  and _p1said["theirs api.json --at 1.2.x"][0] == 1
+                  and _p1said["theirs api.json --at latest"][0] == 1
+                  and _p1said["theirs api.json --at v2.0.0"][0] == 1
+                  # and the one that was DONE still answers nought, so this is
+                  # not a check that everything refuses
+                  and _p1said["mine page.swift --role forms"][0] == 0
+                  and _p1said["theirs api.json --at v1.2.3"][0] == 0))
         S.append(("the account's pair turns away what it cannot write down, and says which",
                   len(_p1s) == 4
                   # a file that is not there is refused by name
@@ -7485,39 +7526,40 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                     "nullable": {"type": ["string", "null"]}}}}}}}}}},
             "nothing at all": {"paths": {}},
         }
+        # ── AND A SHAPE LEFT OPEN IS READ, NOT DROPPED. `declare` prints the
+        # fields a contract gave a shape, because a contract that says two
+        # types has not said which; the reading under it keeps the open ones,
+        # and `drift` dates them. That reading used to be asked through
+        # `--contract-fields`, a door built for this battery: with one carrier
+        # left, a door the tool answers only for its own tests measures the
+        # test. The two verbs that stand on the reading say the same thing
+        # between them, and they are what a person runs.
         _road = []
         for _label, _spec in _specs.items():
-            _sp = os.path.join(_cf, "spec.json")
-            open(_sp, "w").write(json.dumps(_spec))
+            open(os.path.join(_cf, "spec.json"), "w").write(json.dumps(_spec))
             _world = json.loads(subprocess.run(
                 [GATE, "declare", "contract", "spec.json", "--json"],
                 cwd=_cf, capture_output=True, text=True, timeout=180,
                 env={**os.environ, "GATE_CLI": CLI_HERE}).stdout or "{}").get("world") or ""
-            _pyf = [(m.group(1), m.group(2), m.group(3)) for m in re.finditer(
+            _shaped = [(m.group(1), m.group(2), m.group(3)) for m in re.finditer(
                 r"^// (\S+) · (\S+)\npublic enum \S+: Declared \{\n"
                 r"    public typealias Of = (\w+)", _world, re.M)]
-            # the reading returns every field the contract states; `declare`
-            # prints the ones it gave a shape, because a contract that says
-            # `anyOf` has not said which. Like is compared with like: the road
-            # keeps the open ones for `drift`, which dates them.
-            _all = json.loads(subprocess.run(
-                [_cli_bin, "--contract-fields", "spec.json"], cwd=_cf,
-                capture_output=True, text=True, timeout=180).stdout or "[]")
-            _swf = [(f["route"], f["field"], f["shape"]) for f in _all if f["shape"]]
-            if _pyf != _swf:
-                _road.append(f"{_label}: {_pyf[:2]} | {_swf[:2]}")
+            _dated = json.loads(subprocess.run(
+                [GATE, "drift", "spec.json", "--client", ".", "--json"],
+                cwd=_cf, capture_output=True, text=True, timeout=180,
+                env={**os.environ, "GATE_CLI": CLI_HERE}).stdout or "{}").get("declares")
+            # what is printed is what was given a shape; what is dated is every
+            # field the document states. Neither may be more than the other way
+            # round, and a reading that dropped the open ones would make them equal
+            if _dated is None or _dated < len(_shaped):
+                _road.append(f"{_label}: dates {_dated} of {len(_shaped)} printed")
+            if _label == "a shape left open" and (_dated != 3 or len(_shaped) != 2):
+                _road.append(f"{_label}: the open field is not kept: "
+                             f"{_dated} dated, {len(_shaped)} printed")
         if _road:
-            print("   the verb and the road under it read a contract apart:", _road[:2])
-        # and the open field is READ and left shapeless, not dropped: `drift`
-        # dates what a contract has ever said, including what it left open
-        open(os.path.join(_cf, "spec.json"), "w").write(json.dumps(_specs["a shape left open"]))
-        _openf = json.loads(subprocess.run(
-            [_cli_bin, "--contract-fields", "spec.json"], cwd=_cf,
-            capture_output=True, text=True, timeout=180).stdout or "[]")
-        S.append(("the verb and the reading under it see one contract, field for field",
-                  _road == [] and len(_specs) == 4
-                  and [f["field"] for f in _openf] == ["nullable", "said", "unsaid"]
-                  and [f["shape"] for f in _openf] == ["Text", "Text", None]))
+            print("   the contract reading parts:", _road[:2])
+        S.append(("a shape a contract left open is read and dated, and printed by neither",
+                  _road == [] and len(_specs) == 4))
 
         # ── AND THE LAST BIG ROAD: THE STATUS CORE. The whole answer — the
         # world discovered by the same walk, the rows routed to their courts by
@@ -7632,6 +7674,12 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
 
         _s9noms = lambda b: re.sub(rb"[0-9]+\.[0-9]+ ms", b"MS",
                                    re.sub(rb'"(judge|wall)_ms": [0-9.]+', rb'"\1_ms": MS', b))
+        # ── AND THE CORE IS ASKED THE WAY A PERSON ASKS IT. This walked each
+        # world twice, once through the verb and once through `--status-core`,
+        # a door built so the two carriers could be held to each other. There
+        # is one carrier, the door is gone, and what these worlds are for is
+        # what they SAY: every guard family fires on the world planted for it,
+        # held by the check below out of the same answers.
         _s9apart, _s9said = [], {}
         for _name in ("demo", "org", "init", "bare", "policy", "empty", "parted", "gone",
                       "presented", "stale", "printout", "vendored", "thick"):
@@ -7640,11 +7688,11 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                 _py = subprocess.run([GATE, "status", *_shape], cwd=_wd,
                                      capture_output=True, timeout=180,
                                      env={**os.environ, "GATE_CLI": CLI_HERE})
-                _sv = subprocess.run([_cli_bin, "--status-core", *_shape], cwd=_wd,
-                                     capture_output=True, timeout=180)
-                if (_s9noms(_py.stdout), _s9noms(_py.stderr), _py.returncode) != \
-                   (_s9noms(_sv.stdout), _s9noms(_sv.stderr), _sv.returncode):
-                    _s9apart.append(_name + (" --json" if _shape else ""))
+                if _py.returncode not in (0, 1):
+                    _s9apart.append(_name + (" --json" if _shape else "")
+                                    + ": a code nobody reads")
+                if _shape and _py.returncode == 0 and b'"verdict"' not in _py.stdout:
+                    _s9apart.append(_name + " --json: the answer states no verdict")
                 if not _shape:
                     _s9said[_name] = (_py.returncode, _py.stdout)
         # and the tool's own repository, the world the cover's badge is about
@@ -7652,17 +7700,13 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
             _py = subprocess.run([GATE, "status", *_shape], cwd=HERE,
                                  capture_output=True, timeout=180,
                                  env={**os.environ, "GATE_CLI": CLI_HERE})
-            _sv = subprocess.run([_cli_bin, "--status-core", *_shape], cwd=HERE,
-                                 capture_output=True, timeout=180)
-            if (_s9noms(_py.stdout), _s9noms(_py.stderr), _py.returncode) != \
-               (_s9noms(_sv.stdout), _s9noms(_sv.stderr), _sv.returncode):
-                _s9apart.append("the tool's own repository"
-                                + (" --json" if _shape else ""))
+            if _py.returncode not in (0, 1):
+                _s9apart.append("the tool's own repository: a code nobody reads")
             if not _shape:
                 _s9said["here"] = (_py.returncode, _py.stdout)
         if _s9apart:
             print("   the status core answers apart on:", _s9apart[:4])
-        S.append(("the status core answers alike through the verb and through its own door",
+        S.append(("the status core answers in this tool's canon on fourteen worlds",
                   _s9apart == []))
 
         # ── AND THE PRICE OF A VERB IS COUNTED, NOT TIMED. Words and bytes are
@@ -7675,9 +7719,10 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         # would be a flake factory; this is arithmetic.
         _sp_room = os.path.join(tmp, "spawn-ledger")
         run("demo", _sp_room)
-        _sp = subprocess.run([_cli_bin, "--status-core", "--json"], cwd=_sp_room,
+        _sp = subprocess.run([GATE, "status", "--json"], cwd=_sp_room,
                              capture_output=True, text=True,
-                             env={**os.environ, "GATE_SPAWN_LEDGER": "1"})
+                             env={**os.environ, "GATE_SPAWN_LEDGER": "1",
+                                  "GATE_CLI": CLI_HERE})
         _sp_said = _sp.stderr.strip().split("\n")[-1] if _sp.stderr.strip() else ""
         if "spawns" in _sp_said and _sp_said != "gate-cli: spawns 5 (git 2, court 3)":
             print("   the status verb spawns:", _sp_said)
@@ -7942,6 +7987,11 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                               "E1,Manager,Finance,Ada,Lovelace,Y1815,OnSite,Female\n"
                               "E2,Lead,Finance,Grace,Hopper,Y1906,Remote\n",
                  "who,doc\nE1,FinanceShare\n"),
+                # a row that stops inside a column a world IS written from: the
+                # shape that used to reach somebody's repository as `= None`
+                ("short-site", "id,rank,home,given,family,born,site,sex\n"
+                               "E1,Manager,Finance,Ada,Lovelace,Y1815\n",
+                 "who,doc\nE1,FinanceShare\n"),
                 ("quoted", "id,rank,home,given,family,born,site,sex\n"
                            'E1,Manager,"Finance,North",Ada,Lovelace,Y1815,OnSite,Female\n',
                  "who,doc\nE1,FinanceShare\n"),
@@ -7971,8 +8021,20 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                 if _wrote is not None or _said[2] != 1 \
                         or b"has no column named" not in _said[1]:
                     _bsw.append(_tag + ": a missing column is not said, or a world was written")
+            # ── AND A HOLE IN A COLUMN A WORLD IS WRITTEN FROM IS SAID, NOT
+            # SEEDED. A cell the reader could not find was written out as the
+            # word `None`, which no shelf declares, so a repository that was
+            # empty a second before held a world refusing itself at the lines
+            # this tool had just written. `sex` is the one column with a stated
+            # default, so short-row keeps seeding and this shape does not.
+            elif _tag == "short-site":
+                if _wrote is not None or _said[2] != 1 \
+                        or b"states no site" not in _said[1]:
+                    _bsw.append(_tag + ": a hole in an owed column was seeded anyway")
             elif _wrote is None or b"public enum ImportedTeam" not in _wrote:
                 _bsw.append(_tag + ": nothing was seeded at all")
+            if _wrote is not None and b" = None" in _wrote:
+                _bsw.append(_tag + ": a name nothing declares was written into a world")
         if _bsw:
             print("   the tables bootstrap parts:", _bsw[:4])
         S.append(("the tables bootstrap seeds a world out of the rows it can read",
@@ -8916,6 +8978,16 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
             if _label == "a nested object among them" and (
                     '"deep"' not in _after or '"b"' not in _after):
                 _seedapart.append(_label + ": a nested object was flattened or lost")
+            # ── AND A FILE IT CANNOT READ AT ALL IS REFUSED TOO. Every shape
+            # here is careful with somebody else's bytes, and a file that is
+            # not json fell past all that care and was written over from
+            # nothing: the one outcome the care exists to prevent. Held on the
+            # bytes, because the words alone would pass over a file replaced
+            # after them.
+            if _label == "not json at all" and (
+                    _r8.returncode != 1 or "is not the json this verb keeps" not in _r8.stderr
+                    or _after != _seed):
+                _seedapart.append(_label + ": a file this cannot read was rewritten anyway")
             # and a file it cannot read as rows is REFUSED, not rewritten
             if _label == "a row that is not a record" and (
                     _r8.returncode != 1 or "not a record" not in _r8.stderr
@@ -10921,7 +10993,9 @@ public enum MyWatch: AccessLedger {
     # file unreadable, which no check here would have caught before CI did
     try:
         import yaml as _yaml
-        _ci_parses = list(_yaml.safe_load(_ci)["jobs"]) == ["green", "linux", "windows",
+        # the windows road used to have a job of its own, which checked out and
+        # ran with nothing built: it walks in the job that builds the binary now
+        _ci_parses = list(_yaml.safe_load(_ci)["jobs"]) == ["green", "linux",
                                                             "windows-vein", "pages"]
     except ImportError:
         _ci_parses = True          # said plainly: this machine cannot check it
@@ -10982,7 +11056,7 @@ public enum MyWatch: AccessLedger {
     # be held mechanically after all: the sentence's words are verbs, and the
     # file either runs them or does not.
     _win = open(os.path.join(HERE, "tests", "windows.py"), encoding="utf-8").read()
-    _road = re.search(r"On Windows, CI runs .*?So Windows is measured on every push\.",
+    _road = re.search(r"On Windows, CI .*?So Windows is measured on every push\.",
                       readme, re.S)
     _said_road = " ".join(_road.group(0).split()) if _road else ""
     # not `_steps`: this file already has a function by that name, and shadowing
@@ -10995,9 +11069,12 @@ public enum MyWatch: AccessLedger {
         print("   the cover's Windows road and the measure are apart:", _missing[:4])
     S.append(("the road the cover tells for Windows is the one the measure walks",
               _said_road and not _missing
-              # and the court it names is the one the measure asserts
-              and "under the port" in _said_road
-              and "names the port as the court" in _win
+              # and the court it names is the one the measure asserts: this
+              # platform builds the vein and judges with the court compiled
+              # into it, where the port used to answer for a binary that was
+              # never built there
+              and "builds this same one file into that platform's own binary" in _said_road
+              and "the court this binary was built with" in _win
               # and the break it promises is refused with an address
               and "goes red at its line" in _win))
 
@@ -11419,6 +11496,22 @@ public enum MyWatch: AccessLedger {
     if _dashed:
         print("   the long dash:", _dashed[:6])
     S.append(("no printed line of the CLI carries a long dash", _dashed == []))
+
+    # ── AND NOBODY MEETS THE OTHER LANGUAGE'S WORD FOR NOTHING. An absent
+    # value printed as `None` in nine places: a role a flag never named, a row
+    # whose atom a reader could not find, an unread clock on the audit page, a
+    # judge with no digest beside it. One of them did worse than print it: the
+    # seeder wrote `= None` into somebody's world, a name no shelf declares, so
+    # a fresh repository held a world refusing itself at the line just written.
+    # `nil` is the same word in this file's own language and belongs in its
+    # code, never in a sentence somebody reads.
+    _nothing = ["gate:%d" % (gate_src.count("\n", 0, _lit.start()) + 1)
+                for _lit in re.finditer(r'"(?:[^"\\\n]|\\.)*"', gate_src)
+                if re.search(r"\b(None|nil)\b", _lit.group(0))]
+    if _nothing:
+        print("   the other language's nothing:", _nothing[:6])
+    S.append(("no printed line names nothing in a language this tool does not speak",
+              _nothing == []))
 
     # ── ONE NAME, ONE COLOUR, IN EVERY VIEW OF IT. A table cell wore one hue
     # whatever stood in it: the column was painted rather than the name. So a value
