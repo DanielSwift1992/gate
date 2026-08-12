@@ -160,11 +160,17 @@ jobs:
           [ "$CARRIED" = "30" ] || { echo "the ledger this binary prints is not the one the battery holds" | tee -a vein-out.txt; exit 1; }
       # the reviewer's road on this platform, walked against the binary this
       # job just built: the demo made, the kit taken, a claim broken, and the
-      # break refused at its line
+      # break refused at its line.
+      # ── AND ITS WORDS GO WHERE THE BUILD'S WORDS GO. This step went red once
+      # with its mouth shut: the log is closed without rights to the repository,
+      # the statuses below read `vein-out.txt`, and the road wrote to neither.
+      # One file, one mouth, both halves of this job.
       - name: the reviewer's road
-        run: python tests/windows.py
+        shell: bash
         env:
           PYTHONUTF8: "1"
+        run: |
+          python tests/windows.py 2>&1 | tee -a vein-out.txt; exit ${PIPESTATUS[0]}
       # the compiler's own first line travels out as a status: a build that
       # fails on the one platform nobody here can reproduce is a red somebody
       # guesses at, and the guessing is what this line exists against
@@ -182,7 +188,7 @@ jobs:
           # a windows path is longer than the whole status field.
           SAID=$(grep -m2 -E 'LNK[0-9]+|cannot open|undefined symbol|unresolved external' \
                  vein-out.txt | sed 's|.*[\\/]||' | paste -sd '; ' - || true)
-          [ -n "$SAID" ] || SAID=$(grep -m2 -E 'error:|the ledger this binary' vein-out.txt \
+          [ -n "$SAID" ] || SAID=$(grep -m2 -E '^FAIL|error:|the ledger this binary' vein-out.txt \
                  | sed 's|.*[\\/]||' | paste -sd '; ' - || true)
           [ -n "$SAID" ] || SAID=$(tail -1 vein-out.txt)
           BODY=$(python -c 'import json,sys; print(json.dumps({"state":"failure","context":"windows-vein-first-fail","description":sys.argv[1][:138]}))' "$SAID")
