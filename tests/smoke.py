@@ -952,17 +952,25 @@ def main():
               and json.loads(_verj.stdout)["judge_from"]
                   == open(os.path.join(HERE, "bin", "gate-judge.from")).read().strip()))
     # and the README says where this runs, and claims no measure it does not
-    # have. Windows crossed that line the day its CI road went green; Linux
-    # crossed it the day the full battery ran on ubuntu with the judge
-    # rebuilt at the pin. There is no unmeasured platform left to name, and
-    # the old sentence about one may not come back.
+    # have. Two of the three carry the whole battery. The third builds the
+    # binary and asks it what it carries, and its verbs wait on a port of the
+    # paths: every one in the CLI is spelled the posix way, so a drive letter
+    # reads as a relative path. That gap is written on the cover rather than
+    # glossed, which is the whole of this check: a sentence claiming a measure
+    # nobody takes is drift, and this tool would be carrying it in its own
+    # first page.
     rd = open(os.path.join(HERE, "README.md"), encoding="utf-8").read()
-    S.append(("the cover says where it runs, and every platform it names is measured",
+    _rd1 = " ".join(rd.split())
+    S.append(("the cover says where it runs, and claims no measure it does not have",
               "**Where it runs.**" in rd
-              and "Windows is measured on every push" in rd
+              # the two that carry the whole battery say so
+              and "the full battery on every push" in _rd1
+              and "On Linux, CI rebuilds the judge at the same pin" in _rd1
+              # and the third says exactly what is taken there, and what is not
+              and "builds this same one file into that platform's own binary" in _rd1
+              and "asks it what it carries" in _rd1
+              and "not measured there yet" in _rd1
               and "tests/windows.py" in rd
-              and "On Linux, CI rebuilds the judge at the same pin" in rd
-              and "not\nmeasured" not in rd
               and "judge-cli.js" in rd and "judge-where.js" in rd))
 
     # self-hosted shelf: the product's own stdlib files are judged by its own judge
@@ -11084,8 +11092,7 @@ public enum MyWatch: AccessLedger {
     # be held mechanically after all: the sentence's words are verbs, and the
     # file either runs them or does not.
     _win = open(os.path.join(HERE, "tests", "windows.py"), encoding="utf-8").read()
-    _road = re.search(r"On Windows, CI .*?So Windows is measured on every push\.",
-                      readme, re.S)
+    _road = re.search(r"On Windows, CI .*?paths are its own\.", readme, re.S)
     _said_road = " ".join(_road.group(0).split()) if _road else ""
     # not `_steps`: this file already has a function by that name, and shadowing
     # it took the whole battery down two thousand lines later
@@ -11097,11 +11104,13 @@ public enum MyWatch: AccessLedger {
         print("   the cover's Windows road and the measure are apart:", _missing[:4])
     S.append(("the road the cover tells for Windows is the one the measure walks",
               _said_road and not _missing
-              # and the court it names is the one the measure asserts: this
-              # platform builds the vein and judges with the court compiled
-              # into it, where the port used to answer for a binary that was
-              # never built there
-              and "builds this same one file into that platform's own binary" in _said_road
+              # and what the cover claims for that platform is what CI does
+              # there: the binary is built and asked what it carries, and the
+              # verbs wait on a port of the paths, which the cover says rather
+              # than glossing. A sentence claiming a measurement nobody takes
+              # is the drift this tool exists against, in its own cover.
+              and "asks it what it carries" in _said_road
+              and "not measured there yet" in _said_road
               and "the court this binary was built with" in _win
               # and the break it promises is refused with an address
               and "goes red at its line" in _win))

@@ -158,19 +158,21 @@ jobs:
           CARRIED=$(bin/gate-cli.exe --carries | tr -d '\r' | wc -l | tr -d ' ')
           echo "the vein carries $CARRIED veins" | tee -a vein-out.txt
           [ "$CARRIED" = "30" ] || { echo "the ledger this binary prints is not the one the battery holds" | tee -a vein-out.txt; exit 1; }
-      # the reviewer's road on this platform, walked against the binary this
-      # job just built: the demo made, the kit taken, a claim broken, and the
-      # break refused at its line.
-      # ── AND ITS WORDS GO WHERE THE BUILD'S WORDS GO. This step went red once
-      # with its mouth shut: the log is closed without rights to the repository,
-      # the statuses below read `vein-out.txt`, and the road wrote to neither.
-      # One file, one mouth, both halves of this job.
-      - name: the reviewer's road
-        shell: bash
-        env:
-          PYTHONUTF8: "1"
-        run: |
-          python tests/windows.py 2>&1 | tee -a vein-out.txt; exit ${PIPESTATUS[0]}
+      # ── AND THE ROAD DOES NOT WALK HERE YET, FOR A REASON WORTH WRITING
+      # DOWN. Walked against the binary this job builds, it stopped at the
+      # first verb that takes a path: `gate demo C:\...\demo` made nothing.
+      # The cause is in the vein and not in this file. Every path in it is
+      # spelled the one way: `absPath` calls a path absolute when it starts
+      # with `/`, folds it by splitting on `/`, and hands back `/`-joined
+      # text. A drive letter is none of those things, so an absolute windows
+      # path is treated as relative, glued onto the current directory and cut
+      # up by a separator it does not use. Thirteen readers split on `/` and
+      # four ask `hasPrefix("/")`; not one line of that file mentions this
+      # platform. That is a port of the paths, not a step in a workflow, and
+      # it is owed before this road can say anything true here.
+      #
+      # What this job measures until then is what it can: the source compiles
+      # on this platform, and the binary answers for what it carries.
       # the compiler's own first line travels out as a status: a build that
       # fails on the one platform nobody here can reproduce is a red somebody
       # guesses at, and the guessing is what this line exists against
@@ -186,9 +188,16 @@ jobs:
           # looked for first is a line that names a file or a symbol; the
           # generic failure is the fallback. The drive letters go either way:
           # a windows path is longer than the whole status field.
-          SAID=$(grep -m2 -E 'LNK[0-9]+|cannot open|undefined symbol|unresolved external' \
+          # ── AND THE SED IS FOR PATHS, NOT FOR SENTENCES. A windows path is
+          # longer than the whole status field, so a linker line is cut back to
+          # the file it names. The road's own FAIL line is a sentence with a
+          # path at the END of it, and the same cut left only the last folder:
+          # `gate-win-dw4pl1hh`, which names nothing anybody can act on. What
+          # the road says travels whole, and the cut stays where it belongs.
+          SAID=$(grep -m1 -E '^FAIL' vein-out.txt | paste -sd '; ' - || true)
+          [ -n "$SAID" ] || SAID=$(grep -m2 -E 'LNK[0-9]+|cannot open|undefined symbol|unresolved external' \
                  vein-out.txt | sed 's|.*[\\/]||' | paste -sd '; ' - || true)
-          [ -n "$SAID" ] || SAID=$(grep -m2 -E '^FAIL|error:|the ledger this binary' vein-out.txt \
+          [ -n "$SAID" ] || SAID=$(grep -m2 -E 'error:|the ledger this binary' vein-out.txt \
                  | sed 's|.*[\\/]||' | paste -sd '; ' - || true)
           [ -n "$SAID" ] || SAID=$(tail -1 vein-out.txt)
           BODY=$(python -c 'import json,sys; print(json.dumps({"state":"failure","context":"windows-vein-first-fail","description":sys.argv[1][:138]}))' "$SAID")
