@@ -54,7 +54,23 @@ func many(_ n: Int, _ one: String, _ more: String? = nil) -> String {
     return "\(n) " + (n == 1 ? one : (more ?? one + "s"))
 }
 
+// ── AND A VERB THAT STOPS TAKES ITS OWN HALF-WORLD WITH IT. `demo` makes a
+// directory and fills it, and where it stopped partway (a shelf it could not
+// read, a file it could not write) it left the shell of one behind: a folder
+// with a CODEOWNERS and no layout, which the next command reads as a world
+// that is not a world. Whoever founds a directory says so here, and the door
+// every refusal goes through unmakes it. A directory that already existed is
+// never touched: this removes what this run made, and nothing else.
+var FOUNDED_HERE: String? = nil
+
+func unmakeFounded() {
+    guard let made = FOUNDED_HERE else { return }
+    FOUNDED_HERE = nil
+    try? FileManager.default.removeItem(atPath: made)
+}
+
 func cannot(_ note: String, _ then: String) -> Never {
+    unmakeFounded()
     if args.contains("--json") {
         err("{" + jsonString("error") + ": " + jsonString(note) + ", "
             + jsonString("next") + ": " + jsonString(then) + "}\n")
@@ -197,6 +213,18 @@ if args == ["--carries"] {
 // ── the shelf, read the way the python side reads it: the files next to the
 // CLI, sorted by name, each page whole ──
 func shelf() -> [(name: String, text: String)] {
+    // ── AND THE SHELF IS CARRIED, NOT ASSUMED. These pages were read off the
+    // disk beside the binary, which is true in a clone and false for anybody
+    // who downloaded one file: `gate demo` asked for stdlib/manifest.swift and
+    // stopped, holding half a directory it had already made. The pages are
+    // compiled in now (bin/shelf-into-swift.py writes them into the build), so
+    // one binary is one binary.
+    //
+    // The disk still comes FIRST where there is one: a clone that edits a page
+    // is editing the page, not arguing with a snapshot, and this tool would be
+    // a poor advertisement for itself if the copy inside outranked the source.
+    // The battery holds the two equal, because a snapshot nobody compares is
+    // the second record this whole tool exists to refuse.
     let dir = root.appendingPathComponent("stdlib")
     let names = ((try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? [])
         .filter { $0.hasSuffix(".swift") }.sorted()
@@ -207,7 +235,7 @@ func shelf() -> [(name: String, text: String)] {
               let text = String(data: data, encoding: .utf8) else { continue }
         out.append((String(file.dropLast(6)), text))
     }
-    return out
+    return out.isEmpty ? SHELF_EMBEDDED.map { (name: $0.name, text: $0.text) } : out
 }
 
 // a `//`-line of the page's head, by its opening word: the same first four
@@ -266,9 +294,11 @@ if args.count >= 2, args[0] == "stdlib", args[1] == "show" {
         cannot("stdlib show takes a module name", "`gate stdlib` lists them")
     }
     let name = asked[2]
-    let page = root.appendingPathComponent("stdlib").appendingPathComponent(name + ".swift")
-    guard let data = FileManager.default.contents(atPath: page.path),
-          let text = String(data: data, encoding: .utf8) else {
+    // the page comes off the shelf, which is the disk beside a clone and the
+    // pages compiled in otherwise: reading the file directly here made `show`
+    // the one verb that could not answer for a binary carrying its own shelf,
+    // while `stdlib` beside it listed every page it would not print
+    guard let text = shelf().first(where: { $0.name == name })?.text else {
         cannot("no such stdlib module: \(name)", "`gate stdlib` lists them")
     }
     out(text)
@@ -2405,9 +2435,20 @@ func vendoredGuards(_ w: WorldState) -> [(address: String, claim: String)] {
 }
 
 func judgeFrom() -> String? {
+    // ── AND A BINARY KNOWS WHAT IT WAS BUILT FROM. This read `.from` beside
+    // the judge binary, which is a file in a clone and nothing at all for a
+    // person who downloaded one file: `--version` there said the revision "is
+    // not recorded", about the one dependency this whole tool rests on, while
+    // the release was shipping that very revision in a file beside it under a
+    // name this never looked for. The court is compiled in, so the revision it
+    // was compiled at is compiled in with it. The file still comes first where
+    // there is one: a clone that rebuilds its judge is answered by its own
+    // disk rather than by whatever this binary remembers.
     let p = root.appendingPathComponent("bin").appendingPathComponent("gate-judge.from").path
     let said = (readText(p) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-    return said.isEmpty ? nil : said
+    if !said.isEmpty { return said }
+    let built = COURT_PIN_BUILT_IN.trimmingCharacters(in: .whitespacesAndNewlines)
+    return built.isEmpty ? nil : built
 }
 
 func takenJudgeGuard(_ w: WorldState) -> [(address: String, claim: String)] {
@@ -4685,6 +4726,7 @@ if args.first == "demo" {
     // ── demo seam
     if rest.first == "seam" {
         let root = absPath(rest.count > 1 ? rest[1] : "gate-seam-demo")
+        if !FileManager.default.fileExists(atPath: root) { FOUNDED_HERE = root }
         try? FileManager.default.createDirectory(atPath: root, withIntermediateDirectories: true)
         put(root, "openapi.json", SEAM_DEMO_SPEC)
         put(root, "sdk.declared.json", SEAM_DEMO_SDK)
@@ -4740,6 +4782,7 @@ if args.first == "demo" {
         // is the world it is making, and the two are not the same place
         let toolRoot = root
         let root = absPath(rest.count > 1 ? rest[1] : "gate-demo")
+        if !FileManager.default.fileExists(atPath: root) { FOUNDED_HERE = root }
         try? FileManager.default.createDirectory(
             atPath: (root as NSString).appendingPathComponent("tables"),
             withIntermediateDirectories: true)
@@ -4840,6 +4883,7 @@ if args.first == "demo" {
 
     // ── demo: who owns what, in a repository shaped like the reader's own
     let root = absPath(rest.first ?? "gate-demo")
+    if !FileManager.default.fileExists(atPath: root) { FOUNDED_HERE = root }
     for rel in ["src/api", "src/ui", "src/db", "docs"] {
         try? FileManager.default.createDirectory(
             atPath: (root as NSString).appendingPathComponent(rel),
@@ -5710,11 +5754,36 @@ if args.first == "import" {
             ghosts = ghostPatterns(rules, paths, rel.hasPrefix("..") ? src : rel)
         }
         let zones = Set(rules.map { codeownersZone($0.pattern) }).count
-        let refusedAny = !refusals.isEmpty || !ghosts.isEmpty
+        // ── AND AN EMPTY READ IS A REFUSAL, NOT A VERDICT. A CODEOWNERS this
+        // door reads no line of, because it is empty, or all comments, or
+        // written in a shape this reader does not take, used to answer `holds`
+        // and exit nought. The counts beside that word were honest (zones 0,
+        // paths 0, owners 0) and the word ignored them, so a person whose file
+        // is spelled another way was told their ownership was guarded. The law
+        // is already here, one line down: a run with no policy is `observed`
+        // rather than `holds`, because a green nobody could have broken is not
+        // a green. Nothing read is that said harder: there was nothing to
+        // break, and nothing to hold.
+        var unread: [(address: String, claim: String)] = []
+        if rules.isEmpty {
+            let at = tree.map { relPath(absPath(src), absPath($0)) }
+            unread.append((at.map { $0.hasPrefix("..") ? src : $0 } ?? src,
+                           "states no rule this reads, so nothing was read and there is "
+                         + "nothing to hold: a line names a path and then who keeps it, "
+                         + "`src/api/ @alice`"))
+        }
+        let refusedAny = !refusals.isEmpty || !ghosts.isEmpty || !unread.isEmpty
         // A GREEN NOBODY COULD HAVE BROKEN IS NOT A GREEN: without a policy every
         // rule is its own authority, so the equalities cannot fail
         let verdict = refusedAny ? "refused" : (policy.isEmpty ? "observed" : "holds")
-        let note = policy.isEmpty
+        // and the note says what the run WAS: a note about halves being held,
+        // printed over a read that took nothing in, is the same green wearing
+        // longer words
+        let note = !unread.isEmpty
+            ? "nothing was read, so nothing here is a statement about your ownership: "
+              + "this door takes a path and then who keeps it. Check the shape of the "
+              + "file, or point this at the one your reviews actually use"
+            : policy.isEmpty
             ? "no ownership policy given (--policy owner,zone): every rule is its own "
               + "authority, so the equalities hold trivially. The unmatched patterns above "
               + "are read from the tree, not judged."
@@ -5724,7 +5793,11 @@ if args.first == "import" {
               + "what this road does not judge)"
         let w = discoverWorld()
         let declared = (w.layout?.rows ?? []).map { $0.path }
-        let next = asked == nil
+        let next = !unread.isEmpty
+            ? "`gate import codeowners` reads the shape github reads: a path, then the "
+              + "people who keep it. If yours is that shape and this still reads none of "
+              + "it, that is worth telling us: docs/SECURITY.md says how"
+            : asked == nil
             ? "nothing was written: this read your CODEOWNERS and your tree and left "
               + "both as they were. Add `-o ownership.swift` to keep the world it printed"
             : (w.layout != nil && !declared.contains(asked!))
@@ -5733,7 +5806,7 @@ if args.first == "import" {
               + "status names it as a file standing beside the judged ones"
             : "commit it: from here on it is what you have said, and it is judged"
         if kept != nil { try? FileManager.default.removeItem(atPath: kept!) }
-        let all = refusals.map { (address: $0.address, claim: $0.claim) } + ghosts
+        let all = refusals.map { (address: $0.address, claim: $0.claim) } + ghosts + unread
         if asJson {
             var pairs: [(String, StatusJSON)] = [
                 ("command", .text("import codeowners")),
@@ -5751,7 +5824,7 @@ if args.first == "import" {
                              ("source", .text($0.source)),
                              ("address", .text($0.address)),
                              ("claim", .text($0.claim))]) }
-                    + ghosts.map {
+                    + (ghosts + unread).map {
                     .object([("address", .text($0.address)), ("claim", .text($0.claim))]) })),
                 ("judge_ms", .raw(String(ms))),
                 ("canon_handshake", .raw(outp.contains("canon v2") ? "true" : "false")),
@@ -5768,7 +5841,7 @@ if args.first == "import" {
                     ? String(r.source.dropFirst(r.address.count + 3)) : r.source
                 lines.append("  \(r.address) · \(r.claim)" + (rule.isEmpty ? "" : "  (\(rule))"))
             }
-            for g in ghosts { lines.append("  \(g.address) · \(g.claim)") }
+            for g in ghosts + unread { lines.append("  \(g.address) · \(g.claim)") }
             lines.append("  note: " + note)
             lines.append("  next: " + next)
             out(lines.joined(separator: "\n") + "\n")
@@ -5829,6 +5902,18 @@ if args.first == "import" {
             refusals.append((where_.address, claim))
         }
         if let kept = kept { try? FileManager.default.removeItem(atPath: kept) }
+        // ── AND AN EMPTY READ IS A REFUSAL HERE TOO. A tracker with no issues
+        // in it, or a tree with no citation in it, is not a world where every
+        // citation outlives nothing: it is a reading that took nothing in, and
+        // the word over it may not be the word for a world that held.
+        if tracked.isEmpty || cites.isEmpty {
+            refusals.append((address: (src as NSString).lastPathComponent,
+                             claim: tracked.isEmpty
+                                ? "states no issue this reads, so there is nothing for a "
+                                + "citation to outlive: name the export your tracker writes"
+                                : "no citation was found under \(code), so nothing was "
+                                + "read: a citation names its key, `TODO(PROJ-1)`"))
+        }
         let next = refusals.isEmpty
             ? "wire it into CI: a citation cannot outlive its ticket again"
             : "open the address above: the citation outlived the thing it cites"
@@ -5974,7 +6059,21 @@ if args.first == "import" {
                   + "and its Role must share one namespace"
             refusals.append((m[0], what, what.components(separatedBy: " · ")[0], claim))
         }
-        let note = "both tiers of the gate are judged by this run: the posting equalities "
+        // ── AND AN EMPTY READ IS A REFUSAL HERE TOO. A cluster export with no
+        // binding in it does not hold: nothing was posted, so nothing could be
+        // posted wrongly, and a word about two tiers being judged over a read
+        // of nothing is that green wearing longer words.
+        if checked == 0 {
+            refusals.append(((src as NSString).lastPathComponent,
+                             (src as NSString).lastPathComponent,
+                             (src as NSString).lastPathComponent,
+                             "states no RoleBinding this reads, so no posting was judged: "
+                           + "point this at the export your cluster writes, items and all"))
+        }
+        let note = checked == 0
+            ? "nothing was judged: this read the export and found no binding to post, so "
+              + "no sentence here is about your cluster"
+            : "both tiers of the gate are judged by this run: the posting equalities "
                  + "against one canon, and the key's class through the ladder the world "
                  + "presents (the membership court)"
         if asJson {

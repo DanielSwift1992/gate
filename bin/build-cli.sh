@@ -73,13 +73,24 @@ else
 fi
 cp "$HERE/bin/gate-cli.swift" "$BUILD/main.swift"
 
+# ── AND THE SHELF TRAVELS INSIDE THE BINARY. The tool reads stdlib/ off the
+# disk beside it, which is true in a clone and false for everybody who
+# downloads one file: `gate demo` there asks for stdlib/manifest.swift and
+# stops, holding half a directory it already made. The pages are written into
+# the build as text and compiled in, so the sentence "one binary" is literal.
+# A clone still reads the disk first, so editing a page is still editing a
+# page; the snapshot is the fallback, and the battery holds the two equal.
+python3 "$HERE/bin/shelf-into-swift.py" "$HERE/stdlib" "$PIN" > "$BUILD/shelf.swift"
+
 if [ -n "$WINDOWS" ]; then
     # the same three places, spelled the way that toolchain reads them
     SAID="$(cd "$HERE" && pwd -W)"
-    swiftc -O "$SAID/bin/.build/main.swift" "$SAID/bin/.court/$PIN"/*.swift $LINK \
+    swiftc -O "$SAID/bin/.build/main.swift" "$SAID/bin/.build/shelf.swift" \
+        "$SAID/bin/.court/$PIN"/*.swift $LINK \
         -o "$SAID/bin/gate-cli$EXT"
 else
-    swiftc -O "$BUILD/main.swift" "$CACHE"/*.swift -o "$HERE/bin/gate-cli$EXT"
+    swiftc -O "$BUILD/main.swift" "$BUILD/shelf.swift" "$CACHE"/*.swift \
+        -o "$HERE/bin/gate-cli$EXT"
 fi
 rm -rf "$BUILD"
 echo "built bin/gate-cli$EXT (court at $(printf %.7s "$PIN"))"

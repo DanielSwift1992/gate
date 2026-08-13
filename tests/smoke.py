@@ -6293,9 +6293,23 @@ console.log(JSON.stringify(out));
             open(keep, "w").write(had)
         elif os.path.exists(keep):
             os.remove(keep)
-    S.append(("the judge says which revision of the corpus it was built from, and says so when it cannot",
-              "is not recorded" in silent
+    # ── AND THE PROVENANCE TRAVELS WITH THE BINARY. Taking the file away used
+    # to leave this tool saying the revision "is not recorded": true in a clone
+    # whose judge file was deleted, and the ordinary state for anybody who
+    # downloaded one binary, where that file never existed. The court is
+    # compiled in, so the revision it was compiled at is compiled in with it,
+    # and the file still comes first where there is one. The sentence for a
+    # build carrying neither is kept in the vein, because a binary somebody
+    # assembles by hand can still have nothing to say here.
+    S.append(("the judge says which revision of the corpus it was built from, always",
+              # the file gone, the binary still answers: from what it was built with
+              "verification-is-identification" in silent
+              and "is not recorded" not in silent
+              # a file beside it outranks what the build remembers
               and "verification-is-identification 1f4c0a9d3e7b" in spoken
+              # and the sentence for a build that knows neither is still here
+              and "is not recorded beside this binary"
+                  in open(VEIN, encoding="utf-8").read()
               # and the command that rebuilds the same court from that revision
               and "bin/build-cli.sh" in spoken
               # and the build writes it down rather than leaving it to be guessed
@@ -7070,6 +7084,79 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         S.append(("and an absent page is refused by name, with the way on and code 1",
                   _se.returncode == 1 and b"no such stdlib module: nosuch" in _se.stderr
                   and b"next: `gate stdlib` lists them" in _se.stderr))
+
+        # ── AND THE BINARY CARRIES THE SHELF, WHICH IS A SECOND RECORD OF IT.
+        # A person who downloads one file has no stdlib/ beside it, and `demo`
+        # stopped there asking for stdlib/manifest.swift, holding half a
+        # directory it had already made. The pages are compiled in now, so the
+        # sentence about one binary is literal.
+        #
+        # That snapshot is exactly the shape this tool exists to refuse: two
+        # records of one text, one of them out of sight. So it is held here,
+        # page for page, against the files it was taken from. A clone reads the
+        # disk first, so the ONLY way to ask the binary what it carries is to
+        # take it away from the clone: copied alone into a directory of its
+        # own, where the disk cannot answer for it.
+        _alone = os.path.join(tmp, "one-binary")
+        shutil.rmtree(_alone, ignore_errors=True)
+        os.makedirs(_alone)
+        _lone_bin = os.path.join(_alone, "gate-cli")
+        shutil.copy(_cli_bin, _lone_bin)
+        _drifted = []
+        for _page in sorted(glob.glob(os.path.join(HERE, "stdlib", "*.swift"))):
+            _name = os.path.basename(_page)[:-6]
+            _said = subprocess.run([_lone_bin, "stdlib", "show", _name], cwd=_alone,
+                                   capture_output=True, timeout=180).stdout
+            _disk = open(_page, "rb").read()
+            # the verb ends a page with one newline of its own, the way a print does
+            if _said.rstrip(b"\n") != _disk.rstrip(b"\n"):
+                _drifted.append(_name)
+        if _drifted:
+            print("   the shelf inside the binary is not the shelf on disk:", _drifted[:4])
+        S.append(("the shelf the binary carries is the shelf on disk, page for page",
+                  _drifted == [] and len(glob.glob(os.path.join(HERE, "stdlib", "*.swift"))) >= 16))
+
+        # and a person with that one file can walk the first road the cover
+        # offers them: a demo world, and the refusal it exists to show
+        _lone_demo = subprocess.run([_lone_bin, "demo", "world"], cwd=_alone,
+                                    capture_output=True, timeout=300)
+        _lone_status = subprocess.run([_lone_bin, "status"],
+                                      cwd=os.path.join(_alone, "world"),
+                                      capture_output=True, timeout=180) \
+            if os.path.isdir(os.path.join(_alone, "world")) else None
+        S.append(("one binary and nothing else walks the road the cover offers",
+                  _lone_demo.returncode == 0
+                  and _lone_status is not None
+                  and _lone_status.returncode == 1
+                  and b"must share one zone" in _lone_status.stdout))
+
+        # ── AND A VERB THAT STOPS PARTWAY TAKES ITS OWN HALF-WORLD WITH IT.
+        # `demo` makes a directory and fills it; where it stopped partway it
+        # left the shell of one, and the next command read that shell as a
+        # world that is not a world. What it unmakes is what THIS RUN made:
+        # a directory that was already there, with somebody's files in it, is
+        # never removed, which is the half of this rule that matters most.
+        _half = os.path.join(tmp, "half-world")
+        shutil.rmtree(_half, ignore_errors=True)
+        os.makedirs(os.path.join(_half, "theirs"))
+        # a directory standing where the layout must be written: the verb gets
+        # that far, cannot write, and refuses
+        os.makedirs(os.path.join(_half, "theirs", "gate.manifest.swift"))
+        open(os.path.join(_half, "theirs", "a-file-of-mine.txt"), "w").write("mine\n")
+        _stopped = subprocess.run([GATE, "demo", "theirs"], cwd=_half,
+                                  capture_output=True, timeout=300,
+                                  env={**os.environ, "GATE_CLI": CLI_HERE})
+        S.append(("a verb that stops partway keeps its hands off what was already there",
+                  # it refused, in words and with a code a caller can read
+                  _stopped.returncode == 1
+                  # and the person's own directory and file are untouched
+                  and os.path.isdir(os.path.join(_half, "theirs"))
+                  and os.path.exists(os.path.join(_half, "theirs", "a-file-of-mine.txt"))
+                  # and the unmaking has ONE door, the one every refusal goes
+                  # through, rather than a cleanup written per verb
+                  and "func unmakeFounded()" in shelf_src
+                  and shelf_src.count("unmakeFounded()") >= 2
+                  and shelf_src.count("FOUNDED_HERE = root") == 3))
         # ── AND A TEXT THIS TOOL WRITES HAS ONE HOME. The head a layout is born
         # with was a literal inside the CLI, and the day the Swift carrier had to
         # write the same head there would have been two copies of one text: the
@@ -8542,6 +8629,59 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         S.append(("every head of the act of entry prints the world it names, and judges it",
                   _imw == []))
 
+        # ── AND AN EMPTY READ IS A REFUSAL, NOT A VERDICT. Every door here
+        # answered `holds` with nought over a reading that took NOTHING in: a
+        # CODEOWNERS the reader takes no line of (empty, all comments, or the
+        # owner written before the path), a tracker stating no issue, a cluster
+        # export holding no binding. The counts beside that word were honest
+        # (`zones 0, paths 0, owners 0`) and the word ignored them, so a person
+        # whose file is spelled another way was told their ownership was
+        # guarded. `verify` on tables that are only headers already refuses in
+        # words; this is that law, carried the rest of the way. The numbers stay
+        # what they were, because they were never the part that lied.
+        _ew = []
+        _ed2 = os.path.join(tmp, "empty-read")
+        shutil.rmtree(_ed2, ignore_errors=True)
+        os.makedirs(os.path.join(_ed2, "src"), exist_ok=True)
+        subprocess.run(["git", "init", "-q", "-b", "main", _ed2], capture_output=True)
+        open(os.path.join(_ed2, "src", "a.py"), "w").write("x = 1\n")
+        open(os.path.join(_ed2, "owners.csv"), "w").write("owner,zone\nalice,src\n")
+        # three ways to read nothing out of a CODEOWNERS, all of them a person's
+        # ordinary mistake rather than an attack on the reader
+        for _tag, _text in (("empty", ""),
+                            ("comments only", "# who owns what\n\n"),
+                            ("owner before path", "@alice /src/\n@bob /docs/\n")):
+            _cof = os.path.join(_ed2, "CODEOWNERS")
+            open(_cof, "w").write(_text)
+            _r = subprocess.run([GATE, "import", "codeowners", "CODEOWNERS", "--tree", ".",
+                                 "--policy", "owners.csv", "--json"], cwd=_ed2,
+                                capture_output=True, text=True, timeout=180,
+                                env={**os.environ, "GATE_CLI": CLI_HERE})
+            _said = json.loads(_r.stdout or "{}")
+            if _r.returncode != 1 or _said.get("verdict") != "refused":
+                _ew.append("codeowners, " + _tag + ": " + str(_said.get("verdict")))
+            # and the counts are still the counts: what was wrong was the word
+            if _said.get("paths") != 0 or _said.get("zones") != 0:
+                _ew.append("codeowners, " + _tag + ": the counts moved")
+            if "nothing was read" not in json.dumps(_said):
+                _ew.append("codeowners, " + _tag + ": the reading is not named")
+        open(os.path.join(_ed2, "tracker.json"), "w").write('{"issues": []}\n')
+        _r = subprocess.run([GATE, "import", "refs", "tracker.json", "--code", ".", "--json"],
+                            cwd=_ed2, capture_output=True, text=True, timeout=180,
+                            env={**os.environ, "GATE_CLI": CLI_HERE})
+        if _r.returncode != 1 or json.loads(_r.stdout or "{}").get("verdict") != "refused":
+            _ew.append("refs over a tracker stating no issue")
+        open(os.path.join(_ed2, "rbac.json"), "w").write('{"items": []}\n')
+        _r = subprocess.run([GATE, "import", "rbac", "rbac.json", "--json"],
+                            cwd=_ed2, capture_output=True, text=True, timeout=180,
+                            env={**os.environ, "GATE_CLI": CLI_HERE})
+        if _r.returncode != 1 or json.loads(_r.stdout or "{}").get("verdict") != "refused":
+            _ew.append("rbac over an export holding no binding")
+        if _ew:
+            print("   a door said holds over nothing read:", _ew[:4])
+        S.append(("an empty read is a refusal at every import door, and the counts stand",
+                  _ew == []))
+
         # ── AND THE PAIR THAT STANDS ON ONE ROAD: the seed catalogue. `verify`
         # plants one violation per rule form, drawn from the data itself, and
         # judges each by the world and by whatever checker the client has today;
@@ -8838,7 +8978,16 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
             1))
         _pin = open(os.path.join(HERE, "bin", "gate-judge.from"), encoding="utf-8").read().strip()
         _mut_bin = os.path.join(_mut, "gate-cli")
-        _mb = subprocess.run(["swiftc", "-O", os.path.join(_mut, "main.swift"),
+        # the shelf is compiled into this tool now, so a build of it is a build
+        # WITH the shelf: the mutant is the same vein with one line changed, and
+        # a mutant that cannot link is a probe that measures nothing
+        _mut_shelf = os.path.join(_mut, "shelf.swift")
+        with open(_mut_shelf, "w") as _f:
+            _f.write(subprocess.run([sys.executable,
+                                     os.path.join(HERE, "bin", "shelf-into-swift.py"),
+                                     os.path.join(HERE, "stdlib"), _pin],
+                                    capture_output=True, text=True, timeout=180).stdout)
+        _mb = subprocess.run(["swiftc", "-O", os.path.join(_mut, "main.swift"), _mut_shelf,
                               *sorted(glob.glob(os.path.join(HERE, "bin", ".court",
                                                              _pin, "*.swift"))),
                               "-o", _mut_bin], capture_output=True, text=True, timeout=900)

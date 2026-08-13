@@ -298,13 +298,18 @@ bin/gate-cli.swift
                 with the court compiled in at the judge's own pin
                 (bin/build-cli.sh builds it; the binary is not committed,
                 because every executable line here stays text)
+bin/shelf-into-swift.py
+                the shelf, written into the build as text so the binary
+                carries it: a downloaded gate has no stdlib/ beside it. The
+                pages themselves stay in stdlib/, and the battery holds what
+                the binary carries against them, page for page
 stdlib/         the judge's own words, printed as real Swift files, self-judged
 web/ui.html     the workbench; bin/judge.js judges it in the browser
 web/codemirror.*  the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
 docs/           DETAILS.md, SECURITY.md, CHANGELOG.md, NOTICE.md, and
                 the cover's picture with its provenance
-tests/smoke.py   the battery: 522 checks this repository holds itself
+tests/smoke.py   the battery: 526 checks this repository holds itself
                  to, end-to-end runs through judge parity through
                  documentation contracts; the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts
