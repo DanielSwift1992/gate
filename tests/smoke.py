@@ -7618,16 +7618,20 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                               env={**os.environ, "GATE_CLI": CLI_HERE})
         _ci_at = os.path.join(_ciw, ".github", "workflows", "gate.yml")
         _ci_text = open(_ci_at, encoding="utf-8").read() if os.path.exists(_ci_at) else ""
+        # ── AND WHAT IS ASKED OF THE FILE IS ASKED OF THE FILE. Whether it
+        # PARSES needs a yaml reader, which a machine may not carry; what it
+        # SAYS is in the text either way. Reading both through the reader meant
+        # that where it was missing the stand-in answered for the words too, and
+        # the stand-in said something else: green here, red on a runner with no
+        # yaml, over a file that was correct on both.
+        _ci_says = " ".join(_ci_text.split())
         try:
             import yaml as _yaml2
             _ci_doc = _yaml2.safe_load(_ci_text) if _ci_text else None
-            _ci_steps = [s.get("name") or s.get("uses") or ""
-                         for s in (_ci_doc or {}).get("jobs", {}).get("gate", {}).get("steps", [])]
-            _ci_runs = " ".join(str(s.get("run", "")) for s in
-                                (_ci_doc or {}).get("jobs", {}).get("gate", {}).get("steps", []))
             _ci_parses = bool(_ci_doc) and "gate" in (_ci_doc.get("jobs") or {})
         except ImportError:
-            _ci_parses, _ci_steps, _ci_runs = True, ["actions/checkout@v4"], "./gate status"
+            print("   this run cannot say whether the CI step parses: no yaml here")
+            _ci_parses = True
         # and running it twice leaves the first one alone: this hands somebody a
         # starting point, it does not own their pipeline
         _ci_again = subprocess.run([GATE, "init", ".", "--ci"], cwd=_ciw,
@@ -7638,10 +7642,10 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                   and ".github/workflows/gate.yml" in (json.loads(_cir.stdout or "{}")
                                                        .get("created") or [])
                   and _ci_parses
-                  and any(s.startswith("actions/checkout") for s in _ci_steps)
+                  and "uses: actions/checkout" in _ci_says
                   # it asks THIS tool for a verdict, and takes it from a release
-                  and "./gate status" in _ci_runs
-                  and "releases/latest/download/gate-linux-x86_64" in _ci_runs
+                  and "./gate status" in _ci_says
+                  and "releases/latest/download/gate-linux-x86_64" in _ci_says
                   # no toolchain is asked of the runner: one download is the setup
                   and "swiftc" not in _ci_text and "build-cli" not in _ci_text
                   # and the second run says it left the file alone
