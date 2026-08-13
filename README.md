@@ -115,6 +115,20 @@ one example. You point it at any pair: a Jira ticket and the TODO that
 cites it, k8s RBAC and the cluster
 it describes, an API contract and a client in another language.
 
+Two of those pairs are one command each today, because the half you keep
+is already a file somebody else's machine obeys:
+
+```sh
+./gate import codeowners CODEOWNERS --tree . --policy owners.csv   # who owns what
+./gate import workflows --tree .                                   # what wakes a workflow
+```
+
+The second reads the `paths:` filters your workflows are woken by and
+holds them against this tree. A filter naming a folder that was renamed
+goes on being obeyed and wakes nothing: no red line, no log, no mail.
+It reads the filter by its address in the document, and a file it cannot
+read exactly it names, with the line, rather than guessing at it.
+
 ## find your drift
 
 Yours is wherever two places state one fact. Take a thing you shipped this

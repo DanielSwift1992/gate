@@ -161,6 +161,13 @@ usage (the git-shaped porcelain):
   gate badge [-o gate.svg]            (claims judged, and how long every commit
                                        that touched them has held, replayed)
   gate import people.csv grants.csv [-o gate.swift]
+  gate import codeowners CODEOWNERS --tree . [--policy owners.csv]
+                                      (who owns what, translated once and
+                                       judged from then on)
+  gate import workflows [--tree .]    (which paths wake a workflow, against
+                                       the tree it names: a filter that woke
+                                       nothing said nothing)
+  gate import rbac rbac.json  ·  gate import refs tracker.json --code .
   gate export gate.swift -o people.csv grants.csv
   gate verify people.csv grants.csv --against CMD
   gate serve [port]                   (local read-only JSON surface)
@@ -3537,6 +3544,17 @@ func yamlBlock(_ text: String) -> (root: YamlNode, refused: (line: Int, why: Str
             parent.items.append((no, yamlUnquote(body), YamlNode()))
             continue
         }
+        // ── AND A VALUE MAY GO ON PAST ITS KEY. `key:` with nothing after it
+        // opens either a mapping or a plain scalar spread over the lines under
+        // it, and the format tells them apart: a line that carries `: ` or ends
+        // in `:` is a key, a `- ` opens an item, and anything else at a deeper
+        // indent is the value continuing. crossplane's `stale-pr-message:` is
+        // four lines of English, and reading its second line as a key is how a
+        // whole file went unread.
+        if !said.contains(": ") && !said.hasSuffix(":") && !said.hasPrefix("- ")
+            && indent > (stack.last?.indent ?? -1) {
+            continue
+        }
         guard let colon = said.firstIndex(of: ":") else {
             return (root, (no, "a line that is neither a key nor a list item"))
         }
@@ -3590,6 +3608,20 @@ func yamlBlock(_ text: String) -> (root: YamlNode, refused: (line: Int, why: Str
                 let v = yamlUnquote(one)
                 if !v.isEmpty { node.items.append((no, v, YamlNode())) }
             }
+        } else if after.isEmpty, n + 1 < lines.count,
+                  lines[n + 1].trimmingCharacters(in: .whitespaces).hasPrefix("["),
+                  lines[n + 1].prefix(while: { $0 == " " }).count > indent {
+            // `key:` and the list on the line under it, which superset writes
+            // for a build matrix: one value, two lines, and exact either way
+            let flow = lines[n + 1].trimmingCharacters(in: .whitespaces)
+            guard flow.contains("]") else {
+                return (root, (no + 1, "a flow list that does not close on its own line"))
+            }
+            for one in flow.dropFirst().prefix(while: { $0 != "]" }).components(separatedBy: ",") {
+                let v = yamlUnquote(one)
+                if !v.isEmpty { node.items.append((no + 1, v, YamlNode())) }
+            }
+            skipTo = n + 2
         } else if !after.isEmpty && !after.hasPrefix("#") {
             node.value = yamlUnquote(after)
             // a quoted scalar may run past its line, and it ends at its own
