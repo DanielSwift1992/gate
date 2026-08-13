@@ -9882,6 +9882,22 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
     S.append(("nothing served is cacheable: an updated gate is never hidden",
               'head += "Cache-Control: no-store\\r\\n"' in src))
     c, r = run("--version")
+    # ── AND A TAG IS A CLAIM ABOUT THE VERSION IT CARRIES. The first release
+    # candidate shipped a binary that called itself 0.1.0 under a tag that said
+    # v0.2: two records of one fact, drifting in the one repository that exists
+    # to refuse that. Where this commit carries a tag, the two are held equal;
+    # where it carries none, there is nothing to hold and this says so.
+    _tag_here = subprocess.run(["git", "tag", "--points-at", "HEAD"], cwd=HERE,
+                               capture_output=True, text=True).stdout.split()
+    _tag_release = [t for t in _tag_here if re.match(r"^v\d+\.\d+", t) and "-" not in t]
+    if not _tag_release:
+        print("   this commit carries no release tag, so the version answers to nothing here")
+    S.append(("a release tag and the version it ships are one fact",
+              all(t.lstrip("v") == re.search(r'^let VERSION = "([^"]+)"',
+                                             open(VEIN, encoding="utf-8").read(),
+                                             re.M).group(1)
+                  for t in _tag_release)))
+
     S.append(("gate says its version, and the judge its bytes",
               r.get("gate") and r.get("judge", "").startswith("sha256:")))
     ui = open(os.path.join(HERE, "web", "ui.html"), encoding="utf-8").read()

@@ -9323,7 +9323,7 @@ func jsonStringASCII(_ s: String) -> String {
 // it there. A literal here would be a second copy of one number, which is the
 // registry's kind 9 written by hand; when that file goes, the declaration moves
 // with it and this reads wherever it lands.
-let VERSION = "0.1.0"
+let VERSION = "0.2.0"
 
 func gateVersion() -> String {
     return VERSION
