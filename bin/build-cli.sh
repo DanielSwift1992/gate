@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
-# Builds the Swift CLI vein binary beside the python CLI, with the court
-# compiled in: the judge sources at the pin beside the judge binary
+# Builds the tool: one binary, from one Swift file, with the court compiled
+# in. The judge sources at the pin beside the judge binary
 # (bin/gate-judge.from) are fetched the way bin/build-judge.sh fetches,
 # cached per pin under bin/.court/<pin>/ (never committed), and compiled
 # straight into the vein. No module artifact crosses a toolchain boundary:
 # the cache is four source files, and a cache that matches the pin builds
-# offline. The binary is not committed: a clone without swiftc runs the
-# python side of every vein and judges through bin/gate-judge, losing
-# nothing.
+# offline. The shelf is written into the build beside them, so the binary
+# carries its own pages. It is not committed, because every executable line
+# in this repository stays text: a clone without swiftc takes one from the
+# releases, and `gate` says so in a sentence when it finds neither.
 set -euo pipefail
 
 # ── AND THE PATHS ARE THE PLATFORM'S OWN. This script runs under a shell that
