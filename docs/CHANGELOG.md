@@ -4,6 +4,25 @@
 
 The working prototype, end to end:
 
+- A second adaptor, and the one the field asked for: `gate import
+  workflows` holds the `paths:` filters a workflow is woken by against
+  the tree they name. A filter naming a folder that was renamed goes on
+  being obeyed and wakes nothing, which leaves no red line, no log and no
+  mail. It reads the filter by its ADDRESS in the document, `on` then
+  `push` then `paths`, after a first cut that searched the text and
+  called somebody else's action parameter a claim about the repository.
+  What it cannot read exactly it names, with the file and the line, and
+  makes no claim about it. Measured on ten repositories: 245 workflows
+  read whole, one refusal, and that one is real.
+- `gate init --ci` writes the step that holds what arrives:
+  `.github/workflows/gate.yml`, one binary from the latest release and
+  `./gate status`. The hook holds a commit on the machine that makes it;
+  this holds what reaches the branch. A step already there is left alone.
+- An empty read is a refusal, not a verdict. Every import door answered
+  `holds` with nought over a reading that took nothing in: a CODEOWNERS
+  written in a shape the reader does not take, a tracker with no issue, a
+  cluster export with no binding. The counts beside that word were
+  honest; the word was not.
 - The offer knows every axis the law knows. An associatedtype whose kind
   the forms leave unstated (Keeper's Key) was invisible to the bench:
   never offered at the record, silent at its slot, while the judge
