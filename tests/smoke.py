@@ -6971,9 +6971,20 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                   # every action by revision, the way the battery's own are
                   and _rel_uses != []
                   and all(len(u.split("@")[-1]) == 40 for u in _rel_uses)
-                  # the five the shipping page names
-                  and sorted(_rel_plats) == ["linux-arm64", "linux-x86_64", "macos-arm64",
-                                             "macos-x86_64", "windows-x86_64"]
+                  # ── AND THE MATRIX IS WHAT ANSWERS IN TIME. The first run of
+                  # this road built four platforms in minutes and then sat two
+                  # hours on a queued macos-13, the last intel runner, handed
+                  # out sparingly; `publish` waited on the whole matrix, so
+                  # nothing was published at all. What blocks a release is what
+                  # this project can promise, and intel macOS is built beside it
+                  # in a job that blocks nothing and is named in the release
+                  # body either way.
+                  and sorted(_rel_plats) == ["linux-arm64", "linux-x86_64",
+                                             "macos-arm64", "windows-x86_64"]
+                  and _rel_said.get("jobs", {}).get("build-intel", {})
+                      .get("continue-on-error") is True
+                  and _rel_said.get("jobs", {}).get("publish", {}).get("needs") == "build"
+                  and "macOS on Intel is built beside them" in _rel
                   # and beside each binary the two records: what it was built
                   # from, and what lies there
                   and ".from" in _rel and "sha256" in _rel

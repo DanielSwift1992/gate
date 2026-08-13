@@ -17,6 +17,18 @@ on:
 permissions:
   contents: read
 
+# ── AND ONE SCARCE MACHINE DOES NOT HOLD A RELEASE. The first run of this
+# road built four platforms in minutes and then sat two hours on a queued
+# macos-13, which is the last intel runner and is handed out sparingly.
+# `publish` waited on the whole matrix, so nothing at all was published: a
+# release that exists nowhere because one machine somewhere is busy.
+#
+# The matrix below is what this project can promise: those runners answer.
+# Intel macOS is built beside it, in a job that may take as long as it takes
+# and blocks nothing; if it lands before the publish, its files travel with
+# the rest, and if it does not, the release says so rather than pretending
+# the platform was forgotten. Anybody on that machine builds in a minute
+# with bin/build-cli.sh, which is the same binary from the same text.
 jobs:
   build:
     strategy:
@@ -25,8 +37,6 @@ jobs:
         include:
           - runner: macos-14
             said: macos-arm64
-          - runner: macos-13
-            said: macos-x86_64
           - runner: ubuntu-latest
             said: linux-x86_64
           - runner: ubuntu-24.04-arm
@@ -84,6 +94,41 @@ jobs:
           path: out/*
           if-no-files-found: error
 
+  # the platform that is handed out sparingly: it waits as long as it waits,
+  # and `publish` does not wait with it. Its artifact travels if it is there
+  # by then, and the release names what it carries either way.
+  build-intel:
+    runs-on: macos-13
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4
+      - shell: bash
+        run: |
+          command -v swiftc || { echo "no swift toolchain on macos-13: a shipped binary is built here or nowhere"; exit 1; }
+          swiftc --version
+      - name: build the vein at the judge's pin
+        shell: bash
+        run: bin/build-cli.sh
+      - name: it answers what it carries
+        shell: bash
+        run: |
+          CARRIED=$(bin/gate-cli --carries | wc -l | tr -d ' ')
+          [ "$CARRIED" = "30" ] || { echo "this binary carries $CARRIED veins, and the ledger says 30"; exit 1; }
+      - name: name what lies there
+        shell: bash
+        run: |
+          mkdir -p out
+          NAME=gate-macos-x86_64
+          cp bin/gate-cli "out/$NAME"
+          cp bin/gate-judge.from "out/$NAME.from"
+          (cd out && shasum -a 256 "$NAME" > "$NAME.sha256")
+          cat "out/$NAME.sha256"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a   # v7.0.1
+        with:
+          name: gate-macos-x86_64
+          path: out/*
+          if-no-files-found: error
+
   publish:
     needs: build
     runs-on: ubuntu-latest
@@ -110,7 +155,13 @@ jobs:
           body: |
             Binaries built by this workflow, in public, from the text at this
             tag. Beside each one: `.from`, the corpus revision its court was
-            compiled from, and a `sha256`.
+            compiled from, and a `sha256`. What is attached is what built in
+            time: linux (x86_64, arm64), macOS on Apple silicon, and Windows
+            are built on every release; macOS on Intel is built beside them on
+            a runner that is handed out sparingly, and is here only if it
+            landed before this was published. On any machine with swiftc,
+            `bin/build-cli.sh` builds the same binary from the same text in
+            about a minute.
 
             The hash says what lies here. The check is the rebuild:
 
