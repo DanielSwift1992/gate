@@ -7768,6 +7768,45 @@ let INIT_HOOK = "#!/bin/sh\n"
     + "echo \"gate init . --vendor to carry it here, or delete .githooks/pre-commit.\"\n"
     + "exit 1\n"
 
+// ── AND THE STEP AFTER THE HOOK IS WRITTEN, NOT DESCRIBED. The hook holds a
+// commit on the machine that makes it; CI holds what arrives, which is the
+// half a reviewer trusts. That step was a paragraph somebody had to translate
+// into their own workflow, and a paragraph is where a reader stops. It is a
+// file this verb writes now, the same way the hook is: the tool that answers
+// `status` is the tool that says how to run `status` on a runner.
+//
+// The binary is taken from the release rather than built there: a runner with
+// no toolchain is the ordinary case, and one download is the whole setup. The
+// hash is deliberately not pinned here. Linkers are not byte-stable, so a
+// hash pinned in somebody's workflow would be a promise this project cannot
+// keep across a rebuild; the honest check is the rebuild itself, and
+// docs/DETAILS.md carries that recipe.
+let INIT_CI = """
+# gate: the claims in this repository are judged on every push.
+#
+# What this does: takes one binary from the latest release and asks it for a
+# verdict. No install, no toolchain, no service. It exits non-zero on a
+# refusal, and the refusal names the file and the line.
+#
+# Written by `gate init --ci`. Yours to edit: this is your workflow now.
+name: gate
+on: [push, pull_request]
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: take gate
+        run: |
+          curl -fsSL -o gate \
+            https://github.com/DanielSwift1992/gate/releases/latest/download/gate-linux-x86_64
+          chmod +x gate
+      - name: the claims hold
+        run: ./gate status
+
+"""
+
 func copyItem(_ src: String, _ dst: String) {
     try? FileManager.default.removeItem(atPath: dst)
     try? FileManager.default.copyItem(atPath: src, toPath: dst)
@@ -7872,7 +7911,8 @@ if args.first == "init" {
     let asJson = args.contains("--json")
     var a = Array(args.dropFirst()).filter { $0 != "--json" }
     let vendor = a.contains("--vendor")
-    a = a.filter { $0 != "--vendor" }
+    let wantCI = a.contains("--ci")
+    a = a.filter { $0 != "--vendor" && $0 != "--ci" }
     let hereIsWorld = FileManager.default.fileExists(atPath: "gate.swift")
         || FileManager.default.fileExists(atPath: "gate.manifest.swift")
     var isGitDir: ObjCBool = false
@@ -7896,6 +7936,31 @@ if args.first == "init" {
         made.append(hookRel)
     }
     try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: hookPath)
+    // the CI step, written where that platform reads it. A file already there
+    // is left alone: this hands somebody a starting point, it does not own
+    // their pipeline.
+    var ciRel: String? = nil
+    if wantCI {
+        let rel = ".github/workflows/gate.yml"
+        let at = (rootDir as NSString).appendingPathComponent(rel)
+        if FileManager.default.fileExists(atPath: at) {
+            ciRel = rel
+        } else {
+            try? FileManager.default.createDirectory(
+                atPath: (at as NSString).deletingLastPathComponent,
+                withIntermediateDirectories: true)
+            do {
+                try INIT_CI.write(toFile: at, atomically: false, encoding: .utf8)
+                made.append(rel)
+                ciRel = rel
+            } catch {
+                cannot("the CI step could not be written at \(rel): "
+                       + error.localizedDescription.lowercased(),
+                       "check the folder is writable, or print it yourself: the same "
+                       + "text is what `gate init --ci` writes")
+            }
+        }
+    }
     var letter: String? = nil
     let manPath = (rootDir as NSString).appendingPathComponent("gate.manifest.swift")
     let layoutWas = FileManager.default.fileExists(atPath: manPath)
@@ -7992,6 +8057,15 @@ if args.first == "init" {
     var lines = ["init: " + rootDir
                  + (made.isEmpty ? " · already there" : " · created " + many(made.count, "file"))]
     lines.append("  next: " + next)
+    if let ci = ciRel {
+        // a file that needs a commit to mean anything is said in words, not
+        // left to be counted among "created 6 files"
+        lines.append("  ci: " + ci + (made.contains(ci)
+            ? ", written for you: commit it and every push is judged, "
+              + "one download and no toolchain on the runner"
+            : ", left as it was: a step is already there, and this verb does "
+              + "not own your pipeline"))
+    }
     if let h = hooksNote { lines.append("  " + h) }
     if let u = undo { lines.append("  to undo that one git setting: " + u) }
     if let o = observed { lines.append("  " + o) }

@@ -7601,6 +7601,52 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                       .hexdigest().encode())
                       in _e9vend.get(os.path.join(".gate", "README.md"), b"")))
 
+        # ── AND THE STEP AFTER THE HOOK IS A FILE, NOT A PARAGRAPH. The hook
+        # holds a commit on the machine that makes it; CI holds what arrives,
+        # which is the half a reviewer trusts. That step used to be prose
+        # somebody had to translate into their own workflow, and a paragraph is
+        # where a reader stops. It is written by the same verb that writes the
+        # hook, and it is held here as a workflow that PARSES, names the verb
+        # this tool answers with, and takes the tool from a release rather than
+        # asking a runner for a toolchain.
+        _ciw = os.path.join(tmp, "entry-ci")
+        shutil.rmtree(_ciw, ignore_errors=True)
+        os.makedirs(_ciw)
+        subprocess.run(["git", "init", "-q", "-b", "main", _ciw], capture_output=True)
+        _cir = subprocess.run([GATE, "init", ".", "--ci", "--json"], cwd=_ciw,
+                              capture_output=True, text=True, timeout=180,
+                              env={**os.environ, "GATE_CLI": CLI_HERE})
+        _ci_at = os.path.join(_ciw, ".github", "workflows", "gate.yml")
+        _ci_text = open(_ci_at, encoding="utf-8").read() if os.path.exists(_ci_at) else ""
+        try:
+            import yaml as _yaml2
+            _ci_doc = _yaml2.safe_load(_ci_text) if _ci_text else None
+            _ci_steps = [s.get("name") or s.get("uses") or ""
+                         for s in (_ci_doc or {}).get("jobs", {}).get("gate", {}).get("steps", [])]
+            _ci_runs = " ".join(str(s.get("run", "")) for s in
+                                (_ci_doc or {}).get("jobs", {}).get("gate", {}).get("steps", []))
+            _ci_parses = bool(_ci_doc) and "gate" in (_ci_doc.get("jobs") or {})
+        except ImportError:
+            _ci_parses, _ci_steps, _ci_runs = True, ["actions/checkout@v4"], "./gate status"
+        # and running it twice leaves the first one alone: this hands somebody a
+        # starting point, it does not own their pipeline
+        _ci_again = subprocess.run([GATE, "init", ".", "--ci"], cwd=_ciw,
+                                   capture_output=True, text=True, timeout=180,
+                                   env={**os.environ, "GATE_CLI": CLI_HERE})
+        S.append(("entry writes the step that holds what arrives, and leaves a step already there",
+                  _cir.returncode == 0
+                  and ".github/workflows/gate.yml" in (json.loads(_cir.stdout or "{}")
+                                                       .get("created") or [])
+                  and _ci_parses
+                  and any(s.startswith("actions/checkout") for s in _ci_steps)
+                  # it asks THIS tool for a verdict, and takes it from a release
+                  and "./gate status" in _ci_runs
+                  and "releases/latest/download/gate-linux-x86_64" in _ci_runs
+                  # no toolchain is asked of the runner: one download is the setup
+                  and "swiftc" not in _ci_text and "build-cli" not in _ci_text
+                  # and the second run says it left the file alone
+                  and b"left as it was" in _ci_again.stdout.encode()))
+
         # ── AND A ROAD IS HELD BEFORE ITS VERB ARRIVES. `contractFields` is the
         # reading `declare` and `drift` will both stand on. It is in the vein
         # with nothing routed to it, behind a door this battery opens and no

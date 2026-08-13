@@ -263,6 +263,12 @@ away, each where you would look for it:
 - [docs/CHANGELOG.md](docs/CHANGELOG.md): what exists, in the order it came to be.
 - After `gate init`, your repository is met by a letter of its own:
   `stdlib/readme.swift`, beside your files and judged with them.
+- `gate init --ci` writes the other half of the same step:
+  `.github/workflows/gate.yml`, which takes one binary from the latest
+  release and asks it for a verdict on every push. No toolchain on the
+  runner, nothing to install, and a step already there is left alone.
+  The hook holds a commit on the machine that makes it; this holds what
+  arrives.
 
 ## what you just cloned
 
@@ -309,7 +315,7 @@ web/codemirror.*  the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
 docs/           DETAILS.md, SECURITY.md, CHANGELOG.md, NOTICE.md, and
                 the cover's picture with its provenance
-tests/smoke.py   the battery: 526 checks this repository holds itself
+tests/smoke.py   the battery: 527 checks this repository holds itself
                  to, end-to-end runs through judge parity through
                  documentation contracts; the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts
