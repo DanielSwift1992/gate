@@ -3431,6 +3431,206 @@ func globMatch(_ pattern: String, _ name: String) -> Bool {
     return re.firstMatch(in: name, range: NSRange(location: 0, length: ns.length)) != nil
 }
 
+// ── THE BLOCK SUBSET, READ EXACTLY OR NOT AT ALL. An adaptor translates a
+// format somebody else's machine already obeys, so it may not guess: either a
+// line is read the one way the format defines, or the document is refused with
+// the line that stopped it. This takes the subset these files are written in:
+//
+//   comments and blank lines, `key:`, `key: value`, `- item`, nesting by
+//   spaces, values quoted with ' or " or bare, a trailing comment after a
+//   value
+//
+// and it stops at everything else, by name: a tab in the indentation, an
+// anchor `&a`, an alias `*a`, a literal or folded scalar (`|`, `>`), a flow
+// mapping `{`, a document separator. Those are legal yaml and this does not
+// read them, which is a sentence it says rather than a thing it silently
+// guesses at.
+//
+// A general yaml reader would be the wrong tool even if one were here: in yaml
+// 1.1 the key `on` reads as the boolean true, so a document read that way
+// answers about a key nobody wrote. Reading the text as text is the exact
+// reading for this format.
+final class YamlNode {
+    var line = 0
+    var value: String? = nil
+    var children: [(key: String, node: YamlNode)] = []
+    var items: [(line: Int, text: String, node: YamlNode)] = []
+}
+
+func yamlUnquote(_ said: String) -> String {
+    var v = said.trimmingCharacters(in: .whitespaces)
+    if let q = v.first, q == "\"" || q == "'" {
+        let rest = v.dropFirst()
+        if let end = rest.firstIndex(of: q) { return String(rest[rest.startIndex..<end]) }
+        return String(rest)
+    }
+    if let hash = v.range(of: " #") { v = String(v[v.startIndex..<hash.lowerBound]) }
+    return v.trimmingCharacters(in: .whitespaces)
+}
+
+func yamlBlock(_ text: String) -> (root: YamlNode, refused: (line: Int, why: String)?) {
+    let root = YamlNode()
+    var stack: [(indent: Int, node: YamlNode)] = [(-1, root)]
+    var opened = false
+    var skipTo = 0
+    let lines = text.components(separatedBy: "\n")
+    for (n, raw) in lines.enumerated() {
+        if n < skipTo { continue }
+        let no = n + 1
+        if raw.trimmingCharacters(in: .whitespaces).isEmpty { continue }
+        if raw.contains("\t") {
+            return (root, (no, "a tab in the indentation, which yaml does not allow and "
+                             + "this does not straighten out"))
+        }
+        let said = raw.trimmingCharacters(in: .whitespaces)
+        if said.hasPrefix("#") { continue }
+        // a `---` before anything else opens THE document, which is ordinary and
+        // exact; a second one opens a second document, and this reads one
+        if said.hasPrefix("---") || said.hasPrefix("...") {
+            if opened || said.hasPrefix("...") {
+                return (root, (no, "a second document in one file: this reads one"))
+            }
+            opened = true
+            continue
+        }
+        if said.hasPrefix("&") || said.hasPrefix("*") {
+            return (root, (no, "an anchor or an alias, which names a value somewhere else"))
+        }
+        let indent = raw.prefix(while: { $0 == " " }).count
+        while stack.count > 1 && indent <= stack[stack.count - 1].indent { stack.removeLast() }
+        let parent = stack[stack.count - 1].node
+        if said.hasPrefix("- ") || said == "-" {
+            let body = said == "-" ? "" : String(said.dropFirst(2))
+                .trimmingCharacters(in: .whitespaces)
+            if body.contains(": ") || body.hasSuffix(":") {
+                // a mapping inside a list: legal, and not a shape this asks
+                // about. Its first key may still open a literal block, and
+                // `- run: |` is the commonest line in these files: the block's
+                // lines are its value, and reading them as keys of the list is
+                // how prometheus and superset stayed unread.
+                let node = YamlNode()
+                node.line = no
+                parent.items.append((no, "", node))
+                stack.append((indent, node))
+                let firstValue = body.contains(": ")
+                    ? String(body[body.range(of: ": ")!.upperBound...])
+                        .trimmingCharacters(in: .whitespaces)
+                    : ""
+                if firstValue.hasPrefix("|") || firstValue.hasPrefix(">") {
+                    var j = n + 1
+                    while j < lines.count {
+                        let more = lines[j]
+                        if more.trimmingCharacters(in: .whitespaces).isEmpty { j += 1; continue }
+                        if more.prefix(while: { $0 == " " }).count <= indent { break }
+                        j += 1
+                    }
+                    skipTo = j
+                }
+                continue
+            }
+            if body.hasPrefix("{") || body.hasPrefix("[") {
+                return (root, (no, "a flow collection, written inline in brackets"))
+            }
+            if body.hasPrefix("&") || body.hasPrefix("*") {
+                return (root, (no, "an anchor or an alias inside a list"))
+            }
+            parent.items.append((no, yamlUnquote(body), YamlNode()))
+            continue
+        }
+        guard let colon = said.firstIndex(of: ":") else {
+            return (root, (no, "a line that is neither a key nor a list item"))
+        }
+        let key = String(said[said.startIndex..<colon])
+            .trimmingCharacters(in: CharacterSet(charactersIn: " \"'"))
+        let after = String(said[said.index(after: colon)...])
+            .trimmingCharacters(in: .whitespaces)
+        // a literal or folded scalar: its value is every line indented past the
+        // key, which is exact, so it is stepped over rather than refused. This
+        // reads no claim out of it and makes none about it: `run: |` is in
+        // nearly every one of these files, and refusing the document for it
+        // would mean reading none of them.
+        if after.hasPrefix("|") || after.hasPrefix(">") {
+            let node = YamlNode()
+            node.line = no
+            parent.children.append((key, node))
+            var j = n + 1
+            while j < lines.count {
+                let body = lines[j]
+                if body.trimmingCharacters(in: .whitespaces).isEmpty { j += 1; continue }
+                if body.prefix(while: { $0 == " " }).count <= indent { break }
+                j += 1
+            }
+            skipTo = j
+            continue
+        }
+        // a flow mapping that opens and closes on its own line is an opaque
+        // value with exact bounds: stepped over, never read into. One that
+        // does not close there is refused, because its end is a guess.
+        if after.hasPrefix("{") {
+            guard after.contains("}") else {
+                return (root, (no, "a flow mapping that does not close on its own line"))
+            }
+            let node = YamlNode()
+            node.line = no
+            parent.children.append((key, node))
+            continue
+        }
+        if after.hasPrefix("&") || after.hasPrefix("*") {
+            return (root, (no, "an anchor or an alias as a value"))
+        }
+        let node = YamlNode()
+        node.line = no
+        if after.hasPrefix("[") {
+            // a list on one line: read exactly, item by item
+            let inner = after.dropFirst().prefix(while: { $0 != "]" })
+            if !after.contains("]") {
+                return (root, (no, "a flow list that does not close on its own line"))
+            }
+            for one in inner.components(separatedBy: ",") {
+                let v = yamlUnquote(one)
+                if !v.isEmpty { node.items.append((no, v, YamlNode())) }
+            }
+        } else if !after.isEmpty && !after.hasPrefix("#") {
+            node.value = yamlUnquote(after)
+            // a quoted scalar may run past its line, and it ends at its own
+            // closing quote: exact, and stepped over the same way a literal
+            // block is. `run: "cd x && \` spread over five lines is ordinary
+            // in these files, and its lines are not keys of anything.
+            if let q = after.first, q == "\"" || q == "'",
+               after.dropFirst().firstIndex(of: q) == nil {
+                var j = n + 1
+                while j < lines.count {
+                    let more = lines[j]
+                    j += 1
+                    if more.contains(String(q)) { break }
+                }
+                skipTo = j
+            }
+        }
+        parent.children.append((key, node))
+        stack.append((indent, node))
+    }
+    return (root, nil)
+}
+
+// the value at an address in the document, and nothing that merely looks like it
+func yamlAt(_ node: YamlNode, _ address: [String]) -> YamlNode? {
+    var here = node
+    for key in address {
+        guard let next = here.children.first(where: { $0.key == key })?.node else { return nil }
+        here = next
+    }
+    return here
+}
+
+func yamlList(_ node: YamlNode, _ address: [String]) -> [(line: Int, text: String)] {
+    guard let at = yamlAt(node, address) else { return [] }
+    var out = at.items.filter { !$0.text.isEmpty }.map { (line: $0.line, text: $0.text) }
+    // `paths: src/**` with one value is a list of one, the way that platform reads it
+    if out.isEmpty, let v = at.value, !v.isEmpty { out = [(at.line, v)] }
+    return out
+}
+
 func ghostPatterns(_ rules: [(line: Int, pattern: String, owners: [String])],
                    _ paths: [String], _ saidName: String) -> [(address: String, claim: String)] {
     var out: [(address: String, claim: String)] = []
@@ -6109,12 +6309,154 @@ if args.first == "import" {
         exit(refusals.isEmpty ? 0 : 1)
     }
 
+    // ── import workflows [--tree DIR]: the second adaptor.
+    //
+    // A workflow says which paths wake it: `on.push.paths`, and `paths-ignore`
+    // beside it. That is a claim about this tree, written by one team and
+    // obeyed by a runner nobody watches; when a folder is renamed the filter
+    // goes on being obeyed and wakes nothing, and nothing anywhere says so. A
+    // job that does not run leaves no red line, no log and no mail.
+    //
+    // AND THIS DOES NOT SEARCH THE FILE, IT READS THE DOCUMENT. The first cut
+    // of this looked for `paths:` anywhere in the text and took what followed.
+    // That is a search, and a search answers about things it was not asked
+    // about: on vitess it found four `paths:` keys belonging to somebody
+    // else's action under `with:`, and called a step's parameter a claim about
+    // this repository. Both mistakes are the same mistake, which is reading a
+    // format by resemblance instead of by structure.
+    //
+    // So the reading is structural and NARROW, and it refuses rather than
+    // guesses. `yamlBlock` below takes the block subset these files are
+    // written in: comments, `key:`, `key: value`, `- item`, nesting by spaces.
+    // Anything outside that subset (a tab, an anchor, an alias, a folded or
+    // literal scalar, a flow mapping) is not read past: the file is NAMED as
+    // unread, with the line, and no claim is made about it. A reader that
+    // skips what it does not understand is the silence this tool exists
+    // against, and one that guesses is worse.
+    //
+    // The claim is then taken by its address in the document, `on` then `push`
+    // or `pull_request` then `paths`, and never by where a string happens to
+    // appear. Note that a general yaml reader is no help here: in yaml 1.1 the
+    // key `on` reads as the boolean true, which is why this platform's own
+    // documents are famous for it. Reading the text as text is the exact
+    // reading.
+    if head == "workflows" {
+        let tail = Array(rest.dropFirst())
+        var tree = "."
+        if let i = tail.firstIndex(of: "--tree"), i + 1 < tail.count { tree = tail[i + 1] }
+        let dir = (absPath(tree) as NSString).appendingPathComponent(".github/workflows")
+        let names = ((try? FileManager.default.contentsOfDirectory(atPath: dir)) ?? [])
+            .filter { $0.hasSuffix(".yml") || $0.hasSuffix(".yaml") }.sorted()
+        var paths: [String] = []
+        if let walk = FileManager.default.enumerator(atPath: absPath(tree)) {
+            for case let rel as String in walk {
+                if rel.components(separatedBy: "/").contains(".git") {
+                    walk.skipDescendants(); continue
+                }
+                var isDir: ObjCBool = false
+                let full = (absPath(tree) as NSString).appendingPathComponent(rel)
+                if FileManager.default.fileExists(atPath: full, isDirectory: &isDir),
+                   !isDir.boolValue { paths.append(rel) }
+            }
+        }
+        var filters: [(file: String, line: Int, key: String, pattern: String)] = []
+        var unread: [(address: String, claim: String)] = []
+        for file in names {
+            let at = (dir as NSString).appendingPathComponent(file)
+            guard let text = readText(at) else {
+                unread.append((file, "this file is not text this can read, so the paths it "
+                                   + "names were not read either"))
+                continue
+            }
+            let doc = yamlBlock(text)
+            if let refused = doc.refused {
+                unread.append(("\(file):\(refused.line)",
+                               "this reading takes the block subset these files are written "
+                             + "in, and stops at what it cannot read exactly: \(refused.why). "
+                             + "No claim is made about this file"))
+                continue
+            }
+            // the claim by its address in the document, never by resemblance
+            for when in ["push", "pull_request", "pull_request_target"] {
+                for key in ["paths", "paths-ignore"] {
+                    for item in yamlList(doc.root, ["on", when, key]) {
+                        filters.append((file, item.line, key, item.text))
+                    }
+                }
+            }
+        }
+        var dead: [(address: String, claim: String)] = []
+        for f in filters {
+            // ── AND THE MATCHING IS WIDER THAN THAT PLATFORM'S, ON PURPOSE.
+            // Here `*` crosses a separator; there it does not, and `**` does.
+            // So a pattern this calls dead is dead by the narrower reading too,
+            // and one it calls alive may still be dead there. The error is
+            // pushed to the side that costs a missed finding rather than a
+            // wrong accusation.
+            var pat = f.pattern
+            if pat.hasPrefix("!") { pat.removeFirst() }
+            while pat.hasPrefix("/") { pat.removeFirst() }
+            let hit = paths.contains { p in
+                globMatch(pat, p) || globMatch(pat + "/*", p) || p.hasPrefix(pat + "/")
+                    || globMatch(pat, (p as NSString).lastPathComponent)
+            }
+            if !hit {
+                dead.append(("\(f.file):\(f.line)",
+                             "`\(f.key)` names `\(f.pattern)`, and no file in the tree "
+                           + "matches it: this workflow waits for a change that cannot "
+                           + "arrive"))
+            }
+        }
+        let all = dead + unread
+        // an empty read is a refusal, not a verdict: no workflow at all and
+        // workflows stating no filter are two answers, and neither is `holds`
+        let nothing = names.isEmpty
+            ? "there is no .github/workflows here, so nothing was read"
+            : filters.isEmpty && unread.isEmpty
+            ? "no workflow here states a path filter under `on`, so there is nothing "
+              + "for this to judge" : ""
+        let verdict = !all.isEmpty ? "refused" : (nothing.isEmpty ? "holds" : "observed")
+        let next = !dead.isEmpty
+            ? "open the address above: the filter names a path this tree does not have, so "
+              + "the job it guards does not run on the change it was written for"
+            : !unread.isEmpty
+            ? "that file is written outside the subset this reads exactly. If it is "
+              + "ordinary block yaml, that is worth telling us: docs/SECURITY.md says how"
+            : nothing.isEmpty
+            ? "wire it into CI: a filter cannot go quiet again without saying so"
+            : nothing
+        if asJson {
+            var pairs: [(String, StatusJSON)] = [
+                ("command", .text("import workflows")),
+                ("workflows", .raw(String(names.count))),
+                ("filters", .raw(String(filters.count))),
+                ("files", .raw(String(paths.count))),
+                ("verdict", .text(verdict)),
+                ("refusals", .list(all.map {
+                    .object([("address", .text($0.address)), ("claim", .text($0.claim))]) })),
+                ("next", .text(next)),
+            ]
+            if let ready = commandIn(next) { pairs.append(("command_to_run", .text(ready))) }
+            out(statusDumps(.object(pairs), 0) + "\n")
+        } else {
+            var lines = ["import workflows: "
+                         + (all.isEmpty ? verdict : "refused \(all.count)")
+                         + " · " + many(filters.count, "filter")
+                         + " in " + many(names.count, "workflow")]
+            for r in all { lines.append("  \(r.address) · \(r.claim)") }
+            lines.append("  next: " + next)
+            out(lines.joined(separator: "\n") + "\n")
+        }
+        exit(all.isEmpty && nothing.isEmpty ? 0 : 1)
+    }
+
     // ── import people.csv grants.csv [-o gate.swift]
     let tables = rest.filter { !$0.hasPrefix("-") }
     if tables.count < 2 {
         let note = "import people.csv grants.csv [-o gate.swift]  ·  "
                  + "import codeowners CODEOWNERS --tree . [--policy owners.csv]  ·  "
-                 + "import rbac rbac.json  ·  import refs FILE"
+                 + "import rbac rbac.json  ·  import refs FILE  ·  "
+                 + "import workflows [--tree DIR]"
         let next = "gate import codeowners CODEOWNERS --tree . reads ownership you "
                  + "already keep, and writes one small file you commit"
         if asJson {

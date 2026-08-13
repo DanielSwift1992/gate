@@ -8728,6 +8728,83 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         S.append(("an empty read is a refusal at every import door, and the counts stand",
                   _ew == []))
 
+        # ── AND THE SECOND ADAPTOR: WHICH PATHS WAKE A WORKFLOW. A filter under
+        # `on.push.paths` is a claim about this tree, obeyed by a runner nobody
+        # watches: rename the folder and the filter goes on being obeyed and
+        # wakes nothing, leaving no red line, no log and no mail.
+        #
+        # THE READING IS BY ADDRESS, NOT BY RESEMBLANCE, and this is what holds
+        # it there. The first cut searched the text for `paths:` and found four
+        # of them belonging to somebody else's action under `with:`, calling a
+        # step's parameter a claim about the repository. So the fixture below
+        # carries that exact trap, plus a comment after a quoted value, plus the
+        # shapes that stop a reader honestly: what is read must be read by its
+        # place in the document, and what cannot be read exactly must be NAMED.
+        _wfd = os.path.join(tmp, "workflows-adaptor")
+        shutil.rmtree(_wfd, ignore_errors=True)
+        os.makedirs(os.path.join(_wfd, ".github", "workflows"))
+        os.makedirs(os.path.join(_wfd, "src", "api"))
+        open(os.path.join(_wfd, "src", "api", "handler.ts"), "w").write("export const x = 1\n")
+        subprocess.run(["git", "init", "-q", "-b", "main", _wfd], capture_output=True)
+        open(os.path.join(_wfd, ".github", "workflows", "live.yml"), "w").write(
+            "---\n"
+            "name: live\n"
+            '"on":\n'
+            "  push:\n"
+            "    paths:\n"
+            '      - "src/**" # the comment after a value is not part of it\n'
+            "      - docs/**\n"
+            "jobs:\n"
+            "  one:\n"
+            "    runs-on: ubuntu-latest\n"
+            "    steps:\n"
+            "      - run: |\n"
+            "          echo a literal block: its lines are its value\n"
+            "          paths: this line is not a filter\n"
+            "      - uses: test-summary/action@v2\n"
+            "        with:\n"
+            '          paths: "_test/junit/*.xml"\n')
+        _wf = subprocess.run([GATE, "import", "workflows", "--tree", ".", "--json"],
+                             cwd=_wfd, capture_output=True, text=True, timeout=180,
+                             env={**os.environ, "GATE_CLI": CLI_HERE})
+        _wfj = json.loads(_wf.stdout or "{}")
+        _wf_said = json.dumps(_wfj)
+        S.append(("the workflow adaptor reads the filter by its address, not by resemblance",
+                  # two filters under on.push.paths, and NEITHER of the two
+                  # `paths:` keys that belong to a step
+                  _wfj.get("filters") == 2
+                  and "_test/junit" not in _wf_said
+                  and "this line is not a filter" not in _wf_said
+                  # `src/**` catches a file here and is not named; `docs/**`
+                  # catches nothing and is, with the line it stands on
+                  and "docs/**" in _wf_said and "src/**" not in _wf_said
+                  and "live.yml:7" in _wf_said
+                  # the comment travelled with neither pattern
+                  and "the comment after a value" not in _wf_said
+                  and _wf.returncode == 1 and _wfj.get("verdict") == "refused"))
+
+        # and a document it cannot read exactly is NAMED, with the line and the
+        # reason, and no claim is made about it: a reader that skips what it
+        # does not understand is the silence this whole tool is against
+        open(os.path.join(_wfd, ".github", "workflows", "unread.yml"), "w").write(
+            "name: unread\n"
+            '"on":\n'
+            "  push:\n"
+            "    paths:\n"
+            "      - &anchor src/**\n")
+        _wf2 = json.loads(subprocess.run(
+            [GATE, "import", "workflows", "--tree", ".", "--json"], cwd=_wfd,
+            capture_output=True, text=True, timeout=180,
+            env={**os.environ, "GATE_CLI": CLI_HERE}).stdout or "{}")
+        _wf2_said = json.dumps(_wf2)
+        S.append(("a workflow it cannot read exactly is named, and judged about in nothing",
+                  "unread.yml:5" in _wf2_said
+                  and "anchor" in _wf2_said
+                  and "No claim is made about this file" in _wf2_said
+                  # the readable file beside it is still read: one bad document
+                  # does not take the others down
+                  and _wf2.get("filters") == 2))
+
         # ── AND THE PAIR THAT STANDS ON ONE ROAD: the seed catalogue. `verify`
         # plants one violation per rule form, drawn from the data itself, and
         # judges each by the world and by whatever checker the client has today;
