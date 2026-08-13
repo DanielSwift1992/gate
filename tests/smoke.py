@@ -8982,11 +8982,13 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         # WITH the shelf: the mutant is the same vein with one line changed, and
         # a mutant that cannot link is a probe that measures nothing
         _mut_shelf = os.path.join(_mut, "shelf.swift")
-        with open(_mut_shelf, "w") as _f:
+        with open(_mut_shelf, "wb") as _f:
+            # bytes, not text: the pages carry marks a console encoding may not
+            # hold, and this file is utf-8 wherever it is written
             _f.write(subprocess.run([sys.executable,
                                      os.path.join(HERE, "bin", "shelf-into-swift.py"),
                                      os.path.join(HERE, "stdlib"), _pin],
-                                    capture_output=True, text=True, timeout=180).stdout)
+                                    capture_output=True, timeout=180).stdout)
         _mb = subprocess.run(["swiftc", "-O", os.path.join(_mut, "main.swift"), _mut_shelf,
                               *sorted(glob.glob(os.path.join(HERE, "bin", ".court",
                                                              _pin, "*.swift"))),

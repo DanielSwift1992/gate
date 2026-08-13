@@ -37,7 +37,11 @@ def main():
         out.append('    ].joined(separator: "\\n")),')
     out.append("]")
     out.append("let COURT_PIN_BUILT_IN = " + swift_string(pin))
-    print("\n".join(out))
+    # ── AND THE BYTES LEAVE HERE AS UTF-8, WHATEVER THE CONSOLE THINKS. The
+    # pages carry `·` and `─`; printed through a console whose encoding is
+    # cp1252, python raises UnicodeEncodeError and the build dies with it.
+    # The stream is written as bytes, in the one encoding these files are in.
+    sys.stdout.buffer.write(("\n".join(out) + "\n").encode("utf-8"))
 
 
 main()
