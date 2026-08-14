@@ -161,12 +161,20 @@ with tempfile.TemporaryDirectory(prefix="gate-win-") as tmp:
             ("empty", ["import", "codeowners", "empty"]),
             ("hash", ["import", "codeowners", "hashonly"]),
             ("wf", ["import", "workflows", "--tree", "."]),
+            # ── AND THE ONE THAT SAYS WHICH SIDE OF THE WRITE IT IS ON. An
+            # empty file crashes, and an empty file builds no rules at all, so
+            # the trap is not in the reading of them. What is left runs in one
+            # order: the world is written, then the court is asked about it.
+            # Whether the file is THERE after the fall separates those two.
+            ("out", ["import", "codeowners", "empty", "-o", "out.swift"]),
         ]
         _codes = []
         for _name, _argv in _shapes:
             _r = run(*_argv, cwd=_kit)
             _codes.append(_name + "=" + str(_r.returncode)
                           + ("/silent" if not (_r.stdout or _r.stderr).strip() else "/spoke"))
+        _codes.append("wrote out="
+                      + str(os.path.exists(os.path.join(_kit, "out.swift"))))
         print("FAIL demo: import dies as " + "; ".join(_codes))
         print("FAIL demo: the world holds " + ", ".join(_here)[:100])
         voice("demo", d)
