@@ -1131,6 +1131,17 @@ def main():
             open(_p, "wb").write(_raw.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n"))
     _le_said = [subprocess.run([CLI_HERE, "status"], cwd=_w, capture_output=True,
                                text=True, timeout=180) for _w in (_le_lf, _le_crlf)]
+    # ── AND WHAT IS COMPARED IS THE VERDICT, NOT THE STOPWATCH. The first cut
+    # of this asked for the two answers to be equal byte for byte, and the
+    # tool's own first line carries a count beside the word: two runs of one
+    # world can part there without a thing being wrong. What is held is what
+    # this pair is about: the same code, the same addresses, and not one
+    # refusal more.
+    _le_where = [sorted(re.findall(r"^\s+(\S+:\d+)", r.stdout, re.M)) for r in _le_said]
+    if _le_where[0] != _le_where[1]:
+        print("   the two spellings are judged apart:",
+              [a for a in _le_where[1] if a not in _le_where[0]][:3],
+              "and", [a for a in _le_where[0] if a not in _le_where[1]][:3])
     S.append(("a world whose lines end the other way is judged the same, to the word",
               # the demo world refuses at its written line, both ways
               all(r.returncode == 1 and "ownership.swift:89" in r.stdout
@@ -1138,7 +1149,7 @@ def main():
               # and not one refusal more: the carriage return used to travel
               # into a name, and the tool then disagreed with itself eight times
               # about names it had written itself
-              and _le_said[0].stdout == _le_said[1].stdout))
+              and _le_where[0] == _le_where[1] and len(_le_where[0]) == 1))
 
     # ── AND A FOLDER THAT IS A WALL OF LINKS IS A FOLDER THIS TREE CARRIES. The
     # walk behind this asked `fileExists`, which FOLLOWS a symbolic link: a link

@@ -10,6 +10,7 @@
 # compares the sentence to these asserts; change the road here, change the
 # sentence there. The battery anchors only the sentence's closing line.
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -54,9 +55,17 @@ def voice(label, proc):
     # of one, which is a riddle with the answer trimmed off.
     # one line first, short enough to travel as a commit status from a machine
     # whose log needs rights to read
+    # ── AND THE LINE THAT TRAVELS IS THE ONE WITH AN ADDRESS IN IT. This took
+    # the first non-empty line, and this tool's first line is a summary: the
+    # windows job reported `status: refused 1 · 13 equalities` twice over,
+    # which says a refusal happened and not one word about which. The address
+    # is the whole product, so a line carrying one is preferred, and the
+    # summary is the fallback it always was.
     _first = ""
     for _t in (proc.stderr, proc.stdout):
-        _first = next((l.strip() for l in (_t or "").split("\n") if l.strip()), "")
+        _lines = [l.strip() for l in (_t or "").split("\n") if l.strip()]
+        _first = next((l for l in _lines if re.search(r"\S+:\d+ ", l)), "")
+        _first = _first or next(iter(_lines), "")
         if _first:
             break
     print("FAIL " + label + ": exit=" + str(proc.returncode) + " said=" + _first[:90])
