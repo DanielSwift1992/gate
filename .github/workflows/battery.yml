@@ -206,7 +206,19 @@ jobs:
           curl -s -X POST -H "Authorization: Bearer $GH_TOKEN" \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
             -d "$BODY" > /dev/null
-          # and a second status carrying what the machine was, because the job
+          # ── AND THE SECOND SENTENCE THE ROAD SAID TRAVELS TOO. The road tells
+          # a failing pair with one line per verb: the first names the verb that
+          # stopped, and the one after it carries the verb whose answer was
+          # actually wrong. Cut to one line, this mouth reported `demo: exit=0`,
+          # which says the step it names did not fail and nothing about what did.
+          THEN=$(grep -E '^FAIL' vein-out.txt | sed -n '2p' || true)
+          if [ -n "$THEN" ]; then
+            BODY3=$(python -c 'import json,sys; print(json.dumps({"state":"failure","context":"windows-road-then","description":sys.argv[1][:138]}))' "$THEN")
+            curl -s -X POST -H "Authorization: Bearer $GH_TOKEN" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+              -d "$BODY3" > /dev/null
+          fi
+          # and a third status carrying what the machine was, because the job
           # log is unreadable without a token and one sentence is not a state
           SAW=$(head -3 vein-out.txt | paste -sd '; ' - || true)
           BODY2=$(python -c 'import json,sys; print(json.dumps({"state":"failure","context":"windows-vein-machine","description":sys.argv[1][:138]}))' "$SAW")

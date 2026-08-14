@@ -11484,12 +11484,22 @@ public enum MyWatch: AccessLedger {
     # naming itself, and that is the count of contexts and of the permission
     # each needs.
     _mouths = ["pages-publish", "linux-first-fail", "macos-first-fail",
-               "windows-vein-first-fail", "windows-vein-machine"]
+               "windows-vein-first-fail", "windows-road-then", "windows-vein-machine"]
+    # ── AND A MOUTH IS COUNTED PER JOB, NOT PER STEP. This asked for one
+    # failure step per context, which reads as arithmetic and is not the thing
+    # held: a step that says TWO sentences (the verb that stopped, and the one
+    # whose answer was actually wrong) has one guard and two mouths. It was
+    # written when those were the same number, and the day the windows job had
+    # to say a second sentence, this went red for saying more.
+    _before_any_failure = _ci.split("if: failure()")[0]
     S.append(("a job that can go red posts a status naming itself",
               all(m in _ci for m in _mouths)
               and _ci.count("statuses: write") == 4
-              # and each one is posted from a step that runs only on failure
-              and _ci.count("if: failure()") >= len(_mouths)))
+              # every mouth speaks from inside a step guarded by failure, and
+              # none of them before the first such guard in the file
+              and all(m not in _before_any_failure for m in _mouths)
+              # and one guard for each job that can go red
+              and _ci.count("if: failure()") >= 4))
     # ── AND PUBLISHING IS ASKED ABOUT BEFORE IT IS ATTEMPTED. `deploy-pages`
     # fails with an empty message when Pages is off or its source is a branch,
     # and that is what three runs were: checkout, build, road test and artifact
