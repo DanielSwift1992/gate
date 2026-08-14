@@ -511,7 +511,10 @@ func runGit(_ arguments: [String], _ cwd: String) -> String {
     let p = Process()
     p.executableURL = URL(fileURLWithPath: toolPath("git"))
     p.arguments = [] + arguments
-    p.currentDirectoryURL = URL(fileURLWithPath: cwd)
+    // the folder a child runs in is a path: `URL(fileURLWithPath:)` reads its
+    // argument the posix way wherever it runs, and this vein hands it worlds
+    // that live at a drive letter
+    p.currentDirectoryPath = cwd
     let pipe = Pipe(), quiet = Pipe()
     p.standardOutput = pipe
     p.standardError = quiet
@@ -530,7 +533,10 @@ func gitExitCode(_ arguments: [String], _ cwd: String) -> Int32 {
     let p = Process()
     p.executableURL = URL(fileURLWithPath: toolPath("git"))
     p.arguments = [] + arguments
-    p.currentDirectoryURL = URL(fileURLWithPath: cwd)
+    // the folder a child runs in is a path: `URL(fileURLWithPath:)` reads its
+    // argument the posix way wherever it runs, and this vein hands it worlds
+    // that live at a drive letter
+    p.currentDirectoryPath = cwd
     let quiet = Pipe(), alsoQuiet = Pipe()
     p.standardOutput = quiet
     p.standardError = alsoQuiet
@@ -5050,9 +5056,25 @@ func selfSaid(_ words: [String], _ cwd: String) -> String {
                + "so what failed is the spawn: report this with the platform")
     }
     let said = pipe.fileHandleForReading.readDataToEndOfFile()
-    quiet.fileHandleForReading.readDataToEndOfFile()
+    let complained = quiet.fileHandleForReading.readDataToEndOfFile()
     waitDone(p)
-    return String(data: said, encoding: .utf8) ?? ""
+    let answer = String(data: said, encoding: .utf8) ?? ""
+    // ── AND A CHILD THAT COULD NOT ANSWER IS NOT A CHILD THAT HELD. A verb of
+    // this tool refuses on its own channel: a refusal is an ANSWER, on stdout,
+    // with a code beside it, and only a failure to answer at all goes to the
+    // other one. This read the answer and threw that away, so a spawned verb
+    // that could not write the file it was told to write left its parent
+    // carrying on as though the world had been made. What is refused here is
+    // silence and never a refusal: the demo's own import is meant to refuse,
+    // and it does that in JSON like everything else.
+    if answer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, !complained.isEmpty {
+        let why = String(decoding: complained, as: UTF8.self)
+            .components(separatedBy: "\n").first(where: { !$0.isEmpty }) ?? ""
+        cannot("this tool ran itself and it could not answer: " + why,
+               "the words above are its own, from `" + words.joined(separator: " ")
+               + "` run in " + cwd)
+    }
+    return answer
 }
 
 let SEAM_DEMO_SPEC = """
