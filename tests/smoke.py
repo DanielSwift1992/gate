@@ -1107,6 +1107,27 @@ def main():
               and "`/src/gone away/`" in _sp_gone["refusals"][0]["claim"]
               and _sp_gone["refusals"][0]["address"].endswith("CODEOWNERS:3")))
 
+    # ── AND THE COVER'S PICTURE HAS A SUBJECT, NOT ONLY A PROVENANCE. The
+    # pair beside docs/bench.png warrants which ui.html stood before the
+    # camera and says nothing about what the camera saw: from the v0.2.0 bump
+    # the cover carried a screenshot of ERR_CONNECTION_REFUSED, green, for a
+    # day, because the shooter still launched the bash shim with python3 (a
+    # corpse of the strangler), waited for the port IN SILENCE, and shot the
+    # refusal. Nobody reads pixels here; what is held is the wreckage's own
+    # signature: the dead-page shot weighed 109916 bytes against 312-431k for
+    # every real one, so a floor catches that class, and the shooter's three
+    # guards (a wait that runs out refuses, the page says BENCH_FOR before
+    # the camera fires, the change-hash is taken after the frame) are held by
+    # name, with the corpse banned by its spelling.
+    _shot = os.path.getsize(os.path.join(HERE, "docs", "bench.png"))
+    _shooter = open(os.path.join(HERE, "bin", "shoot-bench.sh"), encoding="utf-8").read()
+    S.append(("the cover's picture weighs like a bench, and its camera cannot shoot a dead port",
+              _shot > 150000
+              and 'python3 "$HERE/gate"' not in _shooter
+              and "the bench never came up" in _shooter
+              and 'grep -c "BENCH_FOR"' in _shooter
+              and _shooter.index("--screenshot") < _shooter.index('AFTER="$(shasum')))
+
     # ── AND THE RIM IS A CLOSED SET OF DOORS. The canon says five doors, and a
     # canon nobody counts is a wish: any verb may quietly grow a private spawn
     # or spell its own scratch out of the temp root, which is how three of them
