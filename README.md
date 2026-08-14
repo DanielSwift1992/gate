@@ -106,7 +106,7 @@ One step checks every CODEOWNERS rule and workflow `paths:` filter
 against the files that actually exist, on every push:
 
 ```yaml
-- uses: DanielSwift1992/gate@v0.2.2
+- uses: DanielSwift1992/gate@v0.2.3
 ```
 
 A rule that points to a deleted or renamed path fails the check, with

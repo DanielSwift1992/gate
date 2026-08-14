@@ -12,7 +12,7 @@ inputs:
   version:
     description: 'gate release to take the binary from'
     required: false
-    default: 'v0.2.2'
+    default: 'v0.2.3'
   tree:
     description: 'directory to check (default: repository root)'
     required: false
