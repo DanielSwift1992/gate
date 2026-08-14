@@ -292,6 +292,10 @@ gate            the shim that finds the binary: an explicit GATE_CLI, this
                 clone's own build, a copy carried in by `gate init --vendor`,
                 or one on PATH. It says so in one sentence when there is none
 gate.cmd        the same shim on Windows, in that platform's own spelling
+action.yml      the door for a stranger's CI: one `uses:` step fetches the
+                released binary at a pinned tag, checks the sha256 published
+                beside it, and judges the tree it stands in (the step is
+                bin/gate-audit.sh, and the battery runs its three vectors)
 gate.manifest.swift
                 this repository's own declared layout: its worlds, their
                 roles, and the judge's row, judged like anybody's
