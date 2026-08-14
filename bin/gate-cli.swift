@@ -7395,6 +7395,22 @@ if args.first == "survey" {
 // somebody else's place to put a file, refused in words rather than raised: the
 // writing half of theirsText, with the same three sentences the other carrier's
 // errno names
+// ── ONE RAW OPEN, WITH THE MODE IN THE PLATFORM'S OWN SPELLING. ucrt's
+// `_open` VALIDATES its third argument: any bit outside _S_IREAD|_S_IWRITE
+// (0x0180) is an invalid parameter, and ucrt's handler does not hand back -1,
+// it __fastfail()s the process, which is the 0xC0000409 this hunt chased.
+// `0o644` carries such bits, so every write door of this vein was a fall
+// waiting for its first caller on that platform: v0.2.0's import crashes on
+// it. And _O_BINARY (0x8000) keeps the CRT from spelling \n as \r\n inside
+// what this tool prints: the bytes written are the bytes given.
+func rawOpen(_ path: String, _ flags: Int32) -> Int32 {
+    #if canImport(WinSDK)
+    return open(path, flags | 0x8000, Int32(0x0180))
+    #else
+    return open(path, flags, 0o644)
+    #endif
+}
+
 // ── A TRAIL, BECAUSE A PROCESS THAT FALLS OVER CANNOT SPEAK. A trap on that
 // platform is a fail fast: it takes both channels with it, so everything the
 // verb was going to SAY is lost and only what it has already WRITTEN survives.
@@ -7405,7 +7421,7 @@ if args.first == "survey" {
 func mark(_ step: String) {
     guard let where_ = ProcessInfo.processInfo.environment["GATE_TRACE"],
           !where_.isEmpty else { return }
-    let fd = open(where_, O_WRONLY | O_CREAT | O_APPEND, 0o644)
+    let fd = rawOpen(where_, O_WRONLY | O_CREAT | O_APPEND)
     guard fd >= 0 else { return }
     let bytes = Array((step + "\n").utf8)
     _ = bytes.withUnsafeBufferPointer { buf -> Int in
@@ -7419,7 +7435,7 @@ func mark(_ step: String) {
 }
 
 func oursWrite(_ path: String, _ what: String, _ text: String) {
-    let fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0o644)
+    let fd = rawOpen(path, O_WRONLY | O_CREAT | O_TRUNC)
     if fd < 0 {
         let why = errno
         if why == EISDIR {
