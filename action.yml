@@ -3,23 +3,23 @@
 # tag below is the vein's own VERSION, the script it names is run by the
 # battery on three vectors, and the download road is walked by the `action`
 # job on every push. The words a marketplace shows are these.
-name: 'gate ownership audit'
-description: 'Judge CODEOWNERS rows and workflow path filters against the tree: a row naming nothing is refused at its file:line.'
+name: 'Stale CODEOWNERS and workflow paths check'
+description: 'Finds CODEOWNERS rules and workflow path filters that point to files that no longer exist. Fails at the exact file and line.'
 branding:
   icon: 'check-square'
   color: 'gray-dark'
 inputs:
   version:
-    description: 'gate release tag whose binary judges'
+    description: 'gate release to take the binary from'
     required: false
     default: 'v0.2.2'
   tree:
-    description: 'the directory judged'
+    description: 'directory to check (default: repository root)'
     required: false
     default: '.'
 runs:
   using: 'composite'
   steps:
-    - name: judge the declared
+    - name: check CODEOWNERS and workflow path filters
       shell: bash
       run: bash "${{ github.action_path }}/bin/gate-audit.sh" "${{ inputs.version }}" "${{ inputs.tree }}"

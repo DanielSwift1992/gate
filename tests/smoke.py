@@ -1188,7 +1188,7 @@ def main():
     _abare = _audit(tempfile.mkdtemp(prefix="gate-audit-bare-"))
     S.append(("a tree declaring nothing is not refused, and says so twice",
               _abare.returncode == 0
-              and "nothing on this half was judged" in _abare.stdout
+              and "nothing to check on this half" in _abare.stdout
               and "nothing was read" in _abare.stdout))
 
     # ── AND THE RIM IS A CLOSED SET OF DOORS. The canon says five doors, and a

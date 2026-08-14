@@ -102,19 +102,18 @@ undo.
 
 ## run it in your CI
 
-A fixed row restores agreement once, and a standing judge keeps it. One
-step runs the released binary over your tree and refuses a dead
-CODEOWNERS row, or a workflow filter naming a path you no longer have,
-at its file:line:
+One step checks every CODEOWNERS rule and workflow `paths:` filter
+against the files that actually exist, on every push:
 
 ```yaml
 - uses: DanielSwift1992/gate@v0.2.2
 ```
 
-No world file is needed: it judges what the tree already declares, and a
-tree declaring nothing is told so rather than painted green. `version:`
-pins the release whose binary judges, `tree:` points it away from the
-repository root.
+A rule that points to a deleted or renamed path fails the check, with
+the file and line in the log and as an annotation on the pull request.
+A repository with no CODEOWNERS and no path filters passes, and the log
+says there was nothing to check. `version:` picks the gate release,
+`tree:` checks a subdirectory instead of the root.
 
 ## ask the file, not a person
 

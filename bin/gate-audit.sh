@@ -85,8 +85,8 @@ if [ -n "$CO" ]; then
   printf '%s\n' "$OUT"
   if [ $CODE -ne 0 ]; then RED=1; note "$OUT" ""; fi
 else
-  echo "no CODEOWNERS at CODEOWNERS, .github/CODEOWNERS, docs/CODEOWNERS:" \
-       "nothing on this half was judged"
+  echo "no CODEOWNERS file found (looked at CODEOWNERS, .github/CODEOWNERS," \
+       "docs/CODEOWNERS): nothing to check on this half"
 fi
 
 # `observed` with nothing declared exits 1 at the mouth, because a person

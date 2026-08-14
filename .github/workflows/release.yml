@@ -122,17 +122,41 @@ jobs:
         with:
           files: out/*
           fail_on_unmatched_files: true
+          # ── AND THE PAGE A DOWNLOADER LANDS ON LEADS WITH THE DOOR, NOT THE
+          # FOUNDRY. The first spelling of this body opened with how the
+          # binaries were built and never said what the tool does or how to
+          # take it in one step: provenance prose where a reader wanted a
+          # handle. The order now: what it is, the one-step door, the
+          # binaries, the rebuild. The battery holds the load-bearing words.
           body: |
-            Binaries built by this workflow, in public, from the text at this
-            tag. Beside each one: `.from`, the corpus revision its court was
-            compiled from, and a `sha256`. Attached here: linux (x86_64,
-            arm64), macOS on Apple silicon, and Windows.
+            gate checks facts a repository declares about itself (CODEOWNERS
+            rules, workflow `paths:` filters, its own declared worlds)
+            against the files that actually exist: a rule pointing at a
+            deleted or renamed path fails with the exact file and line.
 
-            macOS on Intel is not attached. That runner is handed out
-            sparingly and a release does not wait on it. On that machine, or
+            ## one step, nothing installed
+
+                - uses: DanielSwift1992/gate@${{ github.ref_name }}
+
+            That step takes the binary below for its runner, checks the bytes
+            against the `sha256` published beside them, and checks the
+            repository it runs in. A clean tree passes quietly; a stale rule
+            fails at its file:line, echoed as an annotation on the pull
+            request.
+
+            ## the binaries
+
+            linux x86_64 · linux arm64 · macos arm64 · windows x86_64, each
+            built by this workflow, in public, from the text at this tag.
+            Beside each one: `.from`, the corpus revision its court was
+            compiled from, and its `sha256`.
+
+            macOS on Intel is not attached: that runner is handed out
+            sparingly, and a release does not wait on it. On that machine, or
             any machine with swiftc, `bin/build-cli.sh` builds the same
-            binary from this same text in about a minute, which is the check
-            this project offers for every binary here anyway.
+            binary from this same text in about a minute.
+
+            ## the hash names it, the rebuild checks it
 
             The hash says what lies here. The check is the rebuild:
 
