@@ -158,21 +158,23 @@ jobs:
           CARRIED=$(bin/gate-cli.exe --carries | tr -d '\r' | wc -l | tr -d ' ')
           echo "the vein carries $CARRIED veins" | tee -a vein-out.txt
           [ "$CARRIED" = "30" ] || { echo "the ledger this binary prints is not the one the battery holds" | tee -a vein-out.txt; exit 1; }
-      # ── AND THE ROAD DOES NOT WALK HERE YET, FOR A REASON WORTH WRITING
-      # DOWN. Walked against the binary this job builds, it stopped at the
-      # first verb that takes a path: `gate demo C:\...\demo` made nothing.
-      # The cause is in the vein and not in this file. Every path in it is
-      # spelled the one way: `absPath` calls a path absolute when it starts
-      # with `/`, folds it by splitting on `/`, and hands back `/`-joined
-      # text. A drive letter is none of those things, so an absolute windows
-      # path is treated as relative, glued onto the current directory and cut
-      # up by a separator it does not use. Thirteen readers split on `/` and
-      # four ask `hasPrefix("/")`; not one line of that file mentions this
-      # platform. That is a port of the paths, not a step in a workflow, and
-      # it is owed before this road can say anything true here.
+      # ── AND THE ROAD WALKS HERE. It could not before: it stopped at the first
+      # verb that takes a path, because `gate demo C:\...\demo` made nothing at
+      # all. Every path in the vein was spelled the one way, a drive letter is
+      # none of those things, and an absolute path on this platform was read as
+      # relative and glued onto the working directory. The port put ONE door in
+      # front of every reader, and the arithmetic of that door is held by the
+      # battery in both spellings, on a machine that is not this one.
       #
-      # What this job measures until then is what it can: the source compiles
-      # on this platform, and the binary answers for what it carries.
+      # What is measured HERE is the only thing no other machine can say: that
+      # the verbs walk on this platform. The road is the reviewer's own, from
+      # the demo to a refusal at its written line, and the cover tells it in
+      # one sentence.
+      - name: the road a reviewer walks
+        shell: bash
+        run: |
+          python tests/windows.py 2>&1 | tee -a vein-out.txt
+          exit ${PIPESTATUS[0]}
       # the compiler's own first line travels out as a status: a build that
       # fails on the one platform nobody here can reproduce is a red somebody
       # guesses at, and the guessing is what this line exists against

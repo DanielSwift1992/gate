@@ -922,19 +922,17 @@ func worldRootFor(_ path: String) -> String {
     // a world being founded right here stops the walk: entry writes DIR's
     // first files, and the walk up from the first one must not put its rows
     // into a world standing overhead
-    if let f = FOUNDING,
-       relPath(absPath(path), f).components(separatedBy: "/").first != ".." {
+    if let f = FOUNDING, !leavesRoot(absPath(path), f) {
         return f
     }
-    var walk = (absPath(path) as NSString).deletingLastPathComponent
+    var walk = parentPath(absPath(path)) ?? absPath(path)
     while true {
         for name in ["gate.swift", "gate.manifest.swift"] {
             if FileManager.default.fileExists(atPath: (walk as NSString).appendingPathComponent(name)) {
                 return walk
             }
         }
-        let up = (walk as NSString).deletingLastPathComponent
-        if up == walk || up.isEmpty { break }
+        guard let up = parentPath(walk), up != walk else { break }
         walk = up
     }
     // ── AND THE FALLBACK IS NOT «WHEREVER I AM STANDING». Falling back to the
@@ -945,8 +943,7 @@ func worldRootFor(_ path: String) -> String {
     // file's own folder otherwise.
     let here = FileManager.default.currentDirectoryPath
     let standing = (absPath(path) as NSString).deletingLastPathComponent
-    return relPath(standing, here).components(separatedBy: "/").first == ".."
-        ? standing : here
+    return leavesRoot(standing, here) ? standing : here
 }
 
 func shelfPage(_ name: String) -> String {
@@ -1357,27 +1354,163 @@ func loadStatusShelf() {
     }
 }
 
-func absPath(_ p: String) -> String {
-    // python's abspath is lexical: nothing is resolved, `.` and `..` fold away
-    let full = p.hasPrefix("/") ? p
-        : (FileManager.default.currentDirectoryPath as NSString).appendingPathComponent(p)
+// ── PATH DOOR BEGIN. Every path this tool takes in comes through the readers
+// between this line and the one that closes them. What a platform spells
+// differently lives here as values, and nowhere below does anything ask which
+// platform it is standing on. The battery cuts this text out at these two
+// marks and compiles it on its own, so the answers a machine running windows
+// would get are measured on a machine that is not one.
+struct PathStyle {
+    // a platform's spelling of a path, held as a value: whether a drive letter
+    // roots a path here, which also decides whether a backslash separates one.
+    let drives: Bool
+    static let posix = PathStyle(drives: false)
+    static let windows = PathStyle(drives: true)
+}
+
+#if os(Windows)
+let HOST_PATHS = PathStyle.windows
+#else
+let HOST_PATHS = PathStyle.posix
+#endif
+
+func pathRoot(_ p: String, _ st: PathStyle) -> (root: String, rest: String)? {
+    // the root this path already stands on, and what is left after it. A nil
+    // says it stands on nothing, which is what relative means.
+    if !st.drives { return p.hasPrefix("/") ? ("", p) : nil }
+    let t = p.replacingOccurrences(of: "\\", with: "/")
+    // a share stands on two names, and both of them are the root: `//host/share`
+    if t.hasPrefix("//") {
+        // counted by the reader, never by arithmetic over the lengths of the
+        // names: `//h//s/a` is one separator written twice, and adding up what
+        // the reader could see cut the rest of the path in the middle of a
+        // folder's name and handed back a folder nobody wrote.
+        var segs = t.dropFirst(2).components(separatedBy: "/")
+        var head: [String] = []
+        while head.count < 2, !segs.isEmpty {
+            let s = segs.removeFirst()
+            if !s.isEmpty { head.append(s) }
+        }
+        guard head.count == 2 else { return nil }
+        return ("//" + head[0] + "/" + head[1], "/" + segs.joined(separator: "/"))
+    }
+    // a drive stands on one letter and a colon. The letter is folded to upper
+    // case, and THAT IS THE ONLY FOLDING DONE HERE: NTFS compares the rest of a
+    // path without case and this tool does not, so two spellings of one file
+    // are two paths to it. Said aloud because a comparison that is almost equal
+    // is the way a judge starts agreeing with itself about nothing.
+    // ── AND `C:foo` IS READ AS `C:/foo`, WHICH IS NOT WHAT THAT PLATFORM
+    // MEANS BY IT. It means foo beside wherever you last stood ON DRIVE C, and
+    // a folder per drive is a thing only the platform itself remembers. This
+    // door is lexical, like the abspath it was written against: it answers
+    // from the text it was handed, and the one form where that is not the
+    // platform's own answer is named here rather than guessed at.
+    let c = Array(t)
+    if c.count >= 2, c[1] == ":", c[0].isLetter {
+        return (String(c[0]).uppercased() + ":", String(t.dropFirst(2)))
+    }
+    return nil
+}
+
+func absPath(_ p: String, _ st: PathStyle = HOST_PATHS,
+             _ cwd: String = FileManager.default.currentDirectoryPath) -> String {
+    // python's abspath is lexical: nothing is resolved, `.` and `..` fold away.
+    // The working directory is a value here because the vectors for the other
+    // platform have to name one, and a door that reads it from the machine can
+    // only be measured on the machine it reads.
+    let text = st.drives ? p.replacingOccurrences(of: "\\", with: "/") : p
+    var root = ""
+    var body = text
+    if let r = pathRoot(text, st) {
+        root = r.root
+        body = r.rest
+    } else if st.drives, text.hasPrefix("/") {
+        // rooted, and on whichever drive you stand: that platform reads `\dir`
+        // against the current drive and not against the current folder
+        root = pathRoot(cwd, st)?.root ?? ""
+        body = text
+    } else {
+        let r = pathRoot(cwd, st)
+        root = r?.root ?? ""
+        body = (r?.rest ?? cwd) + "/" + text
+    }
     var out: [String] = []
-    for c in full.components(separatedBy: "/") {
+    for c in body.components(separatedBy: "/") {
         if c.isEmpty || c == "." { continue }
         if c == ".." { if !out.isEmpty { out.removeLast() }; continue }
         out.append(c)
     }
-    return "/" + out.joined(separator: "/")
+    return root + "/" + out.joined(separator: "/")
 }
 
-func relPath(_ path: String, _ start: String) -> String {
-    let p = absPath(path).components(separatedBy: "/").filter { !$0.isEmpty }
-    let s = absPath(start).components(separatedBy: "/").filter { !$0.isEmpty }
+func relPath(_ path: String, _ start: String, _ st: PathStyle = HOST_PATHS,
+             _ cwd: String = FileManager.default.currentDirectoryPath) -> String {
+    let a = absPath(path, st, cwd)
+    let b = absPath(start, st, cwd)
+    let ar = pathRoot(a, st)
+    let br = pathRoot(b, st)
+    if ar?.root ?? "" != br?.root ?? "" {
+        // two roots, and no way from one to the other. The answer leads with a
+        // step out, because every reader downstream asks this text whether a
+        // file left the world, and the whole target follows it so a person is
+        // shown the thing that was named.
+        return "../" + a
+    }
+    let p = (ar?.rest ?? a).components(separatedBy: "/").filter { !$0.isEmpty }
+    let s = (br?.rest ?? b).components(separatedBy: "/").filter { !$0.isEmpty }
     var i = 0
     while i < min(p.count, s.count), p[i] == s[i] { i += 1 }
     let rest = [String](repeating: "..", count: s.count - i) + p[i...]
     return rest.isEmpty ? "." : rest.joined(separator: "/")
 }
+
+func leavesRoot(_ path: String, _ root: String, _ st: PathStyle = HOST_PATHS) -> Bool {
+    // THE question "is this file outside that world", asked in one place. Read
+    // off the first component of a relative path by hand, it answers rightly
+    // for the paths it was written against and says a silent no for a path on
+    // another root, which is exactly how a check loses its subject and turns
+    // green over nothing.
+    return relPath(path, root, st).components(separatedBy: "/").first == ".."
+}
+
+func parentPath(_ p: String, _ st: PathStyle = HOST_PATHS) -> String? {
+    // the folder a path stands in, and NOTHING at a root: a walk up a tree has
+    // to know when it has arrived. Asked of the platform's own string reader,
+    // that question is answered for a drive letter in a way this project has
+    // never measured, and a walk that cannot tell it is standing on the root
+    // either climbs forever or stops one floor early, which is a world found
+    // where there is none.
+    let a = absPath(p, st)
+    let r = pathRoot(a, st)
+    var seg = (r?.rest ?? a).components(separatedBy: "/").filter { !$0.isEmpty }
+    guard !seg.isEmpty else { return nil }
+    seg.removeLast()
+    return (r?.root ?? "") + "/" + seg.joined(separator: "/")
+}
+
+func canonicalPath(_ p: String, _ st: PathStyle = HOST_PATHS) -> String {
+    // one door for every path comparison that crosses realpath: macOS's
+    // resolvingSymlinksInPath strips the /private prefix from a path that
+    // exists and leaves it on one that does not, so both sides of any
+    // comparison go through here and the spelling cannot split them
+    if st.drives {
+        // ── AND WHAT IS NOT DONE HERE IS SAID OUT LOUD. On that platform this
+        // resolves nothing. A reparse point is followed by the filesystem and
+        // not by this text, and `resolvingSymlinksInPath` is an API this
+        // project has never measured there: guessing at it would put a reading
+        // nobody has seen underneath every comparison the tool makes. The fold
+        // the door already did is what makes two paths comparable, and the
+        // comparison stays bytes.
+        return absPath(p, st)
+    }
+    let r = (absPath(p, st) as NSString).resolvingSymlinksInPath
+    for known in ["/private/tmp/", "/private/var/", "/private/etc/"]
+    where r.hasPrefix(known) || r == String(known.dropLast()) {
+        return String(r.dropFirst("/private".count))
+    }
+    return r
+}
+// ── PATH DOOR END.
 
 func readText(_ path: String) -> String? {
     // read with python's errors="replace": a byte that is not utf-8 becomes the
@@ -1514,8 +1647,7 @@ func discoverWorld() -> WorldState {
         if FileManager.default.fileExists(atPath: w) || hasTables || layout != nil {
             return WorldState(facts: w, tables: hasTables ? t : nil, layout: layout)
         }
-        let up = (d as NSString).deletingLastPathComponent
-        if up == d || up.isEmpty { break }
+        guard let up = parentPath(d), up != d else { break }
         d = up
     }
     if let corpus = ProcessInfo.processInfo.environment["GATE_CORPUS"], !corpus.isEmpty {
@@ -1561,22 +1693,10 @@ func worldPeopleOf(_ w: WorldState) -> Set<String> {
     return names
 }
 
-func canonicalPath(_ p: String) -> String {
-    // one door for every path comparison that crosses realpath: macOS's
-    // resolvingSymlinksInPath strips the /private prefix from a path that
-    // exists and leaves it on one that does not, so both sides of any
-    // comparison go through here and the spelling cannot split them
-    let r = (absPath(p) as NSString).resolvingSymlinksInPath
-    for known in ["/private/tmp/", "/private/var/", "/private/etc/"]
-    where r.hasPrefix(known) || r == String(known.dropLast()) {
-        return String(r.dropFirst("/private".count))
-    }
-    return r
-}
 
 func leavesWorldHere(_ path: String, _ rootDir: String) -> Bool {
     let real = canonicalPath((rootDir as NSString).appendingPathComponent(path))
-    return relPath(real, canonicalPath(rootDir)).components(separatedBy: "/").first == ".."
+    return leavesRoot(real, canonicalPath(rootDir))
 }
 
 func isSeamSide(_ path: String) -> Bool {
@@ -7522,13 +7642,17 @@ if args.first == "declare" {
         let mp = (root as NSString).appendingPathComponent("gate.manifest.swift")
         let text = FileManager.default.fileExists(atPath: mp)
             ? theirsText(mp, "the layout of this world") : manifestHead()
-        var rel = ((path as NSString).standardizingPath)
-        let base = (root as NSString).standardizingPath
-        if rel.hasPrefix(base + "/") { rel = String(rel.dropFirst(base.count + 1)) }
+        // ── AND THESE TWO READ THROUGH THE DOOR NOW. They spelled a path with
+        // `standardizingPath`, which this project forbids: it resolves a
+        // symlink on one platform, folds a tilde it was never given, and knows
+        // nothing of a drive letter. The relative text and the judgment come
+        // from the same readers every other path here goes through.
+        let base = absPath(root)
+        let rel = relPath(absPath(path), base)
         // a row may not point out of the world that makes it: the other carrier
         // raises here, and a row about somebody else's tree is a claim this
         // world cannot answer for
-        if rel.hasPrefix("/") || rel.hasPrefix("../") {
+        if leavesRoot(absPath(path), base) {
             cannot(path + " is not inside the world at " + base + ": a row says where a "
                    + "file is relative to the world that declares it",
                    "write the side inside the world that declares it")
@@ -8535,7 +8659,7 @@ func declareSideHere(_ path: String, _ kind: String, _ role: String, _ frm: Stri
     let d = worldRootFor(path)
     let mp = (d as NSString).appendingPathComponent("gate.manifest.swift")
     let rel = relPath(absPath(path), d)
-    if rel.components(separatedBy: "/").first == ".." || leavesWorldHere(rel, d) {
+    if leavesRoot(absPath(path), d) || leavesWorldHere(rel, d) {
         return (nil, path + " is not inside the world at " + d + ": a row says where a "
                      + "file is relative to the world that declares it")
     }
@@ -8750,7 +8874,7 @@ if args.first == "mine" || args.first == "theirs" {
                + "tag, a release: whatever the source calls the thing you actually took")
     }
     let here = absPath(".")
-    let outside = relPath(absPath(path), here).components(separatedBy: "/").first == ".."
+    let outside = leavesRoot(absPath(path), here)
     if outside && foundsWorld(path) {
         asks("\(path) is not inside the world here, and there is no world around it",
              "a world is founded where you stand: run this from the directory that "

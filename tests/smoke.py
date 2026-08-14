@@ -9196,6 +9196,114 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                   and _s9has("thick", "which is not a name")
                   and _s9has("thick", "has no row in the manifest")))
 
+        # ── AND THE PATHS OF A PLATFORM NOBODY HERE IS STANDING ON. The tool
+        # ships for windows and every path in it was spelled the posix way, so
+        # `gate demo C:\...` made nothing at all: a drive letter is not a `/`,
+        # so an absolute path read as relative and was glued onto the working
+        # directory. The port put one door in front of every reader, and this
+        # is how the door is measured on a machine that is not that platform:
+        # its text is CUT OUT OF THE SHIPPED FILE at its own two marks,
+        # compiled alone, and asked the questions in both spellings. What is
+        # held here is the arithmetic, which is where that defect lived; what
+        # the platform itself answers is held by its own job in CI.
+        _pd_src = open(os.path.join(HERE, "bin", "gate-cli.swift"), encoding="utf-8").read()
+        _pd_cut = ""
+        if "// ── PATH DOOR BEGIN." in _pd_src and "// ── PATH DOOR END." in _pd_src:
+            # the head of the mark's own line is prose, and prose does not compile
+            _pd_cut = _pd_src.split("// ── PATH DOOR BEGIN.", 1)[1].split("\n", 1)[1]
+            _pd_cut = _pd_cut.split("// ── PATH DOOR END.", 1)[0]
+        _pd_ask = [
+            # (question, answer). The working directory is named in every one
+            # of them, because a door that reads it off the machine can only be
+            # asked about the machine it read.
+            ("abs\tposix\t/x/y\t/a/b/../c\t", "/a/c"),
+            ("abs\tposix\t/x/y\ta/b\t", "/x/y/a/b"),
+            ("abs\tposix\t/x/y\t/\t", "/"),
+            ("abs\tposix\t/x/y\t\t", "/x/y"),
+            ("rel\tposix\t/x/y\t/a/b/c\t/a", "b/c"),
+            ("rel\tposix\t/x/y\t/a\t/a/b/c", "../.."),
+            ("rel\tposix\t/x/y\t/a/b\t/a/b", "."),
+            ("leaves\tposix\t/x/y\t/other/x\t/a", "true"),
+            ("leaves\tposix\t/x/y\t/a/b\t/a", "false"),
+            # and the same door, asked in the other spelling
+            ("abs\twindows\tD:\\w\tC:\\a\\b\t", "C:/a/b"),
+            ("abs\twindows\tD:\\w\tc:/a/./b/../x\t", "C:/a/x"),
+            ("abs\twindows\tD:\\w\tb\\c\t", "D:/w/b/c"),
+            # rooted on the drive you stand on, which is not the folder you are in
+            ("abs\twindows\tD:\\w\t\\foo\t", "D:/foo"),
+            ("abs\twindows\tD:\\w\t\\\\srv\\share\\a\\b\t", "//srv/share/a/b"),
+            ("abs\twindows\tD:\\w\tC:\\\t", "C:/"),
+            # and `..` never climbs out of a root, on either side
+            ("abs\twindows\tD:\\w\tC:\\a\\..\\..\\b\t", "C:/b"),
+            ("abs\tposix\t/x/y\t/a/../../b\t", "/b"),
+            ("rel\twindows\tD:\\w\tC:\\a\\b\\c\tC:\\a", "b/c"),
+            # the drive letter is folded, and NOTHING else is: `C:\A` and `C:\a`
+            # are two folders here, and the answer walks out of one into the
+            # other rather than calling them one place
+            ("rel\twindows\tD:\\w\tc:\\a\\b\tC:\\a", "b"),
+            ("rel\twindows\tD:\\w\tC:\\A\\b\tC:\\a", "../A/b"),
+            # two roots: there is no way from one to the other, and the answer
+            # says so with a step out rather than by agreeing they are one place
+            ("rel\twindows\tD:\\w\tD:\\x\tC:\\a", "../D:/x"),
+            ("leaves\twindows\tD:\\w\tD:\\x\tC:\\a", "true"),
+            ("leaves\twindows\tD:\\w\tC:\\a\\b\tC:\\a", "false"),
+            ("leaves\twindows\tD:\\w\tC:\\other\tC:\\a", "true"),
+            # and the walk up ends at a root instead of climbing past one
+            ("parent\tposix\t/x/y\t/a/b/c\t", "/a/b"),
+            ("parent\tposix\t/x/y\t/a\t", "/"),
+            ("parent\tposix\t/x/y\t/\t", "nothing"),
+            ("parent\twindows\tD:\\w\tC:\\a\\b\t", "C:/a"),
+            ("parent\twindows\tD:\\w\tC:\\a\t", "C:/"),
+            ("parent\twindows\tD:\\w\tC:\\\t", "nothing"),
+            ("parent\twindows\tD:\\w\t\\\\srv\\share\\a\t", "//srv/share/"),
+            ("parent\twindows\tD:\\w\t\\\\srv\\share\t", "nothing"),
+            # and a separator written twice is one separator: this read the
+            # share's name by counting letters and handed back a folder cut out
+            # of the middle of one, `//srv/share/e/a/b`, which nobody wrote
+            ("abs\twindows\tD:\\w\t\\\\srv\\\\share\\a\\b\t", "//srv/share/a/b"),
+            ("parent\twindows\tD:\\w\t\\\\srv\\share\\a\\b\t", "//srv/share/a"),
+            # and the one form this door does not answer the way that platform
+            # does is written down rather than guessed: `C:foo` means foo beside
+            # wherever you last stood on drive C, and a lexical reader has no
+            # such memory
+            ("abs\twindows\tD:\\w\tC:foo\t", "C:/foo"),
+        ]
+        _pd_dir = os.path.join(tmp, "path-door")
+        os.makedirs(_pd_dir, exist_ok=True)
+        _pd_main = os.path.join(_pd_dir, "main.swift")
+        open(_pd_main, "w", encoding="utf-8").write(
+            "import Foundation\n" + _pd_cut + '\nwhile let line = readLine(strippingNewline: true) {\n    let f = line.components(separatedBy: "\\t")\n    let st = f[1] == "windows" ? PathStyle.windows : PathStyle.posix\n    switch f[0] {\n    case "abs": print(absPath(f[3], st, f[2]))\n    case "rel": print(relPath(f[3], f[4], st, f[2]))\n    case "parent": print(parentPath(f[3], st) ?? "nothing")\n    default: print(leavesRoot(f[3], f[4], st) ? "true" : "false")\n    }\n}\n')
+        _pd_bin = os.path.join(_pd_dir, "door")
+        _pd_build = subprocess.run(["swiftc", "-O", _pd_main, "-o", _pd_bin],
+                                   capture_output=True, text=True, timeout=900)
+        if _pd_build.returncode != 0:
+            print("   the door cut out of the vein did not build:", "\n   ".join(
+                [l for l in _pd_build.stderr.split("\n") if "error:" in l][:3]))
+        _pd_said = subprocess.run([_pd_bin], input="\n".join(q for q, _ in _pd_ask),
+                                  capture_output=True, text=True, timeout=180
+                                  ) if _pd_build.returncode == 0 else None
+        _pd_got = (_pd_said.stdout or "").split("\n") if _pd_said else []
+        _pd_apart = [(q, a, _pd_got[i] if i < len(_pd_got) else "nothing")
+                     for i, (q, a) in enumerate(_pd_ask)
+                     if i >= len(_pd_got) or _pd_got[i] != a]
+        if _pd_apart:
+            print("   the door answers otherwise:", _pd_apart[:3])
+        S.append(("one door reads every path, and it reads a drive letter as a root",
+                  _pd_cut.count("func absPath") == 1 and _pd_build.returncode == 0
+                  and _pd_apart == []))
+        # and the readers downstream ask that door instead of spelling a path
+        # by hand. `standardizingPath` is the forbidden one: it resolves a
+        # symlink on one platform, expands a tilde nobody wrote, and knows no
+        # drive letter. What is counted is CODE and not prose: the comment that
+        # records why it was taken out names it, and a file may say the word it
+        # may not run. A `//` line is the whole of what is skipped here, which
+        # is enough for this file: no line of it opens a block comment.
+        _pd_code = [l for l in _pd_src.split("\n") if not l.strip().startswith("//")]
+        S.append(("no reader in the vein spells a path by itself",
+                  sum(l.count("standardizingPath") for l in _pd_code) == 0
+                  and sum(l.count('hasPrefix("/") ? p') for l in _pd_code) == 0
+                  and _pd_cut.count("func leavesRoot") == 1))
+
         # ── AND A READER TAKES A RECORD'S BOUNDARY FROM THE FILE, NOT FROM A
         # PATTERN. One search with the dot matching newlines ran the whole
         # document, so a declaration written on ONE line — `public enum
