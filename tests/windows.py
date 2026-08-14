@@ -68,7 +68,13 @@ def voice(label, proc):
         _first = _first or next(iter(_lines), "")
         if _first:
             break
-    print("FAIL " + label + ": exit=" + str(proc.returncode) + " said=" + _first[:90])
+    # ── AND THE CUT TAKES BOTH ENDS. Ninety letters from the front carried
+    # "...and no such file exists at" four runs running and stopped one
+    # character before the path, which was the whole question. A refusal's
+    # head is an address already known and the thing being hunted sits at the
+    # end, so both ends travel and the middle is what gives way.
+    _said = _first if len(_first) <= 110 else _first[:44] + " … " + _first[-63:]
+    print("FAIL " + label + ": exit=" + str(proc.returncode) + " said=" + _said)
     print("  " + label + " exit=" + str(proc.returncode))
     for stream, text in (("out", proc.stdout), ("err", proc.stderr)):
         for line in (text or "").strip().split("\n")[-8:]:
