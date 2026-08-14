@@ -23,10 +23,19 @@ import Glibc
 import WinSDK
 #endif
 
-let root = URL(fileURLWithPath: CommandLine.arguments[0])
-    .resolvingSymlinksInPath()
-    .deletingLastPathComponent()   // bin/
-    .deletingLastPathComponent()   // the clone
+// ── AND THE TOOL FINDS ITS OWN PLACE THROUGH ITS OWN DOOR. This was URL path
+// arithmetic: `fileURLWithPath` then two `deletingLastPathComponent`. Those
+// readers split a path on `/` wherever they run, so on the platform that
+// separates with `\` and roots on a drive letter they answer about a path
+// nobody wrote, and what they answer has never been measured here. The place
+// the tool stands in decides where its shelf is read from, so it is read the
+// same way every other path in this file is now.
+// Declared after the door below in the file's own order of reading, which is
+// why this is a function rather than a value: top level runs top to bottom.
+func toolRoot() -> String {
+    let mine = absPath(CommandLine.arguments[0])
+    return parentPath(parentPath(mine) ?? mine) ?? mine
+}
 let args = Array(CommandLine.arguments.dropFirst())
 
 // the world being founded right now, if any: set by entry for the length of
@@ -232,15 +241,25 @@ func shelf() -> [(name: String, text: String)] {
     // a poor advertisement for itself if the copy inside outranked the source.
     // The battery holds the two equal, because a snapshot nobody compares is
     // the second record this whole tool exists to refuse.
-    let dir = root.appendingPathComponent("stdlib")
-    let names = ((try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? [])
+    let dir = joinPath(toolRoot(), "stdlib")
+    let names = ((try? FileManager.default.contentsOfDirectory(atPath: dir)) ?? [])
         .filter { $0.hasSuffix(".swift") }.sorted()
     var out: [(String, String)] = []
     for file in names {
-        let path = dir.appendingPathComponent(file).path
+        let path = joinPath(dir, file)
         guard let data = FileManager.default.contents(atPath: path),
               let text = String(data: data, encoding: .utf8) else { continue }
-        out.append((String(file.dropLast(6)), text))
+        // ── AND A LINE ENDING IS NOT PART OF THE PAGE. A checkout on windows
+        // hands these files over with `\r\n`, and the pages then read as pages:
+        // sixteen of them, none of them cut at the mark this file looks for,
+        // because that mark ends at a newline. `gate demo` stopped on the first
+        // verb of the road with "the shelf page a layout is born from is
+        // missing" over a page sitting right there, and the disk read had
+        // already outranked the copy compiled in, so the binary's own shelf
+        // never got a turn. The pages are this tool's own text and their line
+        // endings are the checkout's, not theirs.
+        out.append((String(file.dropLast(6)),
+                    text.replacingOccurrences(of: "\r\n", with: "\n")))
     }
     return out.isEmpty ? SHELF_EMBEDDED.map { (name: $0.name, text: $0.text) } : out
 }
@@ -983,7 +1002,17 @@ func manifestHead() -> String {
             return String(page.text[cut.upperBound...])
         }
     }
-    cannot("the shelf page a layout is born from is missing: stdlib/manifest.swift",
+    // ── AND A REFUSAL NAMES WHERE IT LOOKED. This said only that a page was
+    // missing, which leaves a person on a platform nobody here sits at with a
+    // sentence and no place in it: the pages come from two sources, the disk
+    // beside the tool and the snapshot compiled inside, and the reader has to
+    // be told which one answered and what it held.
+    let looked = joinPath(toolRoot(), "stdlib")
+    let onDisk = ((try? FileManager.default.contentsOfDirectory(atPath: looked)) ?? [])
+        .filter { $0.hasSuffix(".swift") }.count
+    cannot("the shelf page a layout is born from is missing: stdlib/manifest.swift. "
+           + "This read \(shelf().count) pages: \(onDisk) beside the tool at \(looked), "
+           + "and \(SHELF_EMBEDDED.count) carried inside this binary",
            "restore the file, or run this where the tool's own stdlib/ is beside it")
 }
 
@@ -1349,8 +1378,7 @@ func loadStatusShelf() {
     for page in shelf() {
         STDLIB_TEXTS[page.name] = page.text
         SHELF_ORDER.append(page.name)
-        SHIPPED_SET.insert(absPath((root.appendingPathComponent("stdlib").path as NSString)
-            .appendingPathComponent(page.name + ".swift")))
+        SHIPPED_SET.insert(joinPath(joinPath(toolRoot(), "stdlib"), page.name + ".swift"))
     }
 }
 
@@ -1471,6 +1499,16 @@ func leavesRoot(_ path: String, _ root: String, _ st: PathStyle = HOST_PATHS) ->
     // another root, which is exactly how a check loses its subject and turns
     // green over nothing.
     return relPath(path, root, st).components(separatedBy: "/").first == ".."
+}
+
+func joinPath(_ base: String, _ more: String) -> String {
+    // one join for the whole tool. `NSString.appendingPathComponent` splits on
+    // `/`, knows nothing of a drive letter and is the reader this port took out
+    // of every other place; the separator written here is `/` on both
+    // platforms, because win32 takes one as readily as it takes its own.
+    if more.isEmpty { return absPath(base) }
+    if pathRoot(more, HOST_PATHS) != nil { return absPath(more) }
+    return absPath(base + "/" + more)
 }
 
 func parentPath(_ p: String, _ st: PathStyle = HOST_PATHS) -> String? {
@@ -2571,7 +2609,7 @@ func judgeFrom() -> String? {
     // was compiled at is compiled in with it. The file still comes first where
     // there is one: a clone that rebuilds its judge is answered by its own
     // disk rather than by whatever this binary remembers.
-    let p = root.appendingPathComponent("bin").appendingPathComponent("gate-judge.from").path
+    let p = joinPath(toolRoot(), "bin/gate-judge.from")
     let said = (readText(p) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
     if !said.isEmpty { return said }
     let built = COURT_PIN_BUILT_IN.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -3783,6 +3821,33 @@ func yamlList(_ node: YamlNode, _ address: [String]) -> [(line: Int, text: Strin
     return out
 }
 
+// ── EVERY PATH THIS TREE CARRIES, WHICH IS NOT EVERY REGULAR FILE IN IT. A
+// repository tracks a symbolic link as a path of its own, and the walk under
+// this asked `fileExists`, which FOLLOWS one: a link to a folder answered
+// "directory" and was stepped over, so a folder that is a wall of links read as
+// empty and every rule naming it was refused. Measured on apache/airflow, where
+// `/.github/skills/` is nine links into `.agents/skills` and the court called
+// the rule dead over a folder their tree carries. What is asked here is the
+// entry's OWN kind, which is what `attributesOfItem` reads, and everything that
+// is not a folder is a path this tree carries. An entry whose kind cannot be
+// read at all is carried too: this reader exists to answer what is here, and
+// the refusal it feeds must never be manufactured by a reader's own blindness.
+func treeFiles(_ root: String) -> [String] {
+    var paths: [String] = []
+    guard let walk = FileManager.default.enumerator(atPath: root) else { return paths }
+    for case let rel as String in walk {
+        if rel.components(separatedBy: "/").contains(".git") {
+            walk.skipDescendants()
+            continue
+        }
+        let full = (root as NSString).appendingPathComponent(rel)
+        let kind = (try? FileManager.default.attributesOfItem(atPath: full))?[.type]
+            as? FileAttributeType
+        if kind != .typeDirectory { paths.append(rel) }
+    }
+    return paths
+}
+
 func ghostPatterns(_ rules: [(line: Int, pattern: String, owners: [String])],
                    _ paths: [String], _ saidName: String) -> [(address: String, claim: String)] {
     var out: [(address: String, claim: String)] = []
@@ -3988,7 +4053,7 @@ func whichNode() -> String? {
 
 func worldParse(_ path: String) -> Said {
     let node = whichNode()
-    let port = root.appendingPathComponent("bin/judge-cli.js").path
+    let port = joinPath(toolRoot(), "bin/judge-cli.js")
     guard let node = node, FileManager.default.fileExists(atPath: port) else {
         cannot("this reads the judge's own parse, and that route is the node port",
                "install node, which serves it through bin/judge-cli.js, or read the "
@@ -5130,16 +5195,16 @@ if args.first == "demo" {
 
     // ── demo org
     if rest.first == "org" {
-        // the tool's own folder, kept under a name of its own: the demo's `root`
-        // is the world it is making, and the two are not the same place
-        let toolRoot = root
+        // the tool's own folder, asked for by name: the demo's `root` is the
+        // world it is making, and the two are not the same place
+        let mine = toolRoot()
         let root = absPath(rest.count > 1 ? rest[1] : "gate-demo")
         if !FileManager.default.fileExists(atPath: root) { FOUNDED_HERE = root }
         try? FileManager.default.createDirectory(
             atPath: (root as NSString).appendingPathComponent("tables"),
             withIntermediateDirectories: true)
         for f in ["people.csv", "grants.csv"] {
-            let src = toolRoot.appendingPathComponent("demo/" + f).path
+            let src = joinPath(mine, "demo/" + f)
             if FileManager.default.fileExists(atPath: src) {
                 try? FileManager.default.removeItem(
                     atPath: (root as NSString).appendingPathComponent("tables/" + f))
@@ -6088,18 +6153,7 @@ if args.first == "import" {
         // a pattern matching no file in the tree: CODEOWNERS says it, the tree does not
         var ghosts: [(address: String, claim: String)] = []
         if let tree = tree {
-            var paths: [String] = []
-            if let walk = FileManager.default.enumerator(atPath: tree) {
-                for case let rel as String in walk {
-                    if rel.components(separatedBy: "/").contains(".git") {
-                        walk.skipDescendants(); continue
-                    }
-                    var isDir: ObjCBool = false
-                    let full = (tree as NSString).appendingPathComponent(rel)
-                    if FileManager.default.fileExists(atPath: full, isDirectory: &isDir),
-                       !isDir.boolValue { paths.append(rel) }
-                }
-            }
+            let paths = treeFiles(tree)
             // the address names the file that makes the claim, relative to the
             // walked tree, which is how the reader's own editor opens it
             let rel = relPath(absPath(src), absPath(tree))
@@ -6499,18 +6553,7 @@ if args.first == "import" {
         let dir = (absPath(tree) as NSString).appendingPathComponent(".github/workflows")
         let names = ((try? FileManager.default.contentsOfDirectory(atPath: dir)) ?? [])
             .filter { $0.hasSuffix(".yml") || $0.hasSuffix(".yaml") }.sorted()
-        var paths: [String] = []
-        if let walk = FileManager.default.enumerator(atPath: absPath(tree)) {
-            for case let rel as String in walk {
-                if rel.components(separatedBy: "/").contains(".git") {
-                    walk.skipDescendants(); continue
-                }
-                var isDir: ObjCBool = false
-                let full = (absPath(tree) as NSString).appendingPathComponent(rel)
-                if FileManager.default.fileExists(atPath: full, isDirectory: &isDir),
-                   !isDir.boolValue { paths.append(rel) }
-            }
-        }
+        let paths = treeFiles(absPath(tree))
         var filters: [(file: String, line: Int, key: String, pattern: String)] = []
         var unread: [(address: String, claim: String)] = []
         for file in names {
@@ -8313,7 +8356,7 @@ func copyItem(_ src: String, _ dst: String) {
 func vendorInto(_ rootDir: String) -> (carried: [String], digest: String?, shim: String) {
     // the tool travels WITH the repository, the way ./gradlew does: one person
     // commits .gate/, and everybody who pulls has it
-    let here = root.path
+    let here = toolRoot()
     let dst = (rootDir as NSString).appendingPathComponent(".gate")
     try? FileManager.default.createDirectory(
         atPath: (dst as NSString).appendingPathComponent("bin"),
@@ -10097,17 +10140,17 @@ func serveDoor(_ a: [String]) -> Never {
         if let asked = serveRead(conn) {
             switch (asked.method, asked.path) {
             case ("GET", "/"), ("GET", "/ui"):
-                serveFile(conn, root.appendingPathComponent("web/ui.html").path,
+                serveFile(conn, joinPath(toolRoot(), "web/ui.html"),
                           "text/html; charset=utf-8")
             case ("GET", "/judge.js"):
                 // the judge this page reads with, served whole
-                serveFile(conn, root.appendingPathComponent("bin/judge.js").path,
+                serveFile(conn, joinPath(toolRoot(), "bin/judge.js"),
                           "text/javascript")
             case ("GET", "/codemirror.js"):
-                serveFile(conn, root.appendingPathComponent("web/codemirror.js").path,
+                serveFile(conn, joinPath(toolRoot(), "web/codemirror.js"),
                           "text/javascript")
             case ("GET", "/codemirror.css"):
-                serveFile(conn, root.appendingPathComponent("web/codemirror.css").path,
+                serveFile(conn, joinPath(toolRoot(), "web/codemirror.css"),
                           "text/css")
             case ("GET", "/ladder.css"):
                 // the named steps, emitted from the judged worlds so the page

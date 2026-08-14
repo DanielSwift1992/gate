@@ -1107,6 +1107,33 @@ def main():
               and "`/src/gone away/`" in _sp_gone["refusals"][0]["claim"]
               and _sp_gone["refusals"][0]["address"].endswith("CODEOWNERS:3")))
 
+    # ── AND A FOLDER THAT IS A WALL OF LINKS IS A FOLDER THIS TREE CARRIES. The
+    # walk behind this asked `fileExists`, which FOLLOWS a symbolic link: a link
+    # to a folder answered "directory", was stepped over as one, and a folder
+    # holding nothing else read as empty. Every rule naming it was then refused
+    # for naming nothing, which is a refusal manufactured by the reader's own
+    # blindness and printed into somebody else's file with a line number on it.
+    # Found in the field, on apache/airflow: `/.github/skills/` is nine links
+    # into `.agents/skills`, their repository carries every one of them, and the
+    # court called the rule dead. Thirteen refusals there, two of them invented.
+    _lk = os.path.join(tmp, "linked")
+    os.makedirs(os.path.join(_lk, "skills", "one"), exist_ok=True)
+    open(os.path.join(_lk, "skills", "one", "SKILL.md"), "w").write("x\n")
+    os.makedirs(os.path.join(_lk, "kit"), exist_ok=True)
+    os.symlink(os.path.join("..", "skills", "one"), os.path.join(_lk, "kit", "one"))
+    open(os.path.join(_lk, "CODEOWNERS"), "w").write("/kit/ @alice\n")
+    _lk_held = run("import", "codeowners", "CODEOWNERS", "--tree", ".", cwd=_lk)[1]
+    # and the pair that gives this teeth: take the link away and the folder
+    # really does carry nothing, so the same rule is refused at its line
+    os.remove(os.path.join(_lk, "kit", "one"))
+    _lk_gone = run("import", "codeowners", "CODEOWNERS", "--tree", ".", cwd=_lk)[1]
+    S.append(("a rule over a folder of links holds, and over an empty one is refused",
+              _lk_held.get("verdict") == "observed"
+              and _lk_held.get("refusals") == []
+              and _lk_gone.get("verdict") == "refused"
+              and _lk_gone["refusals"][0]["address"].endswith("CODEOWNERS:1")
+              and "matches nothing" in _lk_gone["refusals"][0]["claim"]))
+
     # ── AND A FILE OF THE WRONG KIND IS SAID, NOT RAISED. Every verb that reads
     # somebody's JSON handed it straight to the parser, so a text file, a YAML,
     # or a spec saved half-written met a person with a JSONDecodeError and a
@@ -9195,6 +9222,32 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                   and _s9has("thick", "an identity names")
                   and _s9has("thick", "which is not a name")
                   and _s9has("thick", "has no row in the manifest")))
+
+        # ── AND A LINE ENDING IS NOT PART OF A PAGE. A checkout on windows hands
+        # this repository over with `\r\n`, and the shelf beside the tool is read
+        # BEFORE the copy compiled in, so those are the pages that answer. Every
+        # one of them was found and not one was usable: the mark a layout is cut
+        # at ends at a newline, `\r\n` is not one, and `gate demo` stopped on the
+        # first verb of the reviewer's road saying the page was missing while it
+        # sat right there. Found by the windows job, reproduced here by handing
+        # this tool a shelf in that spelling, which is what this does.
+        _crlf = os.path.join(tmp, "crlf-clone")
+        os.makedirs(os.path.join(_crlf, "bin"), exist_ok=True)
+        os.makedirs(os.path.join(_crlf, "stdlib"), exist_ok=True)
+        shutil.copy2(_cli_bin, os.path.join(_crlf, "bin", "gate-cli"))
+        for _pg in sorted(glob.glob(os.path.join(HERE, "stdlib", "*.swift"))):
+            _raw = open(_pg, "rb").read().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
+            open(os.path.join(_crlf, "stdlib", os.path.basename(_pg)), "wb").write(_raw)
+        _crlf_world = os.path.join(tmp, "crlf-world")
+        _crlf_said = subprocess.run([os.path.join(_crlf, "bin", "gate-cli"),
+                                     "demo", _crlf_world],
+                                    capture_output=True, text=True, timeout=180)
+        S.append(("a shelf page whose lines end the other way is the same page",
+                  _crlf_said.returncode == 0
+                  # and the world it made is the demo's own, refusal and all
+                  and "a world in" in _crlf_said.stdout
+                  and "must share one zone" in _crlf_said.stdout
+                  and os.path.exists(os.path.join(_crlf_world, "gate.manifest.swift"))))
 
         # ── AND THE PATHS OF A PLATFORM NOBODY HERE IS STANDING ON. The tool
         # ships for windows and every path in it was spelled the posix way, so
