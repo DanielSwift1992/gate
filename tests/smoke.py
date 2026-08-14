@@ -969,7 +969,7 @@ def main():
               # and the third says exactly what is taken there, and what is not
               and "builds this same one file into that platform's own binary" in _rd1
               and "asks it what it carries" in _rd1
-              and "not measured there yet" in _rd1
+              and "walks the road a reviewer walks" in _rd1
               and "tests/windows.py" in rd
               and "judge-cli.js" in rd and "judge-where.js" in rd))
 
@@ -11660,7 +11660,7 @@ public enum MyWatch: AccessLedger {
     # be held mechanically after all: the sentence's words are verbs, and the
     # file either runs them or does not.
     _win = open(os.path.join(HERE, "tests", "windows.py"), encoding="utf-8").read()
-    _road = re.search(r"On Windows, CI .*?paths are its own\.", readme, re.S)
+    _road = re.search(r"On Windows, CI .*?platform's own paths\.", readme, re.S)
     _said_road = " ".join(_road.group(0).split()) if _road else ""
     # not `_steps`: this file already has a function by that name, and shadowing
     # it took the whole battery down two thousand lines later
@@ -11678,7 +11678,15 @@ public enum MyWatch: AccessLedger {
               # than glossing. A sentence claiming a measurement nobody takes
               # is the drift this tool exists against, in its own cover.
               and "asks it what it carries" in _said_road
-              and "not measured there yet" in _said_road
+              # ── AND THE PROMISE CAME BACK ONLY WHEN THE JOB TOOK THE ROAD.
+              # The cover said the verbs were not measured there while the port
+              # was owed, and it says they are walked now: what holds the
+              # sentence is the step, named here, in the job that runs on that
+              # platform. A cover and its measure are one pair, and this one
+              # has burned before.
+              and "walks the road a reviewer walks" in _said_road
+              and "tests/windows.py" in _ci
+              and _ci.index("windows-vein") < _ci.index("tests/windows.py")
               and "the court this binary was built with" in _win
               # and the break it promises is refused with an address
               and "goes red at its line" in _win))

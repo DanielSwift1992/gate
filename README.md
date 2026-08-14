@@ -362,12 +362,10 @@ plain court, `bin/judge-where.js` runs the certificate court, both ported
 line for line, and the battery holds the port to the binary's own lines.
 `gate --version` says which court ran on your machine. On macOS, CI runs
 the full battery on every push. On Windows, CI builds this same one file
-into that platform's own binary on every push and asks it what it carries.
-The verbs are not measured there yet: every path in the CLI is spelled the
-posix way, so a drive letter reads as a relative path, and that is a port
-this tool still owes. `tests/windows.py` walks the road a reviewer walks
-(it makes the demo, takes the kit, breaks a claim, and the break is
-refused at its line) on the platforms where those paths are its own.
+into that platform's own binary on every push, asks it what it carries, and
+walks the road a reviewer walks: `tests/windows.py` makes the demo, takes
+the kit, breaks a claim, and the break is refused at its line, on that
+platform's own paths.
 On Linux, CI rebuilds the judge at the same pin and runs the full
 battery on every push, so every platform named here is measured.
 
