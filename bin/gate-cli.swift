@@ -5420,8 +5420,25 @@ if args.first == "demo" {
                                   "--policy", joinPath(root, "owners.csv"),
                                   "-o", joinPath(root, "ownership.swift"), "--json"],
                                  root))
-    _ = declareSideHere((root as NSString).appendingPathComponent("ownership.swift"),
-                        "Mine", "forms", nil)
+    // ── AND A WORLD IS NOT DECLARED BEFORE IT IS THERE. The import above is a
+    // verb of this tool run as its own process, and on windows it answered and
+    // left no file: this went on to write a row for `ownership.swift` into the
+    // manifest, commit the lot, and exit nought, so the world shipped
+    // PROMISING a file nobody had. What `gate status` then said about it was
+    // true and unactionable, and six runs of a hunt went into the sentence
+    // rather than into this line. A verb that cannot make the world it
+    // promises refuses, and says what its own child answered.
+    let ours = joinPath(root, "ownership.swift")
+    guard FileManager.default.fileExists(atPath: ours) else {
+        cannot("this demo could not write " + ours + ", and a world is not "
+               + "declared before it is there. Its own import answered: "
+               + (readSaid(selfSaid(["import", "codeowners", joinPath(root, "CODEOWNERS"),
+                                     "--tree", root, "--json"], root))?
+                    .at("verdict")?.asText ?? "nothing this could read"),
+               "the folder is at " + root + " and holds what it holds: this is "
+               + "the tool failing to run itself, not your repository")
+    }
+    _ = declareSideHere(ours, "Mine", "forms", nil)
     // the world ships with its one refusal on purpose, so the commit walks past
     // the hook the kit just wired: the hook is for the reader's own commits
     commit(root, "who owns what in this repository", true)
