@@ -9334,6 +9334,47 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                   and "must share one zone" in _crlf_said.stdout
                   and os.path.exists(os.path.join(_crlf_world, "gate.manifest.swift"))))
 
+        # ── AND THE PURE HEART OF `import codeowners` IS JUDGED HERE. The trap
+        # this project chased for nine CI runs lived in the rim (a raw open),
+        # but the hunt could not say so until the verb was split: a core of
+        # total functions over values, and a thin rim that opens, writes,
+        # spawns and walks. The core is CUT OUT at its own two marks, held
+        # lexically to purity (it may not name a reader of the world), compiled
+        # alone, and asked questions with answers known in advance. A foreign
+        # platform then only ever re-runs the rim, which it shares with verbs
+        # already exonerated there.
+        _cc_src = open(os.path.join(HERE, "bin", "gate-cli.swift"), encoding="utf-8").read()
+        _cc_cut = ""
+        if "// ── CODEOWNERS CORE BEGIN." in _cc_src and "// ── CODEOWNERS CORE END." in _cc_src:
+            _cc_cut = _cc_src.split("// ── CODEOWNERS CORE BEGIN.", 1)[1].split("\n", 1)[1]
+            _cc_cut = _cc_cut.split("// ── CODEOWNERS CORE END.", 1)[0]
+        _cc_impure = [t for t in ("theirsText", "readText", "FileManager",
+                                  "ProcessInfo", "STDLIB_TEXTS", "courtSays",
+                                  "rawOpen", "selfSaid")
+                      if t in _cc_cut]
+        if _cc_impure:
+            print("   the core names a reader of the world:", _cc_impure)
+        _cc_dir = os.path.join(tmp, "codeowners-core")
+        os.makedirs(_cc_dir, exist_ok=True)
+        open(os.path.join(_cc_dir, "main.swift"), "w", encoding="utf-8").write(
+            "import Foundation\n" + _cc_cut + '\nvar bad: [String] = []\nfunc check(_ name: String, _ ok: Bool) { if !ok { bad.append(name) } }\nlet r = parseCodeowners("src/ @alice\\n# note\\n\\n/docs/ @bob @carol\\nbare/\\n/a\\\\ b/ @x\\n")\ncheck("count", r.count == 3)\ncheck("r0", r[0].line == 1 && r[0].pattern == "src/" && r[0].owners == ["@alice"])\ncheck("r1", r[1].line == 4 && r[1].pattern == "/docs/" && r[1].owners == ["@bob", "@carol"])\ncheck("escaped", r[2].line == 6 && r[2].pattern == "/a b/" && r[2].owners == ["@x"])\nlet e = codeownersWorldBuild([], [], "FROM", "CO", "PAGE")\ncheck("empty-head", e.lines.first?.contains("PAGE") == true && e.lines.first?.contains("// from: FROM") == true)\ncheck("empty-map", e.srcmap.isEmpty && e.keepers.isEmpty)\nlet one = codeownersWorldBuild([(1, "/src/api/", ["@alice"])], [], "f", "CO", "")\ncheck("zone", one.lines.contains("public enum Zone_src: Realm {}"))\ncheck("keeper", one.lines.contains("public enum Owner_alice_in_src: Keeper {"))\ncheck("srcmap", one.srcmap["Owns_0_alice"] == "CO:1 · /src/api/ @alice")\nlet pol = codeownersWorldBuild([(1, "/src/api/", ["@alice"])], [("alice", "src")], "f", "CO", "")\ncheck("policy-keeper", pol.lines.contains("public enum Owner_alice: Keeper {") && pol.keepers.contains("Owner_alice"))\nlet hostile = codeownersWorldBuild([(1, "[broken", ["@x"])], [], "f", "CO", "")\ncheck("hostile-total", hostile.lines.contains("public enum Zone__broken: Realm {}"))\nprint(bad.isEmpty ? "CORE OK" : "APART: " + bad.joined(separator: ","))\n')
+        _cc_bin = os.path.join(_cc_dir, "core")
+        _cc_build = subprocess.run(["swiftc", os.path.join(_cc_dir, "main.swift"),
+                                    "-o", _cc_bin],
+                                   capture_output=True, text=True, timeout=900)
+        if _cc_build.returncode != 0:
+            print("   the core cut out of the vein did not build:", "\n   ".join(
+                [l for l in _cc_build.stderr.split("\n") if "error:" in l][:3]))
+        _cc_said = subprocess.run([_cc_bin], capture_output=True, text=True,
+                                  timeout=180) if _cc_build.returncode == 0 else None
+        if _cc_said is not None and "CORE OK" not in _cc_said.stdout:
+            print("   the core answers otherwise:", _cc_said.stdout.strip()[:200])
+        S.append(("the codeowners core is total, reads no world, and answers alone",
+                  _cc_cut.count("func parseCodeowners") == 1
+                  and _cc_cut.count("func codeownersWorldBuild") == 1
+                  and _cc_impure == [] and _cc_build.returncode == 0
+                  and _cc_said is not None and "CORE OK" in _cc_said.stdout))
+
         # ── AND THE PATHS OF A PLATFORM NOBODY HERE IS STANDING ON. The tool
         # ships for windows and every path in it was spelled the posix way, so
         # `gate demo C:\...` made nothing at all: a drive letter is not a `/`,

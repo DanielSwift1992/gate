@@ -928,10 +928,6 @@ let ROLE_ATOM: [String: String] = ["world": "WorldFile", "seam": "SeamFile",
                                    "forms": "FormsFile", "judge": "JudgeFile",
                                    "carried": "CarriedFile", "tool": "ToolFile"]
 
-func sanitized(_ s: String) -> String {
-    return s.replacingOccurrences(of: "[^A-Za-z0-9]", with: "_", options: .regularExpression)
-}
-
 func rowAtom(_ rel: String) -> String {
     // the other carrier's `row_atom`: the path without its extension, sanitised,
     // title-cased, and its separators dropped
@@ -2691,21 +2687,27 @@ func takenJudgeGuard(_ w: WorldState) -> [(address: String, claim: String)] {
     return []
 }
 
-let CODEOWNERS_HEADER = "// printed by gate import codeowners: who owns what in this repository,\n"
-    + "// written in the grants vocabulary (`gate stdlib show forms-grants`). A zone is\n"
-    + "// a top of the tree, a room is a pattern, and an owner keeps a zone: owning\n"
-    + "// is entry whose key administers, judged like any other claim.\n//\n"
+// ── CODEOWNERS CORE BEGIN. The pure heart of `import codeowners`: text into
+// rules, rules into a world. Everything between these two marks is total
+// functions over values: no file is opened, no global is read, no process is
+// asked, and the battery holds that lexically. It also CUTS this block out at
+// the marks, compiles it alone and asks it questions with answers known in
+// advance, so the heart is judged HERE on any machine, and a foreign platform
+// only ever re-runs the thin rim around it: read, write, spawn, walk.
+func sanitized(_ s: String) -> String {
+    return s.replacingOccurrences(of: "[^A-Za-z0-9]", with: "_", options: .regularExpression)
+}
 
-func readCodeowners(_ path: String) -> [(line: Int, pattern: String, owners: [String])] {
-    // ── AND SOMEBODY ELSE'S FILE IS READ THROUGH THE ONE DOOR. This read it
-    // with the reader that replaces a byte it cannot decode, so a file that is
-    // not text at all came back as text full of replacement characters and the
-    // verb answered `observed` over it. The other carrier read it through the
-    // door that says what is wrong, and while it was alive its answer covered
-    // this one. Found the day it stopped covering.
+func codeownersZone(_ pattern: String) -> String {
+    let p = String(pattern.trimmingCharacters(in: .whitespaces).drop(while: { $0 == "/" }))
+    if p.isEmpty || p.hasPrefix("*") { return "Root" }
+    let z = sanitized(p.components(separatedBy: "/")[0])
+    return z.isEmpty ? "Root" : z
+}
+
+func parseCodeowners(_ text: String) -> [(line: Int, pattern: String, owners: [String])] {
     var rules: [(Int, String, [String])] = []
-    for (n0, raw) in theirsText(path, "a CODEOWNERS")
-        .components(separatedBy: "\n").enumerated() {
+    for (n0, raw) in text.components(separatedBy: "\n").enumerated() {
         let line = raw.components(separatedBy: "#")[0].trimmingCharacters(in: .whitespaces)
         if line.isEmpty { continue }
         // a space in a path is escaped as `\ `, and the split happens on the
@@ -2719,44 +2721,20 @@ func readCodeowners(_ path: String) -> [(line: Int, pattern: String, owners: [St
     return rules
 }
 
-func readOwnersPolicy(_ path: String) -> [(owner: String, zone: String)] {
-    // owner,zone pairs, first spelling of an owner wins. The other carrier
-    // reads this through csv; the two files this guard meets are plain columns
-    var rows = (readText(path) ?? "").components(separatedBy: "\n")
-        .filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
-    guard !rows.isEmpty else { return [] }
-    let head = rows.removeFirst().components(separatedBy: ",")
-        .map { $0.trimmingCharacters(in: .whitespaces) }
-    guard let oi = head.firstIndex(of: "owner"), let zi = head.firstIndex(of: "zone")
-    else { return [] }
-    var out: [(String, String)] = []
-    for row in rows {
-        let cells = row.components(separatedBy: ",")
-        guard cells.count > max(oi, zi) else { continue }
-        let owner = String(cells[oi].drop(while: { $0 == "@" }))
-        if !out.contains(where: { $0.0 == owner }) { out.append((owner, cells[zi])) }
-    }
-    return out
-}
+let CODEOWNERS_HEADER = "// printed by gate import codeowners: who owns what in this repository,\n"
+    + "// written in the grants vocabulary (`gate stdlib show forms-grants`). A zone is\n"
+    + "// a top of the tree, a room is a pattern, and an owner keeps a zone: owning\n"
+    + "// is entry whose key administers, judged like any other claim.\n//\n"
 
-func codeownersZone(_ pattern: String) -> String {
-    let p = String(pattern.trimmingCharacters(in: .whitespaces).drop(while: { $0 == "/" }))
-    if p.isEmpty || p.hasPrefix("*") { return "Root" }
-    let z = sanitized(p.components(separatedBy: "/")[0])
-    return z.isEmpty ? "Root" : z
-}
-
-func codeownersWorldLines(_ src: String, _ policy: [(owner: String, zone: String)],
-                          _ saidFrom: String)
-    -> (lines: [String], srcmap: [String: String],
-        rules: [(line: Int, pattern: String, owners: [String])], keepers: Set<String>) {
-    // one translator, whoever asks: the import prints a world with this, and
-    // the pair guard prints the same world again to compare
-    let rules = readCodeowners(src)
+func codeownersWorldBuild(_ rules: [(line: Int, pattern: String, owners: [String])],
+                          _ policy: [(owner: String, zone: String)],
+                          _ saidFrom: String, _ srcName: String, _ grantsPage: String)
+    -> (lines: [String], srcmap: [String: String], keepers: Set<String>) {
+    // rules into a world, over values alone: the page and the source's display
+    // name arrive as arguments, because the core reads no shelf and no disk
     var zones = Set(rules.map { codeownersZone($0.pattern) })
     for (_, z) in policy { zones.insert(sanitized(z)) }
-    var lines = [CODEOWNERS_HEADER + "// from: " + saidFrom + "\n//\n"
-                 + (STDLIB_TEXTS["forms-grants"] ?? ""), ""]
+    var lines = [CODEOWNERS_HEADER + "// from: " + saidFrom + "\n//\n" + grantsPage, ""]
     for z in zones.sorted() { lines.append("public enum Zone_\(z): Realm {}") }
     lines.append("")
     var keepers = Set<String>()
@@ -2781,9 +2759,54 @@ func codeownersWorldLines(_ src: String, _ policy: [(owner: String, zone: String
             }
             let cert = "Owns_\(i)_\(sanitized(plain))"
             lines.append("public typealias \(cert) = Owns<\(keeper), \(room)>")
-            srcmap[cert] = "\((src as NSString).lastPathComponent):\(r.line) · \(r.pattern) \(owner)"
+            srcmap[cert] = "\(srcName):\(r.line) · \(r.pattern) \(owner)"
         }
     }
+    return (lines, srcmap, keepers)
+}
+// ── CODEOWNERS CORE END.
+
+func readCodeowners(_ path: String) -> [(line: Int, pattern: String, owners: [String])] {
+    // ── AND SOMEBODY ELSE'S FILE IS READ THROUGH THE ONE DOOR. This read it
+    // with the reader that replaces a byte it cannot decode, so a file that is
+    // not text at all came back as text full of replacement characters and the
+    // verb answered `observed` over it. The other carrier read it through the
+    // door that says what is wrong, and while it was alive its answer covered
+    // this one. Found the day it stopped covering.
+    // the rim reads, the core parses: one reading of the text, in the block
+    // the battery compiles alone
+    return parseCodeowners(theirsText(path, "a CODEOWNERS"))
+}
+
+func readOwnersPolicy(_ path: String) -> [(owner: String, zone: String)] {
+    // owner,zone pairs, first spelling of an owner wins. The other carrier
+    // reads this through csv; the two files this guard meets are plain columns
+    var rows = (readText(path) ?? "").components(separatedBy: "\n")
+        .filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+    guard !rows.isEmpty else { return [] }
+    let head = rows.removeFirst().components(separatedBy: ",")
+        .map { $0.trimmingCharacters(in: .whitespaces) }
+    guard let oi = head.firstIndex(of: "owner"), let zi = head.firstIndex(of: "zone")
+    else { return [] }
+    var out: [(String, String)] = []
+    for row in rows {
+        let cells = row.components(separatedBy: ",")
+        guard cells.count > max(oi, zi) else { continue }
+        let owner = String(cells[oi].drop(while: { $0 == "@" }))
+        if !out.contains(where: { $0.0 == owner }) { out.append((owner, cells[zi])) }
+    }
+    return out
+}
+
+func codeownersWorldLines(_ src: String, _ policy: [(owner: String, zone: String)],
+                          _ saidFrom: String)
+    -> (lines: [String], srcmap: [String: String],
+        rules: [(line: Int, pattern: String, owners: [String])], keepers: Set<String>) {
+    // one translator, whoever asks: the rim reads the file and the shelf, the
+    // core builds the world out of the values
+    let rules = readCodeowners(src)
+    let (lines, srcmap, keepers) = codeownersWorldBuild(
+        rules, policy, saidFrom, lastName(src), STDLIB_TEXTS["forms-grants"] ?? "")
     return (lines, srcmap, rules, keepers)
 }
 
