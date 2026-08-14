@@ -73,7 +73,16 @@ def voice(label, proc):
     # character before the path, which was the whole question. A refusal's
     # head is an address already known and the thing being hunted sits at the
     # end, so both ends travel and the middle is what gives way.
-    _said = _first if len(_first) <= 110 else _first[:44] + " … " + _first[-63:]
+    # ── AND WHAT TRAVELS IS THE PART NOBODY CAN GUESS. Cut at the front this
+    # carried prose; cut at both ends it carried prose from both ends, and the
+    # path sat in the middle of the sentence where the cut went. A refusal's
+    # prose is written in this repository and can be read here; the only thing
+    # in it that belongs to the machine is what it quotes. So a quoted part
+    # goes first, and the sentence follows for as long as there is room.
+    _mark = re.search(r"`([^`]+)`", _first)
+    _said = _first if len(_first) <= 110 else (
+        "«" + _mark.group(1)[-72:] + "» " + _first[:34] if _mark
+        else _first[:44] + " … " + _first[-63:])
     print("FAIL " + label + ": exit=" + str(proc.returncode) + " said=" + _said)
     print("  " + label + " exit=" + str(proc.returncode))
     for stream, text in (("out", proc.stdout), ("err", proc.stderr)):
