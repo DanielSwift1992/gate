@@ -6981,10 +6981,17 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                   # body either way.
                   and sorted(_rel_plats) == ["linux-arm64", "linux-x86_64",
                                              "macos-arm64", "windows-x86_64"]
-                  and _rel_said.get("jobs", {}).get("build-intel", {})
-                      .get("continue-on-error") is True
                   and _rel_said.get("jobs", {}).get("publish", {}).get("needs") == "build"
-                  and "macOS on Intel is built beside them" in _rel
+                  # ── AND A JOB THAT CANNOT REACH THE RELEASE IT BUILDS FOR IS
+                  # NOT A JOB. Intel macOS first blocked the publish, then was
+                  # moved beside it and blocked nothing: `publish` runs the
+                  # moment the four are done, so that build had no way into the
+                  # release, and sat in a queue for hours making a file nobody
+                  # would receive. There is no such job now, and the body says
+                  # the platform is built rather than attached.
+                  and "build-intel" not in _rel_said.get("jobs", {})
+                  and "macOS on Intel is not attached" in _rel
+                  and "bin/build-cli.sh` builds the same" in _rel
                   # and beside each binary the two records: what it was built
                   # from, and what lies there
                   and ".from" in _rel and "sha256" in _rel
