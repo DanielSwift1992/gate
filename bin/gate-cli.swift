@@ -1899,10 +1899,16 @@ func manifestGuards(_ w: WorldState, liveRows: [LayoutRow]? = nil,
         }
     }
     for r in live where r.role == "forms" && !r.path.isEmpty {
-        let p = (d as NSString).appendingPathComponent(r.path)
-        guard let data = FileManager.default.contents(atPath: p) else { continue }
-        let head = String(decoding: data.prefix(1200), as: UTF8.self)
-            .components(separatedBy: "\n").prefix(8)
+        // ── AND THIS ONE READS THROUGH THE DOOR TOO. It took the file's bytes
+        // and cut them into lines by hand, which is a third reading of a text
+        // in a file where every other one goes through `readText`. A page
+        // checked out with `\r\n` is the same page, and the line endings are
+        // the checkout's: on two platforms this guard fired over a world that
+        // holds here, and a reader that spells a text its own way is how that
+        // happens.
+        let p = joinPath(d, r.path)
+        guard let whole = readText(p) else { continue }
+        let head = whole.prefix(1200).components(separatedBy: "\n").prefix(8)
         var want: String? = nil
         var saw = false
         for ln in head where ln.hasPrefix("//") && ln.contains("written in") {
@@ -1912,7 +1918,7 @@ func manifestGuards(_ w: WorldState, liveRows: [LayoutRow]? = nil,
         }
         guard saw, let shelfName = want else { continue }
         let wantFile = shelfName + ".swift"
-        let mineNames = Set(topNames(String(decoding: data, as: UTF8.self)).map { $0.0 })
+        let mineNames = Set(topNames(whole).map { $0.0 })
         let theirs = Set(topNames(STDLIB_TEXTS[shelfName] ?? "").map { $0.0 })
         if !theirs.isDisjoint(with: mineNames) { continue }
         let row = live.first(where: { $0.name == r.written })
