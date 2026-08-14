@@ -121,6 +121,16 @@ with tempfile.TemporaryDirectory(prefix="gate-win-") as tmp:
     if not demo_ok:
         voice("demo", d)
         voice("status", st)
+        # ── AND WHEN A WORLD IS ACCUSED OF MISSING A FILE, THE FOLDER IS SHOWN.
+        # Four runs were spent proving the path in that refusal is the right
+        # one; what nobody here can see is whether the file is at the end of it.
+        # The folder this world is says that in one line, from the machine that
+        # made it, which no reading of the sources can.
+        try:
+            _here = sorted(os.listdir(demo))
+        except OSError as _e:
+            _here = ["the world's own folder cannot be listed: " + str(_e)]
+        print("FAIL demo: the world holds " + ", ".join(_here)[:100])
 
     # entry: a fresh repository takes the kit, and the whole kit holds,
     # which needs the certificate court over the forms pages
