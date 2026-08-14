@@ -5430,11 +5430,19 @@ if args.first == "demo" {
     // promises refuses, and says what its own child answered.
     let ours = joinPath(root, "ownership.swift")
     guard FileManager.default.fileExists(atPath: ours) else {
+        // ── AND WHAT THE CHILD SAID TRAVELS RAW. Quoting the PARSED verdict
+        // here was quoting a reading: on the platform this fires on, the
+        // answer does not parse, so the sentence said "nothing this could
+        // read" and named neither what came back nor why. The first line of
+        // what it actually printed is the thing nobody here can guess.
+        let again = selfSaid(["import", "codeowners", joinPath(root, "CODEOWNERS"),
+                              "--tree", root, "--json"], root)
+        let firstLine = again.components(separatedBy: "\n")
+            .first(where: { !$0.trimmingCharacters(in: .whitespaces).isEmpty }) ?? ""
         cannot("this demo could not write " + ours + ", and a world is not "
-               + "declared before it is there. Its own import answered: "
-               + (readSaid(selfSaid(["import", "codeowners", joinPath(root, "CODEOWNERS"),
-                                     "--tree", root, "--json"], root))?
-                    .at("verdict")?.asText ?? "nothing this could read"),
+               + "declared before it is there. Its own import answered "
+               + String(again.count) + " characters beginning `"
+               + String(firstLine.prefix(90)) + "`",
                "the folder is at " + root + " and holds what it holds: this is "
                + "the tool failing to run itself, not your repository")
     }
