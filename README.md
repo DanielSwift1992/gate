@@ -329,11 +329,27 @@ web/codemirror.*  the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
 docs/           DETAILS.md, SECURITY.md, CHANGELOG.md, NOTICE.md, and
                 the cover's picture with its provenance
-tests/smoke.py   the battery: 540 checks this repository holds itself
+tests/smoke.py   the battery: 546 checks this repository holds itself
                  to, end-to-end runs through judge parity through
                  documentation contracts; the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts
 ```
+
+## run it in your CI
+
+A fixed row restores agreement once, and a standing judge keeps it. One
+step runs the released binary over your tree and refuses a dead
+CODEOWNERS row, or a workflow filter naming a path you no longer have,
+at its file:line:
+
+```yaml
+- uses: DanielSwift1992/gate@v0.2.2
+```
+
+No world file is needed: it judges what the tree already declares, and a
+tree declaring nothing is told so rather than painted green. `version:`
+pins the release whose binary judges, `tree:` points it away from the
+repository root.
 
 ## what runs today, and what is next
 

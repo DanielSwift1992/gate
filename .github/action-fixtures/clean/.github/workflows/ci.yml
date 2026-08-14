@@ -1,0 +1,9 @@
+on:
+  push:
+    paths:
+      - "src/**"
+jobs:
+  a:
+    runs-on: ubuntu-latest
+    steps:
+      - run: true

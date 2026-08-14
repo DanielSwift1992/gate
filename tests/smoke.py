@@ -1126,7 +1126,9 @@ def main():
               and 'python3 "$HERE/gate"' not in _shooter
               and "the bench never came up" in _shooter
               and 'grep -c "BENCH_FOR"' in _shooter
-              and _shooter.index("--screenshot") < _shooter.index('AFTER="$(shasum')))
+              and '[ -s "$SHOT" ]' in _shooter
+              and _shooter.index("--screenshot")
+                  < _shooter.index('mv "$SHOT" "$HERE/docs/bench.png"')))
 
     # ── AND THE NUMBER ON THE COVER IS THE BADGE'S OWN, TODAY. The cover
     # quotes `badge: N claims · holds` and the sentence beside it says the
@@ -1145,6 +1147,49 @@ def main():
     S.append(("the badge on the cover counts what the badge counts today",
               bool(_bg_now) and bool(_bg_cover)
               and _bg_now.group(1) == _bg_cover.group(1)))
+
+    # ── AND THE OFFER IN A STRANGER'S CI EQUALS THE LAW AT HOME. action.yml
+    # sells a judgement and bin/gate-audit.sh performs it. The words are held
+    # here: the pinned tag is the vein's own VERSION, the cover's snippet pins
+    # the same tag, the assets the audit names are the ones the release road
+    # ships, and the script itself runs on three vectors with the local binary
+    # standing in for the download. The download road is CI's `action` job.
+    _ay = open(os.path.join(HERE, "action.yml"), encoding="utf-8").read()
+    _ga = open(os.path.join(HERE, "bin", "gate-audit.sh"), encoding="utf-8").read()
+    _ver = re.search(r'^let VERSION = "([^"]+)"',
+                     open(VEIN, encoding="utf-8").read(), re.M).group(1)
+    S.append(("the action's pinned tag is the vein's own version",
+              re.search(r"default: 'v([0-9.]+)'", _ay).group(1) == _ver))
+    S.append(("the cover's snippet pins the tag the action pins",
+              ("DanielSwift1992/gate@v" + _ver)
+              in open(os.path.join(HERE, "README.md"), encoding="utf-8").read()))
+    _saids = re.findall(r"said: ([a-z0-9_-]+)",
+                        open(os.path.join(HERE, ".github", "workflows", "release.yml"),
+                             encoding="utf-8").read())
+    S.append(("the assets the audit fetches are the assets the release ships",
+              set(re.findall(r"ASSET=(gate-[a-z0-9_.-]+)", _ga))
+              == {"gate-" + t + (".exe" if t.startswith("windows") else "")
+                  for t in _saids} and len(_saids) == 4))
+    _fx = os.path.join(HERE, ".github", "action-fixtures")
+    _aenv = {**os.environ, "GATE_AUDIT_BIN": GATE, "GATE_CLI": CLI_HERE}
+    def _audit(tree):
+        return subprocess.run(["bash", os.path.join(HERE, "bin", "gate-audit.sh"),
+                               "vLOCAL", tree],
+                              capture_output=True, text=True, timeout=180, env=_aenv)
+    _adead = _audit(os.path.join(_fx, "dead"))
+    S.append(("a dead row refuses the audit at its address",
+              _adead.returncode != 0
+              and "::error file=CODEOWNERS,line=2::" in _adead.stdout))
+    _aclean = _audit(os.path.join(_fx, "clean"))
+    S.append(("a clean tree holds the audit, and both halves are said aloud",
+              _aclean.returncode == 0
+              and "import codeowners" in _aclean.stdout
+              and "import workflows: holds" in _aclean.stdout))
+    _abare = _audit(tempfile.mkdtemp(prefix="gate-audit-bare-"))
+    S.append(("a tree declaring nothing is not refused, and says so twice",
+              _abare.returncode == 0
+              and "nothing on this half was judged" in _abare.stdout
+              and "nothing was read" in _abare.stdout))
 
     # ── AND THE RIM IS A CLOSED SET OF DOORS. The canon says five doors, and a
     # canon nobody counts is a wish: any verb may quietly grow a private spawn
@@ -11713,7 +11758,8 @@ public enum MyWatch: AccessLedger {
         # the windows road used to have a job of its own, which checked out and
         # ran with nothing built: it walks in the job that builds the binary now
         _ci_parses = list(_yaml.safe_load(_ci)["jobs"]) == ["green", "linux",
-                                                            "windows-vein", "pages"]
+                                                            "windows-vein", "pages",
+                                                            "action"]
     except ImportError:
         _ci_parses = True          # said plainly: this machine cannot check it
     S.append(("the run does not go red for a setting this repository cannot state",
@@ -12638,8 +12684,12 @@ public enum MyWatch: AccessLedger {
               # the camera's own words survive a refusal, and stop the run
               "2>/dev/null" not in _shoot.split("--screenshot", 1)[0].split("mkdir -p", 1)[-1]
               and "the camera refused" in _shoot
-              # and a picture that did not change is not a picture that was taken
-              and "did not change" in _shoot
+              # and a run that wrote no frame is refused before any stamp: the
+              # shot lands in the scratch, where no file existed, and an empty
+              # or absent frame is the direct evidence of a camera that did
+              # not fire, asked without a proxy through yesterday's bytes
+              and '[ -s "$SHOT" ]' in _shoot
+              and "no picture was written" in _shoot
               # and the refusal stands ABOVE the line that writes the stamp.
               # `index` found the file's own head comment, which names the stamp
               # eight lines in, so the first spelling of this compared a refusal

@@ -28,6 +28,17 @@ if [ -z "$CHROME" ]; then
     exit 1
 fi
 
+# ── AND THE CAMERA REFUSES WITHOUT ITS SUBJECT. On a fresh clone the shim
+# has no binary to stand for, `demo` below would meet its refusal, and the
+# EXIT trap once croaked `SERVE: unbound variable` over it: a croak is not a
+# refusal. The camera asks the shim first and hands over its own sentence.
+if ! "$HERE/gate" --version >/dev/null 2>&1; then
+    echo "shoot-bench: the camera needs its subject, and there is no runnable gate here:" >&2
+    "$HERE/gate" --version >&2 || true
+    exit 1
+fi
+SERVE=""
+
 WORLD="$(mktemp -d "${TMPDIR:-/tmp}/gate-shoot-XXXXXX")"
 trap 'kill $SERVE 2>/dev/null || true; wait $SERVE 2>/dev/null || true; rm -rf "$WORLD"' EXIT
 "$HERE/gate" demo "$WORLD" >/dev/null
@@ -66,12 +77,17 @@ mkdir -p "$HERE/docs"
 # fresh "taken from this ui.html" beside it, and the battery, which holds that
 # stamp to the working copy, went green over a photograph of a page that no
 # longer exists. The one thing this script exists to prevent.
-BEFORE=""
-[ -f "$HERE/docs/bench.png" ] && BEFORE="$(shasum -a 256 "$HERE/docs/bench.png" | cut -d' ' -f1)"
+# ── AND THE GUARD ASKS TODAY'S CAMERA, NOT YESTERDAY'S BYTES. This hashed
+# the old picture and refused when the fresh one matched it, which is a
+# proxy, and the proxy lied the day the page's holder changed with its
+# pixels intact: a legitimate frame read as "nothing was taken". The direct
+# question is whether THIS run wrote a frame, so the camera shoots into its
+# own scratch, where no file existed, and installs what it can show.
+SHOT="$WORLD/bench-shot.png"
 SHOT_ERR="$(mktemp)"
 if ! "$CHROME" --headless --disable-gpu --hide-scrollbars \
     --window-size=1280,800 --force-device-scale-factor=2 --virtual-time-budget=4000 \
-    --screenshot="$HERE/docs/bench.png" \
+    --screenshot="$SHOT" \
     "http://127.0.0.1:$PORT/?f=ownership.swift:89&view=bare" 2>"$SHOT_ERR"; then
     echo "shoot-bench: the camera refused. What it said:" >&2
     tail -5 "$SHOT_ERR" >&2
@@ -79,27 +95,18 @@ if ! "$CHROME" --headless --disable-gpu --hide-scrollbars \
     exit 1
 fi
 rm -f "$SHOT_ERR"
-[ -f "$HERE/docs/bench.png" ] || { echo "shoot-bench: no picture was written" >&2; exit 1; }
+[ -s "$SHOT" ] || { echo "shoot-bench: no picture was written" >&2; exit 1; }
 # a one-pixel black frame, burned into the file: the cover renders on light
 # and on dark pages, and a dark picture meeting a dark page with no seam
 # reads as a hole. sips ships with macOS, so the frame costs no dependency;
 # the shot is 2x, so two file pixels make one seen pixel.
 if command -v sips >/dev/null; then
-    W=$(sips -g pixelWidth  "$HERE/docs/bench.png" | awk '/pixelWidth/  {print $2}')
-    H=$(sips -g pixelHeight "$HERE/docs/bench.png" | awk '/pixelHeight/ {print $2}')
+    W=$(sips -g pixelWidth  "$SHOT" | awk '/pixelWidth/  {print $2}')
+    H=$(sips -g pixelHeight "$SHOT" | awk '/pixelHeight/ {print $2}')
     sips --padToHeightWidth $((H + 4)) $((W + 4)) --padColor 000000 \
-        "$HERE/docs/bench.png" >/dev/null
+        "$SHOT" >/dev/null
 fi
-
-# ── AND THE GUARD COMPARES LIKE WITH LIKE. It used to hash the fresh shot
-# BEFORE the frame against the old file AFTER its frame, so two identical
-# photographs of the same dead page always "differed" and the guard never
-# fired once. The hash is taken where the file is final.
-AFTER="$(shasum -a 256 "$HERE/docs/bench.png" | cut -d' ' -f1)"
-if [ -n "$BEFORE" ] && [ "$BEFORE" = "$AFTER" ]; then
-    echo "shoot-bench: the picture on disk did not change, so nothing was taken" >&2
-    exit 1
-fi
+mv "$SHOT" "$HERE/docs/bench.png"
 
 python3 - "$HERE" <<'EOF'
 import hashlib, sys, os

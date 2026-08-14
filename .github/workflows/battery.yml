@@ -39,6 +39,10 @@ jobs:
           curl -s -X POST -H "Authorization: Bearer $GH_TOKEN" \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
             -d "$BODY" > /dev/null
+      # the camera's subject: the battery above compiles the vein into its
+      # own scratch and sweeps it, so a fresh runner holds no binary here.
+      # The shot is of this revision's bench, and the subject is built first.
+      - run: bin/build-cli.sh
       # a fresh shot of the bench on every run, downloadable from the run's
       # artifacts. The battery holds docs/bench.png.from to web/ui.html, so a
       # stale committed picture is already red above; committing the fresh
@@ -338,3 +342,28 @@ jobs:
           curl -s -X POST -H "Authorization: Bearer $GH_TOKEN" \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
             -d "$BODY" > /dev/null
+
+  # ── THE ROAD A STRANGER'S CI WALKS. `uses: ./` runs action.yml from this
+  # very push: the published binary is fetched at a pinned tag, its bytes
+  # answer to the sha256 beside them, and both mouths judge a fixture. The
+  # tag here is one release behind the vein on purpose: on the push that
+  # bumps VERSION the new tag has no assets yet, and this job is about the
+  # road. The default tag is held to VERSION by the battery instead.
+  action:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4
+      - name: a tree with a dead row is refused
+        id: dead
+        continue-on-error: true
+        uses: ./
+        with:
+          version: v0.2.1
+          tree: .github/action-fixtures/dead
+      - name: and that refusal is this job's negative control
+        run: test "${{ steps.dead.outcome }}" = failure
+      - name: a clean tree holds
+        uses: ./
+        with:
+          version: v0.2.1
+          tree: .github/action-fixtures/clean
