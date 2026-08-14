@@ -329,7 +329,7 @@ web/codemirror.*  the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
 docs/           DETAILS.md, SECURITY.md, CHANGELOG.md, NOTICE.md, and
                 the cover's picture with its provenance
-tests/smoke.py   the battery: 539 checks this repository holds itself
+tests/smoke.py   the battery: 540 checks this repository holds itself
                  to, end-to-end runs through judge parity through
                  documentation contracts; the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts
@@ -339,7 +339,7 @@ tests/windows.py the Windows measure: the reviewer's road as asserts
 
 ```
 $ gate badge
-badge: 188 claims · holds
+badge: 189 claims · holds
 ```
 
 The badge is this repository's own, and the judge re-counts it on every
@@ -367,10 +367,11 @@ walks the road a reviewer walks: `tests/windows.py` makes the demo, takes
 the kit, breaks a claim, and the break is refused at its line, on that
 platform's own paths.
 On Linux, CI rebuilds the judge at the same pin and runs the full
-battery on every push, so every platform named here is measured.
+battery on every push, so every platform named here is measured. A release
+carries the binary per platform, and beside each one its court's revision
+and a sha256: the honest check is the rebuild, and both are one command.
 
-Roadmap, next: a release carrying the binary per platform ·
-editable bare view in the bench · apply routing over the declared
+Roadmap, next: apply routing over the declared
 layout · more domain forms.
 
 Something drifts? Gate it

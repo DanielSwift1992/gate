@@ -1128,6 +1128,24 @@ def main():
               and 'grep -c "BENCH_FOR"' in _shooter
               and _shooter.index("--screenshot") < _shooter.index('AFTER="$(shasum')))
 
+    # ── AND THE NUMBER ON THE COVER IS THE BADGE'S OWN, TODAY. The cover
+    # quotes `badge: N claims · holds` and the sentence beside it says the
+    # judge re-counts on every run, while N itself was counted once and
+    # pasted: it sat one claim behind the repository for a day and nothing
+    # here noticed. The same ratchet as the battery count: grow the world,
+    # touch the cover.
+    _bg = subprocess.run([GATE, "badge"], cwd=HERE, capture_output=True,
+                         text=True, timeout=180,
+                         env={**os.environ, "GATE_CLI": CLI_HERE})
+    _bg_now = re.search(r"badge: (\d+) claims · holds", _bg.stdout or "")
+    _bg_cover = re.search(r"badge: (\d+) claims · holds",
+                          open(os.path.join(HERE, "README.md"), encoding="utf-8").read())
+    if _bg_now and _bg_cover and _bg_now.group(1) != _bg_cover.group(1):
+        print("   the cover's badge is stale:", _bg_cover.group(1), "vs", _bg_now.group(1))
+    S.append(("the badge on the cover counts what the badge counts today",
+              bool(_bg_now) and bool(_bg_cover)
+              and _bg_now.group(1) == _bg_cover.group(1)))
+
     # ── AND THE RIM IS A CLOSED SET OF DOORS. The canon says five doors, and a
     # canon nobody counts is a wish: any verb may quietly grow a private spawn
     # or spell its own scratch out of the temp root, which is how three of them
