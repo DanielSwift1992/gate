@@ -150,6 +150,14 @@ with tempfile.TemporaryDirectory(prefix="gate-win-") as tmp:
                        "--policy", "owners.csv", "-o", "out.swift", "--json"]),
             ("no policy, no out", ["import", "codeowners", "CODEOWNERS", "--tree", "."]),
             ("bare read", ["import", "codeowners", "CODEOWNERS"]),
+            # ── AND TWO THAT SAY WHERE IT IS NOT. All three above die the same
+            # way, so the trap is before the tree is judged and before anything
+            # is written. A file that is not there must be REFUSED in words: if
+            # that falls over too, nothing in this verb has run yet. And the
+            # sibling adaptor says whether the ground is common to imports or
+            # belongs to this one.
+            ("missing file", ["import", "codeowners", "nosuchfile"]),
+            ("sibling adaptor", ["import", "workflows", "--tree", "."]),
         ]
         _codes = []
         for _name, _argv in _shapes:
