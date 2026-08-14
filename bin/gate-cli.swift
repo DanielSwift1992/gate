@@ -5384,8 +5384,19 @@ if args.first == "demo" {
     put(root, "owners.csv", "owner,zone\nalice,src\nbob,src\ncarol,docs\n")
     _ = runGit(["init", "-q", "-b", "main", "."], root)
     _ = selfSaid(["init", "."], root)
-    let said = readSaid(selfSaid(["import", "codeowners", "CODEOWNERS", "--tree", ".",
-                                  "--policy", "owners.csv", "-o", "ownership.swift", "--json"],
+    // ── AND WHAT THE CHILD IS TOLD IS WHERE, NOT HERE. These were relative and
+    // the child resolved them against a working directory the parent set for
+    // it. On windows that setting did not take: the verb ran, wrote the world's
+    // one declared file somewhere else entirely, and this world was left
+    // promising `ownership.swift` in a manifest with no such file beside it.
+    // `gate demo` exited nought over it, and `gate status` then refused for a
+    // file that was never written, naming a path that was right all along.
+    // A path decided here travels whole, and no other process has to agree
+    // with us about where "here" is.
+    let said = readSaid(selfSaid(["import", "codeowners", joinPath(root, "CODEOWNERS"),
+                                  "--tree", root,
+                                  "--policy", joinPath(root, "owners.csv"),
+                                  "-o", joinPath(root, "ownership.swift"), "--json"],
                                  root))
     _ = declareSideHere((root as NSString).appendingPathComponent("ownership.swift"),
                         "Mine", "forms", nil)
@@ -6201,7 +6212,18 @@ if args.first == "import" {
         let tree = flag("--tree")
         let policyPath = flag("--policy")
         let policy = policyPath.map { readOwnersPolicy($0) } ?? []
-        let saidFrom = src + (policyPath.map { " --policy " + $0 } ?? "")
+        // ── AND THE PROVENANCE IS WRITTEN THE WAY THE WORLD WILL READ IT. This
+        // recorded the source exactly as it was typed, and the guard that
+        // checks it resolves that text against the world the file lives in: a
+        // caller who names an absolute path (which is what a verb spawning
+        // this one should do, since no two processes need agree about "here")
+        // left a world refusing itself for a file sitting right beside it.
+        // What is recorded is the path from the world to its source.
+        let outDir = parentPath(absPath(outPath)) ?? absPath(outPath)
+        func fromHere(_ p: String) -> String {
+            return leavesRoot(absPath(p), outDir) ? p : relPath(absPath(p), outDir)
+        }
+        let saidFrom = fromHere(src) + (policyPath.map { " --policy " + fromHere($0) } ?? "")
         let (lines, srcmap, rules, keepers) = codeownersWorldLines(src, policy, saidFrom)
         let world = lines.joined(separator: "\n") + "\n"
         oursWrite(outPath, "the world this prints", world)
