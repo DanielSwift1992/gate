@@ -119,8 +119,6 @@ with tempfile.TemporaryDirectory(prefix="gate-win-") as tmp:
     S.append(("the demo is born and the plain court refuses at the written line",
               demo_ok))
     if not demo_ok:
-        voice("demo", d)
-        voice("status", st)
         # ── AND WHEN A WORLD IS ACCUSED OF MISSING A FILE, THE FOLDER IS SHOWN.
         # Four runs were spent proving the path in that refusal is the right
         # one; what nobody here can see is whether the file is at the end of it.
@@ -130,7 +128,13 @@ with tempfile.TemporaryDirectory(prefix="gate-win-") as tmp:
             _here = sorted(os.listdir(demo))
         except OSError as _e:
             _here = ["the world's own folder cannot be listed: " + str(_e)]
+        # ── AND IT IS SAID FIRST. Two sentences leave this machine, the first
+        # two that look like a red, and the ones this pair already made are
+        # known: the verb that stopped and the claim it made. What is not known
+        # is the folder, so the folder speaks first.
         print("FAIL demo: the world holds " + ", ".join(_here)[:100])
+        voice("demo", d)
+        voice("status", st)
 
     # entry: a fresh repository takes the kit, and the whole kit holds,
     # which needs the certificate court over the forms pages
