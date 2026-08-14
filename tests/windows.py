@@ -5,10 +5,10 @@
 # port, which serves both courts there. It is plain python and runs on any
 # platform, so the road it walks is also walked by the mac battery's host
 # in CI before Windows ever sees it.
-# PAIR, held by hand: the cover's platform paragraph tells this road in one
-# sentence ("it makes the demo, takes the kit, breaks a claim..."). No guard
-# compares the sentence to these asserts; change the road here, change the
-# sentence there. The battery anchors only the sentence's closing line.
+# PAIR, held by the battery now: the cover's platform paragraph tells this
+# road in one sentence, and smoke.py compares the sentence's verbs to these
+# asserts by name. This head once said nobody compares them, which had grown
+# false: a confession that outlives its guard is drift wearing honesty.
 import os
 import re
 import subprocess

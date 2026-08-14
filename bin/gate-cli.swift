@@ -2234,7 +2234,7 @@ func formsGuards(_ w: WorldState, _ size: inout [String: Int],
             }
         }
     }
-    let tmp = NSTemporaryDirectory() + "gate-forms-\(ProcessInfo.processInfo.processIdentifier)"
+    let tmp = tempRoot() + "gate-forms-\(ProcessInfo.processInfo.processIdentifier)"
     try? FileManager.default.createDirectory(atPath: tmp, withIntermediateDirectories: true)
     for (shelfName, text, mine) in streams {
         let fp = (tmp as NSString).appendingPathComponent((shelfName ?? "presented") + ".swift")
@@ -2610,6 +2610,7 @@ func binaryRuns(_ p: String) -> Bool {
     // runnable is tested by running: bytes say nothing about which platform a
     // judge was built for, so the one question with an answer is asked once
     guard FileManager.default.fileExists(atPath: p) else { return false }
+    mark("spawn:judge-probe")
     let proc = Process()
     proc.executableURL = URL(fileURLWithPath: p)
     proc.arguments = ["judge"]
@@ -3992,7 +3993,7 @@ func historyDivergence(_ n: Int, policyName: String?) -> (rows: [HistoryRow], wh
     let whole = seen.count < n
         && runGit(["rev-parse", "--is-shallow-repository"], base)
             .trimmingCharacters(in: .whitespacesAndNewlines) != "true"
-    let tmp = NSTemporaryDirectory() + "/gate-history-\(ProcessInfo.processInfo.processIdentifier)"
+    let tmp = tempRoot() + "/gate-history-\(ProcessInfo.processInfo.processIdentifier)"
     try? FileManager.default.createDirectory(atPath: tmp, withIntermediateDirectories: true)
     defer { try? FileManager.default.removeItem(atPath: tmp) }
     // AND THE PAIR IS LOOKED FOR AT EVERY COMMIT, not once at the tip. A file
@@ -4141,6 +4142,7 @@ func worldParse(_ path: String) -> Said {
                "install node, which serves it through bin/judge-cli.js, or read the "
                + "file itself: it is plain Swift and `swiftc -typecheck` reads it too")
     }
+    mark("spawn:node")
     let p = Process()
     p.executableURL = URL(fileURLWithPath: node)
     p.arguments = [port, "judge", "parse", path]
@@ -4424,8 +4426,17 @@ func importWorld(_ peoplePath: String, _ grantsPath: String, _ outPath: String)
             matches("([\\d.]+) ms", said).compactMap { $0.first }.last, wallMs)
 }
 
+// ── ONE ROOT FOR EVERY TEMPORARY PLACE. Three verbs used to spell their own
+// scratch out of NSTemporaryDirectory plus string glue, which is three private
+// doors to one fact: where this machine keeps what nobody keeps. The rim's law
+// is closure: every impure reach goes through a named door, and the battery
+// counts the raw token to hold the set closed.
+func tempRoot() -> String {
+    return NSTemporaryDirectory()
+}
+
 func scratchDir(_ tag: String) -> String {
-    let d = NSTemporaryDirectory() + "/" + tag + "\(ProcessInfo.processInfo.processIdentifier)-\(scratchCount)"
+    let d = tempRoot() + "/" + tag + "\(ProcessInfo.processInfo.processIdentifier)-\(scratchCount)"
     scratchCount += 1
     try? FileManager.default.createDirectory(atPath: d, withIntermediateDirectories: true)
     return d
@@ -7637,7 +7648,7 @@ if args.first == "badge" {
     var judged = 0
     var broke: String? = nil
     for mark in marks {
-        let d = NSTemporaryDirectory() + "/gate-badge-" + mark.sha
+        let d = tempRoot() + "/gate-badge-" + mark.sha
         try? FileManager.default.createDirectory(atPath: d,
                                                  withIntermediateDirectories: true)
         var wrote: [String] = []
@@ -8156,6 +8167,7 @@ func contractRevisions(_ path: String, _ since: String?) -> (root: String?, revs
         return (parts.first ?? "", parts.count > 1 ? parts[1] : "")
     }
     if marks.isEmpty { return (rootDir, []) }
+    mark("spawn:git")
     let p = Process()
     p.executableURL = URL(fileURLWithPath: toolPath("git"))
     p.arguments = ["-C", rootDir, "cat-file", "--batch"]
@@ -8231,6 +8243,7 @@ func firstMentions(_ rootDir: String, _ names: [String],
         }
     }
     var seen: [String: String] = [:]
+    mark("spawn:git")
     let p = Process()
     p.executableURL = URL(fileURLWithPath: toolPath("git"))
     p.arguments = ["-C", rootDir, "log", "--reverse", "-p", "--no-color",
@@ -9533,7 +9546,7 @@ if args.first == "seam" {
                      right, lines: true) {
         claims[m[3]] = (m[0], m[1], m[2])
     }
-    let dir = NSTemporaryDirectory() + "gate-seam-\(ProcessInfo.processInfo.processIdentifier)"
+    let dir = tempRoot() + "gate-seam-\(ProcessInfo.processInfo.processIdentifier)"
     try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
     let path = dir + "/seam.swift"
     guard (try? (left + "\n" + right).write(toFile: path, atomically: false, encoding: .utf8)) != nil else {
@@ -10334,6 +10347,7 @@ func serveDoor(_ a: [String]) -> Never {
     if openIt {
         // the bench is the point of serve, and the listener is already up by
         // this line, so the page has something to reach the moment it opens
+        mark("spawn:browser")
         let opener = Process()
         #if canImport(Glibc)
         opener.executableURL = URL(fileURLWithPath: "/usr/bin/xdg-open")

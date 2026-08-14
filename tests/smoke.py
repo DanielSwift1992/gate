@@ -1107,6 +1107,34 @@ def main():
               and "`/src/gone away/`" in _sp_gone["refusals"][0]["claim"]
               and _sp_gone["refusals"][0]["address"].endswith("CODEOWNERS:3")))
 
+    # ── AND THE RIM IS A CLOSED SET OF DOORS. The canon says five doors, and a
+    # canon nobody counts is a wish: any verb may quietly grow a private spawn
+    # or spell its own scratch out of the temp root, which is how three of them
+    # already had. What is held is the RAW TOKEN COUNT in code lines: reaching
+    # for the world outside a named door moves a number here, and the red names
+    # the door law instead of letting the rim fray silently.
+    _rim_code = [l for l in open(os.path.join(HERE, "bin", "gate-cli.swift"),
+                                 encoding="utf-8").read().split("\n")
+                 if not l.strip().startswith("//")]
+    _rim = {
+        # one root for every temporary place: tempRoot() alone
+        "NSTemporaryDirectory": 1,
+        # spawn doors, each named: runGit, gitExitCode, judge-probe, node
+        # parse, runSaid, selfSaid, gitShow, git cat-file stream, git log
+        # stream, courtSays fallback, browser opener
+        "Process()": 11,
+        # courtSays on darwin
+        "posix_spawn(": 1,
+        # rawOpen's two spellings and courtSays' /dev/null
+        " open(": 3,
+    }
+    _rim_apart = {t: sum(l.count(t) for l in _rim_code) for t in _rim}
+    if _rim_apart != _rim:
+        print("   the rim frayed:", {t: (_rim_apart[t], _rim[t])
+                                     for t in _rim if _rim_apart[t] != _rim[t]})
+    S.append(("the rim is a closed set of doors, counted in code and not in prose",
+              _rim_apart == _rim))
+
     # ── AND A WORLD CHECKED OUT ON THAT PLATFORM IS THE SAME WORLD. Git's own
     # default there hands a clone over with `\r\n`, and every reader here
     # matches on lines that end at `\n`: the layout's rows parsed to nothing, so
@@ -10783,8 +10811,13 @@ public enum MyWatch: AccessLedger {
               # and every scratch this tool makes is named for the process that
               # made it, so a run that dies leaves something a person can find
               # rather than an anonymous folder nobody can attribute
+              # keyed to the DOOR, not to the library's name: the raw token
+              # now lives once, inside tempRoot(), and holding lines by the
+              # old spelling left this arm judging one return statement
               and all("gate-" in _l or "processIdentifier" in _l
-                      for _l in gate_src.split("\n") if "NSTemporaryDirectory()" in _l)
+                      for _l in gate_src.split("\n")
+                      if "tempRoot()" in _l and "func tempRoot" not in _l
+                      and "return NSTemporaryDirectory" not in _l)
               and "removeItem(atPath: d)" in gate_src))
 
     # a verb typed without what it reads answers in words: a stack trace is the
