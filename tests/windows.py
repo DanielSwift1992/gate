@@ -145,19 +145,22 @@ with tempfile.TemporaryDirectory(prefix="gate-win-") as tmp:
         open(os.path.join(_kit, "owners.csv"), "w").write("owner,zone\nalice,src\n")
         os.makedirs(os.path.join(_kit, "src"), exist_ok=True)
         open(os.path.join(_kit, "src", "a.txt"), "w").write("x\n")
+        # ── AND THE NAMES ARE SHORT, BECAUSE THE CHANNEL IS 138 LETTERS WIDE.
+        # The fifth shape of the last run never arrived: the labels ate it.
+        open(os.path.join(_kit, "empty"), "w").write("")
+        open(os.path.join(_kit, "hashonly"), "w").write("# only a comment\n")
         _shapes = [
-            ("whole", ["import", "codeowners", "CODEOWNERS", "--tree", ".",
-                       "--policy", "owners.csv", "-o", "out.swift", "--json"]),
-            ("no policy, no out", ["import", "codeowners", "CODEOWNERS", "--tree", "."]),
-            ("bare read", ["import", "codeowners", "CODEOWNERS"]),
-            # ── AND TWO THAT SAY WHERE IT IS NOT. All three above die the same
-            # way, so the trap is before the tree is judged and before anything
-            # is written. A file that is not there must be REFUSED in words: if
-            # that falls over too, nothing in this verb has run yet. And the
-            # sibling adaptor says whether the ground is common to imports or
-            # belongs to this one.
-            ("missing file", ["import", "codeowners", "nosuchfile"]),
-            ("sibling adaptor", ["import", "workflows", "--tree", "."]),
+            # a file that is not there refuses in words (measured: code 1), so
+            # the way in works and the trap is at the reading or past it. An
+            # empty file and a comment-only file are refused by a law of this
+            # tool's own ("an empty read is a refusal"), and they never reach
+            # the building of a world: if THEY speak and the real one falls
+            # over, the trap is in what is built out of live rules.
+            ("real", ["import", "codeowners", "CODEOWNERS"]),
+            ("gone", ["import", "codeowners", "nosuchfile"]),
+            ("empty", ["import", "codeowners", "empty"]),
+            ("hash", ["import", "codeowners", "hashonly"]),
+            ("wf", ["import", "workflows", "--tree", "."]),
         ]
         _codes = []
         for _name, _argv in _shapes:
