@@ -78,6 +78,13 @@ at all: the same reading, printed, and your repository left as it was.
 adds the one thing CODEOWNERS cannot express: which zone each owner
 keeps.
 
+Now break what you just imported. `./gate serve` opens the bench on it:
+rename the folder inside the declaration, and the refusal lands on that
+keystroke, at its line. `./gate status` in the terminal says the same
+thing, word for word. Commit it, and the next section's one `uses:` step
+has CI say it again on every push. Same judge, same declarations,
+different moment.
+
 `drift` reads an API contract and a client library out of git on your
 machine, and prints what the copies have been doing to each other.
 It uploads nothing and fetches nothing. It observes rather than
@@ -92,6 +99,22 @@ moment it is made, and `git checkout .` is the whole way back.
 Every command here is written `gate`. Until it is on your path it is
 `./gate`, run from the clone: nothing else to install, nothing else to
 undo.
+
+## run it in your CI
+
+A fixed row restores agreement once, and a standing judge keeps it. One
+step runs the released binary over your tree and refuses a dead
+CODEOWNERS row, or a workflow filter naming a path you no longer have,
+at its file:line:
+
+```yaml
+- uses: DanielSwift1992/gate@v0.2.2
+```
+
+No world file is needed: it judges what the tree already declares, and a
+tree declaring nothing is told so rather than painted green. `version:`
+pins the release whose binary judges, `tree:` points it away from the
+repository root.
 
 ## ask the file, not a person
 
@@ -203,12 +226,8 @@ The file on disk is full Swift, `gate bare … --full` prints it, and
 `swiftc -typecheck` reads it as it stands: this view is a projection
 over that one source, never a second copy of it.
 
-The language is three things: names, claims between names, and the
-rules the claims must satisfy. Realm, Room, Keeper: the zone, the
-path, the owner. The judge asks one
-question of every claim: the same, or not, and at which line.
-
-The files are bare Swift: the same language with the ceremony stripped,
+The judge asks one question of every claim: the same, or not, and at
+which line. The files are bare Swift: the same language with the ceremony stripped,
 and no DSL. Records are declarations, rules are type constraints in the
 same text, so a record that violates a rule does not get flagged: it fails
 to exist. And because it is plain Swift, a second, independent reader
@@ -216,21 +235,14 @@ exists whenever you want one: `swiftc -typecheck` passes on these files as
 they are, with no project and no build. Git keeps doing what it already
 does best: history, authorship, review, rollback.
 
-A domain's vocabulary is the forms a world of that kind is written in. It
-is a unit of its own, and today forms arrive by two roads: shipped on the
-shelf in `stdlib/` and judged with the rest of this repository, or
-declared in a file of your own beside your world. The goal is one road, a
-shelf where every form is presented and nothing is built in, and that is
-a debt on this project, not a claim about it. `gate stdlib show
-forms-organization` prints any shelf page exactly as it shipped.
-
 The porcelain is deliberately git-shaped: `init · status/fsck · log ·
 check · diff · apply · import/export · verify · guard · library · survey ·
 drift · badge · mine · theirs · declare · seam · attention · serve ·
 report · stdlib · my · demo · findings · --version`. A refusal exits
 non-zero, so hooks and CI need no wrappers, and every command ends by
 naming the one step that comes next, so the whole ladder stays out of
-your head.
+your head. `gate stdlib show forms-organization` prints any shelf page
+exactly as it shipped.
 
 ## what this does not touch
 
@@ -338,22 +350,6 @@ tests/smoke.py   the battery: 546 checks this repository holds itself
                  documentation contracts; the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts
 ```
-
-## run it in your CI
-
-A fixed row restores agreement once, and a standing judge keeps it. One
-step runs the released binary over your tree and refuses a dead
-CODEOWNERS row, or a workflow filter naming a path you no longer have,
-at its file:line:
-
-```yaml
-- uses: DanielSwift1992/gate@v0.2.2
-```
-
-No world file is needed: it judges what the tree already declares, and a
-tree declaring nothing is told so rather than painted green. `version:`
-pins the release whose binary judges, `tree:` points it away from the
-repository root.
 
 ## what runs today, and what is next
 

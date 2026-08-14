@@ -178,6 +178,16 @@ The theory behind the judge ships the same way: compiler-checked
 constructions and executable witnesses, with the arguments carried by
 the papers beside them.
 
+## Forms, and the two roads they arrive by
+
+A domain's vocabulary is the forms a world of that kind is written in.
+Today forms arrive by two roads: shipped on the shelf in `stdlib/` and
+judged with the rest of this repository, or declared in a file of your
+own beside your world. The goal is one road, a shelf where every form is
+presented and nothing is built in, and that is a debt on this project,
+not a claim about it. `gate stdlib show forms-organization` prints any
+shelf page exactly as it shipped.
+
 ## What this road does not judge
 
 The second reader above is the reason this section exists. `swiftc`

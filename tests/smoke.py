@@ -12557,9 +12557,14 @@ public enum MyWatch: AccessLedger {
     rail_and_cli = ui + src + readme + open(__file__, encoding="utf-8").read()
     S.append(("the retired word does not come back into anything a reader sees, this file included",
               rail_and_cli.lower().count("genre") == GENRE_SAID_HERE
-              # and what replaced it is stated as a fact about now, not a law
-              and "arrive by two roads" in readme
-              and "not a claim about it" in readme
+              # and what replaced it is stated as a fact about now, not a law:
+              # the statement lives one page deep, where the cover sends a
+              # reader for details, since the cover carries doors and not
+              # vocabulary
+              and "arrive by two roads" in open(os.path.join(
+                  HERE, "docs", "DETAILS.md"), encoding="utf-8").read()
+              and "not a claim about it" in open(os.path.join(
+                  HERE, "docs", "DETAILS.md"), encoding="utf-8").read()
               # the files carry the living word, and git kept their history
               and all(os.path.exists(os.path.join(HERE, "stdlib", f"forms-{n}.swift"))
                       for n in ("contract", "grants", "organization", "reference"))
