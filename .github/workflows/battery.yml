@@ -24,7 +24,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SAID=$(grep -m3 -E '^FAIL|^   ' /tmp/smoke-out.txt | paste -sd '; ' - || true)
+          # ── AND THE PREAMBLE DOES NOT EAT THE FINDING. A status field is 138
+          # letters wide, and this took the first three lines that looked like
+          # a red: on a clean checkout the first of them is always "no binary
+          # in this clone", which is the battery saying hello. Three runs in a
+          # row spent their whole budget on it and cut the diagnostic off at
+          # its first letter. What a run says about itself before anything has
+          # failed is not what travels.
+          SAID=$(grep -E '^FAIL|^   ' /tmp/smoke-out.txt \
+                 | grep -v 'no binary in this clone' | head -3 \
+                 | paste -sd '; ' - || true)
           [ -n "$SAID" ] || SAID=$(tail -1 /tmp/smoke-out.txt)
           BODY=$(python3 -c 'import json,sys; print(json.dumps({"state":"failure","context":"macos-first-fail","description":sys.argv[1][:138]}))' "$SAID")
           curl -s -X POST -H "Authorization: Bearer $GH_TOKEN" \
@@ -87,7 +96,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SAID=$(grep -m3 -E '^FAIL|^   ' /tmp/smoke-out.txt | paste -sd '; ' - || true)
+          # ── AND THE PREAMBLE DOES NOT EAT THE FINDING. A status field is 138
+          # letters wide, and this took the first three lines that looked like
+          # a red: on a clean checkout the first of them is always "no binary
+          # in this clone", which is the battery saying hello. Three runs in a
+          # row spent their whole budget on it and cut the diagnostic off at
+          # its first letter. What a run says about itself before anything has
+          # failed is not what travels.
+          SAID=$(grep -E '^FAIL|^   ' /tmp/smoke-out.txt \
+                 | grep -v 'no binary in this clone' | head -3 \
+                 | paste -sd '; ' - || true)
           [ -n "$SAID" ] || SAID=$(tail -1 /tmp/smoke-out.txt)
           BODY=$(python3 -c 'import json,sys; print(json.dumps({"state":"failure","context":"linux-first-fail","description":sys.argv[1][:138]}))' "$SAID")
           curl -s -X POST -H "Authorization: Bearer $GH_TOKEN" \
