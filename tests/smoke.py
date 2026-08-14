@@ -1145,10 +1145,17 @@ def main():
         _le_only = [a for a in _le_where[1] if a not in _le_where[0]]
         print("   the two spellings are judged apart:", _le_only[:3],
               "and", [a for a in _le_where[0] if a not in _le_where[1]][:3])
+        # the sentence names the path it looked at, in backticks; what travels
+        # first and shortest is that path SPELLED OUT, because the thing being
+        # hunted is a character nobody can see: a status field is 138 letters
+        # wide and the last cut of this spent them on prose
         for _a in _le_only[:2]:
             for _l in _le_said[1].stdout.split("\n"):
-                if _l.strip().startswith(_a):
-                    print("   the crlf world says:", _l.strip()[:220])
+                if not _l.strip().startswith(_a):
+                    continue
+                _tried = re.search(r"`([^`]+)`", _l)
+                print("   crlf looked at:", repr(_tried.group(1)[-70:]) if _tried
+                      else _l.strip()[:120])
     S.append(("a world whose lines end the other way is judged the same, to the word",
               # the demo world refuses at its written line, both ways
               all(r.returncode == 1 and "ownership.swift:89" in r.stdout
