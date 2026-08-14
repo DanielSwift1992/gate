@@ -1885,11 +1885,17 @@ func manifestGuards(_ w: WorldState, liveRows: [LayoutRow]? = nil,
                   + "String { \"path\" } }`. Give it one or take the row out"))
     }
     for r in live where ["world", "seam", "forms"].contains(r.role ?? "") {
-        if !FileManager.default.fileExists(atPath: (d as NSString).appendingPathComponent(r.path)) {
+        // ── AND THE PLACE THAT WAS LOOKED IN IS NAMED. This said a file is
+        // missing and never where it looked for it, which is a sentence a
+        // person cannot act on when the row and the folder are both in front
+        // of them: a path with a stray character on the end reads as the path
+        // it almost is. The looked-for path travels in quotes.
+        let looked = joinPath(d, r.path)
+        if !FileManager.default.fileExists(atPath: looked) {
             bad.append(("\(man):\(r.line)",
-                        "the manifest declares \(r.path), and no such file exists: "
-                      + "either the file is gone or the row is, and a row for a file "
-                      + "nobody has is a court with nothing to check"))
+                        "the manifest declares \(r.path), and no such file exists at "
+                      + "`\(looked)`: either the file is gone or the row is, and a row "
+                      + "for a file nobody has is a court with nothing to check"))
         }
     }
     for r in live where r.role == "forms" && !r.path.isEmpty {

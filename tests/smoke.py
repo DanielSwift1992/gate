@@ -1139,9 +1139,16 @@ def main():
     # refusal more.
     _le_where = [sorted(re.findall(r"^\s+(\S+:\d+)", r.stdout, re.M)) for r in _le_said]
     if _le_where[0] != _le_where[1]:
-        print("   the two spellings are judged apart:",
-              [a for a in _le_where[1] if a not in _le_where[0]][:3],
+        # the address alone says where, and a difference between two spellings
+        # of one world needs the sentence too: the first cut of this printed
+        # `gate.manifest.swift:45` and left the reader to guess the claim
+        _le_only = [a for a in _le_where[1] if a not in _le_where[0]]
+        print("   the two spellings are judged apart:", _le_only[:3],
               "and", [a for a in _le_where[0] if a not in _le_where[1]][:3])
+        for _a in _le_only[:2]:
+            for _l in _le_said[1].stdout.split("\n"):
+                if _l.strip().startswith(_a):
+                    print("   the crlf world says:", _l.strip()[:220])
     S.append(("a world whose lines end the other way is judged the same, to the word",
               # the demo world refuses at its written line, both ways
               all(r.returncode == 1 and "ownership.swift:89" in r.stdout
