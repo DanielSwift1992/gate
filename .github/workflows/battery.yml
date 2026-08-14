@@ -231,7 +231,13 @@ jobs:
           # which says the step it names did not fail and nothing about what did.
           THEN=$(grep -E '^FAIL' vein-out.txt | sed -n '2p' || true)
           if [ -n "$THEN" ]; then
-            BODY3=$(python -c 'import json,sys; print(json.dumps({"state":"failure","context":"windows-road-then","description":sys.argv[1][:138]}))' "$THEN")
+            # ── AND A SENTENCE IS CUT AT BOTH ENDS, NEVER ONLY THE HEAD. What
+            # this carries is a refusal, and a refusal's head is an address
+            # already known from the line above it while the thing being hunted
+            # (the path that was tried) sits at the END. Cut from the front
+            # alone, three runs in a row carried "...no such file exists at"
+            # and stopped one character before the answer.
+            BODY3=$(python -c 'import json,sys; t=sys.argv[1]; print(json.dumps({"state":"failure","context":"windows-road-then","description":t if len(t)<=138 else t[:56]+" … "+t[-79:]}))' "$THEN")
             curl -s -X POST -H "Authorization: Bearer $GH_TOKEN" \
               "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
               -d "$BODY3" > /dev/null
