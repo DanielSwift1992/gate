@@ -1107,6 +1107,39 @@ def main():
               and "`/src/gone away/`" in _sp_gone["refusals"][0]["claim"]
               and _sp_gone["refusals"][0]["address"].endswith("CODEOWNERS:3")))
 
+    # ── AND A WORLD CHECKED OUT ON THAT PLATFORM IS THE SAME WORLD. Git's own
+    # default there hands a clone over with `\r\n`, and every reader here
+    # matches on lines that end at `\n`: the layout's rows parsed to nothing, so
+    # the world was never found, and `gate status` STANDING IN A WORLD said "no
+    # world here" and exited nought. This project's oldest species, a check that
+    # lost its subject and went green, in the one place where green is a claim
+    # somebody's hook believes. Found by walking the reviewer's road on that
+    # platform; held here by handing a made world over in that spelling and
+    # asking for the same verdict, word for word.
+    _le = os.path.join(tmp, "line-endings")
+    _le_lf, _le_crlf = os.path.join(_le, "lf"), os.path.join(_le, "crlf")
+    os.makedirs(_le, exist_ok=True)
+    run("demo", _le_lf)
+    shutil.copytree(_le_lf, _le_crlf)
+    for _b, _ds, _fs in os.walk(_le_crlf):
+        _ds[:] = [d for d in _ds if d != ".git"]
+        for _f in _fs:
+            _p = os.path.join(_b, _f)
+            _raw = open(_p, "rb").read()
+            if b"\x00" in _raw[:2000]:
+                continue
+            open(_p, "wb").write(_raw.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n"))
+    _le_said = [subprocess.run([CLI_HERE, "status"], cwd=_w, capture_output=True,
+                               text=True, timeout=180) for _w in (_le_lf, _le_crlf)]
+    S.append(("a world whose lines end the other way is judged the same, to the word",
+              # the demo world refuses at its written line, both ways
+              all(r.returncode == 1 and "ownership.swift:89" in r.stdout
+                  and "Owns_3_carol" in r.stdout for r in _le_said)
+              # and not one refusal more: the carriage return used to travel
+              # into a name, and the tool then disagreed with itself eight times
+              # about names it had written itself
+              and _le_said[0].stdout == _le_said[1].stdout))
+
     # ── AND A FOLDER THAT IS A WALL OF LINKS IS A FOLDER THIS TREE CARRIES. The
     # walk behind this asked `fileExists`, which FOLLOWS a symbolic link: a link
     # to a folder answered "directory", was stepped over as one, and a folder

@@ -556,7 +556,15 @@ func theirsText(_ path: String, _ what: String) -> String {
         // mark travelled into the first CODEOWNERS pattern, so `/src/plain.go`
         // became a pattern no file matches and the tool refused a rule that was
         // right. Every reading of somebody else's text comes through here.
-        return text.hasPrefix("\u{feff}") ? String(text.dropFirst()) : text
+        // ── AND THE LINE ENDING IS THEIRS TO CHOOSE, the same as the mark. A
+        // CODEOWNERS checked out on windows ends its lines with `\r\n`, the
+        // carriage return travelled into the owner's name, and a name is
+        // sanitised character by character: `Owns_0_alice` came back as
+        // `Owns_0_alice_`. Eight refusals, every one of them the tool telling
+        // the world it disagreed with itself about a name it had just written.
+        let whole = text.hasPrefix("\u{feff}") ? String(text.dropFirst()) : text
+        return whole.contains("\r\n")
+            ? whole.replacingOccurrences(of: "\r\n", with: "\n") : whole
     }
     // the first byte that is not utf-8, counted the way the other side counts it
     let bytes = [UInt8](data)
@@ -1560,7 +1568,21 @@ func readText(_ path: String) -> String? {
     // reads foreign text through `utf-8-sig`, which drops it. This did not, so
     // the mark travelled into the first CODEOWNERS pattern and the tool refused
     // a rule that was right, and into a policy header so no column was found.
-    return text.hasPrefix("\u{feff}") ? String(text.dropFirst()) : text
+    // ── AND A LINE ENDING IS THE CHECKOUT'S, NOT THE TEXT'S. A clone on
+    // windows arrives with `\r\n` under git's own default, and every reader
+    // downstream matches on lines that end at `\n`: the layout's rows parsed
+    // to nothing, the world was therefore never found, and `gate status` in a
+    // world said "no world here" AND EXITED NOUGHT. That is this project's own
+    // oldest species, a check that lost its subject and went green, in the one
+    // place where green is a claim somebody's hook believes. Measured here by
+    // handing a made world over in that spelling.
+    //
+    // Nothing byte-exact goes through this door: the three digests this tool
+    // takes read the file's own bytes, so a taken file is still identified by
+    // what it is and not by what its lines end with.
+    let whole = text.hasPrefix("\u{feff}") ? String(text.dropFirst()) : text
+    return whole.contains("\r\n")
+        ? whole.replacingOccurrences(of: "\r\n", with: "\n") : whole
 }
 
 func matchesAt(_ pattern: String, _ text: String,
@@ -2749,8 +2771,11 @@ func codeownersPairGuards(_ w: WorldState) -> [(address: String, claim: String)]
     for path in judged.sorted() where FileManager.default.fileExists(atPath: path) {
         // a declared row may be a binary, and a binary is nobody's half of a
         // printed pair: strict utf-8 here, the way the other carrier reads it
+        // the printed world is read the same way: a pair compared across two
+        // spellings of a line ending is two records of one fact by arithmetic
         guard let data = FileManager.default.contents(atPath: path),
-              let text = String(data: data, encoding: .utf8),
+              let text = String(data: data, encoding: .utf8)?
+                  .replacingOccurrences(of: "\r\n", with: "\n"),
               text.contains("printed by gate import codeowners"),
               let m = matchesAt("^// from: (\\S+)(?: --policy (\\S+))?$", text, lines: true)
                   .first?.groups
