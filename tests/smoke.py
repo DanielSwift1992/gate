@@ -1153,9 +1153,12 @@ def main():
             for _l in _le_said[1].stdout.split("\n"):
                 if not _l.strip().startswith(_a):
                     continue
-                _tried = re.search(r"`([^`]+)`", _l)
-                print("   crlf looked at:", repr(_tried.group(1)[-70:]) if _tried
-                      else _l.strip()[:120])
+                # the CLAIM, not the first thing in backticks: the last cut of
+                # this took the first quoted token and carried `Ownership`,
+                # which is a row's name and says nothing about which claim was
+                # made. Two machines make DIFFERENT claims at this address and
+                # the sentence is the only thing that separates them.
+                print("   crlf says:", _l.strip()[len(_a):][:100].strip(" ·"))
     S.append(("a world whose lines end the other way is judged the same, to the word",
               # the demo world refuses at its written line, both ways
               all(r.returncode == 1 and "ownership.swift:89" in r.stdout
