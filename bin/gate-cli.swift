@@ -6280,15 +6280,20 @@ if args.first == "import" {
             return leavesRoot(absPath(p), outDir) ? p : relPath(absPath(p), outDir)
         }
         let saidFrom = fromHere(src) + (policyPath.map { " --policy " + fromHere($0) } ?? "")
+        mark("codeowners-begin")
         let (lines, srcmap, rules, keepers) = codeownersWorldLines(src, policy, saidFrom)
+        mark("world-built")
         let world = lines.joined(separator: "\n") + "\n"
         oursWrite(outPath, "the world this prints", world)
+        mark("world-written")
         let t0 = Date()
         let outp = courtSays(["where", outPath])
+        mark("world-judged")
         let ms = ((Date().timeIntervalSince(t0) * 1000 * 10).rounded(.toNearestOrEven)) / 10
         // ONE FACT, ONE SENTENCE: the words belong to the law, in the file the
         // law is written in, and both surfaces read them from there
         let notes = lawNotes([world])
+        mark("notes-built")
         var refusals: [(certificate: String, source: String, address: String, claim: String)] = []
         for (cert, claim) in whereRefused(outp) {
             guard let cert = cert, let source = srcmap[cert] else { continue }
@@ -6304,6 +6309,7 @@ if args.first == "import" {
             let rel = relPath(absPath(src), absPath(tree))
             ghosts = ghostPatterns(rules, paths, rel.hasPrefix("..") ? src : rel)
         }
+        mark("refusals-read")
         let zones = Set(rules.map { codeownersZone($0.pattern) }).count
         // ── AND AN EMPTY READ IS A REFUSAL, NOT A VERDICT. A CODEOWNERS this
         // door reads no line of, because it is empty, or all comments, or
@@ -6343,6 +6349,7 @@ if args.first == "import" {
               + "the ladder this world presents (docs/DETAILS.md, "
               + "what this road does not judge)"
         let w = discoverWorld()
+        mark("world-discovered")
         let declared = (w.layout?.rows ?? []).map { $0.path }
         let next = !unread.isEmpty
             ? "`gate import codeowners` reads the shape github reads: a path, then the "
@@ -7388,6 +7395,29 @@ if args.first == "survey" {
 // somebody else's place to put a file, refused in words rather than raised: the
 // writing half of theirsText, with the same three sentences the other carrier's
 // errno names
+// ── A TRAIL, BECAUSE A PROCESS THAT FALLS OVER CANNOT SPEAK. A trap on that
+// platform is a fail fast: it takes both channels with it, so everything the
+// verb was going to SAY is lost and only what it has already WRITTEN survives.
+// Asked by `GATE_TRACE`, a verb leaves one word per step in that file, and
+// whoever picks the wreck up reads the last one. Off unless the file is named,
+// appended without buffering, and it says nothing about anybody's world: it is
+// this tool's own state, in a file, which is where this project keeps state.
+func mark(_ step: String) {
+    guard let where_ = ProcessInfo.processInfo.environment["GATE_TRACE"],
+          !where_.isEmpty else { return }
+    let fd = open(where_, O_WRONLY | O_CREAT | O_APPEND, 0o644)
+    guard fd >= 0 else { return }
+    let bytes = Array((step + "\n").utf8)
+    _ = bytes.withUnsafeBufferPointer { buf -> Int in
+        #if canImport(WinSDK)
+        return Int(write(fd, buf.baseAddress, UInt32(buf.count)))
+        #else
+        return write(fd, buf.baseAddress, buf.count)
+        #endif
+    }
+    close(fd)
+}
+
 func oursWrite(_ path: String, _ what: String, _ text: String) {
     let fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0o644)
     if fd < 0 {

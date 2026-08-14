@@ -1168,6 +1168,30 @@ def main():
               # about names it had written itself
               and _le_where[0] == _le_where[1] and len(_le_where[0]) == 1))
 
+    # ── AND A TRAIL EXISTS ONLY WHERE IT IS ASKED FOR. A verb that falls over
+    # takes both its channels with it, so this tool leaves one word per step in
+    # a file when `GATE_TRACE` names one: what a dead process wrote survives it,
+    # and what it was going to say does not. The door is off unless named, and
+    # a door nobody measures is a door that quietly stops working.
+    _tr = os.path.join(tmp, "trail")
+    os.makedirs(_tr, exist_ok=True)
+    open(os.path.join(_tr, "CODEOWNERS"), "w").write("src/ @alice\n")
+    os.makedirs(os.path.join(_tr, "src"), exist_ok=True)
+    open(os.path.join(_tr, "src", "a.txt"), "w").write("x\n")
+    _tr_file = os.path.join(_tr, "trace.txt")
+    subprocess.run([CLI_HERE, "import", "codeowners", "CODEOWNERS"], cwd=_tr,
+                   capture_output=True, timeout=180,
+                   env=dict(os.environ, GATE_TRACE=_tr_file))
+    _tr_marks = (open(_tr_file).read().split("\n") if os.path.exists(_tr_file) else [])
+    _tr_marks = [m for m in _tr_marks if m.strip()]
+    os.remove(_tr_file)
+    subprocess.run([CLI_HERE, "import", "codeowners", "CODEOWNERS"], cwd=_tr,
+                   capture_output=True, timeout=180)
+    S.append(("a verb leaves a trail where one is asked for, and none where it is not",
+              _tr_marks[:1] == ["codeowners-begin"] and "world-written" in _tr_marks
+              and _tr_marks[-1] == "world-discovered"
+              and not os.path.exists(_tr_file)))
+
     # ── AND A FOLDER THAT IS A WALL OF LINKS IS A FOLDER THIS TREE CARRIES. The
     # walk behind this asked `fileExists`, which FOLLOWS a symbolic link: a link
     # to a folder answered "directory", was stepped over as one, and a folder

@@ -168,13 +168,25 @@ with tempfile.TemporaryDirectory(prefix="gate-win-") as tmp:
             # Whether the file is THERE after the fall separates those two.
             ("out", ["import", "codeowners", "empty", "-o", "out.swift"]),
         ]
+        # ── AND THE TRAIL IS READ, NOT THE SPEECH. These fall over with a fail
+        # fast, which takes both channels: nothing they say survives and only
+        # what they wrote does. `GATE_TRACE` names a file the verb leaves one
+        # word per step in, so what travels is the LAST word it reached and the
+        # code, in that order, short enough to arrive whole.
+        _trail = os.path.join(_kit, "trace.txt")
         _codes = []
         for _name, _argv in _shapes:
+            if os.path.exists(_trail):
+                os.remove(_trail)
+            os.environ["GATE_TRACE"] = _trail
             _r = run(*_argv, cwd=_kit)
-            _codes.append(_name + "=" + str(_r.returncode)
-                          + ("/silent" if not (_r.stdout or _r.stderr).strip() else "/spoke"))
-        _codes.append("wrote out="
-                      + str(os.path.exists(os.path.join(_kit, "out.swift"))))
+            os.environ.pop("GATE_TRACE", None)
+            _last = ""
+            if os.path.exists(_trail):
+                _marks = [l.strip() for l in open(_trail).read().split("\n") if l.strip()]
+                _last = _marks[-1] if _marks else ""
+            _code = "trap" if _r.returncode == 3221226505 else str(_r.returncode)
+            _codes.append(_name + "=" + _code + ("@" + _last if _last else ""))
         print("FAIL demo: import dies as " + "; ".join(_codes))
         print("FAIL demo: the world holds " + ", ".join(_here)[:100])
         voice("demo", d)
