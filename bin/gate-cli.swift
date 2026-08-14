@@ -507,6 +507,7 @@ func waitDone(_ p: Process) {
 }
 
 func runGit(_ arguments: [String], _ cwd: String) -> String {
+    mark("spawn:git")
     spawnCounted("git")
     let p = Process()
     p.executableURL = URL(fileURLWithPath: toolPath("git"))
@@ -548,6 +549,7 @@ func gitExitCode(_ arguments: [String], _ cwd: String) -> Int32 {
 }
 
 func theirsText(_ path: String, _ what: String) -> String {
+    mark("read:" + lastName(path))
     // ── THE ONE DOOR, ON THIS SIDE TOO. A file that is not there and a file that
     // is not text are two different sentences, and this vein said the first one
     // for both: `no such side` about a file sitting right there, while the other
@@ -3912,6 +3914,7 @@ func yamlList(_ node: YamlNode, _ address: [String]) -> [(line: Int, text: Strin
 // read at all is carried too: this reader exists to answer what is here, and
 // the refusal it feeds must never be manufactured by a reader's own blindness.
 func treeFiles(_ root: String) -> [String] {
+    mark("walk:" + lastName(root))
     var paths: [String] = []
     guard let walk = FileManager.default.enumerator(atPath: root) else { return paths }
     for case let rel as String in walk {
@@ -5067,6 +5070,7 @@ func selfSaid(_ words: [String], _ cwd: String) -> String {
     // where `-o ownership.swift` lands, so it is set from the string this
     // vein's own door produced.
     let bin = absPath(CommandLine.arguments[0])
+    mark("spawn:self " + (words.first ?? ""))
     let p = Process()
     p.executableURL = URL(fileURLWithPath: bin)
     p.arguments = words
@@ -7458,6 +7462,7 @@ func mark(_ step: String) {
 }
 
 func oursWrite(_ path: String, _ what: String, _ text: String) {
+    mark("write:" + lastName(path))
     let fd = rawOpen(path, O_WRONLY | O_CREAT | O_TRUNC)
     if fd < 0 {
         let why = errno
