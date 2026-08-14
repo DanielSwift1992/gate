@@ -132,6 +132,31 @@ with tempfile.TemporaryDirectory(prefix="gate-win-") as tmp:
         # two that look like a red, and the ones this pair already made are
         # known: the verb that stopped and the claim it made. What is not known
         # is the folder, so the folder speaks first.
+        # ── AND A VERB THAT DIES IS ASKED AGAIN, SIMPLER EACH TIME. The child
+        # this demo runs leaves with 1033, which is the low word of the fail
+        # fast a swift trap raises on this platform: it does not exit, it
+        # falls over, before it can print a character on either channel. Where
+        # it falls is what these three ask, from the outside, on a world this
+        # road makes for them: the whole shape first, then without the court's
+        # own reading of the tree, then the bare read of somebody's file.
+        _kit = os.path.join(tmp, "probe")
+        os.makedirs(_kit, exist_ok=True)
+        open(os.path.join(_kit, "CODEOWNERS"), "w").write("src/ @alice\n")
+        open(os.path.join(_kit, "owners.csv"), "w").write("owner,zone\nalice,src\n")
+        os.makedirs(os.path.join(_kit, "src"), exist_ok=True)
+        open(os.path.join(_kit, "src", "a.txt"), "w").write("x\n")
+        _shapes = [
+            ("whole", ["import", "codeowners", "CODEOWNERS", "--tree", ".",
+                       "--policy", "owners.csv", "-o", "out.swift", "--json"]),
+            ("no policy, no out", ["import", "codeowners", "CODEOWNERS", "--tree", "."]),
+            ("bare read", ["import", "codeowners", "CODEOWNERS"]),
+        ]
+        _codes = []
+        for _name, _argv in _shapes:
+            _r = run(*_argv, cwd=_kit)
+            _codes.append(_name + "=" + str(_r.returncode)
+                          + ("/silent" if not (_r.stdout or _r.stderr).strip() else "/spoke"))
+        print("FAIL demo: import dies as " + "; ".join(_codes))
         print("FAIL demo: the world holds " + ", ".join(_here)[:100])
         voice("demo", d)
         voice("status", st)
