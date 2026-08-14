@@ -5028,6 +5028,8 @@ func saidPath(_ p: String) -> String {
 // orchestration and nothing else: every world it builds is built by the verb
 // that owns that act, so there is one translator here and not a second one
 // wearing a demo's clothes.
+var SELF_SAID_CODE: Int32 = 0
+
 func selfSaid(_ words: [String], _ cwd: String) -> String {
     // ── AND A SPAWN THAT DOES NOT HAPPEN IS NOT AN EMPTY ANSWER. This caught
     // the failure to run and returned "", so `gate demo` on windows built the
@@ -5058,6 +5060,12 @@ func selfSaid(_ words: [String], _ cwd: String) -> String {
     let said = pipe.fileHandleForReading.readDataToEndOfFile()
     let complained = quiet.fileHandleForReading.readDataToEndOfFile()
     waitDone(p)
+    // ── AND THE CODE THE CHILD LEFT WITH IS KEPT. A child that printed on
+    // neither channel says everything through this number and nothing without
+    // it: on windows the import above answered nought characters on both, and
+    // whether that is a crash, a kill or a clean exit is exactly what the code
+    // is for.
+    SELF_SAID_CODE = p.terminationStatus
     let answer = String(data: said, encoding: .utf8) ?? ""
     // ── AND A CHILD THAT COULD NOT ANSWER IS NOT A CHILD THAT HELD. A verb of
     // this tool refuses on its own channel: a refusal is an ANSWER, on stdout,
@@ -5440,9 +5448,10 @@ if args.first == "demo" {
         let firstLine = again.components(separatedBy: "\n")
             .first(where: { !$0.trimmingCharacters(in: .whitespaces).isEmpty }) ?? ""
         cannot("this demo could not write " + ours + ", and a world is not "
-               + "declared before it is there. Its own import answered "
+               + "declared before it is there. Its own import left with code "
+               + String(SELF_SAID_CODE) + " and answered "
                + String(again.count) + " characters beginning `"
-               + String(firstLine.prefix(90)) + "`",
+               + String(firstLine.prefix(60)) + "`",
                "the folder is at " + root + " and holds what it holds: this is "
                + "the tool failing to run itself, not your repository")
     }
