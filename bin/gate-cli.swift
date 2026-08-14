@@ -1534,6 +1534,14 @@ func parentPath(_ p: String, _ st: PathStyle = HOST_PATHS) -> String? {
     return (r?.root ?? "") + "/" + seg.joined(separator: "/")
 }
 
+func lastName(_ p: String, _ st: PathStyle = HOST_PATHS) -> String {
+    // the name at the end of a path, asked of the door rather than of
+    // `NSString.lastPathComponent`, which splits on `/` on every platform and
+    // knows nothing of a drive letter or a backslash
+    let text = st.drives ? p.replacingOccurrences(of: "\\", with: "/") : p
+    return text.components(separatedBy: "/").last(where: { !$0.isEmpty }) ?? text
+}
+
 func canonicalPath(_ p: String, _ st: PathStyle = HOST_PATHS) -> String {
     // one door for every path comparison that crosses realpath: macOS's
     // resolvingSymlinksInPath strips the /private prefix from a path that
@@ -1822,8 +1830,14 @@ func manifestGuards(_ w: WorldState, liveRows: [LayoutRow]? = nil,
     // below is the other carrier's, word for word
     guard let layout = w.layout else { return [] }
     var bad: [(address: String, claim: String)] = []
-    let man = (layout.manifest as NSString).lastPathComponent
-    let d = (layout.manifest as NSString).deletingLastPathComponent
+    // ── AND THE WORLD'S OWN FOLDER COMES OFF THE DOOR. This was NSString path
+    // arithmetic, which splits on `/` wherever it runs: on the platform that
+    // roots on a drive letter it hands back a folder nobody wrote, and every
+    // file this guard then looks for is looked for in the wrong place. That is
+    // what "the manifest declares ownership.swift, and no such file exists"
+    // means on a machine where the file is sitting right there.
+    let man = lastName(layout.manifest)
+    let d = parentPath(layout.manifest) ?? layout.manifest
     let live = liveRows ?? layout.rows
     let liveText = uncommented(liveText ?? (readText(layout.manifest) ?? ""))
     var seenPaths: [String: String] = [:]
@@ -1855,9 +1869,8 @@ func manifestGuards(_ w: WorldState, liveRows: [LayoutRow]? = nil,
                         "`\(said)` does not say what it is for. A row names its court: "
                       + STATUS_ROLES.map { "`\($0.0)`: \($0.1)" }.joined(separator: " · ")))
         } else if r.role == "seam",
-                  FileManager.default.fileExists(
-                      atPath: (d as NSString).appendingPathComponent(r.path)),
-                  !isSeamSide((d as NSString).appendingPathComponent(r.path)) {
+                  FileManager.default.fileExists(atPath: joinPath(d, r.path)),
+                  !isSeamSide(joinPath(d, r.path)) {
             bad.append(("\(man):\(r.line)",
                         "`\(said)` is filed under `seam`, and \(r.path) does not "
                       + "say it is one side of one: a side states a contract or claims "
@@ -1922,7 +1935,7 @@ func manifestGuards(_ w: WorldState, liveRows: [LayoutRow]? = nil,
         let theirs = Set(topNames(STDLIB_TEXTS[shelfName] ?? "").map { $0.0 })
         if !theirs.isDisjoint(with: mineNames) { continue }
         let row = live.first(where: { $0.name == r.written })
-        if row == nil || (row!.path as NSString).lastPathComponent != wantFile {
+        if row == nil || lastName(row!.path) != wantFile {
             bad.append(("\(man):\(r.line)",
                         "`\(r.name ?? "a row with no name")` says in its own head that it is written in "
                       + "\(wantFile), and this row does not declare it: add "
