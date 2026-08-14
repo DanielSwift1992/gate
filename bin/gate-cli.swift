@@ -5023,15 +5023,32 @@ func saidPath(_ p: String) -> String {
 // that owns that act, so there is one translator here and not a second one
 // wearing a demo's clothes.
 func selfSaid(_ words: [String], _ cwd: String) -> String {
-    let bin = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath().path
+    // ── AND A SPAWN THAT DOES NOT HAPPEN IS NOT AN EMPTY ANSWER. This caught
+    // the failure to run and returned "", so `gate demo` on windows built the
+    // whole world, never wrote the one file the world declares, exited nought
+    // and said nothing: the manifest promised `ownership.swift` and the folder
+    // held everything else. Refusal-as-value is this project's oldest law and
+    // this was the one door still swallowing.
+    //
+    // ── AND THE FOLDER IT RUNS IN IS A PATH, NOT A URL. `URL(fileURLWithPath:)`
+    // reads its argument the posix way wherever it runs, and what this verb
+    // hands it is a world at a drive letter. The working directory decides
+    // where `-o ownership.swift` lands, so it is set from the string this
+    // vein's own door produced.
+    let bin = absPath(CommandLine.arguments[0])
     let p = Process()
     p.executableURL = URL(fileURLWithPath: bin)
     p.arguments = words
-    p.currentDirectoryURL = URL(fileURLWithPath: cwd)
+    p.currentDirectoryPath = cwd
     let pipe = Pipe(), quiet = Pipe()
     p.standardOutput = pipe
     p.standardError = quiet
-    do { try p.run() } catch { return "" }
+    do { try p.run() } catch {
+        cannot("this tool could not run itself at " + bin + " in " + cwd
+               + ": " + error.localizedDescription,
+               "the binary is there and this is the same one that is speaking, "
+               + "so what failed is the spawn: report this with the platform")
+    }
     let said = pipe.fileHandleForReading.readDataToEndOfFile()
     quiet.fileHandleForReading.readDataToEndOfFile()
     waitDone(p)
