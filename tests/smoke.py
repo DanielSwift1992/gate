@@ -1244,6 +1244,26 @@ def main():
     S.append(("every flag the cover spells is a spelling the vein knows",
               _cover_flags and _flags_gone == []))
 
+    # ── AND THE -o ADVICE KNOWS WHAT ALREADY STANDS. The bare import at home
+    # said "Add -o ownership.swift to keep the world it printed" beside an
+    # ownership.swift whose from: line names this very file: the lock-on-the-
+    # door species, third sighting. The pair enumeration answers the advice
+    # the way it answers the findings offer; the orphan keeps its -o.
+    _oa_home = subprocess.run([GATE, "import", "codeowners", "--tree", "."],
+                              cwd=HERE, capture_output=True, text=True, timeout=180,
+                              env={**os.environ, "GATE_CLI": CLI_HERE})
+    _oa_dir = os.path.join(tmp, "oa-orphan")
+    os.makedirs(os.path.join(_oa_dir, "src"), exist_ok=True)
+    open(os.path.join(_oa_dir, "src", "a.txt"), "w").write("x")
+    open(os.path.join(_oa_dir, "CODEOWNERS"), "w").write("/src/ @x\n")
+    _oa_orph = subprocess.run([GATE, "import", "codeowners", "--tree", "."],
+                              cwd=_oa_dir, capture_output=True, text=True, timeout=180,
+                              env={**os.environ, "GATE_CLI": CLI_HERE})
+    S.append(("the -o advice knows a held pair from an orphan file",
+              "ownership.swift already keeps this file" in _oa_home.stdout
+              and "Add `-o ownership.swift`" not in _oa_home.stdout
+              and "Add `-o ownership.swift`" in _oa_orph.stdout))
+
     # ── AND A LICENSE PASTED INTO A CODEOWNERS IS SAID, NOT SKIMMED. The
     # parser keeps the lines an owner stands on and dropped the rest in
     # silence, so a file with prose pasted into it judged as a clean map of

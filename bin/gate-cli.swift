@@ -6527,8 +6527,15 @@ if args.first == "import" {
             ? "open the address above: if that line is meant to be a rule, give it an "
               + "owner; if it is prose, move it out or put a `#` in front of it"
             : asked == nil
-            ? "nothing was written: this read your CODEOWNERS and your tree and left "
-              + "both as they were. Add `-o ownership.swift` to keep the world it printed"
+            // the advice knows what already stands: offering -o beside a world
+            // whose from: line names this very file is the lock-on-the-door
+            // species, and the pair enumeration answers it
+            ? (codeownersPairedWorlds(w).first { $0.srcAbs == absPath(src) }.map {
+                   $0.name + " already keeps this file, and every `gate status` "
+                 + "translates it again: a line changed on either side alone "
+                 + "is named at its line"
+               } ?? ("nothing was written: this read your CODEOWNERS and your tree and left "
+                     + "both as they were. Add `-o ownership.swift` to keep the world it printed"))
             : (w.layout != nil && !declared.contains(asked!))
             ? "declare it: `gate mine \(asked!) --role forms` adds the row the layout "
               + "in gate.manifest.swift asks for, and then commit. Until it has one, "
