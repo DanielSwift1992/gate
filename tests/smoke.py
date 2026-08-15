@@ -1176,12 +1176,20 @@ def main():
     _chl_tags = [t for t in subprocess.run(["git", "tag"], cwd=HERE,
                                            capture_output=True, text=True).stdout.split()
                  if re.match(r"^v\d+\.\d+\.\d+$", t)]
+    # a clone without tags (a shallow CI checkout, a fork taken thin) is not
+    # a broken changelog: the pair says what it could not read and judges the
+    # half it holds either way. CI fetches tags, so the full pair runs there.
+    if not _chl_tags:
+        print("   no release tags visible in this clone, so the headings answer"
+              " only for the version being built")
     S.append(("the changelog names every version that shipped, and the one being built",
-              len(_chl_tags) >= 4
-              and all(("\n## " + t.lstrip("v") + "\n") in _chl for t in _chl_tags)
+              all(("\n## " + t.lstrip("v") + "\n") in _chl for t in _chl_tags)
               and ("\n## " + re.search(r'^let VERSION = "([^"]+)"',
                                        open(VEIN, encoding="utf-8").read(),
-                                       re.M).group(1) + "\n") in _chl))
+                                       re.M).group(1) + "\n") in _chl
+              and "fetch-tags: true" in open(os.path.join(
+                  HERE, ".github", "workflows", "battery.yml"),
+                  encoding="utf-8").read()))
 
     # ── AND THE OFFER IN A STRANGER'S CI EQUALS THE LAW AT HOME. action.yml
     # sells a judgement and bin/gate-audit.sh performs it. The words are held

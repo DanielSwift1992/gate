@@ -8,6 +8,10 @@ jobs:
       statuses: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4
+        with:
+          # the changelog pair reads `git tag`: a shallow checkout
+          # without tags starves that reader and the red blames the log
+          fetch-tags: true
       # the runner's own Xcode swift builds the corpus: a pinned separate
       # toolchain met an SDK built by a newer one and refused, so no
       # toolchain is installed here on purpose
@@ -73,6 +77,10 @@ jobs:
       statuses: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4
+        with:
+          # the changelog pair reads `git tag`: a shallow checkout
+          # without tags starves that reader and the red blames the log
+          fetch-tags: true
       # the same full battery, on the platform where the port serves both
       # courts by default. The judge is still built here, from the same pin
       # as the macos job: the parity vectors are the point of this job, and
