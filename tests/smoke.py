@@ -9561,6 +9561,61 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                   and _cc_impure == [] and _cc_build.returncode == 0
                   and _cc_said is not None and "CORE OK" in _cc_said.stdout))
 
+        # ── AND THE PURE HEART OF `import workflows` IS JUDGED THE SAME WAY.
+        # Shell-style matching, the yaml block subset read as text, and the
+        # dead-filter arithmetic: cut out at its own two marks, held lexically
+        # to purity, compiled alone, and asked questions with answers known in
+        # advance. The regex memo lives inside the marks because globMatch is
+        # its caller here: process state, not a reading of the world.
+        _wc_cut = ""
+        if "// ── WORKFLOWS CORE BEGIN." in _cc_src and "// ── WORKFLOWS CORE END." in _cc_src:
+            _wc_cut = _cc_src.split("// ── WORKFLOWS CORE BEGIN.", 1)[1].split("\n", 1)[1]
+            _wc_cut = _wc_cut.split("// ── WORKFLOWS CORE END.", 1)[0]
+        _wc_impure = [t for t in ("theirsText", "readText", "FileManager",
+                                  "ProcessInfo", "STDLIB_TEXTS", "courtSays",
+                                  "rawOpen", "selfSaid", "treeFiles(", "mark(")
+                      if t in _wc_cut]
+        if _wc_impure:
+            print("   the workflows core names a reader of the world:", _wc_impure)
+        _wc_dir = os.path.join(tmp, "workflows-core")
+        os.makedirs(_wc_dir, exist_ok=True)
+        open(os.path.join(_wc_dir, "main.swift"), "w", encoding="utf-8").write(
+            "import Foundation\n" + _wc_cut + '''
+var bad: [String] = []
+func check(_ name: String, _ ok: Bool) { if !ok { bad.append(name) } }
+let wf = yamlBlock("on:\\n  push:\\n    paths:\\n      - \\"src/**\\"\\n      - vanished/**\\njobs:\\n  a:\\n    runs-on: x\\n")
+check("clean", wf.refused == nil)
+let fl = yamlList(wf.root, ["on", "push", "paths"])
+check("list", fl.map { yamlUnquote($0.text) } == ["src/**", "vanished/**"] && fl[0].line == 4)
+let single = yamlBlock("on:\\n  push:\\n    paths: docs/**\\n")
+check("single", yamlList(single.root, ["on", "push", "paths"]).map { yamlUnquote($0.text) } == ["docs/**"])
+let anchored = yamlBlock("on: &a\\n  push: {}\\n")
+check("refuses", anchored.refused != nil)
+let dead = workflowsDeadFilters([("ci.yml", 4, "paths", "src/**"), ("ci.yml", 5, "paths", "vanished/**")], ["src/a/b.txt"])
+check("dead", dead.count == 1 && dead[0].address == "ci.yml:5" && dead[0].claim.contains("vanished/**"))
+check("glob", globMatch("src/**", "src/a/b.txt") && globMatch("a*c", "abc") && !globMatch("a?c", "ac"))
+check("bang", workflowsDeadFilters([("w", 1, "paths-ignore", "!src/**")], ["src/x"]).isEmpty)
+print(bad.isEmpty ? "CORE OK" : "APART: " + bad.joined(separator: ","))
+''')
+        _wc_bin = os.path.join(_wc_dir, "core")
+        _wc_build = subprocess.run(["swiftc", os.path.join(_wc_dir, "main.swift"),
+                                    "-o", _wc_bin],
+                                   capture_output=True, text=True, timeout=900)
+        if _wc_build.returncode != 0:
+            print("   the workflows core cut out of the vein did not build:", "\n   ".join(
+                [l for l in _wc_build.stderr.split("\n") if "error:" in l][:3]))
+        _wc_said = subprocess.run([_wc_bin], capture_output=True, text=True,
+                                  timeout=180) if _wc_build.returncode == 0 else None
+        if _wc_said is not None and "CORE OK" not in _wc_said.stdout:
+            print("   the workflows core answers otherwise:", _wc_said.stdout.strip()[:200])
+        S.append(("the workflows core is total, reads no world, and answers alone",
+                  _wc_cut.count("func globMatch") == 1
+                  and _wc_cut.count("func yamlBlock") == 1
+                  and _wc_cut.count("func yamlList") == 1
+                  and _wc_cut.count("func workflowsDeadFilters") == 1
+                  and _wc_impure == [] and _wc_build.returncode == 0
+                  and _wc_said is not None and "CORE OK" in _wc_said.stdout))
+
         # ── AND THE PATHS OF A PLATFORM NOBODY HERE IS STANDING ON. The tool
         # ships for windows and every path in it was spelled the posix way, so
         # `gate demo C:\...` made nothing at all: a drive letter is not a `/`,

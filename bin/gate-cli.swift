@@ -397,23 +397,6 @@ if args.first == "stdlib" {
 
 // ── export WORLD -o people.csv grants.csv: the tables printed back out of a
 // world, which is the round trip that proves the fact translation ──
-// ── AND A PATTERN IS COMPILED ONCE, the way the other carrier's regex module
-// keeps its own cache. Said out loud here rather than inherited. Measured
-// honestly: this is NOT where this vein's cost sits. `status` spends 538ms of
-// its own work against the other carrier's 110ms, the judge is 4ms of either,
-// and this cache moved none of it. It stays because rebuilding a pattern for
-// nothing is still rebuilding it; where the cost does sit is an open question
-// with a name in the journal.
-var PATTERNS: [String: NSRegularExpression] = [:]
-
-func compiled(_ pattern: String, _ options: NSRegularExpression.Options) -> NSRegularExpression? {
-    let key = "\(options.rawValue)\u{1}" + pattern
-    if let held = PATTERNS[key] { return held }
-    guard let made = try? NSRegularExpression(pattern: pattern, options: options) else { return nil }
-    PATTERNS[key] = made
-    return made
-}
-
 func matches(_ pattern: String, _ text: String,
              dotAll: Bool = false, lines: Bool = false) -> [[String]] {
     var opts: NSRegularExpression.Options = []
@@ -3690,6 +3673,31 @@ func findingsMarkdown(_ found: [Finding]) -> String {
     return lines.joined(separator: "\n")
 }
 
+// ── WORKFLOWS CORE BEGIN. The pure heart of `import workflows` and of the
+// pattern half of `import codeowners`: shell-style matching, the yaml block
+// subset read as text, and the dead-filter arithmetic. Total functions over
+// values, no reader of the world; the battery cuts this out at these two
+// marks, compiles it alone, and asks it questions with answers known in
+// advance (tests/smoke.py, "the workflows core is total").
+// The regex memo lives inside the marks because globMatch is its caller
+// here: a memo is process state, not a reading of the world.
+// ── AND A PATTERN IS COMPILED ONCE, the way the other carrier's regex module
+// keeps its own cache. Said out loud here rather than inherited. Measured
+// honestly: this is NOT where this vein's cost sits. `status` spends 538ms of
+// its own work against the other carrier's 110ms, the judge is 4ms of either,
+// and this cache moved none of it. It stays because rebuilding a pattern for
+// nothing is still rebuilding it; where the cost does sit is an open question
+// with a name in the journal.
+var PATTERNS: [String: NSRegularExpression] = [:]
+
+func compiled(_ pattern: String, _ options: NSRegularExpression.Options) -> NSRegularExpression? {
+    let key = "\(options.rawValue)\u{1}" + pattern
+    if let held = PATTERNS[key] { return held }
+    guard let made = try? NSRegularExpression(pattern: pattern, options: options) else { return nil }
+    PATTERNS[key] = made
+    return made
+}
+
 // ONE READER FOR THE HALF THE COURT CANNOT SEE. A pattern that matches no file
 // is a divergence of the pair with no claim to refuse: the world holds, and the
 // rule addresses nothing. The import walks a working tree for its paths and the
@@ -3958,6 +3966,33 @@ func yamlList(_ node: YamlNode, _ address: [String]) -> [(line: Int, text: Strin
     if out.isEmpty, let v = at.value, !v.isEmpty { out = [(at.line, v)] }
     return out
 }
+
+// the dead-filter arithmetic, total over values. The matching is wider than
+// that platform's on purpose: here `*` crosses a separator, there it does not
+// and `**` does, so a pattern this calls dead is dead by the narrower reading
+// too, and the error is pushed to the side that costs a missed finding rather
+// than a wrong accusation.
+func workflowsDeadFilters(_ filters: [(file: String, line: Int, key: String, pattern: String)],
+                          _ paths: [String]) -> [(address: String, claim: String)] {
+    var dead: [(String, String)] = []
+    for f in filters {
+        var pat = f.pattern
+        if pat.hasPrefix("!") { pat.removeFirst() }
+        while pat.hasPrefix("/") { pat.removeFirst() }
+        let hit = paths.contains { p in
+            globMatch(pat, p) || globMatch(pat + "/*", p) || p.hasPrefix(pat + "/")
+                || globMatch(pat, (p as NSString).lastPathComponent)
+        }
+        if !hit {
+            dead.append(("\(f.file):\(f.line)",
+                         "`\(f.key)` names `\(f.pattern)`, and no file in the tree "
+                       + "matches it: this workflow waits for a change that cannot "
+                       + "arrive"))
+        }
+    }
+    return dead
+}
+// ── WORKFLOWS CORE END.
 
 // ── EVERY PATH THIS TREE CARRIES, WHICH IS NOT EVERY REGULAR FILE IN IT. A
 // repository tracks a symbolic link as a path of its own, and the walk under
@@ -6851,28 +6886,9 @@ if args.first == "import" {
                 }
             }
         }
-        var dead: [(address: String, claim: String)] = []
-        for f in filters {
-            // ── AND THE MATCHING IS WIDER THAN THAT PLATFORM'S, ON PURPOSE.
-            // Here `*` crosses a separator; there it does not, and `**` does.
-            // So a pattern this calls dead is dead by the narrower reading too,
-            // and one it calls alive may still be dead there. The error is
-            // pushed to the side that costs a missed finding rather than a
-            // wrong accusation.
-            var pat = f.pattern
-            if pat.hasPrefix("!") { pat.removeFirst() }
-            while pat.hasPrefix("/") { pat.removeFirst() }
-            let hit = paths.contains { p in
-                globMatch(pat, p) || globMatch(pat + "/*", p) || p.hasPrefix(pat + "/")
-                    || globMatch(pat, (p as NSString).lastPathComponent)
-            }
-            if !hit {
-                dead.append(("\(f.file):\(f.line)",
-                             "`\(f.key)` names `\(f.pattern)`, and no file in the tree "
-                           + "matches it: this workflow waits for a change that cannot "
-                           + "arrive"))
-            }
-        }
+        // the arithmetic and its wider-than-that-platform matching live in
+        // the workflows core, cut out and asked alone by the battery
+        let dead = workflowsDeadFilters(filters, paths)
         let all = dead + unread
         // an empty read is a refusal, not a verdict: no workflow at all and
         // workflows stating no filter are two answers, and neither is `holds`
