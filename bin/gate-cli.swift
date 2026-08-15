@@ -780,6 +780,10 @@ func turned(_ surface: String, _ base: String, _ files: [String]) -> [String: St
 // python's own reader does. So this one does too: an object is a list of pairs,
 // and a number keeps the text it was written as, so what goes back out is what
 // came in unless something meant to change it.
+// ── SAID CORE BEGIN. The json vocabulary and its reader: a value tree that
+// keeps object order and number spellings, and a total parser from text.
+// Pure over values; the battery cuts this out and compiles it under the
+// rbac core, whose items are Said values.
 indirect enum Said {
     case text(String), number(String), yes, no, nothing
     case list([Said])
@@ -896,6 +900,7 @@ func readSaid(_ text: String) -> Said? {
     // and nothing may follow it: a document with a tail is not this document
     return i >= chars.count ? said : nil
 }
+// ── SAID CORE END.
 
 func jsonPlace(_ text: String) -> (line: Int, column: Int) {
     // where the other carrier's reader stops, said its way: a line and a column,
@@ -4045,6 +4050,118 @@ func refsWorldBuild(_ tracked: [(key: String, state: String)],
 }
 // ── REFS CORE END.
 
+// ── RBAC CORE BEGIN. The pure heart of `import rbac`: a kubectl dump's
+// items, already read as Said values, into the grants world with the read
+// gate declared. Total over values: the key ladder, the namespace rooms,
+// the cluster scope and the bindings all decide from the values alone; the
+// battery compiles this under the said and codeowners cores and asks it
+// with answers known in advance.
+let RBAC_WRITES: Set<String> = ["create", "update", "patch", "delete", "deletecollection"]
+
+func rbacKey(_ rules: [Said]) -> String {
+    var verbs = Set<String>()
+    for r in rules { for v in r.at("verbs")?.asList ?? [] { verbs.insert(v.asText ?? "") } }
+    if verbs.contains("*") || !verbs.isDisjoint(with: ["escalate", "bind", "impersonate"]) {
+        return "WardenKey"
+    }
+    if !verbs.isDisjoint(with: RBAC_WRITES) { return "WriterKey" }
+    return "ReaderKey"
+}
+
+func rbacWorldBuild(_ items: [Said], _ head: String)
+    -> (world: String, srcmap: [String: String], checked: Int,
+        namespaces: Int, roles: Int, clusterRoles: Int) {
+    var roleOrder: [String] = [], roles: [String: Said] = [:]
+    var clusterOrder: [String] = [], clusterRoles: [String: Said] = [:]
+    var bindings: [Said] = []
+    var namespaces = Set<String>()
+    for it in items {
+        let kind = it.at("kind")?.asText ?? ""
+        let meta = it.at("metadata")
+        let ns = meta?.at("namespace")?.asText ?? ""
+        let name = meta?.at("name")?.asText ?? ""
+        if kind == "Role" {
+            let key = ns + "\u{0}" + name
+            if roles[key] == nil { roleOrder.append(key) }
+            roles[key] = it
+            namespaces.insert(ns)
+        } else if kind == "ClusterRole" {
+            if clusterRoles[name] == nil { clusterOrder.append(name) }
+            clusterRoles[name] = it
+        } else if kind == "RoleBinding" {
+            bindings.append(it)
+            namespaces.insert(ns)
+        }
+    }
+    var lines = [head]
+    // the read gate, this world's own: a read binding is not entry to work a
+    // room, and pushing it through the writing gate was a lie the court
+    // could not see while it dropped the conjunct
+    lines.append("")
+    lines.append("public protocol Viewed {}")
+    lines.append("public enum View<Who: Keeper, Into: Room> {}")
+    lines.append("extension View: Viewed")
+    lines.append("where Who.Key: Reads, Who.Post == Into.Place {}")
+    var srcmap: [String: String] = [:]
+    for ns in namespaces.sorted() { lines.append("public enum Ns_\(sanitized(ns)): Realm {}") }
+    lines.append("public enum ClusterScope: Realm {}")
+    lines.append("")
+    for key in roleOrder.sorted() {
+        let two = key.components(separatedBy: "\u{0}")
+        lines.append("public enum Role_\(sanitized(two[0]))_\(sanitized(two[1])): Room {")
+        lines.append("    public typealias Place = Ns_\(sanitized(two[0]))")
+        lines.append("}")
+    }
+    for name in clusterOrder.sorted() {
+        lines.append("public enum CR_\(sanitized(name)): Room {")
+        lines.append("    public typealias Place = ClusterScope")
+        lines.append("}")
+    }
+    lines.append("")
+    var checked = 0
+    for b in bindings {
+        let meta = b.at("metadata")
+        let bns = meta?.at("namespace")?.asText ?? ""
+        let bname = meta?.at("name")?.asText ?? ""
+        let ref = b.at("roleRef")
+        let rkind = ref?.at("kind")?.asText ?? ""
+        let rname = ref?.at("name")?.asText ?? ""
+        let keeper = "B_\(sanitized(bns))_\(sanitized(bname))"
+        let cert = "Bind_\(sanitized(bns))_\(sanitized(bname))"
+        var post = "", room = "", key = "", what = ""
+        if rkind == "ClusterRole" {
+            post = "ClusterScope"
+            room = "CR_\(sanitized(rname))"
+            key = rbacKey(clusterRoles[rname]?.at("rules")?.asList ?? [])
+            what = "rolebinding \(bns)/\(bname) -> clusterrole \(rname)"
+        } else {
+            post = "Ns_\(sanitized(bns))"
+            key = rbacKey(roles[bns + "\u{0}" + rname]?.at("rules")?.asList ?? [])
+            if roles[bns + "\u{0}" + rname] != nil {
+                room = "Role_\(sanitized(bns))_\(sanitized(rname))"
+            } else {
+                let foreign = roleOrder.compactMap { k -> String? in
+                    let two = k.components(separatedBy: "\u{0}")
+                    return two[1] == rname ? two[0] : nil
+                }.sorted()
+                room = "Role_\(sanitized(foreign.first ?? bns))_\(sanitized(rname))"
+            }
+            what = "rolebinding \(bns)/\(bname) -> role \(rname)"
+        }
+        lines.append("public enum \(keeper): Keeper {")
+        lines.append("    public typealias Post = \(post)")
+        lines.append("    public typealias Key = \(key)")
+        lines.append("}")
+        lines.append("public typealias \(cert) = "
+                     + (key == "ReaderKey" ? "View" : "Enter") + "<\(keeper), \(room)>")
+        srcmap[cert] = what
+        checked += 1
+    }
+    return (lines.joined(separator: "\n") + "\n", srcmap, checked,
+            namespaces.count, roleOrder.count, clusterOrder.count)
+}
+// ── RBAC CORE END.
+
 // ── EVERY PATH THIS TREE CARRIES, WHICH IS NOT EVERY REGULAR FILE IN IT. A
 // repository tracks a symbolic link as a path of its own, and the walk under
 // this asked `fileExists`, which FOLLOWS one: a link to a folder answered
@@ -4479,17 +4596,6 @@ let RBAC_FORMS_HEADER = """
 
     """.replacingOccurrences(of: "\n    ", with: "\n")
 
-let RBAC_WRITES: Set<String> = ["create", "update", "patch", "delete", "deletecollection"]
-
-func rbacKey(_ rules: [Said]) -> String {
-    var verbs = Set<String>()
-    for r in rules { for v in r.at("verbs")?.asList ?? [] { verbs.insert(v.asText ?? "") } }
-    if verbs.contains("*") || !verbs.isDisjoint(with: ["escalate", "bind", "impersonate"]) {
-        return "WardenKey"
-    }
-    if !verbs.isDisjoint(with: RBAC_WRITES) { return "WriterKey" }
-    return "ReaderKey"
-}
 
 func theirsJson(_ path: String, _ what: String) -> Said {
     let text = theirsText(path, what)
@@ -6716,93 +6822,11 @@ if args.first == "import" {
         }()
         let items = theirsJson(src, "a kubectl dump of roles and bindings")
             .at("items")?.asList ?? []
-        var roleOrder: [String] = [], roles: [String: Said] = [:]
-        var clusterOrder: [String] = [], clusterRoles: [String: Said] = [:]
-        var bindings: [Said] = []
-        var namespaces = Set<String>()
-        for it in items {
-            let kind = it.at("kind")?.asText ?? ""
-            let meta = it.at("metadata")
-            let ns = meta?.at("namespace")?.asText ?? ""
-            let name = meta?.at("name")?.asText ?? ""
-            if kind == "Role" {
-                let key = ns + "\u{0}" + name
-                if roles[key] == nil { roleOrder.append(key) }
-                roles[key] = it
-                namespaces.insert(ns)
-            } else if kind == "ClusterRole" {
-                if clusterRoles[name] == nil { clusterOrder.append(name) }
-                clusterRoles[name] = it
-            } else if kind == "RoleBinding" {
-                bindings.append(it)
-                namespaces.insert(ns)
-            }
-        }
-        var lines = [RBAC_FORMS_HEADER + (STDLIB_TEXTS["forms-grants"] ?? "")]
-        // the read gate, this world's own: a read binding is not entry to work a
-        // room, and pushing it through the writing gate was a lie the court
-        // could not see while it dropped the conjunct
-        lines.append("")
-        lines.append("public protocol Viewed {}")
-        lines.append("public enum View<Who: Keeper, Into: Room> {}")
-        lines.append("extension View: Viewed")
-        lines.append("where Who.Key: Reads, Who.Post == Into.Place {}")
-        var srcmap: [String: String] = [:]
-        for ns in namespaces.sorted() { lines.append("public enum Ns_\(sanitized(ns)): Realm {}") }
-        lines.append("public enum ClusterScope: Realm {}")
-        lines.append("")
-        for key in roleOrder.sorted() {
-            let two = key.components(separatedBy: "\u{0}")
-            lines.append("public enum Role_\(sanitized(two[0]))_\(sanitized(two[1])): Room {")
-            lines.append("    public typealias Place = Ns_\(sanitized(two[0]))")
-            lines.append("}")
-        }
-        for name in clusterOrder.sorted() {
-            lines.append("public enum CR_\(sanitized(name)): Room {")
-            lines.append("    public typealias Place = ClusterScope")
-            lines.append("}")
-        }
-        lines.append("")
-        var checked = 0
-        for b in bindings {
-            let meta = b.at("metadata")
-            let bns = meta?.at("namespace")?.asText ?? ""
-            let bname = meta?.at("name")?.asText ?? ""
-            let ref = b.at("roleRef")
-            let rkind = ref?.at("kind")?.asText ?? ""
-            let rname = ref?.at("name")?.asText ?? ""
-            let keeper = "B_\(sanitized(bns))_\(sanitized(bname))"
-            let cert = "Bind_\(sanitized(bns))_\(sanitized(bname))"
-            var post = "", room = "", key = "", what = ""
-            if rkind == "ClusterRole" {
-                post = "ClusterScope"
-                room = "CR_\(sanitized(rname))"
-                key = rbacKey(clusterRoles[rname]?.at("rules")?.asList ?? [])
-                what = "rolebinding \(bns)/\(bname) -> clusterrole \(rname)"
-            } else {
-                post = "Ns_\(sanitized(bns))"
-                key = rbacKey(roles[bns + "\u{0}" + rname]?.at("rules")?.asList ?? [])
-                if roles[bns + "\u{0}" + rname] != nil {
-                    room = "Role_\(sanitized(bns))_\(sanitized(rname))"
-                } else {
-                    let foreign = roleOrder.compactMap { k -> String? in
-                        let two = k.components(separatedBy: "\u{0}")
-                        return two[1] == rname ? two[0] : nil
-                    }.sorted()
-                    room = "Role_\(sanitized(foreign.first ?? bns))_\(sanitized(rname))"
-                }
-                what = "rolebinding \(bns)/\(bname) -> role \(rname)"
-            }
-            lines.append("public enum \(keeper): Keeper {")
-            lines.append("    public typealias Post = \(post)")
-            lines.append("    public typealias Key = \(key)")
-            lines.append("}")
-            lines.append("public typealias \(cert) = "
-                         + (key == "ReaderKey" ? "View" : "Enter") + "<\(keeper), \(room)>")
-            srcmap[cert] = what
-            checked += 1
-        }
-        let world = lines.joined(separator: "\n") + "\n"
+        // the world is built by the rbac core, cut out and asked alone by the
+        // battery; the reader above and the writer below stay in the rim
+        let built = rbacWorldBuild(items,
+                                   RBAC_FORMS_HEADER + (STDLIB_TEXTS["forms-grants"] ?? ""))
+        let (world, srcmap, checked) = (built.world, built.srcmap, built.checked)
         oursWrite(outPath, "the world this prints", world)
         let t0 = Date()
         let outp = courtSays(["where", outPath])
@@ -6839,9 +6863,9 @@ if args.first == "import" {
             out(statusDumps(.object([
                 ("command", .text("import rbac")),
                 ("world", .text(outPath)),
-                ("namespaces", .raw(String(namespaces.count))),
-                ("roles", .raw(String(roleOrder.count))),
-                ("cluster_roles", .raw(String(clusterOrder.count))),
+                ("namespaces", .raw(String(built.namespaces))),
+                ("roles", .raw(String(built.roles))),
+                ("cluster_roles", .raw(String(built.clusterRoles))),
                 ("bindings_judged", .raw(String(checked))),
                 ("verdict", .text(refusals.isEmpty ? "holds" : "refused")),
                 ("refusals", .list(refusals.map {

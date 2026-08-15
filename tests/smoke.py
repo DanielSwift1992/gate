@@ -9845,6 +9845,85 @@ print(bad.isEmpty ? "CORE OK" : "APART: " + bad.joined(separator: ","))
                   and _rf_impure == [] and _rf_build.returncode == 0
                   and _rf_said is not None and "CORE OK" in _rf_said.stdout))
 
+        # ── AND THE PURE HEARTS OF THE JSON DOOR AND `import rbac` LIKEWISE.
+        # Said and its reader are one small cut (a value tree keeping object
+        # order and number spellings, a total parser), and the rbac world is
+        # built from Said values alone: the key ladder, the namespace rooms,
+        # the cross-namespace resolution and the read gate all decide with no
+        # reader of the world. Three cuts compile together; the questions are
+        # asked of these two.
+        _sd_cut = _cc_src.split("// ── SAID CORE BEGIN.", 1)[1].split("\n", 1)[1] \
+            .split("// ── SAID CORE END.", 1)[0] if "// ── SAID CORE BEGIN." in _cc_src else ""
+        _rb_cut = _cc_src.split("// ── RBAC CORE BEGIN.", 1)[1].split("\n", 1)[1] \
+            .split("// ── RBAC CORE END.", 1)[0] if "// ── RBAC CORE BEGIN." in _cc_src else ""
+        _rb_impure = [t for t in ("theirsText", "readText", "FileManager",
+                                  "ProcessInfo", "STDLIB_TEXTS", "courtSays",
+                                  "rawOpen", "selfSaid", "mark(", "cannot(",
+                                  "oursWrite")
+                      if t in _sd_cut or t in _rb_cut]
+        if _rb_impure:
+            print("   the said or rbac core names a reader of the world:", _rb_impure)
+        _rb_dir = os.path.join(tmp, "rbac-core")
+        os.makedirs(_rb_dir, exist_ok=True)
+        open(os.path.join(_rb_dir, "main.swift"), "w", encoding="utf-8").write(
+            "import Foundation\n" + _sd_cut + "\n" + _cc_cut + "\n" + _rb_cut + '''
+var bad: [String] = []
+func check(_ name: String, _ ok: Bool) { if !ok { bad.append(name) } }
+let dump = """
+{"items": [
+ {"kind": "Role", "metadata": {"namespace": "prod", "name": "deployer"},
+  "rules": [{"verbs": ["create", "update"]}]},
+ {"kind": "ClusterRole", "metadata": {"name": "watcher"},
+  "rules": [{"verbs": ["get", "list"]}]},
+ {"kind": "RoleBinding", "metadata": {"namespace": "prod", "name": "d-bind"},
+  "roleRef": {"kind": "Role", "name": "deployer"}},
+ {"kind": "RoleBinding", "metadata": {"namespace": "ci", "name": "w-bind"},
+  "roleRef": {"kind": "ClusterRole", "name": "watcher"}},
+ {"kind": "RoleBinding", "metadata": {"namespace": "ci", "name": "cross"},
+  "roleRef": {"kind": "Role", "name": "deployer"}}
+]}
+"""
+let items = readSaid(dump)?.at("items")?.asList ?? []
+check("read", items.count == 5)
+let b = rbacWorldBuild(items, "// HEAD\\n")
+check("counts", b.checked == 3 && b.namespaces == 2 && b.roles == 1 && b.clusterRoles == 1)
+check("writer", b.world.contains("public enum B_prod_d_bind: Keeper {")
+      && b.world.contains("    public typealias Key = WriterKey"))
+check("enter", b.world.contains("public typealias Bind_prod_d_bind = Enter<B_prod_d_bind, Role_prod_deployer>"))
+check("reader-view", b.world.contains("public typealias Bind_ci_w_bind = View<B_ci_w_bind, CR_watcher>"))
+check("cross-room", b.world.contains("public typealias Bind_ci_cross = View<B_ci_cross, Role_prod_deployer>"))
+check("srcmap", b.srcmap["Bind_ci_cross"] == "rolebinding ci/cross -> role deployer")
+let empty = rbacWorldBuild([], "// H\\n")
+check("empty", empty.checked == 0 && empty.namespaces == 0)
+let warden = rbacWorldBuild(readSaid("""
+{"items": [
+ {"kind": "ClusterRole", "metadata": {"name": "root"}, "rules": [{"verbs": ["escalate"]}]},
+ {"kind": "RoleBinding", "metadata": {"namespace": "x", "name": "r"},
+  "roleRef": {"kind": "ClusterRole", "name": "root"}}
+]}
+""")?.at("items")?.asList ?? [], "// H\\n")
+check("warden", warden.world.contains("    public typealias Key = WardenKey"))
+print(bad.isEmpty ? "CORE OK" : "APART: " + bad.joined(separator: ","))
+''')
+        _rb_bin = os.path.join(_rb_dir, "core")
+        _rb_build = subprocess.run(["swiftc", os.path.join(_rb_dir, "main.swift"),
+                                    "-o", _rb_bin],
+                                   capture_output=True, text=True, timeout=900)
+        if _rb_build.returncode != 0:
+            print("   the rbac core cut out of the vein did not build:", "\n   ".join(
+                [l for l in _rb_build.stderr.split("\n") if "error:" in l][:3]))
+        _rb_said = subprocess.run([_rb_bin], capture_output=True, text=True,
+                                  timeout=180) if _rb_build.returncode == 0 else None
+        if _rb_said is not None and "CORE OK" not in _rb_said.stdout:
+            print("   the rbac core answers otherwise:", _rb_said.stdout.strip()[:200])
+        S.append(("the said and rbac cores are total, read no world, and answer alone",
+                  _sd_cut.count("indirect enum Said") == 1
+                  and _sd_cut.count("func readSaid") == 1
+                  and _rb_cut.count("func rbacWorldBuild") == 1
+                  and _rb_cut.count("func rbacKey") == 1
+                  and _rb_impure == [] and _rb_build.returncode == 0
+                  and _rb_said is not None and "CORE OK" in _rb_said.stdout))
+
         # ── AND THE PATHS OF A PLATFORM NOBODY HERE IS STANDING ON. The tool
         # ships for windows and every path in it was spelled the posix way, so
         # `gate demo C:\...` made nothing at all: a drive letter is not a `/`,
