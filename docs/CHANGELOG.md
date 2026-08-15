@@ -1,6 +1,45 @@
 # Changelog
 
-## Unreleased
+## 0.2.3
+
+- The card a stranger reads carries plain words. The marketplace card,
+  the cover's CI section, the release body and the step's own log line
+  stopped speaking the house dialect: finds rules pointing at files that
+  no longer exist, fails at the exact file and line. The cover carries
+  doors, and the vocabulary lives one page deep, in docs/DETAILS.md.
+
+## 0.2.2
+
+- One step in a stranger's CI. This repository is a GitHub Action:
+  `uses: DanielSwift1992/gate@v0.2.2` fetches the released binary at a
+  pinned tag, checks the bytes against the sha256 published beside them,
+  and judges the tree it stands in, refusals echoed as annotations on
+  the pull request. The offer is held at home: the pinned tag is the
+  vein's own VERSION, the asset names are the release road's, and the
+  battery walks three vectors with the local binary standing in.
+- The pure heart of `import codeowners` is cut out and judged alone, the
+  rim's doors are a closed set counted in code and not in prose, and
+  every rim door leaves its mark on the trail.
+- The cover's picture shows the bench again. The camera lost its subject
+  at the strangler's death and nothing noticed for a day: the shot is
+  taken through the shim, the wait refuses aloud, a content marker holds
+  the page photographed, and the no-frame guard asks the scratch
+  directly instead of yesterday's bytes.
+
+## 0.2.1
+
+- The shipped windows binary fell on the cover's own recipe. One raw
+  open, and the mode is the platform's own spelling: ucrt validates
+  pmode, and bits outside read and write meet the invalid parameter
+  handler. Found by a trail, because a process that falls over cannot
+  speak: one word per step, written before the step is taken.
+- The path door walks both spellings. Roots, joins, parents and relative
+  roads are one block cut out and judged with pre-known vectors on both
+  families, and `tests/windows.py` walks the reviewer's road on that
+  platform's own paths: make the demo, take the kit, break a claim, and
+  the break is refused at its line.
+
+## 0.2.0
 
 The working prototype, end to end:
 

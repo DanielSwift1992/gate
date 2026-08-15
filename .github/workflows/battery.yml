@@ -346,9 +346,9 @@ jobs:
   # ── THE ROAD A STRANGER'S CI WALKS. `uses: ./` runs action.yml from this
   # very push: the published binary is fetched at a pinned tag, its bytes
   # answer to the sha256 beside them, and both mouths judge a fixture. The
-  # tag here is one release behind the vein on purpose: on the push that
-  # bumps VERSION the new tag has no assets yet, and this job is about the
-  # road. The default tag is held to VERSION by the battery instead.
+  # tag here is a PUBLISHED one rather than the vein's own, because on the
+  # push that bumps VERSION the new tag has no assets yet, and this job is
+  # about the road. The default tag is held to VERSION by the battery.
   action:
     runs-on: ubuntu-latest
     steps:
@@ -358,12 +358,19 @@ jobs:
         continue-on-error: true
         uses: ./
         with:
-          version: v0.2.1
+          version: v0.2.3
           tree: .github/action-fixtures/dead
       - name: and that refusal is this job's negative control
         run: test "${{ steps.dead.outcome }}" = failure
       - name: a clean tree holds
         uses: ./
         with:
-          version: v0.2.1
+          version: v0.2.3
           tree: .github/action-fixtures/clean
+      # and the cobbler wears the shoes: the same one step, over this very
+      # repository, on every push
+      - name: this repository is judged the way it asks others to be
+        uses: ./
+        with:
+          version: v0.2.3
+          tree: .

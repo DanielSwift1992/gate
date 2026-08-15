@@ -1166,6 +1166,23 @@ def main():
               bool(_bg_now) and bool(_bg_cover)
               and _bg_now.group(1) == _bg_cover.group(1)))
 
+    # ── AND THE CHANGELOG NAMES EVERY VERSION THAT SHIPPED. Three releases
+    # went out while the top of docs/CHANGELOG.md said `Unreleased`: a second
+    # record of the releases, compared by nobody, in the repository that
+    # exists to refuse that. Every release tag in this clone has its heading,
+    # and the vein's VERSION has one before its tag exists, so the entry is
+    # written with the bump, the way the battery count moves with the cover.
+    _chl = open(os.path.join(HERE, "docs", "CHANGELOG.md"), encoding="utf-8").read()
+    _chl_tags = [t for t in subprocess.run(["git", "tag"], cwd=HERE,
+                                           capture_output=True, text=True).stdout.split()
+                 if re.match(r"^v\d+\.\d+\.\d+$", t)]
+    S.append(("the changelog names every version that shipped, and the one being built",
+              len(_chl_tags) >= 4
+              and all(("\n## " + t.lstrip("v") + "\n") in _chl for t in _chl_tags)
+              and ("\n## " + re.search(r'^let VERSION = "([^"]+)"',
+                                       open(VEIN, encoding="utf-8").read(),
+                                       re.M).group(1) + "\n") in _chl))
+
     # ── AND THE OFFER IN A STRANGER'S CI EQUALS THE LAW AT HOME. action.yml
     # sells a judgement and bin/gate-audit.sh performs it. The words are held
     # here: the pinned tag is the vein's own VERSION, the cover's snippet pins
