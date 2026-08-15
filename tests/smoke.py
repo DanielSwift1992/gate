@@ -9792,6 +9792,59 @@ print(bad.isEmpty ? "CORE OK" : "APART: " + bad.joined(separator: ","))
                   and _tc_impure == [] and _tc_build.returncode == 0
                   and _tc_said is not None and "CORE OK" in _tc_said.stdout))
 
+        # ── AND THE PURE HEART OF `import refs` IS JUDGED THE SAME WAY. The
+        # shelf page arrives as a parameter and `sanitized` is the codeowners
+        # core's own, so the two cuts compile together and this one is asked
+        # alone: tracked issues and citations into the reference world, sites
+        # deduplicated, the ghost cite kept for the court to refuse.
+        _rf_cut = ""
+        if "// ── REFS CORE BEGIN." in _cc_src and "// ── REFS CORE END." in _cc_src:
+            _rf_cut = _cc_src.split("// ── REFS CORE BEGIN.", 1)[1].split("\n", 1)[1]
+            _rf_cut = _rf_cut.split("// ── REFS CORE END.", 1)[0]
+        _rf_impure = [t for t in ("theirsText", "readText", "FileManager",
+                                  "ProcessInfo", "STDLIB_TEXTS", "courtSays",
+                                  "rawOpen", "selfSaid", "mark(", "cannot(",
+                                  "oursWrite")
+                      if t in _rf_cut]
+        if _rf_impure:
+            print("   the refs core names a reader of the world:", _rf_impure)
+        _rf_dir = os.path.join(tmp, "refs-core")
+        os.makedirs(_rf_dir, exist_ok=True)
+        open(os.path.join(_rf_dir, "main.swift"), "w", encoding="utf-8").write(
+            "import Foundation\n" + _cc_cut + "\n" + _rf_cut + '''
+var bad: [String] = []
+func check(_ name: String, _ ok: Bool) { if !ok { bad.append(name) } }
+let built = refsWorldBuild([("PROJ-1", "Live"), ("PROJ-2", "Closed")],
+                           [(file: "a/b.swift", line: 3, key: "PROJ-1"),
+                            (file: "a/b.swift", line: 3, key: "PROJ-1"),
+                            (file: "c.swift", line: 9, key: "GHOST-7")],
+                           "// HEAD\\n")
+check("head", built.world.hasPrefix("// HEAD\\n"))
+check("tracked", built.world.contains("public enum PROJ_1: Tracked {")
+      && built.world.contains("    public typealias State = Live"))
+check("ghost-untracked", !built.world.contains("GHOST_7: Tracked"))
+check("site-dedup", built.world.components(separatedBy: "At_a_b_swift_L3").count == 3)
+check("cite", built.world.contains("public typealias Cite_2 = Cites<At_c_swift_L9, GHOST_7>"))
+check("srcmap", built.srcmap["Cite_0"]?.address == "a/b.swift:3"
+      && built.srcmap["Cite_0"]?.key == "PROJ-1")
+print(bad.isEmpty ? "CORE OK" : "APART: " + bad.joined(separator: ","))
+''')
+        _rf_bin = os.path.join(_rf_dir, "core")
+        _rf_build = subprocess.run(["swiftc", os.path.join(_rf_dir, "main.swift"),
+                                    "-o", _rf_bin],
+                                   capture_output=True, text=True, timeout=900)
+        if _rf_build.returncode != 0:
+            print("   the refs core cut out of the vein did not build:", "\n   ".join(
+                [l for l in _rf_build.stderr.split("\n") if "error:" in l][:3]))
+        _rf_said = subprocess.run([_rf_bin], capture_output=True, text=True,
+                                  timeout=180) if _rf_build.returncode == 0 else None
+        if _rf_said is not None and "CORE OK" not in _rf_said.stdout:
+            print("   the refs core answers otherwise:", _rf_said.stdout.strip()[:200])
+        S.append(("the refs core is total, reads no world, and answers alone",
+                  _rf_cut.count("func refsWorldBuild") == 1
+                  and _rf_impure == [] and _rf_build.returncode == 0
+                  and _rf_said is not None and "CORE OK" in _rf_said.stdout))
+
         # ── AND THE PATHS OF A PLATFORM NOBODY HERE IS STANDING ON. The tool
         # ships for windows and every path in it was spelled the posix way, so
         # `gate demo C:\...` made nothing at all: a drive letter is not a `/`,

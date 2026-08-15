@@ -4012,6 +4012,39 @@ func workflowsDeadFilters(_ filters: [(file: String, line: Int, key: String, pat
 }
 // ── WORKFLOWS CORE END.
 
+// ── REFS CORE BEGIN. The pure heart of `import refs`: tracked issues and
+// code citations into the reference world, total over values. The shelf
+// page arrives as a parameter, the way the codeowners core takes its page;
+// `sanitized` is the codeowners core's, and the battery compiles the two
+// cuts together and asks this one alone.
+func refsWorldBuild(_ tracked: [(key: String, state: String)],
+                    _ cites: [(file: String, line: Int, key: String)],
+                    _ head: String)
+    -> (world: String, srcmap: [String: (address: String, key: String)]) {
+    var lines = [head, ""]
+    var keys = Set(cites.map { $0.key })
+    for t in tracked { keys.insert(t.key) }
+    for key in keys.sorted() {
+        guard let state = tracked.first(where: { $0.key == key })?.state else { continue }
+        lines.append("public enum \(sanitized(key)): Tracked {")
+        lines.append("    public typealias State = \(state)")
+        lines.append("}")
+    }
+    var srcmap: [String: (address: String, key: String)] = [:]
+    var seen = Set<String>()
+    for (i, c) in cites.enumerated() {
+        let site = "At_\(sanitized(c.file))_L\(c.line)"
+        if seen.contains(site) { continue }
+        seen.insert(site)
+        lines.append("public enum \(site): Site {}")
+        let cert = "Cite_\(i)"
+        lines.append("public typealias \(cert) = Cites<\(site), \(sanitized(c.key))>")
+        srcmap[cert] = ("\(c.file):\(c.line)", c.key)
+    }
+    return (lines.joined(separator: "\n") + "\n", srcmap)
+}
+// ── REFS CORE END.
+
 // ── EVERY PATH THIS TREE CARRIES, WHICH IS NOT EVERY REGULAR FILE IN IT. A
 // repository tracks a symbolic link as a path of its own, and the walk under
 // this asked `fileExists`, which FOLLOWS one: a link to a folder answered
@@ -6604,27 +6637,11 @@ if args.first == "import" {
         let outPath = flag("-o") ?? (kept! as NSString).appendingPathComponent("refs-gate.swift")
         let tracked = readTracker(src)
         let cites = readCitations(code)
-        var lines = [REFS_HEADER + (STDLIB_TEXTS["forms-reference"] ?? ""), ""]
-        var keys = Set(cites.map { $0.key })
-        for t in tracked { keys.insert(t.key) }
-        for key in keys.sorted() {
-            guard let state = tracked.first(where: { $0.key == key })?.state else { continue }
-            lines.append("public enum \(sanitized(key)): Tracked {")
-            lines.append("    public typealias State = \(state)")
-            lines.append("}")
-        }
-        var srcmap: [String: (address: String, key: String)] = [:]
-        var seen = Set<String>()
-        for (i, c) in cites.enumerated() {
-            let site = "At_\(sanitized(c.file))_L\(c.line)"
-            if seen.contains(site) { continue }
-            seen.insert(site)
-            lines.append("public enum \(site): Site {}")
-            let cert = "Cite_\(i)"
-            lines.append("public typealias \(cert) = Cites<\(site), \(sanitized(c.key))>")
-            srcmap[cert] = ("\(c.file):\(c.line)", c.key)
-        }
-        let world = lines.joined(separator: "\n") + "\n"
+        // the world is built by the refs core, cut out and asked alone by the
+        // battery; the readers above and the writer below stay in the rim
+        let built = refsWorldBuild(tracked, cites,
+                                   REFS_HEADER + (STDLIB_TEXTS["forms-reference"] ?? ""))
+        let (world, srcmap) = (built.world, built.srcmap)
         oursWrite(outPath, "the world this prints", world)
         let t0 = Date()
         let outp = courtSays(["where", outPath])
