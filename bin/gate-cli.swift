@@ -3061,6 +3061,11 @@ func floatRepr(_ s: String) -> String {
 // Seeded ONCE, and never again: from then on the world is the source, and fresh
 // tables come in through an explicit `gate import`. That is the whole reason
 // this is three lines of condition and not a sync.
+// ── TABLES CORE BEGIN. The pure heart of the tables road: csv text into
+// rows, rows into the seeded world, and the holes a world cannot be written
+// over, returned as sentences for the rim to speak. Total over values, no
+// reader of the world; the battery cuts this out at these two marks,
+// compiles it alone, and asks it questions with answers known in advance.
 func csvRows(_ text: String) -> [[String]] {
     // read the way the other carrier's csv module reads: a quote protects commas
     // and newlines, a doubled quote inside a quoted field is one quote, and a
@@ -3109,30 +3114,25 @@ struct CsvTable {
     func text(_ r: Int, _ key: String) -> String { at(r, key) ?? "" }
 }
 
-func csvTable(_ path: String, _ what: String) -> CsvTable {
-    var all = csvRows(theirsText(path, what))
-    all.removeAll { $0.isEmpty }            // the reader skips an empty row
-    guard let head = all.first else { return CsvTable() }
-    return CsvTable(header: head, rows: Array(all.dropFirst()))
-}
-
-func seededWorld(_ peoplePath: String, _ grantsPath: String) -> String {
-    let people = csvTable(peoplePath, "the people this world is seeded from")
-    let grants = csvTable(grantsPath, "the grants this world is seeded from")
+func seededWorldBuild(_ people: CsvTable, _ grants: CsvTable,
+                      _ peopleName: String, _ grantsName: String)
+    -> (world: String, holes: [(said: String, fix: String)]) {
+    var holes: [(said: String, fix: String)] = []
     // ── AND A TABLE MISSING A COLUMN IS SAID, NOT RAISED. The other carrier
     // reads `row['rank']` straight, so a table without that column meets a
     // person with a KeyError and a stack trace, inside the one command they ran
     // to look at their repository. A column is a name this reader can check.
-    for (table, path, need) in [(people, peoplePath, ["id", "rank", "home", "given",
+    // The hole is returned as its sentence, and the rim speaks it.
+    for (table, name, need) in [(people, peopleName, ["id", "rank", "home", "given",
                                                       "family", "born", "site"]),
-                                (grants, grantsPath, ["who", "doc"])] {
+                                (grants, grantsName, ["who", "doc"])] {
         let missing = need.filter { !table.has($0) }
         if !table.header.isEmpty && !missing.isEmpty {
-            cannot((path as NSString).lastPathComponent + " has no column named "
+            holes.append((name + " has no column named "
                    + missing.map { "`\($0)`" }.joined(separator: ", ")
                    + ", and the world is seeded from those",
                    "the header line names the columns: "
-                   + need.joined(separator: ", ") + " for people, who, doc for grants")
+                   + need.joined(separator: ", ") + " for people, who, doc for grants"))
         }
     }
     var lines: [String] = []
@@ -3143,8 +3143,7 @@ func seededWorld(_ peoplePath: String, _ grantsPath: String) -> String {
     emit("// edited and judged. A gate.manifest.swift may split it across")
     emit("// several files, all judged together. git carries the history.")
     emit("//")
-    emit("// seeded by gate import from: \((peoplePath as NSString).lastPathComponent), "
-         + "\((grantsPath as NSString).lastPathComponent)")
+    emit("// seeded by gate import from: \(peopleName), \(grantsName)")
     emit("//")
     emit("// the language it is written in: `gate stdlib show forms-organization`.")
     emit("// Those words are carried by the judge, and `materialize` writes them out")
@@ -3173,10 +3172,10 @@ func seededWorld(_ peoplePath: String, _ grantsPath: String) -> String {
     let owed = ["id", "rank", "home", "given", "family", "born", "site"]
     for r in people.rows.indices {
         for key in owed where (people.at(r, key) ?? "").isEmpty {
-            cannot("row \(r + 1) of \((peoplePath as NSString).lastPathComponent) "
+            holes.append(("row \(r + 1) of \(peopleName) "
                  + "states no \(key), and a world cannot be written from it",
                    "every column a world is written from is an axis to a name: fill that "
-                 + "cell in, or take the column out of the table and nothing will ask for it")
+                 + "cell in, or take the column out of the table and nothing will ask for it"))
         }
     }
     // a table with no `sex` column has a stated default, and so does a row
@@ -3219,7 +3218,26 @@ func seededWorld(_ peoplePath: String, _ grantsPath: String) -> String {
              + "                \(grants.text(r, "doc"))\n            >.self")
     }
     emit("    }\n}")
-    return lines.joined(separator: "\n") + "\n"
+    return (lines.joined(separator: "\n") + "\n", holes)
+}
+// ── TABLES CORE END.
+
+func csvTable(_ path: String, _ what: String) -> CsvTable {
+    var all = csvRows(theirsText(path, what))
+    all.removeAll { $0.isEmpty }            // the reader skips an empty row
+    guard let head = all.first else { return CsvTable() }
+    return CsvTable(header: head, rows: Array(all.dropFirst()))
+}
+
+// the rim of the tables road: read both tables, ask the core, and speak the
+// first hole the way this mouth has always spoken it
+func seededWorld(_ peoplePath: String, _ grantsPath: String) -> String {
+    let people = csvTable(peoplePath, "the people this world is seeded from")
+    let grants = csvTable(grantsPath, "the grants this world is seeded from")
+    let built = seededWorldBuild(people, grants,
+                                 lastName(peoplePath), lastName(grantsPath))
+    if let h = built.holes.first { cannot(h.said, h.fix) }
+    return built.world
 }
 
 @discardableResult

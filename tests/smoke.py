@@ -9642,6 +9642,66 @@ print(bad.isEmpty ? "CORE OK" : "APART: " + bad.joined(separator: ","))
                   and _wc_impure == [] and _wc_build.returncode == 0
                   and _wc_said is not None and "CORE OK" in _wc_said.stdout))
 
+        # ── AND THE PURE HEART OF THE TABLES ROAD IS JUDGED THE SAME WAY. Csv
+        # text into rows, rows into the seeded world, and the holes a world
+        # cannot be written over returned as sentences for the rim to speak:
+        # the refusal words stay exactly the mouth's own, and the exit that
+        # speaks them stays in the rim, so the core is total.
+        _tc_cut = ""
+        if "// ── TABLES CORE BEGIN." in _cc_src and "// ── TABLES CORE END." in _cc_src:
+            _tc_cut = _cc_src.split("// ── TABLES CORE BEGIN.", 1)[1].split("\n", 1)[1]
+            _tc_cut = _tc_cut.split("// ── TABLES CORE END.", 1)[0]
+        _tc_impure = [t for t in ("theirsText", "readText", "FileManager",
+                                  "ProcessInfo", "STDLIB_TEXTS", "courtSays",
+                                  "rawOpen", "selfSaid", "mark(", "cannot(")
+                      if t in _tc_cut]
+        if _tc_impure:
+            print("   the tables core names a reader of the world:", _tc_impure)
+        _tc_dir = os.path.join(tmp, "tables-core")
+        os.makedirs(_tc_dir, exist_ok=True)
+        open(os.path.join(_tc_dir, "main.swift"), "w", encoding="utf-8").write(
+            "import Foundation\n" + _tc_cut + '''
+var bad: [String] = []
+func check(_ name: String, _ ok: Bool) { if !ok { bad.append(name) } }
+let rows = csvRows("a,b\\n\\"x,1\\",\\"he said \\"\\"hi\\"\\"\\"\\n\\nlast,r\\n")
+check("quotes", rows[1] == ["x,1", "he said \\"hi\\""] && rows[2] == [] && rows[3] == ["last", "r"])
+func table(_ h: [String], _ r: [[String]]) -> CsvTable { return CsvTable(header: h, rows: r) }
+let people = table(["id","rank","home","given","family","born","site"],
+                   [["Emp1","R1","H1","G1","F1","1990","S1"],
+                    ["Emp2","R2","H1","G2","F2","1991","S1"]])
+let grants = table(["who","doc"], [["Emp1","Doc1"]])
+let ok = seededWorldBuild(people, grants, "people.csv", "grants.csv")
+check("no-holes", ok.holes.isEmpty)
+check("seeded-line", ok.world.contains("// seeded by gate import from: people.csv, grants.csv"))
+check("person", ok.world.contains("public enum Emp1: Employee, Person {"))
+check("grant", ok.world.contains("VerifiedView<\\n                Emp1,\\n                Doc1\\n            >.self"))
+check("ring", ok.world.contains("public typealias Next = G2") || ok.world.contains("public typealias Next = G1"))
+let lame = seededWorldBuild(table(["id","rank"], [["a","b"]]), grants, "p.csv", "g.csv")
+check("missing", lame.holes.first?.said.contains("p.csv has no column named") == true
+      && lame.holes.first!.said.contains("`home`"))
+let hole = seededWorldBuild(table(["id","rank","home","given","family","born","site"],
+                                  [["Emp1","","H1","G1","F1","1990","S1"]]), grants, "p.csv", "g.csv")
+check("empty-cell", hole.holes.first?.said == "row 1 of p.csv states no rank, and a world cannot be written from it")
+print(bad.isEmpty ? "CORE OK" : "APART: " + bad.joined(separator: ","))
+''')
+        _tc_bin = os.path.join(_tc_dir, "core")
+        _tc_build = subprocess.run(["swiftc", os.path.join(_tc_dir, "main.swift"),
+                                    "-o", _tc_bin],
+                                   capture_output=True, text=True, timeout=900)
+        if _tc_build.returncode != 0:
+            print("   the tables core cut out of the vein did not build:", "\n   ".join(
+                [l for l in _tc_build.stderr.split("\n") if "error:" in l][:3]))
+        _tc_said = subprocess.run([_tc_bin], capture_output=True, text=True,
+                                  timeout=180) if _tc_build.returncode == 0 else None
+        if _tc_said is not None and "CORE OK" not in _tc_said.stdout:
+            print("   the tables core answers otherwise:", _tc_said.stdout.strip()[:200])
+        S.append(("the tables core is total, reads no world, and answers alone",
+                  _tc_cut.count("func csvRows") == 1
+                  and _tc_cut.count("func seededWorldBuild") == 1
+                  and _tc_cut.count("struct CsvTable") == 1
+                  and _tc_impure == [] and _tc_build.returncode == 0
+                  and _tc_said is not None and "CORE OK" in _tc_said.stdout))
+
         # ── AND THE PATHS OF A PLATFORM NOBODY HERE IS STANDING ON. The tool
         # ships for windows and every path in it was spelled the posix way, so
         # `gate demo C:\...` made nothing at all: a drive letter is not a `/`,
