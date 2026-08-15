@@ -6581,6 +6581,7 @@ if args.first == "import" {
 
     // ── import refs tracker.json [--code DIR] [-o refs-gate.swift]
     if head == "refs" {
+        mark("refs-begin")
         let tail = Array(rest.dropFirst())
         guard let src = tail.first, !src.hasPrefix("-") else {
             cannot("this reads a tracker export, and no file was named",
@@ -6674,6 +6675,7 @@ if args.first == "import" {
 
     // ── import rbac rbac.json [-o gate.swift]
     if head == "rbac" {
+        mark("rbac-begin")
         let tail = Array(rest.dropFirst())
         guard let src = tail.first, !src.hasPrefix("-") else {
             cannot("this reads a kubectl dump of roles and bindings, and no file was named",
@@ -6871,6 +6873,7 @@ if args.first == "import" {
     // documents are famous for it. Reading the text as text is the exact
     // reading.
     if head == "workflows" {
+        mark("workflows-begin")
         let tail = Array(rest.dropFirst())
         var tree = "."
         if let i = tail.firstIndex(of: "--tree"), i + 1 < tail.count { tree = tail[i + 1] }
@@ -6969,6 +6972,7 @@ if args.first == "import" {
         exit(0)
     }
     let outPath = after("-o") ?? "gate.swift"
+    mark("tables-begin")
     let said = importWorld(tables[0], tables[1], outPath)
     if asJson {
         out(statusDumps(.object([

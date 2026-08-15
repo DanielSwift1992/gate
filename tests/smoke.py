@@ -1166,6 +1166,25 @@ def main():
               bool(_bg_now) and bool(_bg_cover)
               and _bg_now.group(1) == _bg_cover.group(1)))
 
+    # ── AND EVERY IMPORT MOUTH STAMPS ITS NAME BEFORE ITS FIRST DOOR. The
+    # codeowners road carries a full trail, and the other mouths opened doors
+    # namelessly: a process that fell inside `import rbac` left read: marks
+    # with no word for which verb was walking. Each mouth stamps <verb>-begin
+    # first, so the trail's first word answers the first question of any
+    # crash: what was running.
+    _tr = tempfile.mkdtemp(prefix="gate-trail-")
+    _tr_file = os.path.join(_tr, "trail")
+    subprocess.run([GATE, "import", "workflows", "--tree", "."], cwd=_tr,
+                   capture_output=True, text=True, timeout=180,
+                   env={**os.environ, "GATE_CLI": CLI_HERE, "GATE_TRACE": _tr_file})
+    _tr_said = open(_tr_file, encoding="utf-8").read().split("\n") \
+        if os.path.exists(_tr_file) else []
+    _vein_now = open(VEIN, encoding="utf-8").read()
+    S.append(("every import mouth stamps its name before its first door",
+              _tr_said[:1] == ["workflows-begin"]
+              and all(_vein_now.count('mark("' + m + '-begin")') == 1
+                      for m in ("codeowners", "refs", "rbac", "workflows", "tables"))))
+
     # ── AND THE COVER'S PLATFORM SENTENCE IS READ OFF THE BYTES. The cover
     # says bin/gate-judge here is Mach-O arm64, and nothing held it: a judge
     # rebuilt for another platform and committed by mistake would leave the
