@@ -1166,6 +1166,32 @@ def main():
               bool(_bg_now) and bool(_bg_cover)
               and _bg_now.group(1) == _bg_cover.group(1)))
 
+    # ── AND THE COVER'S PLATFORM SENTENCE IS READ OFF THE BYTES. The cover
+    # says bin/gate-judge here is Mach-O arm64, and nothing held it: a judge
+    # rebuilt for another platform and committed by mistake would leave the
+    # sentence standing over foreign bytes. The magic is read directly, so
+    # the pair holds on any machine, including ones where the binary does
+    # not execute.
+    _jm = open(os.path.join(HERE, "bin", "gate-judge"), "rb").read(8)
+    S.append(("the judge the clone carries is the platform the cover names",
+              _jm.hex() == "cffaedfe0c000001"
+              and "Mach-O arm64" in open(os.path.join(HERE, "README.md"),
+                                         encoding="utf-8").read()))
+
+    # ── AND EVERY FLAG THE COVER SPELLS IS A SPELLING THE VEIN KNOWS. The
+    # verbs are held to the dispatch both ways, and the flags were held by
+    # nothing: a renamed --fail-over would leave the cover teaching a word
+    # the tool no longer answers.
+    _cover_flags = set(re.findall(r"--[a-z][a-z-]+",
+                                  open(os.path.join(HERE, "README.md"),
+                                       encoding="utf-8").read()))
+    _vein_text = open(VEIN, encoding="utf-8").read()
+    _flags_gone = sorted(f for f in _cover_flags if f not in _vein_text)
+    if _flags_gone:
+        print("   the cover teaches flags the vein does not know:", _flags_gone)
+    S.append(("every flag the cover spells is a spelling the vein knows",
+              _cover_flags and _flags_gone == []))
+
     # ── AND A LICENSE PASTED INTO A CODEOWNERS IS SAID, NOT SKIMMED. The
     # parser keeps the lines an owner stands on and dropped the rest in
     # silence, so a file with prose pasted into it judged as a clean map of
