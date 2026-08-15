@@ -7350,6 +7350,24 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
               _said and all(w in _verbs or w in _spellings or w == "--version"
                             for w in _said)))
 
+    # ── AND THE PAGE ONE DEEP TEACHES ONLY WORDS THE TABLE KNOWS. The cover's
+    # flags are held to the vein, and docs/DETAILS.md spells `gate <verb>` in
+    # its recipes with nothing holding the words: a renamed verb would leave
+    # the deep page teaching a dead one. Same table, same reader. And every
+    # path the page names under this repository's own folders exists.
+    _dt = open(os.path.join(HERE, "docs", "DETAILS.md"), encoding="utf-8").read()
+    _dt_words = set(re.findall(r"`(?:\./)?gate ([a-z-]+)", _dt))
+    S.append(("the page one deep spells only verbs the table knows",
+              _dt_words and all(w in _verbs or w in _spellings for w in _dt_words)))
+    _dt_paths = {p.rstrip(".") for p in re.findall(
+        r"\b((?:bin|docs|web|tests|stdlib|demo)/[A-Za-z0-9_./-]+)", _dt)}
+    _dt_gone = sorted(p for p in _dt_paths
+                      if not os.path.exists(os.path.join(HERE, p)))
+    if _dt_gone:
+        print("   the deep page names files that are not here:", _dt_gone)
+    S.append(("every path the deep page names is a file that exists",
+              _dt_paths and _dt_gone == []))
+
     # ── the courts are records now, and the records reach real files. The
     # roster in stdlib/courts.swift is the one list of judge implementations;
     # this bridge holds it to the tree both ways, read through the judge's

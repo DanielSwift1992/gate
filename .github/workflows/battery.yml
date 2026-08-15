@@ -369,8 +369,10 @@ jobs:
           version: v0.2.3
           tree: .github/action-fixtures/dead
       - name: and that refusal is this job's negative control
+        id: control
         run: test "${{ steps.dead.outcome }}" = failure
       - name: a clean tree holds
+        id: clean
         uses: ./
         with:
           version: v0.2.3
@@ -378,7 +380,21 @@ jobs:
       # and the cobbler wears the shoes: the same one step, over this very
       # repository, on every push
       - name: this repository is judged the way it asks others to be
+        id: home
         uses: ./
         with:
           version: v0.2.3
           tree: .
+      # ── THE MOUTH THIS JOB DID NOT HAVE. The morning this road went red,
+      # nothing posted a word and the finding came from asking the API by
+      # hand. The same mouth as the smokes: which door fell, into a status a
+      # phone can read.
+      - if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SAID="dead=${{ steps.dead.outcome }} control=${{ steps.control.outcome }} clean=${{ steps.clean.outcome }} home=${{ steps.home.outcome }}"
+          BODY=$(python3 -c 'import json,sys; print(json.dumps({"state":"failure","context":"action-first-fail","description":sys.argv[1][:138]}))' "$SAID")
+          curl -s -X POST -H "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -d "$BODY" > /dev/null
