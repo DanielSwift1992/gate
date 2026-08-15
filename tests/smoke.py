@@ -530,6 +530,24 @@ def main():
     c, r = run("findings", cwd=fresh)
     S.append(("what the letter asks for first answers in a repository that just entered",
               r.get("findings") and any("CODEOWNERS" in f["sentence"] for f in r["findings"])))
+    # ── AND THE OFFER KNOWS A HELD PAIR FROM AN ORPHAN FILE. The tool's own
+    # repository imports its CODEOWNERS into ownership.swift, and `status`
+    # re-translates that pair on every run, and `findings` still offered the
+    # import with the words "nothing checks it": an offer to install the very
+    # lock that is on the door. Both mouths read one enumeration now, so the
+    # orphan above keeps its offer and the held pair at home is a read that
+    # names its holder.
+    S.append(("an orphan CODEOWNERS keeps the offer",
+              any("nothing checks" in f["sentence"]
+                  for f in r.get("findings", []))))
+    _fh = json.loads(subprocess.run([GATE, "findings", "--json"], cwd=HERE,
+                                    capture_output=True, text=True, timeout=180,
+                                    env={**os.environ, "GATE_CLI": CLI_HERE}).stdout)
+    S.append(("the held pair at home is a read naming its holder, not an offer",
+              any(f.get("kind") == "read" and "ownership.swift holds" in f["sentence"]
+                  for f in _fh.get("findings", []))
+              and not any("nothing checks" in f["sentence"]
+                          for f in _fh.get("findings", []))))
     # A GREEN OVER NOTHING SAYS SO, in the one case where that is what happened: a
     # world of atoms alone, with no certificate over them for any court to read.
     bare = os.path.join(tmp, "bare")

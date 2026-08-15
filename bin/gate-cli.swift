@@ -2813,10 +2813,14 @@ func codeownersWorldLines(_ src: String, _ policy: [(owner: String, zone: String
     return (lines, srcmap, rules, keepers)
 }
 
-func codeownersPairGuards(_ w: WorldState) -> [(address: String, claim: String)] {
-    // the print and its source are a pair: the same translator prints the
-    // world again, and the certificates are compared, refusals at the line
-    // that makes them
+// ── ONE PAIR, TWO ASKERS. The worlds printed by `import codeowners`, each
+// with the source its own `from:` line names: `status` re-translates and
+// compares the pair, and `findings` asks whether a CODEOWNERS it met is
+// already somebody's held half before offering to translate it. One
+// enumeration, so the two mouths cannot disagree about what is paired.
+func codeownersPairedWorlds(_ w: WorldState)
+    -> [(world: String, name: String, fromTok: String, policyTok: String,
+         srcAbs: String, text: String)] {
     guard let f = w.facts else { return [] }
     var judged = Set(worldFilesOf(w))
     judged.insert(absPath(f))
@@ -2824,7 +2828,8 @@ func codeownersPairGuards(_ w: WorldState) -> [(address: String, claim: String)]
         let mdir = (l.manifest as NSString).deletingLastPathComponent
         for r in l.rows { judged.insert((mdir as NSString).appendingPathComponent(r.path)) }
     }
-    var out: [(address: String, claim: String)] = []
+    var out: [(world: String, name: String, fromTok: String, policyTok: String,
+               srcAbs: String, text: String)] = []
     for path in judged.sorted() where FileManager.default.fileExists(atPath: path) {
         // a declared row may be a binary, and a binary is nobody's half of a
         // printed pair: strict utf-8 here, the way the other carrier reads it
@@ -2837,9 +2842,22 @@ func codeownersPairGuards(_ w: WorldState) -> [(address: String, claim: String)]
               let m = matchesAt("^// from: (\\S+)(?: --policy (\\S+))?$", text, lines: true)
                   .first?.groups
         else { continue }
-        let name = (path as NSString).lastPathComponent
         let srcp = ((absPath(path) as NSString).deletingLastPathComponent as NSString)
             .appendingPathComponent(m[0])
+        out.append((path, (path as NSString).lastPathComponent, m[0], m[1], srcp, text))
+    }
+    return out
+}
+
+func codeownersPairGuards(_ w: WorldState) -> [(address: String, claim: String)] {
+    // the print and its source are a pair: the same translator prints the
+    // world again, and the certificates are compared, refusals at the line
+    // that makes them
+    var out: [(address: String, claim: String)] = []
+    for pw in codeownersPairedWorlds(w) {
+        let (path, name, text) = (pw.world, pw.name, pw.text)
+        let m = [pw.fromTok, pw.policyTok]
+        let srcp = pw.srcAbs
         if !FileManager.default.fileExists(atPath: srcp) {
             out.append(("\(name):1",
                         "printed from \(m[0]), and no file of that name is here now"))
@@ -3585,17 +3603,35 @@ func repoFindings(_ n: Int) -> [Finding] {
                 evidence: quiet.prefix(4).map { "@" + $0 }.joined(separator: ", ")))
         }
         let them = rules.count == 1 ? "it" : "them"
-        out.append(Finding(
-            kind: "offer", subject: "CODEOWNERS",
-            // a count reads as a count: one rule is not `1 rules`, and this
-            // sentence is the first thing the letter sends anybody to
-            sentence: "CODEOWNERS states \(rules.count) " + (rules.count == 1 ? "rule" : "rules")
-                    + " over \(owners.count) " + (owners.count == 1 ? "owner" : "owners")
-                    + ", and nothing checks \(them). "
-                    + "`gate import codeowners` reads \(them) as a world: a path "
-                    + "no file matches, or an owner outside their zone, is "
-                    + "named by the line it sits on.",
-            evidence: relPath(cand, base)))
+        // ── AND THE OFFER KNOWS A HELD PAIR FROM AN ORPHAN FILE. This said
+        // "nothing checks it" of every CODEOWNERS it met, including one a
+        // world here already names on its `from:` line and `status` re-judges
+        // on every run: an offer to install the very lock that is on the
+        // door. The offer asks the same enumeration the guard reads, so the
+        // two mouths cannot part.
+        let holder = codeownersPairedWorlds(w).first { $0.srcAbs == absPath(cand) }
+        if let h = holder {
+            out.append(Finding(
+                kind: "read", subject: "CODEOWNERS",
+                sentence: "CODEOWNERS states \(rules.count) " + (rules.count == 1 ? "rule" : "rules")
+                        + " over \(owners.count) " + (owners.count == 1 ? "owner" : "owners")
+                        + ", and \(h.name) holds \(them): every `gate status` "
+                        + "translates the file again, and a line changed on "
+                        + "either side alone is named at its line.",
+                evidence: relPath(cand, base)))
+        } else {
+            out.append(Finding(
+                kind: "offer", subject: "CODEOWNERS",
+                // a count reads as a count: one rule is not `1 rules`, and this
+                // sentence is the first thing the letter sends anybody to
+                sentence: "CODEOWNERS states \(rules.count) " + (rules.count == 1 ? "rule" : "rules")
+                        + " over \(owners.count) " + (owners.count == 1 ? "owner" : "owners")
+                        + ", and nothing checks \(them). "
+                        + "`gate import codeowners` reads \(them) as a world: a path "
+                        + "no file matches, or an owner outside their zone, is "
+                        + "named by the line it sits on.",
+                evidence: relPath(cand, base)))
+        }
         break
     }
     // the shape of the work, from the history itself
