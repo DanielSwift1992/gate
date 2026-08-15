@@ -1166,6 +1166,35 @@ def main():
               bool(_bg_now) and bool(_bg_cover)
               and _bg_now.group(1) == _bg_cover.group(1)))
 
+    # ── AND THE ADVICE KNOWS WHERE IT IS STANDING. Three green mouths said
+    # "wire it into CI" to every caller, including the CI step that was that
+    # wire, running: the same species as the findings offer that taught
+    # installing the lock already on the door. The runner's own record
+    # answers (GITHUB_ACTIONS), never a guess over text; the workflows mouth
+    # is probed live in both stances, and the parity arm holds all three
+    # spellings to their paired branch.
+    _wire = tempfile.mkdtemp(prefix="gate-wire-")
+    os.makedirs(os.path.join(_wire, ".github", "workflows"))
+    os.makedirs(os.path.join(_wire, "src"))
+    open(os.path.join(_wire, "src", "a.txt"), "w").write("x")
+    open(os.path.join(_wire, ".github", "workflows", "ci.yml"), "w").write(
+        'on:\n  push:\n    paths:\n      - "src/**"\njobs:\n  a:\n    runs-on: x\n'
+        '    steps:\n      - run: true\n')
+    _hand_env = {k: v for k, v in os.environ.items() if k != "GITHUB_ACTIONS"}
+    _hand = subprocess.run([GATE, "import", "workflows", "--tree", "."], cwd=_wire,
+                           capture_output=True, text=True, timeout=180,
+                           env={**_hand_env, "GATE_CLI": CLI_HERE})
+    _ci_run = subprocess.run([GATE, "import", "workflows", "--tree", "."], cwd=_wire,
+                             capture_output=True, text=True, timeout=180,
+                             env={**os.environ, "GATE_CLI": CLI_HERE,
+                                  "GITHUB_ACTIONS": "true"})
+    _vein_wire = open(VEIN, encoding="utf-8").read()
+    S.append(("the advice knows where it is standing",
+              "next: wire it into CI" in _hand.stdout
+              and "this run is that wire" in _ci_run.stdout
+              and _vein_wire.count("wire it into CI")
+                  == _vein_wire.count("this run is that wire") == 3))
+
     # ── AND EVERY IMPORT MOUTH STAMPS ITS NAME BEFORE ITS FIRST DOOR. The
     # codeowners road carries a full trail, and the other mouths opened doors
     # namelessly: a process that fell inside `import rbac` left read: marks
@@ -1191,7 +1220,11 @@ def main():
     # sentence standing over foreign bytes. The magic is read directly, so
     # the pair holds on any machine, including ones where the binary does
     # not execute.
-    _jm = open(os.path.join(HERE, "bin", "gate-judge"), "rb").read(8)
+    # the linux job rebuilds the judge in place before the battery, so the
+    # working file there is that platform's own: the cover speaks of what the
+    # CLONE carries, and the clone's record is git's, read from HEAD
+    _jm = subprocess.run(["git", "show", "HEAD:bin/gate-judge"], cwd=HERE,
+                         capture_output=True).stdout[:8]
     S.append(("the judge the clone carries is the platform the cover names",
               _jm.hex() == "cffaedfe0c000001"
               and "Mach-O arm64" in open(os.path.join(HERE, "README.md"),

@@ -6646,7 +6646,10 @@ if args.first == "import" {
                                 + "read: a citation names its key, `TODO(PROJ-1)`"))
         }
         let next = refusals.isEmpty
-            ? "wire it into CI: a citation cannot outlive its ticket again"
+            // the advice knows where it is standing, as in import workflows
+            ? (ProcessInfo.processInfo.environment["GITHUB_ACTIONS"] == "true"
+               ? "this run is that wire: a citation cannot outlive its ticket again"
+               : "wire it into CI: a citation cannot outlive its ticket again")
             : "open the address above: the citation outlived the thing it cites"
         if asJson {
             var pairs: [(String, StatusJSON)] = [
@@ -6926,7 +6929,13 @@ if args.first == "import" {
             ? "that file is written outside the subset this reads exactly. If it is "
               + "ordinary block yaml, that is worth telling us: docs/SECURITY.md says how"
             : nothing.isEmpty
-            ? "wire it into CI: a filter cannot go quiet again without saying so"
+            // ── AND THE ADVICE KNOWS WHERE IT IS STANDING. On a green read
+            // this gave the wiring advice to every caller, including the CI
+            // step that was that wire, running. The runner's own record
+            // answers, not a guess over text.
+            ? (ProcessInfo.processInfo.environment["GITHUB_ACTIONS"] == "true"
+               ? "this run is that wire: a filter cannot go quiet again without saying so"
+               : "wire it into CI: a filter cannot go quiet again without saying so")
             : nothing
         if asJson {
             var pairs: [(String, StatusJSON)] = [
@@ -9701,7 +9710,10 @@ if args.first == "seam" {
               + "beside the judgement"
     }
     let nextSaid = refusals.isEmpty
-        ? "wire it into CI: neither side can move without the other seeing"
+        // the advice knows where it is standing, as in import workflows
+        ? (ProcessInfo.processInfo.environment["GITHUB_ACTIONS"] == "true"
+           ? "this run is that wire: neither side can move without the other seeing"
+           : "wire it into CI: neither side can move without the other seeing")
         : "open the address above: two declarations, both signed, do not agree"
     let clock = String(format: "%.1f", ms)
     if asJson {

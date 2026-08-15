@@ -12,6 +12,9 @@ jobs:
           # the changelog pair reads `git tag`: a shallow checkout
           # without tags starves that reader and the red blames the log
           fetch-tags: true
+      # the pinned checkout predates that input and ignored it in silence:
+      # the tags are fetched by a word this job can see running
+      - run: git fetch --tags --quiet --force || true
       # the runner's own Xcode swift builds the corpus: a pinned separate
       # toolchain met an SDK built by a newer one and refused, so no
       # toolchain is installed here on purpose
@@ -81,6 +84,9 @@ jobs:
           # the changelog pair reads `git tag`: a shallow checkout
           # without tags starves that reader and the red blames the log
           fetch-tags: true
+      # the pinned checkout predates that input and ignored it in silence:
+      # the tags are fetched by a word this job can see running
+      - run: git fetch --tags --quiet --force || true
       # the same full battery, on the platform where the port serves both
       # courts by default. The judge is still built here, from the same pin
       # as the macos job: the parity vectors are the point of this job, and
