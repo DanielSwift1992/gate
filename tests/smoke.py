@@ -1166,6 +1166,36 @@ def main():
               bool(_bg_now) and bool(_bg_cover)
               and _bg_now.group(1) == _bg_cover.group(1)))
 
+    # ── AND A LICENSE PASTED INTO A CODEOWNERS IS SAID, NOT SKIMMED. The
+    # parser keeps the lines an owner stands on and dropped the rest in
+    # silence, so a file with prose pasted into it judged as a clean map of
+    # whatever rules survived: seen in the field, a repository whose
+    # CODEOWNERS carried its LICENSE. A multi-word line with no owner-shaped
+    # word is named at its line and judged not at all; one word alone stays
+    # legal, because that is github's unowned-pattern spelling.
+    _sal = os.path.join(tmp, "codeowners-salad")
+    os.makedirs(os.path.join(_sal, "src"), exist_ok=True)
+    open(os.path.join(_sal, "src", "kept.txt"), "w").write("x\n")
+    open(os.path.join(_sal, "CODEOWNERS"), "w").write(
+        "/src/ @keeper\nPermission is hereby granted, free of charge\n"
+        "obtaining a copy of this software\n")
+    _sal_said = subprocess.run([GATE, "import", "codeowners", "--tree", "."],
+                               cwd=_sal, capture_output=True, text=True, timeout=180,
+                               env={**os.environ, "GATE_CLI": CLI_HERE})
+    S.append(("a line that is not a rule is refused at its line, beside the rules",
+              _sal_said.returncode == 1
+              and "CODEOWNERS:2 · this line does not read as a rule" in _sal_said.stdout
+              and "CODEOWNERS:3" in _sal_said.stdout
+              and "refused 2" in _sal_said.stdout))
+    open(os.path.join(_sal, "CODEOWNERS"), "w").write(
+        "# who keeps what\n/src/ @keeper\nbare/\nMIT\n")
+    _sal_ok = subprocess.run([GATE, "import", "codeowners", "--tree", "."],
+                             cwd=_sal, capture_output=True, text=True, timeout=180,
+                             env={**os.environ, "GATE_CLI": CLI_HERE})
+    S.append(("comments, bare patterns and one-word lines stay legal",
+              _sal_ok.returncode == 0
+              and "does not read as a rule" not in _sal_ok.stdout))
+
     # ── AND THE CHANGELOG NAMES EVERY VERSION THAT SHIPPED. Three releases
     # went out while the top of docs/CHANGELOG.md said `Unreleased`: a second
     # record of the releases, compared by nobody, in the repository that
@@ -9512,7 +9542,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         _cc_dir = os.path.join(tmp, "codeowners-core")
         os.makedirs(_cc_dir, exist_ok=True)
         open(os.path.join(_cc_dir, "main.swift"), "w", encoding="utf-8").write(
-            "import Foundation\n" + _cc_cut + '\nvar bad: [String] = []\nfunc check(_ name: String, _ ok: Bool) { if !ok { bad.append(name) } }\nlet r = parseCodeowners("src/ @alice\\n# note\\n\\n/docs/ @bob @carol\\nbare/\\n/a\\\\ b/ @x\\n")\ncheck("count", r.count == 3)\ncheck("r0", r[0].line == 1 && r[0].pattern == "src/" && r[0].owners == ["@alice"])\ncheck("r1", r[1].line == 4 && r[1].pattern == "/docs/" && r[1].owners == ["@bob", "@carol"])\ncheck("escaped", r[2].line == 6 && r[2].pattern == "/a b/" && r[2].owners == ["@x"])\nlet e = codeownersWorldBuild([], [], "FROM", "CO", "PAGE")\ncheck("empty-head", e.lines.first?.contains("PAGE") == true && e.lines.first?.contains("// from: FROM") == true)\ncheck("empty-map", e.srcmap.isEmpty && e.keepers.isEmpty)\nlet one = codeownersWorldBuild([(1, "/src/api/", ["@alice"])], [], "f", "CO", "")\ncheck("zone", one.lines.contains("public enum Zone_src: Realm {}"))\ncheck("keeper", one.lines.contains("public enum Owner_alice_in_src: Keeper {"))\ncheck("srcmap", one.srcmap["Owns_0_alice"] == "CO:1 · /src/api/ @alice")\nlet pol = codeownersWorldBuild([(1, "/src/api/", ["@alice"])], [("alice", "src")], "f", "CO", "")\ncheck("policy-keeper", pol.lines.contains("public enum Owner_alice: Keeper {") && pol.keepers.contains("Owner_alice"))\nlet hostile = codeownersWorldBuild([(1, "[broken", ["@x"])], [], "f", "CO", "")\ncheck("hostile-total", hostile.lines.contains("public enum Zone__broken: Realm {}"))\nprint(bad.isEmpty ? "CORE OK" : "APART: " + bad.joined(separator: ","))\n')
+            "import Foundation\n" + _cc_cut + '\nvar bad: [String] = []\nfunc check(_ name: String, _ ok: Bool) { if !ok { bad.append(name) } }\nlet r = parseCodeowners("src/ @alice\\n# note\\n\\n/docs/ @bob @carol\\nbare/\\n/a\\\\ b/ @x\\n")\ncheck("count", r.count == 3)\ncheck("r0", r[0].line == 1 && r[0].pattern == "src/" && r[0].owners == ["@alice"])\ncheck("r1", r[1].line == 4 && r[1].pattern == "/docs/" && r[1].owners == ["@bob", "@carol"])\ncheck("escaped", r[2].line == 6 && r[2].pattern == "/a b/" && r[2].owners == ["@x"])\nlet e = codeownersWorldBuild([], [], "FROM", "CO", "PAGE")\ncheck("empty-head", e.lines.first?.contains("PAGE") == true && e.lines.first?.contains("// from: FROM") == true)\ncheck("empty-map", e.srcmap.isEmpty && e.keepers.isEmpty)\nlet one = codeownersWorldBuild([(1, "/src/api/", ["@alice"])], [], "f", "CO", "")\ncheck("zone", one.lines.contains("public enum Zone_src: Realm {}"))\ncheck("keeper", one.lines.contains("public enum Owner_alice_in_src: Keeper {"))\ncheck("srcmap", one.srcmap["Owns_0_alice"] == "CO:1 · /src/api/ @alice")\nlet pol = codeownersWorldBuild([(1, "/src/api/", ["@alice"])], [("alice", "src")], "f", "CO", "")\ncheck("policy-keeper", pol.lines.contains("public enum Owner_alice: Keeper {") && pol.keepers.contains("Owner_alice"))\nlet hostile = codeownersWorldBuild([(1, "[broken", ["@x"])], [], "f", "CO", "")\ncheck("hostile-total", hostile.lines.contains("public enum Zone__broken: Realm {}"))\nlet noise = codeownersUnread("src/ @alice\\nPermission is hereby granted, free of charge\\n# note\\nbare/\\nMIT\\n/docs/ @bob\\n")\ncheck("noise", noise.count == 1 && noise[0].line == 2)\nprint(bad.isEmpty ? "CORE OK" : "APART: " + bad.joined(separator: ","))\n')
         _cc_bin = os.path.join(_cc_dir, "core")
         _cc_build = subprocess.run(["swiftc", os.path.join(_cc_dir, "main.swift"),
                                     "-o", _cc_bin],
@@ -9527,6 +9557,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         S.append(("the codeowners core is total, reads no world, and answers alone",
                   _cc_cut.count("func parseCodeowners") == 1
                   and _cc_cut.count("func codeownersWorldBuild") == 1
+                  and _cc_cut.count("func codeownersUnread") == 1
                   and _cc_impure == [] and _cc_build.returncode == 0
                   and _cc_said is not None and "CORE OK" in _cc_said.stdout))
 

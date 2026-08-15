@@ -2767,6 +2767,26 @@ func codeownersWorldBuild(_ rules: [(line: Int, pattern: String, owners: [String
     }
     return (lines, srcmap, keepers)
 }
+// a multi-word line with no owner-shaped word is not a rule of this file's
+// kind: a license pasted into a CODEOWNERS read as a two-rule map with forty
+// lines nobody mentioned, because the parser kept the lines an owner stands
+// on and dropped the rest in silence. What is not read is returned, to be
+// said. One word alone stays legal: github's unowned-pattern spelling.
+func codeownersUnread(_ text: String) -> [(line: Int, said: String)] {
+    var out: [(Int, String)] = []
+    for (n0, raw) in text.components(separatedBy: "\n").enumerated() {
+        let line = raw.components(separatedBy: "#")[0].trimmingCharacters(in: .whitespaces)
+        if line.isEmpty { continue }
+        let parts = line.replacingOccurrences(of: "\\ ", with: "\u{0}")
+            .components(separatedBy: .whitespaces).filter { !$0.isEmpty }
+        if parts.count >= 2
+            && !parts.dropFirst().contains(where: { $0.hasPrefix("@") || $0.contains("@") }) {
+            out.append((n0 + 1, line))
+        }
+    }
+    return out
+}
+
 // ── CODEOWNERS CORE END.
 
 func readCodeowners(_ path: String) -> [(line: Int, pattern: String, owners: [String])] {
@@ -6403,7 +6423,25 @@ if args.first == "import" {
                          + "nothing to hold: a line names a path and then who keeps it, "
                          + "`src/api/ @alice`"))
         }
+        // ── AND WHAT THIS DID NOT READ IS SAID, NOT SKIPPED. The lines an
+        // owner stands on became rules and the rest fell in silence, so a
+        // file with prose pasted into it judged as a clean map of whatever
+        // rules survived. A line this reader does not take is named at its
+        // line, and no claim is made about it.
+        let atSrc = { (n: Int) -> String in
+            let r = tree.map { relPath(absPath(src), absPath($0)) }
+            let head = (r?.hasPrefix("..") ?? true) ? src : r!
+            return "\(head):\(n)"
+        }
+        var noise: [(address: String, claim: String)] = []
+        for nl in codeownersUnread(theirsText(src, "the CODEOWNERS this reads")) {
+            noise.append((atSrc(nl.line),
+                          "this line does not read as a rule: a rule is a path and "
+                        + "then who keeps it, and no word here is an owner. No claim "
+                        + "is made about it"))
+        }
         let refusedAny = !refusals.isEmpty || !ghosts.isEmpty || !unread.isEmpty
+            || !noise.isEmpty
         // A GREEN NOBODY COULD HAVE BROKEN IS NOT A GREEN: without a policy every
         // rule is its own authority, so the equalities cannot fail
         let verdict = refusedAny ? "refused" : (policy.isEmpty ? "observed" : "holds")
@@ -6414,6 +6452,9 @@ if args.first == "import" {
             ? "nothing was read, so nothing here is a statement about your ownership: "
               + "this door takes a path and then who keeps it. Check the shape of the "
               + "file, or point this at the one your reviews actually use"
+            : !noise.isEmpty
+            ? "part of this file is not rules: the lines named above were not read, "
+              + "and the rules beside them were judged as usual"
             : policy.isEmpty
             ? "no ownership policy given (--policy owner,zone): every rule is its own "
               + "authority, so the equalities hold trivially. The unmatched patterns above "
@@ -6429,6 +6470,9 @@ if args.first == "import" {
             ? "`gate import codeowners` reads the shape github reads: a path, then the "
               + "people who keep it. If yours is that shape and this still reads none of "
               + "it, that is worth telling us: docs/SECURITY.md says how"
+            : !noise.isEmpty
+            ? "open the address above: if that line is meant to be a rule, give it an "
+              + "owner; if it is prose, move it out or put a `#` in front of it"
             : asked == nil
             ? "nothing was written: this read your CODEOWNERS and your tree and left "
               + "both as they were. Add `-o ownership.swift` to keep the world it printed"
@@ -6439,6 +6483,7 @@ if args.first == "import" {
             : "commit it: from here on it is what you have said, and it is judged"
         if kept != nil { try? FileManager.default.removeItem(atPath: kept!) }
         let all = refusals.map { (address: $0.address, claim: $0.claim) } + ghosts + unread
+            + noise
         if asJson {
             var pairs: [(String, StatusJSON)] = [
                 ("command", .text("import codeowners")),
@@ -6456,7 +6501,7 @@ if args.first == "import" {
                              ("source", .text($0.source)),
                              ("address", .text($0.address)),
                              ("claim", .text($0.claim))]) }
-                    + (ghosts + unread).map {
+                    + (ghosts + unread + noise).map {
                     .object([("address", .text($0.address)), ("claim", .text($0.claim))]) })),
                 ("judge_ms", .raw(String(ms))),
                 ("canon_handshake", .raw(outp.contains("canon v2") ? "true" : "false")),
@@ -6473,7 +6518,7 @@ if args.first == "import" {
                     ? String(r.source.dropFirst(r.address.count + 3)) : r.source
                 lines.append("  \(r.address) · \(r.claim)" + (rule.isEmpty ? "" : "  (\(rule))"))
             }
-            for g in ghosts + unread { lines.append("  \(g.address) · \(g.claim)") }
+            for g in ghosts + unread + noise { lines.append("  \(g.address) · \(g.claim)") }
             lines.append("  note: " + note)
             lines.append("  next: " + next)
             out(lines.joined(separator: "\n") + "\n")
