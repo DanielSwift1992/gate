@@ -2775,6 +2775,87 @@ func codeownersUnread(_ text: String) -> [(line: Int, said: String)] {
     return out
 }
 
+// ── AND THE EXACT MATCH OF THE PLATFORM, FOR THE QUESTION THAT NEEDS IT.
+// The wide matcher above is deliberate for DEATH: a rule it calls dead is
+// dead by the narrower reading too. Shadowing flips the error's side: a
+// wide LATER rule would beat earlier ones where the platform's own reading
+// does not. So precedence is judged by gitignore semantics exactly: `*`
+// stays inside a segment, `**` crosses, a slash at the head or the middle
+// anchors to the root, and a matched directory owns its subtree.
+func ghSegMatch(_ pat: [Character], _ name: [Character]) -> Bool {
+    func walk(_ i: Int, _ j: Int) -> Bool {
+        if i == pat.count { return j == name.count }
+        if pat[i] == "*" {
+            if walk(i + 1, j) { return true }
+            return j < name.count && walk(i, j + 1)
+        }
+        if j == name.count { return false }
+        if pat[i] == "?" || pat[i] == name[j] { return walk(i + 1, j + 1) }
+        return false
+    }
+    return walk(0, 0)
+}
+
+func ghMatch(_ pattern: String, _ path: String) -> Bool {
+    var pat = pattern
+    let trimmed = pat.hasSuffix("/") ? String(pat.dropLast()) : pat
+    let anchored = pat.hasPrefix("/") || trimmed.dropFirst().contains("/")
+    while pat.hasPrefix("/") { pat.removeFirst() }
+    while pat.hasSuffix("/") { pat.removeLast() }
+    if pat.isEmpty { return true }
+    let segs = pat.components(separatedBy: "/").map { Array($0) }
+    let parts = path.components(separatedBy: "/").map { Array($0) }
+    func walk(_ i: Int, _ j: Int) -> Bool {
+        if i == segs.count { return true }        // a match owns its subtree
+        if segs[i] == ["*", "*"] {
+            if walk(i + 1, j) { return true }
+            return j < parts.count && walk(i, j + 1)
+        }
+        if j == parts.count { return false }
+        return ghSegMatch(segs[i], parts[j]) && walk(i + 1, j + 1)
+    }
+    if anchored { return walk(0, 0) }
+    for start in 0...parts.count where walk(0, start) { return true }
+    return false
+}
+
+// the rules that never win: every file a rule matches is taken by a LATER
+// rule (github reads the last match). A later rule that keeps the same
+// owners is a duplicate; one that drops an owner is an override, and the
+// early author believes they route what they do not.
+func codeownersShadows(_ rules: [(line: Int, pattern: String, owners: [String])],
+                       _ files: [String])
+    -> (overrides: [(line: Int, pattern: String, beatenBy: Int)], duplicates: Int) {
+    let n = rules.count
+    if n < 2 { return ([], 0) }
+    var wins = [Int](repeating: 0, count: n)
+    var seen = [Bool](repeating: false, count: n)
+    var overrideBy = [Int?](repeating: nil, count: n)
+    for f in files {
+        var winner: Int? = nil
+        for idx in stride(from: n - 1, through: 0, by: -1) where ghMatch(rules[idx].pattern, f) {
+            winner = idx; break
+        }
+        guard let w = winner else { continue }
+        wins[w] += 1
+        seen[w] = true
+        for idx in stride(from: w - 1, through: 0, by: -1) where ghMatch(rules[idx].pattern, f) {
+            seen[idx] = true
+            if !Set(rules[idx].owners).isSubset(of: Set(rules[w].owners)) {
+                overrideBy[idx] = overrideBy[idx] ?? rules[w].line
+            }
+        }
+    }
+    var overrides: [(line: Int, pattern: String, beatenBy: Int)] = []
+    var duplicates = 0
+    for i in 0..<n where seen[i] && wins[i] == 0 {
+        if let by = overrideBy[i] {
+            overrides.append((rules[i].line, rules[i].pattern, by))
+        } else { duplicates += 1 }
+    }
+    return (overrides, duplicates)
+}
+
 // ── CODEOWNERS CORE END.
 
 func readCodeowners(_ path: String) -> [(line: Int, pattern: String, owners: [String])] {
@@ -6794,12 +6875,26 @@ if args.first == "import" {
         }
         // a pattern matching no file in the tree: CODEOWNERS says it, the tree does not
         var ghosts: [(address: String, claim: String)] = []
+        var dupShadows = 0
         if let tree = tree {
             let paths = treeFiles(tree)
             // the address names the file that makes the claim, relative to the
             // walked tree, which is how the reader's own editor opens it
             let rel = relPath(absPath(src), absPath(tree))
-            ghosts = ghostPatterns(rules, paths, rel.hasPrefix("..") ? src : rel)
+            let at = rel.hasPrefix("..") ? src : rel
+            ghosts = ghostPatterns(rules, paths, at)
+            // and the rules that never win: github reads the LAST match, so a
+            // rule every file of which is taken by a later one decides nothing.
+            // An override (the early owner loses routing) is refused at its
+            // line; a duplicate is counted aloud and refuses nothing.
+            let sh = codeownersShadows(rules, paths)
+            dupShadows = sh.duplicates
+            for o in sh.overrides {
+                ghosts.append(("\(at):\(o.line)",
+                               "`\(o.pattern)` never wins: every file it matches is "
+                             + "taken by the rule at line \(o.beatenBy), which names "
+                             + "different owners"))
+            }
         }
         mark("refusals-read")
         let zones = Set(rules.map { codeownersZone($0.pattern) }).count
@@ -6861,6 +6956,10 @@ if args.first == "import" {
               + "it: the zone equalities against one canon, and the key's class through "
               + "the ladder this world presents (docs/DETAILS.md, "
               + "what this road does not judge)"
+        let note2 = dupShadows > 0
+            ? note + " " + many(dupShadows, "rule") + " duplicate"
+              + (dupShadows == 1 ? "s" : "") + " later rules naming the same owners."
+            : note
         let w = discoverWorld()
         mark("world-discovered")
         let declared = (w.layout?.rows ?? []).map { $0.path }
@@ -6910,7 +7009,7 @@ if args.first == "import" {
                     .object([("address", .text($0.address)), ("claim", .text($0.claim))]) })),
                 ("judge_ms", .raw(String(ms))),
                 ("canon_handshake", .raw(outp.contains("canon v2") ? "true" : "false")),
-                ("note", .text(note)),
+                ("note", .text(note2)),
                 ("next", .text(next)),
             ]
             if let ready = commandIn(next) { pairs.append(("command_to_run", .text(ready))) }
@@ -6924,7 +7023,7 @@ if args.first == "import" {
                 lines.append("  \(r.address) · \(r.claim)" + (rule.isEmpty ? "" : "  (\(rule))"))
             }
             for g in ghosts + unread + noise { lines.append("  \(g.address) · \(g.claim)") }
-            lines.append("  note: " + note)
+            lines.append("  note: " + note2)
             lines.append("  next: " + next)
             out(lines.joined(separator: "\n") + "\n")
         }

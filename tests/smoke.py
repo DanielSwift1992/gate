@@ -1245,6 +1245,31 @@ def main():
     S.append(("every flag the cover spells is a spelling the vein knows",
               _cover_flags and _flags_gone == []))
 
+    # ── AND A RULE THAT NEVER WINS IS REFUSED AT ITS LINE. GitHub reads the
+    # LAST match, so an early rule fully taken by a later one decides nothing:
+    # an override (the early owner loses routing) is refused; a later rule
+    # that merely extends the same owners is a duplicate, said aloud in the
+    # note and refusing nothing. Judged by the platform's exact semantics,
+    # because the wide matcher of death would flip the error's side here.
+    _shm = os.path.join(tmp, "codeowners-shadow")
+    os.makedirs(os.path.join(_shm, "src", "api"), exist_ok=True)
+    os.makedirs(os.path.join(_shm, "docs"), exist_ok=True)
+    open(os.path.join(_shm, "src", "api", "a.py"), "w").write("x")
+    open(os.path.join(_shm, "src", "other.py"), "w").write("x")
+    open(os.path.join(_shm, "docs", "d.md"), "w").write("x")
+    open(os.path.join(_shm, "CODEOWNERS"), "w").write(
+        "/src/api/ @alice\n/docs/ @carol\n/src/ @bob\n/docs/ @carol @dave\n")
+    _shm_said = subprocess.run([GATE, "import", "codeowners", "--tree", "."],
+                               cwd=_shm, capture_output=True, text=True, timeout=180,
+                               env={**os.environ, "GATE_CLI": CLI_HERE})
+    S.append(("a rule that never wins is refused, and a benign twin is said aloud",
+              _shm_said.returncode == 1
+              and "CODEOWNERS:1" in _shm_said.stdout
+              and "never wins" in _shm_said.stdout
+              and "taken by the rule at line 3" in _shm_said.stdout
+              and "1 rule duplicates later rules naming the same owners" in _shm_said.stdout
+              and "CODEOWNERS:2" not in _shm_said.stdout))
+
     # ── AND THE -o ADVICE KNOWS WHAT ALREADY STANDS. The bare import at home
     # said "Add -o ownership.swift to keep the world it printed" beside an
     # ownership.swift whose from: line names this very file: the lock-on-the-
@@ -9701,7 +9726,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         _cc_dir = os.path.join(tmp, "codeowners-core")
         os.makedirs(_cc_dir, exist_ok=True)
         open(os.path.join(_cc_dir, "main.swift"), "w", encoding="utf-8").write(
-            "import Foundation\n" + _cc_cut + '\nvar bad: [String] = []\nfunc check(_ name: String, _ ok: Bool) { if !ok { bad.append(name) } }\nlet r = parseCodeowners("src/ @alice\\n# note\\n\\n/docs/ @bob @carol\\nbare/\\n/a\\\\ b/ @x\\n")\ncheck("count", r.count == 3)\ncheck("r0", r[0].line == 1 && r[0].pattern == "src/" && r[0].owners == ["@alice"])\ncheck("r1", r[1].line == 4 && r[1].pattern == "/docs/" && r[1].owners == ["@bob", "@carol"])\ncheck("escaped", r[2].line == 6 && r[2].pattern == "/a b/" && r[2].owners == ["@x"])\nlet e = codeownersWorldBuild([], [], "FROM", "CO", "PAGE")\ncheck("empty-head", e.lines.first?.contains("PAGE") == true && e.lines.first?.contains("// from: FROM") == true)\ncheck("empty-map", e.srcmap.isEmpty && e.keepers.isEmpty)\nlet one = codeownersWorldBuild([(1, "/src/api/", ["@alice"])], [], "f", "CO", "")\ncheck("zone", one.lines.contains("public enum Zone_src: Realm {}"))\ncheck("keeper", one.lines.contains("public enum Owner_alice_in_src: Keeper {"))\ncheck("srcmap", one.srcmap["Owns_0_alice"] == "CO:1 · /src/api/ @alice")\nlet pol = codeownersWorldBuild([(1, "/src/api/", ["@alice"])], [("alice", "src")], "f", "CO", "")\ncheck("policy-keeper", pol.lines.contains("public enum Owner_alice: Keeper {") && pol.keepers.contains("Owner_alice"))\nlet hostile = codeownersWorldBuild([(1, "[broken", ["@x"])], [], "f", "CO", "")\ncheck("hostile-total", hostile.lines.contains("public enum Zone__broken: Realm {}"))\nlet noise = codeownersUnread("src/ @alice\\nPermission is hereby granted, free of charge\\n# note\\nbare/\\nMIT\\n/docs/ @bob\\n")\ncheck("noise", noise.count == 1 && noise[0].line == 2)\nprint(bad.isEmpty ? "CORE OK" : "APART: " + bad.joined(separator: ","))\n')
+            "import Foundation\n" + _cc_cut + '\nvar bad: [String] = []\nfunc check(_ name: String, _ ok: Bool) { if !ok { bad.append(name) } }\nlet r = parseCodeowners("src/ @alice\\n# note\\n\\n/docs/ @bob @carol\\nbare/\\n/a\\\\ b/ @x\\n")\ncheck("count", r.count == 3)\ncheck("r0", r[0].line == 1 && r[0].pattern == "src/" && r[0].owners == ["@alice"])\ncheck("r1", r[1].line == 4 && r[1].pattern == "/docs/" && r[1].owners == ["@bob", "@carol"])\ncheck("escaped", r[2].line == 6 && r[2].pattern == "/a b/" && r[2].owners == ["@x"])\nlet e = codeownersWorldBuild([], [], "FROM", "CO", "PAGE")\ncheck("empty-head", e.lines.first?.contains("PAGE") == true && e.lines.first?.contains("// from: FROM") == true)\ncheck("empty-map", e.srcmap.isEmpty && e.keepers.isEmpty)\nlet one = codeownersWorldBuild([(1, "/src/api/", ["@alice"])], [], "f", "CO", "")\ncheck("zone", one.lines.contains("public enum Zone_src: Realm {}"))\ncheck("keeper", one.lines.contains("public enum Owner_alice_in_src: Keeper {"))\ncheck("srcmap", one.srcmap["Owns_0_alice"] == "CO:1 · /src/api/ @alice")\nlet pol = codeownersWorldBuild([(1, "/src/api/", ["@alice"])], [("alice", "src")], "f", "CO", "")\ncheck("policy-keeper", pol.lines.contains("public enum Owner_alice: Keeper {") && pol.keepers.contains("Owner_alice"))\nlet hostile = codeownersWorldBuild([(1, "[broken", ["@x"])], [], "f", "CO", "")\ncheck("hostile-total", hostile.lines.contains("public enum Zone__broken: Realm {}"))\nlet gh: [(String, String, Bool)] = [\n ("/*.md", "README.md", true), ("/*.md", "pages.ar/x.md", false),\n ("*.md", "pages.ar/x.md", true), ("/pages.ar/", "pages.ar/x/y.md", true),\n ("/pages.ar/", "pages.br/x.md", false), ("/docs/*", "docs/a.md", true),\n ("/docs/*", "docs/sub/a.md", true), ("docs/**/*.md", "docs/a/b.md", true),\n ("/src/api/", "src/api/v1/h.py", true), ("apps/", "x/apps/file", true),\n ("/apps/", "x/apps/file", false), ("**/logs", "a/b/logs/x", true)]\ncheck("gh-exact", gh.allSatisfy { ghMatch($0.0, $0.1) == $0.2 })\nlet sh = codeownersShadows([(1, "/src/api/", ["@alice"]), (2, "/docs/", ["@carol"]),\n                            (3, "/src/", ["@bob"]), (4, "/docs/", ["@carol", "@dave"])],\n                           ["src/api/a.py", "src/other.py", "docs/d.md"])\ncheck("shadow-override", sh.overrides.count == 1 && sh.overrides[0].line == 1\n      && sh.overrides[0].beatenBy == 3)\ncheck("shadow-duplicate", sh.duplicates == 1)\nlet sh2 = codeownersShadows([(1, "/src/", ["@bob"])], ["src/a"])\ncheck("shadow-none", sh2.overrides.isEmpty && sh2.duplicates == 0)\nlet noise = codeownersUnread("src/ @alice\\nPermission is hereby granted, free of charge\\n# note\\nbare/\\nMIT\\n/docs/ @bob\\n")\ncheck("noise", noise.count == 1 && noise[0].line == 2)\nprint(bad.isEmpty ? "CORE OK" : "APART: " + bad.joined(separator: ","))\n')
         _cc_bin = os.path.join(_cc_dir, "core")
         _cc_build = subprocess.run(["swiftc", os.path.join(_cc_dir, "main.swift"),
                                     "-o", _cc_bin],
@@ -9717,6 +9742,8 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                   _cc_cut.count("func parseCodeowners") == 1
                   and _cc_cut.count("func codeownersWorldBuild") == 1
                   and _cc_cut.count("func codeownersUnread") == 1
+                  and _cc_cut.count("func ghMatch") == 1
+                  and _cc_cut.count("func codeownersShadows") == 1
                   and _cc_impure == [] and _cc_build.returncode == 0
                   and _cc_said is not None and "CORE OK" in _cc_said.stdout))
 
