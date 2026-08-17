@@ -3850,6 +3850,18 @@ func yamlBlock(_ text: String) -> (root: YamlNode, refused: (line: Int, why: Str
                     ? String(body[body.range(of: ": ")!.upperBound...])
                         .trimmingCharacters(in: .whitespaces)
                     : ""
+                // the inline pair itself is a child of the item: `- uses: x`
+                // used to vanish here, and a door judging that route read a
+                // tree with the address missing
+                if body.contains(": "), !firstValue.hasPrefix("|"),
+                   !firstValue.hasPrefix(">"), !firstValue.isEmpty {
+                    let key = String(body[body.startIndex..<body.range(of: ": ")!.lowerBound])
+                        .trimmingCharacters(in: CharacterSet(charactersIn: " \"'"))
+                    let child = YamlNode()
+                    child.line = no
+                    child.value = yamlUnquote(firstValue)
+                    node.children.append((key, child))
+                }
                 if firstValue.hasPrefix("|") || firstValue.hasPrefix(">") {
                     var j = n + 1
                     while j < lines.count {
@@ -4161,6 +4173,189 @@ func rbacWorldBuild(_ items: [Said], _ head: String)
             namespaces.count, roleOrder.count, clusterOrder.count)
 }
 // ── RBAC CORE END.
+
+// ── ADDRESSES CORE BEGIN. Every route a repository declares in its standard
+// files, judged by existence: a workflow step using a local action that is
+// not there, a working directory the tree does not carry, a dependabot
+// directory whose updates are silently off, a labeler glob matching nothing,
+// a README badge pointing at a workflow that does not exist. An address is a
+// promise of a route; these are the promises this door can read today. Total
+// over values (the yaml reader and the matcher are the workflows core's own);
+// the battery cuts this out and compiles it under that core.
+
+// every (key, line, value) pair of a yaml document, depth-first: the shapes
+// judged here live at unknown nesting, so the walk is generic
+func yamlPairs(_ node: YamlNode) -> [(key: String, line: Int, value: String)] {
+    var out: [(key: String, line: Int, value: String)] = []
+    for (key, child) in node.children {
+        if let v = child.value, !v.isEmpty { out.append((key, child.line, v)) }
+        out += yamlPairs(child)
+    }
+    for item in node.items { out += yamlPairs(item.node) }
+    return out
+}
+
+// every list item text of a yaml document, with its line
+func yamlItems(_ node: YamlNode) -> [(line: Int, text: String)] {
+    var out: [(line: Int, text: String)] = []
+    for item in node.items {
+        if !item.text.isEmpty { out.append((item.line, item.text)) }
+        out += yamlItems(item.node)
+    }
+    for (_, child) in node.children { out += yamlItems(child) }
+    return out
+}
+
+// the four-clause route match, the same reading the codeowners ghosts use
+func routeMatches(_ pattern: String, _ files: [String]) -> Bool {
+    var pat = pattern
+    if pat.hasPrefix("!") { pat.removeFirst() }
+    while pat.hasPrefix("/") { pat.removeFirst() }
+    while pat.hasSuffix("/") { pat.removeLast() }
+    if pat.isEmpty { return true }
+    return files.contains { p in
+        globMatch(pat, p) || globMatch(pat + "/*", p) || p.hasPrefix(pat + "/")
+            || globMatch(pat, (p as NSString).lastPathComponent)
+    }
+}
+
+func hasDir(_ path: String, _ files: [String]) -> Bool {
+    var p = path
+    while p.hasPrefix("/") { p.removeFirst() }
+    while p.hasSuffix("/") { p.removeLast() }
+    if p.isEmpty { return true }
+    return files.contains { $0.hasPrefix(p + "/") }
+}
+
+// one workflow file: local `uses:` and `working-directory:` judged
+func wfAddressFindings(_ name: String, _ text: String, _ files: [String])
+    -> (found: [(cls: String, address: String, claim: String)],
+        unread: [(address: String, claim: String)], judged: Int) {
+    let doc = yamlBlock(text)
+    if let refused = doc.refused {
+        return ([], [("\(name):\(refused.line)",
+                      "this reading takes the block subset these files are written in, "
+                    + "and stops at what it cannot read exactly: \(refused.why). "
+                    + "No claim is made about this file")], 0)
+    }
+    var found: [(cls: String, address: String, claim: String)] = []
+    var judged = 0
+    for (key, line, raw) in yamlPairs(doc.root) {
+        let value = yamlUnquote(raw)
+        if key == "uses" && value.hasPrefix("./") {
+            judged += 1
+            var p = String(value.dropFirst(2))
+            while p.hasSuffix("/") { p.removeLast() }
+            let ok = files.contains(p) || hasDir(p, files)
+            if !ok {
+                found.append(("workflow-uses", "\(name):\(line)",
+                              "`uses: ./\(p)` and no such action is in the tree: "
+                            + "the step silently has nothing to run"))
+            }
+        }
+        if key == "working-directory" {
+            let v = yamlUnquote(raw)
+            if v.isEmpty || v == "." || v.contains("$") || v.contains("*") { continue }
+            judged += 1
+            var p = v
+            if p.hasPrefix("./") { p = String(p.dropFirst(2)) }
+            if !hasDir(p, files) && !files.contains(p) {
+                found.append(("workflow-workdir", "\(name):\(line)",
+                              "`working-directory: \(v)` is not in the tree: "
+                            + "the step starts where nothing is"))
+            }
+        }
+    }
+    return (found, [], judged)
+}
+
+// dependabot: `directory:` and `directories:` entries judged as tree dirs
+func dependabotFindings(_ name: String, _ text: String, _ files: [String])
+    -> (found: [(cls: String, address: String, claim: String)],
+        unread: [(address: String, claim: String)], judged: Int) {
+    let doc = yamlBlock(text)
+    if let refused = doc.refused {
+        return ([], [("\(name):\(refused.line)",
+                      "this reading takes the block subset these files are written in, "
+                    + "and stops at what it cannot read exactly: \(refused.why). "
+                    + "No claim is made about this file")], 0)
+    }
+    var found: [(cls: String, address: String, claim: String)] = []
+    var judged = 0
+    func judge(_ line: Int, _ raw: String) {
+        let v = yamlUnquote(raw)
+        guard v.hasPrefix("/"), !v.contains("$"), !v.contains("*") else { return }
+        judged += 1
+        if v != "/" && !hasDir(v, files) {
+            found.append(("dependabot", "\(name):\(line)",
+                          "`directory: \(v)` is not in the tree: "
+                        + "updates for this ecosystem are silently off"))
+        }
+    }
+    for (key, line, raw) in yamlPairs(doc.root) where key == "directory" {
+        judge(line, raw)
+    }
+    for item in yamlItems(doc.root) where yamlUnquote(item.text).hasPrefix("/") {
+        judge(item.line, item.text)
+    }
+    return (found, [], judged)
+}
+
+// labeler: list items that read as tree globs, judged by the route match
+func labelerFindings(_ name: String, _ text: String, _ files: [String])
+    -> (found: [(cls: String, address: String, claim: String)],
+        unread: [(address: String, claim: String)], judged: Int) {
+    let doc = yamlBlock(text)
+    if let refused = doc.refused {
+        return ([], [("\(name):\(refused.line)",
+                      "this reading takes the block subset these files are written in, "
+                    + "and stops at what it cannot read exactly: \(refused.why). "
+                    + "No claim is made about this file")], 0)
+    }
+    var found: [(cls: String, address: String, claim: String)] = []
+    var judged = 0
+    for item in yamlItems(doc.root) {
+        let v = yamlUnquote(item.text)
+        guard v.contains("/"), !v.contains(" "), !v.contains("$"),
+              !v.hasPrefix("http") else { continue }
+        judged += 1
+        if !routeMatches(v, files) {
+            found.append(("labeler", "\(name):\(item.line)",
+                          "`\(v)` matches nothing in the tree: "
+                        + "this label is never applied"))
+        }
+    }
+    return (found, [], judged)
+}
+
+// README badges: actions/workflows/NAME must name a workflow that exists
+func badgeFindings(_ name: String, _ text: String, _ files: [String])
+    -> (found: [(cls: String, address: String, claim: String)], judged: Int) {
+    var found: [(cls: String, address: String, claim: String)] = []
+    var judged = 0
+    let needle = "actions/workflows/"
+    for (n0, line) in text.components(separatedBy: "\n").enumerated() {
+        var rest = Substring(line)
+        while let r = rest.range(of: needle) {
+            rest = rest[r.upperBound...]
+            var wf = ""
+            for ch in rest {
+                if ch.isLetter || ch.isNumber || ch == "_" || ch == "-" || ch == "." {
+                    wf.append(ch)
+                } else { break }
+            }
+            guard wf.hasSuffix(".yml") || wf.hasSuffix(".yaml") else { continue }
+            judged += 1
+            if !files.contains(".github/workflows/" + wf) {
+                found.append(("badge", "\(name):\(n0 + 1)",
+                              "the badge points at `\(wf)` and no such workflow exists: "
+                            + "the cover wears a verdict nothing earns"))
+            }
+        }
+    }
+    return (found, judged)
+}
+// ── ADDRESSES CORE END.
 
 // ── EVERY PATH THIS TREE CARRIES, WHICH IS NOT EVERY REGULAR FILE IN IT. A
 // repository tracks a symbolic link as a path of its own, and the walk under
@@ -7010,13 +7205,101 @@ if args.first == "import" {
         exit(all.isEmpty && nothing.isEmpty ? 0 : 1)
     }
 
+    // ── import addresses [--tree DIR]: every declared route, judged at once
+    if head == "addresses" {
+        mark("addresses-begin")
+        let tail = Array(rest.dropFirst())
+        var tree = "."
+        if let i = tail.firstIndex(of: "--tree"), i + 1 < tail.count { tree = tail[i + 1] }
+        let files = treeFiles(absPath(tree))
+        var found: [(cls: String, address: String, claim: String)] = []
+        var unread: [(address: String, claim: String)] = []
+        var judged = 0, sources = 0
+        let wfDir = (absPath(tree) as NSString).appendingPathComponent(".github/workflows")
+        let wfNames = ((try? FileManager.default.contentsOfDirectory(atPath: wfDir)) ?? [])
+            .filter { $0.hasSuffix(".yml") || $0.hasSuffix(".yaml") }.sorted()
+        for name in wfNames {
+            sources += 1
+            let text = theirsText((wfDir as NSString).appendingPathComponent(name),
+                                  "a workflow this reads")
+            let said = wfAddressFindings(".github/workflows/" + name, text, files)
+            found += said.found; unread += said.unread; judged += said.judged
+        }
+        for place in [".github/dependabot.yml", ".github/dependabot.yaml"] {
+            let at = (absPath(tree) as NSString).appendingPathComponent(place)
+            guard FileManager.default.fileExists(atPath: at) else { continue }
+            sources += 1
+            let said = dependabotFindings(place, theirsText(at, "a dependabot config"), files)
+            found += said.found; unread += said.unread; judged += said.judged
+            break
+        }
+        for place in [".github/labeler.yml", ".github/labeler.yaml"] {
+            let at = (absPath(tree) as NSString).appendingPathComponent(place)
+            guard FileManager.default.fileExists(atPath: at) else { continue }
+            sources += 1
+            let said = labelerFindings(place, theirsText(at, "a labeler config"), files)
+            found += said.found; unread += said.unread; judged += said.judged
+            break
+        }
+        for place in ["README.md", "README.rst", "readme.md"] {
+            let at = (absPath(tree) as NSString).appendingPathComponent(place)
+            guard FileManager.default.fileExists(atPath: at) else { continue }
+            sources += 1
+            let said = badgeFindings(place, theirsText(at, "the cover this reads"), files)
+            found += said.found; judged += said.judged
+            break
+        }
+        let all = found.map { (address: $0.address, claim: $0.claim) } + unread
+        let nothing = sources == 0
+            ? "nothing here declares an address this reads: no workflows, no dependabot, "
+              + "no labeler, no README"
+            : judged == 0 && unread.isEmpty
+            ? "the declared files state no address this reads, so there is nothing to judge"
+            : ""
+        let verdict = !all.isEmpty ? "refused" : (nothing.isEmpty ? "holds" : "observed")
+        let next = !found.isEmpty
+            ? "open the address above: the route names what the tree does not carry, so "
+              + "its traffic arrives nowhere"
+            : !unread.isEmpty
+            ? "that file is written outside the subset this reads exactly. If it is "
+              + "ordinary block yaml, that is worth telling us: docs/SECURITY.md says how"
+            : nothing.isEmpty
+            ? (ProcessInfo.processInfo.environment["GITHUB_ACTIONS"] == "true"
+               ? "this run is that wire: a route cannot go quiet again without saying so"
+               : "wire it into CI: a route cannot go quiet again without saying so")
+            : nothing
+        if asJson {
+            var pairs: [(String, StatusJSON)] = [
+                ("command", .text("import addresses")),
+                ("sources", .raw(String(sources))),
+                ("addresses", .raw(String(judged))),
+                ("files", .raw(String(files.count))),
+                ("verdict", .text(verdict)),
+                ("refusals", .list(all.map {
+                    .object([("address", .text($0.address)), ("claim", .text($0.claim))]) })),
+                ("next", .text(next)),
+            ]
+            if let ready = commandIn(next) { pairs.append(("command_to_run", .text(ready))) }
+            out(statusDumps(.object(pairs), 0) + "\n")
+        } else {
+            var lines = ["import addresses: "
+                         + (all.isEmpty ? verdict : "refused \(all.count)")
+                         + " · " + many(judged, "route")
+                         + " in " + many(sources, "source")]
+            for r in all { lines.append("  \(r.address) · \(r.claim)") }
+            lines.append("  next: " + next)
+            out(lines.joined(separator: "\n") + "\n")
+        }
+        exit(all.isEmpty && nothing.isEmpty ? 0 : 1)
+    }
+
     // ── import people.csv grants.csv [-o gate.swift]
     let tables = rest.filter { !$0.hasPrefix("-") }
     if tables.count < 2 {
         let note = "import people.csv grants.csv [-o gate.swift]  ·  "
                  + "import codeowners CODEOWNERS --tree . [--policy owners.csv]  ·  "
                  + "import rbac rbac.json  ·  import refs FILE  ·  "
-                 + "import workflows [--tree DIR]"
+                 + "import workflows [--tree DIR]  ·  import addresses [--tree DIR]"
         let next = "gate import codeowners CODEOWNERS --tree . reads ownership you "
                  + "already keep, and writes one small file you commit"
         if asJson {

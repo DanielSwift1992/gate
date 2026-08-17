@@ -1193,7 +1193,7 @@ def main():
               "next: wire it into CI" in _hand.stdout
               and "this run is that wire" in _ci_run.stdout
               and _vein_wire.count("wire it into CI")
-                  == _vein_wire.count("this run is that wire") == 3))
+                  == _vein_wire.count("this run is that wire") == 4))
 
     # ── AND EVERY IMPORT MOUTH STAMPS ITS NAME BEFORE ITS FIRST DOOR. The
     # codeowners road carries a full trail, and the other mouths opened doors
@@ -1212,7 +1212,8 @@ def main():
     S.append(("every import mouth stamps its name before its first door",
               _tr_said[:1] == ["workflows-begin"]
               and all(_vein_now.count('mark("' + m + '-begin")') == 1
-                      for m in ("codeowners", "refs", "rbac", "workflows", "tables"))))
+                      for m in ("codeowners", "refs", "rbac", "workflows", "tables",
+                                "addresses"))))
 
     # ── AND THE COVER'S PLATFORM SENTENCE IS READ OFF THE BYTES. The cover
     # says bin/gate-judge here is Mach-O arm64, and nothing held it: a judge
@@ -1263,6 +1264,48 @@ def main():
               "ownership.swift already keeps this file" in _oa_home.stdout
               and "Add `-o ownership.swift`" not in _oa_home.stdout
               and "Add `-o ownership.swift`" in _oa_orph.stdout))
+
+    # ── AND THE ADDRESSES DOOR JUDGES EVERY DECLARED ROUTE AT ONCE. Five
+    # classes, one mouth: a local action that is not there, a working
+    # directory the tree does not carry, a dependabot directory silently off,
+    # a labeler glob matching nothing, a badge pointing at no workflow. The
+    # dead fixture refuses all five at their addresses; this repository holds.
+    _adm = os.path.join(tmp, "addresses-dead")
+    os.makedirs(os.path.join(_adm, ".github", "workflows"), exist_ok=True)
+    os.makedirs(os.path.join(_adm, "real", "action"), exist_ok=True)
+    os.makedirs(os.path.join(_adm, "src"), exist_ok=True)
+    open(os.path.join(_adm, "real", "action", "action.yml"), "w").write(
+        "name: a\nruns:\n  using: composite\n  steps: []\n")
+    open(os.path.join(_adm, ".github", "workflows", "ci.yml"), "w").write(
+        "on: push\njobs:\n  a:\n    steps:\n      - uses: ./real/action\n"
+        "      - uses: ./gone/action\n      - run: x\n        working-directory: src\n"
+        "      - run: y\n        working-directory: vanished/dir\n")
+    open(os.path.join(_adm, ".github", "dependabot.yml"), "w").write(
+        "version: 2\nupdates:\n  - package-ecosystem: npm\n    directory: \"/src\"\n"
+        "  - package-ecosystem: pip\n    directory: \"/gone-dir\"\n")
+    open(os.path.join(_adm, ".github", "labeler.yml"), "w").write(
+        "docs:\n  - src/**\nghost:\n  - vanished/**\n")
+    open(os.path.join(_adm, "README.md"), "w").write(
+        "![a](https://x/actions/workflows/ci.yml/badge.svg)\n"
+        "![b](https://x/actions/workflows/gone.yml/badge.svg)\n")
+    open(os.path.join(_adm, "src", "a.txt"), "w").write("x")
+    _adm_said = subprocess.run([GATE, "import", "addresses", "--tree", "."],
+                               cwd=_adm, capture_output=True, text=True, timeout=180,
+                               env={**os.environ, "GATE_CLI": CLI_HERE})
+    S.append(("the addresses door refuses all five classes at their addresses",
+              _adm_said.returncode == 1
+              and "refused 5" in _adm_said.stdout
+              and "ci.yml:6" in _adm_said.stdout
+              and "`uses: ./gone/action`" in _adm_said.stdout
+              and "dependabot.yml:6" in _adm_said.stdout
+              and "labeler.yml:4" in _adm_said.stdout
+              and "README.md:2" in _adm_said.stdout))
+    _adh_said = subprocess.run([GATE, "import", "addresses", "--tree", "."],
+                               cwd=HERE, capture_output=True, text=True, timeout=180,
+                               env={**os.environ, "GATE_CLI": CLI_HERE})
+    S.append(("and this repository's own routes hold",
+              _adh_said.returncode == 0
+              and "import addresses: holds" in _adh_said.stdout))
 
     # ── AND A LICENSE PASTED INTO A CODEOWNERS IS SAID, NOT SKIMMED. The
     # parser keeps the lines an owner stands on and dropped the rest in
@@ -9916,6 +9959,70 @@ print(bad.isEmpty ? "CORE OK" : "APART: " + bad.joined(separator: ","))
                                   timeout=180) if _rb_build.returncode == 0 else None
         if _rb_said is not None and "CORE OK" not in _rb_said.stdout:
             print("   the rbac core answers otherwise:", _rb_said.stdout.strip()[:200])
+        # ── AND THE ADDRESSES CORE IS JUDGED THE SAME WAY. Every route a
+        # repository declares in its standard files: local actions, working
+        # directories, dependabot directories, labeler globs, README badges.
+        # The yaml reader is the workflows core's own, so the two compile
+        # together; the vectors are the door's own calibration fixture, both
+        # stances of every class.
+        _ad_cut = _cc_src.split("// ── ADDRESSES CORE BEGIN.", 1)[1].split("\n", 1)[1] \
+            .split("// ── ADDRESSES CORE END.", 1)[0] if "// ── ADDRESSES CORE BEGIN." in _cc_src else ""
+        _ad_impure = [t for t in ("theirsText", "readText", "FileManager",
+                                  "ProcessInfo", "STDLIB_TEXTS", "courtSays",
+                                  "rawOpen", "selfSaid", "mark(", "cannot(",
+                                  "oursWrite", "treeFiles(")
+                      if t in _ad_cut]
+        if _ad_impure:
+            print("   the addresses core names a reader of the world:", _ad_impure)
+        _ad_dir = os.path.join(tmp, "addresses-core")
+        os.makedirs(_ad_dir, exist_ok=True)
+        open(os.path.join(_ad_dir, "main.swift"), "w", encoding="utf-8").write(
+            "import Foundation\n" + _wc_cut + "\n" + _ad_cut + '''
+var bad: [String] = []
+func check(_ name: String, _ ok: Bool) { if !ok { bad.append(name) } }
+let files = ["real/action/action.yml", "src/a.txt", ".github/workflows/ci.yml", "README.md"]
+let wf = wfAddressFindings("ci.yml",
+    "on: push\\njobs:\\n  a:\\n    steps:\\n      - uses: ./real/action\\n" +
+    "      - uses: ./gone/action\\n      - run: x\\n        working-directory: src\\n" +
+    "      - run: y\\n        working-directory: vanished/dir\\n", files)
+check("wf-judged", wf.judged == 4 && wf.unread.isEmpty)
+check("wf-uses", wf.found.contains { $0.cls == "workflow-uses" && $0.address == "ci.yml:6" })
+check("wf-live-uses", !wf.found.contains { $0.address == "ci.yml:5" })
+check("wf-workdir", wf.found.contains { $0.cls == "workflow-workdir" && $0.address == "ci.yml:10" })
+let dep = dependabotFindings("d.yml",
+    "version: 2\\nupdates:\\n  - package-ecosystem: npm\\n    directory: \\"/src\\"\\n" +
+    "  - package-ecosystem: pip\\n    directory: \\"/gone\\"\\n", files)
+check("dep", dep.judged == 2 && dep.found.count == 1
+      && dep.found[0].address == "d.yml:6")
+let lab = labelerFindings("l.yml", "docs:\\n  - src/**\\nghost:\\n  - vanished/**\\n", files)
+check("labeler", lab.judged == 2 && lab.found.count == 1
+      && lab.found[0].claim.contains("vanished/**"))
+let bad2 = badgeFindings("README.md",
+    "![a](https://x/actions/workflows/ci.yml/badge.svg)\\n" +
+    "![b](https://x/actions/workflows/gone.yml/badge.svg)\\n", files)
+check("badge", bad2.judged == 2 && bad2.found.count == 1
+      && bad2.found[0].claim.contains("gone.yml"))
+print(bad.isEmpty ? "CORE OK" : "APART: " + bad.joined(separator: ","))
+''')
+        _ad_bin = os.path.join(_ad_dir, "core")
+        _ad_build = subprocess.run(["swiftc", os.path.join(_ad_dir, "main.swift"),
+                                    "-o", _ad_bin],
+                                   capture_output=True, text=True, timeout=900)
+        if _ad_build.returncode != 0:
+            print("   the addresses core cut out of the vein did not build:", "\n   ".join(
+                [l for l in _ad_build.stderr.split("\n") if "error:" in l][:3]))
+        _ad_said = subprocess.run([_ad_bin], capture_output=True, text=True,
+                                  timeout=180) if _ad_build.returncode == 0 else None
+        if _ad_said is not None and "CORE OK" not in _ad_said.stdout:
+            print("   the addresses core answers otherwise:", _ad_said.stdout.strip()[:200])
+        S.append(("the addresses core is total, reads no world, and answers alone",
+                  _ad_cut.count("func wfAddressFindings") == 1
+                  and _ad_cut.count("func dependabotFindings") == 1
+                  and _ad_cut.count("func labelerFindings") == 1
+                  and _ad_cut.count("func badgeFindings") == 1
+                  and _ad_impure == [] and _ad_build.returncode == 0
+                  and _ad_said is not None and "CORE OK" in _ad_said.stdout))
+
         S.append(("the said and rbac cores are total, read no world, and answer alone",
                   _sd_cut.count("indirect enum Said") == 1
                   and _sd_cut.count("func readSaid") == 1
