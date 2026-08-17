@@ -2830,7 +2830,9 @@ func codeownersShadows(_ rules: [(line: Int, pattern: String, owners: [String])]
     if n < 2 { return ([], 0) }
     var wins = [Int](repeating: 0, count: n)
     var seen = [Bool](repeating: false, count: n)
-    var overrideBy = [Int?](repeating: nil, count: n)
+    var beatenBy = [[Int: Int]](repeating: [:], count: n)   // beater -> files taken
+    var matched = [Int](repeating: 0, count: n)
+    var ownerLoss = [Bool](repeating: false, count: n)
     for f in files {
         var winner: Int? = nil
         for idx in stride(from: n - 1, through: 0, by: -1) where ghMatch(rules[idx].pattern, f) {
@@ -2839,19 +2841,29 @@ func codeownersShadows(_ rules: [(line: Int, pattern: String, owners: [String])]
         guard let w = winner else { continue }
         wins[w] += 1
         seen[w] = true
+        matched[w] += 1
         for idx in stride(from: w - 1, through: 0, by: -1) where ghMatch(rules[idx].pattern, f) {
             seen[idx] = true
+            matched[idx] += 1
+            beatenBy[idx][w, default: 0] += 1
             if !Set(rules[idx].owners).isSubset(of: Set(rules[w].owners)) {
-                overrideBy[idx] = overrideBy[idx] ?? rules[w].line
+                ownerLoss[idx] = true
             }
         }
     }
+    // ── AND A BROAD DEFAULT UNDER LATER SPECIFICS IS LAYERING, NOT A BUG.
+    // An early catch-all beaten file-by-file by many narrow later rules is a
+    // deliberate shape: it still catches tomorrow's files. The refusable
+    // shape is the opposite one: an early SPECIFIC rule whose every file one
+    // later, broader rule takes. So an override needs a single beater that
+    // takes the early rule's whole match, and an owner who loses by it.
     var overrides: [(line: Int, pattern: String, beatenBy: Int)] = []
     var duplicates = 0
     for i in 0..<n where seen[i] && wins[i] == 0 {
-        if let by = overrideBy[i] {
-            overrides.append((rules[i].line, rules[i].pattern, by))
-        } else { duplicates += 1 }
+        let whole = beatenBy[i].first { $0.value == matched[i] }
+        if let w = whole, ownerLoss[i] {
+            overrides.append((rules[i].line, rules[i].pattern, rules[w.key].line))
+        } else if whole != nil && !ownerLoss[i] { duplicates += 1 }
     }
     return (overrides, duplicates)
 }
