@@ -4240,6 +4240,17 @@ func wfAddressFindings(_ name: String, _ text: String, _ files: [String])
     }
     var found: [(cls: String, address: String, claim: String)] = []
     var judged = 0
+    // ── AND A ROUTE THE JOB ITSELF BUILDS IS NOT A DEAD ONE. A checkout
+    // with `path: X` puts a working copy at X, and `./X/...` exists at run
+    // time while the tree at HEAD knows nothing of it: spring-boot and
+    // langchain both wear that shape. The error must cost a missed finding
+    // rather than a wrong accusation, so a first segment mentioned anywhere
+    // else in the file (a path:, an mkdir, an mv) silences the claim.
+    func builtInFile(_ p: String) -> Bool {
+        guard let seg = p.components(separatedBy: "/").first, !seg.isEmpty
+        else { return true }
+        return text.components(separatedBy: seg).count - 1 > 1
+    }
     for (key, line, raw) in yamlPairs(doc.root) {
         let value = yamlUnquote(raw)
         if key == "uses" && value.hasPrefix("./") {
@@ -4247,7 +4258,7 @@ func wfAddressFindings(_ name: String, _ text: String, _ files: [String])
             var p = String(value.dropFirst(2))
             while p.hasSuffix("/") { p.removeLast() }
             let ok = files.contains(p) || hasDir(p, files)
-            if !ok {
+            if !ok && !builtInFile(p) {
                 found.append(("workflow-uses", "\(name):\(line)",
                               "`uses: ./\(p)` and no such action is in the tree: "
                             + "the step silently has nothing to run"))
@@ -4259,7 +4270,7 @@ func wfAddressFindings(_ name: String, _ text: String, _ files: [String])
             judged += 1
             var p = v
             if p.hasPrefix("./") { p = String(p.dropFirst(2)) }
-            if !hasDir(p, files) && !files.contains(p) {
+            if !hasDir(p, files) && !files.contains(p) && !builtInFile(p) {
                 found.append(("workflow-workdir", "\(name):\(line)",
                               "`working-directory: \(v)` is not in the tree: "
                             + "the step starts where nothing is"))

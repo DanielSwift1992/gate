@@ -9989,6 +9989,10 @@ check("wf-judged", wf.judged == 4 && wf.unread.isEmpty)
 check("wf-uses", wf.found.contains { $0.cls == "workflow-uses" && $0.address == "ci.yml:6" })
 check("wf-live-uses", !wf.found.contains { $0.address == "ci.yml:5" })
 check("wf-workdir", wf.found.contains { $0.cls == "workflow-workdir" && $0.address == "ci.yml:10" })
+let wf2 = wfAddressFindings("co.yml",
+    "on: push\\njobs:\\n  a:\\n    steps:\\n      - uses: actions/checkout@v4\\n" +
+    "        with:\\n          path: cloned\\n      - uses: ./cloned/x\\n", files)
+check("wf-built-route-silenced", wf2.found.isEmpty && wf2.judged == 1)
 let dep = dependabotFindings("d.yml",
     "version: 2\\nupdates:\\n  - package-ecosystem: npm\\n    directory: \\"/src\\"\\n" +
     "  - package-ecosystem: pip\\n    directory: \\"/gone\\"\\n", files)
