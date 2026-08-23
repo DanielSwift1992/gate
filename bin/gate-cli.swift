@@ -4100,6 +4100,20 @@ func yamlList(_ node: YamlNode, _ address: [String]) -> [(line: Int, text: Strin
 // and `**` does, so a pattern this calls dead is dead by the narrower reading
 // too, and the error is pushed to the side that costs a missed finding rather
 // than a wrong accusation.
+// the union all three death questions share. Clause five is the zero-width
+// `**`: both platforms read `**/x` as x at any depth INCLUDING none (root),
+// and a union without it buries live roots (caught on tauri `**/Cargo.lock`,
+// 2026-08-23). The error side of a death claim is: match generously.
+func routeAlive(_ pat: String, _ p: String) -> Bool {
+    if globMatch(pat, p) || globMatch(pat + "/*", p) || p.hasPrefix(pat + "/")
+        || globMatch(pat, (p as NSString).lastPathComponent) { return true }
+    if pat.contains("**/") {
+        let collapsed = pat.replacingOccurrences(of: "**/", with: "")
+        if !collapsed.isEmpty && globMatch(collapsed, p) { return true }
+    }
+    return false
+}
+
 func workflowsDeadFilters(_ filters: [(file: String, line: Int, key: String, pattern: String)],
                           _ paths: [String]) -> [(address: String, claim: String)] {
     var dead: [(String, String)] = []
@@ -4107,10 +4121,9 @@ func workflowsDeadFilters(_ filters: [(file: String, line: Int, key: String, pat
         var pat = f.pattern
         if pat.hasPrefix("!") { pat.removeFirst() }
         while pat.hasPrefix("/") { pat.removeFirst() }
-        let hit = paths.contains { p in
-            globMatch(pat, p) || globMatch(pat + "/*", p) || p.hasPrefix(pat + "/")
-                || globMatch(pat, (p as NSString).lastPathComponent)
-        }
+        while pat.hasSuffix("/") { pat.removeLast() }
+        if pat.isEmpty { continue }
+        let hit = paths.contains { p in routeAlive(pat, p) }
         if !hit {
             dead.append(("\(f.file):\(f.line)",
                          "`\(f.key)` names `\(f.pattern)`, and no file in the tree "
@@ -4306,11 +4319,9 @@ func routeMatches(_ pattern: String, _ files: [String]) -> Bool {
     while pat.hasPrefix("/") { pat.removeFirst() }
     while pat.hasSuffix("/") { pat.removeLast() }
     if pat.isEmpty { return true }
-    return files.contains { p in
-        globMatch(pat, p) || globMatch(pat + "/*", p) || p.hasPrefix(pat + "/")
-            || globMatch(pat, (p as NSString).lastPathComponent)
-    }
+    return files.contains { p in routeAlive(pat, p) }
 }
+
 
 func hasDir(_ path: String, _ files: [String]) -> Bool {
     var p = path
@@ -4496,11 +4507,7 @@ func ghostPatterns(_ rules: [(line: Int, pattern: String, owners: [String])],
         var pat = r.pattern
         while pat.hasPrefix("/") { pat.removeFirst() }
         while pat.hasSuffix("/") { pat.removeLast() }
-        let hit = paths.contains { p in
-            globMatch(pat, p) || globMatch(pat + "/*", p)
-                || p.hasPrefix(pat + "/")
-                || globMatch(pat, (p as NSString).lastPathComponent)
-        }
+        let hit = paths.contains { p in routeAlive(pat, p) }
         if !hit {
             out.append(("\(saidName):\(r.line)",
                         "CODEOWNERS names `\(r.pattern)`, and no file in "
