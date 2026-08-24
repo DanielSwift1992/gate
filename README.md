@@ -60,6 +60,16 @@ No server. No runtime. No new formats. Nothing leaves your repository.
 
 ## try it on your own repository
 
+The zero-install way, from inside any clone you already have: one command
+downloads the pinned release binary, checks its sha256, judges your
+CODEOWNERS and your workflow filters, and prints every refusal at its line:
+
+```sh
+curl -sL https://raw.githubusercontent.com/DanielSwift1992/gate/main/bin/gate-audit.sh | bash -s v0.2.3 .
+```
+
+Or take the tool itself:
+
 ```sh
 git clone https://github.com/DanielSwift1992/gate && cd gate    # no install step
 ./gate import codeowners CODEOWNERS --tree . --policy owners.csv -o ownership.swift   # your own ownership, judged
