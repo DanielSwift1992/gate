@@ -4119,7 +4119,10 @@ func workflowsDeadFilters(_ filters: [(file: String, line: Int, key: String, pat
     var dead: [(String, String)] = []
     for f in filters {
         var pat = f.pattern
-        if pat.hasPrefix("!") { pat.removeFirst() }
+        // a negation names what NOT to wake on: a dead one excludes nothing,
+        // which is harmless, and "waits for a change" would be the wrong
+        // consequence. Its side is different, so no death claim is made.
+        if pat.hasPrefix("!") { continue }
         while pat.hasPrefix("/") { pat.removeFirst() }
         while pat.hasSuffix("/") { pat.removeLast() }
         if pat.isEmpty { continue }
