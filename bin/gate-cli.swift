@@ -4114,6 +4114,48 @@ func routeAlive(_ pat: String, _ p: String) -> Bool {
     return false
 }
 
+// the Actions filter law is its own dialect (docs, verbatim): `?` matches
+// zero or one OF THE PRECEDING character, `+` one or more of it, `*` stays
+// inside a segment, `**` crosses. fnmatch reading of `?` buried a LIVE
+// filter (flask **/*.yaml?, 13 runs on record, 2026-08-25): the run count
+// of the executor is the natural control of every "does not run" claim.
+func actionsFilterMatch(_ pattern: String, _ name: String) -> Bool {
+    var expr = "^"
+    let chars = Array(pattern)
+    var i = 0
+    while i < chars.count {
+        let c = chars[i]
+        switch c {
+        case "*":
+            if i + 1 < chars.count && chars[i + 1] == "*" { expr += ".*"; i += 1 }
+            else { expr += "[^/]*" }
+        case "?": expr += "?"
+        case "+": expr += "+"
+        case "[":
+            var j = i + 1
+            while j < chars.count, chars[j] != "]" { j += 1 }
+            if j >= chars.count { expr += "\\[" }
+            else { expr += "[" + String(chars[(i + 1)...(j - 1)]) + "]"; i = j }
+        default:
+            expr += NSRegularExpression.escapedPattern(for: String(c))
+        }
+        i += 1
+    }
+    expr += "$"
+    guard let re = compiled(expr, [.dotMatchesLineSeparators]) else { return true }
+    let ns = name as NSString
+    return re.firstMatch(in: name, range: NSRange(location: 0, length: ns.length)) != nil
+}
+
+func actionsFilterAlive(_ pat: String, _ p: String) -> Bool {
+    if actionsFilterMatch(pat, p) || p.hasPrefix(pat + "/") { return true }
+    if pat.contains("**/") {
+        let collapsed = pat.replacingOccurrences(of: "**/", with: "")
+        if !collapsed.isEmpty && actionsFilterMatch(collapsed, p) { return true }
+    }
+    return false
+}
+
 func workflowsDeadFilters(_ filters: [(file: String, line: Int, key: String, pattern: String)],
                           _ paths: [String]) -> [(address: String, claim: String)] {
     var dead: [(String, String)] = []
@@ -4126,7 +4168,7 @@ func workflowsDeadFilters(_ filters: [(file: String, line: Int, key: String, pat
         while pat.hasPrefix("/") { pat.removeFirst() }
         while pat.hasSuffix("/") { pat.removeLast() }
         if pat.isEmpty { continue }
-        let hit = paths.contains { p in routeAlive(pat, p) }
+        let hit = paths.contains { p in actionsFilterAlive(pat, p) }
         if !hit {
             dead.append(("\(f.file):\(f.line)",
                          "`\(f.key)` names `\(f.pattern)`, and no file in the tree "
