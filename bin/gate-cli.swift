@@ -8496,8 +8496,16 @@ func carrierWorld(_ decl: Said) -> (world: String, declares: Int, who: String) {
         let mineName = c.at("mine")?.asText
         lines.append("// " + route + " · " + field
                      + (mineName.map { " (it calls it " + $0 + ")" } ?? ""))
+        let asSaid = c.at("as")?.asText ?? ""
+        let shapes = ["Text", "Count", "Flag", "Many", "Nested"]
+        guard let shape = shapes.first(where: { $0.lowercased() == asSaid.lowercased() }) else {
+            err("declare carrier: carries[\(i)] · \(route) · \(field) · `as: \(asSaid)` "
+                + "is not a shape this reads. The shapes are "
+                + shapes.joined(separator: ", ") + "\n")
+            exit(1)
+        }
         lines.append("public typealias Carry_\(i) = Carries<" + who + ", " + rec + ", "
-                     + (c.at("as")?.asText ?? "") + ">")
+                     + shape + ">")
     }
     return (lines.joined(separator: "\n") + "\n", carries.count, who)
 }
@@ -10194,8 +10202,11 @@ if args.first == "seam" {
     for m in matches("^✗ '(\\w+)[^']*' requires the types '[^']*' \\(aka '([^']+)'\\) and "
                      + "'[^']*' \\(aka '([^']+)'\\)", said, lines: true) {
         let it = claims[m[0]] ?? (route: "?", field: m[0], mine: "")
+        let contractSide = m[1].lowercased().hasSuffix(".of")
+            ? "the contract does not declare it"
+            : "the contract declares it \(m[1].lowercased())"
         refusals.append((address: "\(it.route) · \(it.field)",
-                         claim: "the contract declares it \(m[1].lowercased()); \(who) declares "
+                         claim: contractSide + "; \(who) declares "
                               + (it.mine.isEmpty ? "it " : "its own \(it.mine) as ")
                               + m[2].lowercased()))
     }

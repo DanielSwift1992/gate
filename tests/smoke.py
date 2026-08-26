@@ -1636,6 +1636,39 @@ def main():
               and "misread" not in json.dumps(_bare_json)
               and _bare_json.get("asks") is True))
 
+    # ── THE CARRIER REFUSES AN UNKNOWN SHAPE ALOUD, AND THE SEAM SAYS WHICH
+    # SIDE NEVER SPOKE. `as: string` used to be spelled into a type that
+    # exists nowhere, and the seam then refused with a riddle (text against
+    # text). Caught in the second-predicate lab, 2026-08-25: unread must be
+    # aloud, and a claim the contract never made must say so in plain words.
+    _lab = os.path.join(tmp, "seam-lab")
+    os.makedirs(_lab, exist_ok=True)
+    subprocess.run(["git", "init", "-q", _lab], capture_output=True)
+    _spec = {"name": {"type": "string"}}
+    _spec = {"schema": {"properties": _spec}}
+    _spec = {"paths": {"/users": {"post": {"requestBody": {"content": {"application/json": _spec}}}}}}
+    json.dump(_spec, open(os.path.join(_lab, "api.json"), "w"))
+    subprocess.run([GATE, "declare", "contract", "api.json", "-o", "c.swift"],
+                   cwd=_lab, capture_output=True)
+    json.dump({"carrier": "Lab", "against": {"contract": "api.json"},
+               "carries": [{"route": "/users", "field": "name", "as": "string"}]},
+              open(os.path.join(_lab, "bad.json"), "w"))
+    _badsaid = subprocess.run([GATE, "declare", "carrier", "bad.json", "-o", "b.swift"],
+                              cwd=_lab, capture_output=True, text=True)
+    json.dump({"carrier": "Lab", "against": {"contract": "api.json"},
+               "carries": [{"route": "/users", "field": "name", "as": "text"},
+                           {"route": "/users", "field": "extra", "as": "Flag"}]},
+              open(os.path.join(_lab, "ok.json"), "w"))
+    subprocess.run([GATE, "declare", "carrier", "ok.json", "-o", "s.swift"],
+                   cwd=_lab, capture_output=True)
+    _seamsaid = subprocess.run([GATE, "seam", "c.swift", "s.swift"],
+                               cwd=_lab, capture_output=True, text=True).stdout
+    S.append(("the carrier refuses an unknown shape aloud, and the seam names the silent side",
+              _badsaid.returncode != 0
+              and "is not a shape this reads" in _badsaid.stderr
+              and "refused 1" in _seamsaid
+              and "does not declare it" in _seamsaid))
+
     # ── AND THE ADDRESS COMES FIRST, THE WAY THE COVER SAYS IT DOES. A refusal
     # from the importer carried `source` alone, so the terminal fell back to the
     # certificate, which the claim already begins with: the line a person reads
