@@ -482,6 +482,41 @@ def main():
               and not re.search(r"\bis the source\b", _cover)
               and not re.search(r"\bis the source\b", letter_text)))
 
+    # ── AND THE COVER'S ROSTER IS THE RECORD'S, NAME FOR NAME. The porcelain
+    # list on the cover and the certificate count in the letter each restated
+    # by hand a fact stdlib/verbs.swift already owns. The cover's list ran
+    # four words short (bare, aside, ask, change) and the letter said Twelve
+    # over thirteen `Run` lines: two encodings of one roster, apart in
+    # silence, inside the tool that exists against exactly that. Held to the
+    # record now, in the reading direction only: the expected text is
+    # rendered FROM the record and compared, and the prose is never parsed
+    # back into facts.
+    _verbs_txt = open(os.path.join(HERE, "stdlib", "verbs.swift"), encoding="utf-8").read()
+    _names = set(re.findall(r'typeName: String \{ "([^"]+)" \}', _verbs_txt))
+    _m = re.search(r"git-shaped: `([^`]+)`", _cover, re.S)
+    _listed = set(w.strip() for part in (_m.group(1) if _m else "").replace("\n", " ").split("\u00b7")
+                  for w in part.split("/") if w.strip())
+    _listed = {("version" if w == "--version" else w) for w in _listed}
+    S.append(("the porcelain the cover lists is the roster the record declares, name for name",
+              _m is not None and _listed == _names - {"v"}))
+    _certs = len(re.findall(r"^public typealias \w+ = Run<\w+>$", _verbs_txt, re.M))
+    _words_for = {11: "Eleven", 12: "Twelve", 13: "Thirteen", 14: "Fourteen",
+                  15: "Fifteen", 16: "Sixteen", 17: "Seventeen", 18: "Eighteen"}
+    _sent = re.search(r"(\w+) commands carry a certificate", _letter_flat)
+    S.append(("the letter's count of certified commands is rendered from the record, not remembered",
+              _sent is not None and _certs in _words_for
+              and _sent.group(1) == _words_for[_certs]))
+    # ── AND ONE RELEASE NAME EVERYWHERE THE SURFACE SAYS IT. The cover pins a
+    # release twice and the action defaults to one: three hand copies of one
+    # fact. One degree of freedom here: every vX.Y.Z the cover says is the
+    # action's default, so a bump that misses a cover line refuses at this
+    # row instead of shipping a cover that installs last season's judge.
+    _act = re.search(r"default: '(v\d+\.\d+\.\d+)'",
+                     open(os.path.join(HERE, "action.yml"), encoding="utf-8").read())
+    _pins = set(re.findall(r"\bv\d+\.\d+\.\d+\b", _cover))
+    S.append(("the release the cover pins is the action's default, every mention",
+              _act is not None and _pins == {_act.group(1)}))
+
     # AND IT KEEPS ITS OWN WORD ABOUT HOW IT IS MET, AS A COLUMN. How a page is
     # first met is a fact of its manifest row now (Opens = Bare), not a comment
     # in its head: the head carries nothing mechanical, so the reader's first
@@ -491,8 +526,8 @@ def main():
               and not any("// opens:" in ln or "// role:" in ln for ln in
                           open(os.path.join(repo, "readme.swift")).read().split("\n")[:6])))
     # AND THE FIRST VERDICT IS OVER SOMETHING. A page taken without the forms it is
-    # written in carries certificates no court can read: eleven promises in the
-    # first file a newcomer is handed, judged over nought equalities, silently.
+    # written in carries certificates no court can read: a page of promises in
+    # the first file a newcomer is handed, judged over nought equalities, silently.
     c, r = run("status", cwd=repo)
     S.append(("the world entry leaves is judged, and the verdict says how wide",
               c == 0 and r.get("verdict") == "holds"

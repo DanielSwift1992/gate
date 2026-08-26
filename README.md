@@ -245,9 +245,9 @@ they are, with no project and no build. Git keeps doing what it already
 does best: history, authorship, review, rollback.
 
 The porcelain is deliberately git-shaped: `init · status/fsck · log ·
-check · diff · apply · import/export · verify · guard · library · survey ·
-drift · badge · mine · theirs · declare · seam · attention · serve ·
-report · stdlib · my · demo · findings · --version`. A refusal exits
+check/ask · diff/change · apply · import/export · verify · guard · library ·
+survey · drift · bare · badge · mine · theirs · declare · seam · attention ·
+aside · serve · report · stdlib · my · demo · findings · --version`. A refusal exits
 non-zero, so hooks and CI need no wrappers, and every command ends by
 naming the one step that comes next, so the whole ladder stays out of
 your head. `gate stdlib show forms-organization` prints any shelf page
@@ -354,7 +354,7 @@ web/codemirror.*  the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
 docs/           DETAILS.md, SECURITY.md, CHANGELOG.md, NOTICE.md, and
                 the cover's picture with its provenance
-tests/smoke.py   the battery: 567 checks this repository holds itself
+tests/smoke.py   the battery: 570 checks this repository holds itself
                  to, end-to-end runs through judge parity through
                  documentation contracts; the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts

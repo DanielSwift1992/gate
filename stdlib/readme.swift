@@ -187,7 +187,7 @@
 // assumed. It is stated twice, and confirmed.
 //
 // Every gate command, what it reads and what it writes: `verbs.swift`,
-// beside this file, judged with it. Twelve commands carry a certificate at
+// beside this file, judged with it. Thirteen commands carry a certificate at
 // its foot saying they change no files, which is why you can run them on a
 // clone you care about.
 //

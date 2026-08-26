@@ -70,11 +70,24 @@ jobs:
       # build that produced something unaskable is not a release, it is a file
       - name: it answers what it carries
         shell: bash
+        # held name for name to stdlib/verbs.swift, the record that owns the
+        # roster: a count identifies nothing, and a swapped verb keeps a count
         run: |
           BIN=bin/gate-cli
           [ "${{ runner.os }}" = "Windows" ] && BIN=bin/gate-cli.exe
-          CARRIED=$($BIN --carries | tr -d '\r' | wc -l | tr -d ' ')
-          [ "$CARRIED" = "30" ] || { echo "this binary carries $CARRIED veins, and the ledger says 30"; exit 1; }
+          sed -n 's/.*typeName: String { "\([^"]*\)".*/\1/p' stdlib/verbs.swift | grep -v -x -e v -e version | sort > roster.txt
+          [ -s roster.txt ] || { echo "the roster read from stdlib/verbs.swift is empty: the reader lost its subject"; exit 1; }
+          $BIN --carries | tr -d '\r' | sort > carried.txt
+          diff roster.txt carried.txt || { echo "the ledger this binary prints is not the roster stdlib/verbs.swift declares"; exit 1; }
+      - name: the tag being released is the default the action installs
+        shell: bash
+        # action.yml names the release its one-liner installs. A tag that leaves
+        # that default behind ships a cover installing last season's judge, so
+        # the release refuses here instead
+        run: |
+          DEFAULT=$(sed -n "s/.*default: '\(v[0-9.]*\)'.*/\1/p" action.yml)
+          [ -n "$DEFAULT" ] || { echo "action.yml declares no default version: the reader lost its subject"; exit 1; }
+          [ "${GITHUB_REF_NAME}" = "$DEFAULT" ] || { echo "this release is ${GITHUB_REF_NAME}, and action.yml still defaults to ${DEFAULT}"; exit 1; }
       - name: name what lies there
         shell: bash
         run: |

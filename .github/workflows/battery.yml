@@ -190,10 +190,16 @@ jobs:
         run: tail -40 vein-out.txt
       - name: the binary answers what it carries
         shell: bash
+        # the roster is read off stdlib/verbs.swift, the record that owns it, and
+        # the ledger the binary prints is held to it name for name: a count can
+        # stay 30 while a verb is swapped, and names cannot. An empty roster is
+        # refused first, so empty against empty never reads as agreement.
         run: |
-          CARRIED=$(bin/gate-cli.exe --carries | tr -d '\r' | wc -l | tr -d ' ')
-          echo "the vein carries $CARRIED veins" | tee -a vein-out.txt
-          [ "$CARRIED" = "30" ] || { echo "the ledger this binary prints is not the one the battery holds" | tee -a vein-out.txt; exit 1; }
+          sed -n 's/.*typeName: String { "\([^"]*\)".*/\1/p' stdlib/verbs.swift | grep -v -x -e v -e version | sort > roster.txt
+          [ -s roster.txt ] || { echo "the roster read from stdlib/verbs.swift is empty: the reader lost its subject" | tee -a vein-out.txt; exit 1; }
+          bin/gate-cli.exe --carries | tr -d '\r' | sort > carried.txt
+          diff roster.txt carried.txt | tee -a vein-out.txt
+          diff -q roster.txt carried.txt >/dev/null || { echo "the ledger this binary prints is not the roster stdlib/verbs.swift declares" | tee -a vein-out.txt; exit 1; }
       # ── AND THE ROAD WALKS HERE. It could not before: it stopped at the first
       # verb that takes a path, because `gate demo C:\...\demo` made nothing at
       # all. Every path in the vein was spelled the one way, a drive letter is
