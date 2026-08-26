@@ -482,30 +482,43 @@ def main():
               and not re.search(r"\bis the source\b", _cover)
               and not re.search(r"\bis the source\b", letter_text)))
 
-    # ── AND THE COVER'S ROSTER IS THE RECORD'S, NAME FOR NAME. The porcelain
-    # list on the cover and the certificate count in the letter each restated
-    # by hand a fact stdlib/verbs.swift already owns. The cover's list ran
-    # four words short (bare, aside, ask, change) and the letter said Twelve
-    # over thirteen `Run` lines: two encodings of one roster, apart in
-    # silence, inside the tool that exists against exactly that. Held to the
-    # record now, in the reading direction only: the expected text is
-    # rendered FROM the record and compared, and the prose is never parsed
-    # back into facts.
-    _verbs_txt = open(os.path.join(HERE, "stdlib", "verbs.swift"), encoding="utf-8").read()
-    _names = set(re.findall(r'typeName: String \{ "([^"]+)" \}', _verbs_txt))
-    _m = re.search(r"git-shaped: `([^`]+)`", _cover, re.S)
-    _listed = set(w.strip() for part in (_m.group(1) if _m else "").replace("\n", " ").split("\u00b7")
-                  for w in part.split("/") if w.strip())
-    _listed = {("version" if w == "--version" else w) for w in _listed}
-    S.append(("the porcelain the cover lists is the roster the record declares, name for name",
-              _m is not None and _listed == _names - {"v"}))
-    _certs = len(re.findall(r"^public typealias \w+ = Run<\w+>$", _verbs_txt, re.M))
-    _words_for = {11: "Eleven", 12: "Twelve", 13: "Thirteen", 14: "Fourteen",
-                  15: "Fifteen", 16: "Sixteen", 17: "Seventeen", 18: "Eighteen"}
-    _sent = re.search(r"(\w+) commands carry a certificate", _letter_flat)
-    S.append(("the letter's count of certified commands is rendered from the record, not remembered",
-              _sent is not None and _certs in _words_for
-              and _sent.group(1) == _words_for[_certs]))
+    # ── AND THE COVER'S ROSTER SENTENCES HAVE ONE WRITER. bin/render-cover.py
+    # reads the record through the product's own projection (`gate bare`) and
+    # writes the porcelain list and the letter's certificate count; nothing
+    # parses the prose back into facts. Held here by regeneration: the page
+    # is byte-identical to what the record renders, a strayed page is refused
+    # at its path, and the working copy is left as it was found.
+    _rc = lambda *a: subprocess.run(
+        [sys.executable, os.path.join(HERE, "bin", "render-cover.py"),
+         "--tool", GATE] + list(a),
+        cwd=HERE, capture_output=True, text=True).returncode
+    S.append(("the cover's roster facts regenerate byte-identical from the record",
+              _rc("--check") == 0))
+    _kept_cover = open(os.path.join(HERE, "README.md"), encoding="utf-8").read()
+    try:
+        open(os.path.join(HERE, "README.md"), "w", encoding="utf-8").write(
+            _kept_cover.replace("status/fsck", "status/fsk", 1))
+        _strayed = _rc("--check")
+    finally:
+        open(os.path.join(HERE, "README.md"), "w", encoding="utf-8").write(_kept_cover)
+    S.append(("a cover that strays from the record refuses, and the page is restored",
+              _strayed == 1 and _rc("--check") == 0))
+
+    # ── AND THE MIDDLE IS BLIND TO THE WORLD. Between the records read and
+    # the verdict printed the judge consults nothing else: not the clock,
+    # not the locale, not a column width, not a stray variable. Two runs
+    # under different undeclared surroundings print one set of bytes, with
+    # the declared inputs pinned. This is what makes a verdict a fact about
+    # records rather than a fact about a machine's afternoon.
+    _pin = {**os.environ, "GATE_ME": os.path.join(tmp, "me-blind")}
+    _one = subprocess.run([GATE, "status"], cwd=HERE, capture_output=True, text=True,
+                          env={**_pin, "TZ": "UTC", "LC_ALL": "C", "COLUMNS": "80"})
+    _two = subprocess.run([GATE, "status"], cwd=HERE, capture_output=True, text=True,
+                          env={**_pin, "TZ": "Pacific/Chatham", "LC_ALL": "en_US.UTF-8",
+                               "COLUMNS": "213", "GATE_BLIND_PROBE": "noise"})
+    S.append(("the middle is blind to the world: one verdict under two surroundings",
+              _one.returncode == 0 and _two.returncode == 0
+              and _one.stdout == _two.stdout))
     # ── AND ONE RELEASE NAME EVERYWHERE THE SURFACE SAYS IT. The cover pins a
     # release twice and the action defaults to one: three hand copies of one
     # fact. One degree of freedom here: every vX.Y.Z the cover says is the
