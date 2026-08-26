@@ -2424,6 +2424,25 @@ func gateShapeGuards(_ w: WorldState) -> [(address: String, claim: String)] {
     return bad
 }
 
+// ── THE ONE READING LAW OF A ROSTER PAGE. The page is read here, once,
+// into rows, and every consumer takes the rows. A second reader of the
+// same record is two laws over one text: the failure this repository
+// documented in the field (one filename, two executors), met at home.
+struct RosterRow { let name: String; let kind: String; let word: String; let line: Int }
+
+func formsRoster(_ text: String) -> [RosterRow] {
+    var rows: [RosterRow] = []
+    for (i0, line) in text.components(separatedBy: "\n").enumerated() {
+        guard let m = matchAt(line.trimmingCharacters(in: .whitespaces),
+                              "public enum (\\w+): (Verb|Spelling) \\{") else { continue }
+        if let spelt = matches("extension " + m[1] + " \\{ public static var typeName: "
+                               + "String \\{ \"([^\"]+)\" \\} \\}", text).first {
+            rows.append(RosterRow(name: m[1], kind: m[2], word: spelt[0], line: i0 + 1))
+        }
+    }
+    return rows
+}
+
 func ownSurfaceGuards(_ w: WorldState) -> [(address: String, claim: String)] {
     // the table of verbs and the dispatch, held to each other by name: the
     // dispatch is still the python side's, so its file is the one read
@@ -2437,14 +2456,9 @@ func ownSurfaceGuards(_ w: WorldState) -> [(address: String, claim: String)] {
     let text = readText((d as NSString).appendingPathComponent(name)) ?? ""
     var said: [String: String] = [:]
     var at: [String: Int] = [:]
-    for (i0, line) in text.components(separatedBy: "\n").enumerated() {
-        guard let m = matchAt(line.trimmingCharacters(in: .whitespaces),
-                              "public enum (\\w+): (Verb|Spelling) \\{") else { continue }
-        if let spelt = matches("extension " + m[1] + " \\{ public static var typeName: "
-                               + "String \\{ \"([^\"]+)\" \\} \\}", text).first {
-            said[spelt[0]] = m[1]
-            at[spelt[0]] = i0 + 1
-        }
+    for row in formsRoster(text) {
+        said[row.word] = row.name
+        at[row.word] = row.line
     }
     // ── AND THE WORDS ARE THIS BINARY'S OWN. The dispatch used to live in the
     // other carrier's file, so this guard read that file; the dispatch is here
