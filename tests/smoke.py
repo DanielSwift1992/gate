@@ -519,6 +519,25 @@ def main():
     S.append(("the middle is blind to the world: one verdict under two surroundings",
               _one.returncode == 0 and _two.returncode == 0
               and _one.stdout == _two.stdout))
+
+    # ── AND THE JUDGE'S OWN LINKAGE OPENS NO SOCKET. DETAILS hands a reviewer
+    # `otool -L` as their own command; the battery walks the same line where a
+    # reader for the binary stands (otool on darwin, ldd elsewhere), so the
+    # sentence "links nothing that opens a socket" is held, not offered. A
+    # machine with no reader for this binary says so aloud instead of greening.
+    _reader = shutil.which("otool") or shutil.which("ldd")
+    _judge_bin = os.path.join(HERE, "bin", "gate-judge")
+    _linked = ""
+    if _reader and os.path.exists(_judge_bin):
+        _linked = subprocess.run(
+            [_reader] + (["-L"] if _reader.endswith("otool") else []) + [_judge_bin],
+            capture_output=True, text=True).stdout
+    if not _linked:
+        print("   no reader for the judge binary stands on this machine: "
+              "the linkage line is unread here, not green")
+    S.append(("the judge links nothing that opens a socket",
+              bool(_linked) and not re.search(
+                  r"libcurl|libssl|CFNetwork|Network\.framework|libnghttp", _linked)))
     # ── AND ONE RELEASE NAME EVERYWHERE THE SURFACE SAYS IT. The cover pins a
     # release twice and the action defaults to one: three hand copies of one
     # fact. One degree of freedom here: every vX.Y.Z the cover says is the
@@ -1439,7 +1458,7 @@ def main():
     # sells a judgement and bin/gate-audit.sh performs it. The words are held
     # here: the pinned tag is the vein's own VERSION, the cover's snippet pins
     # the same tag, the assets the audit names are the ones the release road
-    # ships, and the script itself runs on three vectors with the local binary
+    # ships, and the script itself runs its vectors with the local binary
     # standing in for the download. The download road is CI's `action` job.
     _ay = open(os.path.join(HERE, "action.yml"), encoding="utf-8").read()
     _ga = open(os.path.join(HERE, "bin", "gate-audit.sh"), encoding="utf-8").read()
@@ -1716,6 +1735,24 @@ def main():
               and "is not a shape this reads" in _badsaid.stderr
               and "refused 1" in _seamsaid
               and "does not declare it" in _seamsaid))
+
+    # ── AND A CONTRACT THAT ONLY SENDS BACK SAYS WHERE THE READER STOPS. The
+    # reader walks query parameters and request bodies; a document whose named
+    # schemas serve responses alone used to come back "0 declared" with no
+    # word about scope, and nought read as an empty contract. The note counts
+    # the unwalked schemas aloud now, from the lab of 2026-08-25.
+    _resp = {"paths": {"/users": {"get": {"responses": {"200": {"content": {
+                 "application/json": {"schema": {"$ref": "#/components/schemas/User"}}}}}}}},
+             "components": {"schemas": {"User": {"properties": {"name": {"type": "string"}}},
+                                        "Team": {"properties": {"id": {"type": "integer"}}}}}}
+    json.dump(_resp, open(os.path.join(_lab, "responses.json"), "w"))
+    _respsaid = subprocess.run([GATE, "declare", "contract", "responses.json", "--json"],
+                               cwd=_lab, capture_output=True, text=True).stdout
+    _respr = json.loads(_respsaid or "{}")
+    S.append(("a contract that only sends back counts its unwalked schemas aloud",
+              _respr.get("declares") == 0
+              and "2 schemas and this reader declared none" in _respr.get("note", "")
+              and "not an empty contract" in _respr.get("note", "")))
 
     # ── AND THE ADDRESS COMES FIRST, THE WAY THE COVER SAYS IT DOES. A refusal
     # from the importer carried `source` alone, so the terminal fell back to the

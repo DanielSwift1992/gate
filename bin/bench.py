@@ -8,7 +8,9 @@
 #
 # The worlds are built fresh in a temp directory on every run; the tool
 # under test is this clone's own ./gate with its own judge.
-import os, re, statistics, subprocess, sys, tempfile, time
+import datetime as _dt
+import os
+import platform, re, statistics, subprocess, sys, tempfile, time
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GATE = os.path.join(HERE, "gate")
@@ -57,7 +59,10 @@ def main():
            "`gate status` timed as a fresh process per run, judge included,",
            f"over {RUNS} runs per world, on the machine that ran "
            "`python3 bin/bench.py` last. The worlds are generated grants",
-           "worlds: every claim is one `Owns` lookup.",
+           "worlds: every claim is one `Owns` lookup. A measurement is a",
+           "dated fact: this one is from " + _dt.date.today().isoformat()
+           + ", " + platform.machine() + ", and it ages",
+           "until the command above reprints it.",
            "",
            "| world | claims | p50 | p95 |",
            "|---|---|---|---|"]

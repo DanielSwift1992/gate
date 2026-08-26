@@ -316,7 +316,7 @@ gate.cmd        the same shim on Windows, in that platform's own spelling
 action.yml      the door for a stranger's CI: one `uses:` step fetches the
                 released binary at a pinned tag, checks the sha256 published
                 beside it, and judges the tree it stands in (the step is
-                bin/gate-audit.sh, and the battery runs its three vectors)
+                bin/gate-audit.sh, and the battery runs its vectors)
 gate.manifest.swift
                 this repository's own declared layout: its worlds, their
                 roles, and the judge's row, judged like anybody's
@@ -354,7 +354,7 @@ web/codemirror.*  the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
 docs/           DETAILS.md, SECURITY.md, CHANGELOG.md, NOTICE.md, and
                 the cover's picture with its provenance
-tests/smoke.py   the battery: 571 checks this repository holds itself
+tests/smoke.py   the battery: 573 checks this repository holds itself
                  to, end-to-end runs through judge parity through
                  documentation contracts; the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts

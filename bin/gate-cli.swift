@@ -8592,6 +8592,7 @@ if args.first == "declare" {
     }
 
     var world = "", declares = 0, extra: [(String, String)] = []
+    var unreadShelf = 0
     if what == "contract" {
         let src = rest[1]
         guard let spec = readSaid(theirsText(src, "an OpenAPI document")) else {
@@ -8603,6 +8604,8 @@ if args.first == "declare" {
         }
         let said = contractWorld(spec)
         (world, declares) = (said.world, said.declares)
+        unreadShelf = (spec.at("definitions")?.asObject ?? []).count
+            + (spec.at("components")?.at("schemas")?.asObject ?? []).count
         if let o = outPath { writeWorld(world, o) }
         let pin = after("--at") ?? (src as NSString).lastPathComponent
         let mine = declaredIn(outPath, pin)
@@ -8630,12 +8633,19 @@ if args.first == "declare" {
                  ("declared_in", mine.map { jsonString($0) } ?? "null"),
                  ("against", againstJSON)]
     }
-    let noteSaid = what == "contract"
+    var noteSaid = what == "contract"
         ? "a view of that document: every field it states a type for, as a record whose shape "
           + "is an axis. Fields it leaves open state no shape and are not here. A contract that "
-          + "says `anyOf` has not said which"
+          + "says `anyOf` has not said which. This reader walks the query parameters and "
+          + "request bodies on the routes; a shape the contract only sends back declares "
+          + "nothing here"
         : "what this library says it carries. It is not judgeable alone: a carrier declaration "
           + "is about a contract, and the pair is judged by `gate seam`"
+    if what == "contract", declares == 0, unreadShelf > 0 {
+        noteSaid += ". The document names \(unreadShelf) schemas and this reader declared "
+            + "none of them: what a contract only sends back is outside this reading, so "
+            + "nought declared marks where the reader stops, not an empty contract"
+    }
     let declaredIn_ = extra.first(where: { $0.0 == "declared_in" })?.1 ?? "null"
     let nextSaid = what == "contract"
         ? "commit it: from here on it is what you have said, and it is judged"
