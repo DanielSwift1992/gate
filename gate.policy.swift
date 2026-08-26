@@ -17,10 +17,11 @@
 // rank, and a rank is a fact about an organisation this repository does not
 // have: one keeper, no ladder above them. Writing `Requires = Manager` to make
 // a verb light up would be a fact stated for the tool's convenience, which is
-// the failure this tool exists against. So the act of merging is gated where it
-// is actually gated — CODEOWNERS, on the forge, with the review it already
-// enforces — and what stands here is the fact that is true: this email is that
-// keeper. `gate guard merge` reads a world with people and ranks in it; this
+// the failure this tool exists against. So what CODEOWNERS states here is
+// ownership, a record the forge may read to route review. This repository
+// claims no forge-enforced code-owner approval today: one keeper needs no
+// ceremony against themselves, and a green seam is no reason to invent one.
+// What stands here is the fact that is true: this email is that keeper. `gate guard merge` reads a world with people and ranks in it; this
 // one has a keeper and a tree, and says so rather than pretending otherwise.
 public enum MailDaniil: Identity {
     public typealias Person = Owner_DanielSwift1992
