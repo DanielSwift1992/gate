@@ -47,3 +47,19 @@ public protocol Carried {}
 public enum Carries<Who: Carrier, What: Declared, As: Shape>: Close {}
 extension Carries: Carried
 where What.Of == As {}
+
+// An operation the contract declares is a record too, and calling is the
+// claim. The pin below is existence spelled as an equality: an operation
+// the contract declares stands in the contract, so a carrier's call to it
+// resolves, and a call to an operation the contract never declared has
+// nothing to stand on and is refused at its certificate. A call a carrier
+// never made states no claim, the same absence law the fields above keep.
+public protocol Standing {}
+public enum InTheContract: Standing {}
+public protocol Operation {
+    associatedtype Stands: Standing
+}
+public protocol Called {}
+public enum Calls<Who: Carrier, What: Operation>: Close {}
+extension Calls: Called
+where What.Stands == InTheContract {}

@@ -1750,9 +1750,52 @@ def main():
                                cwd=_lab, capture_output=True, text=True).stdout
     _respr = json.loads(_respsaid or "{}")
     S.append(("a contract that only sends back counts its unwalked schemas aloud",
-              _respr.get("declares") == 0
+              # one declared: the route's own operation; the fields are nought
+              _respr.get("declares") == 1
               and "2 schemas and this reader declared none" in _respr.get("note", "")
               and "not an empty contract" in _respr.get("note", "")))
+
+    # ── AND AN OPERATION IS A RECORD, JUDGED BY EXISTENCE. The contract
+    # prints each route's operation with a pin that stands in the contract;
+    # a carrier claims what it calls, and a call to an operation the
+    # contract never declared has nothing to stand on: refused at the
+    # address, in words. An operation nobody calls mirrors a field nobody
+    # claims: reported beside the verdict, never refused.
+    _opspec = {"post": {"requestBody": {"content": {"application/json": {
+                   "schema": {"properties": {"name": {"type": "string"}}}}}}},
+               "get": {"responses": {}}}
+    json.dump({"paths": {"/users": _opspec}}, open(os.path.join(_lab, "opapi.json"), "w"))
+    _opdecl = {"carrier": "Lab", "against": {"contract": "opapi.json"},
+               "carries": [{"route": "/users", "field": "name", "as": "text"}],
+               "calls": [{"route": "/users", "method": "post"}]}
+    json.dump(_opdecl, open(os.path.join(_lab, "opok.json"), "w"))
+    _opdecl["calls"] = [{"route": "/users", "method": "delete"}]
+    json.dump(_opdecl, open(os.path.join(_lab, "opbad.json"), "w"))
+    subprocess.run([GATE, "declare", "contract", "opapi.json", "-o", "opc.swift"],
+                   cwd=_lab, capture_output=True)
+    subprocess.run([GATE, "declare", "carrier", "opok.json", "-o", "opok.swift"],
+                   cwd=_lab, capture_output=True)
+    subprocess.run([GATE, "declare", "carrier", "opbad.json", "-o", "opbad.swift"],
+                   cwd=_lab, capture_output=True)
+    _opgood = subprocess.run([GATE, "seam", "opc.swift", "opok.swift"],
+                             cwd=_lab, capture_output=True, text=True)
+    S.append(("a declared call holds, and an operation called by nobody stands beside the verdict",
+              _opgood.returncode == 0
+              and "2 claims judged" in _opgood.stdout
+              and "1 operation the contract declares is called by nobody" in _opgood.stdout))
+    _opwrong = subprocess.run([GATE, "seam", "opc.swift", "opbad.swift"],
+                              cwd=_lab, capture_output=True, text=True)
+    _oplame = {"carrier": "Lab", "against": {"contract": "opapi.json"},
+               "carries": [], "calls": [{"route": "/users"}]}
+    json.dump(_oplame, open(os.path.join(_lab, "oplame.json"), "w"))
+    _lamesaid = subprocess.run([GATE, "declare", "carrier", "oplame.json", "-o", "l.swift"],
+                               cwd=_lab, capture_output=True, text=True)
+    S.append(("a call to an operation the contract does not declare is refused, in words",
+              _opwrong.returncode == 1
+              and "/users · delete" in _opwrong.stdout
+              and "the contract does not declare this operation; Lab calls it" in _opwrong.stdout
+              and _lamesaid.returncode != 0
+              and "a call names its route and its method" in _lamesaid.stderr))
 
     # ── AND THE ADDRESS COMES FIRST, THE WAY THE COVER SAYS IT DOES. A refusal
     # from the importer carried `source` alone, so the terminal fell back to the
@@ -2249,8 +2292,9 @@ def main():
               # the rule is right, and is not refused for carrying the mark
               _bom_co.get("verdict") == "holds" and _bom_co.get("paths") == 1
               and not [r for r in _bom_co.get("refusals", []) if "Zone__" in r.get("claim", "")]
-              # and the two readers that raised on it answer
-              and _bom_dc.get("declares") == 1
+              # and the two readers that raised on it answer: the field,
+              # and the route's operation beside it
+              and _bom_dc.get("declares") == 2
               # every reader of somebody else's file goes through one door
               and open(VEIN, encoding="utf-8").read().count("func theirsText(") == 1))
 
@@ -4122,9 +4166,10 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     _, parted = run("seam", os.path.join(ent, "api.swift"), os.path.join(ent, "sdk.swift"))
     said = " ".join(x["claim"] for x in parted.get("refusals", []))
     S.append(("what enters is judged, and only what enters: two declarations, each signed by whoever made it",
-              # the contract declares four; the fifth it leaves open, and an open
-              # shape is not a shape it has stated
-              dc.get("declares") == 4 and dk.get("declares") == 3
+              # the contract declares five: four typed fields and the route's
+              # operation. The fifth field it leaves open, and an open shape is
+              # not a shape it has stated
+              dc.get("declares") == 5 and dk.get("declares") == 3
               # one disagreement, addressed, naming both sides' own words
               and parted.get("verdict") == "refused" and len(parted["refusals"]) == 1
               and "waitFor" in parted["refusals"][0]["address"]
@@ -7873,9 +7918,10 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         S.append(("the act of entry answers every shape of its argv, and leaves what it wrote",
                   # a contract read prints a side, and the road on from it
                   _dsaid["declare contract spec.json"][0] == 0
-                  # three records off this document: the two body fields and the
-                  # query parameter, which is a field of the call like any other
-                  and "declare contract: 3 declared" in _dtold("declare contract spec.json")
+                  # four records off this document: the two body fields, the
+                  # query parameter, a field of the call like any other, and
+                  # the route's operation
+                  and "declare contract: 4 declared" in _dtold("declare contract spec.json")
                   and "next:" in _dtold("declare contract spec.json")
                   # the json shape answers with an object carrying the world
                   and json.loads(_dsaid["declare contract spec.json --json"][1]).get("world")

@@ -8479,7 +8479,7 @@ if args.first == "my" {
 // the act: the door around it names files and writes rows. Pulled out so the
 // demo that makes a pair prints it with the verb's own hand rather than a
 // second one of its own.
-func contractWorld(_ spec: Said) -> (world: String, declares: Int) {
+func contractWorld(_ spec: Said) -> (world: String, declares: Int, fields: Int) {
     let fields = contractFields(spec).filter { $0.shape != nil }
     var lines = [shelfSection("declare",
                               "// ── what a contract side is printed under begins here ──\n")
@@ -8490,7 +8490,21 @@ func contractWorld(_ spec: Said) -> (world: String, declares: Int) {
                   "public enum " + rec + ": Declared {",
                   "    public typealias Of = " + (f.shape ?? ""), "}"]
     }
-    return (lines.joined(separator: "\n") + "\n", fields.count)
+    // and the operations, each a record a carrier may claim to call: the
+    // Stands pin is existence, so a call to an operation absent here is
+    // refused at its certificate rather than resolved by guesswork
+    let methods = ["get", "put", "post", "delete", "options", "head", "patch", "trace"]
+    var ops = 0
+    for (route, said) in spec.at("paths")?.asObject ?? [] {
+        for (m, _) in said.asObject ?? [] where methods.contains(m.lowercased()) {
+            lines += ["// op · " + m.lowercased() + " · " + route,
+                      "public enum Op_" + m.lowercased() + "_" + sanitized(route)
+                      + ": Operation {",
+                      "    public typealias Stands = InTheContract", "}"]
+            ops += 1
+        }
+    }
+    return (lines.joined(separator: "\n") + "\n", fields.count + ops, fields.count)
 }
 
 func carrierWorld(_ decl: Said) -> (world: String, declares: Int, who: String) {
@@ -8521,7 +8535,22 @@ func carrierWorld(_ decl: Said) -> (world: String, declares: Int, who: String) {
         lines.append("public typealias Carry_\(i) = Carries<" + who + ", " + rec + ", "
                      + shape + ">")
     }
-    return (lines.joined(separator: "\n") + "\n", carries.count, who)
+    // and the operations this library claims to call, by route and method:
+    // the carrier speaks, the seam judges, so no method list stands at this
+    // door and a misspelt method is refused where it fails to exist
+    let callsList = decl.at("calls")?.asList ?? []
+    for (i, c) in callsList.enumerated() {
+        let route = c.at("route")?.asText ?? ""
+        let method = (c.at("method")?.asText ?? "").lowercased()
+        if route.isEmpty || method.isEmpty {
+            err("declare carrier: calls[\(i)] · a call names its route and its method\n")
+            exit(1)
+        }
+        lines.append("// calls · " + method + " · " + route)
+        lines.append("public typealias Call_\(i) = Calls<" + who + ", Op_" + method + "_"
+                     + sanitized(route) + ">")
+    }
+    return (lines.joined(separator: "\n") + "\n", carries.count + callsList.count, who)
 }
 
 if args.first == "declare" {
@@ -8593,6 +8622,7 @@ if args.first == "declare" {
 
     var world = "", declares = 0, extra: [(String, String)] = []
     var unreadShelf = 0
+    var fieldCount = 0
     if what == "contract" {
         let src = rest[1]
         guard let spec = readSaid(theirsText(src, "an OpenAPI document")) else {
@@ -8604,6 +8634,7 @@ if args.first == "declare" {
         }
         let said = contractWorld(spec)
         (world, declares) = (said.world, said.declares)
+        fieldCount = said.fields
         unreadShelf = (spec.at("definitions")?.asObject ?? []).count
             + (spec.at("components")?.at("schemas")?.asObject ?? []).count
         if let o = outPath { writeWorld(world, o) }
@@ -8638,10 +8669,11 @@ if args.first == "declare" {
           + "is an axis. Fields it leaves open state no shape and are not here. A contract that "
           + "says `anyOf` has not said which. This reader walks the query parameters and "
           + "request bodies on the routes; a shape the contract only sends back declares "
-          + "nothing here"
+          + "nothing here. Every operation is a record too, and a carrier may claim to "
+          + "call it"
         : "what this library says it carries. It is not judgeable alone: a carrier declaration "
           + "is about a contract, and the pair is judged by `gate seam`"
-    if what == "contract", declares == 0, unreadShelf > 0 {
+    if what == "contract", fieldCount == 0, unreadShelf > 0 {
         noteSaid += ". The document names \(unreadShelf) schemas and this reader declared "
             + "none of them: what a contract only sends back is outside this reading, so "
             + "nought declared marks where the reader stops, not an empty contract"
@@ -10211,6 +10243,12 @@ if args.first == "seam" {
                      right, lines: true) {
         claims[m[3]] = (m[0], m[1], m[2])
     }
+    // and the operations it claims to call, keyed the same way
+    var callClaims: [String: (method: String, route: String)] = [:]
+    for m in matches("^// calls · (\\S+) · (\\S+)\\npublic typealias (Call_\\d+)",
+                     right, lines: true) {
+        callClaims[m[2]] = (m[0], m[1])
+    }
     let dir = tempRoot() + "gate-seam-\(ProcessInfo.processInfo.processIdentifier)"
     try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
     let path = dir + "/seam.swift"
@@ -10225,6 +10263,14 @@ if args.first == "seam" {
     var refusals: [(address: String, claim: String)] = []
     for m in matches("^✗ '(\\w+)[^']*' requires the types '[^']*' \\(aka '([^']+)'\\) and "
                      + "'[^']*' \\(aka '([^']+)'\\)", said, lines: true) {
+        // a call has one way to fail: the operation it names is not in the
+        // contract, and the unresolved pin still wears the spelled name
+        if let call = callClaims[m[0]] {
+            refusals.append((address: call.route + " · " + call.method,
+                             claim: "the contract does not declare this operation; "
+                                  + "\(who) calls it"))
+            continue
+        }
         let it = claims[m[0]] ?? (route: "?", field: m[0], mine: "")
         let contractSide = m[1].lowercased().hasSuffix(".of")
             ? "the contract does not declare it"
@@ -10242,12 +10288,25 @@ if args.first == "seam" {
     where !claimed.contains(m[0] + "\u{1}" + m[1]) {
         silent.append(m[0] + " · " + m[1])
     }
-    var told = many(claims.count, "claim") + " judged"
+    var told = many(claims.count + callClaims.count, "claim") + " judged"
     if !silent.isEmpty {
         told += "; \(silent.count) field\(silent.count != 1 ? "s" : "") the contract declares "
               + (silent.count != 1 ? "are" : "is")
               + " claimed by nobody: a claim never made cannot be refused, so it stands "
               + "beside the judgement"
+    }
+    // an operation nobody calls mirrors a field nobody claims: absence is
+    // reported beside the verdict, never refused
+    let called = Set(callClaims.values.map { $0.method + "\u{1}" + $0.route })
+    var uncalled = 0
+    for m in matches("^// op · (\\S+) · (\\S+)$", left, lines: true)
+    where !called.contains(m[0] + "\u{1}" + m[1]) {
+        uncalled += 1
+    }
+    if uncalled > 0 {
+        told += "; \(uncalled) operation\(uncalled != 1 ? "s" : "") the contract declares "
+              + (uncalled != 1 ? "are" : "is")
+              + " called by nobody, and a call never made cannot be refused"
     }
     let nextSaid = refusals.isEmpty
         // the advice knows where it is standing, as in import workflows
