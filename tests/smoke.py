@@ -1235,8 +1235,9 @@ def main():
     S.append(("the advice knows where it is standing",
               "next: wire it into CI" in _hand.stdout
               and "this run is that wire" in _ci_run.stdout
+              # four mouths and the k8s door's fifth, said in both stances
               and _vein_wire.count("wire it into CI")
-                  == _vein_wire.count("this run is that wire") == 4))
+                  == _vein_wire.count("this run is that wire") == 5))
 
     # ── AND EVERY IMPORT MOUTH STAMPS ITS NAME BEFORE ITS FIRST DOOR. The
     # codeowners road carries a full trail, and the other mouths opened doors
@@ -1772,6 +1773,49 @@ def main():
               and "the contract does not declare this operation; Lab calls it" in _opwrong.stdout
               and _lamesaid.returncode != 0
               and "a call names its route and its method" in _lamesaid.stderr))
+
+    # ── AND A SERVICE'S SELECTION IS JUDGED AGAINST THE LABELS IT NAMES. A
+    # selector that matches no template selects an empty set: endpoints stay
+    # empty and the platform says nothing. Two documents in one file are two
+    # documents; a selector is dead only in its own namespace; and while any
+    # yaml stayed unread as a template, no empty selection is claimed at all,
+    # because the workload may stand in what was not read.
+    _k8 = os.path.join(tmp, "k8s-lab")
+    os.makedirs(_k8, exist_ok=True)
+    subprocess.run(["git", "init", "-q", _k8], capture_output=True)
+    _svc = ("apiVersion: v1\nkind: Service\nmetadata:\n  name: web\nspec:\n"
+            "  selector:\n    app: web\n  ports:\n    - port: 80\n")
+    _dep = ("apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: web\nspec:\n"
+            "  template:\n    metadata:\n      labels:\n        app: web\n")
+    open(os.path.join(_k8, "all.yaml"), "w").write(_svc + "---\n" + _dep)
+    _k8ok = subprocess.run([GATE, "import", "k8s", "--tree", "."], cwd=_k8,
+                           capture_output=True, text=True)
+    open(os.path.join(_k8, "all.yaml"), "w").write(
+        _svc.replace("app: web", "app: gone") + "---\n" + _dep)
+    _k8dead = subprocess.run([GATE, "import", "k8s", "--tree", "."], cwd=_k8,
+                             capture_output=True, text=True)
+    S.append(("a selector that matches its labels holds, and an orphaned one is refused at its line",
+              _k8ok.returncode == 0 and "holds" in _k8ok.stdout
+              and _k8dead.returncode == 1
+              and "all.yaml:6 · Service web" in _k8dead.stdout
+              and "no workload in this tree carries the labels app=gone" in _k8dead.stdout))
+    open(os.path.join(_k8, "helm.yaml"), "w").write(
+        "apiVersion: v1\nkind: Service\nspec:\n  selector:\n    app: {{ .Values.app }}\n")
+    _k8part = subprocess.run([GATE, "import", "k8s", "--tree", "."], cwd=_k8,
+                             capture_output=True, text=True)
+    os.remove(os.path.join(_k8, "helm.yaml"))
+    open(os.path.join(_k8, "ns.yaml"), "w").write(
+        "apiVersion: v1\nkind: Service\nmetadata:\n  name: cross\n"
+        "  namespace: alpha\nspec:\n  selector:\n    app: web\n")
+    open(os.path.join(_k8, "all.yaml"), "w").write(_svc + "---\n" + _dep)
+    _k8ns = subprocess.run([GATE, "import", "k8s", "--tree", "."], cwd=_k8,
+                           capture_output=True, text=True)
+    S.append(("a template keeps the scene partial and no death is claimed, and a namespace is a wall",
+              _k8part.returncode == 0
+              and "no empty selection is claimed" in _k8part.stdout
+              and _k8ns.returncode == 1
+              and "Service cross" in _k8ns.stdout
+              and "Service web" not in _k8ns.stdout.replace("Service cross", "")))
 
     # ── AND THE ADDRESS COMES FIRST, THE WAY THE COVER SAYS IT DOES. A refusal
     # from the importer carried `source` alone, so the terminal fell back to the

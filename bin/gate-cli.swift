@@ -7481,13 +7481,181 @@ if args.first == "import" {
         exit(all.isEmpty && nothing.isEmpty ? 0 : 1)
     }
 
+    // ── import k8s [--tree DIR]: a Service names the pods it selects by
+    // labels, and the pods carry their labels in another document. Two
+    // declarations in one tree, and the platform between them says nothing
+    // when they part: a selector that matches no template selects an empty
+    // set, endpoints stay empty, and no line anywhere goes red. The same
+    // yaml reading as workflows: the block subset, exactly, and what this
+    // cannot read exactly is named as unread, never guessed at. A file that
+    // carries `{{` is a template rather than a manifest, its manifest is
+    // rendered elsewhere, so it is counted aloud and no claim rests on it.
+    // A death claim needs the whole scene: while any yaml stayed unread, an
+    // empty selection is not claimed, because the workload may stand in
+    // what was not read.
+    if head == "k8s" {
+        mark("k8s-begin")
+        let tail = Array(rest.dropFirst())
+        var tree = "."
+        if let i = tail.firstIndex(of: "--tree"), i + 1 < tail.count { tree = tail[i + 1] }
+        let base = absPath(tree)
+        let yamls = treeFiles(base).filter {
+            ($0.hasSuffix(".yml") || $0.hasSuffix(".yaml"))
+                && !$0.hasPrefix(".github/") }.sorted()
+        func labelPairs(_ node: YamlNode?) -> [String: String] {
+            var out: [String: String] = [:]
+            for c in node?.children ?? [] {
+                if let v = c.node.value, !v.isEmpty { out[c.key] = yamlUnquote(v) }
+            }
+            return out
+        }
+        var services: [(file: String, line: Int, name: String, ns: String,
+                        sel: [String: String])] = []
+        var workloads: [(ns: String, labels: [String: String])] = []
+        var refusals: [(address: String, claim: String)] = []
+        var templates = 0, manifests = 0
+        var partial = false
+        for rel in yamls {
+            guard let text = readText((base as NSString).appendingPathComponent(rel))
+            else { continue }
+            if text.contains("{{") {
+                templates += 1
+                partial = true
+                continue
+            }
+            // one file, several documents: split at `---` lines, and each
+            // document keeps the line it starts on
+            var docs: [(offset: Int, body: String)] = []
+            var buf: [String] = []
+            var start = 0
+            for (i, ln) in text.components(separatedBy: "\n").enumerated() {
+                if ln.trimmingCharacters(in: .whitespaces) == "---" {
+                    if !buf.joined().trimmingCharacters(in: .whitespaces).isEmpty {
+                        docs.append((start, buf.joined(separator: "\n")))
+                    }
+                    buf = []
+                    start = i + 1
+                } else {
+                    buf.append(ln)
+                }
+            }
+            if !buf.joined().trimmingCharacters(in: .whitespaces).isEmpty {
+                docs.append((start, buf.joined(separator: "\n")))
+            }
+            for doc in docs {
+                let read = yamlBlock(doc.body)
+                let kindSaid = yamlAt(read.root, ["kind"])?.value
+                let versionSaid = yamlAt(read.root, ["apiVersion"])?.value
+                guard let kind = kindSaid, versionSaid != nil else {
+                    // somebody else's yaml, or a chunk this cannot read:
+                    // only the second keeps the scene from being whole
+                    if read.refused != nil { partial = true }
+                    continue
+                }
+                if let refused = read.refused {
+                    partial = true
+                    refusals.append(("\(rel):\(refused.line + doc.offset)",
+                                     "this reading takes the block subset these files are "
+                                   + "written in, and stops at what it cannot read exactly: "
+                                   + refused.why + ". No claim is made about this document"))
+                    continue
+                }
+                manifests += 1
+                let ns = yamlAt(read.root, ["metadata", "namespace"])?.value ?? "default"
+                let name = yamlAt(read.root, ["metadata", "name"])?.value ?? kind
+                switch kind {
+                case "Service":
+                    if let sel = yamlAt(read.root, ["spec", "selector"]) {
+                        let pairs = labelPairs(sel)
+                        if !pairs.isEmpty {
+                            services.append((rel, sel.line + doc.offset, name, ns, pairs))
+                        }
+                    }
+                case "Deployment", "StatefulSet", "DaemonSet", "ReplicaSet", "Job":
+                    let l = labelPairs(yamlAt(read.root,
+                                              ["spec", "template", "metadata", "labels"]))
+                    if !l.isEmpty { workloads.append((ns, l)) }
+                case "CronJob":
+                    let l = labelPairs(yamlAt(read.root,
+                        ["spec", "jobTemplate", "spec", "template", "metadata", "labels"]))
+                    if !l.isEmpty { workloads.append((ns, l)) }
+                case "Pod":
+                    let l = labelPairs(yamlAt(read.root, ["metadata", "labels"]))
+                    if !l.isEmpty { workloads.append((ns, l)) }
+                default:
+                    break
+                }
+            }
+        }
+        var deadNamed = 0
+        for svc in services {
+            let alive = workloads.contains { w in
+                w.ns == svc.ns && svc.sel.allSatisfy { w.labels[$0.key] == $0.value }
+            }
+            if alive { continue }
+            deadNamed += 1
+            if !partial {
+                let said = svc.sel.sorted { $0.key < $1.key }
+                    .map { $0.key + "=" + $0.value }.joined(separator: ", ")
+                refusals.append(("\(svc.file):\(svc.line) · Service \(svc.name)",
+                                 "no workload in this tree carries the labels \(said), so "
+                               + "this service selects an empty set, and that platform "
+                               + "reports nothing when it does"))
+            }
+        }
+        let nothing = manifests == 0
+            ? (templates > 0
+               ? "every kubernetes yaml here is a template, so nothing was read as a manifest"
+               : "no kubernetes manifest stands in this tree, so nothing was read")
+            : services.isEmpty
+            ? "no service here states a selector, so there is nothing for this to judge" : ""
+        let verdict = !refusals.isEmpty ? "refused" : (nothing.isEmpty ? "holds" : "observed")
+        var next = !refusals.isEmpty
+            ? "open the address above: the selector and the labels are two declarations, "
+              + "and they no longer agree"
+            : nothing.isEmpty
+            ? (ProcessInfo.processInfo.environment["GITHUB_ACTIONS"] == "true"
+               ? "this run is that wire: a selection cannot go empty again without saying so"
+               : "wire it into CI: a selection cannot go empty again without saying so")
+            : nothing
+        if partial, deadNamed > 0, refusals.isEmpty {
+            next = "\(deadNamed) selector\(deadNamed == 1 ? "" : "s") matched nothing "
+                 + "among what was read, and \(templates) file\(templates == 1 ? "" : "s") "
+                 + "stayed unread as templates: a workload may stand there, so no empty "
+                 + "selection is claimed"
+        }
+        if asJson {
+            let pairs: [(String, StatusJSON)] = [
+                ("command", .text("import k8s")),
+                ("manifests", .raw(String(manifests))),
+                ("services", .raw(String(services.count))),
+                ("workloads", .raw(String(workloads.count))),
+                ("templates", .raw(String(templates))),
+                ("verdict", .text(verdict)),
+                ("refusals", .list(refusals.map {
+                    .object([("address", .text($0.address)), ("claim", .text($0.claim))]) })),
+                ("next", .text(next))]
+            out(statusDumps(.object(pairs), 0) + "\n")
+        } else {
+            var lines = ["import k8s: "
+                         + (refusals.isEmpty ? verdict : "refused \(refusals.count)")
+                         + " · " + many(services.count, "selector")
+                         + " against " + many(workloads.count, "workload")]
+            for r in refusals { lines.append("  \(r.address) · \(r.claim)") }
+            lines.append("  next: " + next)
+            out(lines.joined(separator: "\n") + "\n")
+        }
+        exit(refusals.isEmpty ? 0 : 1)
+    }
+
     // ── import people.csv grants.csv [-o gate.swift]
     let tables = rest.filter { !$0.hasPrefix("-") }
     if tables.count < 2 {
         let note = "import people.csv grants.csv [-o gate.swift]  ·  "
                  + "import codeowners CODEOWNERS --tree . [--policy owners.csv]  ·  "
                  + "import rbac rbac.json  ·  import refs FILE  ·  "
-                 + "import workflows [--tree DIR]  ·  import addresses [--tree DIR]"
+                 + "import workflows [--tree DIR]  ·  import addresses [--tree DIR]  ·  "
+                 + "import k8s [--tree DIR]"
         let next = "gate import codeowners CODEOWNERS --tree . reads ownership you "
                  + "already keep, and writes one small file you commit"
         if asJson {
