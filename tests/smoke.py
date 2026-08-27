@@ -1804,18 +1804,27 @@ def main():
     _k8part = subprocess.run([GATE, "import", "k8s", "--tree", "."], cwd=_k8,
                              capture_output=True, text=True)
     os.remove(os.path.join(_k8, "helm.yaml"))
+    # the wall needs a resident: alpha declares a workload with other labels,
+    # so cross is dead INSIDE alpha; beta declares none, so its selector is
+    # outside this tree's jurisdiction and nothing is judged
     open(os.path.join(_k8, "ns.yaml"), "w").write(
         "apiVersion: v1\nkind: Service\nmetadata:\n  name: cross\n"
-        "  namespace: alpha\nspec:\n  selector:\n    app: web\n")
+        "  namespace: alpha\nspec:\n  selector:\n    app: web\n"
+        "---\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: other\n"
+        "  namespace: alpha\nspec:\n  template:\n    metadata:\n      labels:\n"
+        "        app: other\n"
+        "---\napiVersion: v1\nkind: Service\nmetadata:\n  name: far\n"
+        "  namespace: beta\nspec:\n  selector:\n    app: web\n")
     open(os.path.join(_k8, "all.yaml"), "w").write(_svc + "---\n" + _dep)
     _k8ns = subprocess.run([GATE, "import", "k8s", "--tree", "."], cwd=_k8,
                            capture_output=True, text=True)
-    S.append(("a template keeps the scene partial and no death is claimed, and a namespace is a wall",
+    S.append(("a template keeps the scene partial, a namespace is a wall, and an absent one is no jurisdiction",
               _k8part.returncode == 0
               and "no empty selection is claimed" in _k8part.stdout
               and _k8ns.returncode == 1
               and "Service cross" in _k8ns.stdout
-              and "Service web" not in _k8ns.stdout.replace("Service cross", "")))
+              and "Service far" not in _k8ns.stdout
+              and "declares no workload in" in _k8ns.stdout))
 
     # ── AND THE ADDRESS COMES FIRST, THE WAY THE COVER SAYS IT DOES. A refusal
     # from the importer carried `source` alone, so the terminal fell back to the

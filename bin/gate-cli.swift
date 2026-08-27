@@ -3981,7 +3981,29 @@ func yamlBlock(_ text: String) -> (root: YamlNode, refused: (line: Int, why: Str
                 }
                 continue
             }
-            if body.hasPrefix("{") || body.hasPrefix("[") {
+            if body.hasPrefix("{") {
+                // `- {}` and `- {k: v}` close on their own line with scalar
+                // pairs alone: exact bounds, read exactly. Anything nested or
+                // unclosed keeps the refusal, because its end is a guess
+                let inner = body.dropFirst().prefix(while: { $0 != "}" })
+                if body.hasSuffix("}"), !inner.contains("{"), !inner.contains("[") {
+                    let node = YamlNode()
+                    node.line = no
+                    for pair in inner.components(separatedBy: ",") {
+                        let sides = pair.components(separatedBy: ":")
+                        if sides.count == 2 {
+                            let child = YamlNode()
+                            child.line = no
+                            child.value = yamlUnquote(sides[1])
+                            node.children.append((yamlUnquote(sides[0]), child))
+                        }
+                    }
+                    parent.items.append((no, "", node))
+                    continue
+                }
+                return (root, (no, "a flow collection, written inline in brackets"))
+            }
+            if body.hasPrefix("[") {
                 return (root, (no, "a flow collection, written inline in brackets"))
             }
             if body.hasPrefix("&") || body.hasPrefix("*") {
@@ -4036,6 +4058,21 @@ func yamlBlock(_ text: String) -> (root: YamlNode, refused: (line: Int, why: Str
             }
             let node = YamlNode()
             node.line = no
+            // simple scalar pairs on one line are exact and are read; a
+            // nested flow stays an opaque value with exact bounds, stepped
+            // over the way it always was
+            let inner = after.dropFirst().prefix(while: { $0 != "}" })
+            if !inner.contains("{"), !inner.contains("[") {
+                for pair in inner.components(separatedBy: ",") {
+                    let sides = pair.components(separatedBy: ":")
+                    if sides.count == 2 {
+                        let child = YamlNode()
+                        child.line = no
+                        child.value = yamlUnquote(sides[1])
+                        node.children.append((yamlUnquote(sides[0]), child))
+                    }
+                }
+            }
             parent.children.append((key, node))
             continue
         }
@@ -4045,15 +4082,27 @@ func yamlBlock(_ text: String) -> (root: YamlNode, refused: (line: Int, why: Str
         let node = YamlNode()
         node.line = no
         if after.hasPrefix("[") {
-            // a list on one line: read exactly, item by item
-            let inner = after.dropFirst().prefix(while: { $0 != "]" })
-            if !after.contains("]") {
-                return (root, (no, "a flow list that does not close on its own line"))
+            // a flow list ends at its bracket, on this line or a later one:
+            // the end is the bracket, never a guess. The lines between are
+            // consumed as the one value they are
+            var flow = String(after.dropFirst())
+            var j = n
+            while !flow.contains("]"), j + 1 < lines.count {
+                j += 1
+                flow += " " + lines[j].trimmingCharacters(in: .whitespaces)
+            }
+            guard flow.contains("]") else {
+                return (root, (no, "a flow list that never closes"))
+            }
+            let inner = flow.prefix(while: { $0 != "]" })
+            if inner.contains("{") || inner.contains("[") {
+                return (root, (no, "a flow collection, written inline in brackets"))
             }
             for one in inner.components(separatedBy: ",") {
                 let v = yamlUnquote(one)
                 if !v.isEmpty { node.items.append((no, v, YamlNode())) }
             }
+            skipTo = j + 1
         } else if after.isEmpty, n + 1 < lines.count,
                   lines[n + 1].trimmingCharacters(in: .whitespaces).hasPrefix("["),
                   lines[n + 1].prefix(while: { $0 == " " }).count > indent {
@@ -7513,6 +7562,7 @@ if args.first == "import" {
                         sel: [String: String])] = []
         var workloads: [(ns: String, labels: [String: String])] = []
         var refusals: [(address: String, claim: String)] = []
+        var unreadDocs: [(address: String, claim: String)] = []
         var templates = 0, manifests = 0
         var partial = false
         for rel in yamls {
@@ -7546,20 +7596,23 @@ if args.first == "import" {
                 let read = yamlBlock(doc.body)
                 let kindSaid = yamlAt(read.root, ["kind"])?.value
                 let versionSaid = yamlAt(read.root, ["apiVersion"])?.value
-                guard let kind = kindSaid, versionSaid != nil else {
-                    // somebody else's yaml, or a chunk this cannot read:
-                    // only the second keeps the scene from being whole
-                    if read.refused != nil { partial = true }
-                    continue
-                }
+                let carriers: Set<String> = ["Service", "Deployment", "StatefulSet",
+                    "DaemonSet", "ReplicaSet", "Job", "CronJob", "Pod"]
                 if let refused = read.refused {
-                    partial = true
-                    refusals.append(("\(rel):\(refused.line + doc.offset)",
-                                     "this reading takes the block subset these files are "
-                                   + "written in, and stops at what it cannot read exactly: "
-                                   + refused.why + ". No claim is made about this document"))
+                    // a document that stopped mid-read is named, never
+                    // refused: unreadness is this reader's edge, not their
+                    // drift. It breaks the scene only where it could carry
+                    // a side of this pair, and a kind this door never
+                    // judges cannot hide a workload
+                    let k8sish = kindSaid != nil || versionSaid != nil
+                    if !k8sish { continue }
+                    if kindSaid == nil || carriers.contains(kindSaid!) { partial = true }
+                    unreadDocs.append(("\(rel):\(refused.line + doc.offset)",
+                                      "this reading stops at what it cannot read exactly: "
+                                    + refused.why + ". No claim is made about this document"))
                     continue
                 }
+                guard let kind = kindSaid, versionSaid != nil else { continue }
                 manifests += 1
                 let ns = yamlAt(read.root, ["metadata", "namespace"])?.value ?? "default"
                 let name = yamlAt(read.root, ["metadata", "name"])?.value ?? kind
@@ -7588,11 +7641,20 @@ if args.first == "import" {
             }
         }
         var deadNamed = 0
+        var outside = 0
         for svc in services {
             let alive = workloads.contains { w in
                 w.ns == svc.ns && svc.sel.allSatisfy { w.labels[$0.key] == $0.value }
             }
             if alive { continue }
+            // judgement has no jurisdiction over a side that never entered:
+            // a namespace this tree declares no workload in keeps its pods
+            // elsewhere (the platform's own, another repository, a chart),
+            // so nothing stands here to judge that selector against
+            guard workloads.contains(where: { $0.ns == svc.ns }) else {
+                outside += 1
+                continue
+            }
             deadNamed += 1
             if !partial {
                 let said = svc.sel.sorted { $0.key < $1.key }
@@ -7618,10 +7680,16 @@ if args.first == "import" {
                ? "this run is that wire: a selection cannot go empty again without saying so"
                : "wire it into CI: a selection cannot go empty again without saying so")
             : nothing
+        if outside > 0, nothing.isEmpty {
+            next = "\(outside) selector\(outside == 1 ? "" : "s") name\(outside == 1 ? "s" : "") "
+                 + "a namespace this tree declares no workload in: the pods live elsewhere, "
+                 + "so nothing stands here to judge. " + next
+        }
         if partial, deadNamed > 0, refusals.isEmpty {
+            let held = templates + unreadDocs.count
             next = "\(deadNamed) selector\(deadNamed == 1 ? "" : "s") matched nothing "
-                 + "among what was read, and \(templates) file\(templates == 1 ? "" : "s") "
-                 + "stayed unread as templates: a workload may stand there, so no empty "
+                 + "among what was read, and \(held) document\(held == 1 ? "" : "s") "
+                 + "stayed unread: a workload may stand there, so no empty "
                  + "selection is claimed"
         }
         if asJson {
@@ -7631,8 +7699,11 @@ if args.first == "import" {
                 ("services", .raw(String(services.count))),
                 ("workloads", .raw(String(workloads.count))),
                 ("templates", .raw(String(templates))),
+                ("outside", .raw(String(outside))),
                 ("verdict", .text(verdict)),
                 ("refusals", .list(refusals.map {
+                    .object([("address", .text($0.address)), ("claim", .text($0.claim))]) })),
+                ("unread", .list(unreadDocs.map {
                     .object([("address", .text($0.address)), ("claim", .text($0.claim))]) })),
                 ("next", .text(next))]
             out(statusDumps(.object(pairs), 0) + "\n")
@@ -7640,8 +7711,11 @@ if args.first == "import" {
             var lines = ["import k8s: "
                          + (refusals.isEmpty ? verdict : "refused \(refusals.count)")
                          + " · " + many(services.count, "selector")
-                         + " against " + many(workloads.count, "workload")]
+                         + " against " + many(workloads.count, "workload")
+                         + (unreadDocs.isEmpty ? ""
+                            : " · " + many(unreadDocs.count, "unread document"))]
             for r in refusals { lines.append("  \(r.address) · \(r.claim)") }
+            for r in unreadDocs { lines.append("  \(r.address) · \(r.claim)") }
             lines.append("  next: " + next)
             out(lines.joined(separator: "\n") + "\n")
         }
