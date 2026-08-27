@@ -17,6 +17,9 @@ What is rendered, and the law of each:
                        rendered the way it is typed
   stdlib/readme.swift  the number word before "commands carry a
                        certificate", counted from the `Run` certificates
+  README.md            the badge line, asked of `gate badge` today, and
+                       every release name, read from the default the
+                       action declares
 """
 import re
 import subprocess
@@ -94,6 +97,18 @@ def render(tool):
                  + "the renderer lost its subject")
     cover2 = span.sub(lambda m: m.group(1) + porcelain(verbs, spellings)
                       + m.group(2), cover)
+    bg = subprocess.run([tool, "badge"], capture_output=True, text=True)
+    held = re.search(r"badge: \d+ claims · holds", bg.stdout or "")
+    if not held:
+        sys.exit("gate badge did not answer with a holding badge: "
+                 + "the renderer lost its subject")
+    cover2 = re.sub(r"badge: \d+ claims · holds", held.group(0), cover2)
+    act = re.search(r"default: '(v\d+\.\d+\.\d+)'",
+                    open("action.yml", encoding="utf-8").read())
+    if not act:
+        sys.exit("action.yml declares no default version: "
+                 + "the renderer lost its subject")
+    cover2 = re.sub(r"\bv\d+\.\d+\.\d+\b", act.group(1), cover2)
     letter = open("stdlib/readme.swift", encoding="utf-8").read()
     numeral = re.compile(r"(judged with it\. )\w+( commands carry a certificate)")
     if not numeral.search(letter):

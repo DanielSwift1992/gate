@@ -538,16 +538,9 @@ def main():
     S.append(("the judge links nothing that opens a socket",
               bool(_linked) and not re.search(
                   r"libcurl|libssl|CFNetwork|Network\.framework|libnghttp", _linked)))
-    # ── AND ONE RELEASE NAME EVERYWHERE THE SURFACE SAYS IT. The cover pins a
-    # release twice and the action defaults to one: three hand copies of one
-    # fact. One degree of freedom here: every vX.Y.Z the cover says is the
-    # action's default, so a bump that misses a cover line refuses at this
-    # row instead of shipping a cover that installs last season's judge.
-    _act = re.search(r"default: '(v\d+\.\d+\.\d+)'",
-                     open(os.path.join(HERE, "action.yml"), encoding="utf-8").read())
-    _pins = set(re.findall(r"\bv\d+\.\d+\.\d+\b", _cover))
-    S.append(("the release the cover pins is the action's default, every mention",
-              _act is not None and _pins == {_act.group(1)}))
+    # the release name and the badge line are the renderer's now: rendered
+    # from the action's default and from `gate badge`, held by the
+    # regeneration vectors above, so no second guard restates their law
 
     # AND IT KEEPS ITS OWN WORD ABOUT HOW IT IS MET, AS A COLUMN. How a page is
     # first met is a fact of its manifest row now (Opens = Bare), not a comment
@@ -1215,23 +1208,6 @@ def main():
               and _shooter.index("--screenshot")
                   < _shooter.index('mv "$SHOT" "$HERE/docs/bench.png"')))
 
-    # ── AND THE NUMBER ON THE COVER IS THE BADGE'S OWN, TODAY. The cover
-    # quotes `badge: N claims · holds` and the sentence beside it says the
-    # judge re-counts on every run, while N itself was counted once and
-    # pasted: it sat one claim behind the repository for a day and nothing
-    # here noticed. The same ratchet as the battery count: grow the world,
-    # touch the cover.
-    _bg = subprocess.run([GATE, "badge"], cwd=HERE, capture_output=True,
-                         text=True, timeout=180,
-                         env={**os.environ, "GATE_CLI": CLI_HERE})
-    _bg_now = re.search(r"badge: (\d+) claims · holds", _bg.stdout or "")
-    _bg_cover = re.search(r"badge: (\d+) claims · holds",
-                          open(os.path.join(HERE, "README.md"), encoding="utf-8").read())
-    if _bg_now and _bg_cover and _bg_now.group(1) != _bg_cover.group(1):
-        print("   the cover's badge is stale:", _bg_cover.group(1), "vs", _bg_now.group(1))
-    S.append(("the badge on the cover counts what the badge counts today",
-              bool(_bg_now) and bool(_bg_cover)
-              and _bg_now.group(1) == _bg_cover.group(1)))
 
     # ── AND THE ADVICE KNOWS WHERE IT IS STANDING. Three green mouths said
     # "wire it into CI" to every caller, including the CI step that was that
