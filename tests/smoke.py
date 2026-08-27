@@ -1792,10 +1792,18 @@ def main():
                            capture_output=True, text=True)
     open(os.path.join(_k8, "all.yaml"), "w").write(
         _svc.replace("app: web", "app: gone") + "---\n" + _dep)
-    _k8dead = subprocess.run([GATE, "import", "k8s", "--tree", "."], cwd=_k8,
+    _k8cand = subprocess.run([GATE, "import", "k8s", "--tree", "."], cwd=_k8,
                              capture_output=True, text=True)
-    S.append(("a selector that matches its labels holds, and an orphaned one is refused at its line",
+    _k8dead = subprocess.run([GATE, "import", "k8s", "--tree", ".", "--complete"],
+                             cwd=_k8, capture_output=True, text=True)
+    S.append(("an orphaned selector is a candidate by default, and a refusal under the declared premise",
               _k8ok.returncode == 0 and "holds" in _k8ok.stdout
+              # completeness no reading can establish: without the premise the
+              # finding is named and nothing exits red
+              and _k8cand.returncode == 0
+              and "a candidate, not a verdict" in _k8cand.stdout
+              # the operator's own CI line carries the premise, and then the
+              # empty selection is a verdict at its address
               and _k8dead.returncode == 1
               and "all.yaml:6 · Service web" in _k8dead.stdout
               and "no workload in this tree carries the labels app=gone" in _k8dead.stdout))
@@ -1816,15 +1824,35 @@ def main():
         "---\napiVersion: v1\nkind: Service\nmetadata:\n  name: far\n"
         "  namespace: beta\nspec:\n  selector:\n    app: web\n")
     open(os.path.join(_k8, "all.yaml"), "w").write(_svc + "---\n" + _dep)
-    _k8ns = subprocess.run([GATE, "import", "k8s", "--tree", "."], cwd=_k8,
-                           capture_output=True, text=True)
+    _k8ns = subprocess.run([GATE, "import", "k8s", "--tree", ".", "--complete"],
+                           cwd=_k8, capture_output=True, text=True)
+    # falsifiers, pre-registered: an unknown kind with a pod template (an
+    # operator's own, Rollouts) is generous life, and a kustomization that
+    # transforms labels is a build stage, so even the premise claims nothing
+    open(os.path.join(_k8, "rollout.yaml"), "w").write(
+        "apiVersion: argoproj.io/v1alpha1\nkind: Rollout\nmetadata:\n  name: canary\n"
+        "  namespace: alpha\nspec:\n  template:\n    metadata:\n      labels:\n"
+        "        app: web\n")
+    _k8roll = subprocess.run([GATE, "import", "k8s", "--tree", ".", "--complete"],
+                             cwd=_k8, capture_output=True, text=True)
+    os.remove(os.path.join(_k8, "rollout.yaml"))
+    open(os.path.join(_k8, "kustomization.yaml"), "w").write(
+        "resources:\n  - all.yaml\ncommonLabels:\n  team: core\n")
+    _k8kust = subprocess.run([GATE, "import", "k8s", "--tree", ".", "--complete"],
+                             cwd=_k8, capture_output=True, text=True)
+    os.remove(os.path.join(_k8, "kustomization.yaml"))
     S.append(("a template keeps the scene partial, a namespace is a wall, and an absent one is no jurisdiction",
               _k8part.returncode == 0
               and "no empty selection is claimed" in _k8part.stdout
               and _k8ns.returncode == 1
               and "Service cross" in _k8ns.stdout
               and "Service far" not in _k8ns.stdout
-              and "declares no workload in" in _k8ns.stdout))
+              and "declares no workload in" in _k8ns.stdout
+              # the Rollout's template labels answer for cross: alive, no refusal
+              and _k8roll.returncode == 0
+              # and under a kustomization even the premise claims no death
+              and _k8kust.returncode == 0
+              and "transforms labels at build time" in _k8kust.stdout))
 
     # ── AND THE ADDRESS COMES FIRST, THE WAY THE COVER SAYS IT DOES. A refusal
     # from the importer carried `source` alone, so the terminal fell back to the

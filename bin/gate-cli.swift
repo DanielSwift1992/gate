@@ -7547,6 +7547,13 @@ if args.first == "import" {
         let tail = Array(rest.dropFirst())
         var tree = "."
         if let i = tail.firstIndex(of: "--tree"), i + 1 < tail.count { tree = tail[i + 1] }
+        // the completeness of a scene is a premise no reading can establish:
+        // an operator's pods are statically invisible. So it enters the way
+        // everything enters, as a declaration: whoever writes --complete in
+        // their CI line says "this tree deploys everything in its
+        // namespaces", and that line lives in a reviewed file. Without the
+        // premise a dead selector is a candidate, never a verdict
+        let complete = tail.contains("--complete")
         let base = absPath(tree)
         let yamls = treeFiles(base).filter {
             ($0.hasSuffix(".yml") || $0.hasSuffix(".yaml"))
@@ -7565,12 +7572,26 @@ if args.first == "import" {
         var unreadDocs: [(address: String, claim: String)] = []
         var templates = 0, manifests = 0
         var partial = false
+        var kustomized = 0
         for rel in yamls {
             guard let text = readText((base as NSString).appendingPathComponent(rel))
             else { continue }
             if text.contains("{{") {
                 templates += 1
                 partial = true
+                continue
+            }
+            // a kustomization that transforms labels stands between this text
+            // and the cluster: the cluster obeys the build's output, so the
+            // text alone is not the scene
+            if (rel as NSString).lastPathComponent.hasPrefix("kustomization.") {
+                for key in ["commonLabels", "labels", "patches",
+                            "patchesStrategicMerge", "patchesJson6902"]
+                where text.contains(key + ":") {
+                    kustomized += 1
+                    partial = true
+                    break
+                }
                 continue
             }
             // one file, several documents: split at `---` lines, and each
@@ -7636,12 +7657,18 @@ if args.first == "import" {
                     let l = labelPairs(yamlAt(read.root, ["metadata", "labels"]))
                     if !l.isEmpty { workloads.append((ns, l)) }
                 default:
-                    break
+                    // a kind this door does not know may still declare a pod
+                    // template (an operator's own, Argo Rollouts): for LIFE
+                    // the reading is generous, because a death claim must be
+                    let l = labelPairs(yamlAt(read.root,
+                                              ["spec", "template", "metadata", "labels"]))
+                    if !l.isEmpty { workloads.append((ns, l)) }
                 }
             }
         }
         var deadNamed = 0
         var outside = 0
+        var candidates: [(address: String, claim: String)] = []
         for svc in services {
             let alive = workloads.contains { w in
                 w.ns == svc.ns && svc.sel.allSatisfy { w.labels[$0.key] == $0.value }
@@ -7656,13 +7683,19 @@ if args.first == "import" {
                 continue
             }
             deadNamed += 1
-            if !partial {
-                let said = svc.sel.sorted { $0.key < $1.key }
-                    .map { $0.key + "=" + $0.value }.joined(separator: ", ")
+            if partial { continue }
+            let said = svc.sel.sorted { $0.key < $1.key }
+                .map { $0.key + "=" + $0.value }.joined(separator: ", ")
+            if complete {
                 refusals.append(("\(svc.file):\(svc.line) · Service \(svc.name)",
                                  "no workload in this tree carries the labels \(said), so "
                                + "this service selects an empty set, and that platform "
                                + "reports nothing when it does"))
+            } else {
+                candidates.append(("\(svc.file):\(svc.line) · Service \(svc.name)",
+                                   "no workload in this tree carries the labels \(said): "
+                                 + "a candidate, not a verdict, because nobody has declared "
+                                 + "this tree the whole scene"))
             }
         }
         let nothing = manifests == 0
@@ -7680,17 +7713,28 @@ if args.first == "import" {
                ? "this run is that wire: a selection cannot go empty again without saying so"
                : "wire it into CI: a selection cannot go empty again without saying so")
             : nothing
+        if !candidates.isEmpty, refusals.isEmpty {
+            next = "\(candidates.count) candidate\(candidates.count == 1 ? "" : "s") "
+                 + "stand\(candidates.count == 1 ? "s" : ""). Where this tree deploys "
+                 + "everything in its namespaces, say so: `--complete` makes a candidate "
+                 + "a refusal"
+        }
         if outside > 0, nothing.isEmpty {
             next = "\(outside) selector\(outside == 1 ? "" : "s") name\(outside == 1 ? "s" : "") "
                  + "a namespace this tree declares no workload in: the pods live elsewhere, "
                  + "so nothing stands here to judge. " + next
         }
-        if partial, deadNamed > 0, refusals.isEmpty {
+        if partial, deadNamed > 0, refusals.isEmpty, candidates.isEmpty {
+            var why: [String] = []
             let held = templates + unreadDocs.count
+            if held > 0 { why.append("\(held) document\(held == 1 ? "" : "s") stayed unread") }
+            if kustomized > 0 {
+                why.append("\(kustomized) kustomization\(kustomized == 1 ? "" : "s") "
+                         + "transform\(kustomized == 1 ? "s" : "") labels at build time")
+            }
             next = "\(deadNamed) selector\(deadNamed == 1 ? "" : "s") matched nothing "
-                 + "among what was read, and \(held) document\(held == 1 ? "" : "s") "
-                 + "stayed unread: a workload may stand there, so no empty "
-                 + "selection is claimed"
+                 + "among what was read, and " + why.joined(separator: ", and ")
+                 + ": the scene is not whole, so no empty selection is claimed"
         }
         if asJson {
             let pairs: [(String, StatusJSON)] = [
@@ -7700,6 +7744,9 @@ if args.first == "import" {
                 ("workloads", .raw(String(workloads.count))),
                 ("templates", .raw(String(templates))),
                 ("outside", .raw(String(outside))),
+                ("kustomizations", .raw(String(kustomized))),
+                ("candidates", .list(candidates.map {
+                    .object([("address", .text($0.address)), ("claim", .text($0.claim))]) })),
                 ("verdict", .text(verdict)),
                 ("refusals", .list(refusals.map {
                     .object([("address", .text($0.address)), ("claim", .text($0.claim))]) })),
@@ -7715,6 +7762,7 @@ if args.first == "import" {
                          + (unreadDocs.isEmpty ? ""
                             : " · " + many(unreadDocs.count, "unread document"))]
             for r in refusals { lines.append("  \(r.address) · \(r.claim)") }
+            for r in candidates { lines.append("  \(r.address) · \(r.claim)") }
             for r in unreadDocs { lines.append("  \(r.address) · \(r.claim)") }
             lines.append("  next: " + next)
             out(lines.joined(separator: "\n") + "\n")
