@@ -3934,9 +3934,6 @@ func yamlBlock(_ text: String) -> (root: YamlNode, refused: (line: Int, why: Str
             opened = true
             continue
         }
-        if said.hasPrefix("&") || said.hasPrefix("*") {
-            return (root, (no, "an anchor or an alias, which names a value somewhere else"))
-        }
         let indent = raw.prefix(while: { $0 == " " }).count
         while stack.count > 1 && indent <= stack[stack.count - 1].indent { stack.removeLast() }
         let parent = stack[stack.count - 1].node
@@ -4022,6 +4019,14 @@ func yamlBlock(_ text: String) -> (root: YamlNode, refused: (line: Int, why: Str
         if !said.contains(": ") && !said.hasSuffix(":") && !said.hasPrefix("- ")
             && indent > (stack.last?.indent ?? -1) {
             continue
+        }
+        // an anchor or an alias at a structural position. This check sits AFTER
+        // the continuation rule on purpose: a deeper line of a plain scalar may
+        // begin with `&&` (a CEL rule split over lines does, in every operator
+        // CRD), and that is the value going on, not an anchor. The refusal
+        // below names only what it still catches, and the reason is then true.
+        if said.hasPrefix("&") || said.hasPrefix("*") {
+            return (root, (no, "an anchor or an alias, which names a value somewhere else"))
         }
         guard let colon = said.firstIndex(of: ":") else {
             return (root, (no, "a line that is neither a key nor a list item"))

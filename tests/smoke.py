@@ -1807,6 +1807,33 @@ def main():
               and _k8dead.returncode == 1
               and "all.yaml:6 · Service web" in _k8dead.stdout
               and "no workload in this tree carries the labels app=gone" in _k8dead.stdout))
+    # a CEL rule split over lines, the operator-CRD shape the field carries
+    # everywhere: the continuation begins with `&&`, and that is the value
+    # going on, never an anchor. The reason a refusal states is itself a
+    # judged sentence: this document must be READ, and a real anchor at a
+    # structural position must still be refused with the anchor's own reason
+    open(os.path.join(_k8, "cel.yaml"), "w").write(
+        "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: cel\nspec:\n"
+        "  rule: (has(self.a) && !has(self.b))\n    && has(self.c)\n"
+        "  template:\n    metadata:\n      labels:\n        app: web\n")
+    _k8cel = subprocess.run([GATE, "import", "k8s", "--tree", "."], cwd=_k8,
+                            capture_output=True, text=True)
+    os.remove(os.path.join(_k8, "cel.yaml"))
+    open(os.path.join(_k8, "anchor.yaml"), "w").write(
+        "apiVersion: v1\nkind: Service\nmetadata:\n  name: a\nspec:\n"
+        "  selector: &sel\n    app: web\n")
+    _k8anc = subprocess.run([GATE, "import", "k8s", "--tree", "."], cwd=_k8,
+                            capture_output=True, text=True)
+    os.remove(os.path.join(_k8, "anchor.yaml"))
+    S.append(("a scalar's continuation line is the value going on, and a real anchor keeps its true refusal",
+              _k8cel.returncode == 0
+              # the CEL document is read whole: its deployment counts as a
+              # workload, and no unread line is reported for cel.yaml
+              and "2 workloads" in _k8cel.stdout and "cel.yaml" not in _k8cel.stdout
+              # the anchor at a structural position still refuses, and the
+              # stated reason is the anchor's own
+              and _k8anc.returncode == 0 and "anchor.yaml" in _k8anc.stdout
+              and "an anchor or an alias" in _k8anc.stdout))
     open(os.path.join(_k8, "helm.yaml"), "w").write(
         "apiVersion: v1\nkind: Service\nspec:\n  selector:\n    app: {{ .Values.app }}\n")
     _k8part = subprocess.run([GATE, "import", "k8s", "--tree", "."], cwd=_k8,
