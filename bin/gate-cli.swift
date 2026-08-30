@@ -3914,6 +3914,10 @@ func yamlBlock(_ text: String) -> (root: YamlNode, refused: (line: Int, why: Str
     var stack: [(indent: Int, node: YamlNode)] = [(-1, root)]
     var opened = false
     var skipTo = 0
+    // the column of the key whose plain scalar is open, when one is: set the
+    // moment a deeper line reads as the value continuing, cleared the moment
+    // a line comes back to that column
+    var scalarFloor: Int? = nil
     let lines = text.components(separatedBy: "\n")
     for (n, raw) in lines.enumerated() {
         if n < skipTo { continue }
@@ -3937,6 +3941,21 @@ func yamlBlock(_ text: String) -> (root: YamlNode, refused: (line: Int, why: Str
         let indent = raw.prefix(while: { $0 == " " }).count
         while stack.count > 1 && indent <= stack[stack.count - 1].indent { stack.removeLast() }
         let parent = stack[stack.count - 1].node
+        // ── A PLAIN SCALAR, ONCE BEGUN, OWNS EVERY DEEPER LINE. It begins two
+        // ways: `key: value` on one line (the stack still holds that value),
+        // or `key:` whose first deeper line read as the value continuing (the
+        // floor holds that). A deeper bullet inside one is the value going on,
+        // folded in by yaml itself, never a list item; a deeper `key:` inside
+        // one is yaml's own error, and the refusal says that instead of
+        // reading a key that is not there.
+        if let floor = scalarFloor, indent <= floor { scalarFloor = nil }
+        if scalarFloor != nil || !(parent.value ?? "").isEmpty {
+            if said.contains(": ") || said.hasSuffix(":") {
+                return (root, (no, "a mapping value inside a plain scalar, "
+                                 + "which yaml itself refuses to read"))
+            }
+            continue
+        }
         if said.hasPrefix("- ") || said == "-" {
             let body = said == "-" ? "" : String(said.dropFirst(2))
                 .trimmingCharacters(in: .whitespaces)
@@ -4018,6 +4037,20 @@ func yamlBlock(_ text: String) -> (root: YamlNode, refused: (line: Int, why: Str
         // whole file went unread.
         if !said.contains(": ") && !said.hasSuffix(":") && !said.hasPrefix("- ")
             && indent > (stack.last?.indent ?? -1) {
+            let top = stack[stack.count - 1]
+            if stack.count > 1, top.node.items.isEmpty {
+                if top.node.children.isEmpty {
+                    // `key:` with its value spread plain below: the key owns
+                    // every deeper line until one returns to its column
+                    scalarFloor = top.indent
+                } else if let last = top.node.children.last,
+                          !(last.node.value ?? "").isEmpty, last.node.children.isEmpty {
+                    // `- key: value` going on past its line: the inline key
+                    // owns what lies deeper than its own column, and a
+                    // sibling key at that column closes it
+                    scalarFloor = top.indent + 2
+                }
+            }
             continue
         }
         // an anchor or an alias at a structural position. This check sits AFTER

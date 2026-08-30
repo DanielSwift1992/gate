@@ -1834,6 +1834,33 @@ def main():
               # stated reason is the anchor's own
               and _k8anc.returncode == 0 and "anchor.yaml" in _k8anc.stdout
               and "an anchor or an alias" in _k8anc.stdout))
+    # a plain scalar, once begun, owns every deeper line. A markdown bullet
+    # inside a description is the value going on (yaml folds it in), never a
+    # list item; a `key:` line inside one is yaml's own error, and the
+    # refusal must say that instead of reading a key that is not there
+    open(os.path.join(_k8, "bullets.yaml"), "w").write(
+        "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: bullets\nspec:\n"
+        "  description:\n    A field with notes below\n    - first note\n"
+        "    - second note\n  note: starts here\n    - and goes on\n"
+        "  template:\n    metadata:\n      labels:\n        app: web\n")
+    _k8bul = subprocess.run([GATE, "import", "k8s", "--tree", "."], cwd=_k8,
+                            capture_output=True, text=True)
+    os.remove(os.path.join(_k8, "bullets.yaml"))
+    open(os.path.join(_k8, "lie.yaml"), "w").write(
+        "apiVersion: v1\nkind: Service\nmetadata:\n  name: lie\nspec:\n"
+        "  description:\n    plain text first\n    then: a key inside it\n")
+    _k8lie = subprocess.run([GATE, "import", "k8s", "--tree", "."], cwd=_k8,
+                            capture_output=True, text=True)
+    os.remove(os.path.join(_k8, "lie.yaml"))
+    S.append(("a begun scalar owns its deeper lines: bullets are the value, a key inside is yaml's own error",
+              _k8bul.returncode == 0
+              # the bullet document is read whole: its deployment counts, its
+              # bullets are nobody's list items, and no unread line is named
+              and "2 workloads" in _k8bul.stdout and "bullets.yaml" not in _k8bul.stdout
+              # the key inside a scalar refuses with yaml's own reason, at the
+              # file it happened in
+              and _k8lie.returncode == 0 and "lie.yaml" in _k8lie.stdout
+              and "a mapping value inside a plain scalar" in _k8lie.stdout))
     open(os.path.join(_k8, "helm.yaml"), "w").write(
         "apiVersion: v1\nkind: Service\nspec:\n  selector:\n    app: {{ .Values.app }}\n")
     _k8part = subprocess.run([GATE, "import", "k8s", "--tree", "."], cwd=_k8,
