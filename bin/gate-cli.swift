@@ -1710,8 +1710,10 @@ func discoverWorld() -> WorldState {
         guard let up = parentPath(d), up != d else { break }
         d = up
     }
-    if let corpus = ProcessInfo.processInfo.environment["GATE_CORPUS"], !corpus.isEmpty {
-        let f = (((corpus as NSString).appendingPathComponent("Sources") as NSString)
+    // the company world lives in the showcase package since the split of the theory corpus
+    // (verification-is-identification T-0015): GATE_SHOWCASE names a checkout of it
+    if let showcase = ProcessInfo.processInfo.environment["GATE_SHOWCASE"], !showcase.isEmpty {
+        let f = (((showcase as NSString).appendingPathComponent("Sources") as NSString)
             .appendingPathComponent("Organization") as NSString)
             .appendingPathComponent("System/GeneratedTeam.swift")
         return WorldState(facts: f, tables: nil, layout: nil)
@@ -5560,10 +5562,10 @@ if args.first == "check" || args.first == "ask" {
     if kind == "administer" || kind == "delete" {
         // the compiler gates: a probe entry in the corpus's own accesses and a
         // swift build. Seconds, and the full arbiter.
-        guard let root = ProcessInfo.processInfo.environment["GATE_CORPUS"], !root.isEmpty else {
-            cannot("check " + kind + " needs GATE_CORPUS (a checkout of the theory corpus "
+        guard let root = ProcessInfo.processInfo.environment["GATE_SHOWCASE"], !root.isEmpty else {
+            cannot("check " + kind + " needs GATE_SHOWCASE (a checkout of the showcase package "
                    + "with Team.swift)",
-                   "set GATE_CORPUS to that checkout, or ask `gate check view` instead, "
+                   "set GATE_SHOWCASE to that checkout, or ask `gate check view` instead, "
                    + "which needs none")
         }
         let asks = "gate check \(kind) Emp0042 FinanceVault, with names your world declares "
@@ -5582,9 +5584,9 @@ if args.first == "check" || args.first == "ask" {
         // the other carrier asserts this, which is a stack trace; a sentence
         // says the same thing to a person who can act on it
         if text.components(separatedBy: anchor).count - 1 != 1 {
-            cannot("the corpus checkout at GATE_CORPUS does not carry the line this probe "
+            cannot("the showcase checkout at GATE_SHOWCASE does not carry the line this probe "
                    + "writes beside",
-                   "point GATE_CORPUS at a checkout whose Team.swift still states the "
+                   "point GATE_SHOWCASE at a checkout whose Team.swift still states the "
                    + "delete example, or ask `gate check view` instead")
         }
         let gateName = kind.prefix(1).uppercased() + kind.dropFirst()
@@ -10832,7 +10834,8 @@ let LANGUAGE_AT: [(String, Int)] = [("Unit", 283), ("Plus", 287), ("Times", 303)
 let LANGUAGE_FILE = "Sources/VerificationIsIdentification/Primitive.swift"
 // what the court itself is, by name: the two files that decide every verdict
 // this tool prints
-let COURT_FILES = ["Sources/Tools/Judge.swift", "Sources/Tools/WhereJudge.swift"]
+// the court moved to its own target long before the split; these paths name it there
+let COURT_FILES = ["Sources/Court/Judge.swift", "Sources/Court/WhereJudge.swift"]
 
 func languageNames() -> [(String, Int)] {
     return LANGUAGE_AT

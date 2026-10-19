@@ -804,7 +804,7 @@ def main():
               # "nothing here is judged yet" over a world that holds
               and "nothing here is judged yet" not in _sv.get("next", "")))
     c, r = run("check", "administer", "X", "Y", cwd=repo)
-    S.append(("check administer honest error without corpus", "GATE_CORPUS" in json.dumps(r)))
+    S.append(("check administer honest error without the showcase", "GATE_SHOWCASE" in json.dumps(r)))
 
     # the layout is a fact of the world: the manifest splits, judgement runs the list, guards hold both directions
     split = os.path.join(tmp, "split")
@@ -6066,7 +6066,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     S.append(("the court's size is counted from the checkout, and unsaid without one",
               "the court is" not in silent_court
               # the two files that decide every verdict are named, not guessed at
-              and 'let COURT_FILES = ["Sources/Tools/Judge.swift", "Sources/Tools/WhereJudge.swift"]' in shelf_src
+              and 'let COURT_FILES = ["Sources/Court/Judge.swift", "Sources/Court/WhereJudge.swift"]' in shelf_src
               # no number about somebody else's files is written in this tool
               and not re.search(r"court[^\n]*\b1021\b", shelf_src)
               and (not corpus or re.search(r"the court is \d+ lines", counted))
