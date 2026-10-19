@@ -180,15 +180,17 @@ function judgeWhereTexts(text, extraTexts) {
     function refusalsFor(f, text) {
         const out = [];
         if (FORMS.has(f)) {
-            let stream = text;
-            for (const other of FORMS) {
-                if (other !== f) stream += "\\n" + textOf(other);
-            }
-            const notes = lawNotes(stream);
-            const court = judgeWhereTexts(stream, []);
-            /* a form the court cannot read is refused at the line it names,
-               never passed over: the page shows that refusal as it is */
-            if (court.exit === 2) {
+            /* each form is one file and one scope, judged alone, the way the
+               CLI hands the court one file: joining the forms into one stream
+               declares their shared names twice, which the court refuses */
+            const notes = lawNotes(text);
+            const court = judgeWhereTexts(text, []);
+            /* a file with no gated claim is not refused, it has nothing to
+               judge; any other form the court cannot read is refused at the
+               line it names, never passed over */
+            const nothingToJudge = court.exit === 2 && court.refusals.length === 1
+                && court.refusals[0].includes("no equalities or memberships were judged");
+            if (court.exit === 2 && !nothingToJudge) {
                 for (const r of court.refusals) {
                     const ln = r.match(/line (\\d+)/);
                     out.push({ address: f + ":" + (ln ? ln[1] : 1),
