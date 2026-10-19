@@ -193,8 +193,21 @@ function judgeWhereTexts(text, extraTexts) {
             if (court.exit === 2 && !nothingToJudge) {
                 for (const r of court.refusals) {
                     const ln = r.match(/line (\\d+)/);
-                    out.push({ address: f + ":" + (ln ? ln[1] : 1),
-                               claim: r.replace(/^\\s*\\u2717\\s*THE WHERE:\\s*/, "") });
+                    /* a projection the court cannot read names its owner,
+                       not a claim: every certificate that applies that owner
+                       as an argument meets the same projection, so the
+                       refusal lands on each of their lines; the court itself
+                       stops at the first and the page cannot tell which */
+                    const proj = r.match(/cannot read projection '(\\w+)\\./);
+                    const claim = r.replace(/^\\s*\\u2717\\s*THE WHERE:\\s*/, "");
+                    const applying = proj ? text.split("\\n").map((l, i) => [l, i + 1]).filter(
+                        ([l]) => new RegExp("typealias \\\\w+ = \\\\w+<.*\\\\b" + proj[1] + "\\\\b").test(l))
+                        .map(([, n]) => n) : [];
+                    if (!ln && applying.length) {
+                        for (const n of applying) out.push({ address: f + ":" + n, claim });
+                    } else {
+                        out.push({ address: f + ":" + (ln ? ln[1] : 1), claim });
+                    }
                 }
             }
             for (const r of court.exit === 2 ? [] : court.refusals) {
@@ -371,7 +384,10 @@ function judgeWhereTexts(text, extraTexts) {
                         // keeps its dot inside a side, same border, new coat
                         const compiles = rs.every(r => {
                             const m = r.claim.match(/\u00b7 ([^:]+?)(?::|$)/);
-                            return !(m && m[1].includes("."));
+                            // at canon v4 a name of the wrong kind is a
+                            // projection the court cannot read, not a dotted aka
+                            return !(m && m[1].includes("."))
+                                && !/cannot read projection/.test(r.claim);
                         });
                         judged += 1;
                         if (compiles !== offered.has(name)) { pairOk = false; break; }
