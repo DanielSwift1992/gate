@@ -88,10 +88,10 @@
 //
 // BREAK IT, to watch the check happen.
 //
-//     1. Open verbs.swift and find `Log`. Its record says `Does = Reads`:
+//     1. Open verbs.swift and find `Log`. Its record says `Does = Looks`:
 //        the log command reads and never writes.
-//     2. Change `Reads` to `Writes`. The record is now false, and the judge
-//        refuses on that keystroke: `Writes against Reads`, with the line
+//     2. Change `Looks` to `Changes`. The record is now false, and the judge
+//        refuses on that keystroke: `Changes against Looks`, with the line
 //        number. While the verdict is red nothing is saved: on disk the
 //        file stays as it was.
 //     3. Change it back. Green, and the keystroke is saved: the file on

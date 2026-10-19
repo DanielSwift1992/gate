@@ -25,14 +25,23 @@ public typealias W512 = Twice<W256>
 public typealias W1024 = Twice<W512>
 public typealias W2048 = Twice<W1024>
 
-// ── the forms this file holds itself to ──
-public protocol Ordered {}
-public enum Taller<Hi, Lo, Slack>: Close {}
-extension Taller: Ordered
-where Hi == Plus<Lo, Plus<Unit, Slack>> {}
-public enum AtLeast<Have, Floor, Slack>: Close {}
-extension AtLeast: Ordered
-where Have == Plus<Floor, Slack> {}
+// ── the forms this file holds itself to, and they are counts. A size is a
+// number of tenths, so a rule between two sizes is a rule between two numbers:
+// the count court reads Unit, Never and Plus as the corpus's Primitive defines
+// them and checks each reading's declared answer. The where court would read
+// the same rule as an equality of two names, and refuse it ──
+public enum BenchType: Close {}
+public enum TenthsQuestion: Close {}
+public enum Tenths<Measured: Structure, Declared: Structure>: PredicateReading {
+    public typealias Left = Measured
+    public typealias Right = Declared
+    public typealias Sigma = BenchType
+    public typealias Encoding = UnaryArithmeticEncoding
+    public typealias Predicate = TenthsQuestion
+    public typealias Answer = Declared
+}
+public typealias Taller<Hi: Structure, Lo: Structure, Slack: Structure> = Tenths<Hi, Plus<Lo, Plus<Unit, Slack>>>
+public typealias AtLeast<Have: Structure, Floor: Structure, Slack: Structure> = Tenths<Have, Plus<Floor, Slack>>
 
 public protocol Face {}
 public enum Mono: Face {}

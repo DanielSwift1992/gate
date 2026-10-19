@@ -7,14 +7,17 @@
 // because at a percent the darkest nodes cannot land on the grey line at all:
 // the nearest integer sat in the warm corner and the canvas came out pink.
 //
-// Judged here: the ladder is monotone, text clears a contrast bound, ink and
-// the names at 4.5:1, the secondary registers (muted, and the seam the
-// ceremony is set in) at the 3:1 bound П1 declares. A neutral is neutral, its
-// X and Z held within two percent of the D65 grey line, so neither a blue nor
-// a warm tint can creep back. Every semantic atom stands outside that band, on
-// the side it leans, and the verdict's two poles stand on opposite sides of
-// red-green. Lower any of it and the slack stops settling: the judge names the
-// pair, in numbers.
+// Judged here, as a count: the ladder is monotone, text clears a contrast
+// bound, ink and the names at 4.5:1, the secondary registers (muted, and the
+// seam the ceremony is set in) at the 3:1 bound П1 declares, the verdict's two
+// poles stand on opposite sides of red-green, and the channels a reader must
+// tell apart stand apart. Lower any of it and the reading's answer is wrong:
+// the count court names the claim, in numbers.
+//
+// Stated and not judged: a neutral is neutral, its X and Z held within two
+// percent of the D65 grey line, and every semantic atom stands outside that
+// band, on the side it leans. Those laws multiply by the D65 coefficients and
+// outgrow the count court's budget; the section that states them says so.
 //
 // The floor, named: at a tenth of a percent of light one step is the whole
 // resolution, and 0.95 of one step is not a number. Those nodes state X == Y
@@ -61,42 +64,55 @@ public typealias N100 = Plus<W4, Plus<W32, W64>>
 public typealias N300 = Plus<W4, Plus<W8, Plus<W32, W256>>>
 public typealias N350 = Plus<W2, Plus<W4, Plus<W8, Plus<W16, Plus<W64, W256>>>>>
 
-public protocol ContrastHolds {}
-public enum Legible<Bright, Dark, Slack>: Close {}
-extension Legible: ContrastHolds
-where Bright == Plus<Times<N7, Dark>, Plus<N300, Slack>> {}
-public enum Readable<Bright, Dark, Slack>: Close {}
-extension Readable: ContrastHolds
-where Bright == Plus<Times<N3, Dark>, Plus<N100, Slack>> {}
-public enum ReadableAA<Bright, Dark, Slack>: Close {}
-extension ReadableAA: ContrastHolds
-where Twice<Bright> == Plus<Times<N9, Dark>, Plus<N350, Slack>> {}
-public protocol Ordered {}
-public enum Brighter<Hi, Lo, Slack>: Close {}
-extension Brighter: Ordered
-where Hi == Plus<Lo, Plus<Unit, Slack>> {}
-public enum Same<A, B>: Close {}
-extension Same: Ordered
-where A == B {}
-public protocol Achromatic {}
+// ── WHAT THE LAWS BELOW ASK IS A COUNT. A level is a number of tenths of a
+// percent, so a law between two levels is a law between two numbers, and the
+// where court reads Twice and Plus as names: two names that count the same are
+// still two names (canon four). The count court reads them as the corpus's
+// Primitive defines them, Unit one, Never none, Plus the sum, and checks each
+// reading's declared answer. A product by a stated constant is a sum of
+// doublings, so no multiplication is asked of it ──
+public enum BenchLight: Close {}
+public enum LevelQuestion: Close {}
+public enum Luminance<Measured: Structure, Declared: Structure>: PredicateReading {
+    public typealias Left = Measured
+    public typealias Right = Declared
+    public typealias Sigma = BenchLight
+    public typealias Encoding = UnaryArithmeticEncoding
+    public typealias Predicate = LevelQuestion
+    public typealias Answer = Declared
+}
+public typealias Thrice<X: Structure> = Plus<X, Twice<X>>
+public typealias Sevenfold<X: Structure> = Plus<X, Plus<Twice<X>, Twice<Twice<X>>>>
+public typealias Ninefold<X: Structure> = Plus<X, Twice<Twice<Twice<X>>>>
+public typealias Legible<Bright: Structure, Dark: Structure, Slack: Structure> = Luminance<Bright, Plus<Sevenfold<Dark>, Plus<N300, Slack>>>
+public typealias Readable<Bright: Structure, Dark: Structure, Slack: Structure> = Luminance<Bright, Plus<Thrice<Dark>, Plus<N100, Slack>>>
+public typealias ReadableAA<Bright: Structure, Dark: Structure, Slack: Structure> = Luminance<Twice<Bright>, Plus<Ninefold<Dark>, Plus<N350, Slack>>>
+public typealias Brighter<Hi: Structure, Lo: Structure, Slack: Structure> = Luminance<Hi, Plus<Lo, Plus<Unit, Slack>>>
+public typealias Same<A: Structure, B: Structure> = Luminance<A, B>
+// a channel that leans: one coordinate stands over the other by one step and
+// the slack declared, which is how each pole of the verdict says its side
+public typealias Leans<More: Structure, Less: Structure, Slack: Structure> = Luminance<More, Plus<Less, Plus<Unit, Slack>>>
+
+// ── STATED AND NOT JUDGED, AND SAID SO: the neutral and the hue laws. Each
+// multiplies a level near a thousand by a D65 coefficient from 23 to 28, and
+// the count court of question vi.count.unit-never-plus/1 spells a sum of
+// doublings out in full: past about ten thousand on a side it stops at its
+// normalization budget and infers nothing (PaperGrey_lit asks 52,920 in one
+// reading). Some of these would fit and some would not, and a law judged on
+// one theme and not the other would be a split by budget, not by meaning, so
+// the whole class waits for a count court that counts a named definition once.
+// The laws, as they stood under the court that read Times as a product:
+//   Grey<X, Y, Z, Slo, Shi, Xlo, Xhi>:  25·Z == 27·Y + Slo,  28·Y == 25·Z + Shi,
+//                                       25·X == 23·Y + Xlo,  24·Y == 25·X + Xhi
+//   GreyFloor<X, Y, Z, Slo, Shi>:       X == Y,  25·Z == 27·Y + Slo,  28·Y == 25·Z + Shi
+//   TowardBlue<Y, Z, Margin>:           25·Z == 28·Y + 1 + Margin
+//   TowardWarm<Y, Z, Margin>:           27·Y == 25·Z + 1 + Margin
+// Each claim below still names its numbers, and the page paints them, but no
+// court here says they hold ──
 public enum Grey<X, Y, Z, Slo, Shi, Xlo, Xhi>: Close {}
-extension Grey: Achromatic
-where Times<N25, Z> == Plus<Times<N27, Y>, Slo>,
-      Times<N28, Y> == Plus<Times<N25, Z>, Shi>,
-      Times<N25, X> == Plus<Times<N23, Y>, Xlo>,
-      Times<N24, Y> == Plus<Times<N25, X>, Xhi> {}
 public enum GreyFloor<X, Y, Z, Slo, Shi>: Close {}
-extension GreyFloor: Achromatic
-where X == Y,
-      Times<N25, Z> == Plus<Times<N27, Y>, Slo>,
-      Times<N28, Y> == Plus<Times<N25, Z>, Shi> {}
-public protocol Chromatic {}
 public enum TowardBlue<Y, Z, Margin>: Close {}
-extension TowardBlue: Chromatic
-where Times<N25, Z> == Plus<Times<N28, Y>, Plus<Unit, Margin>> {}
 public enum TowardWarm<Y, Z, Margin>: Close {}
-extension TowardWarm: Chromatic
-where Times<N27, Y> == Plus<Times<N25, Z>, Plus<Unit, Margin>> {}
 // ── AND TWO CHANNELS THAT MUST BE TOLD APART STAND APART. Every hue here was
 // certified for its side (toward blue, toward warm) and for its lightness,
 // and nothing ever certified the DISTANCE between two of them. So a channel
@@ -105,15 +121,7 @@ where Times<N27, Y> == Plus<Times<N25, Z>, Plus<Unit, Margin>> {}
 // eleven-fold collapse that left the whole mine/theirs distinction resting on
 // an axis no law looked at. A pair the eye must separate is a pair the world
 // must hold apart, and by a stated amount.
-public enum Apart<A, B, Margin>: Close {}
-extension Apart: Ordered
-where A == Plus<B, Plus<Unit, Margin>> {}
-
-public protocol Opposite {}
-public enum Opposed<AX, AY, BX, BY, Aslack, Bslack>: Close {}
-extension Opposed: Opposite
-where AY == Plus<AX, Plus<Unit, Aslack>>,
-      BX == Plus<BY, Plus<Unit, Bslack>> {}
+public typealias Apart<A: Structure, B: Structure, Margin: Structure> = Luminance<A, Plus<B, Plus<Unit, Margin>>>
 
 // ── the light theme ──
 public typealias InkLitX = Plus<W2, W8>
@@ -266,8 +274,10 @@ public typealias ActionChroma_dim = TowardBlue<ActionDimY, ActionDimZ, Plus<W4, 
 public typealias LawChroma_dim = TowardWarm<LawDimY, LawDimZ, Plus<W2, Plus<W4, Plus<W8, Plus<W16, Plus<W128, Plus<W512, W8192>>>>>>>
 public typealias LocalTypeChroma_dim = TowardBlue<LocalTypeDimY, LocalTypeDimZ, Plus<Unit, Plus<W2, Plus<W8, Plus<W16, Plus<W32, Plus<W512, W4096>>>>>>>
 public typealias KnownNameChroma_dim = TowardBlue<KnownNameDimY, KnownNameDimZ, Plus<W2, Plus<W4, Plus<W32, Plus<W128, Plus<W256, Plus<W1024, W4096>>>>>>>
-public typealias VerdictPoles_lit = Opposed<OkLitX, OkLitY, BadLitX, BadLitY, Plus<Unit, Plus<W4, W64>>, Plus<Unit, Plus<W8, Plus<W16, W64>>>>
-public typealias VerdictPoles_dim = Opposed<OkDimX, OkDimY, BadDimX, BadDimY, Plus<W4, Plus<W8, Plus<W16, Plus<W32, W128>>>>, Plus<Unit, Plus<W8, W32>>>
+public typealias VerdictPoleOk_lit = Leans<OkLitY, OkLitX, Plus<Unit, Plus<W4, W64>>>
+public typealias VerdictPoleBad_lit = Leans<BadLitX, BadLitY, Plus<Unit, Plus<W8, Plus<W16, W64>>>>
+public typealias VerdictPoleOk_dim = Leans<OkDimY, OkDimX, Plus<W4, Plus<W8, Plus<W16, Plus<W32, W128>>>>>
+public typealias VerdictPoleBad_dim = Leans<BadDimX, BadDimY, Plus<Unit, Plus<W8, W32>>>
 
 // ── the seam is read, so it clears the bound П1 declares for secondary
 // text, and stays quieter than speech. The selection is a surface, so it

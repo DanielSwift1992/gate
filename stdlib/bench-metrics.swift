@@ -56,13 +56,26 @@ public typealias Runway = Twice<TwoLines>
 //   TwoLines 20u  ×1   the air above an empty page
 //   Runway   40u  ×2   four lines, so the last line is not the last pixel
 
-public protocol Ordered {}
-public enum Wider<Hi, Lo, Slack>: Close {}
-extension Wider: Ordered
-where Hi == Plus<Lo, Plus<Unit, Slack>> {}
-public enum Same<A, B>: Close {}
-extension Same: Ordered
-where A == B {}
+// ── WHAT THE RULES BELOW ASK IS A COUNT. A rule about two gaps is a rule about
+// two numbers, and the where court reads Twice and Plus as names: two names
+// that count the same are still two names (canon four), so it would refuse
+// every rule here. The count court reads them as the corpus's Primitive
+// defines them, Unit one, Never none, Plus the sum, and checks each reading's
+// declared answer. The reading is stated here, so the arithmetic is a premise
+// this page shows rather than one a court lends it ──
+public enum BenchSpacing: Close {}
+public enum StepsQuestion: Close {}
+public enum Steps<Measured: Structure, Declared: Structure>: PredicateReading {
+    public typealias Left = Measured
+    public typealias Right = Declared
+    public typealias Sigma = BenchSpacing
+    public typealias Encoding = UnaryArithmeticEncoding
+    public typealias Predicate = StepsQuestion
+    public typealias Answer = Declared
+}
+// wider by one step and the slack declared
+public typealias Wider<Hi: Structure, Lo: Structure, Slack: Structure> = Steps<Hi, Plus<Lo, Plus<Unit, Slack>>>
+public typealias Same<A: Structure, B: Structure> = Steps<A, B>
 
 // ── the ladder is monotone ──
 public typealias SnugOverTight = Wider<Snug, Tight, Never>

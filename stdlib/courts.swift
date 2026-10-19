@@ -27,7 +27,7 @@
 public protocol VerdictCanon {}
 public enum CanonV2: VerdictCanon {}
 // the certificate court's normalization canon is four since the corpus
-// replays source-defined definition reductions; the count court answers its
+// replays source-defined definition reductions; the count court is asked its
 // own question, vi.count.unit-never-plus/1, which the where canon does not
 // version. The plain court keeps its canon of two.
 public enum CanonV4: VerdictCanon {}

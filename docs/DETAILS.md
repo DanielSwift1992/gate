@@ -32,7 +32,8 @@ python3 tests/smoke.py                      # all green, offline
 grep -nE "URLSession|NWConnection|^[[:space:]]*import Network|getaddrinfo" bin/gate-cli.swift
 grep -nE "urllib\.request|^[[:space:]]*import socket|socket\.socket|http\.client|requests\.(get|post|put)" gate
 grep -nE "XMLHttpRequest|new WebSocket|fetch\([[:space:]]*['\"\`]https?:|(src|href)[[:space:]]*=[[:space:]]*['\"]https?:" \
-    web/ui.html bin/judge.js bin/judge-where.js bin/judge-cli.js
+    web/ui.html bin/judge.js bin/judge-cli.js bin/judge-wasm.js \
+    bin/court-wasm/node/vi_court.js bin/court-wasm/web/vi_court.js
 
 # 3. the server listens on the loopback, and nowhere else
 grep -n '0x7f00_0001' bin/gate-cli.swift    # 127.0.0.1, written in, not configured
@@ -149,6 +150,12 @@ head.
   `gate.manifest.swift` and gate obeys it: judgement runs the declared
   list, and both halves are named at their line, a row whose file is not
   there and a file beside them with no row.
+- The forms rows of a layout are judged as worlds: a row joins every row
+  that declares a name it uses and does not declare itself, so a
+  certificate whose gate stands in the next file is judged with that file,
+  and two pages that each declare their own word stay two worlds. The
+  bench page in a browser takes these worlds from `gate serve` when the
+  page is built; an edit made in the page does not recompute them.
 - Tables are inputs and views, never truth: a later CSV edit cannot
   silently reprint the world.
 - Policy is a fact, so it lives beside the world in `gate.policy.swift`: an

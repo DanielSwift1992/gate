@@ -1,5 +1,5 @@
-5d798424b79aad6ab000cca55789bbbc4e50fd43
-built from the local checkout /private/tmp/claude-501/-Users-daniilstrizov-Projects-verification-is-identification/7bd3b1d1-e4c9-4c0c-8413-d11aa995ce3f/scratchpad/vi-rust-sample, not from the public pin
+f5a46c38de1ba5c1a95f346a0dee9f21429c0e09
+built from the public corpus at f5a46c38de1ba5c1a95f346a0dee9f21429c0e09
 wasm-bindgen 0.2.105; rustc 1.83.0 (90b35a623 2024-11-26)
 5ee3322eeb45e5ae72bf00a3fd59254dd8d08ff4d995488762cf02ad22e88b40  court-wasm/node/vi_court_bg.wasm
 b937a1ffe22afdbd900b30ef527866736402cd8e28f5eb5b0560e49278175a7e  court-wasm/web/(as base64 in) vi_court_bg.wasm

@@ -31,7 +31,7 @@ silence. Either they are equal, or you get the exact point of contact:
 
 ```
 $ gate status
-status: refused 1
+status: refused 1 · 13 equalities
   ownership.swift:89 · Owns_3_carol · Zone_docs against Zone_src: an owner and
                        the path they own must share one zone
 ```
@@ -352,13 +352,17 @@ bin/shelf-into-swift.py
                 carries it: a downloaded gate has no stdlib/ beside it. The
                 pages themselves stay in stdlib/, and the battery holds what
                 the binary carries against them, page for page
-stdlib/         the judge's own words, printed as real Swift files, self-judged
+stdlib/         the judge's own words, printed as real Swift files, each
+                judged by the question it asks: certificates by the where
+                court, the bench's numbers by the count court against the
+                corpus's Primitive at the pin, and a page that claims
+                nothing is said to claim nothing
 web/ui.html     the workbench; bin/judge.js judges it in the browser
 web/codemirror.*  the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
 docs/           DETAILS.md, SECURITY.md, CHANGELOG.md, NOTICE.md, and
                 the cover's picture with its provenance
-tests/smoke.py   the battery: 577 checks this repository holds itself
+tests/smoke.py   the battery: 578 checks this repository holds itself
                  to, end-to-end runs through judge parity through
                  documentation contracts; the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts
@@ -368,7 +372,7 @@ tests/windows.py the Windows measure: the reviewer's road as asserts
 
 ```
 $ gate badge
-badge: 189 claims · holds
+badge: 112 claims · holds
 ```
 
 The badge is this repository's own, and the judge re-counts it on every
@@ -376,8 +380,10 @@ run.
 
 Working prototype under active development, MIT licensed: see LICENSE,
 and docs/NOTICE.md for the bundled pieces and their terms. The judge is a
-native binary with a versioned verdict contract (canon v2). The CLI is
-one file of Swift, built into a single binary the way git is one tool.
+native binary, and each of its courts has a versioned canon: the plain
+court two, the certificate court four, and the count court its own
+question (stdlib/courts.swift). The CLI is one file of Swift, built into a single
+binary the way git is one tool.
 We want to hear
 about a wrong verdict before anything else: see docs/SECURITY.md.
 

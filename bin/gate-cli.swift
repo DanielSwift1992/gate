@@ -2181,7 +2181,8 @@ func whereRefused(_ out: String) -> [(cert: String?, claim: String)] {
     var found: [(String?, String)] = []
     for line in out.components(separatedBy: "\n") {
         let l = line.trimmingCharacters(in: .whitespaces)
-        guard l.hasPrefix("✗") else { continue }
+        // a world with no gate is a world with nothing to judge, not a refusal
+        guard l.hasPrefix("✗"), l != WhereAnswer.nothingAsked else { continue }
         let claim = String(l.dropFirst()).trimmingCharacters(in: .whitespaces)
         found.append((matchAt(claim, "'(\\w+)").map { $0[1] }, claim))
     }
@@ -2194,9 +2195,15 @@ func whereRefused(_ out: String) -> [(cert: String?, claim: String)] {
 // green over a lie.
 func formsGuards(_ w: WorldState, _ size: inout [String: Int],
                  live: [String: String] = [:]) -> [(address: String, claim: String)] {
-    // the forms rows of one layout are one world laid out in files: glued and
-    // judged together by the where court, with the shelf worlds an operator
-    // overrides judged each as its own stream
+    // ── ONE WORLD IS WHAT A CLAIM REACHES. The forms rows of a layout are glued
+    // into worlds by the names they use: a row joins every row that declares a
+    // name it uses and does not declare itself, and the rows so joined are one
+    // world for the where court. Judged one file at a time, a certificate whose
+    // gate stands in the next file is no certificate to the court, and "nothing
+    // was judged" would be said over a claim. Glued all into one, two pages that
+    // each mean their own `Reads` (a verb's touch, a key's permission) leave a
+    // court with no scope rule no way to choose, and it reads nothing. The shelf
+    // worlds an operator overrides are judged each as its own stream
     guard let layout = w.layout else { return [] }
     let d = (layout.manifest as NSString).deletingLastPathComponent
     let rows = layout.rows.filter { $0.role == "forms"
@@ -2207,27 +2214,40 @@ func formsGuards(_ w: WorldState, _ size: inout [String: Int],
         if let typed = live[r.path] { return typed }
         return readText((d as NSString).appendingPathComponent(r.path)) ?? ""
     }
-    var streams: [(shelf: String?, text: String, mine: [(String, String)])] = []
+    // where each name is declared among some rows: a refusal is addressed to
+    // the row and line that declare the claim it names
+    func declared(_ among: [LayoutRow]) -> [String: String] {
+        var at: [String: String] = [:]
+        for r in among {
+            for (i0, line) in bodyOf(r).components(separatedBy: "\n").enumerated() {
+                if let m = matchAt(line.trimmingCharacters(in: .whitespaces),
+                                   "public (?:typealias|enum|protocol) (\\w+)"),
+                   at[m[1]] == nil {
+                    at[m[1]] = "\(r.path):\(i0 + 1)"
+                }
+            }
+        }
+        return at
+    }
+    var streams: [(name: String, rows: [LayoutRow], text: String, mine: [(String, String)])] = []
     for shelfName in SHELF_ORDER {
         let (text, placed, clash) = presentedOver(w, shelfName)
         bad += clash
-        if !placed.isEmpty { streams.append((shelfName, text, placed)) }
+        if !placed.isEmpty { streams.append((shelfName, rows, text, placed)) }
     }
-    streams.append((nil, rows.map(bodyOf).joined(separator: "\n"), []))
-    var whereMap: [String: String] = [:]
-    for r in rows {
-        for (i0, line) in bodyOf(r).components(separatedBy: "\n").enumerated() {
-            if let m = matchAt(line.trimmingCharacters(in: .whitespaces),
-                               "public (?:typealias|enum|protocol) (\\w+)"),
-               whereMap[m[1]] == nil {
-                whereMap[m[1]] = "\(r.path):\(i0 + 1)"
-            }
-        }
+    // a world with no code at all, a page of prose in comments, holds nothing
+    // any court could read, so no court is asked about it
+    let worlds = worldsOf(rows.map { ($0, bodyOf($0)) }).filter { world in
+        world.contains { !codeOf(bodyOf($0)).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    }
+    for (k, world) in worlds.enumerated() {
+        streams.append(("presented-\(k)", world, world.map(bodyOf).joined(separator: "\n"), []))
     }
     let tmp = tempRoot() + "gate-forms-\(ProcessInfo.processInfo.processIdentifier)"
     try? FileManager.default.createDirectory(atPath: tmp, withIntermediateDirectories: true)
-    for (shelfName, text, mine) in streams {
-        let fp = (tmp as NSString).appendingPathComponent((shelfName ?? "presented") + ".swift")
+    for (streamName, among, text, mine) in streams {
+        let whereMap = declared(among)
+        let fp = (tmp as NSString).appendingPathComponent(streamName + ".swift")
         try? text.write(toFile: fp, atomically: false, encoding: .utf8)
         let said = courtSays(["where", fp])
         bad += canonGuard(w, said,
@@ -2243,17 +2263,206 @@ func formsGuards(_ w: WorldState, _ size: inout [String: Int],
                     spot = mine.first(where: { $0.0 == t })?.1
                 }
             }
-            bad.append((spot ?? rows[0].path, plainly(claim, lawNotes([text]))))
+            bad.append((spot ?? among.first?.path ?? rows[0].path, plainly(claim, lawNotes([text]))))
         }
         if let m = matches("(\\d+) equalities and (\\d+) memberships judged across (\\d+) uses",
                            said).first {
             size["equalities"] = (size["equalities"] ?? 0) + (Int(m[0]) ?? 0)
             size["memberships"] = (size["memberships"] ?? 0) + (Int(m[1]) ?? 0)
             size["uses"] = (size["uses"] ?? 0) + (Int(m[2]) ?? 0)
+        } else if said.contains(WhereAnswer.nothingAsked) {
+            // the court sat and was asked nothing: a measure of none, not silence
+            size["equalities"] = size["equalities"] ?? 0
         }
+    }
+    // and a stream that declares a count question is asked it: a world of the
+    // layout glued the same way, so a reading written in one file stands on the
+    // ladder and the question another file of it declares, and a shelf page with
+    // the values an operator restated in it, so a number moved is held by every
+    // law that stands on it. Both on the corpus's Primitive
+    let premise = (tmp as NSString).appendingPathComponent("Primitive.swift")
+    func askCount(_ fp: String, _ text: String, _ questionsFrom: [String],
+                  _ at: [String: String], _ mine: [(String, String)], _ fallback: String) {
+        var asked: [(predicate: String, encoding: String, sigma: String)] = []
+        for t in questionsFrom {
+            if let q = countQuestion(t), !asked.contains(where: { $0 == q }) { asked.append(q) }
+        }
+        if asked.isEmpty { return }
+        if !FileManager.default.fileExists(atPath: premise) {
+            try? PinnedCorpus.primitive.write(toFile: premise, atomically: false, encoding: .utf8)
+        }
+        try? text.write(toFile: fp, atomically: false, encoding: .utf8)
+        for q in asked {
+            let counted = courtSays(["count", fp, premise, "--predicate", q.predicate,
+                                     "--encoding", q.encoding, "--sigma", q.sigma])
+            bad += canonGuard(w, counted, counted.contains("COUNT"), "judge count")
+            for line in counted.components(separatedBy: "\n") {
+                let l = line.trimmingCharacters(in: .whitespaces)
+                guard l.hasPrefix("✗") else { continue }
+                let claim = String(l.dropFirst()).trimmingCharacters(in: .whitespaces)
+                // a wrong answer names its reading; a reading the court could not
+                // finish names only where it stopped, so it lands on the file.
+                // Over a shelf page the line to fix is the operator's: the first
+                // restated name the reading reaches through the page's aliases
+                let cert = claim.hasPrefix("COUNT:") ? matchAt(claim, "COUNT: '(\\w+)'").map { $0[1] } : nil
+                let spot = cert.flatMap { mine.isEmpty ? nil : reachedRestatement($0, text, mine) }
+                    ?? cert.flatMap { at[$0] } ?? fallback
+                bad.append((spot, claim))
+            }
+            if let m = matches("(\\d+) source-bound readings checked", counted).first {
+                size["readings"] = (size["readings"] ?? 0) + (Int(m[0]) ?? 0)
+            }
+        }
+    }
+    for (streamName, among, text, mine) in streams where !mine.isEmpty {
+        askCount((tmp as NSString).appendingPathComponent("counted-" + streamName + ".swift"),
+                 text, [text], declared(among), mine, among.first?.path ?? rows[0].path)
+    }
+    for (k, world) in worlds.enumerated() {
+        askCount((tmp as NSString).appendingPathComponent("counted-\(k).swift"),
+                 world.map(bodyOf).joined(separator: "\n"), world.map(bodyOf),
+                 declared(world), [], world[0].path)
     }
     try? FileManager.default.removeItem(atPath: tmp)
     return bad
+}
+
+// the operator's line a reading stands on: the first name it reaches, through
+// the aliases the text defines, that the operator restated
+func reachedRestatement(_ reading: String, _ text: String, _ mine: [(String, String)]) -> String? {
+    var defs: [String: String] = [:]
+    for m in matches("^public typealias (\\w+)(?:<[^=]*>)? = (.+)$", text, lines: true) {
+        defs[m[0]] = m[1]
+    }
+    var seen = Set<String>()
+    var todo = [reading]
+    while let name = todo.popLast() {
+        guard seen.insert(name).inserted else { continue }
+        if let hit = mine.first(where: { $0.0 == name }) { return hit.1 }
+        for t in matches("\\b([A-Z]\\w*)\\b", defs[name] ?? "") { todo.append(t[0]) }
+    }
+    return nil
+}
+
+// the rows joined by the names they use: a row and every row declaring a name
+// it uses and does not declare itself, closed under that, in layout order.
+// Comments and strings carry no reference a court reads, so they are cut first
+func codeOf(_ text: String) -> String {
+    // line comments, block comments (which nest in Swift) and string literals
+    // cut, newlines kept so a line stays a line
+    var out: [Character] = []
+    var depth = 0
+    var inString = false
+    var chars = Array(text)
+    chars.append("\n")
+    var i = 0
+    while i < chars.count - 1 {
+        let c = chars[i], next = chars[i + 1]
+        if depth > 0 {
+            if c == "/" && next == "*" { depth += 1; i += 2; continue }
+            if c == "*" && next == "/" { depth -= 1; i += 2; continue }
+            if c == "\n" { out.append(c) }
+            i += 1
+            continue
+        }
+        if inString {
+            if c == "\\" { i += 2; continue }
+            if c == "\"" || c == "\n" { inString = false }
+            if c == "\n" { out.append(c) }
+            i += 1
+            continue
+        }
+        if c == "/" && next == "*" { depth = 1; i += 2; continue }
+        if c == "/" && next == "/" {
+            while i < chars.count - 1 && chars[i] != "\n" { i += 1 }
+            continue
+        }
+        if c == "\"" { inString = true; i += 1; continue }
+        out.append(c)
+        i += 1
+    }
+    return String(out)
+}
+
+func worldsOf(_ rows: [(row: LayoutRow, text: String)]) -> [[LayoutRow]] {
+    let texts = rows.map { codeOf($0.text) }
+    let declares: [Set<String>] = texts.map { t in
+        Set(matches("^public (?:enum|protocol|typealias|struct|class) (\\w+)", t, lines: true)
+            .map { $0[0] })
+    }
+    // a declaration's own parameters and associated types are its own names:
+    // using them reaches no other row
+    func local(_ t: String) -> Set<String> {
+        var names = Set(matches("associatedtype (\\w+)", t).map { $0[0] })
+        let chars = Array(t)
+        let ns = t as NSString
+        guard let re = compiled("(?:enum|struct|class|typealias) \\w+\\s*<", []) else { return names }
+        for hit in re.matches(in: t, range: NSRange(location: 0, length: ns.length)) {
+            // the parameter list from its `<` to the matching `>`, split at its
+            // own commas: each item's first word is a parameter
+            var i = String(ns.substring(to: hit.range.location + hit.range.length)).count
+            var depth = 1
+            var item = ""
+            var items: [String] = []
+            while i < chars.count, depth > 0 {
+                let c = chars[i]
+                if c == "<" { depth += 1 } else if c == ">" { depth -= 1 }
+                if depth == 1 && c == "," { items.append(item); item = "" }
+                else if depth > 0 { item.append(c) }
+                i += 1
+            }
+            items.append(item)
+            for it in items {
+                if let w = matchAt(it.trimmingCharacters(in: .whitespacesAndNewlines), "(\\w+)") {
+                    names.insert(w[1])
+                }
+            }
+        }
+        return names
+    }
+    let locals: [Set<String>] = texts.map(local)
+    let uses: [Set<String>] = texts.map { t in Set(matches("\\b([A-Z]\\w*)\\b", t).map { $0[0] }) }
+    var parent = Array(rows.indices)
+    func root(_ i: Int) -> Int {
+        var i = i
+        while parent[i] != i { parent[i] = parent[parent[i]]; i = parent[i] }
+        return i
+    }
+    for i in rows.indices {
+        for name in uses[i].subtracting(declares[i]).subtracting(locals[i]) {
+            for j in rows.indices where j != i && declares[j].contains(name) {
+                parent[root(i)] = root(j)
+            }
+        }
+    }
+    var groups: [Int: [LayoutRow]] = [:]
+    var order: [Int] = []
+    for i in rows.indices {
+        let r = root(i)
+        if groups[r] == nil { order.append(r) }
+        groups[r, default: []].append(rows[i].row)
+    }
+    return order.map { groups[$0]! }
+}
+
+// ── AND A PAGE WHOSE LAWS ARE NUMBERS ASKS THE COUNT COURT. The question is
+// read off the page's own declaration: the reading that conforms to
+// PredicateReading names its Sigma, its Encoding and its Predicate, and those
+// three are what `judge count` is asked. The count court reads Unit, Never and
+// Plus by the corpus's Primitive, and this binary carries that file at the
+// judge's own pin (bin/build-cli.sh), so a clone without the corpus still
+// judges the bench by the premise the court was built with.
+func countQuestion(_ text: String) -> (predicate: String, encoding: String, sigma: String)? {
+    for m in matches("public enum \\w+<[^{]*>:\\s*PredicateReading\\s*\\{([^}]*)\\}", text) {
+        let body = m[0]
+        func said(_ key: String) -> String? {
+            matches("typealias " + key + " = (\\w+)", body).first?.first
+        }
+        if let p = said("Predicate"), let e = said("Encoding"), let g = said("Sigma") {
+            return (p, e, g)
+        }
+    }
+    return nil
 }
 
 func policyPathOf(_ w: WorldState) -> String? {
@@ -2402,29 +2611,10 @@ func stdlibGuards(_ w: WorldState) -> [(address: String, claim: String)] {
     return bad
 }
 
-func gateShapeGuards(_ w: WorldState) -> [(address: String, claim: String)] {
-    // a gated conformance written on one line is read by no court, in either
-    // carrier of the court: refused rather than left quietly unjudged
-    var bad: [(address: String, claim: String)] = []
-    guard let layout = w.layout else { return bad }
-    let d = (layout.manifest as NSString).deletingLastPathComponent
-    for r in layout.rows where r.role == "forms" {
-        let path = (d as NSString).appendingPathComponent(r.path)
-        guard FileManager.default.fileExists(atPath: path), let text = readText(path)
-        else { continue }
-        for (i0, line) in text.components(separatedBy: "\n").enumerated() {
-            if !matches("^\\s*(?:public )?extension\\s+\\w+\\s*:\\s*\\w+\\b.*\\bwhere\\b.*"
-                        + "\\{\\s*\\}\\s*$", line).isEmpty {
-                bad.append(("\(r.path):\(i0 + 1)",
-                            "a gated conformance written on one line is read by no court: "
-                          + "break the line before `where` and the law is judged again. "
-                          + "Left as it is, every certificate over it holds without "
-                          + "being checked"))
-            }
-        }
-    }
-    return bad
-}
+// A gated conformance written on one line was read by no court at canon two,
+// and a guard here refused the shape. At canon four the where court reads it
+// in both carriers, the binary and the wasm module, and judges it as it judges
+// the broken line, so the guard retired with the reason it stood on.
 
 // ── THE ONE READING LAW OF A ROSTER PAGE. The page is read here, once,
 // into rows, and every consumer takes the rows. A second reader of the
@@ -3448,7 +3638,7 @@ func statusAnswer() -> StatusAnswer {
     refusals += formsGuards(w, &whereSize)
     refusals += policyGuards(w)
     refusals += stdlibGuards(w)
-    refusals += gateShapeGuards(w) + ownSurfaceGuards(w) + opensGuards(w)
+    refusals += ownSurfaceGuards(w) + opensGuards(w)
     refusals += vendoredGuards(w) + takenJudgeGuard(w)
     refusals += codeownersPairGuards(w)
     refusals += duplicateGuardsOver(diskSources(w))
@@ -3507,7 +3697,8 @@ func statusPairs(_ a: StatusAnswer) -> [(String, StatusJSON)] {
         pairs.append(("forms", .object([
             ("equalities", .raw(String(a.whereSize["equalities"] ?? 0))),
             ("memberships", .raw(String(a.whereSize["memberships"] ?? 0))),
-            ("uses", .raw(String(a.whereSize["uses"] ?? 0)))])))
+            ("uses", .raw(String(a.whereSize["uses"] ?? 0))),
+            ("readings", .raw(String(a.whereSize["readings"] ?? 0)))])))
     }
     pairs.append(("court", .text("the judge")))
     pairs.append(("next", .text(a.next)))
@@ -3549,8 +3740,12 @@ func statusDoor(_ asJson: Bool) -> Never {
                       + many(Int(m[2]) ?? 0, "premise"))
         }
         if let n = whereSize["equalities"] {
-            if n != 0 {
-                tail.append(many(n, "equality", "equalities"))
+            let counted = whereSize["readings"] ?? 0
+            if n != 0 || counted != 0 {
+                if n != 0 { tail.append(many(n, "equality", "equalities")) }
+                // the count court's measure beside the where court's: a count
+                // reading is not an equality, and adding them would say so
+                if counted != 0 { tail.append(many(counted, "count reading")) }
             } else if refusals.isEmpty && worldM == nil {
                 tail.append("nothing claimed here yet, so nothing was checked")
             }
@@ -7175,7 +7370,7 @@ if args.first == "import" {
                     + (ghosts + unread + noise).map {
                     .object([("address", .text($0.address)), ("claim", .text($0.claim))]) })),
                 ("judge_ms", .raw(String(ms))),
-                ("canon_handshake", .raw(outp.contains("canon v2") ? "true" : "false")),
+                ("canon_handshake", .raw(outp.contains("canon v4") ? "true" : "false")),
                 ("note", .text(note2)),
                 ("next", .text(next)),
             ]
@@ -7346,7 +7541,7 @@ if args.first == "import" {
                              ("address", .text($0.address)),
                              ("claim", .text($0.claim))]) })),
                 ("judge_ms", .raw(String(ms))),
-                ("canon_handshake", .raw(outp.contains("canon v2") ? "true" : "false")),
+                ("canon_handshake", .raw(outp.contains("canon v4") ? "true" : "false")),
                 ("note", .text(note)),
             ]), 0) + "\n")
         } else {
@@ -8591,7 +8786,8 @@ if args.first == "badge" {
     }
     let holds = said.verdict == "holds"
     let claims: Int
-    if files.isEmpty { claims = said.whereSize["equalities"] ?? 0 }
+    // a count reading is a judged claim as an equality is: both are counted
+    if files.isEmpty { claims = (said.whereSize["equalities"] ?? 0) + (said.whereSize["readings"] ?? 0) }
     else if let m = said.world, m.count == 3 { claims = Int(m[2]) ?? 0 }
     else { claims = 0 }
     let here = FileManager.default.currentDirectoryPath
@@ -10476,8 +10672,24 @@ if args.first == "export" {
 // went red on the linux job already. So the wrapper stays the road everywhere it
 // has not been measured. Both roads are held to the python side's bytes by the
 // parity walk, which runs wherever a toolchain stands, so neither can drift.
+// AND A REFUSAL TO READ IS AN ANSWER, SAID ON THE COURT'S OTHER CHANNEL. The
+// certificate court at canon four answers exit 2 in two ways, and only its
+// stderr tells them apart: a world with no gate asked it nothing ("no equalities
+// or memberships were judged; no certificate established"), and a file it could
+// not read ("cannot read 'Reads': it is declared at lines 238 and 284"). With
+// stderr dropped both arrived here as silence, and silence is what canonGuard
+// names as a court that did not sit. So a `where` that exits 2 hands its stderr
+// back with its stdout, which is the whole answer the court's CLI contract
+// (vi.court.cli-text/1) gives: exit, stdout and stderr.
+// (a static, not a top-level let: this file is main.swift, where a top-level let
+// is set only when the run reaches its line, and the run starts far above it)
+enum WhereAnswer {
+    static let nothingAsked = "✗ THE WHERE: no equalities or memberships were judged; no certificate established"
+}
+
 func courtSays(_ asked: [String]) -> String {
     spawnCounted("court")
+    let keepsRefusal = asked.first == "where" || asked.first == "count"
     let bin = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath().path
     let words: [String] = [bin, "judge"] + asked
 #if canImport(Darwin)
@@ -10489,7 +10701,9 @@ func courtSays(_ asked: [String]) -> String {
     // the court's stderr is captured and dropped, the way the other carrier's
     // judge_call captures both channels: a court asked about nothing says so
     // on stderr, and that sentence is the caller's to keep or to swallow
-    let quiet = open("/dev/null", O_WRONLY)
+    let errPath = tempRoot() + "gate-court-\(ProcessInfo.processInfo.processIdentifier)-\(UInt32.random(in: 0...UInt32.max)).err"
+    let quiet = keepsRefusal ? open(errPath, O_WRONLY | O_CREAT | O_TRUNC, 0o600)
+                             : open("/dev/null", O_WRONLY)
     if quiet >= 0 { posix_spawn_file_actions_adddup2(&actions, quiet, 2) }
     posix_spawn_file_actions_addclose(&actions, fds[0])
     var argv: [UnsafeMutablePointer<CChar>?] = words.map { strdup($0) }
@@ -10510,21 +10724,32 @@ func courtSays(_ asked: [String]) -> String {
     }
     close(fds[0])
     if quiet >= 0 { close(quiet) }
-    guard started == 0 else { return "" }
+    guard started == 0 else {
+        if keepsRefusal { unlink(errPath) }
+        return ""
+    }
     var status: Int32 = 0
     waitpid(child, &status, 0)
-    return String(data: said, encoding: .utf8) ?? ""
+    let out = String(data: said, encoding: .utf8) ?? ""
+    guard keepsRefusal else { return out }
+    let err = readText(errPath) ?? ""
+    unlink(errPath)
+    // exited normally with 2: the status word keeps the code in its second byte
+    let exited = (status & 0x7f) == 0 ? (status >> 8) & 0xff : -1
+    return exited == 2 ? out + err : out
 #else
     let p = Process()
     p.executableURL = URL(fileURLWithPath: bin)
     p.arguments = Array(words.dropFirst())
     let pipe = Pipe()
+    let errPipe = Pipe()
     p.standardOutput = pipe
-    p.standardError = Pipe()
+    p.standardError = errPipe
     guard (try? p.run()) != nil else { return "" }
     let said = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+    let err = String(data: errPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
     waitDone(p)
-    return said
+    return keepsRefusal && p.terminationStatus == 2 ? said + err : said
 #endif
 }
 
@@ -10831,15 +11056,22 @@ public enum MyBench: Bench {
 // must know as grammar: it cannot count without them, so knowing them here is
 // the one place a name may sit inside a tool by right. Everything else a world
 // says is presented rather than built in.
-let LANGUAGE_AT: [(String, Int)] = [("Unit", 283), ("Plus", 287), ("Times", 303), ("Twice", 299), ("Paired", 227), ("Close", 88), ("Open", 87), ("Structure", 86)]
+// The lines are read off the corpus's Primitive at the judge's pin, the file
+// this binary carries (PinnedCorpus), never written here: a number about
+// somebody else's file is a claim nothing checks.
+let LANGUAGE_WORDS = ["Unit", "Plus", "Times", "Twice", "Paired", "Close", "Open", "Structure"]
 let LANGUAGE_FILE = "Sources/VerificationIsIdentification/Primitive.swift"
-// what the court itself is, by name: the two files that decide every verdict
-// this tool prints
-// the court moved to its own target long before the split; these paths name it there
-let COURT_FILES = ["Sources/Court/Judge.swift", "Sources/Court/WhereJudge.swift"]
+// the court is the corpus's Sources/Court, every file of it: the files
+// bin/build-cli.sh compiles in at the pin, listed from the checkout and not here
+let COURT_DIR = "Sources/Court"
 
 func languageNames() -> [(String, Int)] {
-    return LANGUAGE_AT
+    let lines = PinnedCorpus.primitive.components(separatedBy: "\n")
+    return LANGUAGE_WORDS.compactMap { word in
+        lines.firstIndex(where: {
+            matchAt($0, "public (?:enum|protocol|typealias|struct) " + word + "\\b") != nil
+        }).map { (word, $0 + 1) }
+    }
 }
 
 func languageFile() -> String {
@@ -10852,7 +11084,10 @@ func languageFile() -> String {
 func courtShape() -> StatusJSON {
     guard let root = ProcessInfo.processInfo.environment["GATE_CORPUS"], !root.isEmpty
     else { return .null }
-    let files = COURT_FILES
+    let dir = (root as NSString).appendingPathComponent(COURT_DIR)
+    guard let names = try? FileManager.default.contentsOfDirectory(atPath: dir) else { return .null }
+    let files = names.filter { $0.hasSuffix(".swift") }.sorted().map { COURT_DIR + "/" + $0 }
+    if files.isEmpty { return .null }
     var lines = 0
     var seen: [StatusJSON] = []
     for rel in files {
@@ -11623,6 +11858,12 @@ func serveDoor(_ a: [String]) -> Never {
                     ("opens", .object(opens)),
                     ("seams", .list(seamRows.map { .text($0) })),
                     ("overridden", .object(overridden)),
+                    // and the worlds the forms are judged in, as the vein joins
+                    // them (worldsOf), so the page judges a form inside its world
+                    // and keeps no second rule for joining them
+                    ("worlds", .list(worldsOf(rows.filter { $0.role == "forms" && names.contains($0.path) }
+                        .map { r in (r, readText((hereRoot as NSString).appendingPathComponent(r.path)) ?? "") })
+                        .map { world in .list(world.map { .text($0.path) }) })),
                 ]
                 // WHERE THE COURT WAS TAKEN, so the one line a stranger asks
                 // about, "why is this already here, I took nothing", can be
@@ -11982,12 +12223,16 @@ if args.first == "--version" || args.first == "-v" || args.first == "version" {
         out(compactDumps(.object(pairs)) + "\n")
         exit(0)
     }
-    var lines = ["gate " + gateVersion() + " · judge " + short + " (canon v2)"]
+    // each court speaks its own canon (stdlib/courts.swift): the plain court
+    // two, the certificate court four, the count court its question
+    var lines = ["gate " + gateVersion() + " · judge " + short
+                 + " (plain canon v2 · where canon v4 · count question 1)"]
     if case .object(let shape) = courtShape(),
-       case .raw(let count)? = shape.first(where: { $0.0 == "lines" })?.1 {
-        lines.append("  the court is " + count + " lines in Judge.swift and WhereJudge.swift"
-                   + " and the rest of that repository is worlds it shows itself on, and the "
-                   + "theory it comes from")
+       case .raw(let count)? = shape.first(where: { $0.0 == "lines" })?.1,
+       case .list(let files)? = shape.first(where: { $0.0 == "files" })?.1 {
+        lines.append("  the court is " + count + " lines in the " + String(files.count)
+                   + " files of " + COURT_DIR + ", the files bin/build-cli.sh compiles in, "
+                   + "and the rest of that repository is the theory it comes from")
     }
     if let came = came {
         lines.append("  judge built from verification-is-identification "

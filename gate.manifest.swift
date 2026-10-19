@@ -106,11 +106,11 @@ extension GitAtoms { public static var typeName: String { "stdlib/git-atoms.swif
 // on purpose. gate lives under its own court everywhere a court is possible,
 // and this line is the one place where it is not.
 public protocol Theirs {}
-public enum Rev_vi_d74e258 {}
-extension Rev_vi_d74e258 { public static var typeName: String { "verification-is-identification@d74e258" } }
+public enum Rev_vi_f5a46c3 {}
+extension Rev_vi_f5a46c3 { public static var typeName: String { "verification-is-identification@f5a46c3" } }
 public enum TheJudge: Theirs {
     public typealias Kind = JudgeFile
-    public typealias At = Rev_vi_d74e258
+    public typealias At = Rev_vi_f5a46c3
 }
 extension TheJudge { public static var typeName: String { "bin/gate-judge" } }
 

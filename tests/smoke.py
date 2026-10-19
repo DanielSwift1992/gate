@@ -787,7 +787,10 @@ def main():
     _bg = run("badge", cwd=HERE)[1]
     S.append(("the badge counts the claims status counts, on a world of forms too",
               _bg.get("verdict") == "holds"
-              and _bg.get("claims") == run("status", cwd=HERE)[1]["forms"]["equalities"]
+              # a count reading is a judged claim as an equality is: status counts
+              # both, and so does the badge
+              and _bg.get("claims") == (run("status", cwd=HERE)[1]["forms"]["equalities"]
+                                        + run("status", cwd=HERE)[1]["forms"].get("readings", 0))
               and _bg["claims"] > 0
               # and the run of days is not invented where it cannot be replayed:
               # with no path filter the walk took the whole repository's history
@@ -918,21 +921,22 @@ def main():
     c, r = run("status", cwd=orig)
     S.append(("and holds once the row says it", c == 0 and r["verdict"] == "holds"))
 
-    # THE WHERE COURT JUDGES THE FIRST FILE IT IS HANDED AND DROPS THE REST — it
-    # reads the others (an unreadable second path is refused) and then says nothing
-    # about them: palette then metrics reports 119, the same two reversed 14.
-    # Nothing here passes more than one, and the day something does, a verdict
-    # would quietly narrow instead of refusing.
+    # THE WHERE COURT JUDGES THE FIRST FILE IT IS HANDED AND DROPS THE REST — at
+    # canon four the others only lend their definitions (an unreadable second
+    # path is refused) and nothing in them is judged: the courts page then the
+    # metrics page reports the courts page's 9, the same two reversed judge
+    # nothing at all. Nothing here passes more than one, and the day something
+    # does, a verdict would quietly narrow instead of refusing.
     def wide(*paths):
         raw = subprocess.run([os.path.join(HERE, "bin", "gate-judge"), "judge", "where", *paths],
                              capture_output=True, text=True).stdout
         m = re.search(r"(\d+) equalities and \d+ memberships judged", raw)
         return int(m.group(1)) if m else None
-    pal = os.path.join(HERE, "stdlib", "bench-palette.swift")
+    crt = os.path.join(HERE, "stdlib", "courts.swift")
     met = os.path.join(HERE, "stdlib", "bench-metrics.swift")
     S.append(("the where court judges the first file it is given and drops the rest",
-              wide(pal) == wide(pal, met) and wide(met) == wide(met, pal)
-              and wide(pal) != wide(met)))
+              wide(crt) is not None and wide(crt) == wide(crt, met)
+              and wide(met) is None and wide(met, crt) is None))
     gate_src = open(VEIN).read()
     # the same promise, read in the language the tool is written in: every call
     # to the certificate court names one file and nothing else, because handing
@@ -989,17 +993,19 @@ def main():
               _where_pages != [] and _where_apart == []))
     # and a page that refuses: the same refusal, the same canons, the same exit
     _wbroken = os.path.join(tmp, "where-broken.swift")
+    # the courts page is the shelf's one page of certificates: the bench pages
+    # ask the count court, and their own broken reading is held further down
     open(_wbroken, "w").write(
-        open(os.path.join(HERE, "stdlib", "bench-metrics.swift"), encoding="utf-8").read()
-        .replace("public typealias SnugOverTight = Wider<Snug, Tight, Never>",
-                 "public typealias SnugOverTight = Wider<Tight, Snug, Never>", 1))
+        open(os.path.join(HERE, "stdlib", "courts.swift"), encoding="utf-8").read()
+        .replace("public typealias Binary_carries_where = Carry<BinaryJudge, WhereVerdicts, CanonV4>",
+                 "public typealias Binary_carries_where = Carry<BinaryJudge, WhereVerdicts, CanonV2>", 1))
     _wb2 = subprocess.run([os.path.join(HERE, "bin", "gate-judge"), "judge", "where", _wbroken],
                           capture_output=True, text=True)
     _wn2 = subprocess.run(["node", os.path.join(HERE, "bin", "judge-cli.js"), "judge",
                            "where", _wbroken], capture_output=True, text=True)
     S.append(("and a broken certificate refuses through the port in the binary's words",
               _wb2.returncode == _wn2.returncode == 1 and _wb2.stdout == _wn2.stdout
-              and "be equivalent [Ordered]" in _wn2.stdout))
+              and "be equivalent [CourtCarried]" in _wn2.stdout))
     # ── AND A VALUE THAT DERIVES FROM ITSELF IS REFUSED, NOT ORBITED. The
     # values pass is an explicit worklist with an in-flight set; cut that set
     # and the judge does not go red, it goes forever, which no verdict can
@@ -1051,12 +1057,60 @@ def main():
               and "tests/windows.py" in rd
               and "judge-cli.js" in rd and "judge-wasm.js" in rd))
 
-    # self-hosted shelf: the product's own stdlib files are judged by its own judge
+    # self-hosted shelf: the product's own stdlib files are judged by its own
+    # judge, each by the question it asks. A page of certificates asks the where
+    # court and holds there. A page whose laws are numbers declares a count
+    # reading, and the count court checks every answer against the corpus's
+    # Primitive at the judge's own pin, the premise the binary carries. A page
+    # that claims nothing gets the where court's one sentence for a world that
+    # asked it nothing, which is not a refusal and not a green either.
     import glob as _glob
+    _pin = open(os.path.join(HERE, "bin", "gate-judge.from"), encoding="utf-8").read().strip()
+    _premise = os.path.join(HERE, "bin", ".court", _pin, "premise", "Primitive.swift")
+    _nothing = "✗ THE WHERE: no equalities or memberships were judged; no certificate established"
+
+    def count_question(text):
+        m = re.search(r"public enum \w+<[^{]*>:\s*PredicateReading\s*\{([^}]*)\}", text)
+        if not m:
+            return None
+        said = {k: re.search(r"typealias " + k + r" = (\w+)", m.group(1)) for k in
+                ("Predicate", "Encoding", "Sigma")}
+        if not all(said.values()):
+            return None
+        return ["--predicate", said["Predicate"].group(1), "--encoding",
+                said["Encoding"].group(1), "--sigma", said["Sigma"].group(1)]
+
     for sf in sorted(_glob.glob(os.path.join(HERE, "stdlib", "*.swift"))):
-        raw = subprocess.run([os.path.join(HERE, "bin", "gate-judge"), "judge", "where", sf],
-                             capture_output=True, text=True).stdout
-        S.append((f"self-judged: {os.path.basename(sf)}", "holds" in raw and "✗" not in raw))
+        w = subprocess.run([os.path.join(HERE, "bin", "gate-judge"), "judge", "where", sf],
+                           capture_output=True, text=True)
+        q = count_question(open(sf, encoding="utf-8").read())
+        if q is None:
+            ok = ((w.returncode == 0 and "holds" in w.stdout and "✗" not in w.stdout)
+                  or (w.returncode == 2 and w.stderr.strip() == _nothing))
+        else:
+            c = subprocess.run([os.path.join(HERE, "bin", "gate-judge"), "judge", "count",
+                                sf, _premise, *q], capture_output=True, text=True)
+            n = subprocess.run(["node", os.path.join(HERE, "bin", "judge-cli.js"), "judge",
+                                "count", sf, _premise, *q], capture_output=True, text=True)
+            ok = (w.returncode == 2 and w.stderr.strip() == _nothing
+                  and c.returncode == 0 and c.stdout.startswith("✓ COUNT holds")
+                  and (n.stdout, n.returncode) == (c.stdout, c.returncode))
+        S.append((f"self-judged: {os.path.basename(sf)}", ok))
+    # and a count reading with the wrong answer refuses at its name, in the
+    # binary's words through the port as well
+    _cbroken = os.path.join(tmp, "count-broken.swift")
+    open(_cbroken, "w").write(
+        open(os.path.join(HERE, "stdlib", "bench-metrics.swift"), encoding="utf-8").read()
+        .replace("public typealias SnugOverTight = Wider<Snug, Tight, Never>",
+                 "public typealias SnugOverTight = Wider<Tight, Snug, Never>", 1))
+    _cq = count_question(open(_cbroken, encoding="utf-8").read()) or []
+    _cb = subprocess.run([os.path.join(HERE, "bin", "gate-judge"), "judge", "count", _cbroken,
+                          _premise, *_cq], capture_output=True, text=True)
+    _cn = subprocess.run(["node", os.path.join(HERE, "bin", "judge-cli.js"), "judge", "count",
+                          _cbroken, _premise, *_cq], capture_output=True, text=True)
+    S.append(("and a count reading with a wrong answer refuses at its name through both carriers",
+              _cb.returncode == _cn.returncode == 1 and _cb.stdout == _cn.stdout
+              and "'SnugOverTight' count Left = 1, but Answer = 3" in _cb.stdout))
 
     # one reading of the grammar: the SAME parser that judges also carries the
     # kind of every axis and gate parameter, so a bench can be offered exactly
@@ -1492,8 +1546,9 @@ def main():
         "Process()": 11,
         # courtSays on darwin
         "posix_spawn(": 1,
-        # rawOpen's two spellings and courtSays' /dev/null
-        " open(": 3,
+        # rawOpen's two spellings, courtSays' /dev/null, and the file courtSays
+        # keeps a where or count court's stderr in, which at exit 2 is its answer
+        " open(": 4,
     }
     _rim_apart = {t: sum(l.count(t) for l in _rim_code) for t in _rim}
     if _rim_apart != _rim:
@@ -5101,14 +5156,24 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     # every refusal accuses the wrong side, in the same green battery. The raw
     # sentence is fetched from the court itself, so the translation is held to
     # whatever the court said, not to a remembered spelling of it.
+    # The bench pages ask the count court now, so the pair is held on a page of
+    # certificates: the courts page, taken as forms and lied about.
+    _ord = tempfile.mkdtemp(dir=tmp)
+    open(os.path.join(_ord, "gate.swift"), "w").write("public enum Sales: Department {}\n")
+    open(os.path.join(_ord, "vendor-courts.swift"), "w").write(
+        open(os.path.join(HERE, "stdlib", "courts.swift"), encoding="utf-8").read()
+        .replace("public typealias Binary_carries_where = Carry<BinaryJudge, WhereVerdicts, CanonV4>",
+                 "public typealias Binary_carries_where = Carry<BinaryJudge, WhereVerdicts, CanonV2>", 1))
+    run("theirs", "vendor-courts.swift", "--at", "acme/courts@9d1e", "--role", "forms", cwd=_ord)
+    _ord_said = run("status", cwd=_ord)[1]
     _raw_where = subprocess.run(
         [os.path.join(HERE, "bin", "gate-judge"), "judge", "where",
-         os.path.join(frm, "vendor-forms.swift")],
+         os.path.join(_ord, "vendor-courts.swift")],
         capture_output=True, text=True).stdout
-    _raw_pair = re.search(r"'ArchitectIsTwoLines[^']*'[^(]*\(aka '([^']+)'\)"
+    _raw_pair = re.search(r"'Binary_carries_where[^']*'[^(]*\(aka '([^']+)'\)"
                           r"[^(]*\(aka '([^']+)'\)", _raw_where)
-    _said_pair = next((r.get("claim", "") for r in lied.get("refusals", [])
-                       if "ArchitectIsTwoLines" in r.get("claim", "")), "")
+    _said_pair = next((r.get("claim", "") for r in _ord_said.get("refusals", [])
+                       if "Binary_carries_where" in r.get("claim", "")), "")
     S.append(("the where verdict a reader sees keeps the pair in the court's own order",
               bool(_raw_pair)
               and (_raw_pair.group(1) + " against " + _raw_pair.group(2)) in _said_pair))
@@ -5185,7 +5250,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               # so the tool is not asking of anybody a thing it had not done
               and own_status.get("verdict") == "holds"
               and open(os.path.join(HERE, "bin", "gate-judge.from"),
-                       encoding="utf-8").read().strip().startswith("d74e258")
+                       encoding="utf-8").read().strip().startswith("f5a46c3")
               # AND THE EDITOR IS ACCOUNTED FOR TOO. It arrived the way anything
               # of somebody else's should — named, versioned, unchanged, saying
               # so in its own first line — and it was the one dependency an
@@ -5302,8 +5367,8 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     pal = open(os.path.join(HERE, "stdlib", "bench-palette.swift"), encoding="utf-8").read()
     S.append(("two channels a reader must separate are held apart by a stated floor",
               # the form exists and says what it means
-              "public enum Apart<A, B, Margin>: Close {}" in pal
-              and "where A == Plus<B, Plus<Unit, Margin>> {}" in pal
+              "public typealias Apart<A: Structure, B: Structure, Margin: Structure> = "
+              "Luminance<A, Plus<B, Plus<Unit, Margin>>>" in pal
               # both questions a name's hue answers are floored, in both halves
               and all(f"public typealias {n} = Apart<" in pal for n in (
                   "MineApartTheirs_X_lit", "MineApartTheirs_X_dim",
@@ -5317,10 +5382,11 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
                   "BadApartLaw_Z_dim"))
               # and the weak one is named as weak rather than buried in a number
               and "The weak one, said out loud" in pal
-              # the floors are live: the judge counts them among what it holds
-              and "119 equalities" in subprocess.run(
-                  [os.path.join(HERE, "bin", "gate-judge"), "judge", "where",
-                   os.path.join(HERE, "stdlib", "bench-palette.swift")],
+              # the floors are live: the count court counts them among what it holds
+              and "COUNT holds: 53 source-bound readings" in subprocess.run(
+                  [os.path.join(HERE, "bin", "gate-judge"), "judge", "count",
+                   os.path.join(HERE, "stdlib", "bench-palette.swift"), _premise,
+                   *(count_question(pal) or [])],
                   capture_output=True, text=True).stdout))
 
     # ── THE JUDGE'S TABLES ARE A RESTATEMENT OF A FILE WE ALREADY SHIP. Our port
@@ -5544,7 +5610,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     # That file holds laws rather than a list: the size ladder only goes up, so
     # `caption` cannot quietly become the size of `speech`, and every leading is
     # at least as tall as the letters it sets, because a line that overlaps the
-    # next is not a line. Twenty-two equalities, probed by breaking one.
+    # next is not a line. Twenty-two count readings, probed by breaking one.
     reg = open(os.path.join(HERE, "stdlib", "bench-registers.swift"), encoding="utf-8").read()
     served = bench_says("/ladder.css")
     style_only = ui.split("<style>", 1)[1].split("</style>", 1)[0]
@@ -5558,11 +5624,12 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               and "--mono: ui-monospace,Menlo,monospace;" in served
               and "func registerTokens(" in shelf_src
               # and that world holds a ladder and a floor, not just a list
-              and "public enum Taller<Hi, Lo, Slack>: Close {}" in reg
-              and "public enum AtLeast<Have, Floor, Slack>: Close {}" in reg
-              and "22 equalities" in subprocess.run(
-                  [os.path.join(HERE, "bin", "gate-judge"), "judge", "where",
-                   os.path.join(HERE, "stdlib", "bench-registers.swift")],
+              and "public typealias Taller<Hi: Structure, Lo: Structure, Slack: Structure> = " in reg
+              and "public typealias AtLeast<Have: Structure, Floor: Structure, Slack: Structure> = " in reg
+              and "COUNT holds: 22 source-bound readings" in subprocess.run(
+                  [os.path.join(HERE, "bin", "gate-judge"), "judge", "count",
+                   os.path.join(HERE, "stdlib", "bench-registers.swift"), _premise,
+                   *(count_question(reg) or [])],
                   capture_output=True, text=True).stdout))
 
     # ── THE FLOOR IS REACHABLE, AND THIS IS THE SCENARIO. Open a forms file,
@@ -5580,11 +5647,11 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     lang = json.loads(bench_says("/language"))
     S.append(("a word of the language says where it is declared, and opens if it is here",
               # the floor is named, with the line each word stands on
-              lang.get("names", {}).get("Twice") == 299
-              and lang.get("names", {}).get("Unit") == 283
+              lang.get("names", {}).get("Twice") == 308
+              and lang.get("names", {}).get("Unit") == 292
               and lang.get("file", "").endswith("Primitive.swift")
               # at the revision the judge was built from, not some other one
-              and (lang.get("at") or "").startswith("d74e258")
+              and (lang.get("at") or "").startswith("f5a46c3")
               # and the way to get it, since this tool will not go and take it
               and "git clone" in lang.get("command", "")
               # the bench reaches them: they join what a click can land on
@@ -6048,7 +6115,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
 
     # ── HOW BIG THE COURT IS, COUNTED RATHER THAN CLAIMED. Somebody who opens
     # the corpus meets nine hundred files and concludes "a large machine I will
-    # never read". The court is two of them. That is the strongest thing this
+    # never read". The court is one folder of them. That is the strongest thing this
     # tool can say about its own judge and it was said nowhere — while the
     # number, written down here, would be a claim about somebody else's files
     # that nothing checks. It is counted from the checkout when there is one and
@@ -6066,8 +6133,9 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     # none it says nothing about somebody else's files rather than guessing.
     S.append(("the court's size is counted from the checkout, and unsaid without one",
               "the court is" not in silent_court
-              # the two files that decide every verdict are named, not guessed at
-              and 'let COURT_FILES = ["Sources/Court/Judge.swift", "Sources/Court/WhereJudge.swift"]' in shelf_src
+              # the folder that decides every verdict is named, and its files are
+              # listed from the checkout, not guessed at here
+              and 'let COURT_DIR = "Sources/Court"' in shelf_src
               # no number about somebody else's files is written in this tool
               and not re.search(r"court[^\n]*\b1021\b", shelf_src)
               and (not corpus or re.search(r"the court is \d+ lines", counted))
@@ -6546,7 +6614,7 @@ console.log(JSON.stringify({
     kept = open(jm, encoding="utf-8").read()
     try:
         open(jm, "w", encoding="utf-8").write(
-            kept.replace("verification-is-identification@d74e258",
+            kept.replace("verification-is-identification@f5a46c3",
                          "verification-is-identification@deadbee"))
         lied = run("status", cwd=HERE)[1]
     finally:
@@ -6932,8 +7000,10 @@ console.log(JSON.stringify(out));
     S.append(("say any number, say what holds of it, and the form of a law is not yours",
               lawful.get("verdict") == "holds"
               and green.get("verdict") == "refused"
-              and any("BadChroma_dim" in r.get("claim", "") or "Apart<BadDimZ" in r.get("claim", "")
-                      for r in green.get("refusals", []))
+              # the hue laws are stated and not judged at count v0.1's budget, so
+              # the floors that stand on BadDimZ are the laws that refuse it
+              and any(n in r.get("claim", "") for r in green.get("refusals", [])
+                      for n in ("BadChroma_dim", "'BadApartLaw_Z_dim'", "'TheirsApartBad_Z_dim'"))
               and all((r.get("address") or "").startswith("my-colours.swift")
                       for r in green.get("refusals", []))
               and rewrite.get("verdict") == "refused"
@@ -6976,7 +7046,7 @@ console.log(JSON.stringify(out));
     plain = subprocess.run([judge_bin, "judge", os.path.join(claim_probe, "world.swift")],
                            capture_output=True, text=True).stdout
     where = subprocess.run([judge_bin, "judge", "where", os.path.join(claim_probe, "world.swift")],
-                           capture_output=True, text=True).stdout
+                           capture_output=True, text=True)
     S.append(("a claim written where it is used is judged by neither court today",
               # the plain court refuses it on FORM: a protocol is outside the
               # fragment, and so is the extension that spells a typeName
@@ -6984,8 +7054,11 @@ console.log(JSON.stringify(out));
               and "public protocol Role {}" in plain
               and "typeName" in plain
               # and the where court takes the same text and judges nothing at
-              # all — a green over nought uses, which says neither yes nor no
-              and "THE WHERE holds" in where and "across 0 uses" in where))
+              # all, and at canon four it says so rather than print a green over
+              # nought uses: neither yes nor no
+              and where.returncode == 2
+              and where.stderr.strip() == "✗ THE WHERE: no equalities or memberships were "
+                                          "judged; no certificate established"))
 
     # ── AND THE DIAMOND HOLDS ON CLAIMS, which is the half that already works.
     # Two files claiming the same revision atom are two truths about one name,
@@ -7137,11 +7210,14 @@ console.log(JSON.stringify(out));
     # the certificate court `["where"] + paths` is the blindness this guards
     one_path = all("," not in c and "+" not in c and "..." not in c for c in where_calls) \
         and 'courtSays(["where"] +' not in gate_src
-    pal_text = open(os.path.join(HERE, "stdlib", "bench-palette.swift"), encoding="utf-8").read()
-    cut = pal_text.index("// ── the light theme")
-    machinery, values = pal_text[:cut], pal_text[cut:]
-    broken = re.sub(r"public typealias InkLitY = .+",
-                    "public typealias InkLitY = Plus<W256, Plus<W512, W128>>", values, count=1)
+    # the courts page is the shelf's page of certificates: its machinery, and the
+    # carriers' claims after it, split in two with a real break planted
+    crt_text = open(os.path.join(HERE, "stdlib", "courts.swift"), encoding="utf-8").read()
+    cut = crt_text.index("public typealias Binary_carries_plain")
+    machinery, values = crt_text[:cut], crt_text[cut:]
+    broken = values.replace(
+        "public typealias Binary_carries_where = Carry<BinaryJudge, WhereVerdicts, CanonV4>",
+        "public typealias Binary_carries_where = Carry<BinaryJudge, WhereVerdicts, CanonV2>", 1)
     d = os.path.join(tmp, "stream")
     os.makedirs(d, exist_ok=True)
     open(os.path.join(d, "machinery.swift"), "w").write(machinery)
@@ -8672,14 +8748,17 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                              env={**os.environ, "GATE_SPAWN_LEDGER": "1",
                                   "GATE_CLI": CLI_HERE})
         _sp_said = _sp.stderr.strip().split("\n")[-1] if _sp.stderr.strip() else ""
-        if "spawns" in _sp_said and _sp_said != "gate-cli: spawns 5 (git 2, court 3)":
+        if "spawns" in _sp_said and _sp_said != "gate-cli: spawns 6 (git 2, court 4)":
             print("   the status verb spawns:", _sp_said)
         S.append(("the status verb spawns what it is built to need, and no more",
                   # two gits: the repository key, asked once and remembered, and
-                  # its fallback where a clone carries no remote. three courts:
-                  # the world and the two forms streams. A spawn in a loop shows
-                  # up here as 47 against 5 rather than as a slow afternoon.
-                  _sp_said == "gate-cli: spawns 5 (git 2, court 3)"))
+                  # its fallback where a clone carries no remote. four courts:
+                  # the world, the grants shelf page the ownership file restates,
+                  # and one per world of forms that has any code (the tool's words
+                  # with its verbs, and the ownership world; the letter is prose).
+                  # A spawn in a loop shows up here as 47 against 6 rather than as
+                  # a slow afternoon.
+                  _sp_said == "gate-cli: spawns 6 (git 2, court 4)"))
 
         # ── AND THE SAME ANSWERS OVER A SOCKET. The bench is the one surface
         # where a verb is asked for by a wire rather than by an argv, so the two
@@ -9891,7 +9970,16 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                                      os.path.join(HERE, "bin", "shelf-into-swift.py"),
                                      os.path.join(HERE, "stdlib"), _pin],
                                     capture_output=True, timeout=180).stdout)
+        # and the count court's premise, by the same writer bin/build-cli.sh uses
+        _mut_premise = os.path.join(_mut, "premise.swift")
+        with open(_mut_premise, "wb") as _f:
+            _f.write(subprocess.run([sys.executable,
+                                     os.path.join(HERE, "bin", "premise-into-swift.py"),
+                                     os.path.join(HERE, "bin", ".court", _pin, "premise",
+                                                  "Primitive.swift")],
+                                    capture_output=True, timeout=180).stdout)
         _mb = subprocess.run(["swiftc", "-O", os.path.join(_mut, "main.swift"), _mut_shelf,
+                              _mut_premise,
                               *sorted(glob.glob(os.path.join(HERE, "bin", ".court",
                                                              _pin, "*.swift"))),
                               "-o", _mut_bin], capture_output=True, text=True, timeout=900)
@@ -9947,7 +10035,8 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                   and _s9has("thick", "outside this world")
                   and _s9has("thick", "one side of one")
                   and _s9has("thick", "is not a view")
-                  and _s9has("thick", "written on one line")
+                  # (a gated conformance on one line is read by the court at canon
+                  # four, so the shape guard retired and no longer fires here)
                   and _s9has("thick", "never closes")
                   and _s9has("thick", "an identity names")
                   and _s9has("thick", "which is not a name")
@@ -10888,7 +10977,7 @@ print(bad.isEmpty ? "CORE OK" : "APART: " + bad.joined(separator: ","))
         S.append(("and a broken certificate refuses through the vein in the binary's words",
                   _vb2.returncode == _vv2.returncode == 1
                   and _vb2.stdout == _vv2.stdout
-                  and "be equivalent [Ordered]" in _vv2.stdout))
+                  and "be equivalent [CourtCarried]" in _vv2.stdout))
         _strip_ms = lambda s: re.sub(r"[\d.]+ ms", "N ms", s.strip())
         _pb = subprocess.run([os.path.join(HERE, "bin", "gate-judge"),
                               "judge", _where_pages[0]],
@@ -11262,16 +11351,16 @@ public enum MyWatch: AccessLedger {
                       .split("\n")[int(x["address"].split(":")[1]) - 2]
                       or True for x in gates[:1])))
 
-    # ── AND `Reads` IS A CERTIFICATE, NOT A LABEL. Each verb states what it
-    # touches, and one of those words is load-bearing: `Run<V>: Safe where
-    # V.Does == Reads` in the tool's own forms certifies that a verb may be run
+    # ── AND `Looks` IS A CERTIFICATE, NOT A LABEL. Each verb states what it
+    # touches, and one of those words is load-bearing: `Run<Act>: Safe where
+    # Act.Does == Looks` in the tool's own forms certifies that a verb may be run
     # on anybody's clone at any moment. The guard over that table held the names
     # in both directions and never this word, so a verb that started writing
     # would have gone on being certified safe by the court. Nothing is read here:
-    # every verb whose record says `Reads` is RUN, in a world of its own with a
+    # every verb whose record says `Looks` is RUN, in a world of its own with a
     # personal world of its own, and both trees are compared by content before
     # and after. A word about what something does is checked by doing it.
-    said_reads = sorted(re.findall(r"public enum (\w+): Verb \{\s*\n\s*public typealias Does = Reads",
+    said_reads = sorted(re.findall(r"public enum (\w+): Verb \{\s*\n\s*public typealias Does = Looks",
                                    open(os.path.join(HERE, "stdlib", "verbs.swift"),
                                         encoding="utf-8").read()))
     touch_world = os.path.join(tmp, "touch")
@@ -11876,15 +11965,16 @@ public enum MyWatch: AccessLedger {
               and any("`gate badge` is a word this tool answers to" in r["claim"]
                       for r in dropped["refusals"])))
 
-    # ── A LAW WRITTEN ON ONE LINE IS NOT A LAW, AND BOTH COURTS GO SILENT
+    # ── A LAW WRITTEN ON ONE LINE WAS NOT A LAW, AND BOTH COURTS WENT SILENT
     # TOGETHER. Found by hand on this tool's own demo world: move one newline in
-    # the forms file and `refused 1` becomes `holds` over nought judged — in
-    # the shipped binary and in the browser port alike. Every certificate over
-    # that law stops being checked and nothing says a word. Swift accepts both
-    # spellings identically, so the compiler tier still catches it; the fast
-    # tier, the one anybody runs on a keystroke, does not — and that is the tier
-    # people trust. The judge is the corpus's and pinned, so the shape is
-    # refused here rather than left to unjudge a world quietly.
+    # the forms file and `refused 1` became `holds` over nought judged, in the
+    # shipped binary and in the browser port alike, and a guard here refused the
+    # shape. At canon four the where court reads the one-line spelling in both
+    # carriers, the binary and the wasm module, and refuses the same lie at the
+    # same claim, so the guard retired with its reason: a refusal that says
+    # "read by no court" over a law a court reads would be this tool's own lie.
+    # What is held now is the finding reversed, so the day a court goes blind to
+    # one spelling again this check is the one that says so.
     onel = os.path.join(tmp, "oneline")
     os.makedirs(onel)
     two = open(os.path.join(HERE, "stdlib", "forms-grants.swift"), encoding="utf-8").read()
@@ -11910,19 +12000,20 @@ public enum MyWatch: AccessLedger {
         joined = run("status", cwd=HERE)[1]
     finally:
         open(os.path.join(HERE, "stdlib", "forms-grants.swift"), "w").write(kept_shelf)
-    S.append(("a law written on one line is read by no court, and gate refuses the shape",
-              # the finding itself, reproduced: one newline is the whole difference
+    said_one_port = subprocess.run(["node", os.path.join(HERE, "bin", "judge-cli.js"), "judge",
+                                    "where", one_path], capture_output=True, text=True).stdout
+    S.append(("a law written on one line is read like the broken one, and no guard calls it unread",
+              # one newline is no difference to either carrier any more
               "✗" in said_two and "Owns_c" in said_two
-              and "✗" not in said_one
-              and "0 equalities and 0 memberships judged" in said_one
-              # and the guard names it, at the line that writes it
-              and any("read by no court" in r["claim"]
-                      and r["address"].startswith("stdlib/forms-grants.swift:")
-                      for r in joined["refusals"])
-              and run("status", cwd=HERE)[1]["verdict"] == "holds"))
+              and said_one == said_two and said_one_port == said_one
+              # and nothing tells the operator their law is read by no court
+              and not any("read by no court" in r["claim"] for r in joined["refusals"])
+              and joined["verdict"] == "holds"
+              and run("status", cwd=HERE)[1]["verdict"] == "holds"
+              and "func gateShapeGuards(" not in gate_src))
 
-    # ── AND THE HALF NO DECLARATION CAN PROVE. `Run<V>: Safe where V.Does ==
-    # Reads` is judged: a verb that admits to writing cannot be certified safe,
+    # ── AND THE HALF NO DECLARATION CAN PROVE. `Run<Act>: Safe where Act.Does ==
+    # Looks` is judged: a verb that admits to writing cannot be certified safe,
     # and the judge refuses the line. What the judge cannot know is whether the
     # verb tells the truth about itself, so every certified verb is run here and
     # the working copy held byte-identical afterwards. This is the claim CI, the
@@ -12006,8 +12097,11 @@ public enum MyWatch: AccessLedger {
               # returns no width at all, and this battery then died on a
               # KeyError before a single check had spoken. A run that dies
               # names nothing; a check that fails names itself.
-              and vanished.get("forms", {}).get("equalities", 0)
-                  < run("status", cwd=HERE)[1].get("forms", {}).get("equalities", 0)
+              # (the width is every judged claim, equalities and count readings)
+              and (vanished.get("forms", {}).get("equalities", 0)
+                   + vanished.get("forms", {}).get("readings", 0))
+                  < (run("status", cwd=HERE)[1].get("forms", {}).get("equalities", 0)
+                     + run("status", cwd=HERE)[1].get("forms", {}).get("readings", 0))
               # a row that names a dependency rather than a file this world
               # judges is not a ghost: the judge is held by a reproducible build
               and run("status", cwd=os.path.join(tmp, "demoworld"))[1]["verdict"] == "holds"))

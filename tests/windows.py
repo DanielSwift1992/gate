@@ -209,8 +209,8 @@ with tempfile.TemporaryDirectory(prefix="gate-win-") as tmp:
     verbs = os.path.join(repo, "verbs.swift")
     text = open(verbs, encoding="utf-8").read()
     open(verbs, "w", encoding="utf-8").write(
-        text.replace("public typealias Does = Reads",
-                     "public typealias Does = Writes", 1))
+        text.replace("public typealias Does = Looks",
+                     "public typealias Does = Changes", 1))
     red = run("status", cwd=repo)
     S.append(("a false claim in the kit goes red at its line",
               red.returncode == 1 and "verbs.swift:" in red.stdout))

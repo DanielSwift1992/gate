@@ -48,7 +48,11 @@ fi
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
 PIN="$(cat "$HERE/bin/gate-judge.from" | tr -d '[:space:]')"
 CACHE="$HERE/bin/.court/$PIN"
-if [ ! -d "$CACHE" ]; then
+# the count court's premise travels with the court: the corpus's Primitive at
+# the same pin, kept apart from the sources compiled in and carried as text
+PREMISE="$CACHE/premise/Primitive.swift"
+if [ ! -f "$PREMISE" ]; then
+    rm -rf "$CACHE"
     # ── AND THE FETCH DOES NOT TAKE THE COMPILER'S NAME. This directory was
     # called `TMP`, which is the variable the linker reads for its own scratch:
     # on a runner, where the cache is never warm, the fetch overwrote the
@@ -57,8 +61,9 @@ if [ ! -d "$CACHE" ]; then
     FETCH=$(mktemp -d)
     git clone --depth 50 -q https://github.com/DanielSwift1992/verification-is-identification "$FETCH/vi"
     git -C "$FETCH/vi" checkout -q "$PIN"
-    mkdir -p "$CACHE"
+    mkdir -p "$CACHE/premise"
     cp "$FETCH/vi/Sources/Court/"*.swift "$CACHE/"
+    cp "$FETCH/vi/Sources/VerificationIsIdentification/Primitive.swift" "$PREMISE"
     rm -rf "$FETCH"
 fi
 
@@ -82,15 +87,18 @@ cp "$HERE/bin/gate-cli.swift" "$BUILD/main.swift"
 # A clone still reads the disk first, so editing a page is still editing a
 # page; the snapshot is the fallback, and the battery holds the two equal.
 python3 "$HERE/bin/shelf-into-swift.py" "$HERE/stdlib" "$PIN" > "$BUILD/shelf.swift"
+# and the count court's premise beside it, as bytes the binary writes back out
+python3 "$HERE/bin/premise-into-swift.py" "$PREMISE" > "$BUILD/premise.swift"
 
 if [ -n "$WINDOWS" ]; then
     # the same three places, spelled the way that toolchain reads them
     SAID="$(cd "$HERE" && pwd -W)"
     swiftc -O "$SAID/bin/.build/main.swift" "$SAID/bin/.build/shelf.swift" \
+        "$SAID/bin/.build/premise.swift" \
         "$SAID/bin/.court/$PIN"/*.swift $LINK \
         -o "$SAID/bin/gate-cli$EXT"
 else
-    swiftc -O "$BUILD/main.swift" "$BUILD/shelf.swift" "$CACHE"/*.swift \
+    swiftc -O "$BUILD/main.swift" "$BUILD/shelf.swift" "$BUILD/premise.swift" "$CACHE"/*.swift \
         -o "$HERE/bin/gate-cli$EXT"
 fi
 rm -rf "$BUILD"
