@@ -119,6 +119,16 @@ function judgeWhereTexts(text, extraTexts) {
     const FORMS = new Set(__FORMS__);
     const LAYOUT = __LAYOUT__;
     const ALL = __ALL__;
+    /* the forms are judged in worlds, and the worlds are the server's: it
+       joins forms by the names they use and declare (worldsOf in the vein),
+       and records the partition here at build time, so the page never grows
+       a second rule over the same files. Until the server records one, a
+       form is its own world. */
+    const WORLDS = __WORLDS__;
+    function worldOf(f) {
+        for (const w of WORLDS) { if (w.includes(f)) return w; }
+        return [f];
+    }
     const real = window.fetch.bind(window);
     function reply(body, status) {
         return new Response(body, { status: status || 200,
@@ -180,11 +190,18 @@ function judgeWhereTexts(text, extraTexts) {
     function refusalsFor(f, text) {
         const out = [];
         if (FORMS.has(f)) {
-            /* each form is one file and one scope, judged alone, the way the
-               CLI hands the court one file: joining the forms into one stream
-               declares their shared names twice, which the court refuses */
-            const notes = lawNotes(text);
-            const court = judgeWhereTexts(text, []);
+            /* the form is judged inside its world, the pieces in the server's
+               order with this file's live text in its place; a refusal that
+               names a line is read in this file's own numbering, and a line
+               of another piece belongs to that piece's page */
+            const world = worldOf(f);
+            const pieces = world.map((g) => g === f ? text : textOf(g));
+            const stream = pieces.join("\\n");
+            let offset = 0;
+            for (const g of world) { if (g === f) break; offset += pieces[world.indexOf(g)].split("\\n").length; }
+            const mine = text.split("\\n").length;
+            const notes = lawNotes(stream);
+            const court = judgeWhereTexts(stream, []);
             /* a file with no gated claim is not refused, it has nothing to
                judge; any other form the court cannot read is refused at the
                line it names, never passed over */
@@ -203,10 +220,13 @@ function judgeWhereTexts(text, extraTexts) {
                     const applying = proj ? text.split("\\n").map((l, i) => [l, i + 1]).filter(
                         ([l]) => new RegExp("typealias \\\\w+ = \\\\w+<.*\\\\b" + proj[1] + "\\\\b").test(l))
                         .map(([, n]) => n) : [];
-                    if (!ln && applying.length) {
+                    if (ln) {
+                        const at = +ln[1] - offset;
+                        if (at >= 1 && at <= mine) out.push({ address: f + ":" + at, claim });
+                    } else if (applying.length) {
                         for (const n of applying) out.push({ address: f + ":" + n, claim });
-                    } else {
-                        out.push({ address: f + ":" + (ln ? ln[1] : 1), claim });
+                    } else if (world.length === 1 || world[0] === f) {
+                        out.push({ address: f + ":1", claim });
                     }
                 }
             }
@@ -497,6 +517,7 @@ body { height: calc(100vh - var(--strip)) !important; }
 """
     shim = (shim.replace("__SNAP__", json.dumps(snap))
                 .replace("__FORMS__", json.dumps(sorted(forms)))
+                .replace("__WORLDS__", json.dumps(files.get("worlds") or []))
                 .replace("__LAYOUT__", json.dumps(layout))
                 .replace("__ALL__", json.dumps(list(dict.fromkeys(everyone)))))
     note = ('<div id="published-note">judged in your browser as you type · '
