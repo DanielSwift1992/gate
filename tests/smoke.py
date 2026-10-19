@@ -1049,7 +1049,7 @@ def main():
               and "asks it what it carries" in _rd1
               and "walks the road a reviewer walks" in _rd1
               and "tests/windows.py" in rd
-              and "judge-cli.js" in rd and "judge-where.js" in rd))
+              and "judge-cli.js" in rd and "judge-wasm.js" in rd))
 
     # self-hosted shelf: the product's own stdlib files are judged by its own judge
     import glob as _glob
@@ -2772,8 +2772,8 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and "not recorded" not in subprocess.run(
                   [os.path.join(ven, "gatew"), "--version"], cwd=ven,
                   capture_output=True, text=True).stdout))
-    # ── AND BOTH COURTS TRAVEL, OR THE CARRY IS HALF A TOOL. `bin/judge.js` went
-    # and `bin/judge-where.js` stayed, over a comment saying a clone on another
+    # ── AND EVERY COURT TRAVELS, OR THE CARRY IS HALF A TOOL. `bin/judge.js` went
+    # and the certificate court stayed, over a comment saying a clone on another
     # platform has a court only if the file that speaks for it is here. The
     # binary hides the hole on the machine that vendored: on any platform it does
     # not run on, which is the whole reason the ports exist, a vendored clone
@@ -2789,7 +2789,8 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     os.rename(_hidden + ".away", _hidden)
     S.append(("a vendored copy carries both courts, so a clone with no binary still judges",
               os.path.exists(os.path.join(ven, ".gate", "bin", "judge.js"))
-              and os.path.exists(os.path.join(ven, ".gate", "bin", "judge-where.js"))
+              and os.path.exists(os.path.join(ven, ".gate", "bin", "judge-wasm.js"))
+              and os.path.exists(os.path.join(ven, ".gate", "bin", "court-wasm", "node", "vi_court_bg.wasm"))
               and os.path.exists(os.path.join(ven, ".gate", "bin", "judge-cli.js"))
               and _po.get("verdict") == "holds"
               and "did not answer in its own canon" not in _portonly.stdout))
@@ -11071,7 +11072,9 @@ print(bad.isEmpty ? "CORE OK" : "APART: " + bad.joined(separator: ","))
     hits = []
     for f in ("gate", os.path.join("bin", "gate-cli.swift"),
               os.path.join("web", "ui.html"), os.path.join("bin", "judge.js"),
-              os.path.join("bin", "judge-where.js"), os.path.join("bin", "judge-cli.js")):
+              os.path.join("bin", "judge-wasm.js"), os.path.join("bin", "judge-cli.js"),
+              os.path.join("bin", "court-wasm", "node", "vi_court.js"),
+              os.path.join("bin", "court-wasm", "web", "vi_court.js")):
         text = open(os.path.join(HERE, f), encoding="utf-8", errors="replace").read()
         for pat in forbidden:
             for m in re.finditer(pat, text, re.M):

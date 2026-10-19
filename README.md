@@ -335,9 +335,12 @@ bin/gate-judge  the judge, one static binary, built at a pin from the
                 public theory corpus, verification-is-identification:
                 github.com/DanielSwift1992/verification-is-identification
                 (bin/build-judge.sh [pin] rebuilds it)
-bin/judge.js · bin/judge-cli.js · bin/judge-where.js
-                both courts as a node port, for machines the binary
-                was not built for, held to it line for line
+bin/judge.js · bin/judge-cli.js · bin/judge-wasm.js · bin/court-wasm/
+                the courts for machines the binary was not built for:
+                the plain court as a node port held to it line for line,
+                and the certificate and count courts as the corpus court
+                itself built for wasm32 at the pin bin/court-wasm.from
+                records (bin/build-court-wasm.sh rebuilds it)
 bin/gate-cli.swift
                 the CLI, one file of Swift: every verb this tool answers,
                 with the court compiled in at the judge's own pin
@@ -382,9 +385,10 @@ bin/build-cli.sh, and the bench is a page. `gate` is a shim that finds that
 binary, so a clone that has not built one says so in a sentence with the
 two ways out. The judge is a native binary built for one platform: `bin/gate-judge`
 here is `Mach-O arm64`, and on any other machine it does not execute. On
-such a machine node runs both courts instead: `bin/judge-cli.js` runs the
-plain court, `bin/judge-where.js` runs the certificate court, both ported
-line for line, and the battery holds the port to the binary's own lines.
+such a machine node runs the courts instead: `bin/judge-cli.js` runs the
+plain court, ported line for line, and hands `judge where` and `judge count`
+to `bin/judge-wasm.js`, the corpus court itself built for wasm32 at the pin
+`bin/court-wasm.from` records, and the battery holds both to the binary's own lines.
 `gate --version` says which court ran on your machine. On macOS, CI runs
 the full battery on every push. On Windows, CI builds this same one file
 into that platform's own binary on every push, asks it what it carries, and

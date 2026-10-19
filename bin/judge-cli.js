@@ -7,10 +7,11 @@
 // it: this is the reach. Same arguments in, same lines out, so nothing downstream
 // has to know which of the two answered.
 //
-// It serves BOTH courts. The plain court is judge.js, the line-for-line port
-// of the corpus judge; the certificate court, which the binary answers under
-// `judge where`, is judge-where.js beside this file, the same translation of
-// the corpus's WhereJudge. The battery holds each to the binary's own lines.
+// It serves every court. The plain court is judge.js, the line-for-line port
+// of the corpus judge; the certificate court and the count court, which the
+// binary answers under `judge where` and `judge count`, are the corpus court
+// itself built for wasm32 (bin/court-wasm, bin/court-wasm.from), spoken through
+// judge-wasm.js beside this file. The battery holds each to the binary's own lines.
 const fs = require("fs");
 const path = require("path");
 const { judge } = require(path.join(__dirname, "judge.js"));
@@ -20,9 +21,14 @@ if (args[0] !== "judge") {
     console.error("judge-cli: usage: judge FILE... | judge where FILE");
     process.exit(2);
 }
-if (args[1] === "where") {
-    const { runWhere } = require(path.join(__dirname, "judge-where.js"));
-    process.exit(runWhere(args.slice(2)));
+if (args[1] === "where" || args[1] === "count") {
+    // the certificate court and the count court are the corpus court itself,
+    // built for wasm32 at the pin bin/court-wasm.from records, by
+    // bin/build-court-wasm.sh; judge-wasm.js is its door and speaks the
+    // binary's own words, so this file hands them over and adds nothing
+    const { main } = require(path.join(__dirname, "judge-wasm.js"));
+    process.exitCode = main(args);
+    return;
 }
 if (args[1] === "parse") {
     // ONE GRAMMAR, ONE READER. This hands the judge's own parse out as

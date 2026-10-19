@@ -3,7 +3,7 @@
 # ones already shipped: the same ui.html, the same browser judges, and the
 # server's own answers, recorded at build time from a live `gate serve` so
 # the page carries no second reading of any endpoint. On a keystroke the
-# open file is judged in the browser, the where court by judge-where.js and
+# open file is judged in the browser, the where court by the corpus court built for wasm32 (bin/court-wasm) and
 # the plain court by judge.js; the full cross-file court and the write path
 # belong to the clone, and the page says so on its face.
 import json
@@ -87,8 +87,29 @@ def main():
     forms = set(files.get("forms") or [])
     layout = files.get("layout")
     shim = """
-<script src="judge-where.js"></script>
+<script src="court/vi_court.js"></script>
+<script src="court/vi_court_bytes.js"></script>
 <script>
+/* THE COURT ON THE PAGE. The certificate court is the corpus court built for
+   wasm32 at the pin bin/court-wasm.from records (bin/build-court-wasm.sh).
+   It travels inside the page as bytes, because a page opened from a file
+   cannot fetch its neighbour, and it is instantiated here, synchronously,
+   before any keystroke. judgeWhereTexts speaks the shape the bench reads:
+   the court's own refusal lines, and its exit. */
+wasm_bindgen.initSync({ module: Uint8Array.from(atob(VI_COURT_WASM_BASE64), (c) => c.charCodeAt(0)) });
+function judgeWhereTexts(text, extraTexts) {
+    const files = [{ name: "world.swift", text: text }];
+    const args = ["where", "world.swift"];
+    (extraTexts || []).forEach((t, i) => {
+        files.push({ name: "definitions-" + i + ".swift", text: t });
+        args.push("definitions-" + i + ".swift");
+    });
+    const a = JSON.parse(wasm_bindgen.judge(JSON.stringify({ arguments: args, files: files })));
+    const refusals = (a.stdout + a.stderr).split("\\n").filter((l) => l.startsWith("\\u2717"));
+    const m = a.stdout.match(/(\\d+) equalities and (\\d+) memberships judged across (\\d+) uses/);
+    return { exit: a.exit, refusals: refusals, judged: m ? +m[1] : 0,
+             members: m ? +m[2] : 0, uses: m ? +m[3] : 0 };
+}
 /* THE PUBLISHED BENCH. Every answer below was recorded from a live `gate
    serve` over the demo at build time; on a keystroke the open file is
    judged here in the browser. The write path and the cross-file court
@@ -164,7 +185,17 @@ def main():
                 if (other !== f) stream += "\\n" + textOf(other);
             }
             const notes = lawNotes(stream);
-            for (const r of judgeWhereTexts(stream, []).refusals) {
+            const court = judgeWhereTexts(stream, []);
+            /* a form the court cannot read is refused at the line it names,
+               never passed over: the page shows that refusal as it is */
+            if (court.exit === 2) {
+                for (const r of court.refusals) {
+                    const ln = r.match(/line (\\d+)/);
+                    out.push({ address: f + ":" + (ln ? ln[1] : 1),
+                               claim: r.replace(/^\\s*\\u2717\\s*THE WHERE:\\s*/, "") });
+                }
+            }
+            for (const r of court.exit === 2 ? [] : court.refusals) {
                 const m = r.match(/'(\\w+)/);
                 if (!m || !text.includes(m[1])) continue;
                 const bare = r.replace(/^\\s*\\u2717\\s*/, "");
@@ -470,8 +501,12 @@ body { height: calc(100vh - var(--strip)) !important; }
         src = os.path.join(HERE, home, asset)
         if os.path.exists(src):
             shutil.copy(src, os.path.join(OUT, asset))
-    shutil.copy(os.path.join(HERE, "bin", "judge-where.js"),
-                os.path.join(OUT, "judge-where.js"))
+    os.makedirs(os.path.join(OUT, "court"), exist_ok=True)
+    for asset in ("vi_court.js", "vi_court_bytes.js"):
+        shutil.copy(os.path.join(HERE, "bin", "court-wasm", "web", asset),
+                    os.path.join(OUT, "court", asset))
+    shutil.copy(os.path.join(HERE, "bin", "court-wasm.from"),
+                os.path.join(OUT, "court", "court-wasm.from"))
     print(f"published bench written to {OUT}: "
           f"{len(snap)} recorded answers, {len(names)} names")
 

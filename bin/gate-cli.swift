@@ -9625,7 +9625,7 @@ func vendorInto(_ rootDir: String) -> (carried: [String], digest: String?, shim:
     if FileManager.default.fileExists(atPath: pcli) {
         copyItem(pcli, (dst as NSString).appendingPathComponent("bin/judge-cli.js"))
     }
-    for sub in ["web", "docs"] {
+    for sub in ["web", "docs", "bin/court-wasm/node"] {
         try? FileManager.default.createDirectory(
             atPath: (dst as NSString).appendingPathComponent(sub),
             withIntermediateDirectories: true)
@@ -9635,8 +9635,9 @@ func vendorInto(_ rootDir: String) -> (carried: [String], digest: String?, shim:
     // that is what a repository takes in hand. The node port travels with it
     // because the bench's parse route is still asked of it, and because a
     // platform this binary was not built for still has a court that way.
-    for rel in ["bin/judge.js", "bin/judge-where.js", "web/ui.html",
-                "web/codemirror.js", "web/codemirror.css", "LICENSE", "docs/NOTICE.md"] {
+    for rel in ["bin/judge.js", "bin/judge-wasm.js", "bin/court-wasm.from",
+                "bin/court-wasm/node/vi_court.js", "bin/court-wasm/node/vi_court_bg.wasm",
+                "web/ui.html", "web/codemirror.js", "web/codemirror.css", "LICENSE", "docs/NOTICE.md"] {
         let src = (here as NSString).appendingPathComponent(rel)
         if FileManager.default.fileExists(atPath: src) {
             copyItem(src, (dst as NSString).appendingPathComponent(rel))
