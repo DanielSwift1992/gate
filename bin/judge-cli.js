@@ -9,9 +9,10 @@
 //
 // It serves every court. The plain court is judge.js, the line-for-line port
 // of the corpus judge; the certificate court and the count court, which the
-// binary answers under `judge where` and `judge count`, are the corpus court
-// itself built for wasm32 (bin/court-wasm, bin/court-wasm.from), spoken through
-// judge-wasm.js beside this file. The battery holds each to the binary's own lines.
+// binary answers under `judge where` and `judge count`, are the contract's
+// Rust sample built for wasm32 (bin/court-wasm, bin/court-wasm.from), a second
+// implementation spoken through judge-wasm.js beside this file. The suite
+// holds it 13/13, and the battery holds each carrier to the binary's own lines.
 const fs = require("fs");
 const path = require("path");
 const { judge } = require(path.join(__dirname, "judge.js"));
@@ -22,10 +23,11 @@ if (args[0] !== "judge") {
     process.exit(2);
 }
 if (args[1] === "where" || args[1] === "count") {
-    // the certificate court and the count court are the corpus court itself,
-    // built for wasm32 at the pin bin/court-wasm.from records, by
+    // the certificate court and the count court are the contract's Rust
+    // sample built for wasm32 at the pin bin/court-wasm.from records, by
     // bin/build-court-wasm.sh; judge-wasm.js is its door and speaks the
-    // binary's own words, so this file hands them over and adds nothing
+    // binary's words, held to them by the suite and the battery, so this
+    // file hands them over and adds nothing
     const { main } = require(path.join(__dirname, "judge-wasm.js"));
     process.exitCode = main(args);
     return;

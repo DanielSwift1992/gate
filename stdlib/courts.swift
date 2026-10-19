@@ -4,8 +4,9 @@
 //
 // The judge exists more than once on purpose: a native binary built from the
 // theory corpus, a port of its plain court that runs where the binary cannot,
-// in a browser and on Windows, and the corpus court itself built for wasm32
-// for the certificate and count courts on those same machines. Two encodings of one judge agree only under a premise outside
+// in a browser and on Windows, and the contract's Rust sample built for
+// wasm32, a second implementation of the certificate and count courts for
+// those same machines. Two encodings of one judge agree only under a premise outside
 // either of them (v=i §5.4). For the tool's first week that premise lived
 // in a test file: the two halves of this system were held together by a
 // third system, which is the failure this tool exists against. So the
@@ -52,11 +53,11 @@ public enum BinaryJudge: CourtCarrier {}
 extension BinaryJudge { public static var typeName: String { "bin/gate-judge" } }
 public enum PortPlain: CourtCarrier {}
 extension PortPlain { public static var typeName: String { "bin/judge.js" } }
-// the third carrier is not a port: it is the corpus court itself, built for
-// wasm32 at the pin bin/court-wasm.from records and carried by
-// bin/judge-wasm.js for node and by bin/court-wasm/web for the page. One
-// source answers natively and in the browser, so the premise that two
-// encodings agree is no longer asked of a translation.
+// the third carrier is the contract's Rust sample, a second implementation
+// built for wasm32 at the pin bin/court-wasm.from records and carried by
+// bin/judge-wasm.js for node and by bin/court-wasm/web for the page. The
+// premise that it agrees with the binary is asked of the suite (13/13) and
+// of the battery's page-for-page parity, not assumed (v=i §5.4).
 public enum WasmCourt: CourtCarrier {}
 extension WasmCourt { public static var typeName: String { "bin/judge-wasm.js" } }
 // the fourth carrier is the strangler's vein: the same judge sources at the

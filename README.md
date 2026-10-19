@@ -338,9 +338,10 @@ bin/gate-judge  the judge, one static binary, built at a pin from the
 bin/judge.js · bin/judge-cli.js · bin/judge-wasm.js · bin/court-wasm/
                 the courts for machines the binary was not built for:
                 the plain court as a node port held to it line for line,
-                and the certificate and count courts as the corpus court
-                itself built for wasm32 at the pin bin/court-wasm.from
-                records (bin/build-court-wasm.sh rebuilds it)
+                and the certificate and count courts as the contract's
+                Rust sample, a second implementation built for wasm32 at
+                the pin bin/court-wasm.from records (bin/build-court-wasm.sh
+                rebuilds it), held to the binary by the suite and the battery
 bin/gate-cli.swift
                 the CLI, one file of Swift: every verb this tool answers,
                 with the court compiled in at the judge's own pin
@@ -387,8 +388,9 @@ two ways out. The judge is a native binary built for one platform: `bin/gate-jud
 here is `Mach-O arm64`, and on any other machine it does not execute. On
 such a machine node runs the courts instead: `bin/judge-cli.js` runs the
 plain court, ported line for line, and hands `judge where` and `judge count`
-to `bin/judge-wasm.js`, the corpus court itself built for wasm32 at the pin
-`bin/court-wasm.from` records, and the battery holds both to the binary's own lines.
+to `bin/judge-wasm.js`, the contract's Rust sample built for wasm32 at the pin
+`bin/court-wasm.from` records, a second implementation the suite holds 13/13,
+and the battery holds both to the binary's own lines.
 `gate --version` says which court ran on your machine. On macOS, CI runs
 the full battery on every push. On Windows, CI builds this same one file
 into that platform's own binary on every push, asks it what it carries, and

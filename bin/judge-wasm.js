@@ -1,16 +1,17 @@
 #!/usr/bin/env node
-// The corpus court, carried as wasm: the certificate court (`judge where`)
-// and the count court (`judge count`), built from the theory corpus at the
-// pin bin/court-wasm.from records, by bin/build-court-wasm.sh. This file is
+// The contract's Rust sample, carried as wasm: a second implementation of
+// the certificate court (`judge where`) and the count court (`judge count`),
+// built from Contracts/Court/rust-sample of the theory corpus at the pin
+// bin/court-wasm.from records, by bin/build-court-wasm.sh. This file is
 // the door to it for node: it speaks the words the binary speaks, reads the
 // named files itself, hands their texts to the module in bin/court-wasm/node
 // and writes back what the court answered, stdout, stderr and the exit code,
 // so nothing downstream has to know which carrier answered. In the browser
 // the same module answers through bin/court-wasm/web.
 //
-// It is one judgement, not a port: the module is the same source the corpus
-// builds natively, and the contract driver of the corpus
-// (Checks/court-contract.py) holds it to the suite's thirteen cases.
+// It is a second implementation, not the corpus's Swift court: the contract
+// driver of the corpus (Checks/court-contract.py) holds it to the suite's
+// thirteen cases, and the battery holds it to the binary page for page.
 const fs = require("fs");
 const path = require("path");
 const { TextDecoder } = require("util");
