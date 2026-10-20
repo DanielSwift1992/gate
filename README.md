@@ -334,9 +334,17 @@ gate.policy.swift
 bin/gate-judge  the judge, one static binary, built at a pin from the
                 public theory corpus, verification-is-identification:
                 github.com/DanielSwift1992/verification-is-identification
-                (bin/build-judge.sh [pin] rebuilds it)
+                (bin/build-judge.sh [pin] rebuilds it): the certificate
+                and count courts
+bin/organization-judge
+                the company's plain court, built from the theory's
+                showcase, where the policy it reads is declared:
+                github.com/DanielSwift1992/verification-is-identification-showcase
+                at the pin bin/organization-court.from names
+                (bin/build-organization-judge.sh rebuilds it), held to the
+                showcase's organization court contract
 bin/judge.js · bin/judge-cli.js · bin/judge-wasm.js · bin/court-wasm/
-                the courts for machines the binary was not built for:
+                the courts for machines the binaries were not built for:
                 the plain court as a node port held to it line for line,
                 and the certificate and count courts as the contract's
                 Rust sample, a second implementation built for wasm32 at
@@ -344,7 +352,7 @@ bin/judge.js · bin/judge-cli.js · bin/judge-wasm.js · bin/court-wasm/
                 rebuilds it), held to the binary by the suite and the battery
 bin/gate-cli.swift
                 the CLI, one file of Swift: every verb this tool answers,
-                with the court compiled in at the judge's own pin
+                with the courts compiled in at their own pins
                 (bin/build-cli.sh builds it; the binary is not committed,
                 because every executable line here stays text)
 bin/shelf-into-swift.py
@@ -362,7 +370,7 @@ web/codemirror.*  the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
 docs/           DETAILS.md, SECURITY.md, CHANGELOG.md, NOTICE.md, and
                 the cover's picture with its provenance
-tests/smoke.py   the battery: 578 checks this repository holds itself
+tests/smoke.py   the battery: 580 checks this repository holds itself
                  to, end-to-end runs through judge parity through
                  documentation contracts; the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts

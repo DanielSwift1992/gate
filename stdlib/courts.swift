@@ -51,17 +51,23 @@ public enum CountVerdicts: CourtSpoken {
 public protocol CourtCarrier {}
 public enum BinaryJudge: CourtCarrier {}
 extension BinaryJudge { public static var typeName: String { "bin/gate-judge" } }
+// the company's plain court has its own native carrier, built from the
+// showcase's OrganizationCourt at the pin bin/organization-court.from names,
+// where the policy it reads is declared (bin/build-organization-judge.sh)
+public enum OrganizationBinary: CourtCarrier {}
+extension OrganizationBinary { public static var typeName: String { "bin/organization-judge" } }
 public enum PortPlain: CourtCarrier {}
 extension PortPlain { public static var typeName: String { "bin/judge.js" } }
-// the third carrier is the contract's Rust sample, a second implementation
+// the fourth carrier is the contract's Rust sample, a second implementation
 // built for wasm32 at the pin bin/court-wasm.from records and carried by
 // bin/judge-wasm.js for node and by bin/court-wasm/web for the page. The
 // premise that it agrees with the binary is asked of the suite (13/13) and
 // of the battery's page-for-page parity, not assumed (v=i §5.4).
 public enum WasmCourt: CourtCarrier {}
 extension WasmCourt { public static var typeName: String { "bin/judge-wasm.js" } }
-// the fourth carrier is the strangler's vein: the same judge sources at the
-// same pin (bin/gate-judge.from), compiled into the Swift CLI by
+// the fifth carrier is the strangler's vein: the same judge sources at the
+// same pin (bin/gate-judge.from), with the company's plain court from the
+// showcase pin (bin/organization-court.from), compiled into the Swift CLI by
 // bin/build-cli.sh, so the court runs in the vein's own process. A verb of
 // that CLI which needs the TEXT of a verdict asks the same door in a child of
 // itself, because the court prints its lines and leaves on a refusal. The row
@@ -75,7 +81,7 @@ public enum Carry<Who: CourtCarrier, What: CourtSpoken, As: VerdictCanon> {}
 extension Carry: CourtCarried
 where What.Canon == As {}
 
-public typealias Binary_carries_plain = Carry<BinaryJudge, PlainVerdicts, CanonV2>
+public typealias Organization_carries_plain = Carry<OrganizationBinary, PlainVerdicts, CanonV2>
 public typealias Binary_carries_where = Carry<BinaryJudge, WhereVerdicts, CanonV4>
 public typealias Binary_carries_count = Carry<BinaryJudge, CountVerdicts, CountQuestion1>
 public typealias Port_carries_plain = Carry<PortPlain, PlainVerdicts, CanonV2>

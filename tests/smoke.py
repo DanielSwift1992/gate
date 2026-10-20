@@ -958,7 +958,7 @@ def main():
     kept_world = open(pw, encoding="utf-8").read()
 
     def both_ways(path):
-        b = subprocess.run([os.path.join(HERE, "bin", "gate-judge"), "judge", path],
+        b = subprocess.run([os.path.join(HERE, "bin", "organization-judge"), "judge", path],
                            capture_output=True, text=True)
         p = subprocess.run(["node", os.path.join(HERE, "bin", "judge-cli.js"), "judge", path],
                            capture_output=True, text=True)
@@ -974,6 +974,25 @@ def main():
               hb == hp and hbc == hpc == 0 and "THE JUDGE holds" in hb))
     S.append(("and a refusing world in the same words, with the same lines",
               rb == rp and rbc == rpc == 1 and "refuses 2 claim(s)" in rb))
+    # ── AND BOTH ARE HELD TO THE CONTRACT OF THE COURT THEY CARRY. The company's
+    # plain court lives in the showcase with the policy it reads, and its
+    # contract (Contracts/OrganizationCourt/v0.1) comes with its source at the
+    # pin bin/organization-court.from names, laid by bin/organization-court.sh.
+    # The native carrier and the node port each answer all of it.
+    _org = subprocess.run([os.path.join(HERE, "bin", "organization-court.sh")],
+                          capture_output=True, text=True).stdout.strip()
+    def _org_contract(prefix):
+        return subprocess.run(
+            [sys.executable, os.path.join(_org, "Checks", "organization-contract.py"),
+             "--manifest", os.path.join(_org, "Contracts", "OrganizationCourt", "v0.1",
+                                        "contract.json"),
+             "--command-json", json.dumps(prefix), "--implementation-id", "gate battery"],
+            capture_output=True, text=True)
+    _oc_native = _org_contract([os.path.join(HERE, "bin", "organization-judge"), "judge"])
+    _oc_port = _org_contract(["node", os.path.join(HERE, "bin", "judge-cli.js"), "judge"])
+    S.append(("the company's plain court answers its contract through the native carrier and the port",
+              _oc_native.returncode == 0 and "8/8 cases matched" in _oc_native.stdout
+              and _oc_port.returncode == 0 and "8/8 cases matched" in _oc_port.stdout))
     # AND THE CERTIFICATE COURT OF THE PORT, HELD TO THE BINARY PAGE FOR PAGE.
     # For a stretch the port refused `judge where` outright, and gate named the
     # forms rows as unjudged wherever the binary could not run; the port sits
@@ -7213,7 +7232,7 @@ console.log(JSON.stringify(out));
     # the courts page is the shelf's page of certificates: its machinery, and the
     # carriers' claims after it, split in two with a real break planted
     crt_text = open(os.path.join(HERE, "stdlib", "courts.swift"), encoding="utf-8").read()
-    cut = crt_text.index("public typealias Binary_carries_plain")
+    cut = re.search(r"^public typealias \w+_carries_\w+ = ", crt_text, re.M).start()
     machinery, values = crt_text[:cut], crt_text[cut:]
     broken = values.replace(
         "public typealias Binary_carries_where = Carry<BinaryJudge, WhereVerdicts, CanonV4>",
@@ -7673,7 +7692,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
     def two_judges(world_text):
         p = os.path.join(par, "w.swift")
         open(p, "w").write(world_text)
-        raw = subprocess.run([os.path.join(HERE, "bin", "gate-judge"), "judge", p],
+        raw = subprocess.run([os.path.join(HERE, "bin", "organization-judge"), "judge", p],
                              capture_output=True, text=True).stdout
         binary = sorted(m.group(1).strip()
                         for m in re.finditer(r"^\s+\S+\.swift:\d+\s+(.+)$", raw, re.M))
@@ -7874,10 +7893,23 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                  if "CourtCarrier" in d.get("conformances", []) and d.get("typeName")}
     _tree = {os.path.join("bin", f) for f in os.listdir(os.path.join(HERE, "bin"))
              if f.startswith("judge") and f.endswith(".js")
-             and f != "judge-cli.js"} | {"bin/gate-judge", "bin/gate-cli.swift"}
+             and f != "judge-cli.js"} | {"bin/gate-judge", "bin/organization-judge",
+                                         "bin/gate-cli.swift"}
     S.append(("the court roster and the tree name the same carriers, and each exists",
               _carriers and _carriers == _tree
               and all(os.path.exists(os.path.join(HERE, p)) for p in _carriers)))
+    # ── AND THE VEIN'S DOOR KNOWS THE THEORY'S PASSES BY THE THEORY'S OWN WORDS.
+    # The vein sends the theory's passes to the corpus's door and everything else
+    # to the company's plain court, so its list of those words is a second record
+    # of the door's: read here against the door at the judge's pin, both ways.
+    _door_pin = open(os.path.join(HERE, "bin", "gate-judge.from"), encoding="utf-8").read().strip()
+    _door = open(os.path.join(HERE, "bin", ".court", _door_pin, "Judge.swift"),
+                 encoding="utf-8").read()
+    _door_words = set(re.findall(r'arguments\.first == "([^"]+)"', _door))
+    _vein_list = re.search(r"let theoryPasses: Set<String> = \[([^\]]*)\]", gate_src, re.S)
+    _vein_words = set(re.findall(r'"([^"]+)"', _vein_list.group(1))) if _vein_list else set()
+    S.append(("the vein's door names the theory's passes in the words of the theory's door",
+              len(_door_words) >= 8 and _vein_words == _door_words))
 
     # ── what the strangler left: the Swift CLI answers every verb, and this
     # block walks them. The door is proven with a stub first, a fake binary

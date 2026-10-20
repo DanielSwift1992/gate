@@ -21,6 +21,8 @@ jobs:
       # the judge is rebuilt from the public theory corpus at the pin,
       # so the battery never trusts a stale vendored binary
       - run: bin/build-judge.sh f5a46c3
+      # and the company's plain court from the showcase at its own pin
+      - run: bin/build-organization-judge.sh
       # the same tee as linux: this job went red once with its log closed
       # and its mouth shut, and a red nobody can read is a red that gets
       # guessed at. One mechanism, both platforms.
@@ -96,6 +98,7 @@ jobs:
           command -v swift || { echo "the runner image no longer carries swift; install a toolchain step here"; exit 1; }
           swift --version
       - run: bin/build-judge.sh f5a46c3
+      - run: bin/build-organization-judge.sh
       - run: |
           python3 tests/smoke.py 2>&1 | tee /tmp/smoke-out.txt
           exit ${PIPESTATUS[0]}

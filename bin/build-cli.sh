@@ -89,17 +89,27 @@ cp "$HERE/bin/gate-cli.swift" "$BUILD/main.swift"
 python3 "$HERE/bin/shelf-into-swift.py" "$HERE/stdlib" "$PIN" > "$BUILD/shelf.swift"
 # and the count court's premise beside it, as bytes the binary writes back out
 python3 "$HERE/bin/premise-into-swift.py" "$PREMISE" > "$BUILD/premise.swift"
+# ── AND THE COMPANY'S PLAIN COURT COMES FROM THE SHOWCASE, at its own pin
+# (bin/organization-court.from), beside the policy it reads. The theory's copy
+# stays out while the theory still carries one, and the court's door finds
+# the showcase's: the same type, the same calls, one source for it here.
+ORG="$("$HERE/bin/organization-court.sh")"
+mkdir -p "$BUILD/court"
+for f in "$CACHE"/*.swift; do
+    [ "$(basename "$f")" = "OrganizationJudge.swift" ] || cp "$f" "$BUILD/court/"
+done
+cp "$ORG/OrganizationJudge.swift" "$BUILD/court/"
 
 if [ -n "$WINDOWS" ]; then
     # the same three places, spelled the way that toolchain reads them
     SAID="$(cd "$HERE" && pwd -W)"
     swiftc -O "$SAID/bin/.build/main.swift" "$SAID/bin/.build/shelf.swift" \
         "$SAID/bin/.build/premise.swift" \
-        "$SAID/bin/.court/$PIN"/*.swift $LINK \
+        "$SAID/bin/.build/court"/*.swift $LINK \
         -o "$SAID/bin/gate-cli$EXT"
 else
-    swiftc -O "$BUILD/main.swift" "$BUILD/shelf.swift" "$BUILD/premise.swift" "$CACHE"/*.swift \
+    swiftc -O "$BUILD/main.swift" "$BUILD/shelf.swift" "$BUILD/premise.swift" "$BUILD/court"/*.swift \
         -o "$HERE/bin/gate-cli$EXT"
 fi
 rm -rf "$BUILD"
-echo "built bin/gate-cli$EXT (court at $(printf %.7s "$PIN"))"
+echo "built bin/gate-cli$EXT (court at $(printf %.7s "$PIN"), company court at $(head -1 "$ORG/from" | cut -c1-7))"

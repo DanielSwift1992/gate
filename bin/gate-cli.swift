@@ -301,13 +301,23 @@ func jsonObject(_ pairs: [(String, String)], indent: Int) -> String {
 
 // ── the court, carried in-process: the judge sources at the pin beside
 // bin/gate-judge (bin/gate-judge.from) are compiled into this binary by
-// bin/build-cli.sh, and this door is the corpus's own Judge.run verbatim:
-// plain, where, diff, chain. Not a python vein and not on the carries
-// list, because the python side has no judge verb. What holds the road is
-// the battery's parity against bin/gate-judge itself: byte for byte on
-// the where pages, clock stripped on the plain court.
+// bin/build-cli.sh, with the company's plain court from the showcase pin
+// (bin/organization-court.from). The theory's passes go through the corpus's
+// own door, Judge.run; a plain request, paths or `parse`, goes to the plain
+// court itself, which the theory's door no longer carries once the court has
+// moved. What holds the road is the battery's parity against bin/gate-judge
+// on the where pages, byte for byte, and against bin/organization-judge on
+// the plain court, clock stripped.
 if args.first == "judge" {
-    Judge.run(Array(args.dropFirst()))
+    let theoryPasses: Set<String> = ["where", "count", "where-report", "where-admit",
+                                     "replay-continuation", "continue", "coverage", "apply",
+                                     "diff", "chain"]
+    let asked = Array(args.dropFirst())
+    if let pass = asked.first, theoryPasses.contains(pass) {
+        Judge.run(asked)
+    } else {
+        OrganizationJudge.run(asked)
+    }
     exit(0)
 }
 
@@ -9877,6 +9887,19 @@ func vendorInto(_ rootDir: String) -> (carried: [String], digest: String?, shim:
             carried.append("bin/gate-judge.from")
         }
     }
+    // and the company's plain court beside it, built from the showcase at its
+    // own pin: a carried copy takes every native court this tool speaks with
+    let osrc = (here as NSString).appendingPathComponent("bin/organization-judge")
+    if FileManager.default.fileExists(atPath: osrc) {
+        let odst = (dst as NSString).appendingPathComponent("bin/organization-judge")
+        copyItem(osrc, odst)
+        try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: odst)
+        carried.append("bin/organization-judge")
+        if FileManager.default.fileExists(atPath: osrc + ".from") {
+            copyItem(osrc + ".from", odst + ".from")
+            carried.append("bin/organization-judge.from")
+        }
+    }
     let shim = (rootDir as NSString).appendingPathComponent("gatew")
     try? ("#!/bin/sh\n# gate, carried by this repository. Nothing to install.\n"
           + "HERE=\"$(cd \"$(dirname \"$0\")\" && pwd)\"\n"
@@ -12233,6 +12256,11 @@ if args.first == "--version" || args.first == "-v" || args.first == "version" {
         lines.append("  the court is " + count + " lines in the " + String(files.count)
                    + " files of " + COURT_DIR + ", the files bin/build-cli.sh compiles in, "
                    + "and the rest of that repository is the theory it comes from")
+    }
+    let orgFrom = joinPath(toolRoot(), "bin/organization-court.from")
+    if let org = readText(orgFrom)?.trimmingCharacters(in: .whitespacesAndNewlines), !org.isEmpty {
+        lines.append("  company court from verification-is-identification-showcase "
+                   + String(org.prefix(12)) + ". `bin/build-organization-judge.sh` builds it")
     }
     if let came = came {
         lines.append("  judge built from verification-is-identification "

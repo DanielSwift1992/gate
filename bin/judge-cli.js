@@ -75,10 +75,24 @@ if (args[1] === "parse") {
 }
 
 const files = args.slice(1);
+// A file that is not there, or whose bytes are not UTF-8, is a corpus the
+// court cannot read: the binary says so in one line and exits 2, and the port
+// says the same words rather than stop on a stack trace (the organization
+// court's contract, missing-file). Strict decoding, as the binary reads.
+const sourceDecoder = new (require("util").TextDecoder)("utf-8", { fatal: true, ignoreBOM: true });
+const texts = [];
+for (const f of files) {
+    try {
+        texts.push(sourceDecoder.decode(fs.readFileSync(f)));
+    } catch (error) {
+        process.stderr.write("✗ THE JUDGE cannot read the corpus\n");
+        process.exit(2);
+    }
+}
 let decl = 0, lookups = 0, premises = 0, ms = 0;
 const refusals = [];
-for (const f of files) {
-    const r = judge(path.basename(f), fs.readFileSync(f, "utf8"));
+for (const [i, f] of files.entries()) {
+    const r = judge(path.basename(f), texts[i]);
     decl += r.declarations;
     lookups += r.lookups;
     premises += r.premises;
