@@ -468,6 +468,7 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 <script src="/codemirror.js"></script>
 <script src="/judge.js"></script>
 <script src="/renderer.js"></script>
+<script src="/press.js"></script>
 <script>
 // the version this page was written against. The bench reads its page off the
 // disk and answers out of memory, so after a pull the two can disagree: the page
@@ -1947,11 +1948,9 @@ async function render() {
     const local = judge(active || "gate.swift", text,
                         byWhere ? { seeds: new Set(), generics: new Set() } : undefined);
     lastParsed = local.parsed;
-    // the Drawing view is offered to a file that presents a canvas form, and
-    // redrawn on every keystroke while it is the open view
-    const canDraw = drawable(lastParsed);
-    document.getElementById("view-drawing").hidden = !canDraw;
-    if (mode === "drawing") { if (canDraw) drawCanvases(); else setMode("bare"); }
+    // The state and its keys can be in different files. The same whole-world
+    // reading offers Drawing here and paints it when this is the open view.
+    drawCanvases();
     if (viewingShelf) {
         repaintNames(local.parsed, []);          // names highlight; nothing refuses
         clearFlags();
@@ -2788,16 +2787,37 @@ function nameTokens(raw) {
 // guessed at is a range overwritten. A target is never emptied on the way —
 // the value is replaced whole, so `typealias X = ` never exists in the buffer.
 let bareSlots = [];
+// An alias value is one same-line name, optionally with balanced generic
+// arguments. A suffix we cannot place or an unfinished argument list is read-only.
+// Table and Drawing use this same range, so neither leaves old arguments behind.
+function aliasValueRange(text) {
+    const eq = text.indexOf("=");
+    if (eq < 0) return null;
+    const m = text.slice(eq + 1).match(/^(\s*)([A-Za-z_][\w.]*)/);
+    if (!m) return null;
+    const from = eq + 1 + m[1].length;
+    let to = from + m[2].length;
+    let cursor = to;
+    while (/\s/.test(text[cursor] || "") && cursor < text.length) cursor++;
+    if (text[cursor] === "<") {
+        let depth = 0;
+        for (; cursor < text.length; cursor++) {
+            const ch = text[cursor];
+            if (!/[\w.,<>\s]/.test(ch)) return null;
+            if (ch === "<") depth++;
+            if (ch === ">" && --depth === 0) { to = cursor + 1; break; }
+        }
+        if (depth !== 0) return null;
+    }
+    if (!/^\s*;?\s*}?\s*$/.test(text.slice(to))) return null;
+    return { from, to };
+}
 function locateSlot(slot) {
     const line = slot.line - 1;                       // the parse counts from one
     if (line < 0 || line >= cm.lineCount()) return null;
     if (slot.kind === "alias") {
-        const text = codeOfLine(line), eq = text.indexOf("=");
-        if (eq < 0) return null;
-        const m = text.slice(eq + 1).match(/^(\s*)([A-Za-z_][\w.]*)/);
-        if (!m) return null;                          // no whole value to replace
-        const at = eq + 1 + m[1].length;
-        return { from: { line, ch: at }, to: { line, ch: at + m[2].length } };
+        const span = aliasValueRange(codeOfLine(line));
+        return span ? { from: { line, ch: span.from }, to: { line, ch: span.to } } : null;
     }
     // whole units, so nothing is ever half-removed. The same bridge: a unit is a
     // place in the text exactly the way a value is, and there is still one way to
@@ -3003,7 +3023,9 @@ function removeUnit(slot) {
 function fillSlot(slot, value) {
     const at = locateSlot(slot);
     if (!at) return;
-    cm.replaceRange(value, at.from, at.to, "+input");
+    // A slot choice is an edit, but it is not typing at the editor's cursor.
+    // Keep its write and undo step without opening a typing offer over another view.
+    cm.replaceRange(value, at.from, at.to, "slot");
     render();
 }
 
@@ -3376,6 +3398,7 @@ document.addEventListener("keydown", (e) => {
 }, true);
 
 function setMode(m) {
+    drawingSnapshot = null;
     mode = m;
     document.getElementById("editor-host").style.display = m === "full" ? "" : "none";
     document.getElementById("bare").style.display = m === "bare" ? "block" : "none";
@@ -3392,9 +3415,9 @@ function setMode(m) {
 // canvas form. The engine is the kit's span engine on JS (bin/renderer.js, at
 // the pin bin/drawing.from names); it draws from the same parse the court
 // reads, made with the kit's vocabulary so the kit's names are read as the
-// page that first drew these worlds read them. A file that presents no canvas
-// form has no drawing and no button: nothing is drawn of a world that does
-// not say it can be.
+// page that first drew these worlds read them. The button belongs to the world,
+// so the file that carries a state can use keys drawn by its neighbour. A world
+// with no canvas form has neither a drawing nor a button.
 const CANVAS_FORMS = new Set(["Diagram", "GrownDiagram", "HFlow"]);
 function drawable(parsed) {
     if (!parsed || typeof renderAll !== "function") return false;
@@ -3402,23 +3425,124 @@ function drawable(parsed) {
         if ((d.conformances || []).some(c => CANVAS_FORMS.has(c))) return true;
     return false;
 }
-// a drawing reads the whole world: a page's bodies name the declarations of
-// the world's other files (the atom's levels, the lamp's lines), so the open
-// buffer is parsed together with its sibling files, as the court reads them
-async function drawCanvases() {
-    const host = document.getElementById("canvas-host");
-    if (!drawable(lastParsed)) { host.innerHTML = ""; return; }
-    const mine = editor.value;
-    const others = await Promise.all((files || []).filter(f => f !== active).map(f =>
-        fetch("/world?f=" + encodeURIComponent(f)).then(r => r.ok ? r.text() : "").catch(() => "")));
-    if (mode !== "drawing") return;          // the view moved on while the world was read
-    const read = judge(active || "world.swift", [mine, ...others].join("\n"), kitVocabulary).parsed;
-    const drawn = renderAll(read.declarations, read.order, read.literals, read.topAliases);
-    host.innerHTML = drawn.canvases.map(c => c.svg).join("")
-        + (drawn.errors.length
-            ? '<div class="caption">the renderer could not read: ' + esc(drawn.errors.slice(0, 6).join(" · ")) + "</div>"
-            : "");
+// The buffer and its neighbours form one reading for both paint and press.
+// Neighbour texts are cached until the file changes. A later drawing owns the
+// panel, even if an earlier fetch finishes last. No missing file becomes empty.
+let drawingGeneration = 0, drawingNeighbors = null, drawingSnapshot = null;
+function resetDrawing() {
+    drawingGeneration++;
+    drawingNeighbors = null;
+    drawingSnapshot = null;
+    document.getElementById("view-drawing").hidden = true;
+    document.getElementById("canvas-host").innerHTML = "";
 }
+async function drawingWorld() {
+    const file = active, buffer = editor.value, names = (files || []).filter(f => f !== file);
+    const key = JSON.stringify([file, names]);
+    if (!drawingNeighbors || drawingNeighbors.key !== key) {
+        drawingNeighbors = { key, promise: Promise.all(names.map(async name => {
+            const response = await fetch("/world?f=" + encodeURIComponent(name));
+            if (!response.ok) throw new Error("could not read " + name);
+            return { file: name, text: await response.text() };
+        })) };
+    }
+    const parts = [{ file, text: buffer }, ...(await drawingNeighbors.promise).map(part => ({ ...part }))];
+    let first = 1;
+    for (const part of parts) {
+        part.first = first;
+        part.last = first + part.text.split("\n").length - 1;
+        first = part.last + 1;
+    }
+    return { file, buffer, key, parts, text: parts.map(p => p.text).join("\n") };
+}
+function drawingCurrent(snapshot) {
+    return snapshot && snapshot.file === active && snapshot.buffer === editor.value
+        && snapshot.key === JSON.stringify([active, (files || []).filter(f => f !== active)]);
+}
+function drawingSay(message) {
+    const note = document.getElementById("drawing-feedback");
+    if (note) note.textContent = message;
+}
+async function drawCanvases() {
+    const generation = ++drawingGeneration;
+    drawingSnapshot = null;
+    const host = document.getElementById("canvas-host");
+    const button = document.getElementById("view-drawing");
+    try {
+        const world = await drawingWorld();
+        if (generation !== drawingGeneration || !drawingCurrent(world)) return;
+        const read = judge(world.file || "world.swift", world.text, kitVocabulary).parsed;
+        const canDraw = drawable(read);
+        button.hidden = !canDraw;
+        if (!canDraw) {
+            host.innerHTML = "";
+            if (mode === "drawing") setMode("bare");
+            return;
+        }
+        if (mode !== "drawing") return;
+        const drawn = renderAll(read.declarations, read.order, read.literals, read.topAliases);
+        host.innerHTML = drawn.canvases.map(c => c.svg).join("")
+            + '<div class="caption">Keys change an alias in the open file. Literal typing is not available here.</div>'
+            + '<div id="drawing-feedback" class="caption" role="status" aria-live="polite"></div>';
+        drawingSnapshot = world;
+        if (drawn.errors.length) drawingSay("the renderer could not read: " + drawn.errors.slice(0, 6).join(" · "));
+    } catch (error) {
+        if (generation !== drawingGeneration) return;
+        button.hidden = true;
+        if (mode !== "drawing") return;
+        host.innerHTML = '<div class="caption" role="status">the drawing could not read its world: '
+            + esc(error.message) + "</div>";
+    }
+}
+function drawingRuleNames(names) {
+    let depth = 0, result = "";
+    for (const ch of names.trim()) {
+        if (ch === "<") depth++;
+        if (ch === ">") depth--;
+        if (depth === 0 && /[\s,]/.test(ch)) {
+            if (result && !result.endsWith(",")) result += ",";
+        } else result += ch;
+    }
+    return result.replace(/,$/, "");
+}
+function applyDrawingPress(rules) {
+    if (viewingShelf || !active || cm.getOption("readOnly")) {
+        drawingSay("Open an editable file to use its keys."); return;
+    }
+    const world = drawingSnapshot;
+    if (mode !== "drawing" || !drawingCurrent(world)) {
+        drawingSay("The drawing changed. Wait for its current reading."); return;
+    }
+    // append/rubout/clear change a literal. The bench has no literal slot,
+    // so the typewriter is outside this panel, not a second writing route.
+    if (/^(append|rubout|clear)\b/.test(rules)) {
+        drawingSay("Literal typing is not available here."); return;
+    }
+    const result = press(world.text, rules);
+    if (result.error) { drawingSay("the applier refuses: " + result.error); return; }
+    if (!result.applied) { drawingSay(result.noop || "No change."); return; }
+    const before = world.text.split("\n"), after = result.text.split("\n");
+    const target = result.line - 1;
+    if (before.length !== after.length || !Number.isInteger(target) || target < 0
+        || target >= before.length || before.some((line, i) => i !== target && line !== after[i])) {
+        drawingSay("The press does not name one alias line. Edit it in Full."); return;
+    }
+    const owner = world.parts.find(p => result.line >= p.first && result.line <= p.last);
+    if (!owner || owner.file !== active) {
+        drawingSay(owner ? "Open " + owner.file + " to change this alias." : "The press names no file."); return;
+    }
+    const slot = { kind: "alias", line: result.line - owner.first + 1 };
+    const at = locateSlot(slot), value = aliasValueRange(after[target]);
+    if (!at || !value || after[target].slice(0, value.from) !== before[target].slice(0, at.from.ch)) {
+        drawingSay("The alias value cannot be placed whole. Edit it in Full."); return;
+    }
+    fillSlot(slot, after[target].slice(value.from, value.to));
+}
+document.getElementById("canvas-host").addEventListener("click", event => {
+    const key = event.target.closest("g.vi-rule");
+    const names = key && key.getAttribute("data-vi-rules");
+    if (names) applyDrawingPress(drawingRuleNames(names));
+});
 
 // ── WHAT WAITS FOR A WORD, and from whom. Not what changed — git keeps that,
 // and anybody can arrange it for themselves. A debt does not live in commits, it
@@ -3476,7 +3600,7 @@ cm.on("change", (_, change) => {
     // opener was already judging it, in the right order, after the world had been
     // read. So every click on a name paid for two verdicts and two statuses,
     // and the second was of exactly what the first had just answered. Whoever
-    // puts text here draws it; a keystroke is the only thing this schedules.
+    // puts text here draws it; edits, including slot choices, schedule a write.
     if (!userEdit && change.origin === "setValue") return;
     timer = setTimeout(() => tick(userEdit), userEdit ? 400 : 150);
 });
@@ -3595,6 +3719,7 @@ async function siblings() {
     }
 }
 async function loadFile(name) {
+    resetDrawing();
     cm.setOption("readOnly", false); viewingShelf = null; refLabel = null; undeclaredView = null;
     active = name;
     document.getElementById("fname").textContent = name;

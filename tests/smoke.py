@@ -3160,8 +3160,8 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # TO NO OTHER. The page's own `drawable` is read off ui.html and run over
     # two files of the playground fetched above: the atom's pages, which present
     # Diagram, draw one canvas through the engine with the kit's vocabulary and
-    # the world's declarations beside them; the atom's declarations alone, and
-    # this repository's own layout file, present no canvas and get no button.
+    # the world's declarations beside them. The declarations alone have no
+    # canvas, but their world does; a world without a canvas gets no button.
     _dv = {}
     if os.path.exists(os.path.join(_dplay, "corpus", "worlds", "AtomPages.swift")):
         _dprobe = os.path.join(tmp, "drawing-probe.js")
@@ -3184,7 +3184,8 @@ const pages = fs.readFileSync(process.argv[5], "utf8"), world = fs.readFileSync(
 const own = fs.readFileSync(process.argv[7], "utf8");
 const out = {};
 out.pagesDrawable = drawable(judge("AtomPages.swift", pages, kitVocabulary).parsed);
-out.worldDrawable = drawable(judge("Atom.swift", world, kitVocabulary).parsed);
+out.atomAloneDrawable = drawable(judge("Atom.swift", world, kitVocabulary).parsed);
+out.atomWithPagesDrawable = drawable(judge("Atom.swift", world + "\n" + pages, kitVocabulary).parsed);
 out.ownDrawable = drawable(judge("gate.manifest.swift", own).parsed);
 const read = judge("AtomPages.swift", pages + "\n" + world, kitVocabulary).parsed;
 const drawn = renderAll(read.declarations, read.order, read.literals, read.topAliases);
@@ -3202,8 +3203,245 @@ console.log(JSON.stringify(out));
         except Exception:
             _dv = {"stderr": _dp.stderr[-200:]}
     S.append(("the drawing view is offered to a world that presents a canvas, and draws it with its siblings",
-              _dv.get("pagesDrawable") is True and _dv.get("worldDrawable") is False
+              _dv.get("pagesDrawable") is True and _dv.get("atomAloneDrawable") is False
+              and _dv.get("atomWithPagesDrawable") is True
               and _dv.get("ownDrawable") is False and _dv.get("canvases") == 1 and _dv.get("errors") == 0))
+
+    # Click the Atom's rendered keys through the page's own listener, slot
+    # locator and writer, keeping Atom.swift and AtomPages.swift separate.
+    # The applier and worlds are the pinned engine's.
+    _press_probe = os.path.join(tmp, "drawing-press.js")
+    open(_press_probe, "w", encoding="utf-8").write(r"""
+const fs = require('fs'), path = require('path'), vm = require('vm'), assert = require('assert/strict');
+const root = process.argv[2], worlds = process.argv[3];
+const ui = fs.readFileSync(path.join(root, 'web/ui.html'), 'utf8');
+const { judge } = require(path.join(root, 'bin/judge.js'));
+const { renderAll, kitVocabulary } = require(path.join(root, 'bin/renderer.js'));
+const { press } = require(path.join(root, 'bin/press.js'));
+const atom = fs.readFileSync(path.join(worlds, 'Atom.swift'), 'utf8');
+const pages = fs.readFileSync(path.join(worlds, 'AtomPages.swift'), 'utf8');
+const whole = pages + '\n' + atom;
+function grab(name) {
+    const from = ui.indexOf('function ' + name + '(');
+    assert(from >= 0, 'the shipped function exists: ' + name);
+    return ui.slice(from, ui.indexOf('\n}\n', from) + 3);
+}
+function bench(text = atom, file = 'Atom.swift', neighbors = { 'AtomPages.swift': pages }) {
+    let buffer = text, readonly = false;
+    const edits = [], located = [], events = {}, fetches = [], readings = [], scheduled = [], writes = [];
+    const changes = {}, completion = { hidden: true, dataset: {}, style: {}, querySelectorAll: () => [], querySelector: () => null };
+    const host = { style: {}, innerHTML: '', addEventListener: (name, fn) => { events[name] = fn; } };
+    const feedback = { textContent: '' };
+    const button = { hidden: true };
+    const elements = { 'canvas-host': host, 'drawing-feedback': feedback, 'view-drawing': button,
+        'editor-host': { style: {} }, bare: { style: {}, innerHTML: '' }, 'table-host': { style: {} } };
+    const context = vm.createContext({
+        active: file, files: [file, ...Object.keys(neighbors)], viewingShelf: null, mode: 'drawing',
+        lastParsed: judge(file, text, kitVocabulary).parsed, kitVocabulary, press,
+        compEl: completion, compItems: [], compFrom: null, compSlot: null, compRect: null,
+        compChosen: 0, compScaffold: null, pending: null, localNames: new Set(),
+        // Supply a grammar answer at the hidden cursor, just as the real page
+        // does at the start of Atom.swift. Keep the actual offer and change code.
+        allowedAt: () => ({ items: ['enum', 'extension', 'public', 'typealias'] }),
+        setTimeout: (fn, delay) => { const job = { fn, delay }; scheduled.push(job); return job; },
+        clearTimeout: job => { if (job) job.cancelled = true; }, tick: write => writes.push(write),
+        judge: (name, source, vocab) => { readings.push(source); return judge(name, source, vocab); },
+        renderAll, esc: s => String(s).replaceAll('&', '&amp;').replaceAll('<', '&lt;'),
+        editor: { get value() { return buffer; } },
+        document: { getElementById: id => elements[id], querySelectorAll: () => [] },
+        fetch: async url => {
+            const name = decodeURIComponent(url.split('=')[1]); fetches.push(name);
+            return { ok: true, text: async () => neighbors[name] };
+        },
+        cm: {
+            getOption: () => readonly, getLine: i => buffer.split('\n')[i],
+            getValue: () => buffer, refresh: () => {}, getCursor: () => ({ line: 0, ch: 0 }),
+            charCoords: () => ({ left: 0, bottom: 0 }), on: (name, fn) => { changes[name] = fn; },
+            lineCount: () => buffer.split('\n').length,
+            replaceRange: (value, from, to, origin) => {
+                assert.equal(from.line, to.line, 'a press changes one line');
+                const lines = buffer.split('\n');
+                edits.push({ value, from, to, origin });
+                lines[from.line] = lines[from.line].slice(0, from.ch) + value + lines[to.line].slice(to.ch);
+                buffer = lines.join('\n');
+                changes.change(context.cm, { origin, text: value.split('\n') });
+            }
+        },
+        // The editor's note boundary is supplied just as CodeMirror supplies
+        // lines. Existing offer probes exercise the full grammar/note walk.
+        noteStartAt: i => (buffer.split('\n')[i] || '').indexOf('//'),
+        render: () => {}, bareForm: () => '', buildTables: () => {},
+    });
+    vm.runInContext(['codeOfLine', 'aliasValueRange', 'locateSlot', 'fillSlot', 'setMode',
+        'hideCompletion', 'drawCompletion', 'offerCompletion', 'acceptCompletion'].map(grab).join('\n'), context);
+    const changeStart = ui.indexOf('cm.on("change",');
+    assert(changeStart >= 0);
+    vm.runInContext('let timer = null;\n' + ui.slice(changeStart, ui.indexOf('\n});', changeStart) + 4), context);
+    const locate = context.locateSlot;
+    context.locateSlot = slot => { located.push({ ...slot }); return locate(slot); };
+    vm.runInContext(ui.slice(ui.indexOf('const CANVAS_FORMS'), ui.indexOf('// ── WHAT WAITS FOR A WORD')), context);
+    return { context, host, button, feedback, edits, located, fetches, readings, completion, scheduled, writes,
+        text: () => buffer,
+        change: value => { buffer = value; context.lastParsed = judge(context.active, value, kitVocabulary).parsed; },
+        readonly: value => { readonly = value; },
+        click: names => events.click({ target: { closest: selector => {
+            assert.equal(selector, 'g.vi-rule'); return { getAttribute: attr => {
+                assert.equal(attr, 'data-vi-rules'); return names;
+            } };
+        } } }),
+        key: head => {
+            const names = [...host.innerHTML.matchAll(/data-vi-rules="([^"]+)"/g)].map(m => m[1]);
+            const found = names.find(n => n.split(/[\s,]+/).includes(head));
+            assert(found, 'the rendered Atom canvas carries ' + head); return found;
+        }
+    };
+}
+async function main() {
+    const result = {};
+    // The pinned layout stays split. Opening the state file offers Drawing
+    // even in Bare; entering that view then exposes its neighbour's keys.
+    const b = bench(); b.context.mode = 'bare'; await b.context.drawCanvases();
+    assert.equal(b.button.hidden, false); assert.equal(b.host.innerHTML, '');
+    assert.equal(b.readings[0], atom + '\n' + pages);
+    b.context.setMode('drawing'); await new Promise(resolve => setImmediate(resolve));
+    const expected = press(atom + '\n' + pages, 'DropBeta'); assert(expected.applied);
+    const expectedBuffer = expected.text.split('\n').slice(0, atom.split('\n').length).join('\n');
+    b.click(b.key('DropBeta'));
+    assert.equal(b.text(), expectedBuffer); assert.equal(b.edits.length, 1);
+    assert.equal(b.text().split('\n').filter((line, i) => line !== atom.split('\n')[i]).length, 1);
+    assert.equal(b.text().split('\n')[expected.line - 1], 'public typealias Electron = Trapped');
+    assert.equal(b.edits[0].from.line, expected.line - 1);
+    assert.equal(b.completion.hidden, true, 'a drawn key does not offer typing at the hidden cursor');
+    b.scheduled.at(-1).fn(); assert.equal(b.writes.at(-1), true, 'the slot still schedules a write');
+    assert(b.located.length > 0 && b.located.every(s => s.kind === 'alias' && s.line === expected.line));
+    await b.context.drawCanvases(); const unchanged = b.text(); b.click(b.key('DropBeta'));
+    assert.equal(b.text(), unchanged); assert.equal(b.edits.length, 1); assert.match(b.feedback.textContent, /Electron is Trapped/);
+    b.click(b.key('RechargeFromTrap')); assert.equal(b.text(), atom); assert.equal(b.edits.length, 2);
+    assert.equal(b.context.drawingRuleNames('Put<Foo, Bar> Other'), 'Put<Foo, Bar>,Other');
+    const alone = bench(atom, 'Atom.swift', {});
+    await alone.context.drawCanvases();
+    assert.equal(alone.button.hidden, true); assert.equal(alone.host.innerHTML, '');
+    assert.equal(alone.context.mode, 'bare');
+    const plain = bench('public enum Plain {}', 'plain.swift', { 'other.swift': 'public enum Other {}' });
+    plain.context.mode = 'bare'; await plain.context.drawCanvases();
+    assert.equal(plain.button.hidden, true); assert.equal(plain.host.innerHTML, '');
+    assert(grab('render').includes('drawCanvases();'));
+    assert(!grab('render').includes('drawable(lastParsed)'));
+    result.atom = true;
+
+    const other = bench(pages, 'AtomPages.swift', { 'Atom.swift': atom });
+    await other.context.drawCanvases(); other.click(other.key('DropBeta'));
+    assert.equal(other.button.hidden, false);
+    assert.equal(other.text(), pages); assert.equal(other.edits.length, 0);
+    assert.match(other.feedback.textContent, /Open Atom\.swift/);
+    other.context.applyDrawingPress('MissingRule');
+    assert.match(other.feedback.textContent, /the applier refuses: no rule named MissingRule/);
+    other.context.applyDrawingPress('append Text x');
+    assert.match(other.feedback.textContent, /Literal typing is not available/); assert.equal(other.edits.length, 0);
+    const old = b.text(); b.change(old + '\n// typed since the drawing\n');
+    b.click(b.key('DropBeta')); assert.equal(b.text(), old + '\n// typed since the drawing\n');
+    assert.match(b.feedback.textContent, /drawing changed/);
+    other.readonly(true); other.click('DropBeta'); assert.equal(other.edits.length, 0);
+    assert.match(other.feedback.textContent, /editable file/);
+    result.refusals = true;
+
+    // Table uses the same fillSlot path and must preserve notes and braces.
+    const t = bench('public typealias Value = Foo<Bar<Baz>, Qux> // note');
+    t.context.mode = 'table'; t.context.fillSlot({ kind: 'alias', line: 1 }, 'Next<Leaf>');
+    assert.equal(t.text(), 'public typealias Value = Next<Leaf> // note');
+    t.change('public enum P { public typealias Rank = Finance }');
+    t.context.fillSlot({ kind: 'alias', line: 1 }, 'Engineering');
+    assert.equal(t.text(), 'public enum P { public typealias Rank = Engineering }');
+    for (const value of ['Foo<Bar', 'Foo<Bar>>', 'Foo<Bar>.Member', 'Foo & Bar', 'Foo<Bar> other', 'Foo<\nBar>']) {
+        t.change('public typealias Value = ' + value); const before = t.text(), count = t.edits.length;
+        t.context.fillSlot({ kind: 'alias', line: 1 }, 'Baz<Qux>');
+        assert.equal(t.text(), before, value + ' is read-only'); assert.equal(t.edits.length, count);
+    }
+    // Table accepts an offered value through hideCompletion -> fillSlot.
+    // Its real change event must not reopen the typing offer that was just shut.
+    t.change('import VerificationIsIdentification\npublic enum P { public typealias Rank = Finance }');
+    t.context.compSlot = { kind: 'alias', line: 2 };
+    t.context.compItems = ['Engineering']; t.completion.hidden = false;
+    const tableEdits = t.edits.length;
+    t.context.acceptCompletion(0);
+    assert.equal(t.text(), 'import VerificationIsIdentification\npublic enum P { public typealias Rank = Engineering }');
+    assert.equal(t.edits.length, tableEdits + 1); assert.equal(t.completion.hidden, true);
+    t.scheduled.at(-1).fn(); assert.equal(t.writes.at(-1), true);
+    // Calibrate the adapter against the old failure: keyboard +input still
+    // reaches the actual offer. Disabling all completion cannot pass this check.
+    const keyboard = bench(''); keyboard.context.mode = 'full';
+    keyboard.context.cm.replaceRange('e', { line: 0, ch: 0 }, { line: 0, ch: 0 }, '+input');
+    assert.equal(keyboard.completion.hidden, false); assert(keyboard.context.compItems.includes('typealias'));
+    result.completion = true;
+    const generic = bench('public typealias Value = Foo<Bar>\npublic enum Swap: SlotRule {\n    public typealias Slot = ValueSlot\n    public typealias From = Foo<Bar>\n    public typealias Into = Baz<Qux>\n}\n' + whole, 'generic.swift', {});
+    await generic.context.drawCanvases(); generic.context.applyDrawingPress('Swap');
+    assert(generic.text().startsWith('public typealias Value = Baz<Qux>\n'));
+    assert.equal(generic.edits.length, 1); result.slots = true;
+
+    // Two keystrokes share one fetch. The older completion cannot paint.
+    const race = bench(whole, 'a.swift', { 'neighbor.swift': '' });
+    let release; race.context.fetch = async () => {
+        race.fetches.push('neighbor.swift'); return { ok: true, text: () => new Promise(resolve => { release = resolve; }) };
+    };
+    const first = race.context.drawCanvases(); await new Promise(resolve => setImmediate(resolve));
+    race.change(whole.replace('public typealias Electron = Charged', 'public typealias Electron = Trapped'));
+    const second = race.context.drawCanvases(); release(''); await Promise.all([first, second]);
+    assert.equal(race.fetches.length, 1); assert.equal(race.readings.length, 1);
+    assert(race.readings[0].includes('public typealias Electron = Trapped'));
+    await race.context.drawCanvases(); assert.equal(race.fetches.length, 1);
+    const moves = bench(whole, 'a.swift', { 'neighbor.swift': '' }), releases = [];
+    moves.context.fetch = async () => ({ ok: true, text: () => new Promise(resolve => releases.push(resolve)) });
+    const oldRead = moves.context.drawCanvases(); await new Promise(resolve => setImmediate(resolve));
+    moves.context.resetDrawing(); moves.context.active = 'b.swift'; moves.context.files = ['b.swift', 'neighbor.swift'];
+    moves.change(whole.replace('public typealias Electron = Charged', 'public typealias Electron = Trapped'));
+    const newRead = moves.context.drawCanvases(); await new Promise(resolve => setImmediate(resolve));
+    assert.equal(releases.length, 2); releases[1](''); await newRead;
+    const painted = moves.host.innerHTML; releases[0](''); await oldRead;
+    assert.equal(moves.host.innerHTML, painted); assert.equal(moves.readings.length, 1);
+    assert.equal(vm.runInContext('drawingSnapshot.file', moves.context), 'b.swift');
+    // Availability follows the world even if the view changes while fetching,
+    // and an old world with a canvas cannot offer its button in a new empty one.
+    const view = bench(), availability = [];
+    view.context.fetch = async () => ({ ok: true, text: () => new Promise(resolve => availability.push(resolve)) });
+    const pending = view.context.drawCanvases(); await new Promise(resolve => setImmediate(resolve));
+    view.context.setMode('full'); availability[0](pages); await pending;
+    assert.equal(view.button.hidden, false); assert.equal(view.host.innerHTML, '');
+    const stale = bench(), deliveries = [];
+    stale.context.mode = 'bare';
+    stale.context.fetch = async () => ({ ok: true, text: () => new Promise(resolve => deliveries.push(resolve)) });
+    const previous = stale.context.drawCanvases(); await new Promise(resolve => setImmediate(resolve));
+    stale.context.resetDrawing(); stale.context.active = 'plain.swift';
+    stale.context.files = ['plain.swift', 'empty.swift']; stale.change('public enum Plain {}');
+    const current = stale.context.drawCanvases(); await new Promise(resolve => setImmediate(resolve));
+    deliveries[1](''); await current; deliveries[0](pages); await previous;
+    assert.equal(stale.button.hidden, true); assert.equal(stale.host.innerHTML, '');
+    const broken = bench(whole, 'a.swift', { 'missing.swift': '' });
+    broken.context.fetch = async () => ({ ok: false });
+    await broken.context.drawCanvases(); assert.match(broken.host.innerHTML, /could not read missing\.swift/);
+    assert.equal(vm.runInContext('drawingSnapshot', broken.context), null);
+    assert(ui.includes('async function loadFile(name) {\n    resetDrawing();'));
+    assert(ui.includes('<script src="/press.js"></script>'));
+    result.generations = true;
+    console.log(JSON.stringify(result));
+}
+main().catch(e => { console.error(e.stack); process.exitCode = 1; });
+""")
+    _press_run = subprocess.run(["node", _press_probe, HERE, os.path.join(_dplay, "corpus", "worlds")],
+                                capture_output=True, text=True)
+    try:
+        _press_result = json.loads(_press_run.stdout) if _press_run.returncode == 0 else {}
+    except Exception:
+        _press_result = {}
+    if not _press_result:
+        print("   drawing press: " + (_press_run.stderr or _press_run.stdout)[-700:])
+    for _field, _said in [
+        ("atom", "the split Atom world offers Drawing in its state file, where a key writes one alias through the slot"),
+        ("refusals", "a drawn key names the other file to open and speaks an applier refusal without writing"),
+        ("slots", "Table and Drawing replace a whole generic alias value or leave it read-only"),
+        ("completion", "Drawing and Table slot writes close completion, while typing still offers and edits still schedule writes"),
+        ("generations", "only the latest drawing paints, and neighbour texts last until the file changes"),
+    ]:
+        S.append((_said, _press_result.get(_field) is True))
 
     # ── AND A HOOK THAT WILL NOT FIND THE TOOL SAYS SO AT WIRING TIME. The hook
     # looks for ./gatew, then ./gate, then gate on PATH, and refuses the commit
@@ -3499,11 +3737,11 @@ const grab = (name, prefix) => {
     const head = (prefix || "") + "function " + name + "(";
     const at = ui.indexOf(head);
     if (at < 0) throw new Error("no " + name);
-    let d = 0;
-    for (let j = ui.indexOf("{", at); j < ui.length; j++) {
-        if (ui[j] === "{") d++;
-        else if (ui[j] === "}" && --d === 0) return ui.slice(at, j + 1);
-    }
+    // These page functions end at the left margin. Counting raw braces also
+    // counts a brace inside a regexp, which cuts aliasValueRange in half.
+    const end = ui.indexOf("\\n}\\n", at);
+    if (end < 0) throw new Error("no end for " + name);
+    return ui.slice(at, end + 2);
 };
 let SCOPES = [], NESTS = {};
 let LINE_OPENERS = {}, LINE_MODS = {}, LINE_CONTINUERS = new Set();
@@ -3526,7 +3764,7 @@ eval(["buildScopes", "admits", "scopesAt", "noteStartAt", "codeOfLine", "placeAt
       "axesOfHost", "declsInView", "declaredNow", "fillersFor", "afterDot", "allowedAt",
       // the readers that share codeOfLine with the offer, lifted so the note
       // question can be put to them and not to the offer alone
-      "describeName", "describeAxis", "locateSlot"]
+      "describeName", "describeAxis", "aliasValueRange", "locateSlot"]
      .map(n => grab(n)).join("\\n"));
 eval(grab("loadVocabulary", "async "));
 const world = ["public enum Legal: Realm {}",
