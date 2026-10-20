@@ -3131,7 +3131,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # and the drawing view's engine travels with the same carry, with its record
     S.append(("a vendored copy carries the drawing view's engine and its record",
               all(os.path.exists(os.path.join(ven, ".gate", "bin", f))
-                  for f in ("renderer.js", "press.js", "drawing.from"))))
+                  for f in ("renderer.js", "press.js", "drawing.from", "renderer-security.patch"))))
 
     # ── AND THE DRAWING ENGINE IS HELD BY THE PAGE IT CAME FROM. bin/renderer.js
     # and bin/press.js are the typed playground's at the revision bin/drawing.from
@@ -3155,6 +3155,10 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
         subprocess.run(["git", "-C", _dplay, "fetch", "-q", "--depth", "1",
                         "https://github.com/DanielSwift1992/typed-playground", _dpin], capture_output=True)
         subprocess.run(["git", "-C", _dplay, "checkout", "-q", "FETCH_HEAD"], capture_output=True)
+    # The local security delta is replayed over the named upstream bytes,
+    # then the original playground checks still run over the resulting engine.
+    _drawing_patch = subprocess.run(["git", "-C", _dplay, "apply",
+        os.path.join(HERE, "bin", "renderer-security.patch")], capture_output=True)
     _dsame = all(open(os.path.join(HERE, "bin", f), "rb").read() == open(os.path.join(_dplay, f), "rb").read()
                  for f in ("renderer.js", "press.js")) if os.path.exists(os.path.join(_dplay, "check.js")) else False
     for f in ("renderer.js", "press.js"):
@@ -3166,7 +3170,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     if not (_dcheck and _dcheck.returncode == 0):
         print("   the playground's checks over the drawing engine:", _dsaid.strip().split("\n")[-1][:120])
     S.append(("the drawing engine passes the playground's own checks in the playground's own tree, at the pin",
-              _dsame and _dcheck is not None and _dcheck.returncode == 0
+              _drawing_patch.returncode == 0 and _dsame and _dcheck is not None and _dcheck.returncode == 0
               and "29/29" in _dcheck.stdout))
 
     # ── AND THE DRAWING VIEW IS OFFERED TO A WORLD THAT PRESENTS A CANVAS, AND
@@ -4324,7 +4328,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               in open(VEIN).read()
               # and the bench prints it in the multi-file line, where it used to vanish
               and "r.wide = r.premises" in ui
-              and '(r.wide ? " · <b>" + r.wide + "</b> claims checked" : "")' in ui))
+              and '(r.wide ? " · <b>" + esc(r.wide) + "</b> claims checked" : "")' in ui))
 
     S.append(("a jump can be walked back and forward, across files too",
               "function navGo(" in ui and "navFrom = navHere()" in ui
@@ -5283,6 +5287,78 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               # and the guard still does its own job
               and [r["address"] for r in with_stray.get("refusals", [])
                    if "no row in the manifest" in r["claim"]] == ["stray.swift"]))
+
+    # ── WORLD TEXT NEVER BECOMES A PROGRAM. The builders below are the real
+    # UI functions; Python's HTML parser reads their fragments independently.
+    # Reverting rowFor must both create the img and trip the isolated probe.
+    _security = os.path.join(HERE, "tests", "bench-security.js")
+    _safe = subprocess.run(["node", _security], capture_output=True, text=True)
+    S.append(("hostile court text, filenames, notes and typeName stay text in the bench and SVG",
+              _safe.returncode == 0 and "BENCH SECURITY GREEN" in _safe.stdout))
+    if _safe.returncode: print("   " + (_safe.stdout + _safe.stderr)[-1000:])
+    _old = subprocess.run(["node", _security, "--old-row-for"], capture_output=True, text=True)
+    S.append(("the original rowFor is caught by the hostile fragment probe",
+              _old.returncode != 0 and "the event probe stays unset" in _old.stderr))
+
+    import importlib.util as _security_import
+    _csp_spec = _security_import.spec_from_file_location("bench_csp", os.path.join(HERE, "bin", "bench_csp.py"))
+    _csp_module = _security_import.module_from_spec(_csp_spec)
+    _csp_spec.loader.exec_module(_csp_module)
+    _page = open(os.path.join(HERE, "web", "ui.html"), encoding="utf-8").read()
+    _script_policy = re.search(r"script-src ([^;]+)", _page).group(1)
+    S.append(("the bench authorizes only its exact inline programs and blocks inline handlers",
+              "'unsafe-inline'" not in _script_policy
+              and "'unsafe-hashes'" not in _script_policy
+              and "script-src-attr 'none'" in _page
+              and _csp_module.stamp_csp(_page) == _page))
+    _closing_script = '</script><script>document.body.dataset.probe=1</script>'
+    _encoded = _csp_module.script_json({"world": _closing_script, "name": '<img src=x onerror="probe=1">'})
+    _data_page = _page.replace('<script>', '<script>const hostileSnapshot = ' + _encoded + ';', 1)
+    S.append(("published snapshot strings cannot close a trusted script before CSP is stamped",
+              "<" not in _encoded and json.loads(_encoded)["world"] == _closing_script
+              and len(re.findall(r"<script>", _data_page)) == len(re.findall(r"<script>", _page))
+              and "script-src-attr 'none'" in _csp_module.stamp_csp(_data_page)))
+
+    # The actual server and the native plain court must expose the same hostile
+    # line to the renderer; a sanitized fixture response would hide the bug.
+    _hostile = tempfile.mkdtemp(prefix="hostile-bench-", dir=tmp)
+    _hostile_name = "hostile.swift"
+    _hostile_extra = 'extra-<img src=x onerror="document.body.dataset.probe=1">.swift'
+    open(os.path.join(_hostile, _hostile_extra), "w").write("// an undeclared hostile name\n")
+    _hostile_text = '<img src=x onerror="document.body.dataset.probe=1">\npublic enum Stranger {}\n'
+    open(os.path.join(_hostile, _hostile_name), "w").write(_hostile_text)
+    open(os.path.join(_hostile, "other.swift"), "w").write("public enum Other {}\n")
+    run("mine", _hostile_name, "--role", "world", cwd=_hostile)
+    run("mine", "other.swift", "--role", "world", cwd=_hostile)
+    import urllib.request as _security_http, urllib.parse as _security_url
+    _hp = free_port()
+    _hs = subprocess.Popen([GATE, "serve", str(_hp), "--no-open"], cwd=_hostile,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        wait_serve(_hp)
+        _request = _security_http.Request("http://127.0.0.1:" + str(_hp) + "/verdict?f="
+            + _security_url.quote(_hostile_name), data=_hostile_text.encode(), method="POST")
+        _file_answer = _security_http.urlopen("http://127.0.0.1:" + str(_hp) + "/files", timeout=60).read()
+        _file_answer_path = os.path.join(tmp, "hostile-server-files.json")
+        open(_file_answer_path, "wb").write(_file_answer)
+        _answer = _security_http.urlopen(_request, timeout=60).read()
+        _answer_path = os.path.join(tmp, "hostile-server-answer.json")
+        open(_answer_path, "wb").write(_answer)
+        _served = subprocess.run(["node", _security, "--server-verdict", _answer_path, "--file-list", _file_answer_path],
+                                 capture_output=True, text=True)
+        S.append(("a real loopback verdict quoting a hostile world remains literal in the bench",
+                  _served.returncode == 0 and "BENCH SECURITY GREEN" in _served.stdout))
+        if _served.returncode:
+            print("   verdict: " + _answer.decode()[:1800])
+            print("   " + (_served.stdout + _served.stderr)[-1000:])
+    finally:
+        _hs.terminate(); _hs.wait(timeout=10)
+
+    _builder_src = open(os.path.join(HERE, "bin", "build-pages.py"), encoding="utf-8").read()
+    S.append(("the static builder stamps CSP after escaping snapshot data and resets without an inline handler",
+              "script_json(snap)" in _builder_src and "ui = stamp_csp(ui + note)" in _builder_src
+              and 'id="reset-demo"' in _builder_src and 'closest("#reset-demo")' in _builder_src
+              and 'onclick="__resetDemo' not in _builder_src))
 
     # ── AND THE PAGE HAS TO PARSE. Every check here reads the bench as text and
     # asks whether the right words are in it — which says nothing about whether

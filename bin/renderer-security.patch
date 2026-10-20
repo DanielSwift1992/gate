@@ -1,0 +1,191 @@
+diff --git a/renderer.js b/renderer.js
+index 1d78792..e539245 100644
+--- a/renderer.js
++++ b/renderer.js
+@@ -377,8 +377,8 @@ function countOf(env, rawNode) {
+ // a term's name spelled for markup: angles become entities, aliases resolve first
+ function spellTerm(env, node) {
+     const settled = resolveHead(env, node);
+-    if (settled.args.length === 0) return settled.head;
+-    return settled.head + "&lt;"
++    if (settled.args.length === 0) return svgText(settled.head);
++    return svgText(settled.head) + "&lt;"
+         + settled.args.map((argument) => spellTerm(env, argument)).join(", ")
+         + "&gt;";
+ }
+@@ -452,6 +452,21 @@ function textOf(env, rawNode) {
+     return "";
+ }
+ 
++// A world can name an attribute as well as text. textOf already escapes
++// &, < and >; quotes must also stay inside the attribute they were handed.
++function svgText(text) {
++    return String(text).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
++}
++function svgAttr(text) {
++    return String(text).replaceAll('"', "&quot;");
++}
++function spanHref(text) {
++    try {
++        const protocol = new URL(text, "https://gate.invalid/").protocol;
++        return ["http:", "https:", "mailto:"].includes(protocol) ? text : "";
++    } catch (_) { return ""; }
++}
++
+ // ── spannings: content that draws itself into a handed slice ──
+ 
+ function spanningOf(env, rawNode) {
+@@ -465,7 +480,7 @@ function spanningOf(env, rawNode) {
+     }
+     if (node.head === "SpanLink") {
+         const inner = spanningOf(env, node.args[1]);
+-        return (x, w) => '<a href="' + textOf(env, node.args[0]) + '">\n'
++        return (x, w) => '<a href="' + svgAttr(spanHref(textOf(env, node.args[0]))) + '">\n'
+             + inner(x, w) + "</a>\n";
+     }
+     if (node.head === "Layered") {
+@@ -511,8 +526,8 @@ function spanningOf(env, rawNode) {
+             slot = slot ?? declared.aliases.get("Slot");
+         }
+         const face = spanningOf(env, node.args[1]);
+-        return (x, w) => '<g class="vi-rule" data-vi-rules="' + leaves.map((leaf) => leaf.spelled).join(" ")
+-            + '" data-vi-slot="' + (slot ? slot.target : "") + '" cursor="pointer">\n'
++        return (x, w) => '<g class="vi-rule" data-vi-rules="' + svgAttr(leaves.map((leaf) => leaf.spelled).join(" "))
++            + '" data-vi-slot="' + svgAttr(slot ? slot.target : "") + '" cursor="pointer">\n'
+             + face(x, w) + "</g>\n";
+     }
+     // equality of two magnitudes, read at the edge (Vector.swift, EdgeSame):
+@@ -571,25 +586,26 @@ function spanningOf(env, rawNode) {
+         if (bindings) slotNode = substitute(slotNode, bindings);
+         return textOf(env, slotNode);
+     };
++    const readAttr = (key) => svgAttr(read(key));
+     if (shape === "SpanTrack") {
+         return (x, w) => '<rect x="' + px(x) + '" width="' + px(w) + '" height="'
+-            + read("H") + '" rx="' + read("Radius") + '" fill="' + read("Fill") + '"/>\n';
++            + readAttr("H") + '" rx="' + readAttr("Radius") + '" fill="' + readAttr("Fill") + '"/>\n';
+     }
+     if (shape === "SpanTrackOutlined") {
+         return (x, w) => '<rect x="' + px(x) + '" width="' + px(w) + '" height="'
+-            + read("H") + '" rx="' + read("Radius") + '" fill="' + read("Fill")
+-            + '" stroke="' + read("Stroke") + '" stroke-width="'
++            + readAttr("H") + '" rx="' + readAttr("Radius") + '" fill="' + readAttr("Fill")
++            + '" stroke="' + readAttr("Stroke") + '" stroke-width="'
+             + seedText.get("HairlineWidth") + '"/>\n';
+     }
+     if (shape === "SpanHeroFace") {
+         return (x, w) => '<g filter="url(#soft-shadow)">\n<rect x="' + px(x)
+-            + '" width="' + px(w) + '" height="' + read("H") + '" rx="' + read("Radius")
+-            + '" fill="' + read("Fill") + '"/>\n</g>\n';
++            + '" width="' + px(w) + '" height="' + readAttr("H") + '" rx="' + readAttr("Radius")
++            + '" fill="' + readAttr("Fill") + '"/>\n</g>\n';
+     }
+     if (shape === "SpanLabel") {
+-        return (x, w) => '<text x="' + px(x) + '" y="' + read("Y")
+-            + '" text-anchor="start" fill="' + read("FillColor") + '" font-weight="'
+-            + read("Weight") + '" font-size="' + read("Size") + '">'
++        return (x, w) => '<text x="' + px(x) + '" y="' + readAttr("Y")
++            + '" text-anchor="start" fill="' + readAttr("FillColor") + '" font-weight="'
++            + readAttr("Weight") + '" font-size="' + readAttr("Size") + '">'
+             + read("Content") + "</text>\n";
+     }
+     if (shape === "SpanLabelMidWrapped" || shape === "SpanLabelWrapped") {
+@@ -597,9 +613,9 @@ function spanningOf(env, rawNode) {
+         // width the slice hands over, breaking greedily by the fitted gate's
+         // measure, each line one stated pitch below the last. Wrapping earns
+         // lines, never truncation: a word wider than the slice refuses, loudly.
+-        const size = parseInt(read("Size"), 10) || 0;
+-        const base = parseInt(read("Y"), 10) || 0;
+-        const pitch = parseInt(read("LinePitch"), 10) || 0;
++        const size = parseInt(readAttr("Size"), 10) || 0;
++        const base = parseInt(readAttr("Y"), 10) || 0;
++        const pitch = parseInt(readAttr("LinePitch"), 10) || 0;
+         const content = read("Content");
+         return (x, w) => {
+             const given = px(w);
+@@ -625,34 +641,34 @@ function spanningOf(env, rawNode) {
+             const anchored = shape === "SpanLabelMidWrapped"
+                 ? (piece, index) => '<text x="' + midPx(x, w) + '" y="'
+                     + (base + pitch * index) + '" text-anchor="middle" fill="'
+-                    + read("FillColor") + '" font-weight="' + read("Weight")
+-                    + '" font-size="' + read("Size") + '">' + piece + "</text>\n"
++                    + readAttr("FillColor") + '" font-weight="' + readAttr("Weight")
++                    + '" font-size="' + readAttr("Size") + '">' + piece + "</text>\n"
+                 : (piece, index) => '<text x="' + px(x) + '" y="'
+-                    + (base + pitch * index) + '" fill="' + read("FillColor")
+-                    + '" font-weight="' + read("Weight") + '" font-size="'
+-                    + read("Size") + '">' + piece + "</text>\n";
++                    + (base + pitch * index) + '" fill="' + readAttr("FillColor")
++                    + '" font-weight="' + readAttr("Weight") + '" font-size="'
++                    + readAttr("Size") + '">' + piece + "</text>\n";
+             return lines.map(anchored).join("");
+         };
+     }
+     if (shape === "SpanLabelMid") {
+-        return (x, w) => '<text x="' + midPx(x, w) + '" y="' + read("Y")
+-            + '" text-anchor="middle" fill="' + read("FillColor") + '" font-weight="'
+-            + read("Weight") + '" font-size="' + read("Size") + '">'
++        return (x, w) => '<text x="' + midPx(x, w) + '" y="' + readAttr("Y")
++            + '" text-anchor="middle" fill="' + readAttr("FillColor") + '" font-weight="'
++            + readAttr("Weight") + '" font-size="' + readAttr("Size") + '">'
+             + read("Content") + "</text>\n";
+     }
+     if (shape === "SpanLabelEnd") {
+-        return (x, w) => '<text x="' + endPx(x, w) + '" y="' + read("Y")
+-            + '" text-anchor="end" fill="' + read("FillColor") + '" font-weight="'
+-            + read("Weight") + '" font-size="' + read("Size") + '">'
++        return (x, w) => '<text x="' + endPx(x, w) + '" y="' + readAttr("Y")
++            + '" text-anchor="end" fill="' + readAttr("FillColor") + '" font-weight="'
++            + readAttr("Weight") + '" font-size="' + readAttr("Size") + '">'
+             + read("Content") + "</text>\n";
+     }
+     if (shape === "SpanDot") {
+-        return (x, w) => '<circle cx="' + midPx(x, w) + '" cy="' + read("CY")
+-            + '" r="' + read("R") + '" fill="' + read("Fill") + '"/>\n';
++        return (x, w) => '<circle cx="' + midPx(x, w) + '" cy="' + readAttr("CY")
++            + '" r="' + readAttr("R") + '" fill="' + readAttr("Fill") + '"/>\n';
+     }
+     if (shape === "SpanBreathingDot") {
+-        return (x, w) => '<circle cx="' + midPx(x, w) + '" cy="' + read("CY")
+-            + '" r="' + read("R") + '" fill="' + read("Fill")
++        return (x, w) => '<circle cx="' + midPx(x, w) + '" cy="' + readAttr("CY")
++            + '" r="' + readAttr("R") + '" fill="' + readAttr("Fill")
+             + '"><animate attributeName="opacity" values="1;0.55;1" dur="4s" '
+             + 'repeatCount="indefinite"/></circle>\n';
+     }
+@@ -780,12 +796,12 @@ function nodeString(env, rawNode) {
+     const node = resolveHead(env, rawNode);
+     if (node.head === "TimedReveal") {
+         return '<g opacity="0"><set attributeName="opacity" to="1" begin="'
+-            + textOf(env, node.args[0]) + 's" dur="' + textOf(env, node.args[1]) + 's"/>\n'
++            + svgAttr(textOf(env, node.args[0])) + 's" dur="' + svgAttr(textOf(env, node.args[1])) + 's"/>\n'
+             + nodeString(env, node.args[2]) + "</g>\n";
+     }
+     if (node.head === "FrozenReveal") {
+         return '<g opacity="0"><set attributeName="opacity" to="1" begin="'
+-            + textOf(env, node.args[0]) + 's" fill="freeze"/>\n'
++            + svgAttr(textOf(env, node.args[0])) + 's" fill="freeze"/>\n'
+             + nodeString(env, node.args[1]) + "</g>\n";
+     }
+     const declaration = env.declarations.get(node.head);
+@@ -857,7 +873,7 @@ function renderAll(declarations, order, literals, topAliases) {
+             const defs = aliasNode(declaration, "Defs");
+             const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + across
+                 + " " + taken + '" role="img" data-vi-canvas="1" font-family="'
+-                + seedText.get("FontStack") + '" aria-label="' + textOf(env, aria) + '">\n'
++                + seedText.get("FontStack") + '" aria-label="' + svgAttr(textOf(env, aria)) + '">\n'
+                 + (defs ? (seedText.has(defs.head) ? seedText.get(defs.head)
+                     : nodeString(env, defs)) : "")
+                 + verticalString(env, members, across, { n: 0, d: 1 })
+@@ -873,9 +889,9 @@ function renderAll(declarations, order, literals, topAliases) {
+             complain(env, declaration.name + " states no Size, AriaLabel, or Content");
+             continue;
+         }
+-        const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + textOf(env, size)
++        const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + svgAttr(textOf(env, size))
+             + '" role="img" data-vi-canvas="1" font-family="' + seedText.get("FontStack")
+-            + '" aria-label="' + textOf(env, aria) + '">\n'
++            + '" aria-label="' + svgAttr(textOf(env, aria)) + '">\n'
+             + nodeString(env, content) + "\n</svg>\n";
+         canvases.push({ name: declaration.name, svg });
+     }
