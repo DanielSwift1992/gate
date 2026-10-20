@@ -85,6 +85,14 @@ jobs:
       - run: |
           python3 tests/smoke.py 2>&1 | tee /tmp/smoke-out.txt
           exit ${PIPESTATUS[0]}
+      # and the vein the battery built here carries its own Swift: the
+      # binary the release ships from this platform is this one
+      - run: |
+          test -x bin/gate-cli || { echo "no vein here to check: the battery built none"; exit 1; }
+          bin/gate-cli --version
+          if ldd bin/gate-cli | grep -E 'libswift|libFoundation|lib_Foundation|libdispatch|libBlocksRuntime'; then
+            echo "bin/gate-cli links the Swift runtime of this runner"; exit 1
+          fi
       # the first red line travels out as a commit status, because the job
       # log is not readable without a token and a failure nobody can read
       # is a failure that gets guessed at instead of fixed

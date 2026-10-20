@@ -55,7 +55,11 @@ if [ ! -d "$CACHE" ]; then
     # spelling handed over above and the link failed exactly as before. One
     # name, two meanings, and the second one silent.
     FETCH=$(mktemp -d)
-    git clone --depth 50 -q https://github.com/DanielSwift1992/verification-is-identification "$FETCH/vi"
+    # ── AND THE PIN IS REACHED HOWEVER OLD IT GROWS. A clone of the last 50
+    # commits held this pin in August and lost it by October, and the build
+    # stopped at "unable to read tree". The whole history comes without its
+    # file contents, and checking out the pin fetches the pin's files alone.
+    git clone --filter=blob:none --no-checkout -q https://github.com/DanielSwift1992/verification-is-identification "$FETCH/vi"
     git -C "$FETCH/vi" checkout -q "$PIN"
     mkdir -p "$CACHE"
     cp "$FETCH/vi/Sources/Court/"*.swift "$CACHE/"
@@ -90,7 +94,15 @@ if [ -n "$WINDOWS" ]; then
         "$SAID/bin/.court/$PIN"/*.swift $LINK \
         -o "$SAID/bin/gate-cli$EXT"
 else
-    swiftc -O "$BUILD/main.swift" "$BUILD/shelf.swift" "$CACHE"/*.swift \
+    # ── AND ON LINUX THE BINARY CARRIES ITS OWN RUNTIME. Linked against the
+    # runner's Swift, 0.2.3's linux binary started on the image it was built
+    # on (Swift 6.3.3) and stopped starting when the image moved to 6.4:
+    # "undefined symbol: $s20FoundationEssentials4DataV15_RepresentationON".
+    # Swift on linux keeps no stable ABI between versions, so the runtime and
+    # Foundation are linked in, and the binary starts wherever it lands.
+    STATIC=""
+    [ "$(uname -s)" = "Linux" ] && STATIC="-static-stdlib"
+    swiftc -O $STATIC "$BUILD/main.swift" "$BUILD/shelf.swift" "$CACHE"/*.swift \
         -o "$HERE/bin/gate-cli$EXT"
 fi
 rm -rf "$BUILD"

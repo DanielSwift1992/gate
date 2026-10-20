@@ -75,6 +75,16 @@ jobs:
           [ "${{ runner.os }}" = "Windows" ] && BIN=bin/gate-cli.exe
           CARRIED=$($BIN --carries | tr -d '\r' | wc -l | tr -d ' ')
           [ "$CARRIED" = "30" ] || { echo "this binary carries $CARRIED veins, and the ledger says 30"; exit 1; }
+      # and on linux it carries its own runtime: 0.2.3's binary took Swift
+      # from the runner and stopped starting when the image moved to 6.4
+      - name: it needs no Swift from the machine it lands on
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          if ldd bin/gate-cli | grep -E 'libswift|libFoundation|lib_Foundation|libdispatch|libBlocksRuntime'; then
+            echo "bin/gate-cli links the Swift runtime of this runner: a binary that leaves here would start only where this Swift is"; exit 1
+          fi
+          bin/gate-cli --version
       - name: name what lies there
         shell: bash
         run: |
