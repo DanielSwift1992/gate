@@ -81,7 +81,7 @@ def main():
         shutil.rmtree(tmp, ignore_errors=True)
 
     ui = open(os.path.join(HERE, "web", "ui.html"), encoding="utf-8").read()
-    for asset in ("codemirror.css", "ladder.css", "codemirror.js", "judge.js"):
+    for asset in ("codemirror.css", "ladder.css", "codemirror.js", "judge.js", "renderer.js", "press.js"):
         ui = ui.replace(f'"/{asset}"', f'"{asset}"')
 
     forms = set(files.get("forms") or [])

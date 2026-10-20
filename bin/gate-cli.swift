@@ -2683,7 +2683,7 @@ func ownSurfaceGuards(_ w: WorldState) -> [(address: String, claim: String)] {
     return bad
 }
 
-let BENCH_VIEWS = ["full", "bare", "table"]
+let BENCH_VIEWS = ["full", "bare", "table", "drawing"]
 
 func personalPathOf(_ w: WorldState) -> String? {
     guard let f = w.facts else { return nil }

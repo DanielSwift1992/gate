@@ -333,6 +333,9 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
    now, which is not part of the scroll box, so there is nothing above the
    header to see. */
 #table-host{position:absolute;inset:0;overflow:auto;background:var(--paper);padding:0 calc(var(--u)*8) calc(var(--u)*40);font-size:12.5px;display:none}
+#canvas-host{position:absolute;inset:0;overflow:auto;background:var(--paper);padding:calc(var(--u)*6) calc(var(--u)*8) calc(var(--u)*40);display:none}
+#canvas-host svg{display:block;max-width:100%;height:auto;margin:0 auto calc(var(--u)*6)}
+#canvas-host .caption{margin:calc(var(--u)*3) 0}
 #table-host h3{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:calc(var(--u)*10) 0 calc(var(--u)*3);font-weight:600}
 #table-host h3:first-child{margin-top:calc(var(--u)*8)}
 /* ── A TABLE FALLS LEFT. Stretched to the pane it put two short words at
@@ -444,7 +447,7 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 <div id="main">
   <div id="bar">
     <span class="seg" id="nav-seg"><button id="nav-back" disabled>&lsaquo;</button><button id="nav-fwd" disabled>&rsaquo;</button></span>
-    <span class="seg" id="view-seg"><button class="on" data-m="bare">Bare</button><button data-m="table">Table</button><button data-m="full">Full</button></span>
+    <span class="seg" id="view-seg"><button class="on" data-m="bare">Bare</button><button data-m="table">Table</button><button data-m="drawing" id="view-drawing" hidden>Drawing</button><button data-m="full">Full</button></span>
     <b id="fname" class="fact">gate.swift</b>
     <button id="keys-btn" title="Keyboard shortcuts">?</button>
     <span id="gitstate" class="observed" title="Edits go straight to the file on disk. gate keeps no state of its own: commit or discard with git."></span>
@@ -453,6 +456,7 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
     <div id="editor-host"></div>
     <pre id="bare"></pre>
     <div id="table-host"></div>
+    <div id="canvas-host"></div>
   </div>
   <div id="verdict-panel">
     <div id="inspect" class="observed" title="the cursor on a name says what it is"></div>
@@ -462,6 +466,7 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 </div>
 <script src="/codemirror.js"></script>
 <script src="/judge.js"></script>
+<script src="/renderer.js"></script>
 <script>
 // the version this page was written against. The bench reads its page off the
 // disk and answers out of memory, so after a pull the two can disagree: the page
@@ -1941,6 +1946,11 @@ async function render() {
     const local = judge(active || "gate.swift", text,
                         byWhere ? { seeds: new Set(), generics: new Set() } : undefined);
     lastParsed = local.parsed;
+    // the Drawing view is offered to a file that presents a canvas form, and
+    // redrawn on every keystroke while it is the open view
+    const canDraw = drawable(lastParsed);
+    document.getElementById("view-drawing").hidden = !canDraw;
+    if (mode === "drawing") { if (canDraw) drawCanvases(); else setMode("bare"); }
     if (viewingShelf) {
         repaintNames(local.parsed, []);          // names highlight; nothing refuses
         clearFlags();
@@ -3358,10 +3368,44 @@ function setMode(m) {
     document.getElementById("editor-host").style.display = m === "full" ? "" : "none";
     document.getElementById("bare").style.display = m === "bare" ? "block" : "none";
     document.getElementById("table-host").style.display = m === "table" ? "block" : "none";
+    document.getElementById("canvas-host").style.display = m === "drawing" ? "block" : "none";
     document.querySelectorAll("#view-seg button").forEach(b => b.classList.toggle("on", b.dataset.m === m));
     if (m === "bare" && lastParsed) document.getElementById("bare").innerHTML = bareForm(lastParsed, cm.getValue());
     if (m === "table") buildTables();
+    if (m === "drawing") drawCanvases();
     if (m === "full") cm.refresh();
+}
+
+// ── DRAWING: the fourth view of the same file, for a world that presents a
+// canvas form. The engine is the kit's span engine on JS (bin/renderer.js, at
+// the pin bin/drawing.from names); it draws from the same parse the court
+// reads, made with the kit's vocabulary so the kit's names are read as the
+// page that first drew these worlds read them. A file that presents no canvas
+// form has no drawing and no button: nothing is drawn of a world that does
+// not say it can be.
+const CANVAS_FORMS = new Set(["Diagram", "GrownDiagram", "HFlow"]);
+function drawable(parsed) {
+    if (!parsed || typeof renderAll !== "function") return false;
+    for (const d of parsed.declarations.values())
+        if ((d.conformances || []).some(c => CANVAS_FORMS.has(c))) return true;
+    return false;
+}
+// a drawing reads the whole world: a page's bodies name the declarations of
+// the world's other files (the atom's levels, the lamp's lines), so the open
+// buffer is parsed together with its sibling files, as the court reads them
+async function drawCanvases() {
+    const host = document.getElementById("canvas-host");
+    if (!drawable(lastParsed)) { host.innerHTML = ""; return; }
+    const mine = editor.value;
+    const others = await Promise.all((files || []).filter(f => f !== active).map(f =>
+        fetch("/world?f=" + encodeURIComponent(f)).then(r => r.ok ? r.text() : "").catch(() => "")));
+    if (mode !== "drawing") return;          // the view moved on while the world was read
+    const read = judge(active || "world.swift", [mine, ...others].join("\n"), kitVocabulary).parsed;
+    const drawn = renderAll(read.declarations, read.order, read.literals, read.topAliases);
+    host.innerHTML = drawn.canvases.map(c => c.svg).join("")
+        + (drawn.errors.length
+            ? '<div class="caption">the renderer could not read: ' + esc(drawn.errors.slice(0, 6).join(" · ")) + "</div>"
+            : "");
 }
 
 // ── WHAT WAITS FOR A WORD, and from whom. Not what changed — git keeps that,

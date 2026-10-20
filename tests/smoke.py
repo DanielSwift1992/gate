@@ -2909,6 +2909,55 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               _dsame and _dcheck is not None and _dcheck.returncode == 0
               and "29/29" in _dcheck.stdout))
 
+    # ── AND THE DRAWING VIEW IS OFFERED TO A WORLD THAT PRESENTS A CANVAS, AND
+    # TO NO OTHER. The page's own `drawable` is read off ui.html and run over
+    # two files of the playground fetched above: the atom's pages, which present
+    # Diagram, draw one canvas through the engine with the kit's vocabulary and
+    # the world's declarations beside them; the atom's declarations alone, and
+    # this repository's own layout file, present no canvas and get no button.
+    _dv = {}
+    if os.path.exists(os.path.join(_dplay, "corpus", "worlds", "AtomPages.swift")):
+        _dprobe = os.path.join(tmp, "drawing-probe.js")
+        open(_dprobe, "w", encoding="utf-8").write(r"""
+const fs = require("fs");
+const ui = fs.readFileSync(process.argv[2], "utf8");
+const { judge } = require(process.argv[3]);
+const { renderAll, kitVocabulary } = require(process.argv[4]);
+const grab = (name) => {
+    const at = ui.indexOf("function " + name + "(");
+    let d = 0;
+    for (let j = ui.indexOf("{", at); j < ui.length; j++) {
+        if (ui[j] === "{") d++;
+        else if (ui[j] === "}" && --d === 0) return ui.slice(at, j + 1);
+    }
+};
+eval(ui.slice(ui.indexOf("const CANVAS_FORMS"), ui.indexOf("\n", ui.indexOf("const CANVAS_FORMS"))).replace("const CANVAS_FORMS", "globalThis.CANVAS_FORMS"));
+eval(grab("drawable"));
+const pages = fs.readFileSync(process.argv[5], "utf8"), world = fs.readFileSync(process.argv[6], "utf8");
+const own = fs.readFileSync(process.argv[7], "utf8");
+const out = {};
+out.pagesDrawable = drawable(judge("AtomPages.swift", pages, kitVocabulary).parsed);
+out.worldDrawable = drawable(judge("Atom.swift", world, kitVocabulary).parsed);
+out.ownDrawable = drawable(judge("gate.manifest.swift", own).parsed);
+const read = judge("AtomPages.swift", pages + "\n" + world, kitVocabulary).parsed;
+const drawn = renderAll(read.declarations, read.order, read.literals, read.topAliases);
+out.canvases = drawn.canvases.length; out.errors = drawn.errors.length;
+console.log(JSON.stringify(out));
+""")
+        _dp = subprocess.run(["node", _dprobe, os.path.join(HERE, "web", "ui.html"),
+                              os.path.join(HERE, "bin", "judge.js"), os.path.join(HERE, "bin", "renderer.js"),
+                              os.path.join(_dplay, "corpus", "worlds", "AtomPages.swift"),
+                              os.path.join(_dplay, "corpus", "worlds", "Atom.swift"),
+                              os.path.join(HERE, "gate.manifest.swift")],
+                             capture_output=True, text=True)
+        try:
+            _dv = json.loads(_dp.stdout)
+        except Exception:
+            _dv = {"stderr": _dp.stderr[-200:]}
+    S.append(("the drawing view is offered to a world that presents a canvas, and draws it with its siblings",
+              _dv.get("pagesDrawable") is True and _dv.get("worldDrawable") is False
+              and _dv.get("ownDrawable") is False and _dv.get("canvases") == 1 and _dv.get("errors") == 0))
+
     # ── AND A HOOK THAT WILL NOT FIND THE TOOL SAYS SO AT WIRING TIME. The hook
     # looks for ./gatew, then ./gate, then gate on PATH, and refuses the commit
     # loudly when it finds none, which is right: a hook that cannot check must
@@ -12334,12 +12383,14 @@ public enum MyWatch: AccessLedger {
 
     # ── AND THE FIRST SURFACE IS THE RECORD, THE LAST IS THE SWIFT. A reader
     # arrives for what the world says, not for the ceremony it is written in, so
-    # the switch reads Bare, Table, Full in that order and the page opens on
-    # Bare. The Swift is the last tab and not a secret: it is the one source
-    # under all three, and `Full` is one click from every one of them.
+    # the switch reads Bare, Table, Drawing, Full in that order and the page
+    # opens on Bare. Drawing is the record's picture, offered only to a world
+    # that presents a canvas, and stands between the table and the source. The
+    # Swift is the last tab and not a secret: it is the one source under all
+    # four, and `Full` is one click from every one of them.
     _seg = re.search(r'id="view-seg">(.*?)</span>', ui, re.S).group(1)
     S.append(("the bench opens on the record, and the swift is the last tab",
-              [m for m in re.findall(r'data-m="(\w+)"', _seg)] == ["bare", "table", "full"]
+              [m for m in re.findall(r'data-m="(\w+)"', _seg)] == ["bare", "table", "drawing", "full"]
               and re.search(r'<button class="on" data-m="bare">', _seg)
               and 'let mode = "bare";' in ui
               # and a door may name its view, which is how the cover's picture

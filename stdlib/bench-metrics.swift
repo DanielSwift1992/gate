@@ -45,16 +45,16 @@ public typealias Runway = Twice<TwoLines>
 // that stops being used shows up as a zero here, or not at all.
 //   Tight     1u  ×13  inside one mark          (a caret, a badge's own room)
 //   Snug      2u  ×24  inside one row           (a row's own height)
-//   Near      3u  ×14  between parts of a thing (a name and its tag)
+//   Near      3u  ×15  between parts of a thing (a name and its tag)
 //   Step      4u  ×13  between rows             (a header's foot)
 //   Room      5u  ×13  inside a panel           (a button, a cell)
-//   Apart     6u  ×9   between groups           (a section's head)
+//   Apart     6u  ×11  between groups           (a section's head)
 //   Edge      7u  ×9   the rail's shared edge   (every row on the rail, one edge)
-//   Wide      8u  ×5   the widest seam of a view (the editor's own margin)
+//   Wide      8u  ×6   the widest seam of a view (the editor's own margin)
 //   Line     10u  ×4   one reading line of air
 //   Indent   14u  ×1   one edge past the edge   (a note hanging under its flag)
 //   TwoLines 20u  ×1   the air above an empty page
-//   Runway   40u  ×2   four lines, so the last line is not the last pixel
+//   Runway   40u  ×3   four lines, so the last line is not the last pixel
 
 // ── WHAT THE RULES BELOW ASK IS A COUNT. A rule about two gaps is a rule about
 // two numbers, and the where court reads Twice and Plus as names: two names
