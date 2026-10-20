@@ -1,16 +1,9 @@
 "use strict";
 
-// THE PLAIN COURT, ported: a line-for-line JavaScript reading of the company's court,
-// Sources/Court/OrganizationJudge.swift in the theory's showcase, at the pin
-// bin/organization-court.from names. The Swift court stays the reference. What holds this
-// port to it: the organization contract on the company's fragment (8/8), and the battery's
-// parity with bin/organization-judge on the worlds it walks, clocks stripped. On forms
-// outside the company's fragment, the shelf's own pages among them, the two readings
-// differ (12 of 18 pages, measured), and nothing holds them yet: that is T-0034, the
-// contract's next release with fixtures of foreign forms and the Swift court's answers.
-//
-// The fragment, the table, and the message texts mirror the Swift file exactly: the two
-// ports must refuse with the same premise, character for character.
+// The company's plain court at bin/organization-court.from. Verdicts use the
+// reference fragment and fixed company policy. The organization contracts v0.1
+// and v0.2 bind finite observations, including refusals on foreign forms.
+// Richer records for the bench are inspection only, outside that verdict.
 
 const ranks = new Set(["IndividualContributor", "Lead", "Manager"]);
 const departments = new Set(["Finance", "Engineering", "Sales", "People"]);
@@ -42,41 +35,6 @@ const gatePremises = new Map([
     ["VerifiedAtWorkplace", ["Site", null]],
 ]);
 
-
-// ── THE DOMAIN, READ FROM WHAT WAS PRESENTED. This port was written as a
-// line-for-line mirror of the binary, and it mirrored the table too: one
-// reference world's ranks, departments, workplaces, genders, shares and the
-// axes each of its protocols owes, hard-coded in an arbiter meant to judge any
-// world. That table is a differential seat — the binary's own header calls it
-// the policy stated a second time, on purpose — and that seat is the corpus's
-// business with its reference world, not ours.
-//
-// Everything in it is already said by the forms a world presents: departments
-// are the conformers of `Department`, the axes a protocol owes are its own
-// `associatedtype` lines, a gate's premise is its own `where` clause. So the
-// domain is derived, and the presented form is the better of the two: it says
-// `Home: Department`, naming a declared thing, where the constant said
-// "department", naming a category that exists nowhere.
-//
-// The gates need nothing here: `checkWhereGates` already reads a presented
-// `where` clause and normalises both sides through the dictionary — "the gate
-// is grammar, not domain", as the line that wrote it says. The baked premise
-// map was a second copy of a mechanism that already worked for anybody.
-function domainOf(declarations) {
-    const conformers = new Map();   // protocol -> Set of names that conform
-    const requires = new Map();     // protocol -> [[axis, the form it must be]]
-    for (const [name, declaration] of declarations) {
-        for (const conformance of declaration.conformances) {
-            if (!conformers.has(conformance)) conformers.set(conformance, new Set());
-            conformers.get(conformance).add(name);
-        }
-        if (declaration.axes && declaration.axes.length) {
-            requires.set(name, declaration.axes.map(
-                (axis) => [axis, (declaration.axisKinds || {})[axis] || null]));
-        }
-    }
-    return { conformers, requires };
-}
 
 // a name is what it conforms to, walking the ladder a protocol refines
 function conformsTo(name, form, declarations, seen) {
@@ -607,6 +565,124 @@ function parse(file, text, declarations, order, refusals, extras) {
     }
 }
 
+// The reference reader deliberately preserves the pinned Swift reader's
+// narrow spelling and current limitations. In particular it does not read
+// protocols, inline extensions, private aliases or trailing comments as syntax.
+function parseCompany(file, text, declarations, order, refusals) {
+    const stack = [];
+    let bodyOwner = null;
+    let buffer = "";
+    let bufferLine = 0;
+    function drainEntries(lineNumber, final) {
+        let depth = 0;
+        let current = "";
+        const closed = [];
+        for (const character of buffer) {
+            current += character;
+            if (character === "<") depth += 1;
+            if (character === ">") depth -= 1;
+            if (depth === 0 && current.endsWith(".self")) {
+                closed.push(current);
+                current = "";
+            }
+            if (depth === 0 && (character === ";" || character === " ")
+                && current.trim() === "") {
+                current = "";
+            }
+        }
+        const rest = current;
+        for (const closedEntry of closed) {
+            let entry = closedEntry.slice(0, -5);
+            entry = trimEntry(entry);
+            let head;
+            const args = [];
+            const open = entry.indexOf("<");
+            if (open >= 0) {
+                head = entry.slice(0, open);
+                const inner = entry.slice(open + 1, -1);
+                let argumentDepth = 0;
+                let piece = "";
+                for (const character of inner) {
+                    if (character === "<") argumentDepth += 1;
+                    if (character === ">") argumentDepth -= 1;
+                    if (character === "," && argumentDepth === 0) {
+                        args.push(piece.trim());
+                        piece = "";
+                    } else {
+                        piece += character;
+                    }
+                }
+                args.push(piece.trim());
+            } else {
+                head = entry;
+            }
+            if (bodyOwner) bodyOwner.entries.push({ head, args, line: bufferLine });
+        }
+        buffer = final ? "" : rest;
+        if (closed.length > 0) bufferLine = lineNumber;
+    }
+
+
+    for (const [index, raw] of text.split("\n").entries()) {
+        const number = index + 1;
+        const line = raw.trim();
+        if (!line || line.startsWith("//") || line.startsWith("import ")
+            || line.startsWith("@StructureBuilder")) continue;
+        if (bodyOwner !== null) {
+            if (line === "}") {
+                drainEntries(number, true);
+                bodyOwner = null;
+            } else {
+                if (!buffer) bufferLine = number;
+                buffer += line + " ";
+                drainEntries(number, false);
+            }
+            continue;
+        }
+        if (line.startsWith("public enum ") || line.startsWith("enum ")) {
+            const head = line.replaceAll("public enum ", "").replaceAll("enum ", "")
+                .replaceAll(" {", "");
+            const colon = head.indexOf(":");
+            const name = (colon < 0 ? head : head.slice(0, colon)).trim();
+            const conformances = colon < 0 ? []
+                : head.slice(colon + 1).split(",").filter(Boolean).map(x => x.trim());
+            const parent = stack.length ? stack[stack.length - 1].qualified : null;
+            const qualified = parent === null ? name : parent + "." + name;
+            const declaration = { name, qualified, parent, conformances, line: number,
+                aliases: new Map(), entries: [] };
+            declarations.set(qualified, declaration);
+            order.push(qualified);
+            stack.push(declaration);
+            continue;
+        }
+        if (line.startsWith("public typealias ")) {
+            const body = line.replaceAll("public typealias ", "");
+            const equals = body.indexOf("=");
+            if (equals > 0 && equals < body.length - 1 && stack.length) {
+                stack[stack.length - 1].aliases.set(body.slice(0, equals).trim(),
+                    { target: body.slice(equals + 1).trim(), line: number });
+            } else {
+                refusals.push({ file, line: number,
+                    premise: "a typealias stands outside every declaration" });
+            }
+            continue;
+        }
+        if (line.startsWith("public static var body: some Structure {")) {
+            bodyOwner = stack.length ? stack[stack.length - 1] : null;
+            buffer = "";
+            continue;
+        }
+        if (line === "}") {
+            if (stack.length) stack.pop();
+            else refusals.push({ file, line: number,
+                premise: "a closing brace with nothing open" });
+            continue;
+        }
+        refusals.push({ file, line: number,
+            premise: "outside the fragment: `" + Array.from(line).slice(0, 60).join("") + "`" });
+    }
+}
+
 // ── the values: an explicit worklist and a memo, no call recursion ──
 
 function isSeed(name) {
@@ -743,18 +819,15 @@ function coordinate(key, name, declarations, values) {
 
 // ── pass 2: premises against the table ──
 
-function check(file, declarations, order, values, refusals, extras, vocabulary) {
+function check(file, declarations, order, values, refusals) {
     let premises = 0;
     const gateTouches = values.gateTouches;
-    // what this world presented outranks anything this port was born knowing
-    const domain = domainOf(declarations);
 
     for (const qualified of order) {
         const declaration = declarations.get(qualified);
 
         for (const conformance of declaration.conformances) {
-            const requirements = domain.requires.get(conformance)
-                ?? conformanceRequirements.get(conformance);
+            const requirements = conformanceRequirements.get(conformance);
             if (!requirements) continue;
             for (const [key, wanted] of requirements) {
                 premises += 1;
@@ -772,10 +845,7 @@ function check(file, declarations, order, values, refusals, extras, vocabulary) 
                         premise: declaration.name + "." + key + ": " + reason });
                     continue;
                 }
-                const presented = declarations.has(wanted);
-                const landed = presented
-                    ? (conformsTo(settled, wanted, declarations) ? wanted : category(settled, declarations))
-                    : category(settled, declarations);
+                const landed = category(settled, declarations);
                 if (landed !== wanted) {
                     refusals.push({ file, line: alias.line,
                         premise: conformance + " requires " + key + " in " + wanted + ": "
@@ -838,21 +908,12 @@ function check(file, declarations, order, values, refusals, extras, vocabulary) 
                 if (!found) {
                     found = isSeed(entry.head);
                 }
-                if (!found && extras) {
-                    found = extras.topAliases.has(entry.head)
-                        || extras.literals.has(entry.head);
-                }
-                if (!found && vocabulary) {
-                    found = vocabulary.seeds.has(entry.head);
-                }
                 if (!found) {
                     refusals.push({ file, line: entry.line,
                         premise: "the entry " + entry.head + " resolves to nothing" });
                 }
                 continue;
             }
-            if (vocabulary && vocabulary.generics.has(entry.head)) continue;
-            if (extras && extras.topAliases.has(entry.head)) continue;
             refusals.push({ file, line: entry.line,
                 premise: "an unknown gate: " + entry.head });
         }
@@ -866,24 +927,39 @@ function check(file, declarations, order, values, refusals, extras, vocabulary) 
 // plain court here reads no `where` clause. A hand-written reading of the
 // canon beside it would be a third one, held by nothing.
 
-function judge(file, text, vocabulary) {
+// Files share a dictionary and memo. The reference checks the accumulated
+// order after each file, including earlier declarations, rather than summing
+// independent judgments. The multi-file contract records that behavior.
+function judgeFiles(files) {
     const started = performance.now();
-    const declarations = new Map();
-    const order = [];
-    const refusals = [];
-    const extras = { literals: new Map(), topAliases: new Map() };
+    const declarations = new Map(), order = [], refusals = [];
     const values = { settled: new Map(), refused: new Map(), lookups: 0,
         readers: new Map(), gateTouches: new Map() };
-    parse(file, text, declarations, order, refusals, vocabulary ? extras : null);
-    let premises = check(file, declarations, order, values, refusals, extras, vocabulary);
-    const milliseconds = performance.now() - started;
+    let premises = 0;
+    for (const { file, text } of files) {
+        parseCompany(file, text, declarations, order, refusals);
+        premises += check(file, declarations, order, values, refusals);
+    }
     return { declarations: order.length, lookups: values.lookups, premises,
-        milliseconds, refusals,
-        parsed: { declarations, order, literals: extras.literals,
-            topAliases: extras.topAliases,
+        milliseconds: performance.now() - started, refusals,
+        parsed: { declarations, order, literals: new Map(), topAliases: new Map(),
             readers: values.readers, gateTouches: values.gateTouches } };
 }
 
-// conformsTo travels with the verdict: the bench asks the same walk this file
-// judges by, so an offer and a refusal cannot disagree about what a kind is.
-if (typeof module !== "undefined") { module.exports = { judge, conformsTo }; }
+function judge(file, text, vocabulary) {
+    const result = judgeFiles([{ file, text }]);
+    {
+        // The bench needs records outside the company's fragment. These are
+        // inspection data, never additional premises or a wider plain verdict.
+        const declarations = new Map(), order = [];
+        const extras = { literals: new Map(), topAliases: new Map() };
+        parse(file, text, declarations, order, [], vocabulary ? extras : null);
+        result.parsed = { ...result.parsed, declarations, order,
+            literals: extras.literals, topAliases: extras.topAliases };
+    }
+    return result;
+}
+
+// The bench uses this walk for its offers over inspection records, not as
+// a general conformance judgment by the company's plain court.
+if (typeof module !== "undefined") { module.exports = { judge, judgeFiles, conformsTo }; }

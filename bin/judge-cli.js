@@ -1,21 +1,11 @@
 #!/usr/bin/env node
-// The port, speaking the words the binary speaks.
-//
-// `judge.js` is a line-for-line port of the corpus judge and it is held to the
-// binary by parity checks on every run of the battery. The binary is native to one
-// platform, so on any other machine the same court exists and nothing could reach
-// it: this is the reach. Same arguments in, same lines out, so nothing downstream
-// has to know which of the two answered.
-//
-// It serves every court. The plain court is judge.js, the line-for-line port
-// of the corpus judge; the certificate court and the count court, which the
-// binary answers under `judge where` and `judge count`, are the contract's
-// Rust sample built for wasm32 (bin/court-wasm, bin/court-wasm.from), a second
-// implementation spoken through judge-wasm.js beside this file. The suite
-// holds it 13/13, and the battery holds each carrier to the binary's own lines.
+// Plain verdicts carry the pinned company's fragment. Organization contracts
+// v0.1 and v0.2 check exit and output on frozen cases, not general equivalence.
+// The where/count doors use the separate Rust/WASM implementation of their
+// contract. The parse door is richer inspection for gate's own consumers.
 const fs = require("fs");
 const path = require("path");
-const { judge } = require(path.join(__dirname, "judge.js"));
+const { judge, judgeFiles } = require(path.join(__dirname, "judge.js"));
 
 const args = process.argv.slice(2);
 if (args[0] !== "judge") {
@@ -33,11 +23,7 @@ if (args[1] === "where" || args[1] === "count") {
     return;
 }
 if (args[1] === "parse") {
-    // ONE GRAMMAR, ONE READER. This hands the judge's own parse out as
-    // JSON, so nothing beside him grows a regex over the worlds: the CLI
-    // and the battery ask here, or they do not read swift at all. The
-    // wrapper speaks it, not the port: judge.js stays the corpus's mirror,
-    // and this is only the parse it already made, carried to stdout.
+    // Rich inspection records are outside the organization verdict contract.
     const out = {};
     for (const f of args.slice(2)) {
         const r = judge(path.basename(f), fs.readFileSync(f, "utf8"),
@@ -75,6 +61,10 @@ if (args[1] === "parse") {
 }
 
 const files = args.slice(1);
+if (!files.length) {
+    process.stderr.write("✗ THE JUDGE needs the files it reads: `swift run ShowcaseTools judge <path>…`\n");
+    process.exit(2);
+}
 // A file that is not there, or whose bytes are not UTF-8, is a corpus the
 // court cannot read: the binary says so in one line and exits 2, and the port
 // says the same words rather than stop on a stack trace (the organization
@@ -89,20 +79,12 @@ for (const f of files) {
         process.exit(2);
     }
 }
-let decl = 0, lookups = 0, premises = 0, ms = 0;
-const refusals = [];
-for (const [i, f] of files.entries()) {
-    const r = judge(path.basename(f), texts[i]);
-    decl += r.declarations;
-    lookups += r.lookups;
-    premises += r.premises;
-    ms += r.milliseconds;
-    for (const x of r.refusals) refusals.push(x);
-}
+const r = judgeFiles(files.map((f, i) => ({ file: path.basename(f), text: texts[i] })));
+const { declarations: decl, lookups, premises, milliseconds: ms, refusals } = r;
 const t = ms.toFixed(1);
 if (refusals.length) {
     console.log(`✗ THE JUDGE refuses ${refusals.length} claim(s) in ${t} ms:`);
-    for (const x of refusals) console.log(`    ${x.file}:${x.line}  ${x.premise}`);
+    for (const x of refusals.slice(0, 20)) console.log(`    ${x.file}:${x.line}  ${x.premise}`);
     process.exit(1);
 }
 console.log(`✓ THE JUDGE holds: ${decl} declarations · ${lookups} lookups · `

@@ -346,18 +346,18 @@ bin/organization-judge
 bin/judge.js · bin/judge-cli.js · bin/judge-wasm.js · bin/court-wasm/
                 the courts for machines the binaries were not built for:
                 the plain court as a node port held to bin/organization-judge
-                by the organization contract (8/8) and by the battery on the
+                by organization v0.1 (8/8) and v0.2 (25/25), and the battery on the
                 company's worlds, and the certificate and count courts as the
                 contract's Rust sample, a second implementation built for
                 wasm32 at the pin bin/court-wasm.from records
                 (bin/build-court-wasm.sh rebuilds it), held to the binary by
                 the suite and the battery. The port reads no `where` clause:
-                where and count are the sample's alone. Its domain is read
-                from the forms a world presents (conformers of Department,
-                the axes a protocol states), where the Swift court states the
-                company's table; on the company's worlds the two agree, and
-                on the shelf's own pages, which are not company fragments,
-                they refuse differently (6 of 18 pages alike, measured)
+                where and count are the sample's alone. The plain verdict reads
+                the company's fixed table and fragment, including the reference's
+                refusals on foreign forms. Richer inspection records support the
+                bench without imposing additional domain requirements. A zero exit
+                with zero company premises does not validate a foreign domain.
+                Passing these finite suites does not establish general equivalence.
 bin/renderer.js · bin/press.js
                 the drawing view's engine: renderer.js is a second
                 implementation, on JS, of the kit's span engine
@@ -387,7 +387,7 @@ web/codemirror.*  the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
 docs/           DETAILS.md, SECURITY.md, CHANGELOG.md, NOTICE.md, and
                 the cover's picture with its provenance
-tests/smoke.py   the battery: 583 checks this repository holds itself
+tests/smoke.py   the battery: 585 checks this repository holds itself
                  to, end-to-end runs through judge parity through
                  documentation contracts; the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts

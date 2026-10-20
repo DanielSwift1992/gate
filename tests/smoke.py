@@ -974,25 +974,45 @@ def main():
               hb == hp and hbc == hpc == 0 and "THE JUDGE holds" in hb))
     S.append(("and a refusing world in the same words, with the same lines",
               rb == rp and rbc == rpc == 1 and "refuses 2 claim(s)" in rb))
-    # ── AND BOTH ARE HELD TO THE CONTRACT OF THE COURT THEY CARRY. The company's
-    # plain court lives in the showcase with the policy it reads, and its
-    # contract (Contracts/OrganizationCourt/v0.1) comes with its source at the
-    # pin bin/organization-court.from names, laid by bin/organization-court.sh.
-    # The native carrier and the node port each answer all of it.
+    # Both immutable organization releases apply to both carriers. v0.2
+    # adds foreign forms and ordered file sequences, not a broader court.
     _org = subprocess.run([os.path.join(HERE, "bin", "organization-court.sh")],
                           capture_output=True, text=True).stdout.strip()
-    def _org_contract(prefix):
+    def _org_contract(prefix, release):
         return subprocess.run(
             [sys.executable, os.path.join(_org, "Checks", "organization-contract.py"),
-             "--manifest", os.path.join(_org, "Contracts", "OrganizationCourt", "v0.1",
+             "--manifest", os.path.join(_org, "Contracts", "OrganizationCourt", release,
                                         "contract.json"),
              "--command-json", json.dumps(prefix), "--implementation-id", "gate battery"],
             capture_output=True, text=True)
-    _oc_native = _org_contract([os.path.join(HERE, "bin", "organization-judge"), "judge"])
-    _oc_port = _org_contract(["node", os.path.join(HERE, "bin", "judge-cli.js"), "judge"])
-    S.append(("the company's plain court answers its contract through the native carrier and the port",
-              _oc_native.returncode == 0 and "8/8 cases matched" in _oc_native.stdout
-              and _oc_port.returncode == 0 and "8/8 cases matched" in _oc_port.stdout))
+    for _release, _cases in [("v0.1", 8), ("v0.2", 25)]:
+        _oc_native = _org_contract([os.path.join(HERE, "bin", "organization-judge"), "judge"], _release)
+        _oc_port = _org_contract(["node", os.path.join(HERE, "bin", "judge-cli.js"), "judge"], _release)
+        _expected = f"{_cases}/{_cases} cases matched"
+        S.append((f"the company's plain court answers {_release} through the native carrier and the port",
+                  _oc_native.returncode == 0 and _expected in _oc_native.stdout
+                  and _oc_port.returncode == 0 and _expected in _oc_port.stdout))
+    # The browser's vocabulary changes inspection records, never the plain
+    # verdict. These witnesses previously invoked extra domain requirements
+    # or admitted entries that the Swift reference refuses.
+    _vocab_probe = r"""
+const fs = require("fs"), path = require("path");
+const { judge } = require(process.argv[1]);
+const root = process.argv[2];
+const V = { seeds: new Set(["Canvas", "ExternalUnit"]), generics: new Set(["Picture"]) };
+const verdict = r => [r.declarations, r.lookups, r.premises, r.refusals];
+const names = ["domain-outside", "vocabulary-outside", "foreign-enum", "Light", "Atom"];
+const ok = names.every(name => {
+    const file = name + ".swift", text = fs.readFileSync(path.join(root, file), "utf8");
+    return JSON.stringify(verdict(judge(file, text))) === JSON.stringify(verdict(judge(file, text, V)));
+});
+console.log(ok);
+"""
+    _vp = subprocess.run(["node", "-e", _vocab_probe, os.path.join(HERE, "bin", "judge.js"),
+                          os.path.join(_org, "Contracts", "OrganizationCourt", "v0.2", "fixtures")],
+                         capture_output=True, text=True)
+    S.append(("a vocabulary for inspection cannot alter the company's plain verdict",
+              _vp.returncode == 0 and _vp.stdout.strip() == "true"))
     # AND THE CERTIFICATE COURT OF THE PORT, HELD TO THE BINARY PAGE FOR PAGE.
     # For a stretch the port refused `judge where` outright, and gate named the
     # forms rows as unjudged wherever the binary could not run; the port sits
@@ -3658,7 +3678,7 @@ const typeInto = (lines) => {                          // keystrokes: the buffer
     cm = { getLine: (n) => lines[n] };
     lastParsed = parse(lines);
 };
-const holds = (lines) => judge("w.swift", lines.join("\\n"), READ()).refusals.length === 0;
+const outside = (lines) => judge("w.swift", lines.join("\\n"), READ()).refusals.some(r => r.premise.startsWith("outside the fragment:"));
 // a two-line certificate is the where court's: on the page it is the contract's
 // Rust sample (bin/court-wasm), asked here through its node build, as the page's
 // shim asks it; the plain port reads no where clause
@@ -3686,7 +3706,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     const offered = offerAt(slot);
     out.ladder = { offered, pair: {} };
     for (const name of ["ReaderKey", "WriterKey", "Wombat"])
-        out.ladder.pair[name] = { judge: holds(filled(FORMS, name)),
+        out.ladder.pair[name] = { outside: outside(filled(FORMS, name)),
                                   offer: offered.includes(name) };
     // the certificate court over the forms reading: a two-line gate whose
     // premise only means anything after the gate's formal words are
@@ -3712,14 +3732,14 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     typeInto(typed);
     const seenTyped = offerAt(typed);
     out.typed = { offer: seenTyped.includes("K2"),
-                  judge: holds(FORMS.concat(["public enum K1: Reads {}",
+                  outside: outside(FORMS.concat(["public enum K1: Reads {}",
                                              "public enum K2: Reads {}"]).concat(
                       ["public enum H1: Holder {", "    public typealias Key = K2", "}"])),
                   offered: seenTyped };
     const erased = slotAfter(FORMS);                   // K1 erased by the same hand
     typeInto(erased);
     const seenErased = offerAt(erased);
-    out.erased = { offer: seenErased.includes("K1"), judge: holds(filled(FORMS, "K1")),
+    out.erased = { offer: seenErased.includes("K1"), outside: outside(filled(FORMS, "K1")),
                    offered: seenErased };
     out.cert = certSaid;
     console.log(JSON.stringify(out));
@@ -3747,23 +3767,23 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
         _pr = {}
     _lad = _pr.get("ladder") or {}
     _pairs = _lad.get("pair") or {}
-    S.append(("the offer climbs the refinement chain, because the verdict climbs it",
-              # a value of a kind that refines the wanted one is offered AND taken
-              _pairs.get("WriterKey", {}).get("judge") is True
+    S.append(("the offer climbs the inspected refinement chain without claiming a company verdict",
+              # inspection offers matching kinds; the company court refuses these foreign forms
+              _pairs.get("WriterKey", {}).get("outside") is True
               and _pairs.get("WriterKey", {}).get("offer") is True
-              and _pairs.get("ReaderKey", {}).get("judge") is True
+              and _pairs.get("ReaderKey", {}).get("outside") is True
               and _pairs.get("ReaderKey", {}).get("offer") is True
-              # and a name nobody declared is neither taken nor offered
-              and _pairs.get("Wombat", {}).get("judge") is False
+              # an undeclared name is not offered and does not make this company syntax
+              and _pairs.get("Wombat", {}).get("outside") is True
               and _pairs.get("Wombat", {}).get("offer") is False
               # walked by the judge's own function, not a second copy of it
               and "conformsTo(name, kind, decls)" in ui
-              and "module.exports = { judge, conformsTo }" in open(
+              and "module.exports = { judge, judgeFiles, conformsTo }" in open(
                   os.path.join(HERE, "bin", "judge.js"), encoding="utf-8").read()))
     _typed, _erased = (_pr.get("typed") or {}), (_pr.get("erased") or {})
     S.append(("the buffer answers for its own file: a record typed is offered, one erased is gone",
-              _typed.get("offer") is True and _typed.get("judge") is True
-              and _erased.get("offer") is False and _erased.get("judge") is False))
+              _typed.get("offer") is True and _typed.get("outside") is True
+              and _erased.get("offer") is False and _erased.get("outside") is True))
     # ── AND THE TWO-LINE CERTIFICATE JUDGES THROUGH ITS SUBSTITUTION. The
     # premise `A == B` names the gate's formal words; only substituting the
     # claim's arguments over them makes it a sentence about the world. The
@@ -5545,71 +5565,29 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               and re.findall(r"associatedtype (\w+)\s*:\s*(\w+)",
                              protos.get("Document", "")) == [("Home", "Department")]))
 
-    # ── AND PRESENTING THE FORMS CHANGES NOTHING, WHICH IS THE WHOLE PROOF. The
-    # port now derives what a protocol requires from the protocol itself, so a
-    # world that presents its forms is judged by what it presented rather than by
-    # a table this port was born knowing. If that derivation were poorer than the
-    # table, a world would go quiet somewhere — so the check runs the reference
-    # world both ways, whole and broken four ways, and demands the refusals match
-    # word for word. Green parity without red parity is half a parity.
-    #
-    # It also caught a parser fault nobody had met: `public enum FinanceShare:
-    # Document { public typealias Home = Finance }` closes on its own line, and
-    # the test for that asked whether the line ended in an empty `{}`. It does
-    # not, so the share went on the stack and never came off — every record after
-    # it nested inside, `FinanceShare.EngineeringShare.SalesShare.PeopleShare
-    # .Edsger`, and fifty-eight names resolved to nothing. Braces balance on a
-    # line or they do not.
+    # Foreign protocol declarations do not override the company table. Ask
+    # both carriers on the company alone and with those forms prefixed, for
+    # the original world and four lies. The prefixed forms must be refused.
     par = tempfile.mkdtemp(dir=tmp)
     run("demo", "org", cwd=par)
     par_world = os.path.join(par, "gate-demo", "gate.swift")
-    probe = os.path.join(par, "parity.mjs")
-    open(probe, "w").write(
-        "import fs from 'fs';\n"
-        "const src = fs.readFileSync(process.argv[2], 'utf8');\n"
-        "const mod = { exports: {} };\n"
-        "new Function('module','exports',src)(mod, mod.exports);\n"
-        "const { judge } = mod.exports;\n"
-        "const world = fs.readFileSync(process.argv[3], 'utf8');\n"
-        "const forms = fs.readFileSync(process.argv[4], 'utf8');\n"
-        "const V = { seeds: new Set(), generics: new Set() };\n"
-        "const cases = [world,\n"
-        "  world.replace('public typealias Rank = Manager','public typealias Rank = Archduke'),\n"
-        "  world.replace('public typealias Home = Finance','public typealias Home = Atlantis'),\n"
-        "  world.replace('    public typealias Site = OnSite\\n',''),\n"
-        "  world.replace('public typealias Next = Barbara','public typealias Next = Nobody')];\n"
-        "const out = cases.map((w) => {\n"
-        "  const a = judge('w.swift', w, V), b = judge('w.swift', forms + '\\n' + w, V);\n"
-        "  const A = a.refusals.map(r => r.premise).sort();\n"
-        "  const B = b.refusals.map(r => r.premise).sort();\n"
-        "  return [A.length, JSON.stringify(A) === JSON.stringify(B)];\n"
-        "});\n"
-        "console.log(JSON.stringify(out));\n")
-    par_out = subprocess.run(
-        ["node", probe, os.path.join(HERE, "bin", "judge.js"), par_world,
-         os.path.join(HERE, "stdlib", "forms-organization.swift")],
-        capture_output=True, text=True).stdout.strip().splitlines()
-    try:
-        par_res = json.loads(par_out[-1]) if par_out else []
-    except Exception:
-        par_res = []
-    # FOUR MATCH AND ONE CORRECTS, which is better than five matching. Removing
-    # an axis shows the baked table naming `Person` where the file names
-    # `Employee` — the constant had drifted from the declaration it was copied
-    # from and put `Site` under the wrong protocol. A second truth either drifts
-    # or coarsens; this one drifted, and the probe caught it rather than an
-    # argument. The presented file is the one that is right.
-    S.append(("a world judged by the forms it presents refuses what it did, or better",
-              len(par_res) == 5
-              and sum(1 for _, same in par_res if same) == 4
-              # the whole world holds and every broken one refuses, so this is
-              # not five greens agreeing that nothing was ever checked
-              and par_res[0][0] == 0 and all(n > 0 for n, _ in par_res[1:])
-              # the domain comes from what was presented, not from what was baked
-              and "function domainOf(declarations)" in js
-              and "domain.requires.get(conformance)" in js
-              # and a head that closes on its own line closes on its own line
-              and "const selfClosed = opens > 0 && opens === closes;" in js))
+    world_text = open(par_world, encoding="utf-8").read()
+    forms_text = open(os.path.join(STDLIB, "forms-organization.swift"), encoding="utf-8").read()
+    domain_cases = [world_text,
+        world_text.replace("public typealias Rank = Manager", "public typealias Rank = Archduke"),
+        world_text.replace("public typealias Home = Finance", "public typealias Home = Atlantis"),
+        world_text.replace("    public typealias Site = OnSite\n", ""),
+        world_text.replace("public typealias Next = Barbara", "public typealias Next = Nobody")]
+    domain_answers = []
+    for source in domain_cases:
+        for prefix in ("", forms_text + "\n"):
+            open(par_world, "w", encoding="utf-8").write(prefix + source)
+            hb, hp, hbc, hpc = both_ways(par_world)
+            domain_answers.append((hb == hp and hbc == hpc, hbc))
+    S.append(("foreign forms do not replace the company's table in either carrier",
+              all(same for same, code in domain_answers)
+              and domain_answers[0][1] == 0
+              and all(code == 1 for same, code in domain_answers[1:])))
 
     # ── THE BENCH READS THE FORMS THIS WORLD PRESENTS. What a record may be is
     # written in the operator's own file now, and the bench had been offering
@@ -7553,17 +7531,24 @@ console.log(JSON.stringify({
     slot_js = '''
 const { judge } = require(%r);
 const forms = %s;
-const world = (v) => forms + `
+const world = (v) => `
 public enum P1: Person {
     public typealias Given = G1
     public typealias Family = F1
     public typealias Born = B1
     public typealias Sex = ${v}
+    public typealias Site = OnSite
 }
-public enum G1: GivenNameCycle { public typealias Next = G1
-    public typealias Sex = Male }
-public enum F1: FamilyNameCycle { public typealias Next = F1 }
-public enum B1: BirthYearCycle { public typealias Next = B1 }
+public enum G1: GivenNameCycle {
+    public typealias Next = G1
+    public typealias Sex = Male
+}
+public enum F1: FamilyNameCycle {
+    public typealias Next = F1
+}
+public enum B1: BirthYearCycle {
+    public typealias Next = B1
+}
 `;
 const landsIn = (v) => (judge("w.swift", world(v)).refusals || [])
     .some(r => /lands in/.test(r.premise) && /P1\\.Sex/.test(r.premise));
