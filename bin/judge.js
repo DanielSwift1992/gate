@@ -1,8 +1,13 @@
 "use strict";
 
-// THE SECOND JUDGE, ported: a line-for-line JavaScript reading of Sources/Tools/Judge.swift.
-// The Swift judge stays the reference — index.html carries verdicts captured from it and
-// checks this port against them on every load. A drift is a red badge, never a silent lie.
+// THE PLAIN COURT, ported: a line-for-line JavaScript reading of the company's court,
+// Sources/Court/OrganizationJudge.swift in the theory's showcase, at the pin
+// bin/organization-court.from names. The Swift court stays the reference. What holds this
+// port to it: the organization contract on the company's fragment (8/8), and the battery's
+// parity with bin/organization-judge on the worlds it walks, clocks stripped. On forms
+// outside the company's fragment, the shelf's own pages among them, the two readings
+// differ (12 of 18 pages, measured), and nothing holds them yet: that is T-0034, the
+// contract's next release with fixtures of foreign forms and the Swift court's answers.
 //
 // The fragment, the table, and the message texts mirror the Swift file exactly: the two
 // ports must refuse with the same premise, character for character.
@@ -855,226 +860,11 @@ function check(file, declarations, order, values, refusals, extras, vocabulary) 
     return premises;
 }
 
-// ── conditional conformances: normalize both sides, compare at every use ──
-
-// a term settles to its normal form: top aliases unfold (generic ones by
-// substitution), a dotted head reads the owner's axis, arguments settle first
-function normalizeTerm(term, declarations, topAliases, depth) {
-    if (depth > 64) return term.trim();
-    term = term.trim();
-    const angle = term.indexOf("<");
-    let head = angle >= 0 ? term.slice(0, angle).trim() : term;
-    let args = [];
-    if (angle >= 0) {
-        const inner = term.slice(angle + 1, term.lastIndexOf(">"));
-        args = splitTopLevel(inner)
-            .map((piece) => normalizeTerm(piece, declarations, topAliases, depth + 1));
-    }
-    if (head.includes(".")) {
-        const dot = head.indexOf(".", head.includes("<") ? angleSpan(head, head.indexOf("<")) + head.indexOf("<") - 1 : 0);
-        const ownerSpelled = dot >= 0 ? head.slice(0, dot) : head;
-        const axes = dot >= 0 ? head.slice(dot + 1).split(".") : [];
-        let current = normalizeTerm(ownerSpelled, declarations, topAliases, depth + 1);
-        for (const axisName of axes) {
-            // the owner may be a generic instance: read the bare declaration's
-            // axis and substitute the instance arguments into it
-            const ownerAngle = current.indexOf("<");
-            const ownerHead = ownerAngle >= 0 ? current.slice(0, ownerAngle).trim() : current;
-            const ownerArgs = ownerAngle >= 0
-                ? splitTopLevel(current.slice(ownerAngle + 1, current.lastIndexOf(">")))
-                : [];
-            const owner = declarations.get(ownerHead);
-            const axis = owner && owner.aliases.get(axisName);
-            if (!axis) return term;
-            let target = axis.target;
-            (owner.params || []).forEach((parameter, index) => {
-                if (index < ownerArgs.length) {
-                    target = substituteWord(target, parameter, ownerArgs[index]);
-                }
-            });
-            current = normalizeTerm(target, declarations, topAliases, depth + 1);
-        }
-        return args.length > 0 ? current + "<" + args.join(", ") + ">" : current;
-    }
-    const top = topAliases ? topAliases.get(head) : null;
-    if (top) {
-        const params = top.params || [];
-        if (params.length === 0 && args.length === 0) {
-            return normalizeTerm(top.target, declarations, topAliases, depth + 1);
-        }
-        if (params.length > 0 && params.length === args.length) {
-            let body = top.target;
-            params.forEach((parameter, index) => {
-                body = substituteWord(body, parameter, args[index]);
-            });
-            return normalizeTerm(body, declarations, topAliases, depth + 1);
-        }
-    }
-    // the kit's own structural alias: `Twice<S> = Plus<S, S>` (Primitive.swift),
-    // unfolded here so a stated pair and its shorthand settle to one spelling
-    if (head === "Twice" && args.length === 1) {
-        return "Plus<" + args[0] + ", " + args[0] + ">";
-    }
-    // the kit's stated rungs unfold to their own compositions
-    // (Spectrum.swift, Rung0..Rung8), so a sum of rungs and a rung of the
-    // same count settle to one spelling
-    const kitRungs = new Map([
-        ["Rung0", "Never"], ["Rung1", "Unit"], ["Rung2", "Twice<Unit>"],
-        ["Rung3", "Plus<Twice<Unit>, Unit>"], ["Rung4", "Twice<Twice<Unit>>"],
-        ["Rung5", "Plus<Twice<Twice<Unit>>, Unit>"],
-        ["Rung6", "Twice<Plus<Twice<Unit>, Unit>>"],
-        ["Rung7", "Plus<Twice<Twice<Unit>>, Plus<Twice<Unit>, Unit>>"],
-        ["Rung8", "Twice<Twice<Twice<Unit>>>"],
-    ]);
-    if (kitRungs.has(head) && args.length === 0) {
-        return normalizeTerm(kitRungs.get(head), declarations, topAliases, depth + 1);
-    }
-    // the lattice's numerals unfold to their one written definition
-    // (Primitive.swift, the doubling ladder), so a judge counts them without
-    // knowing any number but one and nothing
-    const kitNumerals = new Map([
-        ["U1", "Unit"], ["U2", "Twice<U1>"], ["U4", "Twice<U2>"],
-        ["U8", "Twice<U4>"], ["U16", "Twice<U8>"], ["U32", "Twice<U16>"],
-        ["U64", "Twice<U32>"], ["U128", "Twice<U64>"], ["U256", "Twice<U128>"],
-        ["U512", "Twice<U256>"],
-    ]);
-    if (kitNumerals.has(head) && args.length === 0) {
-        return normalizeTerm(kitNumerals.get(head), declarations, topAliases, depth + 1);
-    }
-    return args.length > 0 ? head + "<" + args.join(", ") + ">" : head;
-}
-
-// ── the counting canon: two spellings of one number are one term ──
-// A mirror of the reference judge's arithmetic pass (WhereJudge.swift): after
-// the structural canon, a Plus tree is flattened to its leaves, the counted
-// leaves fold into one numeral (Unit is one, Never is nothing), a Times of two
-// numerals is their product, and the symbolic leaves are sorted, so 7 + 20 and
-// 27 settle to the same term. The pass knows two counts, one and nothing: a
-// world that wants judged arithmetic spells its own numerals as file aliases
-// over Unit and Twice, and the structural canon unfolds them like any alias.
-
-function parseCanonTree(text) {
-    text = text.trim();
-    const angle = text.indexOf("<");
-    if (angle < 0) return { head: text, args: [] };
-    const head = text.slice(0, angle).trim();
-    const inner = text.slice(angle + 1, text.lastIndexOf(">"));
-    return { head, args: splitTopLevel(inner).map(parseCanonTree) };
-}
-
-function serializeCanonTree(node) {
-    if (node.args.length === 0) return node.head;
-    return node.head + "<" + node.args.map(serializeCanonTree).join(", ") + ">";
-}
-
-function countedLeaf(node) {
-    if (node.args.length > 0) return null;
-    if (node.head === "Unit") return 1;
-    if (node.head === "Never") return 0;
-    if (node.head.startsWith("#")) return parseInt(node.head.slice(1), 10);
-    return null;
-}
-
-function arithmeticFold(node) {
-    const folded = { head: node.head, args: node.args.map(arithmeticFold) };
-    const whole = countedLeaf(folded);
-    if (whole !== null) return { head: "#" + whole, args: [] };
-    // Succ is NOT folded here, and the omission is the law, not an oversight:
-    // the reference's counted leaves are Unit, Never, and a numeral, and its own
-    // comment says the port's judge mirrors this pass. A step of the numeral
-    // ladder stays a symbolic leaf on both sides, so two numbers spelled through
-    // different ladders are two terms — the world spells one ladder instead.
-    if (folded.head === "Times" && folded.args.length === 2) {
-        const left = countedLeaf(folded.args[0]);
-        const right = countedLeaf(folded.args[1]);
-        if (left !== null && right !== null) return { head: "#" + (left * right), args: [] };
-    }
-    if (folded.head !== "Plus" || folded.args.length !== 2) return folded;
-    const leaves = [];
-    let count = 0;
-    const pile = [...folded.args];
-    while (pile.length > 0) {
-        const piece = pile.pop();
-        if (piece.head === "Plus" && piece.args.length === 2) {
-            pile.push(...piece.args);
-            continue;
-        }
-        const n = countedLeaf(piece);
-        if (n !== null) count += n; else leaves.push(piece);
-    }
-    leaves.sort((a, b) => serializeCanonTree(a) < serializeCanonTree(b) ? -1 : 1);
-    if (leaves.length === 0) return { head: "#" + count, args: [] };
-    if (count > 0) leaves.push({ head: "#" + count, args: [] });
-    let result = leaves.pop();
-    while (leaves.length > 0) {
-        result = { head: "Plus", args: [leaves.pop(), result] };
-    }
-    return result;
-}
-
-function arithmeticCanon(text) {
-    return serializeCanonTree(arithmeticFold(parseCanonTree(text)));
-}
-
-// every gated head found in a term is checked where it stands: substitution
-// of the use's arguments into the stated equivalences, then one comparison
-function checkWhereGates(file, declarations, topAliases, refusals) {
-    let checked = 0;
-    const gated = new Map();
-    for (const declaration of declarations.values()) {
-        if (declaration.whereGates) gated.set(declaration.name, declaration);
-    }
-    if (gated.size === 0) return 0;
-
-    function walkTerm(term, line, certificate) {
-        term = term.trim();
-        const angle = term.indexOf("<");
-        const head = angle >= 0 ? term.slice(0, angle).trim() : term;
-        const args = angle >= 0
-            ? splitTopLevel(term.slice(angle + 1, term.lastIndexOf(">")))
-            : [];
-        for (const argument of args) walkTerm(argument, line, certificate);
-        const owner = gated.get(head);
-        if (!owner || args.length !== (owner.params || []).length) return;
-        for (const gate of owner.whereGates) {
-            for (const condition of gate.conditions) {
-                checked += 1;
-                let left = condition.left;
-                let right = condition.right;
-                (owner.params || []).forEach((parameter, index) => {
-                    left = substituteWord(left, parameter, args[index]);
-                    right = substituteWord(right, parameter, args[index]);
-                });
-                const leftCanon = arithmeticCanon(
-                    normalizeTerm(left, declarations, topAliases, 0));
-                const rightCanon = arithmeticCanon(
-                    normalizeTerm(right, declarations, topAliases, 0));
-                if (leftCanon !== rightCanon) {
-                    const spell = (written, canon) => canon === written
-                        ? "`" + written + "`"
-                        : "`" + written + "` (aka `" + canon + "`)";
-                    refusals.push({ file, line,
-                        premise: "`" + (certificate || term) + "` requires the types "
-                            + spell(left, leftCanon) + " and "
-                            + spell(right, rightCanon) + " be equivalent" });
-                }
-            }
-        }
-    }
-
-    for (const [key, alias] of topAliases || []) {
-        if ((alias.params || []).length > 0) continue;
-        walkTerm(alias.target, alias.line, key + " = " + alias.target);
-    }
-    for (const declaration of declarations.values()) {
-        for (const [key, alias] of declaration.aliases) {
-            walkTerm(alias.target, alias.line);
-        }
-    }
-    return checked;
-}
-
-// ── one full judgment ──
+// ── The where court and the count court are not ported. gate carries the
+// contract's Rust sample of both, a second implementation held to the Swift
+// court by the suite, built for wasm32 (bin/court-wasm, bin/judge-wasm.js); the
+// plain court here reads no `where` clause. A hand-written reading of the
+// canon beside it would be a third one, held by nothing.
 
 function judge(file, text, vocabulary) {
     const started = performance.now();
@@ -1086,7 +876,6 @@ function judge(file, text, vocabulary) {
         readers: new Map(), gateTouches: new Map() };
     parse(file, text, declarations, order, refusals, vocabulary ? extras : null);
     let premises = check(file, declarations, order, values, refusals, extras, vocabulary);
-    premises += checkWhereGates(file, declarations, extras.topAliases, refusals);
     const milliseconds = performance.now() - started;
     return { declarations: order.length, lookups: values.lookups, premises,
         milliseconds, refusals,

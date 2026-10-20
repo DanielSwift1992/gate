@@ -3570,6 +3570,12 @@ const typeInto = (lines) => {                          // keystrokes: the buffer
     lastParsed = parse(lines);
 };
 const holds = (lines) => judge("w.swift", lines.join("\\n"), READ()).refusals.length === 0;
+// a two-line certificate is the where court's: on the page it is the contract's
+// Rust sample (bin/court-wasm), asked here through its node build, as the page's
+// shim asks it; the plain port reads no where clause
+const court = require(path.join(path.dirname(process.argv[3]), "court-wasm", "node", "vi_court.js"));
+const holdsWhere = (lines) => JSON.parse(court.judge(JSON.stringify({
+    arguments: ["where", "w.swift"], files: [{ name: "w.swift", text: lines.join("\\n") }] }))).exit === 0;
 const offerAt = (lines) => {
     const last = lines.length - 1;
     return (allowedAt({ line: last, ch: (lines[last] || "").length }).items) || [];
@@ -3593,19 +3599,19 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     for (const name of ["ReaderKey", "WriterKey", "Wombat"])
         out.ladder.pair[name] = { judge: holds(filled(FORMS, name)),
                                   offer: offered.includes(name) };
-    // the certificate court of the forms reading: a two-line gate whose
+    // the certificate court over the forms reading: a two-line gate whose
     // premise only means anything after the gate's formal words are
-    // substituted with the claim's own arguments. Kill the substitution and
-    // A == B is a sentence about names that exist nowhere: the good claim
-    // refuses, the bad one with it, and the bench's first scene (carol's
-    // refusal, judged by this very path in the browser) dies quietly.
+    // substituted with the claim's own arguments. The court that does it on
+    // the page is the contract's sample, so the probe asks that court: the
+    // good claim holds, the bad one is refused, and a court that lost the
+    // substitution would hold both.
     const CERT = ["public protocol Matched {}",
                   "public enum Pair2<A, B> {}",
                   "extension Pair2: Matched",
                   "where A == B {}"];
     const certSaid = {
-        ok: holds(FORMS.concat(CERT, ["public typealias C1 = Pair2<ReaderKey, ReaderKey>"])),
-        bad: holds(FORMS.concat(CERT, ["public typealias C1 = Pair2<ReaderKey, WriterKey>"])),
+        ok: holdsWhere(FORMS.concat(CERT, ["public typealias C1 = Pair2<ReaderKey, ReaderKey>"])),
+        bad: holdsWhere(FORMS.concat(CERT, ["public typealias C1 = Pair2<ReaderKey, WriterKey>"])),
     };
 
     // the moment: a record typed, and a record erased
@@ -5588,17 +5594,18 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     # them. WORLDS are everything else, and a world's name inside a mechanism is
     # a leak, not a feature.
     #
-    # Swept by machine rather than by eye, the port's own literals fall in
-    # exactly two piles: five that are the language, and twenty-five that are one
-    # reference world — its ranks, its departments, its shares, its gates. The
-    # same sweep on the corpus reads WhereJudge with five language names and no
-    # world at all, and the plain Judge with thirty-six names and every one of
-    # them that world's. So the where court is already the clean mechanism, and
-    # the leak is the plain one — which is exactly what its behaviour says: it
-    # refuses a presented protocol and carries a table.
+    # Swept by machine rather than by eye, the port's own literals once fell in
+    # two piles: five that were the language of counting, and twenty-five that
+    # are one reference world — its ranks, its departments, its shares, its
+    # gates. The counting left with the where pass: where and count are the
+    # contract's sample's (bin/court-wasm), and the plain port adds nothing, so
+    # no counting form may appear in it now. The leak is the plain court's, which
+    # is exactly what its behaviour says: it refuses a presented protocol and
+    # carries a table.
     #
-    # This holds the pile still. A new world name in our port goes red here, and
-    # when the leak is swept the number drops rather than a comment going stale.
+    # This holds the pile still. A counting form or a new world name in our port
+    # goes red here, and when the leak is swept the number drops rather than a
+    # comment going stale.
     port = open(os.path.join(HERE, "bin", "judge.js"), encoding="utf-8").read()
     LANGUAGE = {"Unit", "Plus", "Twice", "Times", "Never"}
     LEAKED = {"IndividualContributor", "Lead", "Manager", "Finance", "Engineering",
@@ -5609,9 +5616,9 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               "VerifiedAtRank", "VerifiedAtWorkplace"}
     AXES = {"Rank", "Home", "Site", "Given", "Family", "Sex", "Born", "Next"}
     found = set(re.findall(r'"([A-Z][A-Za-z]+)"', port))
-    S.append(("the mechanism holds the language and one named leak, and nothing else",
-              # the language belongs and is all there
-              LANGUAGE <= found
+    S.append(("the mechanism holds no counting form and one named leak, and nothing else",
+              # the counting forms belong to the sample, none of them here
+              not (LANGUAGE & found)
               # every world name in it is one of the ones already counted: a new
               # one means a world walked into the mechanism while nobody looked
               and not (found - LANGUAGE - LEAKED - AXES)

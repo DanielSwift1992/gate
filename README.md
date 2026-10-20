@@ -345,11 +345,19 @@ bin/organization-judge
                 showcase's organization court contract
 bin/judge.js · bin/judge-cli.js · bin/judge-wasm.js · bin/court-wasm/
                 the courts for machines the binaries were not built for:
-                the plain court as a node port held to it line for line,
-                and the certificate and count courts as the contract's
-                Rust sample, a second implementation built for wasm32 at
-                the pin bin/court-wasm.from records (bin/build-court-wasm.sh
-                rebuilds it), held to the binary by the suite and the battery
+                the plain court as a node port held to bin/organization-judge
+                by the organization contract (8/8) and by the battery on the
+                company's worlds, and the certificate and count courts as the
+                contract's Rust sample, a second implementation built for
+                wasm32 at the pin bin/court-wasm.from records
+                (bin/build-court-wasm.sh rebuilds it), held to the binary by
+                the suite and the battery. The port reads no `where` clause:
+                where and count are the sample's alone. Its domain is read
+                from the forms a world presents (conformers of Department,
+                the axes a protocol states), where the Swift court states the
+                company's table; on the company's worlds the two agree, and
+                on the shelf's own pages, which are not company fragments,
+                they refuse differently (6 of 18 pages alike, measured)
 bin/gate-cli.swift
                 the CLI, one file of Swift: every verb this tool answers,
                 with the courts compiled in at their own pins
