@@ -616,48 +616,10 @@ func uncommented(_ text: String) -> String {
 struct WorldRow { let path: String; let role: String }
 
 func manifestRows(_ dir: String) -> (rows: [WorldRow], manifest: String?) {
-    let mp = (dir as NSString).appendingPathComponent("gate.manifest.swift")
-    guard let text = try? String(contentsOfFile: mp, encoding: .utf8) else { return ([], nil) }
-    let code = uncommented(text)
-    var literal: [String: String] = [:]
-    for m in matches("extension (\\w+)\\b[^{]*\\{(.*?)\\n(?=public |extension |\\Z)",
-                     code + "\n", dotAll: true) where m.count == 2 {
-        let found = matches("typeName:\\s*String\\s*\\{\\s*\"([^\"]*)\"\\s*\\}", m[1])
-        if let first = found.first, first.count == 1 { literal[m[0]] = first[0] }
-    }
-    // ── AND EACH ROW IS READ AT ITS OWN NAME. One pattern over the whole
-    // document, with the dot matching newlines, let the FIRST declaration in the
-    // file swallow the second: `public enum WorldFile: Role {}` is written on one
-    // line, so a body search from there ran to the next `\n}`, which belonged to
-    // the row after it. The python side never had that hole because it finds the
-    // heads first and then asks for each body BY NAME; this does the same, and
-    // the row it was losing is the first row of this repository's own layout.
-    var rows: [WorldRow] = []
-    for m in matches("public enum (\\w+): (Mine|Theirs|WorldFile|SeamFile) \\{", code)
-    where m.count == 2 {
-        guard let path = literal[m[0]], !path.isEmpty else { continue }
-        let body = matches("public enum " + m[0] + "\\b[^{]*\\{(.*?)\\n\\}",
-                           code + "\n", dotAll: true).first?.first ?? ""
-        let kind = matches("typealias\\s+Kind\\s*=\\s*(\\w+)", body).first?.first ?? ""
-        let role: String
-        switch kind {
-        case "WorldFile": role = "world"
-        case "SeamFile": role = "seam"
-        case "FormsFile": role = "forms"
-        case "JudgeFile": role = "judge"
-        case "CarriedFile": role = "carried"
-        case "ToolFile": role = "tool"
-        case "DrawingProfileFile": role = "drawing-profile"
-        case "Seam": role = "seam"
-        default:
-            // no Kind axis: the older spellings said it in the atom itself
-            role = kind.isEmpty ? (m[1] == "WorldFile" ? "world"
-                                   : m[1] == "SeamFile" ? "seam" : "")
-                                : kind.lowercased()
-        }
-        if !role.isEmpty { rows.append(WorldRow(path: path, role: role)) }
-    }
-    return (rows, mp)
+    let parsed = layoutRowsFull(dir)
+    return (parsed.rows.compactMap { r in
+        r.role.map { WorldRow(path: r.path, role: $0) }
+    }, parsed.manifest)
 }
 
 // ── AND THE TWO FACTS A JOURNAL READS BESIDE GIT. An email is not a person:
@@ -1387,10 +1349,41 @@ let STATUS_ROLES: [(String, String)] = [
     ("tool", "the tool's own source: held by the battery's parity, "
            + "and by no court of this world"),
 ]
-let ROLE_OF_KIND: [String: String] = ["WorldFile": "world", "SeamFile": "seam",
-                                      "FormsFile": "forms", "JudgeFile": "judge",
-                                      "CarriedFile": "carried", "ToolFile": "tool",
-                                      "Seam": "seam", "DrawingProfileFile": "drawing-profile"]
+// The installed readers have code here; their Kind bindings live on the shelf.
+let ROLE_OF_READER = ["FormsReaderV1": "forms", "OrganizationReaderV1": "world",
+                      "CarriedReaderV1": "carried", "DrawingProfileReaderV1": "drawing-profile"]
+let LEGACY_KIND_ROLES = ["SeamFile": "seam", "JudgeFile": "judge", "ToolFile": "tool", "Seam": "seam"]
+var KIND_READERS_CACHE: [String: String]? = nil
+func installedKindReaders() -> [String: String] {
+    if let readers = KIND_READERS_CACHE { return readers }
+    let text = codeOf(shelf().first(where: { $0.name == "manifest" })?.text ?? "")
+    var readers: [String: String] = [:]
+    for m in matches("public enum (\\w+): Role \\{([^{}]*)\\}", text, dotAll: true) {
+        let axes = matches("typealias Reader\\s*=\\s*(\\w+)", m[1])
+        if axes.count == 1 { readers[m[0]] = axes[0][0] }
+    }
+    KIND_READERS_CACHE = readers
+    return readers
+}
+func roleOfKind(_ kind: String) -> String {
+    if let reader = installedKindReaders()[kind] { return ROLE_OF_READER[reader] ?? kind.lowercased() }
+    return LEGACY_KIND_ROLES[kind] ?? kind.lowercased()
+}
+func unsupportedKind(_ kind: String) -> Bool {
+    return LEGACY_KIND_ROLES[kind] == nil
+        && installedKindReaders()[kind].flatMap { ROLE_OF_READER[$0] } == nil
+}
+
+func kindBindingGuards(_ rows: [LayoutRow], _ manifest: String) -> [(address: String, claim: String)] {
+    let text = codeOf(manifest)
+    return rows.compactMap { row in
+        guard let kind = row.kind, let reader = installedKindReaders()[kind] else { return nil }
+        let bodies = matches("public enum " + kind + "\\s*:\\s*Role\\s*\\{([^{}]*)\\}", text, dotAll: true)
+        let axes = bodies.flatMap { matches("typealias Reader\\s*=\\s*(\\w+)", $0[0]).map { $0[0] } }
+        guard !axes.isEmpty && axes != [reader] else { return nil }
+        return ("gate.manifest.swift:\(row.line)", "\(row.name ?? row.path): Kind \(kind) uses installed Reader \(reader); a local declaration cannot replace it")
+    }
+}
 
 // the shelf, loaded once per run the way the other carrier loads it at import:
 // filled by the status door, empty on every carried argv, so no vein pays for
@@ -1649,6 +1642,7 @@ struct LayoutRow {
     var written: String?
     var opens: String?
     var line: Int
+    var kind: String? = nil
 }
 struct Layout { var manifest: String; var rows: [LayoutRow] }
 struct WorldState { var facts: String?; var tables: String?; var layout: Layout? }
@@ -1690,7 +1684,7 @@ func layoutRowsFull(_ dir: String, said: String? = nil) -> (rows: [LayoutRow], m
         if path.isEmpty { path = field("typeName") ?? "" }
         if path.isEmpty { continue }
         let kind = axis("Kind")
-        var role: String? = kind.map { ROLE_OF_KIND[$0] ?? $0.lowercased() }
+        var role: String? = kind.map { roleOfKind($0) }
         if role == nil || role!.isEmpty { role = field("role") }
         if role == nil || role!.isEmpty {
             role = atom == "WorldFile" ? "world" : atom == "SeamFile" ? "seam" : nil
@@ -1701,7 +1695,7 @@ func layoutRowsFull(_ dir: String, said: String? = nil) -> (rows: [LayoutRow], m
                               source: (atom == "Mine" || atom == "WorldFile") ? "mine" : "theirs",
                               path: path, role: role,
                               from: (from?.isEmpty ?? true) ? nil : from,
-                              written: axis("Written"), opens: axis("Opens"), line: at))
+                              written: axis("Written"), opens: axis("Opens"), line: at, kind: kind))
     }
     if rows.isEmpty && !code.contains("Mine") && !code.contains("WorldFile") {
         // older layouts: a bare list of paths, every one of them a world file
@@ -1748,15 +1742,16 @@ func discoverWorld() -> WorldState {
 
 func worldFilesOf(_ w: WorldState) -> [String] {
     var files: [String] = []
-    if let f = w.facts, FileManager.default.fileExists(atPath: f) { files.append(f) }
-    if let d = layoutDir(w) {
+    let taken = takenInputs(w)
+    if let f = w.facts, FileManager.default.fileExists(atPath: f),
+       !(taken.v2 && (w.layout?.rows.contains { $0.source == "theirs" && joinPath(layoutDir(w) ?? ".", $0.path) == f } ?? false)) { files.append(f) }
+    if layoutDir(w) != nil {
         // filtered against the list as it stood, not as it grows: two rows
         // naming one file keep both copies here, exactly as the other carrier
         // keeps them, and the second-row guard is the one that refuses the pair
         let stood = files
         for r in w.layout!.rows where r.role == "world" {
-            let p = (d as NSString).appendingPathComponent(r.path)
-            if !stood.contains(p) { files.append(p) }
+            if let p = inputPath(r, w, taken), !stood.contains(p) { files.append(p) }
         }
     }
     return files
@@ -1838,13 +1833,55 @@ func undeclaredHere(_ w: WorldState) -> [String] {
     return out
 }
 
-// `liveRows` and `liveText` override the document on disk, for the same reason
-// the forms guard takes a live text: the layout is judged as it is typed, and
-// two of the checks below ask what the DOCUMENT says rather than what its rows
-// say, so the text comes with them.
+// JSON is decoded by Foundation. This index keeps source lines for diagnostics,
+// including compact records and a repeated object key that decoding would hide.
+struct RecordSpots {
+    var lines: [String: Int] = [:]
+    var repeated: [(String, Int)] = []
+    init(_ text: String) {
+        let tokens = matchesAt(#"("(?:\\.|[^"\\])*"|[{}\[\]:,]|[^\s{}\[\]:,]+)"#, text)
+        var i = 0
+        func walk(_ path: String) {
+            guard i < tokens.count else { return }
+            let token = tokens[i].groups[0]
+            lines[path] = tokens[i].line
+            i += 1
+            if token == "{" {
+                var keys = Set<String>()
+                while i < tokens.count && tokens[i].groups[0] != "}" {
+                    let keyToken = tokens[i]
+                    let key = (try? JSONSerialization.jsonObject(with: Data(keyToken.groups[0].utf8), options: .fragmentsAllowed)) as? String ?? ""
+                    let next = path + "/" + key
+                    if !keys.insert(key).inserted { repeated.append((next, keyToken.line)) }
+                    i += 2 // key and colon
+                    walk(next)
+                    if i < tokens.count && tokens[i].groups[0] == "," { i += 1 }
+                }
+                i += 1
+            } else if token == "[" {
+                var index = 0
+                while i < tokens.count && tokens[i].groups[0] != "]" {
+                    walk(path + "/\(index)"); index += 1
+                    if i < tokens.count && tokens[i].groups[0] == "," { i += 1 }
+                }
+                i += 1
+            }
+        }
+        walk("")
+    }
+    func address(_ path: String) -> String {
+        var parent = path
+        while lines[parent] == nil && !parent.isEmpty {
+            parent = String(parent.prefix(upTo: parent.lastIndex(of: "/")!))
+        }
+        return ".gate/forms-definitions.json:\(lines[parent] ?? 1)"
+    }
+}
+
 // The byte resolver is independent of a file's reader. A v2 record names every
 // taken input, including its local view, Git object and exact source bytes.
 struct TakenResolution {
+    var v2 = false
     var paths: [String: String] = [:]
     var bad: [(address: String, claim: String)] = []
 }
@@ -1852,68 +1889,134 @@ func takenInputs(_ w: WorldState) -> TakenResolution {
     var result = TakenResolution()
     guard let root = layoutDir(w), let layout = w.layout else { return result }
     let record = joinPath(root, ".gate/forms-definitions.json")
-    guard let data = FileManager.default.contents(atPath: record),
-          let spec = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
-          spec["format"] as? Int == 2 else { return result }
-    guard let files = spec["files"] as? [[String: String]] else {
-        result.bad.append((".gate/forms-definitions.json:1", "v2 files must be an input list")); return result
+    guard let data = FileManager.default.contents(atPath: record) else {
+        // Legacy single-world rows can name non-Git revisions. A full Git pin
+        // needs its byte record even when that record has been lost.
+        for row in layout.rows where row.source == "theirs"
+            && row.from?.range(of: "@([0-9a-f]{40})$", options: .regularExpression) != nil {
+            result.v2 = true
+            result.bad.append(("gate.manifest.swift:\(row.line)", "\(row.name ?? row.path): the pinned input record .gate/forms-definitions.json is missing"))
+        }
+        return result
+    }
+    guard let spec = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else {
+        result.v2 = true
+        result.bad.append((".gate/forms-definitions.json:1", "cannot read the input record as a JSON object")); return result
+    }
+    let spots = RecordSpots(String(decoding: data, as: UTF8.self))
+    func bad(_ path: String, _ why: String) {
+        result.bad.append((spots.address(path), path + ": " + why))
+    }
+    if spec["format"] == nil || spec["format"] as? Int == 1 { return result }
+    result.v2 = true
+    guard spec["format"] as? Int == 2 else {
+        bad("/format", "unsupported input record version; expected 2"); return result
+    }
+    let fields: Set<String> = ["format", "files", "languages", "plain_fragments", "shelf_overrides"]
+    for field in Set(spec.keys).subtracting(fields).sorted() { bad("/" + field, "unknown v2 record field") }
+    for (path, line) in spots.repeated where path == "/format" || path == "/files" || path.hasPrefix("/files/") {
+        result.bad.append((".gate/forms-definitions.json:\(line)", path + ": repeated field"))
+    }
+    guard let files = spec["files"] as? [Any] else {
+        bad("/files", "v2 files must be an input list"); return result
     }
     var seen = Set<String>()
-    for item in files {
-        let at = ".gate/forms-definitions.json:1"
-        guard Set(item.keys) == Set(["row", "path", "repository", "revision", "source_path", "sha256"]),
-              let name = item["row"], seen.insert(name).inserted,
-              let row = layout.rows.first(where: { $0.name == name && $0.source == "theirs" }),
-              let repository = item["repository"], !repository.isEmpty, !repository.hasPrefix("-"),
-              let revision = item["revision"], revision.range(of: "^[0-9a-f]{40}$", options: .regularExpression) != nil,
-              let source = item["source_path"], !source.isEmpty, !source.hasPrefix("/"), !source.split(separator: "/").contains(".."),
-              let path = item["path"], path == row.path, !leavesWorldHere(path, root),
-              let hash = item["sha256"], hash.range(of: "^[0-9a-f]{64}$", options: .regularExpression) != nil,
-              row.from == repository + "@" + revision else {
-            result.bad.append((at, "input row, local path, repository@revision or sha256 disagrees with its manifest")); continue
+    var valid: [(String, [String: String])] = []
+    for (index, value) in files.enumerated() {
+        let at = "/files/\(index)"
+        guard let item = value as? [String: Any] else { bad(at, "an input must be an object"); continue }
+        let fields: Set<String> = ["row", "path", "repository", "revision", "source_path", "sha256"]
+        for field in fields.sorted() where !(item[field] is String) { bad(at + "/" + field, "a string is required") }
+        for field in Set(item.keys).subtracting(fields).sorted() { bad(at + "/" + field, "unknown input field") }
+        guard let input = item as? [String: String], Set(input.keys) == fields else { continue }
+        let name = input["row"]!
+        guard seen.insert(name).inserted else { bad(at + "/row", "repeated row " + name); continue }
+        let rows = layout.rows.filter { $0.name == name }
+        guard rows.count == 1, let row = rows.first, row.source == "theirs" else {
+            bad(at + "/row", "\(name) must name exactly one Theirs row in gate.manifest.swift"); continue
         }
+        guard row.kind != nil else {
+            bad(at + "/row", "\(name): a v2 input row must declare Kind at gate.manifest.swift:\(row.line)"); continue
+        }
+        let before = result.bad.count
+        let repository = input["repository"]!, revision = input["revision"]!, source = input["source_path"]!
+        let path = input["path"]!, hash = input["sha256"]!
+        if repository.isEmpty || repository.hasPrefix("-") || repository.contains("\n") || repository.contains("\0") {
+            bad(at + "/repository", "a Git URL or local repository path is required")
+        }
+        if revision.range(of: "^[0-9a-f]{40}$", options: .regularExpression) == nil {
+            bad(at + "/revision", "a full lowercase commit ID is required")
+        }
+        if source.isEmpty || source.contains("\\") || pathRoot(source, .posix) != nil || pathRoot(source, .windows) != nil
+            || source.split(separator: "/", omittingEmptySubsequences: false).contains(where: { $0.isEmpty || $0 == ".." || $0 == "." }) {
+            bad(at + "/source_path", "a repository-relative file path is required")
+        }
+        if path.isEmpty || pathRoot(path, .posix) != nil || pathRoot(path, .windows) != nil || leavesWorldHere(path, root) || path != row.path {
+            bad(at + "/path", "\(name) path disagrees with its manifest or leaves the world")
+        }
+        if hash.range(of: "^[0-9a-f]{64}$", options: .regularExpression) == nil { bad(at + "/sha256", "a lowercase SHA-256 is required") }
+        if row.from != repository + "@" + revision {
+            bad(at + "/revision", "\(name) At disagrees with repository@revision at gate.manifest.swift:\(row.line)")
+        }
+        if result.bad.count == before { valid.append((at, input)) }
+    }
+    for row in layout.rows where row.source == "theirs" && row.name != nil && !seen.contains(row.name!) {
+        result.bad.append(("gate.manifest.swift:\(row.line)", "\(row.name!): a v2 taken row has no input record"))
+    }
+    guard result.bad.isEmpty else { return result }
+    for (at, input) in valid {
+        let name = input["row"]!, repository = input["repository"]!, revision = input["revision"]!
+        let source = input["source_path"]!, hash = input["sha256"]!
         let cache = joinPath(toolRoot(), "bin/.inputs/" + sha256Hex(Data(repository.utf8)) + "/" + revision)
         let target = joinPath(cache, sha256Hex(Data(source.utf8)) + "-" + hash)
         if let bytes = FileManager.default.contents(atPath: target) {
             guard sha256Hex(bytes) == hash else {
-                result.bad.append((path + ":1", "cached input bytes differ from their sha256")); continue
+                bad(at + "/sha256", "\(name): cached input bytes differ from their sha256"); continue
             }
             result.paths[name] = target; continue
         }
         do { try FileManager.default.createDirectory(atPath: cache, withIntermediateDirectories: true) }
-        catch { result.bad.append((path + ":1", "cannot create the input cache")); continue }
+        catch { bad(at, "\(name): cannot create the input cache"); continue }
         func git(_ words: [String]) -> (Int32, Data) {
             let reply = runGitBytes(words, cache)
             return (reply.code, reply.bytes)
         }
         if !FileManager.default.fileExists(atPath: joinPath(cache, ".git")), git(["init", "-q"]).0 != 0 {
-            result.bad.append((path + ":1", "cannot initialize the input object cache")); continue
+            bad(at, "\(name): cannot initialize the input object cache"); continue
         }
         if git(["cat-file", "-t", revision]).0 != 0,
            git(["fetch", "-q", "--depth", "1", repository, revision]).0 != 0 {
-            result.bad.append((path + ":1", "cannot fetch the declared input revision")); continue
+            bad(at + "/revision", "\(name): cannot fetch the declared input revision"); continue
         }
         let objectKind = git(["cat-file", "-t", revision])
-        guard String(data: objectKind.1, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) == "commit",
-              String(data: git(["cat-file", "-t", revision + ":" + source]).1, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) == "blob" else {
-            result.bad.append((path + ":1", "the pin must name a commit and its source_path a file blob")); continue
+        guard String(data: objectKind.1, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) == "commit" else {
+            bad(at + "/revision", "\(name): the pin must name a commit"); continue
+        }
+        guard String(data: git(["cat-file", "-t", revision + ":" + source]).1, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) == "blob" else {
+            bad(at + "/source_path", "\(name): source_path must name a file blob at the pin"); continue
         }
         let blob = git(["show", revision + ":" + source])
         guard blob.0 == 0, sha256Hex(blob.1) == hash else {
-            result.bad.append((path + ":1", "Git source bytes differ from the declared sha256")); continue
+            bad(at + "/sha256", "\(name): Git source bytes differ from the declared sha256"); continue
         }
         do {
-            try FileManager.default.createDirectory(atPath: cache, withIntermediateDirectories: true)
             try blob.1.write(to: URL(fileURLWithPath: target), options: .atomic)
             result.paths[name] = target
-        } catch { result.bad.append((path + ":1", "cannot cache the verified input")) }
-    }
-    for row in layout.rows where row.source == "theirs" && row.name != nil && !seen.contains(row.name!) {
-        result.bad.append(("gate.manifest.swift:\(row.line)", "a v2 taken row has no input record"))
+        } catch { bad(at, "\(name): cannot cache the verified input") }
     }
     return result
 }
 
+func inputPath(_ row: LayoutRow, _ w: WorldState, _ taken: TakenResolution) -> String? {
+    if row.source == "theirs" && taken.v2 { return taken.paths[row.name ?? ""] }
+    guard let root = layoutDir(w), !leavesWorldHere(row.path, root) else { return nil }
+    return joinPath(root, row.path)
+}
+
+// `liveRows` and `liveText` override the document on disk, for the same reason
+// the forms guard takes a live text: the layout is judged as it is typed, and
+// two of the checks below ask what the DOCUMENT says rather than what its rows
+// say, so the text comes with them.
 func manifestGuards(_ w: WorldState, liveRows: [LayoutRow]? = nil,
                     liveText: String? = nil) -> [(address: String, claim: String)] {
     // layout guards, both directions: a declared file exists, a neighbouring
@@ -1933,9 +2036,14 @@ func manifestGuards(_ w: WorldState, liveRows: [LayoutRow]? = nil,
     let liveText = uncommented(liveText ?? (readText(layout.manifest) ?? ""))
     let taken = takenInputs(w)
     bad += taken.bad
+    bad += kindBindingGuards(live, liveText)
     var seenPaths: [String: String] = [:]
+    var seenRows = Set<String>()
     for r in live {
         let said = r.name ?? "a row with no name"
+        if let name = r.name, !seenRows.insert(name).inserted {
+            bad.append(("\(man):\(r.line)", "\(name): repeated manifest row"))
+        }
         if let role = r.role, let atom = ROLE_ATOM[role],
            liveText.contains("public typealias Kind = " + atom),
            !declaresRole(liveText, atom) {
@@ -1968,7 +2076,8 @@ func manifestGuards(_ w: WorldState, liveRows: [LayoutRow]? = nil,
                         "`\(said)` is filed under `seam`, and \(r.path) does not "
                       + "say it is one side of one: a side states a contract or claims "
                       + "to carry one, in its own first lines"))
-        } else if !STATUS_ROLES.contains(where: { $0.0 == r.role }) {
+        } else if !STATUS_ROLES.contains(where: { $0.0 == r.role }),
+                  !(r.kind.map { unsupportedKind($0) } ?? false) {
             bad.append(("\(man):\(r.line)",
                         "`\(said)` is for `\(r.role!)`, which no court here reads. "
                       + "A row gate cannot place is refused, never quietly taken as a "
@@ -1996,7 +2105,8 @@ func manifestGuards(_ w: WorldState, liveRows: [LayoutRow]? = nil,
         // person cannot act on when the row and the folder are both in front
         // of them: a path with a stray character on the end reads as the path
         // it almost is. The looked-for path travels in quotes.
-        let looked = joinPath(d, r.path)
+        let looked = inputPath(r, w, taken) ?? joinPath(d, r.path)
+        if r.source == "theirs" && taken.v2 && taken.paths[r.name ?? ""] == nil { continue }
         if !FileManager.default.fileExists(atPath: looked) {
             bad.append(("\(man):\(r.line)",
                         "the manifest declares \(r.path), and no such file exists at "
@@ -2012,8 +2122,7 @@ func manifestGuards(_ w: WorldState, liveRows: [LayoutRow]? = nil,
         // the checkout's: on two platforms this guard fired over a world that
         // holds here, and a reader that spells a text its own way is how that
         // happens.
-        let p = joinPath(d, r.path)
-        guard let whole = readText(p) else { continue }
+        guard let p = inputPath(r, w, taken), let whole = readText(p) else { continue }
         let head = whole.prefix(1200).components(separatedBy: "\n").prefix(8)
         var want: String? = nil
         var saw = false
@@ -2233,12 +2342,12 @@ func presentedOver(_ w: WorldState, _ shelfName: String)
     let base = layoutDir(w) ?? "."
     var mine: [(name: String, path: String, line: Int, raw: String)] = []
     var clash: [(address: String, claim: String)] = []
+    let taken = takenInputs(w)
     for r in rows where r.role == "forms" {
         if SHIPPED_SET.contains(absPath((base as NSString).appendingPathComponent(r.path))) {
             continue
         }
-        let fp = (base as NSString).appendingPathComponent(r.path)
-        guard FileManager.default.fileExists(atPath: fp), let body = readText(fp) else { continue }
+        guard let fp = inputPath(r, w, taken), let body = readText(fp) else { continue }
         var depth = 0
         for (i0, line) in body.components(separatedBy: "\n").enumerated() {
             let i = i0 + 1
@@ -2350,8 +2459,7 @@ func formsDefinitions(_ w: WorldState) -> (paths: [String], bad: [(address: Stri
         return ([], [])
     }
     guard let data = FileManager.default.contents(atPath: record),
-          let spec = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-          let files = spec["files"] as? [[String: String]], !files.isEmpty else {
+          let spec = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
         return ([], [(".gate/forms-definitions.json:1", "cannot read the world's definitions record")])
     }
     if spec["format"] as? Int == 2 {
@@ -2368,6 +2476,10 @@ func formsDefinitions(_ w: WorldState) -> (paths: [String], bad: [(address: Stri
             }
         }
         return (selected, [])
+    }
+    guard spec["format"] == nil || spec["format"] as? Int == 1 else { return ([], takenInputs(w).bad) }
+    guard let files = spec["files"] as? [[String: String]], !files.isEmpty else {
+        return ([], [(".gate/forms-definitions.json:1", "cannot read the world's definitions record")])
     }
     var paths: [String] = [], bad: [(address: String, claim: String)] = []
     for item in files {
@@ -2396,17 +2508,24 @@ func formsGuards(_ w: WorldState, _ size: inout [String: Int],
     // court with no scope rule no way to choose, and it reads nothing. The shelf
     // worlds an operator overrides are judged each as its own stream
     guard let layout = w.layout else { return [] }
-    let d = (layout.manifest as NSString).deletingLastPathComponent
-    let rows = layout.rows.filter { $0.role == "forms"
-        && FileManager.default.fileExists(atPath: (d as NSString).appendingPathComponent($0.path)) }
+    for row in layout.rows {
+        if let kind = row.kind, unsupportedKind(kind) {
+            let reader = installedKindReaders()[kind] ?? "unavailable"
+            unsupported.append(FormResidue(id: row.name ?? row.path, address: "gate.manifest.swift:\(row.line)",
+                reason: "Kind \(kind) has no installed supported Reader (\(reader))"))
+        }
+    }
+    let taken = takenInputs(w)
+    if !taken.bad.isEmpty { return taken.bad }
+    let rows = layout.rows.filter { $0.role == "forms" && inputPath($0, w, taken) != nil }
     if rows.isEmpty { return [] }
     var bad: [(address: String, claim: String)] = []
     let definitions = formsDefinitions(w)
     bad += definitions.bad
     if !definitions.bad.isEmpty { return bad }
     func bodyOf(_ r: LayoutRow) -> String {
-        if let typed = live[r.path] { return typed }
-        return readText((d as NSString).appendingPathComponent(r.path)) ?? ""
+        if r.source == "mine", let typed = live[r.path] { return typed }
+        return inputPath(r, w, taken).flatMap { readText($0) } ?? ""
     }
     // where each name is declared among some rows: a refusal is addressed to
     // the row and line that declare the claim it names
@@ -2914,11 +3033,13 @@ func benchFilesOf(_ w: WorldState) -> [(String, String)] {
     // slot: the list the panel opens, and the list the stream guards walk
     guard let f = w.facts else { return [] }
     let base = (absPath(f) as NSString).deletingLastPathComponent
-    var out: [(String, String)] = worldFilesOf(w).map { (relPath($0, base), $0) }
+    let taken = takenInputs(w)
+    var out: [(String, String)] = worldFilesOf(w).map { path in
+        ((w.layout?.rows.first { inputPath($0, w, taken) == path })?.path ?? relPath(path, base), path)
+    }
     for r in w.layout?.rows ?? [] where r.role == "forms"
         || (r.role == "carried" && r.source == "mine" && r.path.hasSuffix(".swift")) {
-        let p = (base as NSString).appendingPathComponent(r.path)
-        if FileManager.default.fileExists(atPath: p),
+        if let p = inputPath(r, w, taken), FileManager.default.fileExists(atPath: p),
            !out.contains(where: { $0.0 == r.path && $0.1 == p }) {
             out.append((r.path, p))
         }
@@ -3803,6 +3924,7 @@ struct StatusAnswer {
     var world: [String]? = nil          // declarations, lookups, premises
     var whereSize: [String: Int] = [:]
     var unsupported: [FormResidue] = []
+    var readers: [StatusJSON] = []
     var next = ""
     // the same ladder read from the bench: the room the reader is in is a rung
     // already taken, so it is not offered back to them (`serve`, below)
@@ -3882,6 +4004,11 @@ func statusAnswer() -> StatusAnswer {
         judged = Set((w.layout?.rows ?? []).filter { $0.role == "forms" }.map { $0.path }).sorted()
     }
     answer.judged = judged
+    answer.readers = (w.layout?.rows ?? []).compactMap { row in
+        guard let kind = row.kind, let reader = installedKindReaders()[kind] else { return nil }
+        return .object([("row", .text(row.name ?? row.path)), ("kind", .text(kind)),
+                        ("reader", .text(reader)), ("address", .text("gate.manifest.swift:\(row.line)"))])
+    }
     answer.refusals = refusals
     answer.judgeMs = times.last
     answer.wallMs = wallMs
@@ -3927,6 +4054,7 @@ func statusPairs(_ a: StatusAnswer) -> [(String, StatusJSON)] {
         ("wall_ms", .raw(String(a.wallMs))),
         ("mutates", .raw("false")),
     ]
+    if !a.readers.isEmpty { pairs.append(("readers", .list(a.readers))) }
     if let m = a.world {
         pairs.append(("world", .object([("declarations", .raw(m[0])),
                                         ("lookups", .raw(m[1])),
@@ -11610,8 +11738,11 @@ func drawingInputs(_ w: WorldState, counts: Bool = true) -> (plan: [String: Any]
     guard profiles.count == 1 else { return refused("gate.manifest.swift:1", "one DrawingProfileFile is required") }
     let resolved = takenInputs(w)
     if let bad = resolved.bad.first { return refused(bad.address, bad.claim) }
+    if let bad = kindBindingGuards(w.layout?.rows ?? [], readText(w.layout?.manifest ?? "") ?? "").first {
+        return refused(bad.address, bad.claim)
+    }
     func source(_ row: LayoutRow) -> String {
-        resolved.paths[row.name ?? ""] ?? (leavesWorldHere(row.path, root) ? "" : absPath(joinPath(root, row.path)))
+        inputPath(row, w, resolved) ?? ""
     }
     let row = profiles[0], path = source(row)
     guard let bytes = FileManager.default.contents(atPath: path), let text = String(data: bytes, encoding: .utf8) else { return refused(row.path + ":1", "the drawing profile input is missing") }

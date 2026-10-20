@@ -2,10 +2,9 @@
 // role: gate's own
 // speaks-for: the-tool
 //
-// This page is not forms. It is the text this tool WRITES when a world
-// needs a layout and has none, and it lives here so that both carriers
-// write the same one: a template kept in two places is two texts the day
-// somebody improves one of them.
+// This page keeps the installed Kind bindings and the text this tool WRITES
+// when a world needs a layout. Both carriers take the template below the mark
+// from this page.
 //
 // The card above is the shelf's, not the world's: `role:` and
 // `speaks-for:` are how a page tells this tool what it is. The line below
@@ -13,6 +12,20 @@
 // rather than by counting lines, and `gate stdlib show manifest` shows you
 // both halves as they are.
 //
+// The installed Kind bindings stay on the shelf, above the world template.
+public enum FormsReaderV1: Role {}
+public enum OrganizationReaderV1: Role {}
+public enum CarriedReaderV1: Role {}
+public enum FormsFile: Role {
+    public typealias Reader = FormsReaderV1
+}
+public enum WorldFile: Role {
+    public typealias Reader = OrganizationReaderV1
+}
+public enum CarriedFile: Role {
+    public typealias Reader = CarriedReaderV1
+}
+
 // ── what is written into a world begins here ──
 // One list, three columns: whose source a file is, which court reads it,
 // and, for anything taken, the revision it was taken at. gate obeys this
@@ -30,7 +43,7 @@
 // text. `Written` names another row: the words a page is written in, so the
 // two are read together.
 public protocol Role {}
-// The installed reader, fixed by Kind. Local rows cannot replace its reader.
+// Each Kind names its installed reader. A world's declaration keeps this choice.
 public enum DrawingProfileReaderV1: Role {}
 public enum DrawingProfileFile: Role {
     public typealias Reader = DrawingProfileReaderV1

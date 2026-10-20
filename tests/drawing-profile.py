@@ -56,6 +56,8 @@ def run(cache, site):
                 answer = subprocess.run(['node', str(ROOT / 'bin/drawing-profile.js'), base],
                                         input=json.dumps(plan), capture_output=True, text=True)
                 return plan, answer
+            status = json.loads(subprocess.run([str(ROOT / 'gate'), 'status', '--json'], cwd=world, capture_output=True, text=True).stdout)
+            assert any(r['kind'] == 'DrawingProfileFile' and r['reader'] == 'DrawingProfileReaderV1' for r in status['readers'])
             plan, answer = ask()
             assert answer.returncode == 0, answer.stderr
             first = json.loads(answer.stdout)
