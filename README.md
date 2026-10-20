@@ -359,14 +359,15 @@ bin/judge.js · bin/judge-cli.js · bin/judge-wasm.js · bin/court-wasm/
                 with zero company premises does not validate a foreign domain.
                 Passing these finite suites does not establish general equivalence.
 bin/renderer.js · bin/press.js
-                the drawing view's engine: renderer.js is a second
-                implementation, on JS, of the kit's span engine
-                (DocumentKit's Vector.swift in the theory's showcase), held
-                to it by the showcase's goldens and by the playground's own
-                checks run over these files; press.js applies a drawn key's
-                rule to one alias of the world. Both come from the typed
-                playground at the revision bin/drawing.from names, until
-                that repository folds into this one and the record goes
+                the browser port of DocumentKit, held to the owner's executed
+                Contracts/Drawing/v0.1 through bin/playground-worlds.from.
+                tests/drawing.js compares exact input hashes, SVG bytes and
+                addressed refusals. Unsupported forms refuse instead of drawing;
+                an explicit Backdrop is currently outside this port's subset.
+                At scale stays not-compared. This finite contract does not
+                establish equivalence to arbitrary Swift. press.js applies a
+                drawn key to one alias; its historical pin and the archived
+                renderer replay remain recorded in bin/drawing.from.
 bin/gate-cli.swift
                 the CLI, one file of Swift: every verb this tool answers,
                 with the courts compiled in at their own pins

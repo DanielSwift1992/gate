@@ -3133,15 +3133,9 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               all(os.path.exists(os.path.join(ven, ".gate", "bin", f))
                   for f in ("renderer.js", "press.js", "drawing.from", "renderer-security.patch"))))
 
-    # ── AND THE DRAWING ENGINE IS HELD BY THE PAGE IT CAME FROM. bin/renderer.js
-    # and bin/press.js are the typed playground's at the revision bin/drawing.from
-    # names. The playground's check.js replays twenty-nine checks over them: the
-    # dynamics draw byte for byte against the showcase's golden, the lamp's and
-    # the atom's colour counts, the golden plate value for value, the company's
-    # four verdicts. So the playground is fetched at that pin, the two files here
-    # are laid over its own, and its checks are run in its own tree: the moved
-    # engine must pass the page's checks, not a harness of ours. PLAYGROUND_SOURCE
-    # names a local checkout for development; CI fetches the public pin.
+    # Historical transport replay only: the archived renderer and the carried
+    # press still satisfy the old page. Current renderer semantics are held by
+    # showcase Contracts/Drawing/v0.1 (tests/drawing.js in playground.py).
     _dfrom = open(os.path.join(HERE, "bin", "drawing.from"), encoding="utf-8").read().split("\n")
     _dpin = _dfrom[0].strip()
     _dsrc = os.environ.get("PLAYGROUND_SOURCE")
@@ -3160,8 +3154,8 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     _drawing_patch = subprocess.run(["git", "-C", _dplay, "apply",
         os.path.join(HERE, "bin", "renderer-security.patch")], capture_output=True)
     _dsame = all(open(os.path.join(HERE, "bin", f), "rb").read() == open(os.path.join(_dplay, f), "rb").read()
-                 for f in ("renderer.js", "press.js")) if os.path.exists(os.path.join(_dplay, "check.js")) else False
-    for f in ("renderer.js", "press.js"):
+                 for f in ("press.js",)) if os.path.exists(os.path.join(_dplay, "check.js")) else False
+    for f in ("press.js",):
         if os.path.exists(_dplay):
             shutil.copy(os.path.join(HERE, "bin", f), os.path.join(_dplay, f))
     _dcheck = subprocess.run(["node", "check.js"], cwd=_dplay, capture_output=True, text=True) \
@@ -3169,7 +3163,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     _dsaid = (_dcheck.stdout + _dcheck.stderr) if _dcheck else "the playground was not fetched"
     if not (_dcheck and _dcheck.returncode == 0):
         print("   the playground's checks over the drawing engine:", _dsaid.strip().split("\n")[-1][:120])
-    S.append(("the drawing engine passes the playground's own checks in the playground's own tree, at the pin",
+    S.append(("the archived drawing engine and current press pass the historical playground checks at the pin",
               _drawing_patch.returncode == 0 and _dsame and _dcheck is not None and _dcheck.returncode == 0
               and "29/29" in _dcheck.stdout))
 
@@ -3442,6 +3436,19 @@ async function main() {
     assert(ui.includes('async function loadFile(name) {\n    resetDrawing();'));
     assert(ui.includes('<script src="/press.js"></script>'));
     result.generations = true;
+    const counted = 'public enum Caption: Close {}\nextension Caption { public static var typeName: String { "Count" } }\npublic enum Art: GrownDiagram {\n public typealias Across = U64\n public typealias AriaLabel = Caption\n @StructureBuilder\n public static var body: some Structure & DividesY {\n Air<Half<U2>>.self\n }\n}\n';
+    const refusal = bench(counted, 'Count.swift', {});
+    await refusal.context.drawCanvases(); assert(refusal.host.innerHTML.includes('<svg'));
+    refusal.change(counted.replace('Half<U2>', 'Half<U1>'));
+    await refusal.context.drawCanvases(); assert(!refusal.host.innerHTML.includes('<svg'));
+    assert.match(refusal.feedback.textContent, /Count.swift#Art: half-odd/);
+    refusal.change(counted.replace('Half<U2>', 'Unknown<U2>'));
+    await refusal.context.drawCanvases(); assert(!refusal.host.innerHTML.includes('<svg'));
+    assert.match(refusal.feedback.textContent, /Count.swift#Art: unsupported/);
+    refusal.context.drawingComparisonState = {status:'not-compared',address:'Generated.swift#Art',reason:'native budget not compared'};
+    refusal.change(counted); await refusal.context.drawCanvases();
+    assert.match(refusal.feedback.textContent, /not-compared.*Generated.swift#Art/);
+    result.drawingRefusal = true;
     console.log(JSON.stringify(result));
 }
 main().catch(e => { console.error(e.stack); process.exitCode = 1; });
@@ -3460,6 +3467,7 @@ main().catch(e => { console.error(e.stack); process.exitCode = 1; });
         ("slots", "Table and Drawing replace a whole generic alias value or leave it read-only"),
         ("completion", "Drawing and Table slot writes close completion, while typing still offers and edits still schedule writes"),
         ("generations", "only the latest drawing paints, and neighbour texts last until the file changes"),
+        ("drawingRefusal", "drawing refusals name the root, clear stale SVG and preserve not-compared"),
     ]:
         S.append((_said, _press_result.get(_field) is True))
 
@@ -4263,7 +4271,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               and _pairs.get("Wombat", {}).get("offer") is False
               # walked by the judge's own function, not a second copy of it
               and "conformsTo(name, kind, decls)" in ui
-              and "module.exports = { judge, judgeFiles, conformsTo }" in open(
+              and "module.exports = { judge, judgeFiles, conformsTo, drawingParse }" in open(
                   os.path.join(HERE, "bin", "judge.js"), encoding="utf-8").read()))
     _typed, _erased = (_pr.get("typed") or {}), (_pr.get("erased") or {})
     S.append(("the buffer answers for its own file: a record typed is offered, one erased is gone",

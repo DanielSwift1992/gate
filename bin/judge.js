@@ -102,6 +102,12 @@ function substituteWord(text, word, replacement) {
 
 function parse(file, text, declarations, order, refusals, extras) {
     const stack = [];
+    if (extras && !extras.drawingUnsupported) extras.drawingUnsupported = new Map();
+    function markUnsupported(owner, reason) {
+        if (!owner) return;
+        if (extras) extras.drawingUnsupported.set(owner, reason);
+        if (declarations.has(owner)) declarations.get(owner).drawingUnsupported = reason;
+    }
     let bodyOwner = null;
     let extensionOwner = null;
     let pendingHead = null, pendingHeadLine = null;
@@ -154,6 +160,7 @@ function parse(file, text, declarations, order, refusals, extras) {
             }
             if (bodyOwner) bodyOwner.entries.push({ head, args, line: bufferLine });
         }
+        if (final && rest.replaceAll(";", "").trim() && bodyOwner) bodyOwner.drawingUnsupported = "unread body entry";
         buffer = final ? "" : rest;
         if (closed.length > 0) bufferLine = lineNumber;
     }
@@ -173,6 +180,7 @@ function parse(file, text, declarations, order, refusals, extras) {
         {
             let quoted = false;
             for (let j = 0; j < line.length - 1; j += 1) {
+                if (line[j] === "\\" && quoted) { j += 1; continue; }
                 if (line[j] === '"') quoted = !quoted;
                 else if (!quoted && line[j] === "/" && line[j + 1] === "/") {
                     line = line.slice(0, j).trim();
@@ -216,16 +224,22 @@ function parse(file, text, declarations, order, refusals, extras) {
             continue;
         }
 
+        if (/\bstatic\s+(?:var|let|func)\s+(?!body\b|typeName\b)/.test(line)) {
+            const owner = extensionOwner !== null ? declarations.get(extensionOwner) : stack[stack.length - 1];
+            markUnsupported(extensionOwner || (owner && owner.qualified), "executable member outside the drawing subset");
+        }
         if (extensionOwner !== null) {
-            const literal = line.match(/^(?:public )?static var typeName: String \{ "([^"]*)" \}$/);
+            const literal = line.match(/^(?:public )?static var typeName: String \{ "((?:[^"\\]|\\.)*)" \}$/);
             if (literal) {
-                extras.literals.set(extensionOwner, { value: literal[1], line: number });
+                extras.literals.set(extensionOwner, { ...decodeSwiftLiteral(literal[1]), file, line: number });
                 continue;
             }
             if (line === "}") {
                 extensionOwner = null;
                 continue;
             }
+            const owner = declarations.get(extensionOwner);
+            markUnsupported(extensionOwner, "extension outside the drawing subset");
             refusals.push({ file, line: number,
                 premise: "outside the fragment: `" + line.slice(0, 60) + "`" });
             continue;
@@ -242,8 +256,12 @@ function parse(file, text, declarations, order, refusals, extras) {
                 .replace("extension ", "").trim();
             const colon = head.indexOf(":");
             const owner = (colon >= 0 ? head.slice(0, colon) : head).trim();
+            if (/\bstatic\s+(?:var|let|func)\s+(?!typeName\b)/.test(line) || (/\bstatic\s+(?:var|let|func)\b/.test(line) && !/static var typeName: String \{ "(?:[^"\\]|\\.)*" \}/.test(line))) {
+                const standing = declarations.get(owner);
+                markUnsupported(owner, "executable extension outside the drawing subset");
+            }
             const literal = line.slice(open + 1).match(
-                /(?:public )?static var typeName: String \{ "([^"]*)" \}/);
+                /(?:public )?static var typeName: String \{ "((?:[^"\\]|\\.)*)" \}/);
             // ── AND ONLY WHEN IT CARRIES ONE. This branch was written for the
             // one shape gate itself emits and swallowed every one-line extension
             // it saw, `continue`ing past a gated conformance joined from two
@@ -251,7 +269,7 @@ function parse(file, text, declarations, order, refusals, extras) {
             // Every where-gate in the shelf stopped being read the day this was
             // added, and nothing said a word: no check covered them.
             if (literal) {
-                extras.literals.set(owner, { value: literal[1], line: number });
+                extras.literals.set(owner, { ...decodeSwiftLiteral(literal[1]), file, line: number });
                 continue;
             }
         }
@@ -416,7 +434,9 @@ function parse(file, text, declarations, order, refusals, extras) {
                 continue;
             }
             const declaration = { name, qualified, parent, conformances, params, paramKinds,
-                line: number, aliases: new Map(), entries: [] };
+                file, line: number, aliases: new Map(), entries: [] };
+            if (/\bstatic\s+(?:var|let|func)\b/.test(line)) declaration.drawingUnsupported = "inline executable member outside the drawing subset";
+            if (extras && extras.drawingUnsupported.has(qualified)) declaration.drawingUnsupported = extras.drawingUnsupported.get(qualified);
             declarations.set(qualified, declaration);
             order.push(qualified);
             // what the head's own line said inside its braces is what it states
@@ -468,7 +488,7 @@ function parse(file, text, declarations, order, refusals, extras) {
                 continue;
             }
             const declaration = { name, qualified: name, parent: null, conformances,
-                params: [], line: number, aliases: new Map(), entries: [], axes: [], axisKinds: {} };
+                params: [], file, line: number, aliases: new Map(), entries: [], axes: [], axisKinds: {} };
             declarations.set(name, declaration);
             order.push(name);
             if (!selfClosed) stack.push(declaration);
@@ -946,6 +966,26 @@ function judgeFiles(files) {
             readers: values.readers, gateTouches: values.gateTouches } };
 }
 
+function decodeSwiftLiteral(raw) {
+    // Swift's ordinary escaped literals; interpolation and other escapes are
+    // outside this reader, never left as invented literal text.
+    try { return {value: raw.replace(/\\(u\{[0-9a-fA-F]+\}|[\s\S])/g, (_, escape) => {
+        const simple = {"0":"\0", "n":"\n", "r":"\r", "t":"\t", '"':'"', "'":"'", "\\":"\\"};
+        if (Object.hasOwn(simple, escape)) return simple[escape];
+        if (/^u\{[0-9a-fA-F]+\}$/.test(escape)) {
+            const code = parseInt(escape.slice(2, -1), 16);
+            if (code <= 0x10ffff && !(code >= 0xd800 && code <= 0xdfff)) return String.fromCodePoint(code);
+        }
+        throw new Error("unsupported Swift string escape: " + escape);
+    })}; } catch (error) { return {value: "", unsupported: error.message}; }
+}
+function drawingParse(files) {
+    const declarations = new Map(), order = [], refusals = [];
+    const extras = {literals: new Map(), topAliases: new Map()};
+    for (const {file, text} of files) parse(file, text, declarations, order, refusals, extras);
+    return {declarations, order, ...extras, parseRefusals: refusals};
+}
+
 function judge(file, text, vocabulary) {
     const result = judgeFiles([{ file, text }]);
     {
@@ -962,4 +1002,4 @@ function judge(file, text, vocabulary) {
 
 // The bench uses this walk for its offers over inspection records, not as
 // a general conformance judgment by the company's plain court.
-if (typeof module !== "undefined") { module.exports = { judge, judgeFiles, conformsTo }; }
+if (typeof module !== "undefined") { module.exports = { judge, judgeFiles, conformsTo, drawingParse }; }

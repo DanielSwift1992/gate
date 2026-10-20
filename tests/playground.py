@@ -19,6 +19,7 @@ def run():
     runpy.run_path(str(HERE / 'tests/inputs-kind.py'))['run']()
     runpy.run_path(str(HERE / 'tests/publication.py'))['run']()
     cache = Path(subprocess.check_output([str(HERE / 'bin/playground-worlds.sh')], text=True).strip())
+    subprocess.run(['node', str(HERE / 'tests/drawing.js'), str(cache)], check=True)
     spec = importlib.util.spec_from_file_location('worlds', HERE / 'bin/playground-worlds.py')
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

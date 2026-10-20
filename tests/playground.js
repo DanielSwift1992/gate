@@ -6,6 +6,8 @@ const sc = path.join(cache, "showcase"), base = path.join(cache, "baseline"), ch
 const read = p => fs.readFileSync(p, "utf8"), fixture = n => JSON.parse(read(path.join(checks, n + ".json")));
 const { judge } = require("../bin/judge.js");
 const { renderAll, kitVocabulary, canonicalShares, seedCount } = require("../bin/renderer.js");
+const historicalRenderer = require(path.join(base, "renderer.js"));
+const historicalJudge = judge;
 const { lint } = require("../bin/playground-lint.js"), { pageGuards } = require("../bin/playground-guards.js");
 const worldCourt = require("../bin/world-court.js"), court = require("../bin/court-wasm/node/vi_court.js");
 const record = JSON.parse(read(path.join(cache, "worlds.from")));
@@ -35,9 +37,9 @@ check("a refused certificate named budget stays a refusal", () => {
     assert.strictEqual(answer.unsupported.length, 0);
     assert(answer.refusals.some(r => r.claim.includes("budget")));
 });
-function draw(name, text) {
-    const p = judge(name, text, kitVocabulary).parsed;
-    const art = renderAll(p.declarations, p.order, p.literals, p.topAliases);
+function draw(name, text, historical = false) {
+    const p = (historical ? historicalJudge : judge)(name, text, kitVocabulary).parsed;
+    const art = (historical ? historicalRenderer.renderAll : renderAll)(p.declarations, p.order, p.literals, p.topAliases);
     assert.deepStrictEqual(art.errors, [], name);
     return art.canvases;
 }
@@ -52,14 +54,13 @@ for (const [world, sources] of Object.entries(renderFixture.world_sources)) {
     const text = sources.map(n => read(path.join(sc, n))).join("\n");
     const original = [world + ".swift", ...(["Atom", "Light"].includes(world) ? [world + "Pages.swift"] : [])]
         .map(n => read(path.join(base, "corpus/worlds", n))).join("\n");
-    check(world + " drawings match the recorded copy repair in both file orders", () => {
-        const arts = draw(world, text), old = draw(world, updated(original, sources)), reverse = draw(world, [...sources].reverse().map(n => read(path.join(sc, n))).join("\n"));
-        assert.deepStrictEqual(arts, old, world);
+    check(world + " historical snapshots stay historical; current file orders agree", () => {
+        const arts = draw(world, text), reverse = draw(world, [...sources].reverse().map(n => read(path.join(sc, n))).join("\n"));
         const pinned = fixture("r2-preservation").render.worlds[world];
-        if (pinned) assert.deepStrictEqual(hashes(draw(world, original)),
-            pinned.map(({name,bytes,sha256})=>({name,bytes,sha256})), world + " historical renderer 6142211");
-        assert.deepStrictEqual(hashes(arts), copy.drawings[world], world + " registered copy repair");
-        assert.deepStrictEqual(reverse, old, world);
+        if (pinned) assert.deepStrictEqual(hashes(draw(world, original, true)),
+            pinned.map(({name,bytes,sha256})=>({name,bytes,sha256})), world + " historical renderer");
+        assert.deepStrictEqual(hashes(draw(world, updated(original, sources), true)), copy.drawings[world], world + " historical copy repair");
+        assert.deepStrictEqual(reverse, arts, world);
         drawings[world] = arts.map(c => c.svg).join("");
         if (world !== "Company") assert(arts.length >= 1);
     });
@@ -128,11 +129,11 @@ check("company's four vectors", () => {
         assert.deepStrictEqual(refusals.map(({line, premise}) => ({line, premise})), company.golden[id]);
     }
 });
-check("native dynamics golden bytes", () => {
+check("historical native dynamics golden bytes", () => {
     const config = renderFixture.dynamics;
     const vocab = Object.fromEntries(Object.entries(config.gameKit).map(([k, v]) => [k, new Set(v)]));
     const text = read(path.join(checks, config.source)), p = judge("dynamics-world.swift", text, vocab).parsed;
-    const result = renderAll(p.declarations, p.order, p.literals, p.topAliases);
+    const result = historicalRenderer.renderAll(p.declarations, p.order, p.literals, p.topAliases);
     assert.deepStrictEqual(result.errors, []);
     assert.strictEqual(result.canvases[0].svg + "\n", read(path.join(checks, config.expected_svg)));
 });
@@ -155,7 +156,7 @@ check("the twenty-eight native vector plate observations", () => {
     assert(drawings.Light.includes(plate.match(/^golden: XYZWrite\(full h-alpha\) = (.*)$/m)[1])); n++;
     const walk = plate.match(/^golden: PerceptualRung\(walk (\d{8})\) = (\d)$/m), lit = walk[1].indexOf("1");
     assert.strictEqual(lit < 0 ? "0" : String(8 - lit), walk[2]); n++;
-    assert(plate.includes('data-vi-rules="PlateSet<PlateOn>"') && plate.includes('data-vi-rules="PlateSet"') && drawings.Light.includes('data-vi-rules="SetAlpha<Rung1>"')); n++;
+    assert(plate.includes('data-vi-rules="PlateSet<PlateOn>"') && plate.includes('data-vi-rules="PlateSet"') && drawings.Light.includes('data-vi-rules="SetAlpha&lt;Unit&gt;"')); n++;
     assert(n >= renderFixture.vector_plate.minimum_checks);
 });
 check("every supported kit name and its native vector obligation", () => {

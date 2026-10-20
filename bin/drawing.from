@@ -1,4 +1,4 @@
 400b6674d1c120bb2b86150631093f86ec4d7994
-typed-playground at that revision: press.js byte for byte; renderer.js with the local attribute/URL hardening recorded in renderer-security.patch (T-0036).
-b3a0c38e662268a94a78205e7399b7d717de13a2648d61dcc19af58b127482a8  bin/renderer.js
+Historical typed-playground transport: press.js stays byte for byte; renderer-security.patch replays the archived renderer only. Current renderer.js follows showcase Contracts/Drawing/v0.1 through playground-worlds.from; tests/drawing.js checks native bytes/refusals. Font and palette profile remain T-0038.
+312622492de9c1358b0bc2528feab0b1b57e005971baab4548144f022c8b016a  bin/renderer.js
 a9fbf7f4e0333ea5a262d38ceb30e58de53ad99cff00d94dc3fe40145a0289f6  bin/press.js

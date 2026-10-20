@@ -513,7 +513,9 @@ const BENCH_FOR = "0.2.5";
 // bench, so it stands in the line that reports the bench's own condition.
 let benchStale = "";
 // A pin is a condition of the page, so it stays beside the judge's own pin.
+let drawingComparisonState = null;
 function showWorldInputs(world) {
+    drawingComparisonState = world.drawing || null;
     const door = /\/playground\/(?:index\.html)?$/.test(location.pathname);
     const disclosure = document.getElementById("world-provenance"), values = document.getElementById("world-inputs");
     disclosure.hidden = false; values.textContent = "";
@@ -3663,6 +3665,12 @@ async function drawCanvases() {
         const world = await drawingWorld();
         if (generation !== drawingGeneration || !drawingCurrent(world)) return;
         const read = judge(world.file || "world.swift", world.text, kitVocabulary).parsed;
+        // Keep the combined parse's line coordinates for press, but refusals
+        // name the source file containing the actual canvas declaration.
+        for (const d of read.declarations.values()) {
+            const part = world.parts.find(p => d.line >= p.first && d.line <= p.last);
+            if (part) d.file = part.file;
+        }
         const canDraw = drawable(read);
         button.hidden = !canDraw;
         if (!canDraw) {
@@ -3684,7 +3692,11 @@ async function drawCanvases() {
             + '<div class="caption">Keys change an alias in the open file. Literal typing is not available here.</div>'
             + '<div id="drawing-feedback" class="caption" role="status" aria-live="polite"></div>';
         drawingSnapshot = world;
-        if (drawn.errors.length) drawingSay("the renderer could not read: " + drawn.errors.slice(0, 6).join(" · "));
+        const comparison = typeof drawingComparisonState !== "undefined" && drawingComparisonState;
+        const status = comparison && comparison.status === "not-compared"
+            ? "not-compared · " + comparison.address + ": " + comparison.reason
+            : "port-under-contract · Drawing v0.1. This current input has not been read by Swift.";
+        drawingSay(status + (drawn.errors.length ? " · Drawing refused: " + drawn.errors.slice(0, 6).join(" · ") : ""));
     } catch (error) {
         if (generation !== drawingGeneration) return;
         button.hidden = true;

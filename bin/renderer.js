@@ -34,7 +34,7 @@ const kitVocabulary = {
         "P3RedPrimary", "P3GreenPrimary", "P3BluePrimary",
         "Rec2020RedPrimary", "Rec2020GreenPrimary", "Rec2020BluePrimary"]),
     generics: new Set(["Air", "Flexible", "Layered", "TimedReveal", "FrozenReveal",
-        "Tally", "CanvasSize", "Plus", "Times", "Twice", "Half",
+        "Tally", "CanvasSize", "Plus", "Times", "Twice", "Half", "Rest", "Seconds",
         "Fixed", "SpanHosted", "SpanLink", "Halfway", "Under", "Paired",
         "RuleKey", "TermText", "CenteredBaseline", "Chord",
         "LineTally", "TextWidth", "SpanLabelMidWrapped", "SpanLabelWrapped", "Succ",
@@ -151,15 +151,19 @@ function spellNode(node) {
 
 // ── the fraction arithmetic, ported from the Frac readings ──
 
+function exactInteger(value) {
+    if (!Number.isSafeInteger(value)) refuse("unsupported", "arithmetic exceeds the port's exact integer range");
+    return value;
+}
 function px(fraction) {
-    return Math.floor((2 * fraction.n + fraction.d) / (2 * fraction.d));
+    return Math.floor(exactInteger(2 * fraction.n + fraction.d) / exactInteger(2 * fraction.d));
 }
 function sumFrac(a, b) {
-    return { n: a.n * b.d + b.n * a.d, d: a.d * b.d };
+    return { n: exactInteger(a.n * b.d + b.n * a.d), d: exactInteger(a.d * b.d) };
 }
 function midPx(x, w) {
-    return Math.floor((2 * (2 * x.n * w.d + w.n * x.d) + 2 * x.d * w.d)
-        / (2 * 2 * x.d * w.d));
+    return Math.floor(exactInteger(2 * (2 * x.n * w.d + w.n * x.d) + 2 * x.d * w.d)
+        / exactInteger(2 * 2 * x.d * w.d));
 }
 function endPx(x, w) {
     return px(sumFrac(x, w));
@@ -172,8 +176,25 @@ function makeEnvironment(declarations, literals, topAliases) {
         reads: new Map(), currentCanvas: null };
 }
 
-function complain(env, message) {
-    if (!env.errors.includes(message)) env.errors.push(message);
+class DrawingRefusal extends Error {
+    constructor(code, message) { super(message); this.code = code; }
+}
+function refuse(code, message) { throw new DrawingRefusal(code, message); }
+function complain(env, message) { refuse("unsupported", message); }
+function remainder(given, taken) {
+    if (taken > given) refuse("rest-underflow", "Rest: taken exceeds given");
+    return given - taken;
+}
+function wrappedLines(content, given, size) {
+    const lines = []; let line = "";
+    for (const word of content.split(" ").filter(Boolean)) {
+        if (textWidthPx(word, size) > given) refuse("text-overflow", "word exceeds the given width");
+        const candidate = line === "" ? word : line + " " + word;
+        if (textWidthPx(candidate, size) <= given) line = candidate;
+        else { lines.push(line); line = word; }
+    }
+    if (line !== "") lines.push(line);
+    return lines;
 }
 
 function aliasNode(declaration, key) {
@@ -199,7 +220,7 @@ function substitute(node, bindings) {
         if (bindings.has(owner)) {
             const bound = bindings.get(owner);
             const spelled = bound.args.length > 0
-                ? bound.head + "<" + bound.args.map(nodeString).join(", ") + ">"
+                ? bound.head + "<" + bound.args.map(spellNode).join(", ") + ">"
                 : bound.head;
             return { head: spelled + node.head.slice(dot),
                 args: node.args.map((argument) => substitute(argument, bindings)) };
@@ -209,11 +230,21 @@ function substitute(node, bindings) {
         args: node.args.map((argument) => substitute(argument, bindings)) };
 }
 
+const portArity = new Map([
+    ...["Air", "Flexible", "Tally", "Twice", "Half", "Succ", "Tick", "TermText", "SpanHosted", "PerceptualRung"].map(n => [n,1]),
+    ...["Plus", "Times", "Rest", "Seconds", "CanvasSize", "Fixed", "Layered", "FrozenReveal", "SpanLink", "RuleKey", "Chord", "Halfway", "Under", "CenteredBaseline", "TextWidth", "Paired", "EdgeEven", "EdgeOdd"].map(n => [n,2]),
+    ...["TimedReveal", "LineTally", "XYZWrite", "EdgeSame", "EdgeAtLeast"].map(n => [n,3]),
+    ["PouredCoordinate",6]
+]);
 function resolveHead(env, node) {
-    if (!node) return { head: "", args: [] };
+    if (!node) complain(env, "missing type");
     let cursor = node;
     for (let step = 0; step < 32; step += 1) {
         recordRead(env, cursor.head);
+        if (portArity.has(cursor.head) && cursor.args.length !== portArity.get(cursor.head)) complain(env, cursor.head + ": unsupported argument count");
+        const stated = env.declarations.get(cursor.head);
+        if (stated && (seedCount.has(cursor.head) || seedText.has(cursor.head) || portArity.has(cursor.head))) complain(env, cursor.head + ": a local definition shadows the kit");
+        if (stated && stated.drawingUnsupported) complain(env, cursor.head + ": " + stated.drawingUnsupported);
         const alias = env.topAliases.get(cursor.head);
         // a dotted head reads an axis off a resolved owner: `LampMode.Ink` is the
         // Ink alias of whatever term LampMode stands for
@@ -264,7 +295,31 @@ function resolveHead(env, node) {
         if (cursor.args.length > 0) return cursor;
         cursor = parseType(alias.target);
     }
-    return cursor;
+    complain(env, "alias expansion exceeds the supported budget");
+}
+
+// Named aliases in the pinned kit matter to Swift's runtime type spelling,
+// including RuleKey's data attributes. Counts alone do not determine a name.
+const kitTypeAliases = new Map([
+    ["Rung0", "Never"], ["Rung1", "Unit"], ["Rung2", "Twice<Unit>"],
+    ["Rung3", "Plus<Twice<Unit>, Unit>"], ["Rung4", "Twice<Twice<Unit>>"],
+    ["Rung5", "Plus<Twice<Twice<Unit>>, Unit>"], ["Rung6", "Twice<Plus<Twice<Unit>, Unit>>"],
+    ["Rung7", "Plus<Twice<Twice<Unit>>, Plus<Twice<Unit>, Unit>>"],
+    ["Rung8", "Twice<Twice<Twice<Unit>>>"]
+]);
+function runtimeType(env, raw) {
+    let node = resolveHead(env, raw);
+    if (kitTypeAliases.has(node.head) && !env.declarations.has(node.head)) return runtimeType(env, parseType(kitTypeAliases.get(node.head)));
+    if (node.head === "Twice" && node.args.length === 1) node = {head: "Plus", args: [node.args[0], node.args[0]]};
+    return {head: node.head, args: node.args.map(n => runtimeType(env, n))};
+}
+for (const width of [1,2,4,8,16,32,64,128,256,512]) kitTypeAliases.set("U" + width, width === 1 ? "Unit" : "Twice<U" + width / 2 + ">");
+const leafCountBases = new Set(["Structure", "Close", "Open", "Pair", "Employee", "Roster", "Team", "AccessLedger"]);
+function supportedCount(env, declaration, seen = new Set()) {
+    if (seen.has(declaration.name) || declaration.drawingUnsupported) return false;
+    seen.add(declaration.name);
+    return declaration.conformances.some(c => leafCountBases.has(c)
+        || (env.declarations.has(c) && supportedCount(env, env.declarations.get(c), seen)));
 }
 
 // ── counts: the unit trees a canvas and an Air measure by ──
@@ -289,6 +344,11 @@ const canonicalShares = new Map([
 const shareIndex = new Map([["XShare", 0], ["YShare", 1], ["ZShare", 2]]);
 
 function countOf(env, rawNode) {
+    const value = readCount(env, rawNode);
+    if (!Number.isSafeInteger(value) || value < 0) complain(env, "count outside the supported integer range");
+    return value;
+}
+function readCount(env, rawNode) {
     if (!rawNode) {
         complain(env, "a count is missing where a member expects one");
         return 0;
@@ -323,12 +383,17 @@ function countOf(env, rawNode) {
     if (node.head === "Plus") return countOf(env, node.args[0]) + countOf(env, node.args[1]);
     if (node.head === "Times") return countOf(env, node.args[0]) * countOf(env, node.args[1]);
     if (node.head === "Twice") return 2 * countOf(env, node.args[0]);
-    if (node.head === "Half") return countOf(env, node.args[0]) / 2;
+    if (node.head === "Half") {
+        const whole = countOf(env, node.args[0]);
+        if (whole % 2) refuse("half-odd", "Half: count is not even");
+        return whole / 2;
+    }
+    if (node.head === "Rest") return remainder(countOf(env, node.args[0]), countOf(env, node.args[1]));
     // the counter's constructor counts itself: one more than what it wraps
     // (Tick.count = Previous.count + 1, the floor Never counts 0)
     if (node.head === "Tick") return 1 + countOf(env, node.args[0]);
-    // the numeral ladder's step counts the same way (Numeral.swift: Succ)
-    if (node.head === "Succ") return 1 + countOf(env, node.args[0]);
+    // Succ inherits Structure.count = 1; it does not count its predecessor.
+    if (node.head === "Succ") return 1;
     // the wrapped line tally, mirrored from Vector.swift: how many lines a
     // literal earns under the same greedy measure the wrapped labels draw
     // with, over a stated dictionary width. A band's height is then a type:
@@ -338,18 +403,7 @@ function countOf(env, rawNode) {
         const content = textOf(env, node.args[0]);
         const given = countOf(env, node.args[1]);
         const size = parseInt(textOf(env, node.args[2]), 10) || 0;
-        let lines = 1;
-        let line = "";
-        for (const word of content.split(" ").filter((piece) => piece !== "")) {
-            const candidate = line === "" ? word : line + " " + word;
-            if (textWidthPx(candidate, size) <= given) {
-                line = candidate;
-            } else {
-                lines += 1;
-                line = word;
-            }
-        }
-        return lines;
+        return wrappedLines(content, given, size).length;
     }
     // the measured width of a word, mirrored from Vector.swift (TextWidth): the
     // advances of its characters summed at a stated size, the same reader the
@@ -360,27 +414,27 @@ function countOf(env, rawNode) {
         return textWidthPx(content, size);
     }
     const declaration = env.declarations.get(node.head);
-    if (declaration && declaration.entries.length > 0) {
+    if (declaration && supportedCount(env, declaration) && declaration.entries.length > 0) {
         let total = 0;
         for (const entry of declaration.entries) {
             total += countOf(env, { head: entry.head, args: entry.args.map(parseType) });
         }
         return total;
     }
-    if (declaration) return 1;
+    if (declaration && supportedCount(env, declaration)) return 1;
     complain(env, "no count for `" + node.head + "`");
     return 0;
 }
 
 // ── texts: an atom's reading ──
 
-// a term's name spelled for markup: angles become entities, aliases resolve first
+// A term name before XML serialization; Swift names resolved runtime types.
 function spellTerm(env, node) {
-    const settled = resolveHead(env, node);
-    if (settled.args.length === 0) return svgText(settled.head);
-    return svgText(settled.head) + "&lt;"
+    const settled = runtimeType(env, node);
+    if (settled.args.length === 0) return settled.head;
+    return settled.head + "<"
         + settled.args.map((argument) => spellTerm(env, argument)).join(", ")
-        + "&gt;";
+        + ">";
 }
 
 function textOf(env, rawNode) {
@@ -390,6 +444,14 @@ function textOf(env, rawNode) {
     }
     const node = resolveHead(env, rawNode);
     if (node.head === "Tally") return String(countOf(env, node.args[0]));
+    if (node.head === "Seconds") {
+        const frequency = countOf(env, node.args[1]);
+        if (frequency === 0 || frequency > 65536 || (frequency & (frequency - 1)) !== 0
+            || countOf(env, node.args[0]) > 1e9) complain(env, "Seconds outside the port's exact binary fraction range");
+        const seconds = countOf(env, node.args[0]) / frequency;
+        // Swift Double.description includes .0 for integral seconds.
+        return Number.isInteger(seconds) ? seconds + ".0" : String(seconds);
+    }
     // the perceptual rung of a band (Spectrum.swift, PerceptualRung): the
     // position of the highest lit door, zero for a quenched band — a halving
     // is one felt ratio, so felt distance is a difference of rungs. The walks
@@ -442,29 +504,29 @@ function textOf(env, rawNode) {
         return "0 0 " + countOf(env, node.args[0]) + " " + countOf(env, node.args[1]);
     }
     if (env.literals.has(node.head)) {
-        // a literal travels into markup as text, never as markup: the escape
-        // changes nothing on the literal alphabet and defuses a hand-edited one
-        return env.literals.get(node.head).value.replaceAll("&", "&amp;")
-            .replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+        if (!env.declarations.has(node.head)) complain(env, node.head + ": literal has no declared owner");
+        const literal = env.literals.get(node.head);
+        if (literal.unsupported) complain(env, literal.unsupported);
+        return literal.value;
     }
     if (seedText.has(node.head)) return seedText.get(node.head);
     complain(env, "no reading for `" + node.head + "`");
     return "";
 }
 
-// A world can name an attribute as well as text. textOf already escapes
-// &, < and >; quotes must also stay inside the attribute they were handed.
+// Escape at the XML boundary, once, exactly as DocumentKit.XMLEscaped.
 function svgText(text) {
-    return String(text).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+    if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f\ufffe\uffff]/u.test(String(text))) refuse("unsupported", "text outside the XML character subset");
+    return String(text).replaceAll("&", "&amp;").replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&apos;");
 }
-function svgAttr(text) {
-    return String(text).replaceAll('"', "&quot;");
-}
+const svgAttr = svgText;
 function spanHref(text) {
     try {
         const protocol = new URL(text, "https://gate.invalid/").protocol;
-        return ["http:", "https:", "mailto:"].includes(protocol) ? text : "";
-    } catch (_) { return ""; }
+        if (["http:", "https:", "mailto:"].includes(protocol)) return text;
+    } catch (_) { /* unsupported URL */ }
+    refuse("unsupported", "link scheme outside the browser drawing subset");
 }
 
 // ── spannings: content that draws itself into a handed slice ──
@@ -502,7 +564,7 @@ function spanningOf(env, rawNode) {
             // an Exactly leaf is spelled whole, spaces shed: the press supplies
             // the atom and the atom travels with the press (Dynamics, Exactly)
             if (settled.head === "Exactly" && settled.args.length === 1) {
-                leaves.push({ spelled: spellWhole(settled.args[0]),
+                leaves.push({ spelled: spellWhole(runtimeType(env, settled.args[0])),
                     bare: settled.args[0].head });
                 return;
             }
@@ -523,11 +585,15 @@ function spanningOf(env, rawNode) {
                     + "`, and the file declares no such rule");
                 return () => "";
             }
-            slot = slot ?? declared.aliases.get("Slot");
+            const current = declared.aliases.get("Slot");
+            if (!current) complain(env, leaf.bare + " states no Slot");
+            const spelling = spellTerm(env, parseType(current.target));
+            if (slot && slot !== spelling) complain(env, "Chord names different slots");
+            slot = spelling;
         }
         const face = spanningOf(env, node.args[1]);
         return (x, w) => '<g class="vi-rule" data-vi-rules="' + svgAttr(leaves.map((leaf) => leaf.spelled).join(" "))
-            + '" data-vi-slot="' + svgAttr(slot ? slot.target : "") + '" cursor="pointer">\n'
+            + '" data-vi-slot="' + svgAttr(slot) + '" cursor="pointer">\n'
             + face(x, w) + "</g>\n";
     }
     // equality of two magnitudes, read at the edge (Vector.swift, EdgeSame):
@@ -606,7 +672,7 @@ function spanningOf(env, rawNode) {
         return (x, w) => '<text x="' + px(x) + '" y="' + readAttr("Y")
             + '" text-anchor="start" fill="' + readAttr("FillColor") + '" font-weight="'
             + readAttr("Weight") + '" font-size="' + readAttr("Size") + '">'
-            + read("Content") + "</text>\n";
+            + svgText(read("Content")) + "</text>\n";
     }
     if (shape === "SpanLabelMidWrapped" || shape === "SpanLabelWrapped") {
         // mirrored from Vector.swift: the words fill measured lines within the
@@ -619,34 +685,16 @@ function spanningOf(env, rawNode) {
         const content = read("Content");
         return (x, w) => {
             const given = px(w);
-            const lines = [];
-            let line = "";
-            for (const word of content.split(" ").filter((piece) => piece !== "")) {
-                if (textWidthPx(word, size) > given) {
-                    complain(env, "SpanLabelMidWrapped overflow in `" + node.head
-                        + "`: the word \"" + word + "\" measures "
-                        + textWidthPx(word, size) + "px, the slice hands "
-                        + given + "px");
-                    return "";
-                }
-                const candidate = line === "" ? word : line + " " + word;
-                if (textWidthPx(candidate, size) <= given) {
-                    line = candidate;
-                } else {
-                    lines.push(line);
-                    line = word;
-                }
-            }
-            if (line !== "") lines.push(line);
+            const lines = wrappedLines(content, given, size);
             const anchored = shape === "SpanLabelMidWrapped"
                 ? (piece, index) => '<text x="' + midPx(x, w) + '" y="'
                     + (base + pitch * index) + '" text-anchor="middle" fill="'
                     + readAttr("FillColor") + '" font-weight="' + readAttr("Weight")
-                    + '" font-size="' + readAttr("Size") + '">' + piece + "</text>\n"
+                    + '" font-size="' + readAttr("Size") + '">' + svgText(piece) + "</text>\n"
                 : (piece, index) => '<text x="' + px(x) + '" y="'
-                    + (base + pitch * index) + '" fill="' + readAttr("FillColor")
+                    + (base + pitch * index) + '" text-anchor="start" fill="' + readAttr("FillColor")
                     + '" font-weight="' + readAttr("Weight") + '" font-size="'
-                    + readAttr("Size") + '">' + piece + "</text>\n";
+                    + readAttr("Size") + '">' + svgText(piece) + "</text>\n";
             return lines.map(anchored).join("");
         };
     }
@@ -654,13 +702,13 @@ function spanningOf(env, rawNode) {
         return (x, w) => '<text x="' + midPx(x, w) + '" y="' + readAttr("Y")
             + '" text-anchor="middle" fill="' + readAttr("FillColor") + '" font-weight="'
             + readAttr("Weight") + '" font-size="' + readAttr("Size") + '">'
-            + read("Content") + "</text>\n";
+            + svgText(read("Content")) + "</text>\n";
     }
     if (shape === "SpanLabelEnd") {
         return (x, w) => '<text x="' + endPx(x, w) + '" y="' + readAttr("Y")
             + '" text-anchor="end" fill="' + readAttr("FillColor") + '" font-weight="'
             + readAttr("Weight") + '" font-size="' + readAttr("Size") + '">'
-            + read("Content") + "</text>\n";
+            + svgText(read("Content")) + "</text>\n";
     }
     if (shape === "SpanDot") {
         return (x, w) => '<circle cx="' + midPx(x, w) + '" cy="' + readAttr("CY")
@@ -718,7 +766,7 @@ function rowString(env, declaration) {
             + ": an axis under a given owes its remainder to someone — end it with a flexible member");
         return "";
     }
-    const free = { n: given - taken, d: stretch };
+    const free = { n: remainder(given, taken), d: stretch };
     let markup = "";
     let x = { n: 0, d: 1 };
     for (const member of members) {
@@ -804,6 +852,7 @@ function nodeString(env, rawNode) {
             + svgAttr(textOf(env, node.args[0])) + 's" fill="freeze"/>\n'
             + nodeString(env, node.args[1]) + "</g>\n";
     }
+    if (node.head === "Never") return "";
     const declaration = env.declarations.get(node.head);
     if (!declaration) {
         complain(env, "`" + node.head + "` resolves to no drawable declaration");
@@ -827,7 +876,7 @@ function nodeString(env, rawNode) {
                 + ": an axis under a given owes its remainder to someone — end it with a flexible member");
             return "";
         }
-        return verticalString(env, members, across, { n: given - taken, d: stretch });
+        return verticalString(env, members, across, { n: remainder(given, taken), d: stretch });
     }
     if (declaration.conformances.includes("Group")) {
         let markup = "";
@@ -835,12 +884,6 @@ function nodeString(env, rawNode) {
             markup += nodeString(env, { head: entry.head, args: entry.args.map(parseType) });
         }
         return markup;
-    }
-    if (env.literals.has(node.head)) {
-        // a literal travels into markup as text, never as markup: the escape
-        // changes nothing on the literal alphabet and defuses a hand-edited one
-        return env.literals.get(node.head).value.replaceAll("&", "&amp;")
-            .replaceAll("<", "&lt;").replaceAll(">", "&gt;");
     }
     complain(env, "`" + node.head + "` is not a form the renderer carries");
     return "";
@@ -850,10 +893,13 @@ function nodeString(env, rawNode) {
 
 function renderAll(declarations, order, literals, topAliases) {
     const env = makeEnvironment(declarations, literals, topAliases);
-    const canvases = [];
+    const canvases = [], refusals = [];
     for (const qualified of order) {
         const declaration = declarations.get(qualified);
         env.currentCanvas = declaration.name;
+        if (!declaration.conformances.some(c => c === "GrownDiagram" || c === "Diagram")) continue;
+        try {
+        resolveHead(env, {head: qualified, args: []});
         if (declaration.conformances.includes("GrownDiagram")) {
             const acrossNode = aliasNode(declaration, "Across");
             const aria = aliasNode(declaration, "AriaLabel");
@@ -870,6 +916,8 @@ function renderAll(declarations, order, literals, topAliases) {
                 continue;
             }
             const taken = members.reduce((sum, member) => sum + member.taken, 0);
+            const backdrop = aliasNode(declaration, "Backdrop");
+            if (backdrop && resolveHead(env, backdrop).head !== "Never") complain(env, "Backdrop is outside this drawing subset");
             const defs = aliasNode(declaration, "Defs");
             const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + across
                 + " " + taken + '" role="img" data-vi-canvas="1" font-family="'
@@ -894,8 +942,15 @@ function renderAll(declarations, order, literals, topAliases) {
             + '" aria-label="' + svgAttr(textOf(env, aria)) + '">\n'
             + nodeString(env, content) + "\n</svg>\n";
         canvases.push({ name: declaration.name, svg });
+        } catch (error) {
+            if (!(error instanceof DrawingRefusal) && !(error instanceof RangeError)) throw error;
+            const address = (declaration.file || "world.swift") + "#" + qualified;
+            const code = error.code || "unsupported";
+            refusals.push({name: declaration.name, status: "refused", code, address});
+            env.errors.push(address + ": " + code + " — " + error.message);
+        }
     }
-    return { canvases, errors: env.errors, reads: env.reads };
+    return { canvases, refusals, errors: env.errors, reads: env.reads };
 }
 
 // textOf and makeEnvironment travel with the engine so the build can read a

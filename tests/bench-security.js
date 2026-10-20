@@ -99,8 +99,7 @@ public enum DiagramText: GrownDiagram {
 }
 `;
 const read = judge('drawing.swift', graphic, renderer.kitVocabulary).parsed;
-// A quote is legal in a literal; the parser's limited literal syntax does not
-// read an escaped Swift quote, so mutate its already-read literal to test that boundary too.
+// Test serialization independently of the Swift literal decoder.
 read.literals.get('CaptionText').value += '" onload="document.body.dataset.probe=1';
 const drawn = renderer.renderAll(read.declarations, read.order, read.literals, read.topAliases);
 assert.equal(drawn.errors.length, 0, drawn.errors.join('; '));
@@ -110,7 +109,8 @@ pieces.push({label: 'SVG text and attribute', html: drawn.canvases[0].svg, expec
 read.literals.get('CaptionText').value = 'javascript:document.body.dataset.probe=1';
 read.declarations.get('DiagramText').entries[0].args[1] = 'SpanLink<CaptionText, Label>';
 const links = renderer.renderAll(read.declarations, read.order, read.literals, read.topAliases);
-pieces.push({label: 'SVG script URL', html: links.canvases[0].svg, expected: []});
+assert.equal(links.canvases.length, 0, 'unsafe URLs refuse instead of changing the native href');
+assert.deepEqual(links.refusals, [{name:'DiagramText',status:'refused',code:'unsupported',address:'drawing.swift#DiagramText'}]);
 const parser = `
 import json,sys
 from html.parser import HTMLParser
