@@ -6,6 +6,8 @@
 # open file is judged in the browser, the where court by the corpus court built for wasm32 (bin/court-wasm) and
 # the plain court by judge.js; the full cross-file court and the write path
 # belong to the clone, and the page says so on its face.
+import argparse
+import html
 import json
 from bench_csp import stamp_csp, script_json
 import os
@@ -17,29 +19,26 @@ import sys
 import tempfile
 import time
 import urllib.request
+from urllib.parse import quote
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GATE = os.path.join(HERE, "gate")
-OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, "_site")
+
 
 
 def get(port, path):
-    with urllib.request.urlopen(f"http://127.0.0.1:{port}{path}", timeout=10) as r:
+    with urllib.request.urlopen(f"http://127.0.0.1:{port}{path}", timeout=120) as r:
         return r.read().decode("utf-8")
 
 
 def post(port, path, body):
     req = urllib.request.Request(f"http://127.0.0.1:{port}{path}",
                                  data=body.encode("utf-8"), method="POST")
-    with urllib.request.urlopen(req, timeout=30) as r:
+    with urllib.request.urlopen(req, timeout=120) as r:
         return r.read().decode("utf-8")
 
 
-def main():
-    tmp = tempfile.mkdtemp(prefix="gate-pages-")
-    demo = os.path.join(tmp, "demo")
-    subprocess.run([GATE, "demo", demo],
-                   capture_output=True, check=True)
+def publish(demo, out, context=None):
     s = socket.socket(); s.bind(("127.0.0.1", 0)); port = s.getsockname()[1]; s.close()
     serve = subprocess.Popen([GATE, "serve", str(port), "--no-open"],
                              cwd=demo, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -57,6 +56,8 @@ def main():
             snap[path] = get(port, path)
 
         files = json.loads(snap["/files"])
+        if context:
+            context["carried"] = files.get("carried") or []
         everyone = list(files["files"]) + [files["layout"]]
         texts = {}
         for f in dict.fromkeys(everyone):
@@ -71,7 +72,7 @@ def main():
         ladder_css = get(port, "/ladder.css")
         names = sorted(set(re.findall(r"(?:enum|protocol|typealias)\s+(\w+)",
                                       "\n".join(texts.values()))))
-        for n in names:
+        for n in (names if not context else []):
             try:
                 snap[f"/value?name={n}"] = get(port, f"/value?name={n}")
             except Exception:
@@ -79,7 +80,6 @@ def main():
     finally:
         serve.terminate()
         serve.wait()
-        shutil.rmtree(tmp, ignore_errors=True)
 
     ui = open(os.path.join(HERE, "web", "ui.html"), encoding="utf-8").read()
     for asset in ("codemirror.css", "ladder.css", "codemirror.js", "judge.js", "renderer.js", "press.js"):
@@ -117,6 +117,8 @@ function judgeWhereTexts(text, extraTexts) {
    belong to the clone. */
 (function () {
     const SNAP = __SNAP__;
+    const CONTEXT = __CONTEXT__;
+    const STORAGE = __STORAGE__;
     const FORMS = new Set(__FORMS__);
     const LAYOUT = __LAYOUT__;
     const ALL = __ALL__;
@@ -142,16 +144,65 @@ function judgeWhereTexts(text, extraTexts) {
         }
         return 1;
     }
-    /* saved on green, in this browser: the panel is the arbiter of
-       write-on-holds, exactly as it is over the real server, and a PUT that
-       arrives is a holding file. localStorage stands where the working copy
-       stood; reset below empties it and the demo is back. */
-    function textOf(f) {
+    /* A published world stores reader text and its verdict, including red.
+       The ordinary demo retains its on-green policy. A saved verdict is a
+       receipt for that text, never a substitute for judging the reopened world. */
+    function keptDraft(f) {
         try {
-            const kept = localStorage.getItem("gate.pages." + f);
-            if (kept !== null) return kept;
-        } catch (e) { }
-        return SNAP["/world?f=" + f] || "";
+            const raw = localStorage.getItem(STORAGE + f);
+            if (raw === null) return null;
+            if (CONTEXT) {
+                try {
+                    const row = JSON.parse(raw);
+                    if (row.format === 1 && typeof row.text === "string") return row;
+                    if (row.format === 2 && Array.isArray(row.splices)) {
+                        let text = SNAP["/world?f=" + f] || "";
+                        for (const cut of row.splices) {
+                            if (!Number.isInteger(cut.from) || !Number.isInteger(cut.to) || cut.from < 0
+                                || cut.to < cut.from || cut.to > text.length || typeof cut.insert !== "string")
+                                throw new Error("invalid reader splice");
+                            text = text.slice(0, cut.from) + cut.insert + text.slice(cut.to);
+                        }
+                        return { text, verdict: row.verdict, splices: row.splices };
+                    }
+                } catch (e) { }
+            }
+            return { text: raw, verdict: null }; // old browser drafts remain readable
+        } catch (e) { return null; }
+    }
+    function textOf(f) {
+        const row = keptDraft(f);
+        return row ? row.text : SNAP["/world?f=" + f] || "";
+    }
+    // A five-megabyte source is already pinned in SNAP. Keep the reader's
+    // splice against those bytes, not a second full copy beyond localStorage's
+    // quota. This is lossless text, including edits outside the visible page.
+    function draftRecord(f, text, verdict) {
+        const base = SNAP["/world?f=" + f] || "";
+        if (base.length < 300000) return { format: 1, text, verdict };
+        const splice = (base, text) => {
+            let from = 0, tail = 0;
+            while (from < base.length && from < text.length && base[from] === text[from]) from++;
+            while (tail < base.length - from && tail < text.length - from
+                && base[base.length - 1 - tail] === text[text.length - 1 - tail]) tail++;
+            return { from, to: base.length - tail, insert: text.slice(from, text.length - tail) };
+        };
+        const direct = [splice(base, text)], previous = keptDraft(f);
+        const chain = previous && previous.splices ? [...previous.splices, splice(previous.text, text)] : direct;
+        const splices = JSON.stringify(chain).length < JSON.stringify(direct).length ? chain : direct;
+        return { format: 2, splices, verdict };
+    }
+    const readings = new Map();
+    function readDraft(f, text) {
+        const texts = Object.fromEntries(ALL.map(g => [g, g === f ? text : textOf(g)]));
+        const inputs = JSON.stringify(texts), previous = readings.get(f);
+        if (previous && previous.inputs === inputs) return previous.answer;
+        const answer = GateWorldCourt.verdict(wasm_bindgen, WORLDS, texts,
+            CONTEXT.definitions, ALL.filter(g => !FORMS.has(g)), CONTEXT.carried,
+            LAYOUT, judge, (claim, stream) => plainly(claim, lawNotes(stream)), CONTEXT.plain_fragments);
+        answer.compiler = "page bodies have not been checked by Swift";
+        readings.set(f, { inputs, answer });
+        return answer;
     }
     /* one court for every file, fed the way the server feeds it: forms in
        one stream per world, plain pages one by one, the layout judged for
@@ -250,9 +301,11 @@ function judgeWhereTexts(text, extraTexts) {
         const method = (opts && opts.method) || "GET";
         if (method === "PUT" && u.startsWith("/world")) {
             const f = decodeURIComponent(u.split("f=")[1] || "");
-            try { localStorage.setItem("gate.pages." + f,
-                                       String((opts && opts.body) || "")); }
-            catch (e) { }
+            const text = String((opts && opts.body) || "");
+            const row = CONTEXT ? JSON.stringify(draftRecord(f, text, readDraft(f, text))) : text;
+            try {
+                localStorage.setItem(STORAGE + f, row);
+            } catch (e) { return reply(JSON.stringify({ note: "browser storage unavailable" }), 507); }
             return reply("", 200);
         }
         if (method === "PUT") return reply("", 200);
@@ -260,6 +313,7 @@ function judgeWhereTexts(text, extraTexts) {
             const f = decodeURIComponent(u.split("f=")[1] || "");
             const text = opts && opts.body ? String(opts.body) : "";
             const said = JSON.parse(SNAP["/verdict?f=" + f] || "{}");
+            if (CONTEXT) return reply(JSON.stringify(readDraft(f, text)));
             let refusals = [];
             for (const g of ALL) {
                 if (g !== f) refusals = refusals.concat(refusalsFor(g, textOf(g)));
@@ -274,7 +328,15 @@ function judgeWhereTexts(text, extraTexts) {
             return new Response(textOf(f), { status: 200,
                 headers: { "Content-Type": "text/plain; charset=utf-8" } });
         }
-        if (u.startsWith("/") && SNAP[u] !== undefined) return reply(SNAP[u]);
+        if (CONTEXT && method === "GET" && u === "/files")
+            return reply(JSON.stringify({ ...JSON.parse(SNAP["/files"]), save_policy: "reader-draft" }));
+        if (CONTEXT && method === "GET" && u.startsWith("/gitstatus?f=")) {
+            const row = keptDraft(decodeURIComponent(u.split("f=")[1] || ""));
+            return reply(JSON.stringify(row ? { git: "draft", verdict: row.verdict ? row.verdict.verdict : "not yet judged" }
+                : { git: "source" }));
+        }
+        const recorded = u.replace(/%2F/gi, "/");
+        if (u.startsWith("/") && SNAP[recorded] !== undefined) return reply(SNAP[recorded]);
         if (u.startsWith("/")) return reply("{}", 404);
         return real(url, opts);
     };
@@ -489,7 +551,9 @@ function judgeWhereTexts(text, extraTexts) {
     window.__resetWipe = function () {
         try {
             for (const key of Object.keys(localStorage)) {
-                if (key.startsWith("gate.pages.") || key === "gate.theme.declared") {
+                if (CONTEXT ? key.startsWith(STORAGE)
+                    : ALL.some(f => key === STORAGE + f) || key === "gate.theme.declared"
+                        || key === "gate.bench.layout") {
                     localStorage.removeItem(key);
                 }
             }
@@ -520,9 +584,10 @@ body { height: calc(100vh - var(--strip)) !important; }
 #published-note a { color: #c9c9c9; }
 </style>
 """
-    # JSON lives inside an HTML script element. Its strings cannot close that
-    # element and introduce a second program which the CSP stamper would trust.
     shim = (shim.replace("__SNAP__", script_json(snap))
+                .replace("__CONTEXT__", script_json(context))
+                .replace("__STORAGE__", script_json("gate.pages." if not context else
+                    "gate.pages." + context["pin"] + "." + context["world"] + "."))
                 .replace("__FORMS__", script_json(sorted(forms)))
                 .replace("__WORLDS__", script_json(files.get("worlds") or []))
                 .replace("__LAYOUT__", script_json(layout))
@@ -533,29 +598,62 @@ body { height: calc(100vh - var(--strip)) !important; }
             'the tool: <code>git clone '
             'https://github.com/DanielSwift1992/gate</code></div>')
 
+    if context:
+        note = note.replace('saved on green, in this browser', 'draft and verdict saved in this browser, including refusals')
+
     marker = '<link rel="stylesheet" href="codemirror.css">'
     if marker not in ui:
         raise SystemExit("build-pages: ui.html changed shape, the shim has no place to stand")
     ui = ui.replace(marker, shim + marker, 1)
-    ui = stamp_csp(ui + note)
+    if context:
+        scope = "gate.pages." + context["pin"] + "." + context["world"] + "."
+        ui = ui.replace('<title>gate · world bench</title>', '<title>gate · ' + html.escape(context['tab']['title']) + '</title>')
+        ui = ui.replace('"gate.theme.declared"', script_json(scope + "theme"))
+        ui = ui.replace('"gate.bench.layout"', script_json(scope + "layout"))
+        ui = ui.replace('<script src="court/vi_court.js">',
+            '<script src="world-court.js"></script><script src="court/vi_court.js">', 1)
+        ui = ui.replace('<div id="rail">', context["navigation"] + '<div id="rail">', 1)
+        ui += context["provenance_html"]
+        ui += '<style>:root {--strip:52px} #world-tabs {position:fixed;top:0;left:0;right:0;height:48px;overflow:auto;white-space:nowrap;padding:4px 12px;box-sizing:border-box;font:13px ui-monospace,monospace} #world-tabs a {margin-right:12px} body {height:calc(100vh - 52px)!important;padding-top:48px;box-sizing:border-box} #world-provenance {position:fixed;bottom:28px;height:24px;left:0;right:0;overflow:auto;white-space:nowrap;font:11px ui-monospace,monospace;background:#101010;color:#c9c9c9} #world-provenance a {color:inherit}</style>'
 
-    os.makedirs(OUT, exist_ok=True)
-    open(os.path.join(OUT, "index.html"), "w", encoding="utf-8").write(ui)
-    open(os.path.join(OUT, "ladder.css"), "w", encoding="utf-8").write(ladder_css)
+    ui = stamp_csp(ui + note)
+    os.makedirs(out, exist_ok=True)
+    open(os.path.join(out, "index.html"), "w", encoding="utf-8").write(ui)
+    open(os.path.join(out, "ladder.css"), "w", encoding="utf-8").write(ladder_css)
     for asset, home in (("codemirror.css", "web"), ("codemirror.js", "web"),
                         ("judge.js", "bin"), ("renderer.js", "bin"), ("press.js", "bin"),
                         ("drawing.from", "bin")):
         src = os.path.join(HERE, home, asset)
         if os.path.exists(src):
-            shutil.copy(src, os.path.join(OUT, asset))
-    os.makedirs(os.path.join(OUT, "court"), exist_ok=True)
+            shutil.copy(src, os.path.join(out, asset))
+    os.makedirs(os.path.join(out, "court"), exist_ok=True)
     for asset in ("vi_court.js", "vi_court_bytes.js"):
         shutil.copy(os.path.join(HERE, "bin", "court-wasm", "web", asset),
-                    os.path.join(OUT, "court", asset))
+                    os.path.join(out, "court", asset))
     shutil.copy(os.path.join(HERE, "bin", "court-wasm.from"),
-                os.path.join(OUT, "court", "court-wasm.from"))
-    print(f"published bench written to {OUT}: "
+                os.path.join(out, "court", "court-wasm.from"))
+    if context:
+        shutil.copy(os.path.join(HERE, "bin", "world-court.js"), os.path.join(out, "world-court.js"))
+        with open(os.path.join(out, "snapshots.json"), "w", encoding="utf-8") as f:
+            json.dump(snap, f, indent=2)
+        with open(os.path.join(out, "world.json"), "w", encoding="utf-8") as f:
+            json.dump(context, f, indent=2)
+    print(f"published bench written to {out}: "
           f"{len(snap)} recorded answers, {len(names)} names")
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("out", nargs="?", default=os.path.join(HERE, "_site"))
+    parser.add_argument("--worlds", action="store_true", help="add pinned showcase worlds")
+    args = parser.parse_args()
+    with tempfile.TemporaryDirectory(prefix="gate-pages-") as tmp:
+        demo = os.path.join(tmp, "demo")
+        subprocess.run([GATE, "demo", demo], capture_output=True, check=True)
+        publish(demo, args.out)
+        if args.worlds:
+            from playground_pages import build_worlds
+            build_worlds(HERE, args.out, publish)
 
 
 if __name__ == "__main__":

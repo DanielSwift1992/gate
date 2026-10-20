@@ -382,12 +382,26 @@ stdlib/         the judge's own words, printed as real Swift files, each
                 court, the bench's numbers by the count court against the
                 corpus's Primitive at the pin, and a page that claims
                 nothing is said to claim nothing
+bin/playground-worlds.sh
+                the showcase worlds at bin/playground-worlds.from: every selected
+                file has its SHA-256, checked again on a cache hit. The compiler's
+                theory and the court's pin are recorded separately there.
+bin/build-pages.py
+                builds the bench. The worlds mode in docs/DETAILS.md adds the
+                playground tabs from the pinned site's Manifest.swift, with
+                serve's recorded answers. Each world keeps
+                its own saved files by revision, world and file. Page bodies at
+                the pin compile in showcase; browser edits have no Swift proof.
+                A mixed company page names its data boundary explicitly; the
+                company court reads below it, at the original line addresses.
+                SHOWCASE_SOURCE names a local source at the pin; the published
+                worlds-source.json says local. The default fetches the public pin.
 web/ui.html     the workbench; bin/judge.js judges it in the browser
 web/codemirror.*  the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
 docs/           DETAILS.md, SECURITY.md, CHANGELOG.md, NOTICE.md, and
                 the cover's picture with its provenance
-tests/smoke.py   the battery: 712 checks this repository holds itself
+tests/smoke.py   the battery: 713 checks this repository holds itself
                  to, end-to-end runs through judge parity through
                  documentation contracts; the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts

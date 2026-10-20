@@ -9,7 +9,7 @@
 <meta charset="utf-8"><title>gate · world bench</title>
 <!-- zero egress, enforced by the browser as well as by the code: the bench may
      talk to its own loopback server and to nothing else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-5GzCvayhfKIAxAwizJRqS3a05vGAKRgdgfqpOuJGoBs=' 'sha256-N4s8Q0jZWU0PvSavXrfl34OILjli758rp+Z0kwmSMYg='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-5GzCvayhfKIAxAwizJRqS3a05vGAKRgdgfqpOuJGoBs=' 'sha256-YcZLDNR5nKB5fNxcDO7otLfSJT1BXRnt4UTRzvp3+1g='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
 <link rel="stylesheet" href="/codemirror.css">
 <script>
 // The theme is a declaration, not a toggle — and the declaration lives in the
@@ -178,6 +178,7 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 #gitstate.committed .g{background:var(--muted)}
 #write{border:none;background:color-mix(in srgb,var(--action) 12%,transparent);color:var(--action);padding:calc(var(--u)*2) calc(var(--u)*6);border-radius:5px;font:inherit;cursor:pointer}
 #write:disabled{opacity:.4;cursor:default}
+#projection-pages{padding:var(--near) var(--wide);border-bottom:1px solid var(--line)}
 #surface{flex:1;position:relative;min-height:0}
 #editor-host{position:absolute;inset:0}
 .CodeMirror{height:100%;font:var(--source);background:var(--paper);color:var(--ink)}
@@ -453,6 +454,7 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
     <button id="keys-btn" title="Keyboard shortcuts">?</button>
     <span id="gitstate" class="observed" title="Edits go straight to the file on disk. gate keeps no state of its own: commit or discard with git."></span>
   </div>
+    <div id="projection-pages" class="caption" hidden><button id="projection-prev">Previous</button> <span id="projection-range"></span> <button id="projection-next">Next</button> · projections show a page; the judge reads the whole file</div>
   <div id="surface">
     <div id="editor-host"></div>
     <pre id="bare"></pre>
@@ -535,7 +537,8 @@ let layoutFile = null;
 // the forms this world presents: the operator's own files saying what a
 // record may be. Their names belong to the vocabulary the bench offers,
 // and their court is `where`, never the plain stream.
-let formsFiles = new Set();
+let formsFiles = new Set(), carriedFiles = new Set();
+let readerDrafts = false;
 // ── WHAT A NAME WAS BEFORE SOMEBODY SAID OTHERWISE, keyed by name. An override
 // is judged — the shipped laws test whatever number stands in place — but it was
 // silent, and silence about values is answered by feel a month later. The answer
@@ -717,7 +720,8 @@ function toggleComment(cm) {
 function noSave(cm) {
     // ⌘S is muscle memory, and here it has nothing to do: say so, and above
     // all keep the browser from offering to save the page
-    say("There is nothing to save: the file is written whenever the judge holds.");
+    say(readerDrafts ? "Your draft and its verdict are saved in this browser, including refusals."
+        : "There is nothing to save: the file is written whenever the judge holds.");
 }
 
 // `historySize().undo` counts EDITS, never selections, so it is the one number
@@ -730,7 +734,7 @@ function undoEdit() {
 }
 const cm = CodeMirror(document.getElementById("editor-host"), {
     value: "", mode: "gate-swift", lineNumbers: true, indentUnit: 4,
-    viewportMargin: Infinity, dragDrop: false,
+    viewportMargin: 10, dragDrop: false,
     extraKeys: {
         "Cmd-/": toggleComment, "Ctrl-/": toggleComment,
         "Cmd-S": noSave, "Ctrl-S": noSave,
@@ -1372,12 +1376,12 @@ function admits(top, kind) {
 // it. placeAt's hand-counted braces and the six-line gathering of a
 // broken gate died here: this is the one walk, asked twice.
 function scopesAt(cur) {
-    const stack = [];
-    for (let l = 0; l <= cur.line; l++) {
+    const signs = new Set([",", ...SCOPES.flatMap(s => [s.open[0], s.close[0]])]);
+    const walk = (l, end, stack) => {
         const text = cm.getLine(l) || "";
-        const end = l === cur.line ? cur.ch : text.length;
         let i = 0;
         while (i < end) {
+            if (!signs.has(text[i])) { i++; continue; }
             const top = stack[stack.length - 1];
             if (top && top.close !== "\n" && text.startsWith(top.close, i)) {
                 stack.pop(); i += top.close.length; continue;
@@ -1395,8 +1399,26 @@ function scopesAt(cur) {
             if (text[i] === "," && top) top.commas += 1;
             i += 1;
         }
-        while (stack.length && stack[stack.length - 1].close === "\n") stack.pop();
+    };
+    // Rewalking every preceding line for every opener made a keystroke in
+    // At scale quadratic. Cache immutable line-start frames for this document
+    // generation. Grammar changes and undo/redo get their own reading too.
+    const generation = cm.changeGeneration ? cm.changeGeneration() : null;
+    const doc = cm.getDoc ? cm.getDoc() : cm;
+    let cache = scopesAt.cache;
+    if (generation === null || !cache || cache.doc !== doc || cache.generation !== generation
+        || cache.scopes !== SCOPES || cache.nests !== NESTS) {
+        cache = scopesAt.cache = { doc, generation, scopes: SCOPES, nests: NESTS, starts: [[]] };
     }
+    while (cache.starts.length <= cur.line) {
+        const l = cache.starts.length - 1;
+        const stack = cache.starts[l].map(f => ({ ...f }));
+        walk(l, (cm.getLine(l) || "").length, stack);
+        while (stack.length && stack[stack.length - 1].close === "\n") stack.pop();
+        cache.starts.push(stack);
+    }
+    const stack = cache.starts[cur.line].map(f => ({ ...f }));
+    walk(cur.line, cur.ch, stack);
     return stack;
 }
 // walk one line: enough to answer where its note begins, because neither
@@ -1719,7 +1741,8 @@ function paintUngranted() {
     for (const mk of momentMarks) mk.clear();
     momentMarks = [];
     if (!cm || !cm.markText) return;
-    for (let l = 0; l < cm.lineCount(); l++) {
+    const view = cm.getViewport ? cm.getViewport() : { from: 0, to: cm.lineCount() };
+    for (let l = view.from; l < view.to; l++) {
         const bad = ungrantedOpenerAt(l);
         if (!bad) continue;
         momentMarks.push(cm.markText(
@@ -1727,6 +1750,8 @@ function paintUngranted() {
             { className: "cm-badname", title: bad.why }));
     }
 }
+
+cm.on("viewportChange", paintUngranted);
 
 let compSlot = null, compRect = null;   // the offer may belong to a slot in Bare
 // an offer over a slot that already holds a value opens ON that value: the list
@@ -1872,7 +1897,8 @@ document.addEventListener("keydown", (e) => {
     // the browser must not offer to save the page when a hand reaches for it
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
         e.preventDefault();
-        say("There is nothing to save: the file is written whenever the judge holds.");
+        say(readerDrafts ? "Your draft and its verdict are saved in this browser, including refusals."
+        : "There is nothing to save: the file is written whenever the judge holds.");
     }
 });
 
@@ -1888,18 +1914,21 @@ function namesOf(parsed) {
     return out;
 }
 
+let flaggedLines = new Set();
 function clearFlags() {
     widgets.forEach(w => w.clear()); widgets = [];
-    for (let i = 0; i < cm.lineCount(); i++) {
+    for (const i of flaggedLines) {
         cm.removeLineClass(i, "background", "line-flag-bad");
         cm.removeLineClass(i, "gutter", "gutter-flag-bad");
     }
+    flaggedLines.clear();
 }
 function applyFlags(refusals) {
     for (const ref of refusals) {
         if ((ref.file || active) !== active) continue;
         const i = ref.line - 1;
         if (i < 0 || i >= cm.lineCount()) continue;
+        flaggedLines.add(i);
         cm.addLineClass(i, "background", "line-flag-bad");
         cm.addLineClass(i, "gutter", "gutter-flag-bad");
         const note = document.createElement("div");
@@ -1930,7 +1959,9 @@ function repaintNames(parsed, refusals) {
     if (key !== paintedKey) { paintedKey = key; cm.setOption("mode", "gate-swift"); }
 }
 
+let renderGeneration = 0;
 async function render() {
+    const generation = ++renderGeneration;
     const text = editor.value;
     // ── WHICH COURT READS THIS FILE IS WHAT THE ROW SAYS, and the page had one
     // reading for everything. The plain court reads a world of facts and refuses
@@ -1944,9 +1975,10 @@ async function render() {
     // one — it declares protocols, which the plain court refuses on sight — and
     // reading it plainly threw away the one thing its rows are made of, the
     // `typeName` string that says which file each claim is about.
-    const byWhere = viewingShelf !== null || formsFiles.has(active) || active === layoutFile;
+    const byWhere = viewingShelf !== null || formsFiles.has(active) || carriedFiles.has(active) || active === layoutFile;
     const local = judge(active || "gate.swift", text,
-                        byWhere ? { seeds: new Set(), generics: new Set() } : undefined);
+                        carriedFiles.has(active) ? kitVocabulary
+                            : byWhere ? { seeds: new Set(), generics: new Set() } : undefined);
     lastParsed = local.parsed;
     // The state and its keys can be in different files. The same whole-world
     // reading offers Drawing here and paints it when this is the open view.
@@ -1980,6 +2012,7 @@ async function render() {
     const serverJudged = files.length > 1 || formsFiles.has(active);
     if (serverJudged) {
         r = await (await fetch("/verdict?f=" + encodeURIComponent(active), { method: "POST", body: text })).json();
+        if (generation !== renderGeneration) return false;
         // the width travels with the verdict: `holds` over three files says
         // nothing until it says over how much
         r.wide = r.premises; r.declarations = files.length + " files";
@@ -2140,7 +2173,14 @@ async function showNext() {
 async function refreshGit() {
     const el = document.getElementById("gitstate");
     try {
-        const g = (await (await fetch("/gitstatus?f=" + encodeURIComponent(active))).json()).git;
+        const state = await (await fetch("/gitstatus?f=" + encodeURIComponent(active))).json();
+        const g = state.git;
+        if (readerDrafts) {
+            el.className = g === "draft" ? "modified" : "observed";
+            el.textContent = g === "draft" ? "draft saved · saved verdict: " + state.verdict : "source · no reader draft";
+            el.title = "Reader text and its verdict are stored in this browser. Refusals stay visible; no repository is written.";
+            return;
+        }
         el.className = g === "committed" ? "committed" : "modified";
         el.innerHTML = '<span class="g"></span>' + (g === "committed" ? "committed"
             : g === "untracked" ? "not in git yet" : "not committed yet");
@@ -2385,6 +2425,7 @@ async function sayValue(name, now, cell) {
 }
 
 function buildTables() {
+    syncProjection();
     const host = document.getElementById("table-host");
     host.innerHTML = "";
     const badLines = new Set(lastRefusals.map(r => r.line));
@@ -2403,7 +2444,7 @@ function buildTables() {
     // shipped, the row says what it was and whose shelf it came from. That is a
     // column on a form that already exists, not a badge somewhere else.
     if (values.length) {
-        const rowset = values, label = "values";
+        const rowset = values.filter(([, a]) => projected(a.line)), label = "values";
         const h = document.createElement("h3");
         h.textContent = label + " · " + rowset.length;
         host.append(h);
@@ -2501,7 +2542,7 @@ function buildTables() {
             head.append(th);
         }
         table.append(head);
-        let entries = L.rows;
+        let entries = L.rows.filter(e => projected(e.line));
         if (tableSort && tableSort.sig === sig)
             entries = [...entries].sort((a, b) =>
                 tableSort.dir * (a.args[tableSort.key] ?? "").localeCompare(b.args[tableSort.key] ?? "", undefined, { numeric: true }));
@@ -2575,7 +2616,7 @@ function buildTables() {
             head.append(th);
         }
         table.append(head);
-        let rows = group.rows;
+        let rows = group.rows.filter(d => projected(d.line));
         if (tableSort && tableSort.sig === sig) {
             const val = (d) => tableSort.key === "name" ? d.name : (d.aliases.get(tableSort.key)?.target ?? "");
             rows = [...rows].sort((a, b) => tableSort.dir * val(a).localeCompare(val(b), undefined, { numeric: true }));
@@ -3162,16 +3203,50 @@ function noteProse(text, marks) {
 
 // where a record stops: the next declaration begins. Nothing else in the parse
 // says it, and a record that owns the rest of the file owns other people's lines.
+// The parse is immutable. Its ordered boundaries are built once, not once
+// per record: a company of 12,800 people must not do 12,800 squared walks.
+const recordBoundaries = new WeakMap();
 function recordEnd(parsed, d) {
-    let end = Infinity;
-    for (const [, o] of parsed.declarations)
-        if (o.line > d.line && o.line < end) end = o.line;
-    for (const [, a] of (parsed.topAliases || new Map()))
-        if (a.line > d.line && a.line < end) end = a.line;
-    return end;
+    if (!recordBoundaries.has(parsed)) {
+        const lines = [...parsed.declarations.values(), ...(parsed.topAliases || new Map()).values()]
+            .map(x => x.line).sort((a, b) => a - b);
+        recordBoundaries.set(parsed, new Map(lines.map((line, i) => [line, lines[i + 1] ?? Infinity])));
+    }
+    return recordBoundaries.get(parsed).get(d.line) ?? Infinity;
 }
+// Full keeps the complete document in CodeMirror's virtual viewport. Bare
+// and Table bound their DOM too; a page changes only the projection, never
+// the buffer, line addresses, undo history, or the text sent to the court.
+const projectionLines = 2000;
+let projectionPage = 0;
+function projectionRange() {
+    const total = Math.max(1, Math.ceil(cm.lineCount() / projectionLines));
+    projectionPage = Math.max(0, Math.min(projectionPage, total - 1));
+    const from = projectionPage * projectionLines + 1;
+    return { from, to: total === 1 ? Infinity : from + projectionLines - 1, total };
+}
+function projected(line) {
+    const range = projectionRange();
+    return line >= range.from && line <= range.to;
+}
+function syncProjection() {
+    const range = projectionRange(), host = document.getElementById("projection-pages");
+    host.hidden = range.total === 1 || (mode !== "bare" && mode !== "table");
+    document.getElementById("projection-range").textContent = "lines " + range.from + "–"
+        + Math.min(range.to, cm.lineCount()) + " · page " + (projectionPage + 1) + " of " + range.total;
+    document.getElementById("projection-prev").disabled = projectionPage === 0;
+    document.getElementById("projection-next").disabled = projectionPage + 1 === range.total;
+}
+for (const [id, step] of [["projection-prev", -1], ["projection-next", 1]])
+    document.getElementById(id).addEventListener("click", () => {
+        projectionPage += step;
+        setMode(mode);
+    });
+
 
 function bareForm(parsed, text) {
+    syncProjection();
+    const range = projectionRange();
     const badLines = new Set(lastRefusals.map(r => r.line));
     const src = text || "";
     const notes = attachNotes(src, parsed);
@@ -3200,6 +3275,7 @@ function bareForm(parsed, text) {
     // it, and the comments that belong to nobody where they were written
     const items = [];
     for (const [name, d] of parsed.declarations) {
+        if (d.line > range.to || recordEnd(parsed, d) <= range.from) continue;
         const bad = badLines.has(d.line);
         // ── AND THE HOLES A GATE OPENS, beside the name that opens them. A gate
         // is the one form whose whole content is its parameters — `Enter<Who:
@@ -3275,6 +3351,7 @@ function bareForm(parsed, text) {
             if (owner !== null && ln < (starts.find(s => s > owner) ?? ends)) hurt.add(owner);
         }
         for (const e of (d.entries || [])) {
+            if (!projected(e.line)) continue;
             const args = (e.args || []).map((a, i) =>
                 slotSpan({ kind: "arg", line: e.line, host: name, head: e.head, index: i }, a));
             // ── AND A REFUSAL IS VISIBLE WHERE THE EDIT WAS MADE. This view is
@@ -3299,6 +3376,7 @@ function bareForm(parsed, text) {
     // record. The spelling stays a hover away, because it is still the thing on
     // the line underneath.
     for (const [name, a] of (parsed.topAliases || new Map())) {
+        if (!projected(a.line)) continue;
         const shown = shownTerm(a.target);
         const said = shown === a.target ? nameTokens(a.target)
             : '<span title="' + escAttr(a.target) + '">' + nameTokens(shown) + "</span>";
@@ -3314,6 +3392,7 @@ function bareForm(parsed, text) {
     const frees = freeComments(src, notes, parsed);
     const marks = frees.filter(c => c.kind === "mark").map(c => c.text);
     for (const c of frees) {
+        if (!projected(c.line)) continue;
         if (c.kind === "mark") continue;
         items.push({ line: c.line, block: [],
             note: c.kind === "head"
@@ -3414,6 +3493,7 @@ function setMode(m) {
     if (m === "table") buildTables();
     if (m === "drawing") drawCanvases();
     if (m === "full") cm.refresh();
+    syncProjection();
 }
 
 // ── DRAWING: the fourth view of the same file, for a world that presents a
@@ -3586,8 +3666,9 @@ document.getElementById("nav-fwd").onclick = () => navGo(navForward, navBack);
 }
 updateNavButtons();
 
-// No buffer of our own: an edit goes to the working-copy file, and git is the
-// only state. But ONLY a holding world is written — a refused (invalid) world
+// In a repository an edit goes to the working-copy file, and git is the
+// only state. Published worlds keep browser drafts, with their verdicts.
+// In a repository ONLY a holding file is written — a refused (invalid) world
 // never reaches the file, so git reflects only worlds that hold. The invalid
 // state lives only in the editor buffer until it holds again. A programmatic
 // load (setValue) judges without writing.
@@ -3675,8 +3756,12 @@ function inspect() {
 }
 cm.on("cursorActivity", scheduleInspect);
 async function tick(write) {
-    await render();                         // judges the buffer first
+    const file = active, text = editor.value;
+    const current = await render();                         // judges the buffer first
+    if (current === false || file !== active || text !== editor.value) return;
     paintUngranted();                       // the moment's refusal, over the fresh parse
+    // Published worlds keep reader drafts, including refusals, together with
+    // their verdict. A repository still writes only when this file holds.
     // ── AND WHAT STOPS THE WRITE IS THIS FILE, NOT THE WHOLE WORLD. A refusal
     // in a file you are not editing cannot be caused by what you typed and
     // cannot be fixed by it either, and blocking on one froze the bench whole:
@@ -3685,8 +3770,14 @@ async function tick(write) {
     // every value looked broken. Your file is judged before it is written; the
     // rest of the world is judged, and shown, and not held against you.
     const holds = !lastRefusals.some(r => !r.file || r.file === active);
-    if (write && holds) {
-        await fetch("/world?f=" + encodeURIComponent(active), { method: "PUT", body: editor.value });
+    if (write && (holds || readerDrafts)) {
+        const saved = await fetch("/world?f=" + encodeURIComponent(active), { method: "PUT", body: editor.value });
+        if (!saved.ok) {
+            const el = document.getElementById("gitstate");
+            el.className = "modified";
+            el.textContent = "draft not saved: browser storage unavailable";
+            return;
+        }
         refreshGit();
         // ── AND THE LIST IS A FILE, so writing that file can change the list. The
         // rows say which files are read: delete one here and its file is undeclared
@@ -3725,6 +3816,8 @@ async function siblings() {
 }
 async function loadFile(name) {
     resetDrawing();
+    scopesAt.cache = null;
+    projectionPage = 0;
     cm.setOption("readOnly", false); viewingShelf = null; refLabel = null; undeclaredView = null;
     active = name;
     document.getElementById("fname").textContent = name;
@@ -3739,8 +3832,9 @@ async function loadFile(name) {
     // through to `theirs` and the whole document came up purple, then repainted
     // a beat later when the parse arrived. A view that shows the wrong world
     // first and corrects itself is a view you cannot read at a glance.
-    const early = judge(name, t, formsFiles.has(name) || name === layoutFile
-                                ? { seeds: new Set(), generics: new Set() } : undefined);
+    const early = judge(name, t, carriedFiles.has(name) ? kitVocabulary
+        : formsFiles.has(name) || name === layoutFile
+            ? { seeds: new Set(), generics: new Set() } : undefined);
     // and it is this file's parse from here on: the buffer answers for its own
     // file, so between opening and the first render nothing may answer for it
     // out of the file you just left
@@ -3900,6 +3994,8 @@ async function readFiles() {
     files = fl.files || []; personalFile = fl.personal || null; personalEmpty = !!fl.personal_empty;
     layoutFile = fl.layout || null;
     formsFiles = new Set(fl.forms || []);
+    carriedFiles = new Set(fl.carried || []);
+    readerDrafts = fl.save_policy === "reader-draft";
     opensAs = fl.opens || {};
     seamRows = fl.seams || [];
     undeclaredFiles = fl.undeclared || []; roleWords = fl.roles || {};

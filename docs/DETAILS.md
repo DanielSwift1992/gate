@@ -236,3 +236,19 @@ sha256 of `web/ui.html` as photographed, and the battery holds that hash to
 the working copy: change the bench and the battery goes red until the
 picture is retaken. CI takes a fresh shot on every run and attaches it as
 an artifact.
+
+## Pinned playground worlds
+
+`python3 bin/build-pages.py _site --worlds` adds the showcase worlds to the published bench, at `playground/<id>/index.html`. The tab order, groups and labels come from the pinned `Worlds/Playground/Site/Manifest.swift`. The ordinary demo stays at the front door.
+
+`bin/playground-worlds.from` names the showcase revision, every selected file's SHA-256, the world's compiler theory, the judge and the wasm bytes. `bin/playground-worlds.sh` fetches those revisions directly, with LF checkouts, and checks the files again when its cache is warm. `SHOWCASE_SOURCE` selects a local checkout at the recorded revision; the built site's `worlds-source.json` then says local. A changed selected file is refused.
+
+The compiler uses theory b61433ab, the judge 68671515. Both Primitive files have SHA-256 c2700f5d176d4f30159b9996cbe41d33fc2f14dfb6e7ad355e081014f8c4482a. The world supplies its Primitive and Spectrum explicitly through `.gate/forms-definitions.json`; these are input files, not claims. `shelf_overrides: false` keeps a standalone dictionary from restating the bench's same-named colours. The mixed organization page names its existing company-data boundary in `plain_fragments`; blank lines preserve the original claim addresses. Erasing or repeating that boundary refuses the reading.
+
+The page saves reader drafts and their verdicts under their showcase revision, world and file, including refusals. A red Atom edit survives a reload and stays red; the repository bench still writes on holds. Reset clears only that world's texts and layout. Large files keep a lossless splice against the pinned source, so a small edit does not duplicate five megabytes into browser storage. A storage failure is reported as an unsaved draft. The reopened world is judged again; a saved receipt is not evidence about later edits.
+
+The showcase palette at 9026431 preserves its seventeen integer contrast relations as count readings, and Site holds. The generic where normalization-limit route remains unsupported with its requirement IDs and addresses. Atom keeps four nominal refusals alongside ten successful count readings. A compiled page at the pin is not a compiler check of an edit in the browser; the generated company has no new Swift check at these pins.
+
+At scale keeps all 136,513 lines in the editor and in the court's input. Full uses CodeMirror's virtual viewport; Bare and Table project 2,000 source lines at a time, with Previous/Next controls and original addresses. Projection pages change neither the buffer nor the scope of judgement. The drawing engine still reads the whole world.
+
+`tests/playground.py`, called by the battery, replays the transferred page and kit vectors, compares all nine drawings with playground 400b667, checks native/wasm answers and all seventeen palette slack controls, builds the actual benches through serve, and executes their fetch shim and paged projection functions under node. The live browser walk belongs to review.

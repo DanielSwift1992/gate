@@ -325,7 +325,7 @@ jobs:
       # server's own answers recorded from a live serve at build time. The
       # build itself is a Linux measure: a demo is born and served under the
       # node port on this runner before anything is published.
-      - run: python3 bin/build-pages.py _site
+      - run: python3 bin/build-pages.py _site --worlds
       # the road test: the published page walks the user's own road headless,
       # type to offer to red to green to kept, and refuses to deploy a page
       # where any step of it falls over

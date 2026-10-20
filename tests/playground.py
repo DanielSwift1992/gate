@@ -1,0 +1,152 @@
+#!/usr/bin/env python3
+"""The transferred vectors, and the actual published benches that read them."""
+import importlib.util
+import hashlib
+from html.parser import HTMLParser
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+
+HERE = Path(__file__).resolve().parent.parent
+
+
+def run():
+    cache = Path(subprocess.check_output([str(HERE / 'bin/playground-worlds.sh')], text=True).strip())
+    spec = importlib.util.spec_from_file_location('worlds', HERE / 'bin/playground-worlds.py')
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    record = json.loads((cache / 'worlds.from').read_text())
+    with tempfile.TemporaryDirectory(prefix='gate-worlds-check-') as temp:
+        # A corrupt warm cache must refuse before a builder gets its path.
+        # Keep the shared cache intact; this is the very checker the door calls.
+        root = Path(temp) / 'corrupt'
+        selected = next(iter(record['showcase']['files']))
+        target = root / selected
+        target.parent.mkdir(parents=True)
+        shutil.copyfile(cache / 'showcase' / selected, target)
+        module.checked(root, {selected: record['showcase']['files'][selected]})
+        target.write_bytes(target.read_bytes() + b' ')
+        try:
+            module.checked(root, {selected: record['showcase']['files'][selected]})
+            raise AssertionError('a changed cached file was accepted')
+        except ValueError as e:
+            assert 'sha256' in str(e)
+        # Exercise the whole local door with an isolated git, including a
+        # warm hit and a wrong HEAD. No user's checkout is changed for this.
+        local = Path(temp) / 'local'
+        local.mkdir()
+        subprocess.run(['git', '-C', str(local), 'init', '-q'], check=True)
+        (local / 'sample.swift').write_bytes(b'public enum Sample {}\n')
+        subprocess.run(['git', '-C', str(local), 'add', 'sample.swift'], check=True)
+        subprocess.run(['git', '-C', str(local), '-c', 'user.name=Fixture', '-c', 'user.email=fixture@test',
+                        'commit', '-qm', 'fixture: one recorded file'], check=True)
+        pin = subprocess.check_output(['git', '-C', str(local), 'rev-parse', 'HEAD'], text=True).strip()
+        fixture = Path(temp) / 'door'
+        (fixture / 'bin').mkdir(parents=True)
+        test_record = {kind: dict(revision=pin, files={'sample.swift': hashlib.sha256((local / 'sample.swift').read_bytes()).hexdigest()})
+                       for kind in ('showcase', 'theory', 'baseline')}
+        (fixture / 'bin/playground-worlds.from').write_text(json.dumps(test_record))
+        old_here, old_record, env = module.HERE, module.RECORD, dict(os.environ)
+        try:
+            module.HERE, module.RECORD = fixture, fixture / 'bin/playground-worlds.from'
+            for key in ('SHOWCASE_SOURCE', 'VI_THEORY_PATH', 'PLAYGROUND_SOURCE'):
+                os.environ[key] = str(local)
+            laid = module.materialize()
+            assert all(v.startswith('local: ') for v in json.loads((laid / 'from').read_text())['sources'].values())
+            assert module.materialize() == laid
+            (laid / 'showcase/sample.swift').write_bytes(b'corrupted\n')
+            try:
+                module.materialize()
+                raise AssertionError('the local door accepted changed cached bytes')
+            except ValueError as e:
+                assert 'sha256' in str(e)
+            shutil.rmtree(laid)
+            test_record['showcase']['revision'] = '0' * 40
+            module.RECORD.write_text(json.dumps(test_record))
+            try:
+                module.materialize()
+                raise AssertionError('the local door accepted a different HEAD')
+            except ValueError as e:
+                assert 'local HEAD' in str(e)
+        finally:
+            module.HERE, module.RECORD = old_here, old_record
+            os.environ.clear()
+            os.environ.update(env)
+        def prepared(name):
+            world = Path(temp) / ('native-' + name)
+            shutil.copytree(cache / 'showcase/Worlds/Playground' / name, world)
+            internal = world / '.gate'
+            internal.mkdir()
+            shutil.copyfile(cache / 'worlds.from', internal / 'worlds.from')
+            rows = []
+            for filename, source in [('Primitive.swift', cache / 'theory/Sources/VerificationIsIdentification/Primitive.swift'),
+                                     ('Spectrum.swift', cache / 'showcase/Sources/DocumentKit/Spectrum.swift')]:
+                shutil.copyfile(source, internal / filename)
+                rows.append(dict(path='.gate/' + filename, sha256=hashlib.sha256(source.read_bytes()).hexdigest()))
+            fragments = [dict(path='Organization.swift', marker='// ── the data the page reads')] if name == 'Organization' else []
+            (internal / 'forms-definitions.json').write_text(json.dumps(dict(files=rows, plain_fragments=fragments, shelf_overrides=False)))
+            return world
+        def status(world):
+            answer = subprocess.run([str(HERE / 'gate'), 'status', '--json'], cwd=world,
+                                    capture_output=True, text=True, check=False)
+            return json.loads(answer.stdout)
+        light = prepared('Light')
+        assert status(light)['verdict'] == 'holds'
+        declaration = light / 'Dictionary/Light.swift'
+        original = declaration.read_text()
+        declaration.write_text(original.replace('public typealias HalfFact =', 'public typealias budget =').replace(
+            '    public typealias Vertical = Twice<Lit1>\n}', '    public typealias Vertical = Lit1\n}'))
+        named = status(light)
+        assert named['verdict'] == 'refused' and not named.get('unsupported')
+        assert any('budget' in r['claim'] for r in named['refusals'])
+        declaration.write_text(original)
+        (light / '.gate/Primitive.swift').write_bytes(b'changed\n')
+        broken = status(light)
+        assert broken['verdict'] == 'refused' and any(r['address'] == '.gate/Primitive.swift:1' for r in broken['refusals'])
+        (light / '.gate/forms-definitions.json').unlink()
+        assert status(light)['verdict'] == 'refused'
+        organization = prepared('Organization')
+        assert status(organization)['verdict'] == 'holds'
+        source = organization / 'Organization.swift'
+        source.write_text(source.read_text().replace('public typealias Home = Finance', 'public typealias Home = Sales', 1))
+        lie = status(organization)
+        assert lie['verdict'] == 'refused' and all(r['address'].startswith('Organization.swift:') for r in lie['refusals'])
+        source.write_text(source.read_text().replace('// ── the data the page reads', '// boundary erased'))
+        assert status(organization)['verdict'] == 'refused'
+        # The new palette preserves the old integer relations and each of its
+        # seventeen slack+1 controls refuses in the native court.
+        subprocess.run([sys.executable, str(cache / 'showcase/Checks/Playground/palette-count.py'),
+                        '--theory', str(cache / 'theory'), '--judge', str(HERE / 'bin/gate-judge')], check=True)
+        site = Path(temp) / 'site'
+        subprocess.run([sys.executable, str(HERE / 'bin/build-pages.py'), str(site), '--worlds'], check=True)
+        csp_spec = importlib.util.spec_from_file_location('bench_csp', HERE / 'bin/bench_csp.py')
+        csp = importlib.util.module_from_spec(csp_spec)
+        csp_spec.loader.exec_module(csp)
+        class Handlers(HTMLParser):
+            def handle_starttag(self, tag, attrs):
+                assert not any(key.lower().startswith('on') for key, _ in attrs), (tag, attrs)
+        for page in [site / 'index.html', *(site / 'playground').glob('*/index.html')]:
+            html = page.read_text()
+            assert csp.stamp_csp(html) == html, str(page) + ': CSP must cover the final programs'
+            assert "script-src-attr 'none'" in html
+            Handlers().feed(html)
+        subprocess.run(['node', str(HERE / 'tests/playground.js'), str(cache), str(site)], check=True)
+        subprocess.run(['node', str(HERE / 'tests/playground-storage.js'), str(site)], check=True)
+        subprocess.run(['node', str(HERE / 'tests/playground-scale.js'), str(site)], check=True)
+        gallery = (site / 'playground/index.html').read_text()
+        assert gallery.count('class="world-card"') == 10 and 'world-grid' in gallery
+        assert 'href="../ladder.css"' in gallery and '<meta name="viewport"' in gallery
+        tabs = json.loads((site / 'playground/tabs.json').read_text())
+        assert [t['id'] for t in tabs] == ['readme', 'organization', 'scale', 'basics', 'writer', 'buttons', 'light', 'atom', 'rules', 'faq']
+        assert (site / 'worlds.from').read_bytes() == (HERE / 'bin/playground-worlds.from').read_bytes()
+        assert record['theory']['files']['Sources/VerificationIsIdentification/Primitive.swift'] == record['judge']['primitive_sha256']
+        assert all((site / 'playground' / t['id'] / 'index.html').is_file() for t in tabs)
+    print('PLAYGROUND ALL GREEN: pinned inputs, ten worlds, native/wasm, snapshots and isolated storage')
+
+
+if __name__ == '__main__':
+    run()

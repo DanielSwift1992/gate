@@ -3287,7 +3287,7 @@ function bench(text = atom, file = 'Atom.swift', neighbors = { 'AtomPages.swift'
         // The editor's note boundary is supplied just as CodeMirror supplies
         // lines. Existing offer probes exercise the full grammar/note walk.
         noteStartAt: i => (buffer.split('\n')[i] || '').indexOf('//'),
-        render: () => {}, bareForm: () => '', buildTables: () => {},
+        render: () => {}, bareForm: () => '', buildTables: () => {}, syncProjection: () => {},
     });
     vm.runInContext(['codeOfLine', 'aliasValueRange', 'locateSlot', 'fillSlot', 'setMode',
         'hideCompletion', 'drawCompletion', 'offerCompletion', 'acceptCompletion'].map(grab).join('\n'), context);
@@ -3768,7 +3768,7 @@ let vocabulary = {}, conformers = {}, axisOf = {}, protoAxes = {};
 let shelfDecls = new Map();
 let layoutDecls = new Map(), declFile = new Map(), worldAliases = new Map();
 let active = "w.swift", lastParsed = null, cm = null;
-let formsFiles = new Set();
+let formsFiles = new Set(), carriedFiles = new Set();
 global.fetch = async (u) => ({
     json: async () => ({ modules: pages.map(p => path.basename(p, ".swift")) }),
     text: async () => {
@@ -4132,7 +4132,7 @@ let SLOT_SPELLING = {};
 let vocabulary = {}, conformers = {}, axisOf = {}, protoAxes = {};
 let shelfDecls = new Map();
 let layoutDecls = new Map(), declFile = new Map(), worldAliases = new Map();
-let active = "w.swift", lastParsed = null, cm = null, formsFiles = new Set();
+let active = "w.swift", lastParsed = null, cm = null, formsFiles = new Set(), carriedFiles = new Set();
 global.fetch = async (u) => ({
     json: async () => ({ modules: pages.map(p => path.basename(p, ".swift")) }),
     text: async () => {
@@ -14331,6 +14331,16 @@ public enum MyWatch: AccessLedger {
               # eight lines in, so the first spelling of this compared a refusal
               # against a sentence about one.
               and _shoot.index("exit 1") < _shoot.rindex("bench.png.from")))
+
+    # The old playground's witnesses travel with the pinned showcase worlds.
+    # This builds the actual static benches through serve, then reads their
+    # snapshots with both courts and executes their storage shim under node.
+    _playground = subprocess.run([sys.executable, os.path.join(HERE, "tests", "playground.py")],
+                                 capture_output=True, text=True, timeout=300)
+    if _playground.returncode:
+        print("   playground:", (_playground.stdout + _playground.stderr)[-6000:])
+    S.append(("the pinned playground worlds keep their drawings, courts and separate state",
+              _playground.returncode == 0))
 
     # ── AND A SHORT RUN SAYS IT WAS SHORT, rather than blaming the README. The
     # swift vein's checks run only where a toolchain stands, so on a machine

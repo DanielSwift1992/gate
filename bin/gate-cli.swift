@@ -1969,7 +1969,7 @@ func findAll(_ pattern: String, _ text: String, lines: Bool = false) -> [String]
 func oneStream(_ w: WorldState, _ named: [(String, String)]) -> [(String, String)] {
     // one namespace is one stream, and this is the one place that says which:
     // a forms file is its own stream, and the layout's court is the guards
-    let forms = Set((w.layout?.rows ?? []).filter { $0.role == "forms" }.map { $0.path })
+    let forms = Set((w.layout?.rows ?? []).filter { $0.role == "forms" || $0.role == "carried" }.map { $0.path })
     var apart = Set<String>()
     if let l = w.layout { apart.insert(absPath(l.manifest)) }
     if let pp = policyPathOf(w) { apart.insert(absPath(pp)) }
@@ -1979,9 +1979,28 @@ func oneStream(_ w: WorldState, _ named: [(String, String)]) -> [(String, String
 func diskSources(_ w: WorldState) -> [(String, String)] {
     var out: [(String, String)] = []
     for (n, p) in oneStream(w, benchFilesOf(w)) where FileManager.default.fileExists(atPath: p) {
-        out.append((n, readText(p) ?? ""))
+        out.append((n, companyFragment(w, n, readText(p) ?? "")))
     }
     return out
+}
+
+// A mixed demonstration file has a compiled page and a company below it.
+// The publication record names that existing boundary explicitly. Blank lines
+// retain the source's addresses; changing or repeating the boundary refuses.
+func companyFragment(_ w: WorldState, _ name: String, _ text: String) -> String {
+    guard let root = layoutDir(w), let bytes = FileManager.default.contents(atPath:
+        (root as NSString).appendingPathComponent(".gate/forms-definitions.json")),
+        let spec = try? JSONSerialization.jsonObject(with: bytes) as? [String: Any],
+        let fragments = spec["plain_fragments"] as? [[String: String]],
+        let marker = fragments.first(where: {
+            $0["path"]?.replacingOccurrences(of: "/", with: "__") == (name as NSString).lastPathComponent
+        })?["marker"] else { return text }
+    let parts = text.components(separatedBy: marker)
+    if parts.count != 2 {
+        return "the declared company fragment marker is missing or repeated\n"
+    }
+    return String(repeating: "\n", count: parts[0].components(separatedBy: "\n").count - 1)
+        + marker + parts[1]
 }
 
 func duplicateGuardsOver(_ sources: [(String, String)]) -> [(address: String, claim: String)] {
@@ -2032,6 +2051,11 @@ func entryGuardsOver(_ sources: [(String, String)]) -> [(address: String, claim:
             }
             let bare = code.trimmingCharacters(in: .whitespaces)
             if bare.isEmpty { continue }
+            // A roster contains metatypes without generic arguments. The
+            // company court resolves those names; they are complete entries.
+            if !matches("^(?:[A-Z]\\w*\\.self\\s*;?\\s*)+$", bare).isEmpty && openAt == nil {
+                continue
+            }
             let closes = !matches(">\\s*\\.self\\s*;?", bare).isEmpty
             let opens = matchAt(bare, "[A-Z]\\w*\\s*<") != nil
             if opens {
@@ -2107,6 +2131,14 @@ func presentedOver(_ w: WorldState, _ shelfName: String)
     // place, and only this world's names; two declarations inside one layer
     // are refused with both addresses rather than settled by list order
     let shipped = STDLIB_TEXTS[shelfName] ?? ""
+    if let root = layoutDir(w), let data = FileManager.default.contents(atPath:
+        (root as NSString).appendingPathComponent(".gate/forms-definitions.json")),
+        let spec = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+        spec["shelf_overrides"] as? Bool == false {
+        // A pinned dictionary world supplies its own definitions. A same-named
+        // colour there is not a restatement of the bench's own palette.
+        return (shipped, [], [])
+    }
     let rows = w.layout?.rows ?? []
     if rows.isEmpty { return (shipped, [], []) }
     let base = layoutDir(w) ?? "."
@@ -2215,6 +2247,39 @@ func formsOutcome(_ refused: Int, _ residue: [FormResidue], _ checked: Int) -> S
     return "holds"
 }
 
+// A published world's compiler and its judge may stand at different pins.
+// These are explicit input files, not additional claims or a new file role.
+// The page builder lays this record beside the world; a changed or missing
+// definition is a refusal to read the record, never a fallback to our pin.
+func formsDefinitions(_ w: WorldState) -> (paths: [String], bad: [(address: String, claim: String)]) {
+    guard let root = layoutDir(w) else { return ([], []) }
+    let record = (root as NSString).appendingPathComponent(".gate/forms-definitions.json")
+    guard FileManager.default.fileExists(atPath: record) else {
+        if FileManager.default.fileExists(atPath: (root as NSString).appendingPathComponent(".gate/worlds.from")) {
+            return ([], [(".gate/forms-definitions.json:1", "the world's definitions record is missing")])
+        }
+        return ([], [])
+    }
+    guard let data = FileManager.default.contents(atPath: record),
+          let spec = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+          let files = spec["files"] as? [[String: String]], !files.isEmpty else {
+        return ([], [(".gate/forms-definitions.json:1", "cannot read the world's definitions record")])
+    }
+    var paths: [String] = [], bad: [(address: String, claim: String)] = []
+    for item in files {
+        guard let name = item["path"], name.hasPrefix(".gate/"), !name.contains(".."),
+              let want = item["sha256"] else {
+            bad.append((".gate/forms-definitions.json:1", "a definition has no local path or sha256")); continue
+        }
+        let path = (root as NSString).appendingPathComponent(name)
+        guard let bytes = FileManager.default.contents(atPath: path), sha256Hex(bytes) == want else {
+            bad.append((name + ":1", "definition bytes differ from the world's compiler pin")); continue
+        }
+        paths.append(path)
+    }
+    return (paths, bad)
+}
+
 func formsGuards(_ w: WorldState, _ size: inout [String: Int],
                  unsupported: inout [FormResidue], live: [String: String] = [:]) -> [(address: String, claim: String)] {
     // ── ONE WORLD IS WHAT A CLAIM REACHES. The forms rows of a layout are glued
@@ -2232,6 +2297,9 @@ func formsGuards(_ w: WorldState, _ size: inout [String: Int],
         && FileManager.default.fileExists(atPath: (d as NSString).appendingPathComponent($0.path)) }
     if rows.isEmpty { return [] }
     var bad: [(address: String, claim: String)] = []
+    let definitions = formsDefinitions(w)
+    bad += definitions.bad
+    if !definitions.bad.isEmpty { return bad }
     func bodyOf(_ r: LayoutRow) -> String {
         if let typed = live[r.path] { return typed }
         return readText((d as NSString).appendingPathComponent(r.path)) ?? ""
@@ -2288,13 +2356,26 @@ func formsGuards(_ w: WorldState, _ size: inout [String: Int],
         try? text.write(toFile: fp, atomically: false, encoding: .utf8)
         // A declared count world lends the same pinned definitions to its
         // nominal certificates: Twice is an alias, not an arithmetic guess.
-        let borrowed = countQuestion(text) == nil ? [] : [premise]
+        let borrowed = definitions.paths.isEmpty
+            ? (countQuestion(text) == nil ? [] : [premise]) : definitions.paths
         let said = courtSays(["where", fp] + borrowed)
         bad += canonGuard(w, said,
                           (said.contains("THE WHERE") && said.contains("canon v"))
                               || said.contains("✗"),
                           "judge where")
         for (cert, claim) in whereRefused(said) {
+            // Exhausting normalization does not disprove a requirement.
+            // Keep its original ID and address in the outstanding ledger.
+            if claim.hasPrefix("THE WHERE: ") && claim.contains("normalization limit reached at '")
+                && claim.hasSuffix("; no impossibility inferred") {
+                let marked = unsupported.filter { r in among.contains { r.address.hasPrefix($0.path + ":") } }
+                if marked.isEmpty {
+                    unsupported.append(FormResidue(id: cert ?? streamName,
+                        address: cert.flatMap { whereMap[$0] } ?? (among.first?.path ?? streamName) + ":1",
+                        reason: claim))
+                }
+                continue
+            }
             var spot: String? = cert.flatMap { whereMap[$0] }
             if spot == nil && !mine.isEmpty {
                 let touched = mine.map { $0.0 }.filter { claim.contains($0) }
@@ -2332,7 +2413,8 @@ func formsGuards(_ w: WorldState, _ size: inout [String: Int],
         }
         try? text.write(toFile: fp, atomically: false, encoding: .utf8)
         for q in asked {
-            let counted = courtSays(["count", fp, premise, "--predicate", q.predicate,
+            let counted = courtSays(["count", fp] + (definitions.paths.isEmpty ? [premise] : definitions.paths)
+                                   + ["--predicate", q.predicate,
                                      "--encoding", q.encoding, "--sigma", q.sigma])
             bad += canonGuard(w, counted, counted.contains("COUNT"), "judge count")
             for line in counted.components(separatedBy: "\n") {
@@ -2729,7 +2811,8 @@ func benchFilesOf(_ w: WorldState) -> [(String, String)] {
     guard let f = w.facts else { return [] }
     let base = (absPath(f) as NSString).deletingLastPathComponent
     var out: [(String, String)] = worldFilesOf(w).map { (relPath($0, base), $0) }
-    for r in w.layout?.rows ?? [] where r.role == "forms" {
+    for r in w.layout?.rows ?? [] where r.role == "forms"
+        || (r.role == "carried" && r.source == "mine" && r.path.hasSuffix(".swift")) {
         let p = (base as NSString).appendingPathComponent(r.path)
         if FileManager.default.fileExists(atPath: p),
            !out.contains(where: { $0.0 == r.path && $0.1 == p }) {
@@ -10774,7 +10857,22 @@ func courtSays(_ asked: [String]) -> String {
     spawnCounted("court")
     let keepsRefusal = asked.first == "where" || asked.first == "count"
     let bin = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath().path
-    let words: [String] = [bin, "judge"] + asked
+    var supplied = asked
+    var projected: String? = nil
+    if !keepsRefusal {
+        let w = discoverWorld()
+        for (i, path) in asked.enumerated() where !path.hasPrefix("-") {
+            guard let text = readText(path) else { continue }
+            let fragment = companyFragment(w, path, text)
+            if fragment == text { continue }
+            if projected == nil { projected = scratchDir("gate-company-") }
+            let target = (projected! as NSString).appendingPathComponent((path as NSString).lastPathComponent)
+            try? fragment.write(toFile: target, atomically: false, encoding: .utf8)
+            supplied[i] = target
+        }
+    }
+    defer { if let d = projected { try? FileManager.default.removeItem(atPath: d) } }
+    let words: [String] = [bin, "judge"] + supplied
 #if canImport(Darwin)
     var fds: [Int32] = [0, 0]
     guard pipe(&fds) == 0 else { return "" }
@@ -11942,6 +12040,8 @@ func serveDoor(_ a: [String]) -> Never {
                     ("files", .list(names.map { .text($0) })),
                     ("layout", lay.flatMap { names.contains($0) ? StatusJSON.text($0) : nil } ?? .null),
                     ("forms", .list(formsRows.map { .text($0) })),
+                    ("carried", .list(rows.filter { $0.role == "carried" && names.contains($0.path) }
+                        .map { .text($0.path) })),
                     // here and nobody declared: readable, not judged, and one
                     // gesture from being either
                     ("undeclared", .list(undeclaredHere(w).map { .text($0) })),
@@ -12105,6 +12205,8 @@ func serveDoor(_ a: [String]) -> Never {
                 let layout = w.layout?.manifest
                 let formsHere = Set((w.layout?.rows ?? []).filter { $0.role == "forms" }
                     .map { $0.path })
+                let carriedHere = Set((w.layout?.rows ?? []).filter { $0.role == "carried" }
+                    .map { $0.path })
                 var paths: [String] = []
                 for (name, p) in benchFilesOf(w) {
                     if p != active && !FileManager.default.fileExists(atPath: p) { continue }
@@ -12116,7 +12218,7 @@ func serveDoor(_ a: [String]) -> Never {
                     // typeName, and the plain court refuses both on sight: each
                     // has a guard of its own, and listing them here turned every
                     // row into a refusal
-                    if p != layout && !formsHere.contains(name)
+                    if p != layout && !formsHere.contains(name) && !carriedHere.contains(name)
                         && absPath(p) != absPath(policyPathOf(w) ?? "") {
                         paths.append(tp)
                     }
@@ -12132,7 +12234,7 @@ func serveDoor(_ a: [String]) -> Never {
                 let sources = oneStream(w, benchFilesOf(w))
                     .filter { $0.1 == active || FileManager.default.fileExists(atPath: $0.1) }
                     .map { (($0.0 as NSString).lastPathComponent,
-                            $0.1 == active ? text : (readText($0.1) ?? "")) }
+                            companyFragment(w, $0.0, $0.1 == active ? text : (readText($0.1) ?? ""))) }
                 if sources.count > 1 {
                     refusals = attributeRefusals(refusals, sources)
                 } else {
