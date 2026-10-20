@@ -1,4 +1,4 @@
 400b6674d1c120bb2b86150631093f86ec4d7994
-Historical typed-playground transport: press.js stays byte for byte; renderer-security.patch replays the archived renderer only. Current renderer.js follows showcase Contracts/Drawing/v0.1 through playground-worlds.from; tests/drawing.js checks native bytes/refusals. Font and palette profile remain T-0038.
-13535b6a7634fede0214f9d2ece59c68f19f03ffb9278862155d2a77ee473141  bin/renderer.js
+Historical typed-playground transport: press.js stays byte for byte; renderer-security.patch replays the archived renderer only. Current renderer.js follows showcase Contracts/Drawing/v0.1 through playground-worlds.from; tests/drawing.js checks native bytes/refusals. The T-0038 profile carries the owner Drawing input; drawing-profile.js alone states comparison status.
+8eee1cf3ed8023753677039362b112d6c86ef8db90ba24c56c697164cc7ac34e  bin/renderer.js
 a9fbf7f4e0333ea5a262d38ceb30e58de53ad99cff00d94dc3fe40145a0289f6  bin/press.js

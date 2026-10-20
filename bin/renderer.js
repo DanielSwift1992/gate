@@ -38,7 +38,7 @@ const kitVocabulary = {
         "Fixed", "SpanHosted", "SpanLink", "Halfway", "Under", "Paired",
         "RuleKey", "TermText", "CenteredBaseline", "Chord",
         "LineTally", "TextWidth", "SpanLabelMidWrapped", "SpanLabelWrapped", "Succ",
-        "XYZWrite", "PouredCoordinate", "Exactly", "EdgeSame", "EdgeEven", "EdgeOdd",
+        "XYZWrite", "XYZRatioWrite", "PouredCoordinate", "Exactly", "EdgeSame", "EdgeEven", "EdgeOdd",
         "EdgeAtLeast", "PerceptualRung"]),
     bareSeeds: new Set(["RestAir"]),
 };
@@ -231,6 +231,7 @@ function substitute(node, bindings) {
 }
 
 const portArity = new Map([
+    ["XYZRatioWrite",4],
     ...["Air", "Flexible", "Tally", "Twice", "Half", "Succ", "Tick", "TermText", "SpanHosted", "PerceptualRung"].map(n => [n,1]),
     ...["Plus", "Times", "Rest", "Seconds", "CanvasSize", "Fixed", "Layered", "FrozenReveal", "SpanLink", "RuleKey", "Chord", "Halfway", "Under", "CenteredBaseline", "TextWidth", "Paired", "EdgeEven", "EdgeOdd"].map(n => [n,2]),
     ...["TimedReveal", "LineTally", "XYZWrite", "EdgeSame", "EdgeAtLeast"].map(n => [n,3]),
@@ -482,9 +483,12 @@ function textOf(env, rawNode) {
     // canonical sums printed as the browser's device-independent form,
     // color(xyz-d65 ...) in 256ths. The canon computes nothing and clamps
     // nothing: the device maps the value onto whatever it can reach.
-    if (node.head === "XYZWrite" && node.args.length === 3) {
+    if ((node.head === "XYZWrite" && node.args.length === 3) || (node.head === "XYZRatioWrite" && node.args.length === 4)) {
+        const divisor = node.args.length === 4 ? countOf(env, node.args[3]) : 1;
+        if (!divisor || !Number.isSafeInteger(256 * divisor)) complain(env, "XYZ ratio divisor outside the supported range");
         const thousandths = (value) => {
-            const scaled = Math.floor(value * 1000 / 256);
+            if (!Number.isSafeInteger(value * 1000)) complain(env, "XYZ coordinate outside the supported range");
+            const scaled = Math.floor(value * 1000 / (256 * divisor));
             const whole = Math.floor(scaled / 1000);
             const rest = scaled % 1000;
             const padded = rest < 10 ? "00" + rest : rest < 100 ? "0" + rest : String(rest);

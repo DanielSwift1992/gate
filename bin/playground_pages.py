@@ -46,8 +46,6 @@ def build_worlds(here, out, publish):
         judge_primitive=record['judge']['primitive_sha256'])
     definitions = [('Primitive.swift', cache / 'theory' / primitive),
                    ('Spectrum.swift', cache / 'showcase/Sources/DocumentKit/Spectrum.swift')]
-    drawing = json.loads((cache / 'showcase/Contracts/Drawing/v0.1/manifest.json').read_text())
-    drawing_cases = {case['id']: case for case in drawing['cases']}
     for tab in entries:
         with tempfile.TemporaryDirectory(prefix='gate-playground-') as temp:
             workspace = Path(temp) / 'source'
@@ -89,7 +87,7 @@ def build_worlds(here, out, publish):
             context = dict(pin=record['showcase']['revision'], world=tab['id'], tab=tab,
                 definitions=texts, carried=[], catalog=catalog, provenance=provenance, guard_names=guard_names,
                 compiler=record['theory'], judge=record['judge'], plain_fragments=fragments,
-                drawing=drawing_cases.get(tab['id']),
+                drawing=dict(case_id=tab['id']),
                 generated_from='Organization/Organization.swift' if tab.get('generated') else None)
             # Carried paths are taken from /files by publish, not guessed here.
             publish(str(world), str(out / 'playground' / tab['id']), context)

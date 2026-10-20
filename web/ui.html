@@ -9,7 +9,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"><meta charset="utf-8"><title>gate · world bench</title>
 <!-- zero egress, enforced by the browser as well as by the code: the bench may
      talk to its own loopback server and to nothing else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-5GzCvayhfKIAxAwizJRqS3a05vGAKRgdgfqpOuJGoBs=' 'sha256-4+m3FIvcd31aKJPJn4eLW06X4Xdll326rYS8npdFpXk='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-5GzCvayhfKIAxAwizJRqS3a05vGAKRgdgfqpOuJGoBs=' 'sha256-Ok+CID/jlEgSKqRc+gfwgKAkAIQiELTBJN8L0ugoEfE='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
 <link rel="stylesheet" href="/codemirror.css">
 <script>
 // The theme is a declaration, not a toggle — and the declaration lives in the
@@ -513,9 +513,9 @@ const BENCH_FOR = "0.2.5";
 // bench, so it stands in the line that reports the bench's own condition.
 let benchStale = "";
 // A pin is a condition of the page, so it stays beside the judge's own pin.
-let drawingComparisonState = null;
+let drawingDeclaration = null;
 function showWorldInputs(world) {
-    drawingComparisonState = world.drawing || null;
+    drawingDeclaration = world.drawing || null;
     const door = /\/playground\/(?:index\.html)?$/.test(location.pathname);
     const disclosure = document.getElementById("world-provenance"), values = document.getElementById("world-inputs");
     disclosure.hidden = false; values.textContent = "";
@@ -3688,15 +3688,12 @@ async function drawCanvases() {
         // same dimensions to the host without changing the registered SVG.
         host.innerHTML = drawn.canvases.map(c => c.svg.replace(/viewBox="0 0 ([\d.]+) ([\d.]+)"/,
             '$& width="$1" height="$2"')).join("")
-            + (typeof drawingProfileState === "undefined" ? "" : '<div class="caption">' + esc(drawingProfileState.status + " · " + drawingProfileState.reason) + '</div>')
             + '<div class="caption">Keys change an alias in the open file. Literal typing is not available here.</div>'
             + '<div id="drawing-feedback" class="caption" role="status" aria-live="polite"></div>';
         drawingSnapshot = world;
-        const comparison = typeof drawingComparisonState !== "undefined" && drawingComparisonState;
-        const status = comparison && comparison.status === "not-compared"
-            ? "not-compared · " + comparison.address + ": " + comparison.reason
-            : "port-under-contract · Drawing v0.1. This current input has not been read by Swift.";
-        drawingSay(status + (drawn.errors.length ? " · Drawing refused: " + drawn.errors.slice(0, 6).join(" · ") : ""));
+        const comparison = await GateDrawingProfile.compare(drawingProfileState, world.parts, drawn, drawingDeclaration);
+        if (generation !== drawingGeneration || !drawingCurrent(world)) return;
+        drawingSay(GateDrawingProfile.caption(comparison) + (drawn.errors.length ? " · Drawing refused: " + drawn.errors.slice(0, 6).join(" · ") : ""));
     } catch (error) {
         if (generation !== drawingGeneration) return;
         button.hidden = true;

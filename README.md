@@ -364,7 +364,15 @@ bin/renderer.js · bin/press.js
                 tests/drawing.js compares exact input hashes, SVG bytes and
                 addressed refusals. Unsupported forms refuse instead of drawing;
                 an explicit Backdrop is currently outside this port's subset.
-                At scale stays not-compared. This finite contract does not
+                DrawingProfile.Contract takes the same pinned owner input.
+                drawing-profile.js compares the current bytes and actual output
+                in both serve and static pages. Exact cases say compared, edits
+                say port-under-contract, and At scale stays not-compared.
+                The published bench also reads its manifest and personal record;
+                that larger input stays port-under-contract even when its SVG
+                equals a native case. No extra source is discarded for comparison.
+                XYZRatioWrite prints the palette's explicit integer scale,
+                without asking Half for a fractional count. This contract does not
                 establish equivalence to arbitrary Swift. press.js applies a
                 drawn key to one alias; its historical pin and the archived
                 renderer replay remain recorded in bin/drawing.from.

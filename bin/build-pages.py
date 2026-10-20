@@ -7,6 +7,7 @@
 # the plain court by judge.js; the full cross-file court and the write path
 # belong to the clone, and the page says so on its face.
 import argparse
+import hashlib
 import html
 import json
 from bench_csp import stamp_csp, script_json
@@ -69,6 +70,11 @@ def publish(demo, out, context=None):
             snap[f"/world?f={f}"] = texts[f] = get(port, f"/world?f={f}")
             snap[f"/gitstatus?f={f}"] = get(port, f"/gitstatus?f={f}")
             snap[f"/verdict?f={f}"] = post(port, f"/verdict?f={f}", texts[f])
+
+        if context and context.get("drawing"):
+            # Bind the declared owner remainder to these exact initial bytes.
+            hashes = sorted(hashlib.sha256(texts[f].encode()).hexdigest() for f in files["files"])
+            context["drawing"]["source_digest"] = hashlib.sha256(json.dumps(hashes, separators=(",", ":")).encode()).hexdigest()
 
         shelf = json.loads(snap["/shelf"])
         for m in (shelf.get("modules") or []) if isinstance(shelf, dict) else []:

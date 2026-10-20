@@ -58,7 +58,23 @@ async function compile(plan, getBytes, assetURL) {
     function input(name){const f=plan.inputs[name];if(!f)fail('missing input row '+name);return f;}
     const list=text=>{if(!/^\([^()]*\)$/.test(text))fail('a reference list must be a finite tuple');return text.slice(1,-1).split(',').map(s=>s.trim()).filter(Boolean);};
     if(word(axis(d,'Reader'))!=='gate/documentkit-drawing')fail('this drawing reader is not installed','unsupported');
-    if(word(axis(d,'Contract'))!=='')fail('the owner Drawing contract is not installed','unsupported');
+    const contractName=axis(d,'Contract');
+    let contract=null, contractPin=null;
+    if(p.literals.get(contractName)?.value!=='') {
+        const file=input(contractName);
+        try { contract=JSON.parse(file.text); } catch { fail('invalid Drawing contract','refused',file.path+':1'); }
+        if(contract.format!=='drawing/1'||!Array.isArray(contract.cases)||!contract.owner?.files)fail('unsupported Drawing contract','unsupported',file.path+':1');
+        const ids=new Set();
+        for(const c of contract.cases) {
+            if(typeof c.id!=='string'||!c.id||ids.has(c.id)||!['svg','refused','not-compared'].includes(c.status)||!c.root||!c.address)fail('invalid Drawing case','refused',file.path+':1');
+            ids.add(c.id);
+            if(c.status==='not-compared') { if(!c.reason)fail('Drawing remainder has no reason'); continue; }
+            if(!/^[a-f0-9]{64}$/.test(c.inputSHA256)||!Array.isArray(c.sources)||!Array.isArray(c.sourceSHA256)||c.sourceSHA256.length!==c.sources.length||c.sourceSHA256.some(h=>!/^[a-f0-9]{64}$/.test(h)))fail('Drawing input hashes are missing');
+            if(c.status==='svg'&&(typeof c.svg!=='string'||await sha(bytes(c.svg))!==c.svgSHA256))fail('Drawing output bytes differ','refused',file.path+':1');
+        }
+        const provenance=(plan.record?.files||[]).find(row=>row.row===contractName);
+        contractPin={sha256:file.sha256,...(provenance?{repository:provenance.repository,revision:provenance.revision,source_path:provenance.source_path}:{path:file.path,source:file.source})};
+    }
     const palette=input(axis(d,'Palette')), pp=parsed(palette), env=kit.makeEnvironment(pp.declarations,pp.literals,pp.topAliases);
     const colour=term=>{const value=kit.textOf(env,kit.parseType(term));if(!/^color\(xyz-d65 [\d.]+ [\d.]+ [\d.]+\)$/.test(value))fail('unsupported colour '+term,'unsupported');return value;};
     const count=term=>{const n=Number(kit.textOf(env,kit.parseType('Tally<'+term+'>')));if(!Number.isSafeInteger(n)||n<0)fail('unsupported luminance '+term,'unsupported');return n;};
@@ -76,7 +92,9 @@ async function compile(plan, getBytes, assetURL) {
         shape(y,['Value','Colour','Projection'],file);
         if(!y?.conformances.includes('DrawingLuminance')||axis(y,'Colour')!==term)fail('luminance does not name this colour','refused',at);
         const value=axis(y,'Value'),css=colour(term);
-        const projected=colour('XYZWrite<Never, Times<'+value+', '+axis(y,'Projection')+'>, Never>');
+        const projection=kit.parseType(axis(y,'Projection'));
+        if(projection.head!=='XYZRatioWrite'||projection.args.length!==4||projection.args[0].head!=='Never'||projection.args[1].head!==value||projection.args[2].head!=='Never')fail('projection does not bind its declared luminance','refused',at);
+        const projected=colour(axis(y,'Projection'));
         if(projected.split(' ')[2]!==css.split(' ')[2])fail('luminance and printed Y disagree','refused',at);
         const key=theme+'/'+role;if(names.has(key))fail('duplicate binding '+key,'refused',at);
         const row={name,id:owner.row+'::'+name,role,theme,term,value,css,address:at};names.set(key,row);bindings.push(row);
@@ -117,6 +135,10 @@ async function compile(plan, getBytes, assetURL) {
     if(face!=='default'||word(axis(metrics,'Profile'))!==support.profile||!support.fonts.includes(asset.sha256))fail('font/face is outside the installed metric profile','unsupported',asset.path+':1');
     const units=Number(word(axis(metrics,'UnitsPerEm'),mp)),cap=Number(word(axis(metrics,'CapHeight'),mp)),advances=word(axis(metrics,'Advances'),mp),missing=word(axis(metrics,'MissingGlyph'));
     if(units!==Number(plan.reader.source.match(/const fontUnitsPerEm = (\d+)/)?.[1])||cap!==Number(plan.reader.source.match(/const fontCapHeight = (\d+)/)?.[1])||advances!==plan.reader.source.match(/const fontAdvances = new Map\("([^"]+)"/)?.[1]||missing!=='advance-of-U+006D')fail('metrics differ from the installed drawing reader','unsupported',mf.path+':1');
+    if(contract) {
+        const owner=contract.owner.files;
+        if(owner['showcase/Sources/DocumentKit/GeneratedFontMetrics.swift']!==mf.sha256)fail('metrics differ from the Drawing owner','refused',mf.path+':1');
+    }
     const fontBytes=await getBytes(asset.sha256);
     if(await sha(fontBytes)!==asset.sha256)fail('font delivery hash differs','refused',asset.path+':1');
     let faceInfo;
@@ -127,9 +149,44 @@ async function compile(plan, getBytes, assetURL) {
     const css=['light','dark'].map(theme=>(theme==='light'?':root':':root[data-theme="dark"]')+'{'+bindings.filter(b=>b.theme===theme).map(b=>'--vi-'+b.role+':'+b.css+';').join('')+'}').join('\n')+'\n'
         +'@font-face{font-family:'+JSON.stringify(cssFamily)+';src:url("'+assetURL(asset.sha256,'font.ttf')+'") format("truetype");font-weight:'+faceInfo.weight+';font-style:normal;font-display:block;}\n'
         +'svg[data-vi-canvas]{font-family:'+JSON.stringify(cssFamily)+';font-optical-sizing:none;font-kerning:none;font-variant-ligatures:none;}\n';
-    return {status:'not-compared',reason:'The owner Drawing contract is not declared (T-0040)',css,bindings,witnesses,reader:{id:'gate/documentkit-drawing',sha256:plan.reader.sha256},font:{sha256:asset.sha256,family,cssFamily,face,units,cap,metrics_sha256:mf.sha256,missingGlyph:missing},assets:[{sha256:asset.sha256,name:'font.ttf'},{sha256:license.sha256,name:'license.txt'}],profile_sha256:plan.profile.sha256,source:{record_sha256:plan.record_sha256,inputs:plan.record?.files||[]}};
+    const ownerInputsMatch=!!contract?.profile
+        && contract.profile.profileSHA256===plan.profile.sha256
+        && JSON.stringify([...contract.profile.inputSHA256].sort())===JSON.stringify(Object.entries(plan.inputs).filter(([name])=>name!==contractName).map(([,file])=>file.sha256).sort());
+    const inputSHA256=await sha(bytes(JSON.stringify({profile:plan.profile.sha256,reader:plan.reader.sha256,inputs:Object.keys(plan.inputs).sort().map(name=>[name,plan.inputs[name].sha256])})));
+    return {inputSHA256,ownerInputsMatch,status:contract?'ready':'not-compared',reason:contract?'Drawing contract is installed':'The owner Drawing contract is not declared',contract,contract_pin:contractPin,css,bindings,witnesses,reader:{id:'gate/documentkit-drawing',sha256:plan.reader.sha256},font:{sha256:asset.sha256,family,cssFamily,face,units,cap,metrics_sha256:mf.sha256,missingGlyph:missing},assets:[{sha256:asset.sha256,name:'font.ttf'},{sha256:license.sha256,name:'license.txt'}],profile_sha256:plan.profile.sha256,source:{record_sha256:plan.record_sha256,inputs:plan.record?.files||[]}};
 }
-const api={compile,ProfileError,sha};
+// One comparison for live and static readings. File labels do not grant parity:
+// every semantic source byte and every actual result must match the owner.
+async function compare(profile, parts, drawn, declaration=null) {
+    const hashes=await Promise.all(parts.map(p=>sha(bytes(p.text))));
+    const sourceDigest=await sha(bytes(JSON.stringify([...hashes].sort())));
+    const digest=await sha(bytes(JSON.stringify({sources:sourceDigest,profile:profile?.inputSHA256||null})));
+    const contract=profile?.contract;
+    const base={status:'port-under-contract',inputs_digest:digest,source_digest:sourceDigest,contract_pin:profile?.contract_pin||null,case_count:contract?.cases.length||0};
+    if(!contract)return {...base,status:'not-compared',reason:profile?.reason||'The owner Drawing contract is not declared'};
+    if(profile.ownerInputsMatch===false)return {...base,reason:'The drawing profile inputs differ from the owner case environment'};
+    const stated=contract.cases.find(c=>c.id===declaration?.case_id&&c.status==='not-compared');
+    if(stated&&declaration.source_digest===sourceDigest)return {...base,status:'not-compared',case_id:stated.id,address:stated.address,reason:stated.reason};
+    const matches=[];
+    for(const c of contract.cases) {
+        if(c.status==='not-compared'||c.sourceSHA256.length!==hashes.length)continue;
+        const unused=hashes.map((hash,i)=>({hash,i})), ordered=[];
+        for(const h of c.sourceSHA256) { const at=unused.findIndex(x=>x.hash===h);if(at<0)break;ordered.push(parts[unused.splice(at,1)[0].i]); }
+        if(unused.length||await sha(bytes(ordered.map(p=>p.text).join('\n')))!==c.inputSHA256)continue;
+        const art=drawn.canvases.find(a=>a.name===c.root), refusal=drawn.refusals.find(a=>a.name===c.root);
+        const ownerFile=c.address.split('#')[0],index=c.sources.indexOf(ownerFile);
+        const address=index<0?c.address:ordered[index].file+'#'+c.root;
+        const equal=c.status==='svg'?art?.svg===c.svg&&!refusal:!art&&refusal?.status==='refused'&&refusal.code===c.code&&refusal.address===address;
+        if(!equal)return {...base,status:'not-compared',case_id:c.id,address:c.address,reason:'The port output differs from the owner Drawing case'};
+        matches.push(c.id);
+    }
+    if(matches.length&&matches.length===drawn.canvases.length+drawn.refusals.length)return {...base,status:'compared',case_id:matches.join(', ')};
+    return {...base,reason:'This input has not been read by the owner'};
+}
+function caption(comparison) {
+    return comparison.status+(comparison.case_id?' · '+comparison.case_id:'')+(comparison.reason?' · '+(comparison.address?comparison.address+': ':'')+comparison.reason:'');
+}
+const api={compile,compare,caption,ProfileError,sha};
 if(node){module.exports=api;if(require.main===module){let s='';process.stdin.setEncoding('utf8');process.stdin.on('data',b=>s+=b);process.stdin.on('end',async()=>{try{const plan=JSON.parse(s),base=process.argv[2];const result=await compile(plan,async h=>base==='--assets'?new Uint8Array(require('fs').readFileSync(require('path').join(process.argv[3],h,'font.ttf'))):new Uint8Array(await(await fetch(base+'/drawing-assets/'+h)).arrayBuffer()),(h,n)=>'../'+h+'/'+n);console.log(JSON.stringify(result));}catch(e){console.error(JSON.stringify({status:e.status||'refused',address:e.address||'drawing-profile:1',message:e.message}));process.exitCode=1;}});}}
 else host.GateDrawingProfile=api;
 })(globalThis);

@@ -24,6 +24,7 @@ def run(cache, site):
         shutil.copyfile(source/'Worlds/Playground/Site/Palette.swift',palette)
         shutil.copyfile(source/'Worlds/Playground/Site/DrawingBindings.swift',bindings)
         shutil.copyfile(source/'Worlds/Playground/Site/DrawingProfile.swift',profile)
+        shutil.copyfile(source/'Contracts/Drawing/v0.1/contract.json',owner/'DrawingContract.json')
         shutil.copyfile(source/'Sources/DocumentKit/GeneratedFontMetrics.swift',metrics)
         shutil.copyfile(source/'Assets/InterVariable.ttf',owner/'font.ttf')
         shutil.copyfile(source/'Assets/InterLicense.txt',owner/'license.txt')
@@ -31,7 +32,7 @@ def run(cache, site):
         def own_row(name,kind,path):
             return 'public enum '+name+': Mine {\n    public typealias Kind = '+kind+'\n}\nextension '+name+' {\n    public static var typeName: String { "'+path+'" }\n}\n'
         text='public protocol Role {}\npublic protocol Mine {}\npublic enum FormsFile: Role {}\npublic enum DrawingProfileReaderV1: Role {}\npublic enum DrawingProfileFile: Role {\n    public typealias Reader = DrawingProfileReaderV1\n}\npublic enum CarriedFile: Role {}\n'
-        for name,kind,path in [('ThePalette','FormsFile','Palette.swift'),('TheBindings','CarriedFile','Bindings.swift'),('TheMetrics','CarriedFile','metrics.swift'),('TheFont','CarriedFile','font.ttf'),('TheLicense','CarriedFile','license.txt')]:
+        for name,kind,path in [('TheContract','CarriedFile','DrawingContract.json'),('ThePalette','FormsFile','Palette.swift'),('TheBindings','CarriedFile','Bindings.swift'),('TheMetrics','CarriedFile','metrics.swift'),('TheFont','CarriedFile','font.ttf'),('TheLicense','CarriedFile','license.txt')]:
             text+=own_row(name,kind,path)
         manifest.write_text(text)
         declared = subprocess.run([str(ROOT / 'gate'), 'mine', 'DrawingProfile.swift',
@@ -61,7 +62,7 @@ def run(cache, site):
             plan, answer = ask()
             assert answer.returncode == 0, answer.stderr
             first = json.loads(answer.stdout)
-            assert first['status'] == 'not-compared' and len(first['witnesses']) == 17
+            assert first['status'] == 'ready' and len(first['contract']['cases']) == 22 and len(first['witnesses']) == 17
             assert {b['theme'] for b in first['bindings']} == {'light', 'dark'}
             # The v2 resolver must fetch a local Git dependency by its full pin.
             # A cached byte hash never grants a different source_path.
@@ -121,6 +122,10 @@ def run(cache, site):
                     assert error['status'] == status and ':' in error['address'], (label, error)
                 finally:
                     undo()
+            contract_file=owner/'DrawingContract.json';c0=contract_file.read_text()
+            bad_contract=json.loads(c0);bad_contract['cases'][0]['svg']+=' '
+            refused('wrong contract output', 'refused', lambda:contract_file.write_text(json.dumps(bad_contract)), lambda:contract_file.write_text(c0))
+            refused('missing contract row', 'refused', lambda:profile.write_text(f0.replace('Contract = TheContract','Contract = MissingInput')), lambda:profile.write_text(f0))
             refused('missing dark', 'refused', lambda:profile.write_text(f0.replace('BindingReference7, ', '', 1)), lambda:profile.write_text(f0))
             refused('unknown field', 'refused', lambda:profile.write_text(f0.replace('public typealias Reader = Port', 'public typealias Reader = Port\n    public typealias Unexpected = Port',1)), lambda:profile.write_text(f0))
             refused('duplicate field', 'refused', lambda:profile.write_text(f0.replace('public typealias Reader = Port', 'public typealias Reader = Port\n    public typealias Reader = Port',1)), lambda:profile.write_text(f0))
@@ -152,6 +157,7 @@ def run(cache, site):
     sys.path.insert(0, str(ROOT / 'bin'))
     from drawing_profile import audit
     assert audit(site)
+    subprocess.run(['node',str(ROOT/'tests/drawing-status.js'),str(site)],check=True)
     index = json.loads((Path(site) / '.drawing-profiles.json').read_text())
     row = next(iter(index.values()))
     page = Path(site) / row['consumers'][0];text = page.read_text()

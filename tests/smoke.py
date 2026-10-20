@@ -3257,7 +3257,9 @@ function bench(text = atom, file = 'Atom.swift', neighbors = { 'AtomPages.swift'
         setTimeout: (fn, delay) => { const job = { fn, delay }; scheduled.push(job); return job; },
         clearTimeout: job => { if (job) job.cancelled = true; }, tick: write => writes.push(write),
         judge: (name, source, vocab) => { readings.push(source); return judge(name, source, vocab); },
-        renderAll, esc: s => String(s).replaceAll('&', '&amp;').replaceAll('<', '&lt;'),
+        renderAll, GateDrawingProfile: require(path.join(root, 'bin/drawing-profile.js')),
+        suppliedDrawingProfile: {contract:JSON.parse(fs.readFileSync(path.join(root, 'bin/.worlds/playground', JSON.parse(fs.readFileSync(path.join(root, 'bin/playground-worlds.from'))).showcase.revision, 'showcase/Contracts/Drawing/v0.1/contract.json'), 'utf8'))}, drawingDeclaration:null,
+        esc: s => String(s).replaceAll('&', '&amp;').replaceAll('<', '&lt;'),
         editor: { get value() { return buffer; } },
         document: { getElementById: id => elements[id], querySelectorAll: () => [] },
         fetch: async url => {
@@ -3291,6 +3293,7 @@ function bench(text = atom, file = 'Atom.swift', neighbors = { 'AtomPages.swift'
     const locate = context.locateSlot;
     context.locateSlot = slot => { located.push({ ...slot }); return locate(slot); };
     vm.runInContext(ui.slice(ui.indexOf('const CANVAS_FORMS'), ui.indexOf('// ── WHAT WAITS FOR A WORD')), context);
+    vm.runInContext('drawingProfileState = suppliedDrawingProfile;', context);
     return { context, host, button, feedback, edits, located, fetches, readings, completion, scheduled, writes,
         text: () => buffer,
         change: value => { buffer = value; context.lastParsed = judge(context.active, value, kitVocabulary).parsed; },
@@ -3445,9 +3448,8 @@ async function main() {
     refusal.change(counted.replace('Half<U2>', 'Unknown<U2>'));
     await refusal.context.drawCanvases(); assert(!refusal.host.innerHTML.includes('<svg'));
     assert.match(refusal.feedback.textContent, /Count.swift#Art: unsupported/);
-    refusal.context.drawingComparisonState = {status:'not-compared',address:'Generated.swift#Art',reason:'native budget not compared'};
     refusal.change(counted); await refusal.context.drawCanvases();
-    assert.match(refusal.feedback.textContent, /not-compared.*Generated.swift#Art/);
+    assert.match(refusal.feedback.textContent, /port-under-contract/);
     result.drawingRefusal = true;
     console.log(JSON.stringify(result));
 }

@@ -11764,7 +11764,7 @@ func drawingInputs(_ w: WorldState, counts: Bool = true) -> (plan: [String: Any]
     let profile = body(declarations[0][0]), paletteName = axis(profile, "Palette")
     let font = body(axis(profile, "Font")), metrics = body(axis(profile, "Metrics"))
     let qualified = matches("typeName:\\s*String\\s*\\{\\s*\"(\\w+)::", text).map { $0[0] }
-    let selected = Set([paletteName, axis(font, "Asset"), axis(metrics, "Input"), axis(profile, "License")] + qualified)
+    let selected = Set([paletteName, axis(font, "Asset"), axis(metrics, "Input"), axis(profile, "License"), axis(profile, "Contract")] + qualified)
     var inputs: [String: Any] = [:], assets: [String: Data] = [:]
     for input in (w.layout?.rows ?? []) where selected.contains(input.name ?? "") {
         guard let name = input.name else { continue }
