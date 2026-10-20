@@ -42,7 +42,10 @@ jobs:
         include:
           - runner: macos-14
             said: macos-arm64
-          - runner: ubuntu-latest
+          # named, not latest: the binary needs this C library or a newer
+          # one, so an image a year ahead would ship a binary that does not
+          # start on the runners strangers use today
+          - runner: ubuntu-24.04
             said: linux-x86_64
           - runner: ubuntu-24.04-arm
             said: linux-arm64
@@ -88,6 +91,20 @@ jobs:
           DEFAULT=$(sed -n "s/.*default: '\(v[0-9.]*\)'.*/\1/p" action.yml)
           [ -n "$DEFAULT" ] || { echo "action.yml declares no default version: the reader lost its subject"; exit 1; }
           [ "${GITHUB_REF_NAME}" = "$DEFAULT" ] || { echo "this release is ${GITHUB_REF_NAME}, and action.yml still defaults to ${DEFAULT}"; exit 1; }
+      # and on linux it carries its own runtime: 0.2.3's binary took Swift
+      # from the runner and stopped starting when the image moved to 6.4
+      - name: it needs no Swift from the machine it lands on
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          # ldd's own answer is read first: a check that could not read the
+          # binary has found nothing, and nothing found is not a pass
+          DEPS="$(ldd bin/gate-cli)" || { echo "ldd could not read bin/gate-cli"; exit 1; }
+          printf '%s\n' "$DEPS"
+          if printf '%s\n' "$DEPS" | grep -E 'libswift|libFoundation|lib_Foundation|libdispatch|libBlocksRuntime'; then
+            echo "bin/gate-cli links the Swift runtime of this runner: a binary that leaves here would start only where this Swift is"; exit 1
+          fi
+          bin/gate-cli --version
       - name: name what lies there
         shell: bash
         run: |

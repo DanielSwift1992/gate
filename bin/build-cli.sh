@@ -61,7 +61,11 @@ if [ ! -f "$PREMISE" ]; then
     FETCH=$(mktemp -d)
     # the bytes as committed: the count court reads the carried Primitive by its
     # shape, and a checkout that turns LF into CRLF would hand it another file
-    git clone --config core.autocrlf=false --config core.eol=lf --depth 50 -q \
+    # ── AND THE PIN IS REACHED HOWEVER OLD IT GROWS. A clone of the last 50
+    # commits held 0.2.3's pin in August and lost it by October, and that
+    # build stopped at "unable to read tree". The whole history comes without
+    # its file contents, and checking out the pin fetches the pin's files alone.
+    git clone --config core.autocrlf=false --config core.eol=lf --filter=blob:none --no-checkout -q \
         https://github.com/DanielSwift1992/verification-is-identification "$FETCH/vi"
     git -C "$FETCH/vi" checkout -q "$PIN"
     mkdir -p "$CACHE/premise"
@@ -111,7 +115,17 @@ if [ -n "$WINDOWS" ]; then
         "$SAID/bin/.build/court"/*.swift $LINK \
         -o "$SAID/bin/gate-cli$EXT"
 else
-    swiftc -O "$BUILD/main.swift" "$BUILD/shelf.swift" "$BUILD/premise.swift" "$BUILD/court"/*.swift \
+    # ── AND ON LINUX THE BINARY CARRIES ITS OWN RUNTIME. Linked against the
+    # runner's Swift, 0.2.3's linux binary started on the image it was built
+    # on (Swift 6.3.3) and stopped starting when the image moved to 6.4:
+    # "undefined symbol: $s20FoundationEssentials4DataV15_RepresentationON".
+    # Swift on linux keeps no stable ABI between versions, so the runtime and
+    # Foundation are linked in. What stays outside is the C library: the
+    # binary starts where that is the builder's or newer, which is why the
+    # release builds on a named image rather than the newest one.
+    STATIC=""
+    [ "$(uname -s)" = "Linux" ] && STATIC="-static-stdlib"
+    swiftc -O $STATIC "$BUILD/main.swift" "$BUILD/shelf.swift" "$BUILD/premise.swift" "$BUILD/court"/*.swift \
         -o "$HERE/bin/gate-cli$EXT"
 fi
 rm -rf "$BUILD"

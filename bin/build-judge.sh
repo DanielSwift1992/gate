@@ -13,7 +13,9 @@ PIN=${1:-main}
 # the shell stands in the clone
 OUT="$(cd "$(dirname "$0")" && pwd)"
 TMP=$(mktemp -d)
-git clone --depth 50 https://github.com/DanielSwift1992/verification-is-identification "$TMP/vi"
+# the whole history without file contents: a pin older than any fixed depth
+# is still reached, and only the pin's own files are fetched
+git clone --filter=blob:none --no-checkout https://github.com/DanielSwift1992/verification-is-identification "$TMP/vi"
 cd "$TMP/vi" && git checkout "$PIN"
 REV=$(git rev-parse HEAD)
 swift build -c release --product Tools

@@ -65,7 +65,7 @@ downloads the pinned release binary, checks its sha256, judges your
 CODEOWNERS and your workflow filters, and prints every refusal at its line:
 
 ```sh
-curl -sL https://raw.githubusercontent.com/DanielSwift1992/gate/main/bin/gate-audit.sh | bash -s v0.2.3 .
+curl -sL https://raw.githubusercontent.com/DanielSwift1992/gate/main/bin/gate-audit.sh | bash -s v0.2.4 .
 ```
 
 Or take the tool itself:
@@ -116,7 +116,7 @@ One step checks every CODEOWNERS rule and workflow `paths:` filter
 against the files that actually exist, on every push:
 
 ```yaml
-- uses: DanielSwift1992/gate@v0.2.3
+- uses: DanielSwift1992/gate@v0.2.4
 ```
 
 A rule that points to a deleted or renamed path fails the check, with

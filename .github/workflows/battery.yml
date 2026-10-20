@@ -106,6 +106,16 @@ jobs:
       - run: |
           python3 tests/smoke.py 2>&1 | tee /tmp/smoke-out.txt
           exit ${PIPESTATUS[0]}
+      # and the vein the battery built here carries its own Swift: the
+      # binary the release ships from this platform is this one
+      - run: |
+          test -x bin/gate-cli || { echo "no vein here to check: the battery built none"; exit 1; }
+          bin/gate-cli --version
+          DEPS="$(ldd bin/gate-cli)" || { echo "ldd could not read bin/gate-cli"; exit 1; }
+          printf '%s\n' "$DEPS"
+          if printf '%s\n' "$DEPS" | grep -E 'libswift|libFoundation|lib_Foundation|libdispatch|libBlocksRuntime'; then
+            echo "bin/gate-cli links the Swift runtime of this runner"; exit 1
+          fi
       # the first red line travels out as a commit status, because the job
       # log is not readable without a token and a failure nobody can read
       # is a failure that gets guessed at instead of fixed
@@ -393,7 +403,7 @@ jobs:
         continue-on-error: true
         uses: ./
         with:
-          version: v0.2.3
+          version: v0.2.4
           tree: .github/action-fixtures/dead
       - name: and that refusal is this job's negative control
         id: control
@@ -405,7 +415,7 @@ jobs:
         id: clean
         uses: ./
         with:
-          version: v0.2.3
+          version: v0.2.4
           tree: .github/action-fixtures/clean
       # and the cobbler wears the shoes: the same one step, over this very
       # repository, on every push
@@ -413,7 +423,7 @@ jobs:
         id: home
         uses: ./
         with:
-          version: v0.2.3
+          version: v0.2.4
           tree: .
       # ── THE MOUTH THIS JOB DID NOT HAVE. The morning this road went red,
       # nothing posted a word and the finding came from asking the API by

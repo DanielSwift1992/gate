@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.2.4
+
+- The linux binaries start on today's runners. 0.2.3's linux binary took
+  the Swift runtime from the machine it ran on, built on an image with
+  Swift 6.3.3; the image moved to Swift 6.4 in September, and the binary
+  stopped at `undefined symbol:
+  $s20FoundationEssentials4DataV15_RepresentationON`. Swift on linux
+  keeps no stable ABI between versions, so the runtime and Foundation are
+  linked in now, and the release refuses a linux binary that still links
+  the runner's Swift. The C library stays outside: the x86 binary is built
+  on ubuntu-24.04 by name and starts there and on newer systems.
+- The theory's pin is reached however old it grows. The builds cloned the
+  last 50 commits of the corpus and checked the pin out of them; by
+  October 0.2.3's pin was older than that and the build stopped at
+  "unable to read tree". The whole history comes without file contents,
+  and the pin's own files are fetched on checkout.
+- Nothing else changed: the judge, the courts and every mouth are 0.2.3's.
+
 ## 0.2.3
 
 - The card a stranger reads carries plain words. The marketplace card,
