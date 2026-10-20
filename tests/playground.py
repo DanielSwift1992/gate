@@ -140,7 +140,7 @@ def run():
         subprocess.run(['node', str(HERE / 'tests/playground-ui.js'), str(site)], check=True)
         door = (site / 'playground/index.html').read_bytes()
         assert door == (site / 'playground/readme/index.html').read_bytes()
-        assert b'world-card' not in door and b'id="worldlist"' in door
+        assert b'world-card' not in door and b'id="worldlist"' not in door
         sys.path.insert(0, str(HERE / 'bin'))
         from bench_styles import audit_site
         ladder = (site / 'ladder.css').read_text()
@@ -165,7 +165,7 @@ def run():
             refused(site / 'playground/basics/codemirror.css', '.probe{' + value + '}')
         refused(site / 'playground/basics/ladder.css', ':root{--ink:#123456}')
         tabs = json.loads((site / 'playground/tabs.json').read_text())
-        assert [t['id'] for t in tabs] == ['readme', 'organization', 'scale', 'basics', 'writer', 'buttons', 'light', 'atom', 'rules', 'faq']
+        assert [t['id'] for t in tabs] == ['readme', 'organization', 'scale', 'basics', 'writer', 'buttons', 'light', 'atom', 'rules', 'faq', 'company', 'site']
         assert (site / 'worlds.from').read_bytes() == (HERE / 'bin/playground-worlds.from').read_bytes()
         assert record['theory']['files']['Sources/VerificationIsIdentification/Primitive.swift'] == record['judge']['primitive_sha256']
         assert all((site / 'playground' / t['id'] / 'index.html').is_file() for t in tabs)

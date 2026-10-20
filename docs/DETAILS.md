@@ -239,7 +239,7 @@ an artifact.
 
 ## Pinned playground worlds
 
-`python3 bin/build-pages.py _site --worlds` adds the showcase worlds to the published bench, at `playground/<id>/index.html`. The world order, groups and labels in the bench rail come from the pinned `Worlds/Playground/Site/Manifest.swift`. `playground/` opens that same bench on Read me; the ordinary demo stays at the repository site root. World inputs are disclosed beside the judge in the rail. There is no catalog or added tab/provenance strip.
+`python3 bin/build-pages.py _site --worlds` adds the showcase worlds to the published bench, at `playground/<id>/index.html`. The pinned `Worlds/Playground/Site/Manifest.swift` stands in THEIRS of every world, including Site. Open it in Bare or Table and follow a record name to `playground/<id>/`; the first ten associations stay in order and the Company and Site source records follow them. `playground/` opens that same bench on Read me; the ordinary demo stays at the repository site root. World inputs are disclosed beside the judge in the rail. The rail has only MINE and THEIRS; no added tab/provenance strip.
 
 `bin/playground-worlds.from` names the showcase revision, every selected file's SHA-256, the world's compiler theory, the judge and the wasm bytes. `bin/playground-worlds.sh` fetches those revisions directly, with LF checkouts, and checks the files again when its cache is warm. `SHOWCASE_SOURCE` selects a local checkout at the recorded revision; the built site's `worlds-source.json` then says local. A changed selected file is refused.
 

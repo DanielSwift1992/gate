@@ -26,10 +26,15 @@ def build_worlds(here, out, publish):
     source = cache / 'showcase/Worlds/Playground'
     tabs = json.loads(subprocess.check_output(['node', str(here / 'bin/playground-site.js'),
                                               str(source / 'Site/Manifest.swift')], text=True))
-    # Company supplies the generated world's manifest, not an invented tab. Site is an
-    # inspectable world, including Palette and its outstanding requirements.
-    entries = tabs + [dict(id='company', world='Company', title='Company template', group='source', caption='Company.swift and the generated world manifest', generated=False),
-                      dict(id='site', world='Site', title='Site', group='source', caption='Manifest and Palette', generated=False)]
+    # Source worlds are records in the same catalog, never a publisher's second list.
+    entries = tabs
+    catalog = dict(file='Site/Manifest.swift', revision=record['showcase']['revision'],
+        sha256=record['showcase']['files']['Worlds/Playground/Site/Manifest.swift'],
+        text=(source / 'Site/Manifest.swift').read_text(),
+        destinations={tab['record']: tab['id'] for tab in tabs})
+    # Both the catalog record and the world it Reads have a door. Seeds name a
+    # source world, not the generated world's identity (CompanyWorld -> company).
+    catalog['destinations'].update({tab['reads']: tab['id'] for tab in tabs if not tab['generated']})
     primitive = 'Sources/VerificationIsIdentification/Primitive.swift'
     guard_sources = [str(cache / 'theory' / name) for name in record['theory']['files']]
     guard_sources += [str(cache / 'showcase' / name) for name in record['showcase']['files']
@@ -45,6 +50,9 @@ def build_worlds(here, out, publish):
         with tempfile.TemporaryDirectory(prefix='gate-playground-') as temp:
             world = Path(temp) / tab['id']
             shutil.copytree(source / tab['world'], world)
+            if tab['world'] == 'Site':
+                # Manifest is this world's pinned input too, not a second editable copy.
+                (world / 'Manifest.swift').unlink()
             if tab.get('generated'):
                 # The generator reads the pinned organization page, and its
                 # geometry stays in that world's dictionary after the split.
@@ -70,7 +78,7 @@ def build_worlds(here, out, publish):
                 revision=record['theory']['revision'], files=paths, plain_fragments=fragments,
                 shelf_overrides=False), indent=2) + '\n')
             context = dict(pin=record['showcase']['revision'], world=tab['id'], tab=tab,
-                definitions=texts, carried=[], tabs=entries, provenance=provenance, guard_names=guard_names,
+                definitions=texts, carried=[], catalog=catalog, provenance=provenance, guard_names=guard_names,
                 compiler=record['theory'], judge=record['judge'], plain_fragments=fragments,
                 generated_from='Organization/Organization.swift' if tab.get('generated') else None)
             # Carried paths are taken from /files by publish, not guessed here.

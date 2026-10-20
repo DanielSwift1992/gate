@@ -14,7 +14,7 @@ assert.strictEqual(read(path.join(here, "bin/playground-lint.js")), read(path.jo
 const definitions = [{ name: "Primitive.swift", text: read(path.join(cache, "theory/Sources/VerificationIsIdentification/Primitive.swift")) },
     { name: "Spectrum.swift", text: read(path.join(sc, "Sources/DocumentKit/Spectrum.swift")) }];
 const renderFixture = fixture("renderer"), courtFixture = fixture("courts"), drawings = {}, reports = [];
-const copy = fixture("copy-r3");
+const copy = fixture("copy-r3"), catalog = fixture("catalog-r4");
 function updated(text, paths) {
     for (const c of copy.changes.filter(c => paths.includes(c.path))) {
         assert(text.includes(c.before), c.path + ": copy anchor lost");
@@ -83,9 +83,9 @@ for (const name of ["Manifest", "Palette"]) check("Site/" + name + " preserves i
     if (name === "Manifest") {
         const a = judge(name, original, kitVocabulary).parsed, b = judge(name, text, kitVocabulary).parsed;
         const links = p => [...p.declarations].map(([n,d]) => [n,[...d.aliases].map(([k,v]) => [k,v.target])]);
-        assert.deepStrictEqual(links(b), links(a), "order, IDs, groups, Reads, Seeds and page associations");
+        assert.deepStrictEqual(links(b).filter(([n])=>!catalog.added_declarations.includes(n)), links(a), "order, IDs, groups, Reads, Seeds and page associations");
         const expected = judge(name, updated(original, ["Worlds/Playground/Site/Manifest.swift"]), kitVocabulary).parsed;
-        assert.deepStrictEqual([...b.literals].map(([n,x])=>[n,x.value]), [...expected.literals].map(([n,x])=>[n,x.value]), "only recorded phrases change");
+        assert.deepStrictEqual([...b.literals].filter(([n])=>!catalog.added_declarations.includes(n)).map(([n,x])=>[n,x.value]), [...expected.literals].map(([n,x])=>[n,x.value]), "only recorded phrases change");
     } else assert.strictEqual(read(path.join(checks, "origins/Palette.swift")), original);
     assert.deepStrictEqual(lint(name, text), []);
     assert.deepStrictEqual(pageGuards(judge(name, text, kitVocabulary).parsed, text.split("\n"), outside), []);
@@ -208,10 +208,14 @@ if (site) for (const id of fs.readdirSync(path.join(site, "playground"))) {
         const page = read(path.join(folder, "index.html"));
         assert(page.includes("gate.pages." + record.showcase.revision + "." + id + "."));
         assert(page.includes(record.theory.revision) && page.includes(record.judge.revision));
-        assert(page.includes('id="worldlist"') && page.includes('id="world-provenance"'));
+        assert(!page.includes('id="worldlist"') && page.includes('id="world-provenance"'));
+        const shelf = JSON.parse(snap['/shelf']);
+        assert(shelf.modules.includes('Site/Manifest'));
+        assert.equal(snap['/shelf?m=Site/Manifest'], read(path.join(sc,'Worlds/Playground/Site/Manifest.swift')));
+        assert.equal(shelf.inputs['Site/Manifest'].revision, record.showcase.revision);
         assert(!page.includes('id="world-tabs"') && !page.includes('position:fixed;top:0'));
         const tabs = JSON.parse(read(path.join(site, "playground/tabs.json")));
-        assert.deepStrictEqual(ctx.tabs.slice(0, tabs.length).map(t => t.id), tabs.map(t => t.id));
+        assert.deepStrictEqual(tabs.map(t => shelf.inputs['Site/Manifest'].destinations[t.record]), tabs.map(t => t.id));
         if (id !== "scale") {
             const world = ctx.tab.world;
             if (world !== "Site") assert.deepStrictEqual(draw(world, files.files.filter(f => f !== files.layout && !f.endsWith("my.swift"))

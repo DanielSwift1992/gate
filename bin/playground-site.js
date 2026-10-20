@@ -21,6 +21,8 @@ if (process.argv[3] === "--company") {
     const tabs = p.order.filter(n => axis(n, "Id")).map(n => {
         const read = axis(n, "Reads"), seed = axis(n, "Seeds");
         const row = Object.fromEntries(["Id", "Title", "Shown", "Caption"].map(k => [k.toLowerCase(), word(axis(n, k))]));
+        row.record = n;
+        row.reads = read;
         row.group = word(axis(axis(n, "Group"), "Name"));
         row.generated = read === "GeneratedText";
         row.world = word(axis(row.generated ? seed : read, "File"));

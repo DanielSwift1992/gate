@@ -69,6 +69,16 @@ def publish(demo, out, context=None):
         for m in (shelf.get("modules") or []) if isinstance(shelf, dict) else []:
             snap[f"/shelf?m={m}"] = get(port, f"/shelf?m={m}")
 
+        if context:
+            # A frozen input uses the shelf's ordinary read-only path. The same
+            # declaration parse that orders the build records each name's door.
+            catalog = dict(context.pop("catalog"))
+            mod = catalog["file"].removesuffix(".swift")
+            snap[f"/shelf?m={mod}"] = catalog.pop("text")
+            shelf.setdefault("modules", []).append(mod)
+            shelf.setdefault("inputs", {})[mod] = catalog
+            snap["/shelf"] = json.dumps(shelf)
+
         ladder_css = get(port, "/ladder.css")
         names = sorted(set(re.findall(r"(?:enum|protocol|typealias)\s+(\w+)",
                                       "\n".join(texts.values()))))

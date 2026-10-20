@@ -9,7 +9,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"><meta charset="utf-8"><title>gate · world bench</title>
 <!-- zero egress, enforced by the browser as well as by the code: the bench may
      talk to its own loopback server and to nothing else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-5GzCvayhfKIAxAwizJRqS3a05vGAKRgdgfqpOuJGoBs=' 'sha256-Fno8SnLqSQKHvhAmH47K0mSg6+vXjbt9WluL0hXuptg='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-5GzCvayhfKIAxAwizJRqS3a05vGAKRgdgfqpOuJGoBs=' 'sha256-9+5MhCbX9kGB+EhYiYEzOXNR9a0ey3lPv6UPSYPn6TY='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
 <link rel="stylesheet" href="/codemirror.css">
 <script>
 // The theme is a declaration, not a toggle — and the declaration lives in the
@@ -437,13 +437,12 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 #published-note{overflow-wrap:anywhere;flex:none;border-top:0.5px solid var(--line);padding:var(--near) var(--wide);font:var(--caption);color:var(--muted);background:var(--paper)}
 #published-note a{color:var(--action)}
 #published-note code{font:var(--fact)}
-.world-link{color:var(--ink);text-decoration:none}
+.file[href]{color:var(--ink);text-decoration:none}
 #world-inputs{padding:0 var(--wide)}
 .source-input{font:var(--captionloose);margin:var(--near) 0;overflow-wrap:anywhere}
 @media(max-width:40rem){#rail{flex-basis:35%;}#next{max-width:100%}}
 </style>
 <div id="rail"><div id="brand"><b>gate</b><span id="brandsep" class="caption"> · </span><span id="brandline" class="caption"></span><span id="brandstatus" class="caption"></span></div>
-  <section id="worlds-section" hidden><h3 class="fold caption" data-fold="worlds"><i></i>worlds</h3><div id="worldlist" class="foldable"></div></section>
   <h3 class="fold caption" data-fold="files"><i></i>mine</h3><div id="filelist" class="foldable"></div>
   <h3 class="fold caption" id="seams-head" data-fold="seams"><i></i>theirs</h3>
   <div id="theirs-host" class="foldable">
@@ -494,31 +493,9 @@ const BENCH_FOR = "0.2.4";
 // where it can be read twice. This one is true until somebody restarts the
 // bench, so it stands in the line that reports the bench's own condition.
 let benchStale = "";
-function buildWorldRail(world) {
-    const section = document.getElementById("worlds-section"), list = document.getElementById("worldlist");
-    if (!section || !list) return;
-    section.hidden = false;
-    list.textContent = "";
-    const caption = document.createElement("div"); caption.className = "folder caption";
-    caption.textContent = world.tab.caption; list.appendChild(caption);
-    // The entry bench is a sibling of world folders; deep benches are inside.
+// A pin is a condition of the page, so it stays beside the judge's own pin.
+function showWorldInputs(world) {
     const door = /\/playground\/(?:index\.html)?$/.test(location.pathname);
-    let group;
-    for (const tab of world.tabs) {
-        if (tab.group !== group) {
-            group = tab.group;
-            const head = document.createElement("div"); head.className = "folder caption"; head.textContent = group;
-            list.appendChild(head);
-        }
-        const row = document.createElement("a");
-        row.className = "file fact world-link" + (tab.id === world.world ? " on" : "");
-        row.href = (door ? "" : "../") + tab.id + "/index.html";
-        row.title = (tab.shown || tab.world) + " · " + tab.caption;
-        if (tab.id === world.world) row.setAttribute("aria-current", "page");
-        const dot = document.createElement("span"); dot.className = "dot";
-        const name = document.createElement("span"); name.className = "name"; name.textContent = tab.title;
-        row.append(dot, name); list.appendChild(row);
-    }
     const disclosure = document.getElementById("world-provenance"), values = document.getElementById("world-inputs");
     disclosure.hidden = false; values.textContent = "";
     for (const [label, value] of Object.entries(world.provenance)) {
@@ -533,14 +510,14 @@ function buildWorldRail(world) {
         : "Page bodies were compiled at the source pin. Edited page bodies have not been checked by Swift.";
     values.appendChild(note);
     for (const [file, label] of [["worlds.from", "all input hashes"], ["worlds-source.json", "public or local source"]]) {
-        const link = document.createElement("a"); link.className = "file fact world-link";
+        const link = document.createElement("a"); link.className = "file fact";
         link.href = (door ? "../" : "../../") + file; link.textContent = label; values.appendChild(link);
     }
 }
 fetch("/version", { cache: "no-store" }).then(r => r.json()).then(v => {
     // the one dependency that cannot be edited, only re-pinned — so it is named
     // where the words it carries are listed, and said plainly when unrecorded
-    if (v.playground) buildWorldRail(v.playground);
+    if (v.playground) showWorldInputs(v.playground);
     const rev = document.getElementById("judge-row");
     if (rev) {
         rev.innerHTML = "<b>the judge</b> · <span class='at'>"
@@ -668,6 +645,7 @@ let conformers = {}, axisOf = {}, protoAxes = {};
 // climbs the refinement chain with the judge's own conformsTo, and that walk
 // reads declarations, not the flattened maps beside this line
 let shelfDecls = new Map();
+let shelfInputs = {};          // pinned read-only inputs, beside the shipped shelf
 
 CodeMirror.defineMode("gate-swift", () => ({
     token: (stream) => {
@@ -1120,6 +1098,7 @@ async function buildShelf() {
     try {
         const shelf = await (await fetch("/shelf")).json();
         mods = shelf.modules || []; roles = shelf.roles || {}; speaks = shelf.speaks || {};
+        shelfInputs = shelf.inputs || {};
         mods.sort((a, b) => shelfRank(speaks[a]) - shelfRank(speaks[b])
                             || a.localeCompare(b));
     } catch { mods = []; }
@@ -1180,7 +1159,7 @@ async function buildShelf() {
         r.className = "file nested";
         r.title = (SHELF_MEANS[sort]
             || "Taken with the tool, and judged like every other world here.");
-        r.innerHTML = '<span class="dot"></span><span class="name">' + esc(m) + "</span>";
+        r.innerHTML = '<span class="dot"></span><span class="name">' + esc(shelfInputs[m]?.file || m) + "</span>";
         r.onclick = () => openShelf(m);
         host.appendChild(r);
     }
@@ -1750,6 +1729,9 @@ function allowedAt(cur) {
 // the line's end is the offer's affair, not a refusal yet.
 function ungrantedOpenerAt(lineNo) {
     const text = cm.getLine(lineNo) || "";
+    // Page guards and the moment's underline read one import grant list. Native
+    // worlds without these guards keep their own shelf's grammar unchanged.
+    if (typeof fixedImports !== "undefined" && fixedImports.includes(text.trim())) return null;
     const lead = /^(\s*)[a-z]/.exec(text);
     if (!lead) return null;
     const noteAt = noteStartAt(lineNo);
@@ -2000,7 +1982,7 @@ function repaintNames(parsed, refusals) {
             for (const a of (d.params || [])) slotNames.add(a);
     for (const axes of Object.values(protoAxes || {}))
         for (const a of Object.keys(axes)) slotNames.add(a);
-    jumpable = new Set([...layoutDecls.keys(), ...Object.keys(vocabulary),
+    jumpable = new Set([...layoutDecls.keys(), ...(viewingShelf ? namesOf(parsed) : []), ...Object.keys(vocabulary),
                         ...Object.keys(language.names || {})]);
     unresolved = new Set();
     // nothing in the layout resolves to a world name, and marking it all as
@@ -2263,12 +2245,15 @@ function tableGroups() {
         if (!buckets.has(sig)) buckets.set(sig, { conformances: d.conformances, keys, rows: [] });
         buckets.get(sig).rows.push(d);
     }
-    const groups = [...buckets.values()].filter(g => g.rows.length >= 2);
+    // A reference is the whole file in every view, including a unique record
+    // shape. Dropping that row would make a declared door disappear in Table.
+    const groups = [...buckets.values()].filter(g => g.rows.length >= 2 || reading());
     for (const g of groups) g.rows.sort((a, b) => a.line - b.line);
     groups.sort((a, b) => a.rows[0].line - b.rows[0].line);
     return groups;
 }
-function layoutOrActive() { return layoutDecls.size ? layoutDecls : (lastParsed ? lastParsed.declarations : new Map()); }
+function layoutOrActive() { return viewingShelf && lastParsed ? lastParsed.declarations
+    : layoutDecls.size ? layoutDecls : (lastParsed ? lastParsed.declarations : new Map()); }
 
 // the ledgers: declarations whose body is a list of gate entries (VerifiedView,
 // VerifiedInDepartment …). Each becomes a table of the entry's arguments.
@@ -2332,6 +2317,19 @@ function reveal(line) {
 }
 
 async function jumpTo(name) {
+    // A record may name another published world. Its door is read from the
+    // pinned input, and following its name is the same gesture in every view.
+    const id = (shelfInputs[viewingShelf]?.destinations || {})[name];
+    if (id && /^[a-z][a-z0-9-]*$/.test(id)) {
+        const door = /\/playground\/(?:index\.html)?$/.test(location.pathname);
+        return location.assign((door ? "" : "../") + id + "/");
+    }
+    // A name declared on the read-only page belongs to that page, even if a
+    // file of mine happens to use the same name. Reading adds no language grant.
+    if (viewingShelf) {
+        const local = lastParsed?.declarations.get(name) || lastParsed?.topAliases.get(name);
+        if (local) return reveal(local.line);
+    }
     navFrom = navHere();
     const f = declFile.get(name);
     if (f && f !== active) await loadFile(f);   // a name in another file opens that file
@@ -2398,7 +2396,10 @@ function sayLanguage(name, line) {
 async function openShelf(mod, name) {
     const text = await (await fetch("/shelf?m=" + encodeURIComponent(mod))).text();
     active = ""; viewingShelf = mod; refLabel = null; undeclaredView = null;   // reference, not one of your files
-    document.getElementById("fname").textContent = mod + ".swift";
+    const input = shelfInputs[mod];
+    if (input) refLabel = "<b>" + esc(input.file) + "</b> · showcase at "
+        + esc(input.revision) + " · theirs, read-only";
+    document.getElementById("fname").textContent = input ? input.file : mod + ".swift";
     document.getElementById("fname").style.display = "";
     // ── AND THE VIEW IS THE READER'S. Opening somebody's page threw the reader back
     // to Full whatever they had been reading in: pick Bare or Table, click a shelf
@@ -2413,7 +2414,8 @@ async function openShelf(mod, name) {
     render();
     // the bar already says what this is; the line says the one thing the bar
     // cannot fit — that a copy of it is not a source
-    say("Your world speaks these words with no file of this name beside it, and editing a "
+    say(input ? "A pinned input, read-only. Follow a catalog record's name to its world."
+        : "Your world speaks these words with no file of this name beside it, and editing a "
         + "copy adds none to the language. `gate stdlib materialize " + mod + "` to read it offline.");
     if (name) {
         const i = text.split("\n").findIndex(l => new RegExp("\\b" + name + "\\b").test(l)
@@ -2688,7 +2690,10 @@ function buildTables() {
             {
                 const name = document.createElement("td");
                 name.className = "fact cell-name"; name.textContent = d.name;
-                name.title = "go to line " + d.line; name.onclick = () => jumpTo(d.name);
+                const destination = shelfInputs[viewingShelf]?.destinations?.[d.name];
+                name.title = "go to line " + d.line;
+                if (destination) name.title = "open playground/" + destination + "/";
+                name.onclick = () => jumpTo(d.name);
                 cellFor["name"] = name;
             }
             {
@@ -2856,10 +2861,12 @@ function buildTables() {
         host.append(table);
         // add row: the form is the group's own signature, so a new row is born
         // wearing exactly the shape the rows beside it wear
-        const add = document.createElement("div");
-        add.className = "add caption"; add.textContent = "+ add row";
-        add.onclick = () => askName(group.conformances.join(", "));
-        host.append(add);
+        if (!reading()) {
+            const add = document.createElement("div");
+            add.className = "add caption"; add.textContent = "+ add row";
+            add.onclick = () => askName(group.conformances.join(", "));
+            host.append(add);
+        }
     }
 }
 
@@ -3315,6 +3322,7 @@ function bareForm(parsed, text) {
         '<span class="decl' + (bad ? " bad" : "") + '" data-jump="' + escAttr(name) + '">' + esc(name) + "</span>";
     bareSlots = [];
     const slotSpan = (slot, value) => {
+        if (reading()) return nameTokens(value);
         const placeable = !!locateSlot(slot);
         const i = bareSlots.push(slot) - 1;
         return '<span class="slot' + (placeable ? "" : " elsewhere") + '" data-slot="' + i
@@ -3992,6 +4000,7 @@ async function loadVocabulary() {
     vocabulary = {}; conformers = {}; axisOf = {}; protoAxes = {}; FORM_ROWS.gate = {};
     shelfDecls = new Map();
     const list = await (await fetch("/shelf")).json().catch(() => ({}));
+    shelfInputs = list.inputs || {};
     // WHAT THIS WORLD PRESENTS COMES FIRST, because it is what this world is
     // written in. Reading only the shelf left the bench offering the ranks it
     // was born knowing while the operator's own file, sitting right there in
@@ -3999,7 +4008,9 @@ async function loadVocabulary() {
     const sources = [];
     for (const f of formsFiles)
         sources.push([f, await (await fetch("/world?f=" + encodeURIComponent(f))).text()]);
-    for (const mod of (list.modules || []))
+    // A pinned data input is readable, not a language the world may speak.
+    // Only the shipped shelf and the world's own forms grant vocabulary.
+    for (const mod of (list.modules || []).filter(m => !shelfInputs[m]))
         sources.push([mod, await (await fetch("/shelf?m=" + encodeURIComponent(mod))).text()]);
     for (const [mod, text] of sources) {
         // reading the shelf, not judging a world: the extras parse (a truthy

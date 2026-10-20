@@ -28,6 +28,7 @@ class Element {
         ["import NotInThePackage\n"+original,f+":1","imports are fixed"],
         [original+"\npublic extension MissingOwner {}",null,"MissingOwner"],
         [original+"\npublic typealias Probe = MissingTarget",null,"MissingTarget"],
+        [original+"\npublic typealias Probe = ReadMeTab",null,"ReadMeTab"],
         [original+"\npublic enum ProbeRow: HFlow {\npublic typealias Given = U512\npublic static var body: some Structure & Divides {\nAir<U2>.self\n}\n}",null,"StructureBuilder"],
         [original+"\nlet runtime = 1",null,"rule 0"]
     ];
@@ -49,20 +50,17 @@ class Element {
     assert(chip({refusals:[broken]}).includes('>refuses 1</span>'));
     assert(chip({refusals:[empty,broken]}).includes('>refuses 1</span>'));
     assert(ui.includes('const waits = pending.length') && ui.includes('+ waits;'));
-    // The template's actual rail function, at the door and at a deep address.
+    // Provenance reports the pin beside the existing judge row, not a third rail category.
     const world=JSON.parse(fs.readFileSync(path.join(root,"playground/basics/world.json")));
     for(const pathname of ["/gate/playground/","/gate/playground/basics/index.html"]){
-        const ids=Object.fromEntries(["worlds-section","worldlist","world-provenance","world-inputs"].map(id=>[id,new Element("div")]));
+        const ids=Object.fromEntries(["world-provenance","world-inputs"].map(id=>[id,new Element("div")]));
         const ctx=vm.createContext({location:{pathname},document:{getElementById:id=>ids[id],createElement:tag=>new Element(tag)},world});
-        vm.runInContext(implementation("buildWorldRail"),ctx);vm.runInContext("buildWorldRail(world)",ctx);
-        assert.equal(ids.worldlist.children[0].textContent,world.tab.caption,"current instructions are visible, not just a hover title");
-        assert.equal(ids.worldlist.children[0].className,"folder caption");
-        const links=ids.worldlist.children.filter(e=>e.tag==="a");assert.equal(links.length,12);
-        assert.deepEqual(links.map(l=>l.href),world.tabs.map(t=>(pathname.endsWith("basics/index.html")?"../":"")+t.id+"/index.html"));
-        assert(links.every(l=>l.className.startsWith("file fact")));
-        assert.equal(links.find(l=>l.attrs["aria-current"]==="page").href,pathname.endsWith("basics/index.html")?"../basics/index.html":"basics/index.html");
-        assert.equal(ids["world-provenance"].hidden,false);assert.equal(ids["worlds-section"].hidden,false);
+        vm.runInContext(implementation("showWorldInputs"),ctx);vm.runInContext("showWorldInputs(world)",ctx);
+        assert.equal(ids["world-provenance"].hidden,false);
+        assert.equal(ids["world-inputs"].children.filter(e=>e.tag==="a").length,2);
     }
+    assert(!ui.includes('id="worlds-section"') && !ui.includes('data-fold="worlds"'));
+    await require("./playground-catalog.js")(root);
     // Both theme paths remain the bench's declaration and OS mechanism.
     for(const dark of [false,true]){
         let theme;
