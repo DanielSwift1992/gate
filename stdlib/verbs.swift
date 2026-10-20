@@ -52,6 +52,13 @@ public enum Serve: Verb {
 }
 extension Serve { public static var typeName: String { "serve" } }
 
+/// a repository's declared publication, written to the named output directory
+public enum Publish: Verb {
+    public typealias Does = Asked
+    public typealias Under = NoCourt
+}
+extension Publish { public static var typeName: String { "publish" } }
+
 // ── what is true of a repository before anything is translated ──
 
 /// what is true of this clone, in sentences: needs no world and no configuration

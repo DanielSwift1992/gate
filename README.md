@@ -245,9 +245,9 @@ they are, with no project and no build. Git keeps doing what it already
 does best: history, authorship, review, rollback.
 
 The porcelain is deliberately git-shaped: `status/fsck · demo · init · serve ·
-findings · bare · log · survey · drift · check/ask · diff/change · apply ·
-guard · library · mine · theirs · my · declare · seam · attention · aside ·
-import · export · verify · badge · report · stdlib · --version`. A refusal exits
+publish · findings · bare · log · survey · drift · check/ask · diff/change ·
+apply · guard · library · mine · theirs · my · declare · seam · attention ·
+aside · import · export · verify · badge · report · stdlib · --version`. A refusal exits
 non-zero, so hooks and CI need no wrappers, and every command ends by
 naming the one step that comes next, so the whole ladder stays out of
 your head. `gate stdlib show forms-organization` prints any shelf page
@@ -407,7 +407,7 @@ web/codemirror.*  the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
 docs/           DETAILS.md, SECURITY.md, CHANGELOG.md, NOTICE.md, and
                 the cover's picture with its provenance
-tests/smoke.py   the battery: 713 checks this repository holds itself
+tests/smoke.py   the battery: 714 checks this repository holds itself
                  to, end-to-end runs through judge parity through
                  documentation contracts; the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts
@@ -453,3 +453,14 @@ Roadmap, next: apply routing over the declared
 layout · more domain forms.
 
 Something drifts? Gate it
+
+Publish a declared repository with `gate publish /path/to/repository -o /path/to/site`.
+The current binary delivers `publication/1` with `NoDrawing` and `ReadOnly`, including
+the bench, stdlib and browser court. It needs Git for declared pinned inputs; it
+needs no Python, Node or Swift at publication time. Serve the same repository with
+`gate serve /path/to/repository`. The record format and current supported boundary
+are on `gate stdlib show forms-publication`. The existing `build-pages.py` showcase
+recipe still builds gate's own showcase site.
+
+The read-only browser checks delivery with Web Crypto over HTTPS or localhost;
+a missing capability or damaged resource removes the verdict.

@@ -9,7 +9,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"><meta charset="utf-8"><title>gate · world bench</title>
 <!-- zero egress, enforced by the browser as well as by the code: the bench may
      talk to its own loopback server and to nothing else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-5GzCvayhfKIAxAwizJRqS3a05vGAKRgdgfqpOuJGoBs=' 'sha256-a2kS1So7tsMY9zexOYeefILlCkuyi0U85F0Aa5clygw='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-5GzCvayhfKIAxAwizJRqS3a05vGAKRgdgfqpOuJGoBs=' 'sha256-4+m3FIvcd31aKJPJn4eLW06X4Xdll326rYS8npdFpXk='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
 <link rel="stylesheet" href="/codemirror.css">
 <script>
 // The theme is a declaration, not a toggle — and the declaration lives in the
@@ -3933,6 +3933,7 @@ async function loadFile(name) {
     scopesAt.cache = null;
     projectionPage = 0;
     cm.setOption("readOnly", false); viewingShelf = null; refLabel = null; undeclaredView = null;
+    if (window.GatePublication?.readOnly) cm.setOption("readOnly", true);
     active = name;
     document.getElementById("fname").textContent = name;
     // the address names the open file, so a URL is a door: copy it from the

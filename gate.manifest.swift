@@ -155,3 +155,12 @@ public enum StdlibDeclare: Mine {
     public typealias Kind = FormsFile
 }
 extension StdlibDeclare { public static var typeName: String { "stdlib/declare.swift" } }
+
+public enum PublicationForms: Mine {
+    public typealias Kind = CarriedFile
+}
+extension PublicationForms { public static var typeName: String { "stdlib/forms-publication.swift" } }
+public enum PublicationTransport: Mine {
+    public typealias Kind = ToolFile
+}
+extension PublicationTransport { public static var typeName: String { "web/publication.js" } }

@@ -8,7 +8,7 @@
 # The snapshot is a SECOND record of the pages, which is the shape this
 # whole tool exists to refuse. So it is never edited by hand, never
 # committed, and the battery holds it byte for byte against stdlib/.
-import os, sys
+import base64, os, sys
 
 
 def swift_string(line):
@@ -37,6 +37,23 @@ def main():
         out.append('    ].joined(separator: "\\n")),')
     out.append("]")
     out.append("let COURT_PIN_BUILT_IN = " + swift_string(pin))
+    # Runtime bytes travel with the shelf so every build of the CLI, including
+    # the battery's mutant, carries the same delivery. Development still reads
+    # the files beside the binary first.
+    runtime = ["web/ui.html", "web/codemirror.js", "web/codemirror.css", "web/publication.js",
+               "bin/judge.js", "bin/renderer.js", "bin/press.js", "bin/drawing-profile.js",
+               "bin/drawing-fonts.json", "bin/drawing.from", "bin/court-wasm.from",
+               "bin/court-wasm/web/vi_court.js", "bin/court-wasm/web/vi_court_bytes.js",
+               "bin/organization-court.from", "LICENSE", "docs/NOTICE.md"]
+    out.append("let RUNTIME_EMBEDDED: [String: String] = [")
+    for relative in runtime:
+        path = os.path.join(os.path.dirname(os.path.abspath(where)), relative)
+        if not os.path.isfile(path):
+            continue
+        encoded = base64.b64encode(open(path, "rb").read()).decode("ascii")
+        chunks = [swift_string(encoded[i:i+4096]) for i in range(0, len(encoded), 4096)]
+        out.append("    " + swift_string(relative) + ": [" + ",\n".join(chunks) + "].joined(),")
+    out.append("]")
     # ── AND THE BYTES LEAVE HERE AS UTF-8, WHATEVER THE CONSOLE THINKS. The
     # pages carry `·` and `─`; printed through a console whose encoding is
     # cp1252, python raises UnicodeEncodeError and the build dies with it.

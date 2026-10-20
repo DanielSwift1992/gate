@@ -27,6 +27,12 @@ public enum CarriedFile: Role {
     public typealias Reader = CarriedReaderV1
 }
 
+// The publication reader takes a pinned catalog of doors and worlds.
+public enum CatalogReaderV1: Role {}
+public enum CatalogFile: Role {
+    public typealias Reader = CatalogReaderV1
+}
+
 // ── what is written into a world begins here ──
 // One list, three columns: whose source a file is, which court reads it,
 // and, for anything taken, the revision it was taken at. gate obeys this

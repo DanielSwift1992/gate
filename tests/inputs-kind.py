@@ -124,7 +124,7 @@ public typealias Input_agrees = Pair<InputAtom, Coral>
             assert status()['verdict'] == 'holds'
             manifest.write_text(text); write()
             for kind in ('DocumentFile', 'CatalogFile'):
-                manifest.write_text(text.replace('Kind = FormsFile', 'Kind = ' + kind))
+                manifest.write_text(text.replace('Kind = FormsFile', 'Kind = ' + kind) + ('\npublic enum CatalogFile: Role {}\n' if kind == 'CatalogFile' else ''))
                 answer = status()
                 assert answer['verdict'] in ('partial', 'unsupported') and any(kind in r['reason'] for r in answer['unsupported']), answer
             manifest.write_text(text.replace('Kind = FormsFile', 'Kind = CarriedFile'))

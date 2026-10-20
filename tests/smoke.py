@@ -11383,7 +11383,7 @@ print(bad.isEmpty ? "CORE OK" : "APART: " + bad.joined(separator: ","))
                                       "status", "fsck", "badge", "survey", "findings",
                                       "report", "bare", "import", "verify", "library",
                                       "guard", "check", "ask", "diff", "apply", "change",
-                                      "attention", "demo", "serve"]))
+                                      "attention", "demo", "serve", "publish"]))
         # ── AND THE LEDGER IS READ AGAINST THE ROAD IT IS WALKING. The strangler
         # has a length and a position, and both were feelings: the list of moved
         # veins lived in the binary and the list of verbs lived in the python
@@ -11593,11 +11593,11 @@ print(bad.isEmpty ? "CORE OK" : "APART: " + bad.joined(separator: ","))
         # usage offers, the road is walked: from here the python side is a
         # decision rather than a dependency, and what is left of it is the
         # death commit.
-        S.append(("the ledger names verbs the usage offers, 27 of 27 carried",
+        S.append(("the ledger names verbs the usage offers, 28 of 28 carried",
                   set(_ledger) <= _verbs | _spellings_carried
-                  and len(_ledger) == 30
-                  and len(_carried_verbs) == 27
-                  and len(_verbs) == 27
+                  and len(_ledger) == 31
+                  and len(_carried_verbs) == 28
+                  and len(_verbs) == 28
                   # and a name on the ledger is a whole verb: a prefix claims
                   # everything under it, so half a verb would take argv nobody
                   # answers, which is why the unit of the move is the verb
@@ -12465,7 +12465,7 @@ public enum MyWatch: AccessLedger {
     if _shapes:
         print("   verbs answering outside the canon:", _shapes[:4])
     S.append(("a verb asked for nothing answers with a sentence, in a world and without one",
-              _stacks == [] and len(_all) == 27))
+              _stacks == [] and len(_all) == 28))
     # and a non-answer is a machine's object only for whoever asked for one
     _nj = subprocess.run([GATE, "my", "--json"],
                          cwd=os.path.join(tmp, "bare-no-my"),
@@ -14150,7 +14150,7 @@ public enum MyWatch: AccessLedger {
                          if f.endswith(".swift"))
     S.append(("every page on the shelf says its sort, and says one of the four",
               sorted(speaks_map) == shelf_pages
-              and len(shelf_pages) == 16
+              and len(shelf_pages) == 17
               and sorted(speaks_map) == sorted(shelf_out.get("modules") or {})
               and set(speaks_map.values()) == {"a-domain", "the-tool", "the-bench", "the-reader"}
               # said by the page in its third line, never guessed from its name

@@ -179,7 +179,8 @@ usage (the git-shaped porcelain):
   gate import rbac rbac.json  ·  gate import refs tracker.json --code .
   gate export gate.swift -o people.csv grants.csv
   gate verify people.csv grants.csv --against CMD
-  gate serve [port]                   (local read-only JSON surface)
+  gate serve [repository] [port]      (the bench and its declared publication)
+  gate publish REPOSITORY -o SITE     (a static publication from its manifest)
   gate report [-o report.html]        (printable audit page. Nothing is written
                                        unless you name the file)
   gate guard [merge]                  (repo policy by the same gates: HEAD author
@@ -219,7 +220,7 @@ if args.isEmpty || args == ["--help"] || args == ["-h"] {
 let CARRIES = ["stdlib", "export", "seam", "log", "aside", "declare", "mine", "theirs",
                "init", "drift", "my", "status", "fsck", "badge", "survey", "findings",
                "report", "bare", "import", "verify", "library", "guard", "check", "ask",
-               "diff", "apply", "change", "attention", "demo", "serve"]
+               "diff", "apply", "change", "attention", "demo", "serve", "publish"]
 
 if args == ["--carries"] {
     out(CARRIES.joined(separator: "\n") + "\n")
@@ -894,7 +895,7 @@ func jsonPlace(_ text: String) -> (line: Int, column: Int) {
 let ROLE_ATOM: [String: String] = ["world": "WorldFile", "seam": "SeamFile",
                                    "forms": "FormsFile", "judge": "JudgeFile",
                                    "carried": "CarriedFile", "tool": "ToolFile",
-                                   "drawing-profile": "DrawingProfileFile"]
+                                   "drawing-profile": "DrawingProfileFile", "catalog": "CatalogFile"]
 
 // A Role may carry its installed Reader. Its declaration does not stop being
 // a declaration when its body is nonempty. The writer and guard ask alike.
@@ -1346,12 +1347,13 @@ let STATUS_ROLES: [(String, String)] = [
               + "and by no court of this world"),
     ("drawing-profile", "profile structure and declared inputs, read by DrawingProfileReaderV1; "
                         + "Drawing evidence is separate from the world's relations"),
+    ("catalog", "publication doors and worlds, read by CatalogReaderV1"),
     ("tool", "the tool's own source: held by the battery's parity, "
            + "and by no court of this world"),
 ]
 // The installed readers have code here; their Kind bindings live on the shelf.
 let ROLE_OF_READER = ["FormsReaderV1": "forms", "OrganizationReaderV1": "world",
-                      "CarriedReaderV1": "carried", "DrawingProfileReaderV1": "drawing-profile"]
+                      "CarriedReaderV1": "carried", "DrawingProfileReaderV1": "drawing-profile", "CatalogReaderV1": "catalog"]
 let LEGACY_KIND_ROLES = ["SeamFile": "seam", "JudgeFile": "judge", "ToolFile": "tool", "Seam": "seam"]
 var KIND_READERS_CACHE: [String: String]? = nil
 func installedKindReaders() -> [String: String] {
@@ -1393,6 +1395,7 @@ var SHELF_ORDER: [String] = []
 var SHIPPED_SET: Set<String> = []
 
 func loadStatusShelf() {
+    if !STDLIB_TEXTS.isEmpty { return }
     for page in shelf() {
         STDLIB_TEXTS[page.name] = page.text
         SHELF_ORDER.append(page.name)
@@ -2513,6 +2516,9 @@ func formsGuards(_ w: WorldState, _ size: inout [String: Int],
             let reader = installedKindReaders()[kind] ?? "unavailable"
             unsupported.append(FormResidue(id: row.name ?? row.path, address: "gate.manifest.swift:\(row.line)",
                 reason: "Kind \(kind) has no installed supported Reader (\(reader))"))
+        } else if row.kind == "CatalogFile" {
+            unsupported.append(FormResidue(id: row.name ?? row.path, address: "gate.manifest.swift:\(row.line)",
+                reason: "Kind CatalogFile uses CatalogReaderV1 in a Publication plan; it has no standalone relation court"))
         }
     }
     let taken = takenInputs(w)
@@ -3936,14 +3942,14 @@ struct StatusAnswer {
     }
 }
 
-func statusAnswer() -> StatusAnswer {
+func statusAnswer(_ supplied: WorldState? = nil) -> StatusAnswer {
     // ── THE ANSWER THE BATTERY OPENS THROUGH A DOOR, and no argv a person
     // types: byte for byte against the other carrier on the worlds the battery
     // keeps. The verb itself moves with the asking pack, because the tables
     // bootstrap (`ensure_world`, python's `cmd_import`) has not moved: this
     // reads worlds, it does not seed them.
     loadStatusShelf()
-    let w = discoverWorld()
+    let w = supplied ?? discoverWorld()
     ensureWorld(w)                  // tables and no world yet: seed it, once
     let files = worldFilesOf(w)
     let here = FileManager.default.currentDirectoryPath
@@ -11824,7 +11830,8 @@ func drawingTakenTexts(_ w: WorldState) -> [(String, String)] {
 }
 
 func serveFile(_ conn: GateSocket, _ path: String, _ ctype: String) {
-    guard let body = FileManager.default.contents(atPath: path) else {
+    let relative = path.hasPrefix(toolRoot() + "/") ? String(path.dropFirst(toolRoot().count + 1)) : ""
+    guard let body = FileManager.default.contents(atPath: path) ?? runtimeData(relative) else {
         serveJSON(conn, compactDumps(.object([
             ("error", .text("this request was not one the bench could read: FileNotFoundError")),
             ("next", .text("the terminal answers the same questions and says more: "
@@ -12105,6 +12112,14 @@ func servedWorld() -> WorldState {
 }
 
 func serveDoor(_ a: [String]) -> Never {
+    let selected = a.dropFirst().filter { !$0.hasPrefix("-") && !$0.allSatisfy { $0.isNumber } }
+    if selected.count > 1 { cannot("serve selects one repository", "gate serve [repository] [port] --no-open") }
+    if let path = selected.first, !FileManager.default.changeCurrentDirectoryPath(absPath(path)) {
+        cannot("the selected repository is missing", "gate serve <repository> [port]")
+    }
+    let publicationRoot = FileManager.default.currentDirectoryPath
+    let publicationText = readText(joinPath(publicationRoot, "gate.manifest.swift")) ?? ""
+    let hasPublication = !matches(#"public enum \w+: Publication\s*\{"#, uncommented(publicationText)).isEmpty
     let nums = a.filter { !$0.isEmpty && $0.allSatisfy { $0.isNumber } }
     let port = nums.first.flatMap { Int($0) } ?? 4744
     let openIt = !a.contains("--no-open")
@@ -12184,6 +12199,19 @@ func serveDoor(_ a: [String]) -> Never {
         if conn == gateNoSocket { continue }
         let spawnsBefore = SPAWNS
         if let asked = serveRead(conn) {
+            if hasPublication || !matches(#"public enum \w+: Publication\s*\{"#, uncommented(readText(joinPath(publicationRoot, "gate.manifest.swift")) ?? "")).isEmpty {
+                do {
+                    let plan = try buildReadPlan(publicationRoot)
+                    let (code, payload) = readPlanResponse(plan, asked.method, asked.path, asked.query, asked.body)
+                    var data = payload.data
+                    if payload.contentType.hasPrefix("text/html"), let html = String(data: data, encoding: .utf8) {
+                        data = Data(html.replacingOccurrences(of: " data-plan=", with: " data-live=\"true\" data-plan=").utf8)
+                    }
+                    serveSay(conn, code, payload.contentType, data)
+                } catch { serveSay(conn, 409, "application/json", publicationFailureJSON(error)) }
+                gateClose(conn)
+                continue
+            }
             if asked.method == "GET", asked.path.hasPrefix("/drawing-assets/") {
                 let hash = String(asked.path.dropFirst("/drawing-assets/".count))
                 let assets = drawingInputs(servedWorld(), counts: false).assets
@@ -12751,6 +12779,480 @@ func serveDoor(_ a: [String]) -> Never {
     }
 }
 
+// publication/1: both transports take one plan and one set of response bytes.
+struct PublicationFailure: Error {
+    var address: String
+    var reason: String
+    var status = "refused"
+}
+func publicationJSON(_ value: Any) -> Data {
+    return (try? JSONSerialization.data(withJSONObject: value, options: [.sortedKeys, .fragmentsAllowed])) ?? Data("null".utf8)
+}
+func publicationObject(_ value: StatusJSON) -> [String: Any] {
+    return (try? JSONSerialization.jsonObject(with: Data(compactDumps(value).utf8))) as? [String: Any] ?? [:]
+}
+func runtimeData(_ relative: String) -> Data? {
+    if let bytes = FileManager.default.contents(atPath: joinPath(toolRoot(), relative)) { return bytes }
+    return RUNTIME_EMBEDDED[relative].flatMap { Data(base64Encoded: $0) }
+}
+func publicationEscape(_ text: String) -> String {
+    return text.replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "<", with: "&lt;")
+        .replacingOccurrences(of: ">", with: "&gt;").replacingOccurrences(of: "\"", with: "&quot;")
+}
+func publicationQuery(_ text: String) -> String {
+    return text.addingPercentEncoding(withAllowedCharacters: CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.!~*'()")) ?? ""
+}
+func publicationCWD<T>(_ root: String, _ run: () throws -> T) rethrows -> T {
+    let old = FileManager.default.currentDirectoryPath
+    FileManager.default.changeCurrentDirectoryPath(root)
+    defer { FileManager.default.changeCurrentDirectoryPath(old) }
+    return try run()
+}
+struct PublicationNode {
+    var name: String
+    var role: String
+    var body: String
+    var line: Int
+    func axes(_ allowed: Set<String>, _ file: String) throws -> [String: String] {
+        var result: [String: String] = [:]
+        let pattern = #"public\s+typealias\s+(\w+)\s*=\s*([^\n]+)"#
+        for m in matches(pattern, body) {
+            let key = m[0], value = m[1].trimmingCharacters(in: .whitespacesAndNewlines)
+            guard allowed.contains(key), result[key] == nil else {
+                throw PublicationFailure(address: "\(file):\(line)", reason: "\(name).\(key): unknown or repeated field")
+            }
+            guard !value.isEmpty else { throw PublicationFailure(address: "\(file):\(line)", reason: "\(name).\(key): empty axis") }
+            result[key] = value
+        }
+        let rest = body.replacingOccurrences(of: pattern, with: "", options: .regularExpression)
+        guard rest.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw PublicationFailure(address: "\(file):\(line)", reason: "\(name): expected declared axes")
+        }
+        guard Set(result.keys) == allowed else {
+            throw PublicationFailure(address: "\(file):\(line)", reason: "\(name): missing fields " + allowed.subtracting(result.keys).sorted().joined(separator: ", "))
+        }
+        return result
+    }
+}
+struct PublicationSource {
+    var file: String
+    var nodes: [PublicationNode] = []
+    var words: [String: String] = [:]
+    init(_ text: String, _ address: String) throws {
+        file = address
+        let code = uncommented(text)
+        if let (_, line) = matchesAt(#"^\s*import\s+"#, code, lines: true).first {
+            throw PublicationFailure(address: "\(address):\(line)", reason: "catalog imports need a supported context", status: "unsupported")
+        }
+        for (groups, line) in matchesAt(#"public enum (\w+): (\w+)\s*\{([^{}]*)\}"#, code, dotAll: true) {
+            guard !nodes.contains(where: { $0.name == groups[0] }) else {
+                throw PublicationFailure(address: "\(address):\(line)", reason: "repeated record " + groups[0])
+            }
+            nodes.append(PublicationNode(name: groups[0], role: groups[1], body: groups[2], line: line))
+        }
+        for (g, line) in matchesAt(#"extension (\w+)\s*\{\s*public static var typeName:\s*String\s*\{\s*("(?:\\.|[^"\\])*")\s*\}\s*\}"#, code, dotAll: true) {
+            guard words[g[0]] == nil, let word = (try? JSONSerialization.jsonObject(with: Data(g[1].utf8), options: .fragmentsAllowed)) as? String else {
+                throw PublicationFailure(address: "\(address):\(line)", reason: "unreadable or repeated typeName for " + g[0])
+            }
+            words[g[0]] = word
+        }
+    }
+    func node(_ name: String) throws -> PublicationNode {
+        guard let n = nodes.first(where: { $0.name == name }) else {
+            throw PublicationFailure(address: file + ":1", reason: "unresolved record " + name)
+        }
+        return n
+    }
+    func word(_ name: String) throws -> String {
+        guard let word = words[name] else { throw PublicationFailure(address: file + ":1", reason: "unresolved typeName " + name) }
+        return word
+    }
+}
+struct PublicationReply {
+    var data: Data
+    var contentType: String
+}
+struct ReadPlan {
+    var document: [String: Any]
+    var replies: [String: PublicationReply]
+    var watched: [String: String]
+    var directories: [String: [String]]
+    func current() -> Bool {
+        for (file, hash) in watched {
+            guard let bytes = FileManager.default.contents(atPath: file), sha256Hex(bytes) == hash else { return false }
+        }
+        for (dir, names) in directories {
+            if ((try? FileManager.default.contentsOfDirectory(atPath: dir)) ?? []).sorted() != names { return false }
+        }
+        return true
+    }
+}
+struct PublicationDoor {
+    var name: String
+    var id: String
+    var world: String
+    var directory: String
+    var shown: String
+    var title: String
+    var group: String
+    var caption: String
+}
+var PUBLICATION_CACHE: (root: String, plan: ReadPlan)? = nil
+let PUBLICATION_ASSETS = [
+    "codemirror.js": "web/codemirror.js", "codemirror.css": "web/codemirror.css",
+    "publication.js": "web/publication.js", "judge.js": "bin/judge.js", "renderer.js": "bin/renderer.js",
+    "press.js": "bin/press.js", "drawing-profile.js": "bin/drawing-profile.js",
+    "vi_court.js": "bin/court-wasm/web/vi_court.js", "vi_court_bytes.js": "bin/court-wasm/web/vi_court_bytes.js",
+    "court-wasm.from": "bin/court-wasm.from", "LICENSE": "LICENSE", "NOTICE.md": "docs/NOTICE.md"
+]
+func publicationRelative(_ path: String) -> Bool {
+    return !path.isEmpty && !path.contains("\\") && pathRoot(path, .posix) == nil && pathRoot(path, .windows) == nil
+        && path.split(separator: "/", omittingEmptySubsequences: false).allSatisfy { !$0.isEmpty && $0 != "." && $0 != ".." }
+}
+func publicationFailureJSON(_ error: Error) -> Data {
+    let e = error as? PublicationFailure ?? PublicationFailure(address: "publication:1", reason: String(describing: error))
+    return publicationJSON(["verdict": e.status, "status": e.status, "address": e.address, "reason": e.reason,
+                            "input_errors": [["address": e.address, "reason": e.reason]]])
+}
+func buildReadPlan(_ selected: String) throws -> ReadPlan {
+    let root = canonicalPath(selected)
+    if let cached = PUBLICATION_CACHE, cached.root == root, cached.plan.current() { return cached.plan }
+    return try publicationCWD(root) {
+        guard gitExitCode(["rev-parse", "--is-inside-work-tree"], root) == 0 else {
+            throw PublicationFailure(address: "gate.manifest.swift:1", reason: "publish needs a local Git checkout")
+        }
+        var watched: [String: String] = [:], directories: [String: [String]] = [:]
+        var blobs: [String: Data] = [:]
+        func take(_ path: String, _ address: String) throws -> Data {
+            guard let bytes = FileManager.default.contents(atPath: path) else {
+                throw PublicationFailure(address: address, reason: "required input is missing")
+            }
+            watched[path] = sha256Hex(bytes)
+            blobs[sha256Hex(bytes)] = bytes
+            let dir = parentPath(path) ?? root
+            directories[dir] = ((try? FileManager.default.contentsOfDirectory(atPath: dir)) ?? []).sorted()
+            return bytes
+        }
+        var replies: [String: PublicationReply] = [:]
+        let manifest = joinPath(root, "gate.manifest.swift")
+        let manifestBytes = try take(manifest, "gate.manifest.swift:1")
+        let source = try PublicationSource(String(decoding: manifestBytes, as: UTF8.self), "gate.manifest.swift")
+        let publications = source.nodes.filter { $0.role == "Publication" }
+        guard publications.count == 1 else {
+            throw PublicationFailure(address: "gate.manifest.swift:1", reason: "declare exactly one Publication; found \(publications.count)")
+        }
+        let publication = publications[0]
+        let axes = try publication.axes(["Id", "Entry", "Catalog", "DraftPolicy", "DrawingProfile", "Aliases"], source.file)
+        guard axes["DrawingProfile"] == "NoDrawing", axes["DraftPolicy"] == "ReadOnly" else {
+            throw PublicationFailure(address: "gate.manifest.swift:\(publication.line)", reason: "this delivery supports NoDrawing and ReadOnly; the requested policy or profile needs its reader", status: "unsupported")
+        }
+        let identity = try source.word(axes["Id"]!)
+        guard !identity.isEmpty else { throw PublicationFailure(address: "gate.manifest.swift:\(publication.line)", reason: "Publication.Id is empty") }
+        let rootLayout = layoutRowsFull(root)
+        let rootWorld = WorldState(facts: nil, tables: nil, layout: Layout(manifest: manifest, rows: rootLayout.rows))
+        let resolved = takenInputs(rootWorld)
+        if let bad = resolved.bad.first { throw PublicationFailure(address: bad.address, reason: bad.claim) }
+        guard resolved.v2 else { throw PublicationFailure(address: ".gate/forms-definitions.json:1", reason: "publication requires v2 files") }
+        let rootRecordPath = joinPath(root, ".gate/forms-definitions.json")
+        let recordBytes = try take(rootRecordPath, ".gate/forms-definitions.json:1")
+        let rootRecord = (try? JSONSerialization.jsonObject(with: recordBytes)) as? [String: Any] ?? [:]
+        if let bad = manifestGuards(rootWorld).first { throw PublicationFailure(address: bad.address, reason: bad.claim) }
+        func limitedContext(_ record: [String: Any], _ text: String, _ address: String) throws {
+            if let value = record["languages"], !(value is [String: Any]) {
+                throw PublicationFailure(address: address, reason: "languages must be an object")
+            }
+            if let value = record["plain_fragments"], !(value is [Any]) {
+                throw PublicationFailure(address: address, reason: "plain_fragments must be a list")
+            }
+            if !(record["languages"] as? [String: Any] ?? [:]).isEmpty || !(record["plain_fragments"] as? [Any] ?? []).isEmpty
+                || !matches(#"typealias\s+Language\s*=|^\s*import\s+"#, uncommented(text), lines: true).isEmpty {
+                throw PublicationFailure(address: address, reason: "this publication needs Language/import/scope or fragment operations outside this NoDrawing delivery", status: "unsupported")
+            }
+        }
+        try limitedContext(rootRecord, String(decoding: manifestBytes, as: UTF8.self), "gate.manifest.swift:1")
+        guard let catalogRow = rootLayout.rows.first(where: { $0.name == axes["Catalog"] }), catalogRow.source == "theirs",
+              catalogRow.kind == "CatalogFile", let catalogPath = resolved.paths[catalogRow.name ?? ""] else {
+            throw PublicationFailure(address: "gate.manifest.swift:\(publication.line)", reason: "Catalog must name a pinned Theirs CatalogFile row")
+        }
+        var inputs: [[String: Any]] = [], manifests: [[String: Any]] = [], records: [[String: Any]] = []
+        for row in rootLayout.rows {
+            guard row.source == "theirs", row.kind == "CatalogFile", let path = inputPath(row, rootWorld, resolved) else {
+                throw PublicationFailure(address: "gate.manifest.swift:\(row.line)", reason: "root input Kind needs a supported publication reader", status: "unsupported")
+            }
+            let bytes = try take(path, row.path + ":1")
+            inputs.append(["manifest": "gate.manifest.swift", "row": row.name ?? "", "path": row.path, "kind": "CatalogFile", "reader": "CatalogReaderV1", "source": "theirs", "sha256": sha256Hex(bytes)])
+        }
+        manifests.append(["path": "gate.manifest.swift", "sha256": sha256Hex(manifestBytes)])
+        records.append(["path": ".gate/forms-definitions.json", "sha256": sha256Hex(recordBytes)])
+        let catalogBytes = try take(catalogPath, catalogRow.path + ":1")
+        let catalog = try PublicationSource(String(decoding: catalogBytes, as: UTF8.self), catalogRow.path)
+        var doors: [PublicationDoor] = [], ids = Set<String>()
+        for node in catalog.nodes where !matches(#"typealias\s+Id\s*="# , node.body).isEmpty {
+            let a = try node.axes(["Id", "Group", "Title", "Shown", "Reads", "Caption"], catalog.file)
+            let id = try catalog.word(a["Id"]!)
+            guard id.range(of: "^[a-z][a-z0-9-]*$", options: .regularExpression) != nil,
+                  !["assets", "snapshots", "styles", "read-plan.json"].contains(id), ids.insert(id).inserted else {
+                throw PublicationFailure(address: "\(catalog.file):\(node.line)", reason: "unsafe or repeated door Id " + id)
+            }
+            let world = try catalog.node(a["Reads"]!), w = try world.axes(["File", "Name"], catalog.file)
+            let directory = try catalog.word(w["File"]!)
+            let name = try catalog.word(w["Name"]!)
+            guard publicationRelative(directory), !leavesWorldHere(directory, root) else {
+                throw PublicationFailure(address: "\(catalog.file):\(world.line)", reason: "world File leaves the selected repository")
+            }
+            let group = try catalog.node(a["Group"]!).axes(["Name"], catalog.file)
+            doors.append(PublicationDoor(name: node.name, id: id, world: name, directory: directory,
+                shown: try catalog.word(a["Shown"]!), title: try catalog.word(a["Title"]!),
+                group: try catalog.word(group["Name"]!), caption: try catalog.word(a["Caption"]!)))
+        }
+        guard !doors.isEmpty, let entry = doors.first(where: { $0.name == axes["Entry"] }) else {
+            throw PublicationFailure(address: "gate.manifest.swift:\(publication.line)", reason: "Entry does not name a catalog door")
+        }
+        var routes = doors.map { ["path": $0.id + "/", "door": $0.name, "world": $0.directory] }
+        routes.append(["path": "", "door": entry.name, "world": entry.directory])
+        var aliases = axes["Aliases"]!.trimmingCharacters(in: .whitespacesAndNewlines)
+        if aliases.hasPrefix("("), aliases.hasSuffix(")") { aliases = String(aliases.dropFirst().dropLast()) }
+        var paths = Set(routes.map { $0["path"]! })
+        for reference in aliases.split(separator: ",").map({ $0.trimmingCharacters(in: .whitespacesAndNewlines) }).filter({ !$0.isEmpty }) {
+            let alias = try source.node(reference)
+            guard alias.role == "PublicationAlias" else { throw PublicationFailure(address: "gate.manifest.swift:\(alias.line)", reason: "Aliases names a non-alias record") }
+            let a = try alias.axes(["Path", "To"], source.file), path = try source.word(a["Path"]!)
+            guard publicationRelative(path), path.range(of: "^[a-z][a-z0-9-]*(/[a-z][a-z0-9-]*)*$", options: .regularExpression) != nil, !["assets", "snapshots", "styles", "read-plan.json"].contains(path.split(separator: "/").first.map(String.init) ?? ""),
+                  let door = doors.first(where: { $0.name == a["To"] }), paths.insert(path + "/").inserted else {
+                throw PublicationFailure(address: "gate.manifest.swift:\(alias.line)", reason: "unsafe, conflicting or unresolved alias")
+            }
+            routes.append(["path": path + "/", "door": door.name, "world": door.directory])
+        }
+        // A route cannot be both an output directory and another route's file.
+        var worlds: [[String: Any]] = []
+        let jsonType = "application/json; charset=utf-8", textType = "text/plain; charset=utf-8"
+        func reply(_ path: String, _ object: Any) { replies[path] = PublicationReply(data: publicationJSON(object), contentType: jsonType) }
+        for (asset, file) in PUBLICATION_ASSETS {
+            guard let bytes = runtimeData(file) else { throw PublicationFailure(address: file + ":1", reason: "installed runtime resource is missing") }
+            if FileManager.default.fileExists(atPath: joinPath(toolRoot(), file)) { watched[joinPath(toolRoot(), file)] = sha256Hex(bytes) }
+            let type = asset.hasSuffix(".js") ? "text/javascript" : asset.hasSuffix(".css") ? "text/css" : "text/plain; charset=utf-8"
+            replies["assets/" + asset] = PublicationReply(data: bytes, contentType: type)
+        }
+        guard let template = runtimeData("web/ui.html"), let ui = String(data: template, encoding: .utf8) else {
+            throw PublicationFailure(address: "web/ui.html:1", reason: "installed UI is missing")
+        }
+        if FileManager.default.fileExists(atPath: joinPath(toolRoot(), "web/ui.html")) { watched[joinPath(toolRoot(), "web/ui.html")] = sha256Hex(template) }
+        var coverage: [[String: Any]] = []
+        for door in doors {
+            let worldRoot = joinPath(root, door.directory)
+            let worldData = try publicationCWD(worldRoot) { () throws -> [String: Any] in
+                let mp = joinPath(worldRoot, "gate.manifest.swift")
+                let mb = try take(mp, door.directory + "/gate.manifest.swift:1")
+                let parsed = layoutRowsFull(worldRoot)
+                let w = WorldState(facts: nil, tables: nil, layout: Layout(manifest: mp, rows: parsed.rows))
+                let taken = takenInputs(w)
+                if let bad = taken.bad.first { throw PublicationFailure(address: door.directory + "/" + bad.address, reason: bad.claim) }
+                let rp = joinPath(worldRoot, ".gate/forms-definitions.json")
+                let rb = try take(rp, door.directory + "/.gate/forms-definitions.json:1")
+                let record = (try? JSONSerialization.jsonObject(with: rb)) as? [String: Any] ?? [:]
+                guard record["format"] as? Int == 2 else { throw PublicationFailure(address: door.directory + "/.gate/forms-definitions.json:1", reason: "world requires a v2 record") }
+                try limitedContext(record, String(decoding: mb, as: UTF8.self), door.directory + "/gate.manifest.swift:1")
+                if let bad = manifestGuards(w).first { throw PublicationFailure(address: door.directory + "/" + bad.address, reason: bad.claim) }
+                manifests.append(["path": door.directory + "/gate.manifest.swift", "sha256": sha256Hex(mb)])
+                records.append(["path": door.directory + "/.gate/forms-definitions.json", "sha256": sha256Hex(rb)])
+                var texts: [String: String] = ["gate.manifest.swift": String(decoding: mb, as: UTF8.self)], kinds: [String: String] = [:]
+                for row in parsed.rows {
+                    guard let kind = row.kind, ["FormsFile", "WorldFile", "CarriedFile"].contains(kind), let reader = installedKindReaders()[kind] else {
+                        throw PublicationFailure(address: "\(door.directory)/gate.manifest.swift:\(row.line)", reason: "Kind needs its publication reader", status: "unsupported")
+                    }
+                    guard let path = inputPath(row, w, taken) else { throw PublicationFailure(address: "\(door.directory)/gate.manifest.swift:\(row.line)", reason: "unresolved input") }
+                    let bytes = try take(path, door.directory + "/" + row.path + ":1")
+                    guard let text = String(data: bytes, encoding: .utf8), !text.utf8.contains(0) else {
+                        throw PublicationFailure(address: door.directory + "/" + row.path + ":1", reason: "binary carried inputs need their asset reader", status: "unsupported")
+                    }
+                    try limitedContext([:], text, door.directory + "/" + row.path + ":1")
+                    if row.kind == "FormsFile", countQuestion(text) != nil {
+                        throw PublicationFailure(address: door.directory + "/" + row.path + ":1", reason: "count needs a declared definition context; this delivery never substitutes its installed Primitive", status: "unsupported")
+                    }
+                    texts[row.path] = text; kinds[row.path] = kind
+                    inputs.append(["manifest": door.directory + "/gate.manifest.swift", "row": row.name ?? "", "path": row.path,
+                        "kind": kind, "reader": reader, "source": row.source, "sha256": sha256Hex(bytes)])
+                }
+                guard texts[door.shown] != nil, door.shown != "gate.manifest.swift" else {
+                    throw PublicationFailure(address: catalog.file + ":1", reason: "Shown is not a declared source in " + door.directory)
+                }
+                var answer = publicationObject(.object(statusPairs(statusAnswer(w))))
+                answer["judge_ms"] = NSNull(); answer["wall_ms"] = NSNull()
+                answer["facts"] = parsed.rows.filter { $0.kind == "WorldFile" }.map { $0.path }
+                answer["next"] = "Read-only publication. Change the source repository and publish again."
+                // Addresses stay source-relative even when a taken file is cached elsewhere.
+                let forms = parsed.rows.filter { $0.kind == "FormsFile" }.map { $0.path }
+                let groups = worldsOf(parsed.rows.filter { $0.kind == "FormsFile" }.map { ($0, texts[$0.path] ?? "") }).map { $0.map { $0.path } }
+                let names = [door.shown] + texts.keys.sorted().filter { $0 != door.shown }
+                var snap: [String: Any] = [:]
+                func json(_ key: String, _ object: Any) { snap[key] = ["body": String(decoding: publicationJSON(object), as: UTF8.self), "type": jsonType] }
+                json("GET /files", ["files": names, "layout": "gate.manifest.swift", "forms": forms,
+                     "carried": parsed.rows.filter { $0.kind == "CarriedFile" }.map { $0.path }, "worlds": groups,
+                     "roles": Dictionary(uniqueKeysWithValues: STATUS_ROLES), "opens": [:], "seams": [], "undeclared": [], "overridden": [:],
+                     "personal": NSNull(), "personal_empty": false, "judge_claim": NSNull(), "save_policy": "read-only",
+                     "capabilities": ["read_only": names, "write": []]])
+                json("GET /status", answer)
+                var verdict = answer
+                verdict["declarations"] = (answer["world"] as? [String: Any])?["declarations"] ?? NSNull()
+                verdict["premises"] = (answer["world"] as? [String: Any])?["premises"] ?? NSNull()
+                for (name, text) in texts {
+                    snap["GET /world?f=" + publicationQuery(name)] = ["body": text, "type": textType]
+                    var reading = verdict
+                    reading["coverage_scope"] = "declared relations; Swift bodies are unchecked"
+                    if name == "gate.manifest.swift" || kinds[name] == "CarriedFile" {
+                        reading["verdict"] = "unsupported"
+                        reading["unsupported"] = [["id": name, "address": name + ":1", "reason": "structural or carried input; no independent relation court"]]
+                        reading["refusals"] = []
+                    }
+                    json("POST /verdict?f=" + publicationQuery(name), reading)
+                    json("GET /gitstatus?f=" + publicationQuery(name), ["file": name, "git": "source"])
+                }
+                let modules = shelf().map { $0.name }
+                json("GET /shelf", ["modules": modules, "roles": Dictionary(uniqueKeysWithValues: modules.map { ($0, shelfHeadLine($0, "// role:") ?? "") }),
+                    "speaks": Dictionary(uniqueKeysWithValues: modules.map { ($0, shelfHeadLine($0, "// speaks-for:") ?? "") })])
+                for page in shelf() { snap["GET /shelf?m=" + publicationQuery(page.name)] = ["body": presentedWorld(w, page.name), "type": textType] }
+                json("GET /drawing-profile", ["status": "none", "reason": "NoDrawing"])
+                json("GET /version", ["gate": gateVersion(), "judge_from": judgeFrom() ?? "", "publication": identity])
+                json("GET /language", ["names": Dictionary(uniqueKeysWithValues: languageNames()), "file": languageFile(), "court": NSNull(), "at": judgeFrom() ?? "", "present": false])
+                json("GET /attention", ["command": "attention", "seams": []])
+                let journal = repoJournal(worldRoot, Set(parsed.rows.map { $0.path }), scope: "world", limit: 200, onlyMe: false)
+                json("GET /log", publicationObject(.object(journalPairs(journal, scope: "world", limit: 200, onlyMe: false,
+                    world: Set(parsed.rows.map { $0.path }), who: identities(worldRoot), nextSaid: "Read-only publication", lastMile: false))))
+                coverage.append(["world": door.directory, "verdict": answer["verdict"] ?? "unsupported", "forms": answer["forms"] ?? [:],
+                    "world_counts": answer["world"] ?? [:], "unsupported": answer["unsupported"] ?? [], "unchecked": parsed.rows.filter { $0.kind == "CarriedFile" }.map { $0.path },
+                    "area": "declared relations; Swift bodies are unchecked"])
+                return ["snapshots": snap, "texts": texts, "groups": groups, "kinds": kinds,
+                        "css": paletteTokens(w) + ladderTokens(w) + registerTokens(w)]
+            }
+            let snap = worldData["snapshots"] as! [String: Any]
+            reply("snapshots/" + door.id + ".json", ["responses": snap])
+            replies["styles/" + door.id + ".css"] = PublicationReply(data: Data((worldData["css"] as! String).utf8), contentType: "text/css")
+            worlds.append(["door": door.name, "id": door.id, "file": door.directory, "name": door.world, "shown": door.shown,
+                "title": door.title, "group": door.group, "caption": door.caption, "kinds": worldData["kinds"]!, "groups": worldData["groups"]!])
+        }
+        // The reader records each input when taking it; delivery follows that
+        // record rather than guessing whether its cache path looks structural.
+        for (hash, bytes) in blobs {
+            replies["inputs/" + hash] = PublicationReply(data: bytes, contentType: "application/octet-stream")
+        }
+        let assets = Dictionary(uniqueKeysWithValues: replies.filter { $0.key.hasPrefix("assets/") }.map { ($0.key, sha256Hex($0.value.data)) })
+        let resources = Dictionary(uniqueKeysWithValues: replies.filter { $0.key.hasPrefix("assets/") || $0.key.hasPrefix("inputs/") || $0.key.hasPrefix("styles/") }.map { ($0.key, sha256Hex($0.value.data)) })
+        var doc: [String: Any] = ["format": "publication/1", "publication": ["id": identity, "entry": entry.name],
+            "manifests": manifests, "records": records, "inputs": inputs, "languages": [:], "worlds": worlds, "routes": routes,
+            "plain_fragments": [], "capabilities": ["read_only": true, "structure": "read-only-structure", "delivery": "NoDrawing/ReadOnly"],
+            "draft_policy": "ReadOnly", "drawing_profile": "NoDrawing", "coverage": coverage,
+            "installed": ["gate": gateVersion(), "organization_revision": runtimeData("bin/organization-court.from").flatMap { String(data: $0, encoding: .utf8)?.components(separatedBy: "\n").first } ?? "", "binary_sha256": FileManager.default.contents(atPath: absPath(CommandLine.arguments[0])).map { sha256Hex($0) } ?? "", "judge_revision": judgeFrom() ?? "", "wasm": assets["assets/vi_court_bytes.js"] ?? "", "stdlib": Dictionary(uniqueKeysWithValues: shelf().map { ($0.name, sha256Hex(Data($0.text.utf8))) })], "assets": assets, "resources": resources]
+        doc["inputs_digest"] = sha256Hex(publicationJSON(["manifests": manifests, "records": records, "inputs": inputs]))
+        let planID = sha256Hex(publicationJSON(doc)); doc["plan_id"] = planID
+        // Every transport sends these bytes, including its declared limitation.
+        for door in doors {
+            let path = "snapshots/" + door.id + ".json"
+            var object = (try? JSONSerialization.jsonObject(with: replies[path]!.data)) as? [String: Any] ?? [:]
+            object["plan_id"] = planID
+            reply(path, object)
+        }
+        // Response receipts follow plan_id: the plan does not hash its own ID.
+        doc["response_sha256"] = Dictionary(uniqueKeysWithValues: replies.filter { $0.key.hasPrefix("snapshots/") }.map { ($0.key, sha256Hex($0.value.data)) })
+        reply("read-plan.json", doc)
+        for route in routes {
+            let door = doors.first { $0.name == route["door"]! }!, path = route["path"]!
+            let depth = path.split(separator: "/").count, prefix = String(repeating: "../", count: depth)
+            var html = ui
+            for asset in ["codemirror.js", "codemirror.css", "judge.js", "renderer.js", "press.js", "drawing-profile.js"] {
+                html = html.replacingOccurrences(of: "\"/" + asset + "\"", with: "\"" + prefix + "assets/" + asset + "\"")
+            }
+            html = html.replacingOccurrences(of: "\"/ladder.css\"", with: "\"" + prefix + "styles/" + door.id + ".css\"")
+            let loader = "<script src=\"" + prefix + "assets/publication.js\" data-replies=\"" + prefix + "snapshots/" + door.id + ".json\" data-plan=\"" + planID + "\"></script>\n"
+            html = html.replacingOccurrences(of: "<head>", with: "<head>\n" + loader)
+            let navigation = doors.map { "<a href=\"" + prefix + $0.id + "/\">" + publicationEscape($0.title) + "</a>" }.joined(separator: " · ")
+            html = html.replacingOccurrences(of: "<body>", with: "<body>\n<nav aria-label=\"Publication\">" + navigation + " · Read-only publication</nav>")
+            replies[path + "index.html"] = PublicationReply(data: Data(html.utf8), contentType: "text/html; charset=utf-8")
+        }
+        let plan = ReadPlan(document: doc, replies: replies, watched: watched, directories: directories)
+        PUBLICATION_CACHE = (root, plan)
+        return plan
+    }
+}
+func readPlanResponse(_ plan: ReadPlan, _ method: String, _ path: String, _ query: [String: String], _ body: Data) -> (Int, PublicationReply) {
+    let jsonType = "application/json; charset=utf-8"
+    let publication = plan.document["publication"] as? [String: String] ?? [:]
+    let worlds = plan.document["worlds"] as? [[String: Any]] ?? []
+    let selected = query["world"].flatMap { id in worlds.first { $0["id"] as? String == id } }
+        ?? worlds.first { $0["door"] as? String == publication["entry"] }
+    if method == "GET" {
+        let key = path == "/" || path == "/ui" ? "index.html"
+            : String(path.dropFirst()) + (path.hasSuffix("/") ? "index.html" : "")
+        if let response = plan.replies[key] { return (200, response) }
+    }
+    if method == "GET" || (method == "POST" && path == "/verdict"),
+       let id = selected?["id"] as? String, let bytes = plan.replies["snapshots/" + id + ".json"]?.data,
+       let snapshots = (try? JSONSerialization.jsonObject(with: bytes)) as? [String: Any],
+       let responses = snapshots["responses"] as? [String: [String: String]] {
+        var key = method + " " + path
+        if ["/world", "/verdict", "/gitstatus"].contains(path) { key += "?f=" + publicationQuery(query["f"] ?? "") }
+        if path == "/language", let file = query["f"] { key += "?f=" + publicationQuery(file) }
+        if path == "/shelf", let name = query["m"] { key += "?m=" + publicationQuery(name) }
+        if method == "POST", responses["GET /world?f=" + publicationQuery(query["f"] ?? "")]?["body"] != String(decoding: body, as: UTF8.self) {
+            return (409, PublicationReply(data: publicationJSON(["verdict": "unsupported", "code": "read-only-structure", "reason": "this publication grants reading"]), contentType: jsonType))
+        }
+        if let response = responses[key], let text = response["body"], let type = response["type"] {
+            return (200, PublicationReply(data: Data(text.utf8), contentType: type))
+        }
+    }
+    let code = method == "GET" ? 404 : 409
+    return (code, PublicationReply(data: publicationJSON(["verdict": "unsupported", "code": "read-only-structure", "reason": "this request has no declared publication reader"]), contentType: jsonType))
+}
+
+func publishDoor(_ raw: [String]) -> Never {
+    let a = raw.filter { $0 != "--json" }
+    guard a.count == 4, a[2] == "-o", !a[1].hasPrefix("-"), !a[3].isEmpty else {
+        cannot("publish needs its repository and named output", "gate publish <repository> -o <site>")
+    }
+    let root = absPath(a[1]), output = absPath(a[3])
+    do {
+        guard leavesRoot(canonicalPath(root), canonicalPath(output)), leavesRoot(canonicalPath(output), canonicalPath(root)) else {
+            throw PublicationFailure(address: "publish:1", reason: "output must be outside the source repository")
+        }
+        let plan = try buildReadPlan(root)
+        let parent = parentPath(output) ?? "."
+        try FileManager.default.createDirectory(atPath: parent, withIntermediateDirectories: true)
+        let stage = joinPath(parent, ".gate-publish-" + UUID().uuidString)
+        defer { try? FileManager.default.removeItem(atPath: stage) }
+        for (path, response) in plan.replies {
+            let target = joinPath(stage, path)
+            try FileManager.default.createDirectory(atPath: parentPath(target)!, withIntermediateDirectories: true)
+            try response.data.write(to: URL(fileURLWithPath: target), options: .atomic)
+        }
+        // Validate the finished delivery before touching an existing output.
+        for (path, response) in plan.replies {
+            guard FileManager.default.contents(atPath: joinPath(stage, path)) == response.data else {
+                throw PublicationFailure(address: path + ":1", reason: "published resource differs from its planned bytes")
+            }
+        }
+        let backup = joinPath(parent, ".gate-previous-" + UUID().uuidString)
+        let existed = FileManager.default.fileExists(atPath: output)
+        if existed { try FileManager.default.moveItem(atPath: output, toPath: backup) }
+        do { try FileManager.default.moveItem(atPath: stage, toPath: output) }
+        catch { if existed { try? FileManager.default.moveItem(atPath: backup, toPath: output) }; throw error }
+        if existed { try? FileManager.default.removeItem(atPath: backup) }
+        if raw.contains("--json") {
+            out(String(decoding: publicationJSON(["command": "publish", "site": output, "plan_id": plan.document["plan_id"]!, "format": "publication/1", "delivery": "NoDrawing/ReadOnly"]), as: UTF8.self) + "\n")
+        } else {
+            out("publish: " + output + " · NoDrawing/ReadOnly\n  next: gate serve " + saidPath(root) + "\n")
+        }
+        exit(0)
+    } catch {
+        if raw.contains("--json") {
+            var object = (try? JSONSerialization.jsonObject(with: publicationFailureJSON(error))) as? [String: Any] ?? [:]
+            object["error"] = object["reason"] ?? "publication failed"
+            object["next"] = "repair the addressed input, then gate publish <repository> -o <site>"
+            err(String(decoding: publicationJSON(object), as: UTF8.self) + "\n"); exit(1)
+        }
+        let failure = error as? PublicationFailure
+        cannot((failure?.address ?? "publication:1") + ": " + (failure?.reason ?? String(describing: error)), "repair the input, then gate publish <repository> -o <site>")
+    }
+}
+
 // ── WHAT IS ACTUALLY RUNNING, said by the thing that runs. The identity of a
 // court is its bytes, and the court that sits here is this binary: the vein
 // carries the judge in-process, so the digest it names is its own rather than a
@@ -12806,6 +13308,10 @@ if args.first == "--version" || args.first == "-v" || args.first == "version" {
     }
     out(lines.joined(separator: "\n") + "\n")
     exit(0)
+}
+
+if args.first == "publish" {
+    publishDoor(args)
 }
 
 if args.first == "serve" {
