@@ -6,10 +6,10 @@
      Swift is a tab away, not a secret; a draggable file rail (the declared
      layout); the verdict docked at the bottom, Xcode-style; cross-file
      judgement over unsaved text. -->
-<meta charset="utf-8"><title>gate · world bench</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"><meta charset="utf-8"><title>gate · world bench</title>
 <!-- zero egress, enforced by the browser as well as by the code: the bench may
      talk to its own loopback server and to nothing else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-5GzCvayhfKIAxAwizJRqS3a05vGAKRgdgfqpOuJGoBs=' 'sha256-YcZLDNR5nKB5fNxcDO7otLfSJT1BXRnt4UTRzvp3+1g='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-5GzCvayhfKIAxAwizJRqS3a05vGAKRgdgfqpOuJGoBs=' 'sha256-Fno8SnLqSQKHvhAmH47K0mSg6+vXjbt9WluL0hXuptg='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
 <link rel="stylesheet" href="/codemirror.css">
 <script>
 // The theme is a declaration, not a toggle — and the declaration lives in the
@@ -43,11 +43,11 @@
    states and its contrast certificates hold to. Lower a colour here and the
    file's slack stops settling — the palette cannot drift from what was judged.
    Do not hand-edit; regenerate from the atoms. ── */
-:root{color-scheme:light; font-size:13px;
+:root{color-scheme:light; font-size:var(--speech-size);
   /* the reading line is the base of every distance: an instrument for reading
      measures its spacing in the letter it sets. --u is one fifth of the line,
      and every gap is a multiple of it — one ladder, no length off it. */
-  --textline: 1.45rem; --u: calc(var(--textline) / 10);
+  --textline: calc(1rem * var(--speech-leading)); --u: calc(var(--textline) / 10);
   /* a shadow is light taken away, so it is cast toward nothing in either theme.
      Cast in --ink it followed the text instead, and in the dark theme the ink is
      the LIGHT end: every raised thing wore a halo. This one belongs to no theme
@@ -161,16 +161,16 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 #brand #brandstatus{display:block;margin-top:calc(var(--u)*2)}
 #brand #brandstatus:empty{display:none}
 #main{flex:1;display:flex;flex-direction:column;min-width:0;border-left:0.5px solid var(--line)}
-#bar{display:flex;gap:calc(var(--u)*5);align-items:center;padding:calc(var(--u)*3) calc(var(--u)*6);border-bottom:0.5px solid var(--line);flex:none}
+#bar{display:flex;flex-wrap:wrap;gap:calc(var(--u)*5);align-items:center;padding:calc(var(--u)*3) calc(var(--u)*6);border-bottom:0.5px solid var(--line);flex:none}
 #bar b{font-weight:600}
-.seg{display:inline-flex;background:var(--mist);border-radius:8px;padding:var(--u);gap:var(--u)}
+.seg{display:inline-flex;max-width:100%;flex-wrap:wrap;background:var(--mist);border-radius:8px;padding:var(--u);gap:var(--u)}
 .seg button{border:none;border-radius:5px;margin:0;background:transparent;color:var(--muted);font:var(--control);padding:calc(var(--u)*2) calc(var(--u)*6);cursor:pointer}
 .seg button:hover{color:var(--ink)}
 .seg button.on{background:var(--paper);color:var(--ink);box-shadow:0 1px 2px color-mix(in srgb,var(--shade) 12%,transparent)}
 .seg button:disabled{opacity:.3;cursor:default}
 .seg button:disabled:hover{color:var(--muted)}
-#nav-seg button{padding:calc(var(--u)*2) calc(var(--u)*5);font-size:15px;line-height:1}
-#gitstate{font-family:var(--mono);font-size:11px;margin-left:auto;display:flex;align-items:center;gap:calc(var(--u)*3)}
+#nav-seg button{padding:calc(var(--u)*2) calc(var(--u)*5);font:var(--brand);line-height:1}
+#gitstate{font-family:var(--mono);font-size:var(--caption-size);margin-left:auto;display:flex;align-items:center;gap:calc(var(--u)*3)}
 #gitstate .g{width:7px;height:7px;border-radius:50%;background:var(--muted)}
 #gitstate.modified{color:var(--law)}
 #gitstate.modified .g{background:var(--law)}
@@ -333,11 +333,11 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
    columns. The space over the first table is the first heading's own margin
    now, which is not part of the scroll box, so there is nothing above the
    header to see. */
-#table-host{position:absolute;inset:0;overflow:auto;background:var(--paper);padding:0 calc(var(--u)*8) calc(var(--u)*40);font-size:12.5px;display:none}
+#table-host{position:absolute;inset:0;overflow:auto;background:var(--paper);padding:0 calc(var(--u)*8) calc(var(--u)*40);font-size:var(--fact-size);display:none}
 #canvas-host{position:absolute;inset:0;overflow:auto;background:var(--paper);padding:calc(var(--u)*6) calc(var(--u)*8) calc(var(--u)*40);display:none}
 #canvas-host svg{display:block;max-width:100%;height:auto;margin:0 auto calc(var(--u)*6)}
 #canvas-host .caption{margin:calc(var(--u)*3) 0}
-#table-host h3{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:calc(var(--u)*10) 0 calc(var(--u)*3);font-weight:600}
+#table-host h3{font-size:var(--caption-size);text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:calc(var(--u)*10) 0 calc(var(--u)*3);font-weight:600}
 #table-host h3:first-child{margin-top:calc(var(--u)*8)}
 /* ── A TABLE FALLS LEFT. Stretched to the pane it put two short words at
    opposite ends of a wide screen — `Emp9000` here, `Finance` eight hundred
@@ -391,9 +391,9 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
    step that needs two lines takes two.
    ── ONE BOX, ONE RULE: this stood declared twice, ten lines apart, and the
    second quietly answered for the first. */
-#verdict-head{display:flex;align-items:flex-start;gap:calc(var(--u)*5);padding:calc(var(--u)*4) calc(var(--u)*8) calc(var(--u)*4);flex:none}
-#chips{display:flex;align-items:center;gap:calc(var(--u)*3);flex:none}
-.chip{font-family:var(--mono);display:inline-block;flex:none;min-width:4.6em;white-space:nowrap;text-align:center;font-size:11px;font-weight:600;padding:calc(var(--u)*2) calc(var(--u)*5);border-radius:8px;font-variant-numeric:tabular-nums}
+#verdict-head{display:flex;flex-wrap:wrap;align-items:flex-start;gap:calc(var(--u)*5);padding:calc(var(--u)*4) calc(var(--u)*8) calc(var(--u)*4);flex:none}
+#chips{display:flex;max-width:100%;flex-wrap:wrap;align-items:center;gap:calc(var(--u)*3);flex:none}
+.chip{font-family:var(--mono);display:inline-block;flex:none;min-width:4.6em;white-space:nowrap;text-align:center;font-size:var(--caption-size);font-weight:600;padding:calc(var(--u)*2) calc(var(--u)*5);border-radius:8px;font-variant-numeric:tabular-nums}
 .chip.ok{background:color-mix(in srgb,var(--ok) 12%,transparent);color:var(--ok)}
 /* a refusal wears its colour the way a green does: the WORD carries it, over a
    backing of the same hue at a tenth. A solid fill made one chip a block of
@@ -433,13 +433,23 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 .pending-head{padding:calc(var(--u)*4) calc(var(--u)*4) calc(var(--u)*2);text-transform:uppercase;letter-spacing:.05em}
 .pending{display:flex;gap:calc(var(--u)*5);padding:calc(var(--u)*3) calc(var(--u)*5);border-radius:5px;cursor:pointer;align-items:baseline}
 .pending:hover{background:var(--mist)}
+/* Published benches keep their note in the main column's own flow. */
+#published-note{overflow-wrap:anywhere;flex:none;border-top:0.5px solid var(--line);padding:var(--near) var(--wide);font:var(--caption);color:var(--muted);background:var(--paper)}
+#published-note a{color:var(--action)}
+#published-note code{font:var(--fact)}
+.world-link{color:var(--ink);text-decoration:none}
+#world-inputs{padding:0 var(--wide)}
+.source-input{font:var(--captionloose);margin:var(--near) 0;overflow-wrap:anywhere}
+@media(max-width:40rem){#rail{flex-basis:35%;}#next{max-width:100%}}
 </style>
 <div id="rail"><div id="brand"><b>gate</b><span id="brandsep" class="caption"> · </span><span id="brandline" class="caption"></span><span id="brandstatus" class="caption"></span></div>
+  <section id="worlds-section" hidden><h3 class="fold caption" data-fold="worlds"><i></i>worlds</h3><div id="worldlist" class="foldable"></div></section>
   <h3 class="fold caption" data-fold="files"><i></i>mine</h3><div id="filelist" class="foldable"></div>
   <h3 class="fold caption" id="seams-head" data-fold="seams"><i></i>theirs</h3>
   <div id="theirs-host" class="foldable">
     <div id="seam-host"></div>
     <div id="judge-row" class="took-head caption"></div>
+    <details id="world-provenance" hidden><summary class="took-head caption">world inputs</summary><div id="world-inputs" class="caption"></div></details>
     <div id="shelf-host"></div>
   </div>
 </div>
@@ -484,9 +494,53 @@ const BENCH_FOR = "0.2.4";
 // where it can be read twice. This one is true until somebody restarts the
 // bench, so it stands in the line that reports the bench's own condition.
 let benchStale = "";
+function buildWorldRail(world) {
+    const section = document.getElementById("worlds-section"), list = document.getElementById("worldlist");
+    if (!section || !list) return;
+    section.hidden = false;
+    list.textContent = "";
+    const caption = document.createElement("div"); caption.className = "folder caption";
+    caption.textContent = world.tab.caption; list.appendChild(caption);
+    // The entry bench is a sibling of world folders; deep benches are inside.
+    const door = /\/playground\/(?:index\.html)?$/.test(location.pathname);
+    let group;
+    for (const tab of world.tabs) {
+        if (tab.group !== group) {
+            group = tab.group;
+            const head = document.createElement("div"); head.className = "folder caption"; head.textContent = group;
+            list.appendChild(head);
+        }
+        const row = document.createElement("a");
+        row.className = "file fact world-link" + (tab.id === world.world ? " on" : "");
+        row.href = (door ? "" : "../") + tab.id + "/index.html";
+        row.title = (tab.shown || tab.world) + " · " + tab.caption;
+        if (tab.id === world.world) row.setAttribute("aria-current", "page");
+        const dot = document.createElement("span"); dot.className = "dot";
+        const name = document.createElement("span"); name.className = "name"; name.textContent = tab.title;
+        row.append(dot, name); list.appendChild(row);
+    }
+    const disclosure = document.getElementById("world-provenance"), values = document.getElementById("world-inputs");
+    disclosure.hidden = false; values.textContent = "";
+    for (const [label, value] of Object.entries(world.provenance)) {
+        const row = document.createElement("p"); row.className = "source-input";
+        const name = document.createElement("span"); name.textContent = label.replaceAll("_", " ") + " · ";
+        const datum = document.createElement("code"); datum.className = "fact"; datum.textContent = value;
+        row.append(name, datum); values.appendChild(row);
+    }
+    const note = document.createElement("p"); note.className = "source-input";
+    note.textContent = world.generated_from
+        ? "Generated from " + world.generated_from + ". This generated file has not been checked by Swift."
+        : "Page bodies were compiled at the source pin. Edited page bodies have not been checked by Swift.";
+    values.appendChild(note);
+    for (const [file, label] of [["worlds.from", "all input hashes"], ["worlds-source.json", "public or local source"]]) {
+        const link = document.createElement("a"); link.className = "file fact world-link";
+        link.href = (door ? "../" : "../../") + file; link.textContent = label; values.appendChild(link);
+    }
+}
 fetch("/version", { cache: "no-store" }).then(r => r.json()).then(v => {
     // the one dependency that cannot be edited, only re-pinned — so it is named
     // where the words it carries are listed, and said plainly when unrecorded
+    if (v.playground) buildWorldRail(v.playground);
     const rev = document.getElementById("judge-row");
     if (rev) {
         rev.innerHTML = "<b>the judge</b> · <span class='at'>"
@@ -1960,6 +2014,21 @@ function repaintNames(parsed, refusals) {
 }
 
 let renderGeneration = 0;
+function readingChip(r, broken) {
+    return (broken.length
+        ? '<span class="chip bad" title="' + broken.length
+            + ' claims disagree with the rest. Each is listed below, with its line.">refuses '
+            + broken.length + '</span>'
+        : ((r.unsupported || []).length
+            ? '<span class="chip partial" title="'
+                + escAttr((r.unsupported || []).map(x => x.id + ": " + x.reason).join("; "))
+                + '">' + (r.checked ? 'partial' : 'unsupported') + ' · '
+                + (r.unsupported || []).length + ' unsupported</span>'
+            : (r.coverage && !r.coverage.readings
+                ? '<span class="chip partial" title="No supported court readings were presented. Limited page guards ran.">no readings</span>'
+                : '<span class="chip ok" title="The supported relations read by the court hold. This is not Swift compilation.">holds</span>')))
+        + (r.coverage ? '<span class="chip partial" title="Edited page bodies and generated sources have not been compiled by Swift here.">Swift bodies unchecked</span>' : "");
+}
 async function render() {
     const generation = ++renderGeneration;
     const text = editor.value;
@@ -2015,7 +2084,7 @@ async function render() {
         if (generation !== renderGeneration) return false;
         // the width travels with the verdict: `holds` over three files says
         // nothing until it says over how much
-        r.wide = r.premises; r.declarations = files.length + " files";
+        r.wide = r.coverage ? r.coverage.readings : r.premises; r.declarations = files.length + " files";
         r.premises = "judged together"; r.milliseconds = r.judge_ms || 0;
         r.refusals = r.refusals.map(x => { const [f, line] = x.address.split(":");
                                            return { file: f, line: line === undefined ? null : +line, premise: x.claim }; });
@@ -2050,15 +2119,7 @@ async function render() {
     // keystrokes, each one a truthful count of the same five slots. Writing
     // into a holder replaces everything that was said, which is what saying it
     // again should mean.
-    document.getElementById("chips").innerHTML = (broken.length
-        ? '<span class="chip bad" title="' + broken.length
-            + ' claims disagree with the rest. Each is listed below, with its line.">refuses '
-            + broken.length + '</span>'
-        : (unsupported.length
-            ? '<span class="chip partial" title="'
-                + escAttr(unsupported.map(x => x.id + ": " + x.reason).join("; "))
-                + '">partial · ' + unsupported.length + ' unsupported</span>'
-            : '<span class="chip ok" title="Every claim in these files agrees with every other one.">holds</span>'))
+    document.getElementById("chips").innerHTML = readingChip(r, broken)
         + waits;
     clearFlags(); applyFlags(r.refusals);
     showNext();
@@ -4106,7 +4167,7 @@ function showEmpty() {
     document.getElementById("editor-host").style.display = "none";
     document.getElementById("verdict-panel").style.display = "none";
     document.getElementById("view-seg").style.display = "none";
-    document.querySelector("#rail h3").style.display = "none";   // no files, no heading
+    document.querySelector('#rail h3[data-fold="files"]').style.display = "none";   // no files, no heading
     const host = document.getElementById("table-host");
     host.style.display = "block";
     // ── AND AN EMPTY BENCH SAYS WHAT THIS PLACE IS FOR, NOT WHAT IT LACKS.

@@ -2,6 +2,8 @@
 "use strict";
 const fs = require("fs"), path = require("path"), vm = require("vm"), assert = require("assert");
 const court = require("../bin/court-wasm/node/vi_court.js"), { judge } = require("../bin/judge.js");
+const {lint} = require("../bin/playground-lint.js"), {pageGuards} = require("../bin/playground-guards.js");
+const {kitVocabulary} = require("../bin/renderer.js");
 const GateWorldCourt = require("../bin/world-court.js");
 const root = process.argv[2], record = JSON.parse(fs.readFileSync(path.join(root, "worlds.from")));
 const storage = Object.create({ getItem(k) { return this[k] ?? null; }, setItem(k,v) { this[k] = String(v); }, removeItem(k) { delete this[k]; } });
@@ -10,7 +12,7 @@ function open(id) {
     const at = page.indexOf("wasm_bindgen.initSync("), start = page.lastIndexOf("<script>", at) + 8, end = page.indexOf("</script>", at);
     assert(at >= 0 && end > start);
     const scope = { localStorage: storage, wasm_bindgen: { ...court, initSync() {} }, VI_COURT_WASM_BASE64: "",
-        Uint8Array, atob, Response, Map, GateWorldCourt, judge, location: { search: "" }, fetch: async () => { throw Error("unexpected network"); } };
+        Uint8Array, atob, Response, Map, GateWorldCourt, judge, lint, pageGuards, kitVocabulary, location: { search: "" }, fetch: async () => { throw Error("unexpected network"); } };
     scope.document = {addEventListener(){}};
     scope.window = scope;
     vm.runInNewContext(page.slice(start, end), scope);

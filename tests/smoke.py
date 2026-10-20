@@ -4304,7 +4304,8 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     # moment something broke — which is exactly the moment there is most to
     # decide.
     S.append(("and the chip reddens for disagreements alone, never for empty slots, and neither hides the other",
-              'document.getElementById("chips").innerHTML = (broken.length' in ui
+              'document.getElementById("chips").innerHTML = readingChip(r, broken)' in ui
+              and 'function readingChip(r, broken)' in ui and 'return (broken.length' in ui
               and "+ broken.length + '</span>'" in ui
               # the waiting slots are built apart from the verdict and appended to it
               and "const waits = pending.length" in ui and "+ waits;" in ui
@@ -4327,7 +4328,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               '("premises", measured.map { StatusJSON.raw($0[2]) } ?? .null)'
               in open(VEIN).read()
               # and the bench prints it in the multi-file line, where it used to vanish
-              and "r.wide = r.premises" in ui
+              and "r.wide = r.coverage ? r.coverage.readings : r.premises" in ui
               and '(r.wide ? " · <b>" + esc(r.wide) + "</b> claims checked" : "")' in ui))
 
     S.append(("a jump can be walked back and forward, across files too",
@@ -5356,7 +5357,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
 
     _builder_src = open(os.path.join(HERE, "bin", "build-pages.py"), encoding="utf-8").read()
     S.append(("the static builder stamps CSP after escaping snapshot data and resets without an inline handler",
-              "script_json(snap)" in _builder_src and "ui = stamp_csp(ui + note)" in _builder_src
+              "script_json(snap)" in _builder_src and "ui = stamp_csp(ui.replace(marker, note + marker, 1))" in _builder_src
               and 'id="reset-demo"' in _builder_src and 'closest("#reset-demo")' in _builder_src
               and 'onclick="__resetDemo' not in _builder_src))
 

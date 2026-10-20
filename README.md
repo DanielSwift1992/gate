@@ -388,8 +388,9 @@ bin/playground-worlds.sh
                 theory and the court's pin are recorded separately there.
 bin/build-pages.py
                 builds the bench. The worlds mode in docs/DETAILS.md adds the
-                playground tabs from the pinned site's Manifest.swift, with
-                serve's recorded answers. Each world keeps
+                worlds in the bench rail from the pinned site's Manifest.swift, with
+                serve's recorded answers. playground/ opens Read me in that
+                same bench. Each world keeps
                 its own saved files by revision, world and file. Page bodies at
                 the pin compile in showcase; browser edits have no Swift proof.
                 A mixed company page names its data boundary explicitly; the

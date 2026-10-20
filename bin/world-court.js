@@ -20,7 +20,7 @@
         }
         return out;
     }
-    function verdict(court, groups, texts, definitions, plain, carried, layout, judgePlain, translate, fragments) {
+    function verdict(court, groups, texts, definitions, plain, carried, layout, judgePlain, translate, fragments, guards) {
         const refusals = [], unsupported = [];
         let checked = 0;
         for (const group of groups) {
@@ -71,11 +71,36 @@
                 }
                 text = "\n".repeat(pieces[0].split("\n").length - 1) + fragment.marker + pieces[1];
             }
-            for (const r of judgePlain(f, text).refusals)
+            const answer = judgePlain(f, text);
+            checked += answer.premises || 0;
+            for (const r of answer.refusals)
                 refusals.push({ address: f + ":" + r.line, claim: r.premise });
         }
-        return { verdict: refusals.length ? "refused" : unsupported.length
+        let guarded = 0;
+        if (guards) {
+            const names = new Set([...(guards.names || []), "Never",
+                ...guards.vocabulary.seeds, ...guards.vocabulary.generics, ...guards.vocabulary.bareSeeds]);
+            const parsed = {};
+            for (const [f, text] of Object.entries(texts)) {
+                if (f === layout) continue;
+                parsed[f] = judgePlain(f, text, guards.vocabulary).parsed;
+                // Extension literals do not declare their owner. Adding them
+                // here would let the orphan extension prove its own existence.
+                for (const name of [...parsed[f].declarations.keys(), ...parsed[f].topAliases.keys()]) names.add(name);
+            }
+            for (const [f, p] of Object.entries(parsed)) {
+                const text = texts[f];
+                for (const r of guards.pageGuards(p, text.split("\n"), names))
+                    refusals.push({ address: f + ":" + r.line, claim: "page guard: " + r.premise });
+                for (const r of guards.lint(f, text))
+                    refusals.push({ address: f + ":" + r.line, claim: r.rule + ": " + r.premise });
+                guarded++;
+            }
+        }
+        const result = { verdict: refusals.length ? "refused" : unsupported.length
             ? (checked ? "partial" : "unsupported") : "holds", refusals, unsupported, checked };
+        if (guards) result.coverage = { readings: checked, guarded_files: guarded, swift_bodies: "not checked" };
+        return result;
     }
     const api = { ask, question, verdict };
     if (typeof module !== "undefined") module.exports = api;

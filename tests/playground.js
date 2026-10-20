@@ -14,6 +14,16 @@ assert.strictEqual(read(path.join(here, "bin/playground-lint.js")), read(path.jo
 const definitions = [{ name: "Primitive.swift", text: read(path.join(cache, "theory/Sources/VerificationIsIdentification/Primitive.swift")) },
     { name: "Spectrum.swift", text: read(path.join(sc, "Sources/DocumentKit/Spectrum.swift")) }];
 const renderFixture = fixture("renderer"), courtFixture = fixture("courts"), drawings = {}, reports = [];
+const copy = fixture("copy-r3");
+function updated(text, paths) {
+    for (const c of copy.changes.filter(c => paths.includes(c.path))) {
+        assert(text.includes(c.before), c.path + ": copy anchor lost");
+        text = text.replace(c.before, c.after);
+    }
+    return text;
+}
+const hashes = arts => arts.map(c => ({name:c.name,bytes:Buffer.byteLength(c.svg),
+    sha256:crypto.createHash("sha256").update(c.svg).digest("hex")}));
 let vectors = 0;
 function check(name, fn) { fn(); vectors++; reports.push(name); }
 check("a refused certificate named budget stays a refusal", () => {
@@ -42,13 +52,13 @@ for (const [world, sources] of Object.entries(renderFixture.world_sources)) {
     const text = sources.map(n => read(path.join(sc, n))).join("\n");
     const original = [world + ".swift", ...(["Atom", "Light"].includes(world) ? [world + "Pages.swift"] : [])]
         .map(n => read(path.join(base, "corpus/worlds", n))).join("\n");
-    check(world + " drawings equal playground 400b667 in both file orders", () => {
-        const arts = draw(world, text), old = draw(world, original), reverse = draw(world, [...sources].reverse().map(n => read(path.join(sc, n))).join("\n"));
+    check(world + " drawings match the recorded copy repair in both file orders", () => {
+        const arts = draw(world, text), old = draw(world, updated(original, sources)), reverse = draw(world, [...sources].reverse().map(n => read(path.join(sc, n))).join("\n"));
         assert.deepStrictEqual(arts, old, world);
         const pinned = fixture("r2-preservation").render.worlds[world];
-        if (pinned) assert.deepStrictEqual(arts.map(c => ({name:c.name,bytes:Buffer.byteLength(c.svg),
-            sha256:crypto.createHash("sha256").update(c.svg).digest("hex")})),
-            pinned.map(({name,bytes,sha256})=>({name,bytes,sha256})), world + " at renderer 6142211");
+        if (pinned) assert.deepStrictEqual(hashes(draw(world, original)),
+            pinned.map(({name,bytes,sha256})=>({name,bytes,sha256})), world + " historical renderer 6142211");
+        assert.deepStrictEqual(hashes(arts), copy.drawings[world], world + " registered copy repair");
         assert.deepStrictEqual(reverse, old, world);
         drawings[world] = arts.map(c => c.svg).join("");
         if (world !== "Company") assert(arts.length >= 1);
@@ -70,8 +80,13 @@ const company = fixture("company"), companyText = read(path.join(sc, company.wor
 for (const name of ["Manifest", "Palette"]) check("Site/" + name + " preserves its source obligations and page guards", () => {
     const text = read(path.join(sc, "Worlds/Playground/Site", name + ".swift"));
     const original = read(path.join(base, "corpus", name + ".swift"));
-    if (name === "Manifest") assert.strictEqual(text, original);
-    else assert.strictEqual(read(path.join(checks, "origins/Palette.swift")), original);
+    if (name === "Manifest") {
+        const a = judge(name, original, kitVocabulary).parsed, b = judge(name, text, kitVocabulary).parsed;
+        const links = p => [...p.declarations].map(([n,d]) => [n,[...d.aliases].map(([k,v]) => [k,v.target])]);
+        assert.deepStrictEqual(links(b), links(a), "order, IDs, groups, Reads, Seeds and page associations");
+        const expected = judge(name, updated(original, ["Worlds/Playground/Site/Manifest.swift"]), kitVocabulary).parsed;
+        assert.deepStrictEqual([...b.literals].map(([n,x])=>[n,x.value]), [...expected.literals].map(([n,x])=>[n,x.value]), "only recorded phrases change");
+    } else assert.strictEqual(read(path.join(checks, "origins/Palette.swift")), original);
     assert.deepStrictEqual(lint(name, text), []);
     assert.deepStrictEqual(pageGuards(judge(name, text, kitVocabulary).parsed, text.split("\n"), outside), []);
 });
@@ -178,7 +193,7 @@ for (const c of courtFixture.cases) check(c.id + " native and wasm", () => {
 });
 if (site) for (const id of fs.readdirSync(path.join(site, "playground"))) {
     const folder = path.join(site, "playground", id);
-    if (!fs.statSync(folder).isDirectory()) continue;
+    if (!fs.statSync(folder).isDirectory() || !fs.existsSync(path.join(folder,"world.json"))) continue;
     check("published " + id + " reads the native snapshots and saves separately", () => {
         const snap = JSON.parse(read(path.join(folder, "snapshots.json"))), ctx = JSON.parse(read(path.join(folder, "world.json")));
         const files = JSON.parse(snap["/files"]), texts = Object.fromEntries(files.files.map(f => [f, snap["/world?f=" + f] || ""]));
@@ -193,10 +208,10 @@ if (site) for (const id of fs.readdirSync(path.join(site, "playground"))) {
         const page = read(path.join(folder, "index.html"));
         assert(page.includes("gate.pages." + record.showcase.revision + "." + id + "."));
         assert(page.includes(record.theory.revision) && page.includes(record.judge.revision));
-        assert(page.includes('id="world-tabs"'));
-        const nav = page.match(/<nav id="world-tabs"[^>]*>([\s\S]*?)<\/nav>/)[1];
+        assert(page.includes('id="worldlist"') && page.includes('id="world-provenance"'));
+        assert(!page.includes('id="world-tabs"') && !page.includes('position:fixed;top:0'));
         const tabs = JSON.parse(read(path.join(site, "playground/tabs.json")));
-        assert.deepStrictEqual([...nav.matchAll(/href="\.\.\/([^/]+)\/index.html"/g)].map(m => m[1]), tabs.map(t => t.id));
+        assert.deepStrictEqual(ctx.tabs.slice(0, tabs.length).map(t => t.id), tabs.map(t => t.id));
         if (id !== "scale") {
             const world = ctx.tab.world;
             if (world !== "Site") assert.deepStrictEqual(draw(world, files.files.filter(f => f !== files.layout && !f.endsWith("my.swift"))

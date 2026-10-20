@@ -199,7 +199,8 @@ function judgeWhereTexts(text, extraTexts) {
         if (previous && previous.inputs === inputs) return previous.answer;
         const answer = GateWorldCourt.verdict(wasm_bindgen, WORLDS, texts,
             CONTEXT.definitions, ALL.filter(g => !FORMS.has(g)), CONTEXT.carried,
-            LAYOUT, judge, (claim, stream) => plainly(claim, lawNotes(stream)), CONTEXT.plain_fragments);
+            LAYOUT, judge, (claim, stream) => plainly(claim, lawNotes(stream)), CONTEXT.plain_fragments,
+            { lint, pageGuards, vocabulary: kitVocabulary, names: CONTEXT.guard_names });
         answer.compiler = "page bodies have not been checked by Swift";
         readings.set(f, { inputs, answer });
         return answer;
@@ -328,6 +329,8 @@ function judgeWhereTexts(text, extraTexts) {
             return new Response(textOf(f), { status: 200,
                 headers: { "Content-Type": "text/plain; charset=utf-8" } });
         }
+        if (CONTEXT && method === "GET" && u === "/version")
+            return reply(JSON.stringify({ ...JSON.parse(SNAP["/version"]), playground: CONTEXT }));
         if (CONTEXT && method === "GET" && u === "/files")
             return reply(JSON.stringify({ ...JSON.parse(SNAP["/files"]), save_policy: "reader-draft" }));
         if (CONTEXT && method === "GET" && u.startsWith("/gitstatus?f=")) {
@@ -569,20 +572,6 @@ function judgeWhereTexts(text, extraTexts) {
     };
 })();
 </script>
-<style>
-/* the note takes its own strip: the body is one viewport high, so it is
-   shortened by the strip's height and nothing of the bench is covered.
-   One height, spelled once: the body's cut and the strip wear the same
-   variable, so the two numbers cannot part. */
-:root { --strip: 28px; }
-body { height: calc(100vh - var(--strip)) !important; }
-#published-note { position: fixed; bottom: 0; left: 0; right: 0; z-index: 99;
-  height: var(--strip); box-sizing: border-box; overflow: hidden; white-space: nowrap;
-  font: 12px/16px ui-monospace, monospace; padding: 6px 12px;
-  background: #101010; color: #9a9a9a; border-top: 1px solid #2a2a2a; }
-#published-note code { color: #c9c9c9; }
-#published-note a { color: #c9c9c9; }
-</style>
 """
     shim = (shim.replace("__SNAP__", script_json(snap))
                 .replace("__CONTEXT__", script_json(context))
@@ -611,12 +600,15 @@ body { height: calc(100vh - var(--strip)) !important; }
         ui = ui.replace('"gate.theme.declared"', script_json(scope + "theme"))
         ui = ui.replace('"gate.bench.layout"', script_json(scope + "layout"))
         ui = ui.replace('<script src="court/vi_court.js">',
+            '<script src="playground-lint.js"></script><script src="playground-guards.js"></script>'
             '<script src="world-court.js"></script><script src="court/vi_court.js">', 1)
-        ui = ui.replace('<div id="rail">', context["navigation"] + '<div id="rail">', 1)
-        ui += context["provenance_html"]
-        ui += '<style>:root {--strip:52px} #world-tabs {position:fixed;top:0;left:0;right:0;height:48px;overflow:auto;white-space:nowrap;padding:4px 12px;box-sizing:border-box;font:13px ui-monospace,monospace} #world-tabs a {margin-right:12px} body {height:calc(100vh - 52px)!important;padding-top:48px;box-sizing:border-box} #world-provenance {position:fixed;bottom:28px;height:24px;left:0;right:0;overflow:auto;white-space:nowrap;font:11px ui-monospace,monospace;background:#101010;color:#c9c9c9} #world-provenance a {color:inherit}</style>'
 
-    ui = stamp_csp(ui + note)
+
+    marker = '</div>\n<script src="codemirror.js">'
+    if ui.count(marker) != 1:
+        raise ValueError("bench template has no unique main column boundary")
+    ui = stamp_csp(ui.replace(marker, note + marker, 1))
+
     os.makedirs(out, exist_ok=True)
     open(os.path.join(out, "index.html"), "w", encoding="utf-8").write(ui)
     open(os.path.join(out, "ladder.css"), "w", encoding="utf-8").write(ladder_css)
@@ -633,13 +625,15 @@ body { height: calc(100vh - var(--strip)) !important; }
     shutil.copy(os.path.join(HERE, "bin", "court-wasm.from"),
                 os.path.join(out, "court", "court-wasm.from"))
     if context:
-        shutil.copy(os.path.join(HERE, "bin", "world-court.js"), os.path.join(out, "world-court.js"))
+        for asset in ("world-court.js", "playground-lint.js", "playground-guards.js"):
+            shutil.copy(os.path.join(HERE, "bin", asset), os.path.join(out, asset))
         with open(os.path.join(out, "snapshots.json"), "w", encoding="utf-8") as f:
             json.dump(snap, f, indent=2)
         with open(os.path.join(out, "world.json"), "w", encoding="utf-8") as f:
             json.dump(context, f, indent=2)
     print(f"published bench written to {out}: "
           f"{len(snap)} recorded answers, {len(names)} names")
+    return ladder_css
 
 
 def main():
@@ -650,10 +644,12 @@ def main():
     with tempfile.TemporaryDirectory(prefix="gate-pages-") as tmp:
         demo = os.path.join(tmp, "demo")
         subprocess.run([GATE, "demo", demo], capture_output=True, check=True)
-        publish(demo, args.out)
+        ladder = publish(demo, args.out)
         if args.worlds:
             from playground_pages import build_worlds
             build_worlds(HERE, args.out, publish)
+        from bench_styles import audit_site
+        print("interface tokens:", audit_site(args.out, ladder))
 
 
 if __name__ == "__main__":

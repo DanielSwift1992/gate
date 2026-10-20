@@ -1,0 +1,101 @@
+{
+  "codemirror_upstream_sha256": "b26778c9479ca28e3fdcb9ac9d039812ac48ee10089b1079b9cc919723a27ec4",
+  "constants": [
+    {
+      "name": "editor-scroll-compensation",
+      "selector": ".CodeMirror-scroll",
+      "property": "margin-bottom",
+      "value": "-50px",
+      "reason": "CodeMirror scrolling/measurement mechanics; not a reading gap."
+    },
+    {
+      "name": "editor-scroll-compensation",
+      "selector": ".CodeMirror-scroll",
+      "property": "margin-right",
+      "value": "-50px",
+      "reason": "CodeMirror scrolling/measurement mechanics; not a reading gap."
+    },
+    {
+      "name": "editor-scroll-compensation",
+      "selector": ".CodeMirror-scroll",
+      "property": "padding-bottom",
+      "value": "50px",
+      "reason": "CodeMirror scrolling/measurement mechanics; not a reading gap."
+    },
+    {
+      "name": "editor-scroll-compensation",
+      "selector": ".CodeMirror-gutter",
+      "property": "margin-bottom",
+      "value": "-50px",
+      "reason": "CodeMirror scrolling/measurement mechanics; not a reading gap."
+    },
+    {
+      "name": "editor-measurement-sentinel",
+      "selector": ".CodeMirror-linewidget",
+      "property": "padding",
+      "value": ".1px",
+      "reason": "CodeMirror scrolling/measurement mechanics; not a reading gap."
+    },
+    {
+      "name": "editor-measurement-sentinel",
+      "selector": ".cm-force-border",
+      "property": "padding-right",
+      "value": ".1px",
+      "reason": "CodeMirror scrolling/measurement mechanics; not a reading gap."
+    },
+    {
+      "name": "shadow-zero-light",
+      "selector": ":root",
+      "property": "--shade",
+      "value": "#000",
+      "reason": "A shadow subtracts light in both themes; the zero-light constant is not a surface role."
+    },
+    {
+      "name": "shadow-zero-light",
+      "selector": ":root",
+      "property": "--shade",
+      "value": "color(xyz-d65 0 0 0)",
+      "reason": "A shadow subtracts light in both themes; the zero-light constant is not a surface role."
+    },
+    {
+      "name": "reading-line-reference",
+      "selector": ":root",
+      "property": "--textline",
+      "value": "calc(1rem * var(--speech-leading))",
+      "reason": "The reading line uses the declared speech leading and the root reading size."
+    },
+    {
+      "name": "ladder-unit",
+      "selector": ":root",
+      "property": "--u",
+      "value": "calc(var(--textline) / 10)",
+      "reason": "One named gap unit is a tenth of that reading line."
+    },
+    {
+      "name": "fold-glyph-line-box",
+      "selector": "#rail h3.fold i",
+      "property": "line-height",
+      "value": "1",
+      "reason": "A single navigation glyph uses its own one-em box; prose leading still comes from the declared register."
+    },
+    {
+      "name": "navigation-glyph-line-box",
+      "selector": "#nav-seg button",
+      "property": "line-height",
+      "value": "1",
+      "reason": "A single navigation glyph uses its own one-em box; prose leading still comes from the declared register."
+    }
+  ],
+  "layout_constants": [
+    {
+      "name": "narrow-viewport",
+      "value": "40rem",
+      "reason": "Responsive breakpoint; no reading gap or face is declared here."
+    },
+    {
+      "name": "narrow-rail-share",
+      "value": "35%",
+      "reason": "The rail shares the narrow viewport with the main column; content spacing remains on the ladder."
+    }
+  ]
+}

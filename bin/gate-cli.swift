@@ -11634,6 +11634,10 @@ func registerTokens(_ w: WorldState) -> String {
         let lead = vals[name + "Lead"] ?? 0
         let leading = lead != 0 ? "/" + String(format: "%g", Double(lead) / 100) : ""
         rows.append("  --\(name.lowercased()): \(weight)\(px)px\(leading) \(stack);")
+        rows.append("  --\(name.lowercased())-size: \(px)px;")
+        if lead != 0 {
+            rows.append("  --\(name.lowercased())-leading: " + String(format: "%g", Double(lead) / 100) + ";")
+        }
     }
     // and the two faces on their own, for a rule that changes the face and keeps
     // whatever size it stands in: still a name, never a stack written by hand

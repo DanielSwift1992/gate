@@ -35,19 +35,19 @@ function makeBigCompany(count, organizationFile) {
         '"Four people, their departments and shares, written as types in the file on the left."',
         '"This file is the same organization, written out for ' + thousands(count) + ' people."');
     view = mustReplace(view,
-        '"Every number below is read out of the file on every edit: nothing is stored beside it."',
-        '"A compiler computes what each line means from the other lines. Here that takes 199 seconds."');
+        '"The drawing reads the declarations in this file. Browser drafts are saved with their verdict."',
+        '"The editor shows a portion of this file; Full keeps the complete source."');
     view = mustReplace(view,
-        '"Press Hire one more: a fifth person is written into the file, and every number follows."',
-        '"The judge computes nothing: every fact is there in full, and a check is one read."');
+        '"Open Full to change a person or a department alias; the drawing reads the changed declarations."',
+        '"The company court reads the declared department and share claims."');
     view = mustReplace(view,
-        '"Plant a lie writes one false line: the judge refuses the file and names the line."',
-        '"So on every edit the judge re-reads the whole file, @LINES@ lines, in 0.2 seconds."');
+        '"Change an employee Home from Finance to Sales; the company court names a broken share claim."',
+        '"The court reads the complete company fragment, @LINES@ lines."');
     view = mustReplace(view,
-        '"Press Table under the preview: the same people appear as rows."',
-        '"Press Plant a lie deep: it breaks one line near the bottom, and the judge names its number."');
+        '"Open Table to read the declarations as rows; a name leads to its source."',
+        '"Change a Home alias in Full; the court names a broken share claim at its line."');
     view = mustReplace(view,
-        '"Break it by hand: change one Finance to Sales on the left. The judge refuses the share lines."',
+        '"The court reads the declared company fragment. Edited page bodies have not been checked by Swift."',
         '"The editor shows this file in pages. The judge reads all pages at once."');
     lines.push(view, "// gate-company-data");
     for (let i = 0; i < givenPool.length; i += 1) {

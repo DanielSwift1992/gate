@@ -129,7 +129,7 @@ def run():
         class Handlers(HTMLParser):
             def handle_starttag(self, tag, attrs):
                 assert not any(key.lower().startswith('on') for key, _ in attrs), (tag, attrs)
-        for page in [site / 'index.html', *(site / 'playground').glob('*/index.html')]:
+        for page in site.rglob('*.html'):
             html = page.read_text()
             assert csp.stamp_csp(html) == html, str(page) + ': CSP must cover the final programs'
             assert "script-src-attr 'none'" in html
@@ -137,9 +137,33 @@ def run():
         subprocess.run(['node', str(HERE / 'tests/playground.js'), str(cache), str(site)], check=True)
         subprocess.run(['node', str(HERE / 'tests/playground-storage.js'), str(site)], check=True)
         subprocess.run(['node', str(HERE / 'tests/playground-scale.js'), str(site)], check=True)
-        gallery = (site / 'playground/index.html').read_text()
-        assert gallery.count('class="world-card"') == 10 and 'world-grid' in gallery
-        assert 'href="../ladder.css"' in gallery and '<meta name="viewport"' in gallery
+        subprocess.run(['node', str(HERE / 'tests/playground-ui.js'), str(site)], check=True)
+        door = (site / 'playground/index.html').read_bytes()
+        assert door == (site / 'playground/readme/index.html').read_bytes()
+        assert b'world-card' not in door and b'id="worldlist"' in door
+        sys.path.insert(0, str(HERE / 'bin'))
+        from bench_styles import audit_site
+        ladder = (site / 'ladder.css').read_text()
+        assert audit_site(site, ladder)['pages'] == 14
+        # The same law must refuse a second palette on EACH finished page.
+        # Font and gap controls exercise the CSS branch independently.
+        def refused(path, addition):
+            original = path.read_text()
+            try:
+                path.write_text(original + addition)
+                try:
+                    audit_site(site, ladder)
+                except ValueError as e:
+                    assert str(path.relative_to(site)) in str(e), str(e)
+                else:
+                    raise AssertionError(str(path) + ': a private interface value was accepted')
+            finally:
+                path.write_text(original)
+        for page in site.rglob('*.html'):
+            refused(page, '<style>.probe{color:#123456}</style>')
+        for value in ['font:17px fantasy', 'line-height:1.6', 'padding:7px', 'font:var(--not-a-register)']:
+            refused(site / 'playground/basics/codemirror.css', '.probe{' + value + '}')
+        refused(site / 'playground/basics/ladder.css', ':root{--ink:#123456}')
         tabs = json.loads((site / 'playground/tabs.json').read_text())
         assert [t['id'] for t in tabs] == ['readme', 'organization', 'scale', 'basics', 'writer', 'buttons', 'light', 'atom', 'rules', 'faq']
         assert (site / 'worlds.from').read_bytes() == (HERE / 'bin/playground-worlds.from').read_bytes()

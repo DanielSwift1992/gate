@@ -3,6 +3,14 @@ const fs = require("fs");
 const { judge } = require("./judge.js");
 const { kitVocabulary } = require("./renderer.js");
 const { makeBigCompany } = require("./playground-company.js");
+if (process.argv[2] === "--names") {
+    const names = new Set();
+    for (const file of process.argv.slice(3)) {
+        const parsed = judge(file, fs.readFileSync(file, "utf8"), kitVocabulary).parsed;
+        for (const n of [...parsed.declarations.keys(), ...parsed.topAliases.keys()]) names.add(n);
+    }
+    console.log(JSON.stringify([...names].sort()));
+} else {
 const source = fs.readFileSync(process.argv[2], "utf8");
 if (process.argv[3] === "--company") {
     process.stdout.write(makeBigCompany(12800, source));
@@ -22,4 +30,6 @@ if (process.argv[3] === "--company") {
     });
     if (!tabs.length || new Set(tabs.map(t => t.id)).size !== tabs.length) throw Error("no unique tabs");
     console.log(JSON.stringify(tabs));
+}
+
 }
