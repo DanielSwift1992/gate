@@ -42,7 +42,10 @@ jobs:
         include:
           - runner: macos-14
             said: macos-arm64
-          - runner: ubuntu-latest
+          # named, not latest: the binary needs this C library or a newer
+          # one, so an image a year ahead would ship a binary that does not
+          # start on the runners strangers use today
+          - runner: ubuntu-24.04
             said: linux-x86_64
           - runner: ubuntu-24.04-arm
             said: linux-arm64
@@ -81,7 +84,11 @@ jobs:
         if: runner.os == 'Linux'
         shell: bash
         run: |
-          if ldd bin/gate-cli | grep -E 'libswift|libFoundation|lib_Foundation|libdispatch|libBlocksRuntime'; then
+          # ldd's own answer is read first: a check that could not read the
+          # binary has found nothing, and nothing found is not a pass
+          DEPS="$(ldd bin/gate-cli)" || { echo "ldd could not read bin/gate-cli"; exit 1; }
+          printf '%s\n' "$DEPS"
+          if printf '%s\n' "$DEPS" | grep -E 'libswift|libFoundation|lib_Foundation|libdispatch|libBlocksRuntime'; then
             echo "bin/gate-cli links the Swift runtime of this runner: a binary that leaves here would start only where this Swift is"; exit 1
           fi
           bin/gate-cli --version

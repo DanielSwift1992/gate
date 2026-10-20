@@ -99,7 +99,9 @@ else
     # on (Swift 6.3.3) and stopped starting when the image moved to 6.4:
     # "undefined symbol: $s20FoundationEssentials4DataV15_RepresentationON".
     # Swift on linux keeps no stable ABI between versions, so the runtime and
-    # Foundation are linked in, and the binary starts wherever it lands.
+    # Foundation are linked in. What stays outside is the C library: the
+    # binary starts where that is the builder's or newer, which is why the
+    # release builds on a named image rather than the newest one.
     STATIC=""
     [ "$(uname -s)" = "Linux" ] && STATIC="-static-stdlib"
     swiftc -O $STATIC "$BUILD/main.swift" "$BUILD/shelf.swift" "$CACHE"/*.swift \

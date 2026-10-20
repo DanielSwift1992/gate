@@ -67,7 +67,9 @@ jobs:
             docs/bench.png
             docs/bench.png.from
   linux:
-    runs-on: ubuntu-latest
+    # named rather than latest: the latest label moves to a new image with
+    # no change in this tree, and a red here should be this tree's own
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       statuses: write
@@ -90,7 +92,9 @@ jobs:
       - run: |
           test -x bin/gate-cli || { echo "no vein here to check: the battery built none"; exit 1; }
           bin/gate-cli --version
-          if ldd bin/gate-cli | grep -E 'libswift|libFoundation|lib_Foundation|libdispatch|libBlocksRuntime'; then
+          DEPS="$(ldd bin/gate-cli)" || { echo "ldd could not read bin/gate-cli"; exit 1; }
+          printf '%s\n' "$DEPS"
+          if printf '%s\n' "$DEPS" | grep -E 'libswift|libFoundation|lib_Foundation|libdispatch|libBlocksRuntime'; then
             echo "bin/gate-cli links the Swift runtime of this runner"; exit 1
           fi
       # the first red line travels out as a commit status, because the job
@@ -263,7 +267,9 @@ jobs:
             -d "$BODY2" > /dev/null
   pages:
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    # named rather than latest: the latest label moves to a new image with
+    # no change in this tree, and a red here should be this tree's own
+    runs-on: ubuntu-24.04
     # ── AND TWO PUSHES DO NOT RACE FOR ONE DEPLOYMENT. There is one Pages site
     # and one deployment at a time; without a group, a second push while the
     # first is deploying fails the second, and the run goes red for a reason
@@ -358,7 +364,9 @@ jobs:
   # bumps VERSION the new tag has no assets yet, and this job is about the
   # road. The default tag is held to VERSION by the battery instead.
   action:
-    runs-on: ubuntu-latest
+    # named rather than latest: the latest label moves to a new image with
+    # no change in this tree, and a red here should be this tree's own
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4
       - name: a tree with a dead row is refused
