@@ -59,7 +59,10 @@ if [ ! -f "$PREMISE" ]; then
     # spelling handed over above and the link failed exactly as before. One
     # name, two meanings, and the second one silent.
     FETCH=$(mktemp -d)
-    git clone --depth 50 -q https://github.com/DanielSwift1992/verification-is-identification "$FETCH/vi"
+    # the bytes as committed: the count court reads the carried Primitive by its
+    # shape, and a checkout that turns LF into CRLF would hand it another file
+    git clone --config core.autocrlf=false --config core.eol=lf --depth 50 -q \
+        https://github.com/DanielSwift1992/verification-is-identification "$FETCH/vi"
     git -C "$FETCH/vi" checkout -q "$PIN"
     mkdir -p "$CACHE/premise"
     cp "$FETCH/vi/Sources/Court/"*.swift "$CACHE/"

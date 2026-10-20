@@ -23,6 +23,10 @@ if [ ! -f "$CACHE/OrganizationJudge.swift" ]; then
     else
         FETCH=$(mktemp -d)
         git -C "$FETCH" init -q
+        # the bytes as committed: a platform that turns LF into CRLF on checkout
+        # would hand over a different file than the SHA-256 below names
+        git -C "$FETCH" config core.autocrlf false
+        git -C "$FETCH" config core.eol lf
         git -C "$FETCH" fetch -q --depth 1 \
             https://github.com/DanielSwift1992/verification-is-identification-showcase "$PIN"
         git -C "$FETCH" checkout -q FETCH_HEAD
