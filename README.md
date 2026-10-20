@@ -358,6 +358,15 @@ bin/judge.js · bin/judge-cli.js · bin/judge-wasm.js · bin/court-wasm/
                 company's table; on the company's worlds the two agree, and
                 on the shelf's own pages, which are not company fragments,
                 they refuse differently (6 of 18 pages alike, measured)
+bin/renderer.js · bin/press.js
+                the drawing view's engine: renderer.js is a second
+                implementation, on JS, of the kit's span engine
+                (DocumentKit's Vector.swift in the theory's showcase), held
+                to it by the showcase's goldens and by the playground's own
+                checks run over these files; press.js applies a drawn key's
+                rule to one alias of the world. Both come from the typed
+                playground at the revision bin/drawing.from names, until
+                that repository folds into this one and the record goes
 bin/gate-cli.swift
                 the CLI, one file of Swift: every verb this tool answers,
                 with the courts compiled in at their own pins
@@ -378,7 +387,7 @@ web/codemirror.*  the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
 docs/           DETAILS.md, SECURITY.md, CHANGELOG.md, NOTICE.md, and
                 the cover's picture with its provenance
-tests/smoke.py   the battery: 580 checks this repository holds itself
+tests/smoke.py   the battery: 582 checks this repository holds itself
                  to, end-to-end runs through judge parity through
                  documentation contracts; the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts

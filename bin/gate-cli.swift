@@ -9843,6 +9843,7 @@ func vendorInto(_ rootDir: String) -> (carried: [String], digest: String?, shim:
     // platform this binary was not built for still has a court that way.
     for rel in ["bin/judge.js", "bin/judge-wasm.js", "bin/court-wasm.from",
                 "bin/court-wasm/node/vi_court.js", "bin/court-wasm/node/vi_court_bg.wasm",
+                "bin/renderer.js", "bin/press.js", "bin/drawing.from",
                 "web/ui.html", "web/codemirror.js", "web/codemirror.css", "LICENSE", "docs/NOTICE.md"] {
         let src = (here as NSString).appendingPathComponent(rel)
         if FileManager.default.fileExists(atPath: src) {
@@ -10954,6 +10955,8 @@ if args.first == "seam" {
 //   GET  /files                the world's files, their roles and verdicts
 //   GET  /gitstatus            what git says about this working copy
 //   GET  /judge.js             the ported court, for the page to judge with
+//   GET  /renderer.js          the kit's span engine on JS, for the drawing view
+//   GET  /press.js             the kit's rule applier on JS, for a key on a drawing
 //   GET  /ladder.css           the ladder and the palette, as this world says
 //   GET  /language             the grammar the page highlights and offers by
 //   GET  /log                  the journal of this world
@@ -11698,6 +11701,14 @@ func serveDoor(_ a: [String]) -> Never {
             case ("GET", "/judge.js"):
                 // the judge this page reads with, served whole
                 serveFile(conn, joinPath(toolRoot(), "bin/judge.js"),
+                          "text/javascript")
+            case ("GET", "/renderer.js"):
+                // the kit's span engine on JS, for the drawing view (bin/drawing.from)
+                serveFile(conn, joinPath(toolRoot(), "bin/renderer.js"),
+                          "text/javascript")
+            case ("GET", "/press.js"):
+                // the kit's rule applier on JS: a key on a drawing rewrites one alias
+                serveFile(conn, joinPath(toolRoot(), "bin/press.js"),
                           "text/javascript")
             case ("GET", "/codemirror.js"):
                 serveFile(conn, joinPath(toolRoot(), "web/codemirror.js"),

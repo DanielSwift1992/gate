@@ -536,7 +536,8 @@ body { height: calc(100vh - var(--strip)) !important; }
     open(os.path.join(OUT, "index.html"), "w", encoding="utf-8").write(ui)
     open(os.path.join(OUT, "ladder.css"), "w", encoding="utf-8").write(ladder_css)
     for asset, home in (("codemirror.css", "web"), ("codemirror.js", "web"),
-                        ("judge.js", "bin")):
+                        ("judge.js", "bin"), ("renderer.js", "bin"), ("press.js", "bin"),
+                        ("drawing.from", "bin")):
         src = os.path.join(HERE, home, asset)
         if os.path.exists(src):
             shutil.copy(src, os.path.join(OUT, asset))

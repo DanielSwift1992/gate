@@ -2868,6 +2868,46 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
               and os.path.exists(os.path.join(ven, ".gate", "bin", "judge-cli.js"))
               and _po.get("verdict") == "holds"
               and "did not answer in its own canon" not in _portonly.stdout))
+    # and the drawing view's engine travels with the same carry, with its record
+    S.append(("a vendored copy carries the drawing view's engine and its record",
+              all(os.path.exists(os.path.join(ven, ".gate", "bin", f))
+                  for f in ("renderer.js", "press.js", "drawing.from"))))
+
+    # ── AND THE DRAWING ENGINE IS HELD BY THE PAGE IT CAME FROM. bin/renderer.js
+    # and bin/press.js are the typed playground's at the revision bin/drawing.from
+    # names. The playground's check.js replays twenty-nine checks over them: the
+    # dynamics draw byte for byte against the showcase's golden, the lamp's and
+    # the atom's colour counts, the golden plate value for value, the company's
+    # four verdicts. So the playground is fetched at that pin, the two files here
+    # are laid over its own, and its checks are run in its own tree: the moved
+    # engine must pass the page's checks, not a harness of ours. PLAYGROUND_SOURCE
+    # names a local checkout for development; CI fetches the public pin.
+    _dfrom = open(os.path.join(HERE, "bin", "drawing.from"), encoding="utf-8").read().split("\n")
+    _dpin = _dfrom[0].strip()
+    _dsrc = os.environ.get("PLAYGROUND_SOURCE")
+    _dplay = os.path.join(tmp, "playground-at-pin")
+    if _dsrc:
+        shutil.copytree(_dsrc, _dplay, ignore=shutil.ignore_patterns(".build", ".git"))
+    else:
+        os.makedirs(_dplay)
+        subprocess.run(["git", "-C", _dplay, "init", "-q"], capture_output=True)
+        subprocess.run(["git", "-C", _dplay, "config", "core.autocrlf", "false"], capture_output=True)
+        subprocess.run(["git", "-C", _dplay, "fetch", "-q", "--depth", "1",
+                        "https://github.com/DanielSwift1992/typed-playground", _dpin], capture_output=True)
+        subprocess.run(["git", "-C", _dplay, "checkout", "-q", "FETCH_HEAD"], capture_output=True)
+    _dsame = all(open(os.path.join(HERE, "bin", f), "rb").read() == open(os.path.join(_dplay, f), "rb").read()
+                 for f in ("renderer.js", "press.js")) if os.path.exists(os.path.join(_dplay, "check.js")) else False
+    for f in ("renderer.js", "press.js"):
+        if os.path.exists(_dplay):
+            shutil.copy(os.path.join(HERE, "bin", f), os.path.join(_dplay, f))
+    _dcheck = subprocess.run(["node", "check.js"], cwd=_dplay, capture_output=True, text=True) \
+        if os.path.exists(os.path.join(_dplay, "check.js")) else None
+    _dsaid = (_dcheck.stdout + _dcheck.stderr) if _dcheck else "the playground was not fetched"
+    if not (_dcheck and _dcheck.returncode == 0):
+        print("   the playground's checks over the drawing engine:", _dsaid.strip().split("\n")[-1][:120])
+    S.append(("the drawing engine passes the playground's own checks in the playground's own tree, at the pin",
+              _dsame and _dcheck is not None and _dcheck.returncode == 0
+              and "29/29" in _dcheck.stdout))
 
     # ── AND A HOOK THAT WILL NOT FIND THE TOOL SAYS SO AT WIRING TIME. The hook
     # looks for ./gatew, then ./gate, then gate on PATH, and refuses the commit
