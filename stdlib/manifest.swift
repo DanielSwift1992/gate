@@ -3,8 +3,9 @@
 // speaks-for: the-tool
 //
 // This page keeps the installed Kind bindings and the text this tool WRITES
-// when a world needs a layout. Both carriers take the template below the mark
-// from this page.
+// when a world needs a layout. The template lives here so that both carriers
+// write the same one: a template kept in two places is two texts the day
+// somebody improves one of them.
 //
 // The card above is the shelf's, not the world's: `role:` and
 // `speaks-for:` are how a page tells this tool what it is. The line below
