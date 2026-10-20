@@ -109,6 +109,33 @@ public typealias Leans<More: Structure, Less: Structure, Slack: Structure> = Lum
 //   TowardWarm<Y, Z, Margin>:           27·Y == 25·Z + 1 + Margin
 // Each claim below still names its numbers, and the page paints them, but no
 // court here says they hold ──
+// Addressed remainder of the original page; these IDs are not a green subset.
+// gate-unsupported: InkGrey_lit | count v0.1 normalization budget: D65 products are not checked
+// gate-unsupported: PaperGrey_lit | count v0.1 normalization budget: D65 products are not checked
+// gate-unsupported: MistGrey_lit | count v0.1 normalization budget: D65 products are not checked
+// gate-unsupported: LineGrey_lit | count v0.1 normalization budget: D65 products are not checked
+// gate-unsupported: MutedGrey_lit | count v0.1 normalization budget: D65 products are not checked
+// gate-unsupported: SeamGrey_lit | count v0.1 normalization budget: D65 products are not checked
+// gate-unsupported: SelectGrey_lit | count v0.1 normalization budget: D65 products are not checked
+// gate-unsupported: InkGrey_dim | count v0.1 normalization budget: D65 products are not checked
+// gate-unsupported: PaperGrey_dim | count v0.1 normalization budget: D65 products are not checked
+// gate-unsupported: MistGrey_dim | count v0.1 normalization budget: D65 products are not checked
+// gate-unsupported: LineGrey_dim | count v0.1 normalization budget: D65 products are not checked
+// gate-unsupported: MutedGrey_dim | count v0.1 normalization budget: D65 products are not checked
+// gate-unsupported: SeamGrey_dim | count v0.1 normalization budget: D65 products are not checked
+// gate-unsupported: SelectGrey_dim | count v0.1 normalization budget: D65 products are not checked
+// gate-unsupported: OkChroma_lit | count v0.1 normalization budget: D65 products are not checked
+// gate-unsupported: BadChroma_lit | count v0.1 normalization budget: D65 products are not checked
+// gate-unsupported: ActionChroma_lit | count v0.1 normalization budget: D65 products are not checked
+// gate-unsupported: LawChroma_lit | count v0.1 normalization budget: D65 products are not checked
+// gate-unsupported: LocalTypeChroma_lit | count v0.1 normalization budget: D65 products are not checked
+// gate-unsupported: KnownNameChroma_lit | count v0.1 normalization budget: D65 products are not checked
+// gate-unsupported: OkChroma_dim | count v0.1 normalization budget: D65 products are not checked
+// gate-unsupported: BadChroma_dim | count v0.1 normalization budget: D65 products are not checked
+// gate-unsupported: ActionChroma_dim | count v0.1 normalization budget: D65 products are not checked
+// gate-unsupported: LawChroma_dim | count v0.1 normalization budget: D65 products are not checked
+// gate-unsupported: LocalTypeChroma_dim | count v0.1 normalization budget: D65 products are not checked
+// gate-unsupported: KnownNameChroma_dim | count v0.1 normalization budget: D65 products are not checked
 public enum Grey<X, Y, Z, Slo, Shi, Xlo, Xhi>: Close {}
 public enum GreyFloor<X, Y, Z, Slo, Shi>: Close {}
 public enum TowardBlue<Y, Z, Margin>: Close {}

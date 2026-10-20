@@ -2203,8 +2203,20 @@ func whereRefused(_ out: String) -> [(cert: String?, claim: String)] {
 // hold a forms row to the same promise as every other file it opens: judged as
 // you type. Reading the saved copy while somebody edits an unsaved one shows
 // green over a lie.
+struct FormResidue {
+    let id: String
+    let address: String
+    let reason: String
+}
+
+func formsOutcome(_ refused: Int, _ residue: [FormResidue], _ checked: Int) -> String {
+    if refused != 0 { return "refused" }
+    if !residue.isEmpty { return checked == 0 ? "unsupported" : "partial" }
+    return "holds"
+}
+
 func formsGuards(_ w: WorldState, _ size: inout [String: Int],
-                 live: [String: String] = [:]) -> [(address: String, claim: String)] {
+                 unsupported: inout [FormResidue], live: [String: String] = [:]) -> [(address: String, claim: String)] {
     // ── ONE WORLD IS WHAT A CLAIM REACHES. The forms rows of a layout are glued
     // into worlds by the names they use: a row joins every row that declares a
     // name it uses and does not declare itself, and the rows so joined are one
@@ -2255,11 +2267,29 @@ func formsGuards(_ w: WorldState, _ size: inout [String: Int],
     }
     let tmp = tempRoot() + "gate-forms-\(ProcessInfo.processInfo.processIdentifier)"
     try? FileManager.default.createDirectory(atPath: tmp, withIntermediateDirectories: true)
+    let premise = (tmp as NSString).appendingPathComponent("Primitive.swift")
+    try? PinnedCorpus.primitive.write(toFile: premise, atomically: false, encoding: .utf8)
     for (streamName, among, text, mine) in streams {
         let whereMap = declared(among)
+        // These are outstanding requirements, not refusals and not checked claims.
+        // In an overridden shelf world the shipped ledger survives value edits.
+        for item in matches("^// gate-unsupported: (\\w+) \\| (.+)$", text, lines: true) {
+            let id = item[0], reason = item[1]
+            let spot = whereMap[id] ?? reachedRestatement(id, text, mine)
+                ?? among.first?.path ?? streamName
+            if matches("^public typealias " + id + "\\b", text, lines: true).isEmpty {
+                bad.append((spot, "unsupported requirement '" + id + "' lost its declared relation"))
+            }
+            if !unsupported.contains(where: { $0.id == id }) {
+                unsupported.append(FormResidue(id: id, address: spot, reason: reason))
+            }
+        }
         let fp = (tmp as NSString).appendingPathComponent(streamName + ".swift")
         try? text.write(toFile: fp, atomically: false, encoding: .utf8)
-        let said = courtSays(["where", fp])
+        // A declared count world lends the same pinned definitions to its
+        // nominal certificates: Twice is an alias, not an arithmetic guess.
+        let borrowed = countQuestion(text) == nil ? [] : [premise]
+        let said = courtSays(["where", fp] + borrowed)
         bad += canonGuard(w, said,
                           (said.contains("THE WHERE") && said.contains("canon v"))
                               || said.contains("✗"),
@@ -2290,7 +2320,6 @@ func formsGuards(_ w: WorldState, _ size: inout [String: Int],
     // ladder and the question another file of it declares, and a shelf page with
     // the values an operator restated in it, so a number moved is held by every
     // law that stands on it. Both on the corpus's Primitive
-    let premise = (tmp as NSString).appendingPathComponent("Primitive.swift")
     func askCount(_ fp: String, _ text: String, _ questionsFrom: [String],
                   _ at: [String: String], _ mine: [(String, String)], _ fallback: String) {
         var asked: [(predicate: String, encoding: String, sigma: String)] = []
@@ -3301,7 +3330,9 @@ func nextRung(_ w: WorldState, _ refused: Bool, serving: Bool = false) -> String
         // of the same fact, said from their own side: what you commit is what
         // holds. The old wording survives in this comment, which is the
         // decision, and nowhere a terminal prints.
-        return "run `gate init .` to wire the hook: from here on, what you commit is what holds"
+        // A commit may carry an addressed remainder, so the hook promises a
+        // check and a visible obligation rather than an entirely holding world.
+        return "run `gate init .` to wire the hook: each commit is checked and unfinished claims stay named"
     }
     let rows = (w.layout?.rows ?? []).filter { !$0.path.isEmpty }
     let saidSomething = w.facts.map { FileManager.default.fileExists(atPath: $0) } ?? false
@@ -3584,12 +3615,16 @@ struct StatusAnswer {
     var wallMs: Double = 0
     var world: [String]? = nil          // declarations, lookups, premises
     var whereSize: [String: Int] = [:]
+    var unsupported: [FormResidue] = []
     var next = ""
     // the same ladder read from the bench: the room the reader is in is a rung
     // already taken, so it is not offered back to them (`serve`, below)
     var servingNext = ""
     var then = ""
-    var verdict: String { noWorld ? "no world here" : (refusals.isEmpty ? "holds" : "refused") }
+    var verdict: String {
+        noWorld ? "no world here" : formsOutcome(refusals.count, unsupported,
+            (whereSize["equalities"] ?? 0) + (whereSize["readings"] ?? 0) + (world == nil ? 0 : 1))
+    }
 }
 
 func statusAnswer() -> StatusAnswer {
@@ -3645,7 +3680,8 @@ func statusAnswer() -> StatusAnswer {
     }
     refusals += manifestGuards(w)
     var whereSize: [String: Int] = [:]
-    refusals += formsGuards(w, &whereSize)
+    var unsupported: [FormResidue] = []
+    refusals += formsGuards(w, &whereSize, unsupported: &unsupported)
     refusals += policyGuards(w)
     refusals += stdlibGuards(w)
     refusals += ownSurfaceGuards(w) + opensGuards(w)
@@ -3664,8 +3700,9 @@ func statusAnswer() -> StatusAnswer {
     answer.wallMs = wallMs
     answer.world = matches("(\\d+) declarations · (\\d+) lookups · (\\d+) premises", raw).first
     answer.whereSize = whereSize
-    answer.next = nextRung(w, !refusals.isEmpty)
-    answer.servingNext = nextRung(w, !refusals.isEmpty, serving: true)
+    answer.unsupported = unsupported
+    answer.next = nextRung(w, !refusals.isEmpty || !unsupported.isEmpty)
+    answer.servingNext = nextRung(w, !refusals.isEmpty || !unsupported.isEmpty, serving: true)
     return answer
 }
 
@@ -3676,6 +3713,11 @@ func statusAnswer() -> StatusAnswer {
 // where the answer is PRINTED, which is what the other carrier does in its own
 // main; the bench recomputes the step for the room it is in and lifts the
 // command out of THAT one, so the field cannot arrive here already spent.
+func formResidueJSON(_ items: [FormResidue]) -> StatusJSON {
+    .list(items.map { .object([("id", .text($0.id)), ("address", .text($0.address)),
+                               ("reason", .text($0.reason))]) })
+}
+
 func statusPairs(_ a: StatusAnswer) -> [(String, StatusJSON)] {
     if a.noWorld {
         return [
@@ -3710,6 +3752,7 @@ func statusPairs(_ a: StatusAnswer) -> [(String, StatusJSON)] {
             ("uses", .raw(String(a.whereSize["uses"] ?? 0))),
             ("readings", .raw(String(a.whereSize["readings"] ?? 0)))])))
     }
+    if !a.unsupported.isEmpty { pairs.append(("unsupported", formResidueJSON(a.unsupported))) }
     pairs.append(("court", .text("the judge")))
     pairs.append(("next", .text(a.next)))
     return pairs
@@ -3725,8 +3768,9 @@ func statusPrinted(_ a: StatusAnswer) -> [(String, StatusJSON)] {
     return pairs
 }
 
-// the door: it prints what the answer above assembled, and decides nothing
-func statusDoor(_ asJson: Bool) -> Never {
+// The hook prints the same answer. Only a completed judgement with an
+// addressed remainder may pass there; failures to obtain an answer still stop.
+func statusDoor(_ asJson: Bool, forCommit: Bool = false) -> Never {
     let a = statusAnswer()
     if a.noWorld {
         if asJson {
@@ -3742,7 +3786,7 @@ func statusDoor(_ asJson: Bool) -> Never {
     if asJson {
         out(statusDumps(.object(statusPrinted(a)), 0) + "\n")
     } else {
-        let head = refusals.isEmpty ? "holds" : "refused \(refusals.count)"
+        let head = refusals.isEmpty ? a.verdict : "refused \(refusals.count)"
         var tail: [String] = []
         if let m = worldM {
             tail.append(many(Int(m[0]) ?? 0, "declaration") + " · "
@@ -3763,10 +3807,11 @@ func statusDoor(_ asJson: Bool) -> Never {
         if let ms = times { tail.append(floatRepr(ms) + " ms") }
         var lines = ["status: " + head + (tail.isEmpty ? "" : " · " + tail.joined(separator: " · "))]
         for r in refusals { lines.append("  \(r.address) · \(r.claim)") }
+        for r in a.unsupported { lines.append("  \(r.address) · unsupported \(r.id): \(r.reason)") }
         lines.append("  next: " + next)
         out(lines.joined(separator: "\n") + "\n")
     }
-    exit(refusals.isEmpty ? 0 : 1)
+    exit(!refusals.isEmpty ? 1 : (a.unsupported.isEmpty || forCommit ? 0 : 2))
 }
 
 // the road's own door: the battery calls this, not a person
@@ -8547,6 +8592,7 @@ if args.first == "survey" {
         fabric = [("facts", .text(facts)),
                   ("verdict", .text(said.verdict)),
                   ("refusals", .raw(String(said.refusals.count)))]
+        if !said.unsupported.isEmpty { fabric.append(("unsupported", formResidueJSON(said.unsupported))) }
     }
     let next = hasWorld
         ? "run `gate status`: these are candidates from your history, and a world is what holds them"
@@ -8855,16 +8901,21 @@ if args.first == "badge" {
     // green is, and on a red world there is no green to be wide: it says how
     // many were refused, which is the number that is true then.
     let right = (holds ? many(claims, "claim") + " · holds"
-                       : "refused \(said.refusals.count)")
+        : (said.refusals.isEmpty ? said.verdict + " · \(said.unsupported.count) unsupported"
+                                : "refused \(said.refusals.count)"))
         + (days.map { " · \($0)d" } ?? "")
     if let path = outPath {
         let lw = 40, rw = 8 + Int(Double(right.count) * 6.2)
         var svg = BADGE_SVG
         for (k, v) in [("{w}", String(lw + rw)), ("{lw}", String(lw)), ("{rw}", String(rw)),
                        ("{tx}", String(lw + 5)), ("{right}", escXml(right)),
-                       ("{fill}", holds ? "#007D36" : "#BF4035"),
+                       ("{fill}", holds ? "#007D36" : (said.refusals.isEmpty ? "#8A6500" : "#BF4035")),
                        ("{alt}", escXml("gate: " + right))] {
             svg = svg.replacingOccurrences(of: k, with: v)
+        }
+        if !said.unsupported.isEmpty {
+            let remainder = said.unsupported.map { $0.id + ": " + $0.reason }.joined(separator: "; ")
+            svg = svg.replacingOccurrences(of: "</svg>", with: "<title>" + escXml(remainder) + "</title></svg>")
         }
         oursWrite(path, "the badge", svg)
     }
@@ -8886,7 +8937,7 @@ if args.first == "badge" {
         var pairs: [(String, StatusJSON)] = [
             ("command", .text("badge")),
             ("claims", .raw(String(claims))),
-            ("verdict", .text(holds ? "holds" : "refused")),
+            ("verdict", .text(said.verdict)),
             ("commits_judged", .raw(String(judged))),
             ("unbroken_days", days.map { .raw(String($0)) } ?? .null),
             ("last_refusal", broke.map { .text($0) } ?? .null),
@@ -8898,13 +8949,15 @@ if args.first == "badge" {
             ("next", .text(next)),
             ("mutates", .raw(outPath != nil ? "true" : "false")),
         ]
+        if !said.unsupported.isEmpty { pairs.append(("unsupported", formResidueJSON(said.unsupported))) }
         if let ready = commandIn(next) { pairs.append(("command_to_run", .text(ready))) }
         out(statusDumps(.object(pairs), 0) + "\n")
     } else {
+        let remainder = said.unsupported.map { "\n  " + $0.address + " · unsupported " + $0.id + ": " + $0.reason }.joined()
         out("badge: " + right + (outPath.map { " · wrote \($0)" } ?? "")
-            + "\n  note: " + note + "\n  next: " + next + "\n")
+            + remainder + "\n  note: " + note + "\n  next: " + next + "\n")
     }
-    exit(holds ? 0 : 1)
+    exit(holds ? 0 : (said.refusals.isEmpty ? 2 : 1))
 }
 
 // and the verb itself, now that the bootstrap it stood on is here. `fsck` is
@@ -8912,7 +8965,7 @@ if args.first == "badge" {
 // carrier answers both from one branch and names the answer `status` either
 // way, so a spelling left behind would be one word answered by two carriers.
 if args.first == "status" || args.first == "fsck" {
-    statusDoor(args.contains("--json"))
+    statusDoor(args.contains("--json"), forCommit: args.contains("--hook"))
 }
 
 // ── my: your personal world, where it is, and its verdict WITH the shared
@@ -8984,23 +9037,29 @@ if args.first == "my" {
     refusals += duplicateGuardsOver(sources)
     refusals += entryGuardsOver(sources)
     var whereSize: [String: Int] = [:]
-    refusals += formsGuards(w, &whereSize)   // the forms half, by the court that reads it
+    var unsupported: [FormResidue] = []
+    refusals += formsGuards(w, &whereSize, unsupported: &unsupported)
+    let outcome = formsOutcome(refusals.count, unsupported,
+        (whereSize["equalities"] ?? 0) + (whereSize["readings"] ?? 0))
     if asJson {
-        out(statusDumps(.object([
+        var pairs: [(String, StatusJSON)] = [
             ("command", .text("my")),
             ("personal", .text(personal)),
             ("repo_key", .text(key)),
             ("shared_repo_untouched", .raw("true")),
-            ("verdict", .text(refusals.isEmpty ? "holds" : "refused")),
+            ("verdict", .text(outcome)),
             ("refusals", .list(refusals.map {
                 .object([("address", .text($0.address)), ("claim", .text($0.claim))]) })),
-        ]), 0) + "\n")
+        ]
+        if !unsupported.isEmpty { pairs.append(("unsupported", formResidueJSON(unsupported))) }
+        out(statusDumps(.object(pairs), 0) + "\n")
     } else {
-        var lines = ["my: " + (refusals.isEmpty ? "holds" : "refused \(refusals.count)")]
+        var lines = ["my: " + (refusals.isEmpty ? outcome : "refused \(refusals.count)")]
         for r in refusals { lines.append("  \(r.address) · \(r.claim)") }
+        for r in unsupported { lines.append("  \(r.address) · unsupported \(r.id): \(r.reason)") }
         out(lines.joined(separator: "\n") + "\n")
     }
-    exit(refusals.isEmpty ? 0 : 1)
+    exit(!refusals.isEmpty ? 1 : (unsupported.isEmpty ? 0 : 2))
 }
 
 // ── declare contract SPEC [-o F] · declare carrier DECL.json [-o F]
@@ -9763,12 +9822,12 @@ if args.first == "drift" {
 // arrive by the same verb everything arrives by, the hook wires itself where
 // a .git stands, and --vendor makes the tool travel with the repository.
 let INIT_HOOK = "#!/bin/sh\n"
-    + "# the claims must hold before a commit is made (they are judged, never reprinted)\n"
-    + "if [ -x ./gatew ]; then exec ./gatew status; fi\n"
+    + "# refusals stop a commit; an addressed unsupported remainder is printed and kept\n"
+    + "if [ -x ./gatew ]; then exec ./gatew status --hook; fi\n"
     + "# a clone carries the tool at ./gate, which is the way the cover says to run it\n"
     + "# (\"no install step\"), so the hook looks there before it looks for an install\n"
-    + "if [ -x ./gate ]; then exec ./gate status; fi\n"
-    + "if command -v gate >/dev/null 2>&1; then exec gate status; fi\n"
+    + "if [ -x ./gate ]; then exec ./gate status --hook; fi\n"
+    + "if command -v gate >/dev/null 2>&1; then exec gate status --hook; fi\n"
     + "echo \"pre-commit: gate is not on PATH and there is no ./gatew here, so nothing\"\n"
     + "echo \"checked the claims in this repository. Put gate on PATH, run\"\n"
     + "echo \"gate init . --vendor to carry it here, or delete .githooks/pre-commit.\"\n"
@@ -12092,7 +12151,8 @@ func serveDoor(_ a: [String]) -> Never {
                 }
                 var size: [String: Int] = [:]
                 refusals += manifestGuards(w, liveRows: liveRows, liveText: typedLayout)
-                refusals += formsGuards(w, &size, live: typed)
+                var unsupported: [FormResidue] = []
+                refusals += formsGuards(w, &size, unsupported: &unsupported, live: typed)
                 refusals += policyGuards(w) + stdlibGuards(w) + vendoredGuards(w)
                 refusals += takenJudgeGuard(w) + codeownersPairGuards(w)
                 let times = matches("([\\d.]+) ms", raw).compactMap { $0.first }
@@ -12102,7 +12162,9 @@ func serveDoor(_ a: [String]) -> Never {
                 let measured = matches("(\\d+) declarations · (\\d+) lookups · (\\d+) premises",
                                        raw).first
                 serveJSON(conn, compactDumps(.object([
-                    ("verdict", .text(refusals.isEmpty ? "holds" : "refused")),
+                    ("verdict", .text(formsOutcome(refusals.count, unsupported,
+                        (size["equalities"] ?? 0) + (size["readings"] ?? 0)))),
+                    ("unsupported", formResidueJSON(unsupported)),
                     ("refusals", .list(refusals.map {
                         .object([("address", .text($0.address)), ("claim", .text($0.claim))]) })),
                     ("declarations", measured.map { StatusJSON.raw($0[0]) } ?? .null),

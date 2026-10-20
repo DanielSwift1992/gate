@@ -1,0 +1,953 @@
+{
+  "schema": "gate.bench.obligations/1",
+  "source_revision": "4816f5cd99b6466cae248fde46c5075d3266c3c2",
+  "pages": {
+    "bench-metrics": {
+      "original_sha256": "b384c65cf3f50d7b31e6efe8fea6530f0ccb61ede5ccf19ce03722dcb9311cf7",
+      "claims": [
+        {
+          "id": "SnugOverTight",
+          "route": "count",
+          "original_head": "Wider",
+          "targets": [
+            "SnugOverTight"
+          ]
+        },
+        {
+          "id": "NearOverSnug",
+          "route": "count",
+          "original_head": "Wider",
+          "targets": [
+            "NearOverSnug"
+          ]
+        },
+        {
+          "id": "StepOverNear",
+          "route": "count",
+          "original_head": "Wider",
+          "targets": [
+            "StepOverNear"
+          ]
+        },
+        {
+          "id": "RoomOverStep",
+          "route": "count",
+          "original_head": "Wider",
+          "targets": [
+            "RoomOverStep"
+          ]
+        },
+        {
+          "id": "ApartOverRoom",
+          "route": "count",
+          "original_head": "Wider",
+          "targets": [
+            "ApartOverRoom"
+          ]
+        },
+        {
+          "id": "EdgeOverApart",
+          "route": "count",
+          "original_head": "Wider",
+          "targets": [
+            "EdgeOverApart"
+          ]
+        },
+        {
+          "id": "WideOverEdge",
+          "route": "count",
+          "original_head": "Wider",
+          "targets": [
+            "WideOverEdge"
+          ]
+        },
+        {
+          "id": "LineOverWide",
+          "route": "count",
+          "original_head": "Wider",
+          "targets": [
+            "LineOverWide"
+          ]
+        },
+        {
+          "id": "GroupsStandOffFurtherThanRows",
+          "route": "count",
+          "original_head": "Wider",
+          "targets": [
+            "GroupsStandOffFurtherThanRows"
+          ]
+        },
+        {
+          "id": "RowsStandOffFurtherThanParts",
+          "route": "count",
+          "original_head": "Wider",
+          "targets": [
+            "RowsStandOffFurtherThanParts"
+          ]
+        },
+        {
+          "id": "PartsStandOffFurtherThanMarks",
+          "route": "where",
+          "original_head": "Wider",
+          "targets": [
+            "PartsStandOffFurtherThanMarks"
+          ]
+        },
+        {
+          "id": "AirIsTwoLines",
+          "route": "where",
+          "original_head": "Same",
+          "targets": [
+            "AirIsTwoLines"
+          ]
+        },
+        {
+          "id": "RunwayIsFourLines",
+          "route": "where",
+          "original_head": "Same",
+          "targets": [
+            "RunwayIsFourLines"
+          ]
+        },
+        {
+          "id": "IndentIsTwiceTheEdge",
+          "route": "where",
+          "original_head": "Same",
+          "targets": [
+            "IndentIsTwiceTheEdge"
+          ]
+        }
+      ]
+    },
+    "bench-palette": {
+      "original_sha256": "2c6ac5abca5bed9e6b295958fd8f865d58b7f67a3e00723f6f703cf45eb09fa9",
+      "claims": [
+        {
+          "id": "PaperOverMist_lit",
+          "route": "count",
+          "original_head": "Brighter",
+          "targets": [
+            "PaperOverMist_lit"
+          ]
+        },
+        {
+          "id": "MistOverLine_lit",
+          "route": "count",
+          "original_head": "Brighter",
+          "targets": [
+            "MistOverLine_lit"
+          ]
+        },
+        {
+          "id": "LineOverMuted_lit",
+          "route": "count",
+          "original_head": "Brighter",
+          "targets": [
+            "LineOverMuted_lit"
+          ]
+        },
+        {
+          "id": "MutedOverInk_lit",
+          "route": "count",
+          "original_head": "Brighter",
+          "targets": [
+            "MutedOverInk_lit"
+          ]
+        },
+        {
+          "id": "Paper_Ink_lit",
+          "route": "count",
+          "original_head": "Legible",
+          "targets": [
+            "Paper_Ink_lit"
+          ]
+        },
+        {
+          "id": "Paper_Muted_lit",
+          "route": "count",
+          "original_head": "Readable",
+          "targets": [
+            "Paper_Muted_lit"
+          ]
+        },
+        {
+          "id": "Paper_Ok_lit",
+          "route": "count",
+          "original_head": "ReadableAA",
+          "targets": [
+            "Paper_Ok_lit"
+          ]
+        },
+        {
+          "id": "Paper_Bad_lit",
+          "route": "count",
+          "original_head": "ReadableAA",
+          "targets": [
+            "Paper_Bad_lit"
+          ]
+        },
+        {
+          "id": "Paper_Action_lit",
+          "route": "count",
+          "original_head": "ReadableAA",
+          "targets": [
+            "Paper_Action_lit"
+          ]
+        },
+        {
+          "id": "Paper_Law_lit",
+          "route": "count",
+          "original_head": "ReadableAA",
+          "targets": [
+            "Paper_Law_lit"
+          ]
+        },
+        {
+          "id": "Paper_LocalType_lit",
+          "route": "count",
+          "original_head": "ReadableAA",
+          "targets": [
+            "Paper_LocalType_lit"
+          ]
+        },
+        {
+          "id": "Paper_KnownName_lit",
+          "route": "count",
+          "original_head": "ReadableAA",
+          "targets": [
+            "Paper_KnownName_lit"
+          ]
+        },
+        {
+          "id": "OkEqBad_lit",
+          "route": "count",
+          "original_head": "Same",
+          "targets": [
+            "OkEqBad_lit"
+          ]
+        },
+        {
+          "id": "BadEqAction_lit",
+          "route": "count",
+          "original_head": "Same",
+          "targets": [
+            "BadEqAction_lit"
+          ]
+        },
+        {
+          "id": "ActionEqLaw_lit",
+          "route": "count",
+          "original_head": "Same",
+          "targets": [
+            "ActionEqLaw_lit"
+          ]
+        },
+        {
+          "id": "LawEqLocalType_lit",
+          "route": "count",
+          "original_head": "Same",
+          "targets": [
+            "LawEqLocalType_lit"
+          ]
+        },
+        {
+          "id": "LocalTypeEqKnownName_lit",
+          "route": "count",
+          "original_head": "Same",
+          "targets": [
+            "LocalTypeEqKnownName_lit"
+          ]
+        },
+        {
+          "id": "InkOverMuted_dim",
+          "route": "count",
+          "original_head": "Brighter",
+          "targets": [
+            "InkOverMuted_dim"
+          ]
+        },
+        {
+          "id": "MutedOverLine_dim",
+          "route": "count",
+          "original_head": "Brighter",
+          "targets": [
+            "MutedOverLine_dim"
+          ]
+        },
+        {
+          "id": "LineOverMist_dim",
+          "route": "count",
+          "original_head": "Brighter",
+          "targets": [
+            "LineOverMist_dim"
+          ]
+        },
+        {
+          "id": "MistOverPaper_dim",
+          "route": "count",
+          "original_head": "Brighter",
+          "targets": [
+            "MistOverPaper_dim"
+          ]
+        },
+        {
+          "id": "Ink_Paper_dim",
+          "route": "count",
+          "original_head": "Legible",
+          "targets": [
+            "Ink_Paper_dim"
+          ]
+        },
+        {
+          "id": "Muted_Paper_dim",
+          "route": "count",
+          "original_head": "Readable",
+          "targets": [
+            "Muted_Paper_dim"
+          ]
+        },
+        {
+          "id": "Ok_Paper_dim",
+          "route": "count",
+          "original_head": "ReadableAA",
+          "targets": [
+            "Ok_Paper_dim"
+          ]
+        },
+        {
+          "id": "Bad_Paper_dim",
+          "route": "count",
+          "original_head": "ReadableAA",
+          "targets": [
+            "Bad_Paper_dim"
+          ]
+        },
+        {
+          "id": "Action_Paper_dim",
+          "route": "count",
+          "original_head": "ReadableAA",
+          "targets": [
+            "Action_Paper_dim"
+          ]
+        },
+        {
+          "id": "Law_Paper_dim",
+          "route": "count",
+          "original_head": "ReadableAA",
+          "targets": [
+            "Law_Paper_dim"
+          ]
+        },
+        {
+          "id": "LocalType_Paper_dim",
+          "route": "count",
+          "original_head": "ReadableAA",
+          "targets": [
+            "LocalType_Paper_dim"
+          ]
+        },
+        {
+          "id": "KnownName_Paper_dim",
+          "route": "count",
+          "original_head": "ReadableAA",
+          "targets": [
+            "KnownName_Paper_dim"
+          ]
+        },
+        {
+          "id": "OkEqBad_dim",
+          "route": "count",
+          "original_head": "Same",
+          "targets": [
+            "OkEqBad_dim"
+          ]
+        },
+        {
+          "id": "BadEqAction_dim",
+          "route": "count",
+          "original_head": "Same",
+          "targets": [
+            "BadEqAction_dim"
+          ]
+        },
+        {
+          "id": "ActionEqLaw_dim",
+          "route": "count",
+          "original_head": "Same",
+          "targets": [
+            "ActionEqLaw_dim"
+          ]
+        },
+        {
+          "id": "LawEqLocalType_dim",
+          "route": "count",
+          "original_head": "Same",
+          "targets": [
+            "LawEqLocalType_dim"
+          ]
+        },
+        {
+          "id": "LocalTypeEqKnownName_dim",
+          "route": "count",
+          "original_head": "Same",
+          "targets": [
+            "LocalTypeEqKnownName_dim"
+          ]
+        },
+        {
+          "id": "InkGrey_lit",
+          "route": "unsupported",
+          "original_head": "GreyFloor",
+          "targets": [
+            "InkGrey_lit"
+          ],
+          "reason": "count v0.1 normalization budget: D65 products are not checked"
+        },
+        {
+          "id": "PaperGrey_lit",
+          "route": "unsupported",
+          "original_head": "Grey",
+          "targets": [
+            "PaperGrey_lit"
+          ],
+          "reason": "count v0.1 normalization budget: D65 products are not checked"
+        },
+        {
+          "id": "MistGrey_lit",
+          "route": "unsupported",
+          "original_head": "Grey",
+          "targets": [
+            "MistGrey_lit"
+          ],
+          "reason": "count v0.1 normalization budget: D65 products are not checked"
+        },
+        {
+          "id": "LineGrey_lit",
+          "route": "unsupported",
+          "original_head": "Grey",
+          "targets": [
+            "LineGrey_lit"
+          ],
+          "reason": "count v0.1 normalization budget: D65 products are not checked"
+        },
+        {
+          "id": "MutedGrey_lit",
+          "route": "unsupported",
+          "original_head": "Grey",
+          "targets": [
+            "MutedGrey_lit"
+          ],
+          "reason": "count v0.1 normalization budget: D65 products are not checked"
+        },
+        {
+          "id": "SeamGrey_lit",
+          "route": "unsupported",
+          "original_head": "Grey",
+          "targets": [
+            "SeamGrey_lit"
+          ],
+          "reason": "count v0.1 normalization budget: D65 products are not checked"
+        },
+        {
+          "id": "SelectGrey_lit",
+          "route": "unsupported",
+          "original_head": "Grey",
+          "targets": [
+            "SelectGrey_lit"
+          ],
+          "reason": "count v0.1 normalization budget: D65 products are not checked"
+        },
+        {
+          "id": "InkGrey_dim",
+          "route": "unsupported",
+          "original_head": "Grey",
+          "targets": [
+            "InkGrey_dim"
+          ],
+          "reason": "count v0.1 normalization budget: D65 products are not checked"
+        },
+        {
+          "id": "PaperGrey_dim",
+          "route": "unsupported",
+          "original_head": "GreyFloor",
+          "targets": [
+            "PaperGrey_dim"
+          ],
+          "reason": "count v0.1 normalization budget: D65 products are not checked"
+        },
+        {
+          "id": "MistGrey_dim",
+          "route": "unsupported",
+          "original_head": "Grey",
+          "targets": [
+            "MistGrey_dim"
+          ],
+          "reason": "count v0.1 normalization budget: D65 products are not checked"
+        },
+        {
+          "id": "LineGrey_dim",
+          "route": "unsupported",
+          "original_head": "Grey",
+          "targets": [
+            "LineGrey_dim"
+          ],
+          "reason": "count v0.1 normalization budget: D65 products are not checked"
+        },
+        {
+          "id": "MutedGrey_dim",
+          "route": "unsupported",
+          "original_head": "Grey",
+          "targets": [
+            "MutedGrey_dim"
+          ],
+          "reason": "count v0.1 normalization budget: D65 products are not checked"
+        },
+        {
+          "id": "SeamGrey_dim",
+          "route": "unsupported",
+          "original_head": "Grey",
+          "targets": [
+            "SeamGrey_dim"
+          ],
+          "reason": "count v0.1 normalization budget: D65 products are not checked"
+        },
+        {
+          "id": "SelectGrey_dim",
+          "route": "unsupported",
+          "original_head": "Grey",
+          "targets": [
+            "SelectGrey_dim"
+          ],
+          "reason": "count v0.1 normalization budget: D65 products are not checked"
+        },
+        {
+          "id": "OkChroma_lit",
+          "route": "unsupported",
+          "original_head": "TowardWarm",
+          "targets": [
+            "OkChroma_lit"
+          ],
+          "reason": "count v0.1 normalization budget: D65 products are not checked"
+        },
+        {
+          "id": "BadChroma_lit",
+          "route": "unsupported",
+          "original_head": "TowardWarm",
+          "targets": [
+            "BadChroma_lit"
+          ],
+          "reason": "count v0.1 normalization budget: D65 products are not checked"
+        },
+        {
+          "id": "ActionChroma_lit",
+          "route": "unsupported",
+          "original_head": "TowardBlue",
+          "targets": [
+            "ActionChroma_lit"
+          ],
+          "reason": "count v0.1 normalization budget: D65 products are not checked"
+        },
+        {
+          "id": "LawChroma_lit",
+          "route": "unsupported",
+          "original_head": "TowardWarm",
+          "targets": [
+            "LawChroma_lit"
+          ],
+          "reason": "count v0.1 normalization budget: D65 products are not checked"
+        },
+        {
+          "id": "LocalTypeChroma_lit",
+          "route": "unsupported",
+          "original_head": "TowardBlue",
+          "targets": [
+            "LocalTypeChroma_lit"
+          ],
+          "reason": "count v0.1 normalization budget: D65 products are not checked"
+        },
+        {
+          "id": "KnownNameChroma_lit",
+          "route": "unsupported",
+          "original_head": "TowardBlue",
+          "targets": [
+            "KnownNameChroma_lit"
+          ],
+          "reason": "count v0.1 normalization budget: D65 products are not checked"
+        },
+        {
+          "id": "OkChroma_dim",
+          "route": "unsupported",
+          "original_head": "TowardWarm",
+          "targets": [
+            "OkChroma_dim"
+          ],
+          "reason": "count v0.1 normalization budget: D65 products are not checked"
+        },
+        {
+          "id": "BadChroma_dim",
+          "route": "unsupported",
+          "original_head": "TowardWarm",
+          "targets": [
+            "BadChroma_dim"
+          ],
+          "reason": "count v0.1 normalization budget: D65 products are not checked"
+        },
+        {
+          "id": "ActionChroma_dim",
+          "route": "unsupported",
+          "original_head": "TowardBlue",
+          "targets": [
+            "ActionChroma_dim"
+          ],
+          "reason": "count v0.1 normalization budget: D65 products are not checked"
+        },
+        {
+          "id": "LawChroma_dim",
+          "route": "unsupported",
+          "original_head": "TowardWarm",
+          "targets": [
+            "LawChroma_dim"
+          ],
+          "reason": "count v0.1 normalization budget: D65 products are not checked"
+        },
+        {
+          "id": "LocalTypeChroma_dim",
+          "route": "unsupported",
+          "original_head": "TowardBlue",
+          "targets": [
+            "LocalTypeChroma_dim"
+          ],
+          "reason": "count v0.1 normalization budget: D65 products are not checked"
+        },
+        {
+          "id": "KnownNameChroma_dim",
+          "route": "unsupported",
+          "original_head": "TowardBlue",
+          "targets": [
+            "KnownNameChroma_dim"
+          ],
+          "reason": "count v0.1 normalization budget: D65 products are not checked"
+        },
+        {
+          "id": "VerdictPoles_lit",
+          "route": "count",
+          "original_head": "Opposed",
+          "targets": [
+            "VerdictPoleOk_lit",
+            "VerdictPoleBad_lit"
+          ]
+        },
+        {
+          "id": "VerdictPoles_dim",
+          "route": "count",
+          "original_head": "Opposed",
+          "targets": [
+            "VerdictPoleOk_dim",
+            "VerdictPoleBad_dim"
+          ]
+        },
+        {
+          "id": "Paper_Seam_lit",
+          "route": "count",
+          "original_head": "Readable",
+          "targets": [
+            "Paper_Seam_lit"
+          ]
+        },
+        {
+          "id": "Seam_Paper_dim",
+          "route": "count",
+          "original_head": "Readable",
+          "targets": [
+            "Seam_Paper_dim"
+          ]
+        },
+        {
+          "id": "SeamUnderMuted_lit",
+          "route": "count",
+          "original_head": "Brighter",
+          "targets": [
+            "SeamUnderMuted_lit"
+          ]
+        },
+        {
+          "id": "SeamUnderMuted_dim",
+          "route": "count",
+          "original_head": "Brighter",
+          "targets": [
+            "SeamUnderMuted_dim"
+          ]
+        },
+        {
+          "id": "SelectOverMist_lit",
+          "route": "count",
+          "original_head": "Brighter",
+          "targets": [
+            "SelectOverMist_lit"
+          ]
+        },
+        {
+          "id": "SelectOverMist_dim",
+          "route": "count",
+          "original_head": "Brighter",
+          "targets": [
+            "SelectOverMist_dim"
+          ]
+        },
+        {
+          "id": "MineApartTheirs_X_lit",
+          "route": "count",
+          "original_head": "Apart",
+          "targets": [
+            "MineApartTheirs_X_lit"
+          ]
+        },
+        {
+          "id": "MineApartTheirs_X_dim",
+          "route": "count",
+          "original_head": "Apart",
+          "targets": [
+            "MineApartTheirs_X_dim"
+          ]
+        },
+        {
+          "id": "MineApartTheirs_Z_lit",
+          "route": "count",
+          "original_head": "Apart",
+          "targets": [
+            "MineApartTheirs_Z_lit"
+          ]
+        },
+        {
+          "id": "MineApartTheirs_Z_dim",
+          "route": "count",
+          "original_head": "Apart",
+          "targets": [
+            "MineApartTheirs_Z_dim"
+          ]
+        },
+        {
+          "id": "TheirsApartBad_Z_lit",
+          "route": "count",
+          "original_head": "Apart",
+          "targets": [
+            "TheirsApartBad_Z_lit"
+          ]
+        },
+        {
+          "id": "TheirsApartBad_Z_dim",
+          "route": "count",
+          "original_head": "Apart",
+          "targets": [
+            "TheirsApartBad_Z_dim"
+          ]
+        },
+        {
+          "id": "ActionApartTheirs_X_dim",
+          "route": "count",
+          "original_head": "Apart",
+          "targets": [
+            "ActionApartTheirs_X_dim"
+          ]
+        },
+        {
+          "id": "ActionApartMine_X_dim",
+          "route": "count",
+          "original_head": "Apart",
+          "targets": [
+            "ActionApartMine_X_dim"
+          ]
+        },
+        {
+          "id": "BadApartLaw_Z_dim",
+          "route": "count",
+          "original_head": "Apart",
+          "targets": [
+            "BadApartLaw_Z_dim"
+          ]
+        }
+      ]
+    },
+    "bench-registers": {
+      "original_sha256": "1cc4118fc77e7383b7f640094a240ab5376bd23021755787a82bbac9c0bf0867",
+      "claims": [
+        {
+          "id": "CodeinlineOverCaption",
+          "route": "count",
+          "original_head": "Taller",
+          "targets": [
+            "CodeinlineOverCaption"
+          ]
+        },
+        {
+          "id": "FactOverCodeinline",
+          "route": "count",
+          "original_head": "Taller",
+          "targets": [
+            "FactOverCodeinline"
+          ]
+        },
+        {
+          "id": "SpeechOverFact",
+          "route": "count",
+          "original_head": "Taller",
+          "targets": [
+            "SpeechOverFact"
+          ]
+        },
+        {
+          "id": "BrandOverSpeech",
+          "route": "count",
+          "original_head": "Taller",
+          "targets": [
+            "BrandOverSpeech"
+          ]
+        },
+        {
+          "id": "BrandLeadClearsItsLetters",
+          "route": "count",
+          "original_head": "AtLeast",
+          "targets": [
+            "BrandLeadClearsItsLetters"
+          ]
+        },
+        {
+          "id": "CaptionLeadClearsItsLetters",
+          "route": "count",
+          "original_head": "AtLeast",
+          "targets": [
+            "CaptionLeadClearsItsLetters"
+          ]
+        },
+        {
+          "id": "CaptionlineLeadClearsItsLetters",
+          "route": "count",
+          "original_head": "AtLeast",
+          "targets": [
+            "CaptionlineLeadClearsItsLetters"
+          ]
+        },
+        {
+          "id": "CaptionlooseLeadClearsItsLetters",
+          "route": "count",
+          "original_head": "AtLeast",
+          "targets": [
+            "CaptionlooseLeadClearsItsLetters"
+          ]
+        },
+        {
+          "id": "CodeinlineLeadClearsItsLetters",
+          "route": "count",
+          "original_head": "AtLeast",
+          "targets": [
+            "CodeinlineLeadClearsItsLetters"
+          ]
+        },
+        {
+          "id": "FactLeadClearsItsLetters",
+          "route": "count",
+          "original_head": "AtLeast",
+          "targets": [
+            "FactLeadClearsItsLetters"
+          ]
+        },
+        {
+          "id": "HeadlineLeadClearsItsLetters",
+          "route": "count",
+          "original_head": "AtLeast",
+          "targets": [
+            "HeadlineLeadClearsItsLetters"
+          ]
+        },
+        {
+          "id": "HeadsmallLeadClearsItsLetters",
+          "route": "count",
+          "original_head": "AtLeast",
+          "targets": [
+            "HeadsmallLeadClearsItsLetters"
+          ]
+        },
+        {
+          "id": "MonolineLeadClearsItsLetters",
+          "route": "count",
+          "original_head": "AtLeast",
+          "targets": [
+            "MonolineLeadClearsItsLetters"
+          ]
+        },
+        {
+          "id": "ProseLeadClearsItsLetters",
+          "route": "count",
+          "original_head": "AtLeast",
+          "targets": [
+            "ProseLeadClearsItsLetters"
+          ]
+        },
+        {
+          "id": "ProselooseLeadClearsItsLetters",
+          "route": "count",
+          "original_head": "AtLeast",
+          "targets": [
+            "ProselooseLeadClearsItsLetters"
+          ]
+        },
+        {
+          "id": "SourceLeadClearsItsLetters",
+          "route": "count",
+          "original_head": "AtLeast",
+          "targets": [
+            "SourceLeadClearsItsLetters"
+          ]
+        },
+        {
+          "id": "RubricLeadClearsItsLetters",
+          "route": "count",
+          "original_head": "AtLeast",
+          "targets": [
+            "RubricLeadClearsItsLetters"
+          ]
+        },
+        {
+          "id": "FactfirmIsFactSized",
+          "route": "count",
+          "original_head": "AtLeast",
+          "targets": [
+            "FactfirmIsFactSized"
+          ]
+        },
+        {
+          "id": "FactfirmLeadsLikeFact",
+          "route": "count",
+          "original_head": "AtLeast",
+          "targets": [
+            "FactfirmLeadsLikeFact"
+          ]
+        },
+        {
+          "id": "FactfirmLeadClearsItsLetters",
+          "route": "count",
+          "original_head": "AtLeast",
+          "targets": [
+            "FactfirmLeadClearsItsLetters"
+          ]
+        },
+        {
+          "id": "RubricIsCaptionSized",
+          "route": "count",
+          "original_head": "AtLeast",
+          "targets": [
+            "RubricIsCaptionSized"
+          ]
+        },
+        {
+          "id": "SpeechLeadClearsItsLetters",
+          "route": "count",
+          "original_head": "AtLeast",
+          "targets": [
+            "SpeechLeadClearsItsLetters"
+          ]
+        }
+      ]
+    }
+  }
+}

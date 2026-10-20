@@ -398,6 +398,7 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
    backing of the same hue at a tenth. A solid fill made one chip a block of
    paint beside a chip of text, so the two verdicts were not the same kind of
    thing on the bar, and the louder one shouted before it was read. */
+.chip.partial{background:var(--mist);color:var(--law)}
 .chip.bad{background:color-mix(in srgb,var(--bad) 12%,transparent);color:var(--bad)}
 /* the typeface says WHO is speaking. Monospace is the world and everything read
    or measured from it — a file's name, a verdict, a count of files, a duration,
@@ -1977,7 +1978,8 @@ async function render() {
         return;
     }
     let r;
-    if (files.length > 1) {
+    const serverJudged = files.length > 1 || formsFiles.has(active);
+    if (serverJudged) {
         r = await (await fetch("/verdict?f=" + encodeURIComponent(active), { method: "POST", body: text })).json();
         // the width travels with the verdict: `holds` over three files says
         // nothing until it says over how much
@@ -1988,10 +1990,11 @@ async function render() {
     } else {
         r = local; r.refusals = r.refusals.map(x => ({ file: active, line: x.line, premise: x.premise }));
     }
+    const unsupported = r.unsupported || [];
     lastRefusals = r.refusals;
     repaintNames(local.parsed, r.refusals);
     document.getElementById("status").innerHTML =
-        (files.length > 1
+        (serverJudged
             ? "<b>" + r.declarations + "</b> " + r.premises
               + (r.wide ? " · <b>" + r.wide + "</b> claims checked" : "")
             : "<b>" + r.declarations + "</b> declarations · <b>" + r.premises + "</b> claims checked")
@@ -2019,7 +2022,11 @@ async function render() {
         ? '<span class="chip bad" title="' + broken.length
             + ' claims disagree with the rest. Each is listed below, with its line.">refuses '
             + broken.length + '</span>'
-        : '<span class="chip ok" title="Every claim in these files agrees with every other one.">holds</span>')
+        : (unsupported.length
+            ? '<span class="chip partial" title="'
+                + esc(unsupported.map(x => x.id + ": " + x.reason).join("; "))
+                + '">partial · ' + unsupported.length + ' unsupported</span>'
+            : '<span class="chip ok" title="Every claim in these files agrees with every other one.">holds</span>'))
         + waits;
     clearFlags(); applyFlags(r.refusals);
     showNext();
@@ -2058,6 +2065,11 @@ async function render() {
         return row;
     };
     for (const ref of broken) v.appendChild(rowFor(ref, "refusal"));
+    for (const item of unsupported) {
+        const [file, line] = item.address.split(":");
+        v.appendChild(rowFor({ file, line: line === undefined ? null : +line,
+            premise: esc("unsupported " + item.id + ": " + item.reason) }, "pending"));
+    }
     if (pending.length) {
         const head = document.createElement("div");
         head.className = "pending-head caption";

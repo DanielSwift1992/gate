@@ -56,13 +56,9 @@ public typealias Runway = Twice<TwoLines>
 //   TwoLines 20u  ×1   the air above an empty page
 //   Runway   40u  ×3   four lines, so the last line is not the last pixel
 
-// ── WHAT THE RULES BELOW ASK IS A COUNT. A rule about two gaps is a rule about
-// two numbers, and the where court reads Twice and Plus as names: two names
-// that count the same are still two names (canon four), so it would refuse
-// every rule here. The count court reads them as the corpus's Primitive
-// defines them, Unit one, Never none, Plus the sum, and checks each reading's
-// declared answer. The reading is stated here, so the arithmetic is a premise
-// this page shows rather than one a court lends it ──
+// ── FOUR RELATIONS KEEP THEIR NOMINAL QUESTION. An equal count does not
+// identify a tree: where keeps those certificates, borrowing the pinned
+// Primitive definitions that count uses for the numeric comparisons. ──
 public enum BenchSpacing: Close {}
 public enum StepsQuestion: Close {}
 public enum Steps<Measured: Structure, Declared: Structure>: PredicateReading {
@@ -75,7 +71,13 @@ public enum Steps<Measured: Structure, Declared: Structure>: PredicateReading {
 }
 // wider by one step and the slack declared
 public typealias Wider<Hi: Structure, Lo: Structure, Slack: Structure> = Steps<Hi, Plus<Lo, Plus<Unit, Slack>>>
-public typealias Same<A: Structure, B: Structure> = Steps<A, B>
+public protocol Certified {}
+public enum Same<A, B>: Close {}
+extension Same: Certified
+where A == B {}
+public enum StructuralWider<Hi, Lo, Slack>: Close {}
+extension StructuralWider: Certified
+where Hi == Plus<Lo, Plus<Unit, Slack>> {}
 
 // ── the ladder is monotone ──
 public typealias SnugOverTight = Wider<Snug, Tight, Never>
@@ -93,7 +95,7 @@ public typealias LineOverWide = Wider<Line, Wide, Unit>
 // so narrowing one below the other stops the settling and the judge says so ──
 public typealias GroupsStandOffFurtherThanRows = Wider<Apart, Step, Unit>
 public typealias RowsStandOffFurtherThanParts = Wider<Step, Near, Never>
-public typealias PartsStandOffFurtherThanMarks = Wider<Near, Tight, Unit>
+public typealias PartsStandOffFurtherThanMarks = StructuralWider<Near, Tight, Unit>
 
 // ── the air is whole lines, and the indent is a sum of named steps ──
 public typealias AirIsTwoLines = Same<TwoLines, Plus<Line, Line>>

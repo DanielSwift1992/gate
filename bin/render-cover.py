@@ -21,6 +21,7 @@ What is rendered, and the law of each:
                        every release name, read from the default the
                        action declares
 """
+import json
 import re
 import subprocess
 import sys
@@ -97,12 +98,18 @@ def render(tool):
                  + "the renderer lost its subject")
     cover2 = span.sub(lambda m: m.group(1) + porcelain(verbs, spellings)
                       + m.group(2), cover)
-    bg = subprocess.run([tool, "badge"], capture_output=True, text=True)
-    held = re.search(r"badge: \d+ claims · holds", bg.stdout or "")
-    if not held:
-        sys.exit("gate badge did not answer with a holding badge: "
-                 + "the renderer lost its subject")
-    cover2 = re.sub(r"badge: \d+ claims · holds", held.group(0), cover2)
+    bg = subprocess.run([tool, "badge", "--json"], capture_output=True, text=True)
+    try:
+        badge = json.loads(bg.stdout)
+    except (ValueError, TypeError):
+        sys.exit("gate badge did not return its declared answer")
+    outcome = badge.get("verdict")
+    expected_code = {"holds": 0, "refused": 1, "partial": 2, "unsupported": 2}.get(outcome)
+    if expected_code is None or bg.returncode != expected_code or not badge.get("text"):
+        sys.exit("gate badge did not answer in its declared outcome")
+    if outcome in ("partial", "unsupported") and not badge.get("unsupported"):
+        sys.exit("gate badge lost its addressed remainder")
+    cover2 = re.sub(r"^badge: [^\n]+$", "badge: " + badge["text"], cover2, flags=re.M)
     act = re.search(r"default: '(v\d+\.\d+\.\d+)'",
                     open("action.yml", encoding="utf-8").read())
     if not act:
