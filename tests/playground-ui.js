@@ -20,6 +20,20 @@ class Element {
     setAttribute(k,v){this.attrs[k]=v;}
 }
 (async()=>{
+    // A new door without a per-file view still applies the bench's default.
+    // The selected button and the visible surface must answer the same word.
+    const initial=ui.match(/setMode\(opensAs\[first\] \|\| mode\);/);assert(initial,'apply even the default view');
+    for(const requested of [null,'bare','table','full']){
+        const ids=Object.fromEntries(['editor-host','bare','table-host','canvas-host'].map(n=>[n,{style:{}}]));
+        const selected={};
+        const ctx=vm.createContext({mode:'bare',drawingSnapshot:null,lastParsed:null,opensAs:requested?{first:requested}:{},first:'first',
+            document:{getElementById:n=>ids[n],querySelectorAll:()=>['bare','table','full','drawing'].map(m=>({dataset:{m},classList:{toggle:(_,on)=>selected[m]=on}}))},
+            syncProjection(){},buildTables(){},drawCanvases(){},cm:{refresh(){}}});
+        vm.runInContext(implementation('setMode'),ctx);vm.runInContext(initial[0],ctx);
+        const expected=requested||'bare';assert(selected[expected]);
+        assert.equal(ids['editor-host'].style.display,expected==='full'?'':'none');
+        for(const [id,m] of [['bare','bare'],['table-host','table'],['canvas-host','drawing']])assert.equal(ids[id].style.display,expected===m?'block':'none');
+    }
     const basics=open(root,"basics",storage), snap=snapshots("basics"), f="Dictionary/Basics.swift", original=snap["/world?f="+f];
     const ask=(text,file=f)=>basics.fetch("/verdict?f="+file,{method:"POST",body:text}).then(r=>r.json());
     const clean=await ask(original);assert.equal(clean.refusals.length,0,JSON.stringify(clean));

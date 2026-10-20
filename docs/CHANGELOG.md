@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.5
+
+- Fix stored script execution in the bench shipped in 0.2.3 and 0.2.4: world text, court responses, filenames, notes and literals are rendered as text, attribute values are escaped, and both the live bench and published page authorize only their exact inline programs with CSP hashes and block inline event handlers.
+
 ## 0.2.4
 
 - The linux binaries start on today's runners. 0.2.3's linux binary took

@@ -9,7 +9,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"><meta charset="utf-8"><title>gate · world bench</title>
 <!-- zero egress, enforced by the browser as well as by the code: the bench may
      talk to its own loopback server and to nothing else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-5GzCvayhfKIAxAwizJRqS3a05vGAKRgdgfqpOuJGoBs=' 'sha256-9+5MhCbX9kGB+EhYiYEzOXNR9a0ey3lPv6UPSYPn6TY='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-5GzCvayhfKIAxAwizJRqS3a05vGAKRgdgfqpOuJGoBs=' 'sha256-pwgI9nfhAWDq7Hy6GY54osL+nqok+un7YyKSyG/Dphg='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
 <link rel="stylesheet" href="/codemirror.css">
 <script>
 // The theme is a declaration, not a toggle — and the declaration lives in the
@@ -169,7 +169,8 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 .seg button.on{background:var(--paper);color:var(--ink);box-shadow:0 1px 2px color-mix(in srgb,var(--shade) 12%,transparent)}
 .seg button:disabled{opacity:.3;cursor:default}
 .seg button:disabled:hover{color:var(--muted)}
-#nav-seg button{padding:calc(var(--u)*2) calc(var(--u)*5);font:var(--brand);line-height:1}
+/* History is a gesture, like the view buttons, not a heading or a brand. */
+#nav-seg button{padding:calc(var(--u)*2) calc(var(--u)*5);font:var(--control);line-height:1}
 #gitstate{font-family:var(--mono);font-size:var(--caption-size);margin-left:auto;display:flex;align-items:center;gap:calc(var(--u)*3)}
 #gitstate .g{width:7px;height:7px;border-radius:50%;background:var(--muted)}
 #gitstate.modified{color:var(--law)}
@@ -335,7 +336,10 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
    header to see. */
 #table-host{position:absolute;inset:0;overflow:auto;background:var(--paper);padding:0 calc(var(--u)*8) calc(var(--u)*40);font-size:var(--fact-size);display:none}
 #canvas-host{position:absolute;inset:0;overflow:auto;background:var(--paper);padding:calc(var(--u)*6) calc(var(--u)*8) calc(var(--u)*40);display:none}
-#canvas-host svg{display:block;max-width:100%;height:auto;margin:0 auto calc(var(--u)*6)}
+/* A world's unit stays a screen unit. Fitting the whole canvas to a narrow
+   pane made a declared 13-unit letter five pixels high. Read its stated size
+   and scroll the existing surface; this is no adaptive layout proof. */
+#canvas-host svg{display:block;max-width:none;height:auto;margin:0 auto calc(var(--u)*6)}
 #canvas-host .caption{margin:calc(var(--u)*3) 0}
 #table-host h3{font-size:var(--caption-size);text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:calc(var(--u)*10) 0 calc(var(--u)*3);font-weight:600}
 #table-host h3:first-child{margin-top:calc(var(--u)*8)}
@@ -433,14 +437,28 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 .pending-head{padding:calc(var(--u)*4) calc(var(--u)*4) calc(var(--u)*2);text-transform:uppercase;letter-spacing:.05em}
 .pending{display:flex;gap:calc(var(--u)*5);padding:calc(var(--u)*3) calc(var(--u)*5);border-radius:5px;cursor:pointer;align-items:baseline}
 .pending:hover{background:var(--mist)}
-/* Published benches keep their note in the main column's own flow. */
-#published-note{overflow-wrap:anywhere;flex:none;border-top:0.5px solid var(--line);padding:var(--near) var(--wide);font:var(--caption);color:var(--muted);background:var(--paper)}
+/* The copy's instructions stay available, without charging every reading
+   their full height. This is the same disclosure as the judge's inputs. */
+#published-note{overflow-wrap:anywhere;flex:none;border-top:0.5px solid var(--line);padding:var(--near) var(--wide);font:var(--caption);color:var(--muted);background:var(--paper);display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--near);max-height:34vh;overflow:auto}
+#published-note details[open]{flex-basis:100%}
+#published-note summary{cursor:pointer}
 #published-note a{color:var(--action)}
 #published-note code{font:var(--fact)}
 .file[href]{color:var(--ink);text-decoration:none}
 #world-inputs{padding:0 var(--wide)}
 .source-input{font:var(--captionloose);margin:var(--near) 0;overflow-wrap:anywhere}
-@media(max-width:40rem){#rail{flex-basis:35%;}#next{max-width:100%}}
+/* The address and its answer remain complete and clickable. In a narrow
+   panel they are consecutive rows, rather than two unshrinkable columns.
+   The bar keeps its words too: history/state, then views/help. */
+@media(max-width:40rem){
+ #rail{flex-basis:35%;}
+ #next{max-width:100%}
+ #bar{gap:var(--near)}
+ #view-seg,#keys-btn{order:1}
+ #view-seg button,#nav-seg button{padding:var(--snug) var(--near)}
+ .refusal,.pending{flex-direction:column;align-items:stretch;gap:var(--near);overflow-wrap:anywhere}
+ .refusal code,.pending code{white-space:normal}
+}
 </style>
 <div id="rail"><div id="brand"><b>gate</b><span id="brandsep" class="caption"> · </span><span id="brandline" class="caption"></span><span id="brandstatus" class="caption"></span></div>
   <h3 class="fold caption" data-fold="files"><i></i>mine</h3><div id="filelist" class="foldable"></div>
@@ -486,7 +504,7 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 // is new, the server is the process that was already running. Nothing said so,
 // and a page talking to a server that has never heard of half its answers fails
 // quietly — the one failure this bench must never have.
-const BENCH_FOR = "0.2.4";
+const BENCH_FOR = "0.2.5";
 // A BAR THAT EXPIRES MAY ANSWER AN ACTION; IT MAY NEVER REPORT A STATE. You
 // asked for the save, so a word about the save can go and be forgotten — but a
 // state you did not cause, and that is still true a minute later, must stay
@@ -3635,7 +3653,10 @@ async function drawCanvases() {
         }
         if (mode !== "drawing") return;
         const drawn = renderAll(read.declarations, read.order, read.literals, read.topAliases);
-        host.innerHTML = drawn.canvases.map(c => c.svg).join("")
+        // The reader states the canvas dimensions in its viewBox. Give those
+        // same dimensions to the host without changing the registered SVG.
+        host.innerHTML = drawn.canvases.map(c => c.svg.replace(/viewBox="0 0 ([\d.]+) ([\d.]+)"/,
+            '$& width="$1" height="$2"')).join("")
             + '<div class="caption">Keys change an alias in the open file. Literal typing is not available here.</div>'
             + '<div id="drawing-feedback" class="caption" role="status" aria-live="polite"></div>';
         drawingSnapshot = world;
@@ -4141,7 +4162,9 @@ buildRail();
         const askedLine = asked.match(/:(\d+)$/);
         const askedFile = askedLine ? asked.slice(0, askedLine.index) : asked;
         const first = files.includes(askedFile) ? askedFile : (files[0] || "gate.swift");
-        if (opensAs[first]) setMode(opensAs[first]);
+        // A default is a real view too. Merely setting `mode = bare` left
+        // CodeMirror visible on worlds that stated no per-file opening view.
+        setMode(opensAs[first] || mode);
         await loadFile(first);
         if (["bare", "table", "full"].includes(askedView)) setMode(askedView);
         if (first === askedFile && askedLine) doorLine = +askedLine[1];

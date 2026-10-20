@@ -5,6 +5,7 @@ import hashlib
 from html.parser import HTMLParser
 import json
 import os
+import runpy
 from pathlib import Path
 import shutil
 import subprocess
@@ -145,6 +146,8 @@ def run():
         from bench_styles import audit_site
         ladder = (site / 'ladder.css').read_text()
         assert audit_site(site, ladder)['pages'] == 14
+        layout_law = runpy.run_path(str(HERE / 'tests/bench-layout.py'))
+        layout_law['run'](site)
         # The same law must refuse a second palette on EACH finished page.
         # Font and gap controls exercise the CSS branch independently.
         def refused(path, addition):

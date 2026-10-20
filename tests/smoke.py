@@ -3321,6 +3321,9 @@ async function main() {
     assert.equal(b.button.hidden, false); assert.equal(b.host.innerHTML, '');
     assert.equal(b.readings[0], atom + '\n' + pages);
     b.context.setMode('drawing'); await new Promise(resolve => setImmediate(resolve));
+    const sized = [...b.host.innerHTML.matchAll(/viewBox="0 0 ([\d.]+) ([\d.]+)" width="([\d.]+)" height="([\d.]+)"/g)];
+    assert(sized.length, 'a drawn world keeps its stated screen dimensions');
+    assert(sized.every(m => m[1] === m[3] && m[2] === m[4]));
     const expected = press(atom + '\n' + pages, 'DropBeta'); assert(expected.applied);
     const expectedBuffer = expected.text.split('\n').slice(0, atom.split('\n').length).join('\n');
     b.click(b.key('DropBeta'));

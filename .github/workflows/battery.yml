@@ -403,7 +403,7 @@ jobs:
         continue-on-error: true
         uses: ./
         with:
-          version: v0.2.4
+          version: v0.2.5
           tree: .github/action-fixtures/dead
       - name: and that refusal is this job's negative control
         id: control
@@ -415,7 +415,7 @@ jobs:
         id: clean
         uses: ./
         with:
-          version: v0.2.4
+          version: v0.2.5
           tree: .github/action-fixtures/clean
       # and the cobbler wears the shoes: the same one step, over this very
       # repository, on every push
@@ -423,7 +423,7 @@ jobs:
         id: home
         uses: ./
         with:
-          version: v0.2.4
+          version: v0.2.5
           tree: .
       # ── THE MOUTH THIS JOB DID NOT HAVE. The morning this road went red,
       # nothing posted a word and the finding came from asking the API by

@@ -591,11 +591,12 @@ function judgeWhereTexts(text, extraTexts) {
                 .replace("__WORLDS__", script_json(files.get("worlds") or []))
                 .replace("__LAYOUT__", script_json(layout))
                 .replace("__ALL__", script_json(list(dict.fromkeys(everyone)))))
-    note = ('<div id="published-note">judged in your browser as you type · '
-            'saved on green, in this browser · <a href="#" '
-            'id="reset-demo">reset the demo</a> · '
+    note = ('<div id="published-note"><details><summary>browser copy</summary>'
+            '<div>judged in your browser as you type · '
+            'saved on green, in this browser · '
             'the tool: <code>git clone '
-            'https://github.com/DanielSwift1992/gate</code></div>')
+            'https://github.com/DanielSwift1992/gate</code></div></details>'
+            '<a href="#" id="reset-demo">reset the demo</a></div>')
 
     if context:
         note = note.replace('saved on green, in this browser', 'draft and verdict saved in this browser, including refusals')
