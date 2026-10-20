@@ -104,11 +104,22 @@ with tempfile.TemporaryDirectory(prefix="gate-win-") as tmp:
     S.append(("the version names the court this binary was built with",
               "judge built from verification-is-identification" in v.stdout))
 
-    # the certificate court through the port: a shelf page holds
+    # the certificate court through the port: the shelf's page of certificates
+    # holds. The spacing page's laws are numbers, so the count court holds
+    # them, on the corpus's Primitive at the judge's pin, which the vein's
+    # build lays beside the court
     w = sh("node", os.path.join(HERE, "bin", "judge-cli.js"), "judge", "where",
-           os.path.join(HERE, "stdlib", "bench-metrics.swift"))
-    S.append(("the certificate court sits here: the spacing page holds",
+           os.path.join(HERE, "stdlib", "courts.swift"))
+    S.append(("the certificate court sits here: the courts page holds",
               w.returncode == 0 and "THE WHERE holds" in w.stdout))
+    _pin = open(os.path.join(HERE, "bin", "gate-judge.from"), encoding="utf-8").read().strip()
+    c = sh("node", os.path.join(HERE, "bin", "judge-cli.js"), "judge", "count",
+           os.path.join(HERE, "stdlib", "bench-metrics.swift"),
+           os.path.join(HERE, "bin", ".court", _pin, "premise", "Primitive.swift"),
+           "--predicate", "StepsQuestion", "--encoding", "UnaryArithmeticEncoding",
+           "--sigma", "BenchSpacing")
+    S.append(("and the count court sits here: the spacing page holds its readings",
+              c.returncode == 0 and "COUNT holds" in c.stdout))
 
     # the demo world: the first refusal a person sees, with its address
     demo = os.path.join(tmp, "demo")
