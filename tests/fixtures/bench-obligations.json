@@ -396,237 +396,251 @@
         },
         {
           "id": "InkGrey_lit",
-          "route": "unsupported",
+          "route": "count",
           "original_head": "GreyFloor",
           "targets": [
-            "InkGrey_lit"
-          ],
-          "reason": "count v0.1 normalization budget: D65 products are not checked"
+            "InkGrey_lit.R1",
+            "InkGrey_lit.R2",
+            "InkGrey_lit.R3"
+          ]
         },
         {
           "id": "PaperGrey_lit",
-          "route": "unsupported",
+          "route": "count",
           "original_head": "Grey",
           "targets": [
-            "PaperGrey_lit"
-          ],
-          "reason": "count v0.1 normalization budget: D65 products are not checked"
+            "PaperGrey_lit.R1",
+            "PaperGrey_lit.R2",
+            "PaperGrey_lit.R3",
+            "PaperGrey_lit.R4"
+          ]
         },
         {
           "id": "MistGrey_lit",
-          "route": "unsupported",
+          "route": "count",
           "original_head": "Grey",
           "targets": [
-            "MistGrey_lit"
-          ],
-          "reason": "count v0.1 normalization budget: D65 products are not checked"
+            "MistGrey_lit.R1",
+            "MistGrey_lit.R2",
+            "MistGrey_lit.R3",
+            "MistGrey_lit.R4"
+          ]
         },
         {
           "id": "LineGrey_lit",
-          "route": "unsupported",
+          "route": "count",
           "original_head": "Grey",
           "targets": [
-            "LineGrey_lit"
-          ],
-          "reason": "count v0.1 normalization budget: D65 products are not checked"
+            "LineGrey_lit.R1",
+            "LineGrey_lit.R2",
+            "LineGrey_lit.R3",
+            "LineGrey_lit.R4"
+          ]
         },
         {
           "id": "MutedGrey_lit",
-          "route": "unsupported",
+          "route": "count",
           "original_head": "Grey",
           "targets": [
-            "MutedGrey_lit"
-          ],
-          "reason": "count v0.1 normalization budget: D65 products are not checked"
+            "MutedGrey_lit.R1",
+            "MutedGrey_lit.R2",
+            "MutedGrey_lit.R3",
+            "MutedGrey_lit.R4"
+          ]
         },
         {
           "id": "SeamGrey_lit",
-          "route": "unsupported",
+          "route": "count",
           "original_head": "Grey",
           "targets": [
-            "SeamGrey_lit"
-          ],
-          "reason": "count v0.1 normalization budget: D65 products are not checked"
+            "SeamGrey_lit.R1",
+            "SeamGrey_lit.R2",
+            "SeamGrey_lit.R3",
+            "SeamGrey_lit.R4"
+          ]
         },
         {
           "id": "SelectGrey_lit",
-          "route": "unsupported",
+          "route": "count",
           "original_head": "Grey",
           "targets": [
-            "SelectGrey_lit"
-          ],
-          "reason": "count v0.1 normalization budget: D65 products are not checked"
+            "SelectGrey_lit.R1",
+            "SelectGrey_lit.R2",
+            "SelectGrey_lit.R3",
+            "SelectGrey_lit.R4"
+          ]
         },
         {
           "id": "InkGrey_dim",
-          "route": "unsupported",
+          "route": "count",
           "original_head": "Grey",
           "targets": [
-            "InkGrey_dim"
-          ],
-          "reason": "count v0.1 normalization budget: D65 products are not checked"
+            "InkGrey_dim.R1",
+            "InkGrey_dim.R2",
+            "InkGrey_dim.R3",
+            "InkGrey_dim.R4"
+          ]
         },
         {
           "id": "PaperGrey_dim",
-          "route": "unsupported",
+          "route": "count",
           "original_head": "GreyFloor",
           "targets": [
-            "PaperGrey_dim"
-          ],
-          "reason": "count v0.1 normalization budget: D65 products are not checked"
+            "PaperGrey_dim.R1",
+            "PaperGrey_dim.R2",
+            "PaperGrey_dim.R3"
+          ]
         },
         {
           "id": "MistGrey_dim",
-          "route": "unsupported",
+          "route": "count",
           "original_head": "Grey",
           "targets": [
-            "MistGrey_dim"
-          ],
-          "reason": "count v0.1 normalization budget: D65 products are not checked"
+            "MistGrey_dim.R1",
+            "MistGrey_dim.R2",
+            "MistGrey_dim.R3",
+            "MistGrey_dim.R4"
+          ]
         },
         {
           "id": "LineGrey_dim",
-          "route": "unsupported",
+          "route": "count",
           "original_head": "Grey",
           "targets": [
-            "LineGrey_dim"
-          ],
-          "reason": "count v0.1 normalization budget: D65 products are not checked"
+            "LineGrey_dim.R1",
+            "LineGrey_dim.R2",
+            "LineGrey_dim.R3",
+            "LineGrey_dim.R4"
+          ]
         },
         {
           "id": "MutedGrey_dim",
-          "route": "unsupported",
+          "route": "count",
           "original_head": "Grey",
           "targets": [
-            "MutedGrey_dim"
-          ],
-          "reason": "count v0.1 normalization budget: D65 products are not checked"
+            "MutedGrey_dim.R1",
+            "MutedGrey_dim.R2",
+            "MutedGrey_dim.R3",
+            "MutedGrey_dim.R4"
+          ]
         },
         {
           "id": "SeamGrey_dim",
-          "route": "unsupported",
+          "route": "count",
           "original_head": "Grey",
           "targets": [
-            "SeamGrey_dim"
-          ],
-          "reason": "count v0.1 normalization budget: D65 products are not checked"
+            "SeamGrey_dim.R1",
+            "SeamGrey_dim.R2",
+            "SeamGrey_dim.R3",
+            "SeamGrey_dim.R4"
+          ]
         },
         {
           "id": "SelectGrey_dim",
-          "route": "unsupported",
+          "route": "count",
           "original_head": "Grey",
           "targets": [
-            "SelectGrey_dim"
-          ],
-          "reason": "count v0.1 normalization budget: D65 products are not checked"
+            "SelectGrey_dim.R1",
+            "SelectGrey_dim.R2",
+            "SelectGrey_dim.R3",
+            "SelectGrey_dim.R4"
+          ]
         },
         {
           "id": "OkChroma_lit",
-          "route": "unsupported",
+          "route": "count",
           "original_head": "TowardWarm",
           "targets": [
-            "OkChroma_lit"
-          ],
-          "reason": "count v0.1 normalization budget: D65 products are not checked"
+            "OkChroma_lit.R1"
+          ]
         },
         {
           "id": "BadChroma_lit",
-          "route": "unsupported",
+          "route": "count",
           "original_head": "TowardWarm",
           "targets": [
-            "BadChroma_lit"
-          ],
-          "reason": "count v0.1 normalization budget: D65 products are not checked"
+            "BadChroma_lit.R1"
+          ]
         },
         {
           "id": "ActionChroma_lit",
-          "route": "unsupported",
+          "route": "count",
           "original_head": "TowardBlue",
           "targets": [
-            "ActionChroma_lit"
-          ],
-          "reason": "count v0.1 normalization budget: D65 products are not checked"
+            "ActionChroma_lit.R1"
+          ]
         },
         {
           "id": "LawChroma_lit",
-          "route": "unsupported",
+          "route": "count",
           "original_head": "TowardWarm",
           "targets": [
-            "LawChroma_lit"
-          ],
-          "reason": "count v0.1 normalization budget: D65 products are not checked"
+            "LawChroma_lit.R1"
+          ]
         },
         {
           "id": "LocalTypeChroma_lit",
-          "route": "unsupported",
+          "route": "count",
           "original_head": "TowardBlue",
           "targets": [
-            "LocalTypeChroma_lit"
-          ],
-          "reason": "count v0.1 normalization budget: D65 products are not checked"
+            "LocalTypeChroma_lit.R1"
+          ]
         },
         {
           "id": "KnownNameChroma_lit",
-          "route": "unsupported",
+          "route": "count",
           "original_head": "TowardBlue",
           "targets": [
-            "KnownNameChroma_lit"
-          ],
-          "reason": "count v0.1 normalization budget: D65 products are not checked"
+            "KnownNameChroma_lit.R1"
+          ]
         },
         {
           "id": "OkChroma_dim",
-          "route": "unsupported",
+          "route": "count",
           "original_head": "TowardWarm",
           "targets": [
-            "OkChroma_dim"
-          ],
-          "reason": "count v0.1 normalization budget: D65 products are not checked"
+            "OkChroma_dim.R1"
+          ]
         },
         {
           "id": "BadChroma_dim",
-          "route": "unsupported",
+          "route": "count",
           "original_head": "TowardWarm",
           "targets": [
-            "BadChroma_dim"
-          ],
-          "reason": "count v0.1 normalization budget: D65 products are not checked"
+            "BadChroma_dim.R1"
+          ]
         },
         {
           "id": "ActionChroma_dim",
-          "route": "unsupported",
+          "route": "count",
           "original_head": "TowardBlue",
           "targets": [
-            "ActionChroma_dim"
-          ],
-          "reason": "count v0.1 normalization budget: D65 products are not checked"
+            "ActionChroma_dim.R1"
+          ]
         },
         {
           "id": "LawChroma_dim",
-          "route": "unsupported",
+          "route": "count",
           "original_head": "TowardWarm",
           "targets": [
-            "LawChroma_dim"
-          ],
-          "reason": "count v0.1 normalization budget: D65 products are not checked"
+            "LawChroma_dim.R1"
+          ]
         },
         {
           "id": "LocalTypeChroma_dim",
-          "route": "unsupported",
+          "route": "count",
           "original_head": "TowardBlue",
           "targets": [
-            "LocalTypeChroma_dim"
-          ],
-          "reason": "count v0.1 normalization budget: D65 products are not checked"
+            "LocalTypeChroma_dim.R1"
+          ]
         },
         {
           "id": "KnownNameChroma_dim",
-          "route": "unsupported",
+          "route": "count",
           "original_head": "TowardBlue",
           "targets": [
-            "KnownNameChroma_dim"
-          ],
-          "reason": "count v0.1 normalization budget: D65 products are not checked"
+            "KnownNameChroma_dim.R1"
+          ]
         },
         {
           "id": "VerdictPoles_lit",

@@ -2343,7 +2343,7 @@ func formsGuards(_ w: WorldState, _ size: inout [String: Int],
                 // finish names only where it stopped, so it lands on the file.
                 // Over a shelf page the line to fix is the operator's: the first
                 // restated name the reading reaches through the page's aliases
-                let cert = claim.hasPrefix("COUNT:") ? matchAt(claim, "COUNT: '(\\w+)'").map { $0[1] } : nil
+                let cert = claim.hasPrefix("COUNT:") ? matchAt(claim, "COUNT: '(\\w+)(?:\\.\\w+)*'").map { $0[1] } : nil
                 let spot = cert.flatMap { mine.isEmpty ? nil : reachedRestatement($0, text, mine) }
                     ?? cert.flatMap { at[$0] } ?? fallback
                 bad.append((spot, claim))

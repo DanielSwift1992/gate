@@ -387,7 +387,7 @@ web/codemirror.*  the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
 docs/           DETAILS.md, SECURITY.md, CHANGELOG.md, NOTICE.md, and
                 the cover's picture with its provenance
-tests/smoke.py   the battery: 611 checks this repository holds itself
+tests/smoke.py   the battery: 706 checks this repository holds itself
                  to, end-to-end runs through judge parity through
                  documentation contracts; the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts
@@ -397,7 +397,7 @@ tests/windows.py the Windows measure: the reviewer's road as asserts
 
 ```
 $ gate badge
-badge: partial · 26 unsupported
+badge: 178 claims · holds
 ```
 
 The badge is this repository's own, and the judge re-counts it on every
@@ -417,11 +417,7 @@ bin/build-cli.sh, and the bench is a page. `gate` is a shim that finds that
 binary, so a clone that has not built one says so in a sentence with the
 two ways out. The judge is a native binary built for one platform: `bin/gate-judge`
 here is `Mach-O arm64`, and on any other machine it does not execute. On
-such a machine node runs the courts instead: `bin/judge-cli.js` runs the
-plain court, ported line for line, and hands `judge where` and `judge count`
-to `bin/judge-wasm.js`, the contract's Rust sample built for wasm32 at the pin
-`bin/court-wasm.from` records, a second implementation the suite holds 13/13,
-and the battery holds both to the binary's own lines.
+such a machine node runs the courts instead: `bin/judge-cli.js` runs the plain court, ported line for line, and hands `judge where` and `judge count` to `bin/judge-wasm.js`, the contract's Rust sample built for wasm32 at the pin `bin/court-wasm.from` records. The second implementation is checked against both contract suites, v0.1 13/13 and v0.2 12/12, and the battery holds both to the binary's own lines.
 `gate --version` says which court ran on your machine. On macOS, CI runs
 the full battery on every push. On Windows, CI builds this same one file
 into that platform's own binary on every push, asks it what it carries, and

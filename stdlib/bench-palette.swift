@@ -14,10 +14,10 @@
 // tell apart stand apart. Lower any of it and the reading's answer is wrong:
 // the count court names the claim, in numbers.
 //
-// Stated and not judged: a neutral is neutral, its X and Z held within two
-// percent of the D65 grey line, and every semantic atom stands outside that
-// band, on the side it leans. Those laws multiply by the D65 coefficients and
-// outgrow the count court's budget; the section that states them says so.
+// Judged by the same count question: a neutral's X and Z lie within the
+// declared D65 band, and every semantic atom lies outside that band on the
+// side it leans. Each side is a separate reading, carried by its original
+// claim, with the coefficient presented as a sum of doublings.
 //
 // The floor, named: at a tenth of a percent of light one step is the whole
 // resolution, and 0.95 of one step is not a number. Those nodes state X == Y
@@ -93,53 +93,38 @@ public typealias Same<A: Structure, B: Structure> = Luminance<A, B>
 // the slack declared, which is how each pole of the verdict says its side
 public typealias Leans<More: Structure, Less: Structure, Slack: Structure> = Luminance<More, Plus<Less, Plus<Unit, Slack>>>
 
-// ── STATED AND NOT JUDGED, AND SAID SO: the neutral and the hue laws. Each
-// multiplies a level near a thousand by a D65 coefficient from 23 to 28, and
-// the count court of question vi.count.unit-never-plus/1 spells a sum of
-// doublings out in full: past about ten thousand on a side it stops at its
-// normalization budget and infers nothing (PaperGrey_lit asks 52,920 in one
-// reading). Some of these would fit and some would not, and a law judged on
-// one theme and not the other would be a split by budget, not by meaning, so
-// the whole class waits for a count court that counts a named definition once.
-// The laws, as they stood under the court that read Times as a product:
-//   Grey<X, Y, Z, Slo, Shi, Xlo, Xhi>:  25·Z == 27·Y + Slo,  28·Y == 25·Z + Shi,
-//                                       25·X == 23·Y + Xlo,  24·Y == 25·X + Xhi
-//   GreyFloor<X, Y, Z, Slo, Shi>:       X == Y,  25·Z == 27·Y + Slo,  28·Y == 25·Z + Shi
-//   TowardBlue<Y, Z, Margin>:           25·Z == 28·Y + 1 + Margin
-//   TowardWarm<Y, Z, Margin>:           27·Y == 25·Z + 1 + Margin
-// Each claim below still names its numbers, and the page paints them, but no
-// court here says they hold ──
-// Addressed remainder of the original page; these IDs are not a green subset.
-// gate-unsupported: InkGrey_lit | count v0.1 normalization budget: D65 products are not checked
-// gate-unsupported: PaperGrey_lit | count v0.1 normalization budget: D65 products are not checked
-// gate-unsupported: MistGrey_lit | count v0.1 normalization budget: D65 products are not checked
-// gate-unsupported: LineGrey_lit | count v0.1 normalization budget: D65 products are not checked
-// gate-unsupported: MutedGrey_lit | count v0.1 normalization budget: D65 products are not checked
-// gate-unsupported: SeamGrey_lit | count v0.1 normalization budget: D65 products are not checked
-// gate-unsupported: SelectGrey_lit | count v0.1 normalization budget: D65 products are not checked
-// gate-unsupported: InkGrey_dim | count v0.1 normalization budget: D65 products are not checked
-// gate-unsupported: PaperGrey_dim | count v0.1 normalization budget: D65 products are not checked
-// gate-unsupported: MistGrey_dim | count v0.1 normalization budget: D65 products are not checked
-// gate-unsupported: LineGrey_dim | count v0.1 normalization budget: D65 products are not checked
-// gate-unsupported: MutedGrey_dim | count v0.1 normalization budget: D65 products are not checked
-// gate-unsupported: SeamGrey_dim | count v0.1 normalization budget: D65 products are not checked
-// gate-unsupported: SelectGrey_dim | count v0.1 normalization budget: D65 products are not checked
-// gate-unsupported: OkChroma_lit | count v0.1 normalization budget: D65 products are not checked
-// gate-unsupported: BadChroma_lit | count v0.1 normalization budget: D65 products are not checked
-// gate-unsupported: ActionChroma_lit | count v0.1 normalization budget: D65 products are not checked
-// gate-unsupported: LawChroma_lit | count v0.1 normalization budget: D65 products are not checked
-// gate-unsupported: LocalTypeChroma_lit | count v0.1 normalization budget: D65 products are not checked
-// gate-unsupported: KnownNameChroma_lit | count v0.1 normalization budget: D65 products are not checked
-// gate-unsupported: OkChroma_dim | count v0.1 normalization budget: D65 products are not checked
-// gate-unsupported: BadChroma_dim | count v0.1 normalization budget: D65 products are not checked
-// gate-unsupported: ActionChroma_dim | count v0.1 normalization budget: D65 products are not checked
-// gate-unsupported: LawChroma_dim | count v0.1 normalization budget: D65 products are not checked
-// gate-unsupported: LocalTypeChroma_dim | count v0.1 normalization budget: D65 products are not checked
-// gate-unsupported: KnownNameChroma_dim | count v0.1 normalization budget: D65 products are not checked
-public enum Grey<X, Y, Z, Slo, Shi, Xlo, Xhi>: Close {}
-public enum GreyFloor<X, Y, Z, Slo, Shi>: Close {}
-public enum TowardBlue<Y, Z, Margin>: Close {}
-public enum TowardWarm<Y, Z, Margin>: Close {}
+// ── AND A NEUTRAL ANSWERS FOR EVERY SIDE OF ITS BAND. The count court now
+// shares a named definition and independently replays each use. The D65 laws
+// below can therefore ask their whole question, with the original numbers:
+//   Grey:      25*Z = 27*Y + Slo, 28*Y = 25*Z + Shi,
+//              25*X = 23*Y + Xlo, 24*Y = 25*X + Xhi
+//   GreyFloor: X = Y, 25*Z = 27*Y + Slo, 28*Y = 25*Z + Shi
+//   TowardBlue: 25*Z = 28*Y + 1 + Margin
+//   TowardWarm: 27*Y = 25*Z + 1 + Margin
+// Each field is a reading under the original claim's name. The constants
+// are sums of doublings presented here, not a meaning granted to Times.
+public typealias Fold23<X: Structure> = Plus<X, Plus<Twice<X>, Plus<Twice<Twice<X>>, Twice<Twice<Twice<Twice<X>>>>>>>
+public typealias Fold24<X: Structure> = Plus<Twice<Twice<Twice<X>>>, Twice<Twice<Twice<Twice<X>>>>>
+public typealias Fold25<X: Structure> = Plus<X, Plus<Twice<Twice<Twice<X>>>, Twice<Twice<Twice<Twice<X>>>>>>
+public typealias Fold27<X: Structure> = Plus<X, Plus<Twice<X>, Plus<Twice<Twice<Twice<X>>>, Twice<Twice<Twice<Twice<X>>>>>>>
+public typealias Fold28<X: Structure> = Plus<Twice<Twice<X>>, Plus<Twice<Twice<Twice<X>>>, Twice<Twice<Twice<Twice<X>>>>>>
+public enum Grey<X: Structure, Y: Structure, Z: Structure, Slo: Structure, Shi: Structure, Xlo: Structure, Xhi: Structure>: Close {
+    public typealias R1 = Luminance<Fold25<Z>, Plus<Fold27<Y>, Slo>>
+    public typealias R2 = Luminance<Fold28<Y>, Plus<Fold25<Z>, Shi>>
+    public typealias R3 = Luminance<Fold25<X>, Plus<Fold23<Y>, Xlo>>
+    public typealias R4 = Luminance<Fold24<Y>, Plus<Fold25<X>, Xhi>>
+}
+public enum GreyFloor<X: Structure, Y: Structure, Z: Structure, Slo: Structure, Shi: Structure>: Close {
+    public typealias R1 = Luminance<X, Y>
+    public typealias R2 = Luminance<Fold25<Z>, Plus<Fold27<Y>, Slo>>
+    public typealias R3 = Luminance<Fold28<Y>, Plus<Fold25<Z>, Shi>>
+}
+public enum TowardBlue<Y: Structure, Z: Structure, Margin: Structure>: Close {
+    public typealias R1 = Luminance<Fold25<Z>, Plus<Fold28<Y>, Plus<Unit, Margin>>>
+}
+public enum TowardWarm<Y: Structure, Z: Structure, Margin: Structure>: Close {
+    public typealias R1 = Luminance<Fold27<Y>, Plus<Fold25<Z>, Plus<Unit, Margin>>>
+}
 // ── AND TWO CHANNELS THAT MUST BE TOLD APART STAND APART. Every hue here was
 // certified for its side (toward blue, toward warm) and for its lightness,
 // and nothing ever certified the DISTANCE between two of them. So a channel

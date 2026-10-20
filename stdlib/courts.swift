@@ -61,7 +61,7 @@ extension PortPlain { public static var typeName: String { "bin/judge.js" } }
 // the fourth carrier is the contract's Rust sample, a second implementation
 // built for wasm32 at the pin bin/court-wasm.from records and carried by
 // bin/judge-wasm.js for node and by bin/court-wasm/web for the page. The
-// premise that it agrees with the binary is asked of the suite (13/13) and
+// premise that it agrees with the binary is asked of the suites (v0.1 13/13, v0.2 12/12) and
 // of the battery's page-for-page parity, not assumed (v=i §5.4).
 public enum WasmCourt: CourtCarrier {}
 extension WasmCourt { public static var typeName: String { "bin/judge-wasm.js" } }

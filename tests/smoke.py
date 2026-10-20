@@ -18,11 +18,11 @@ DEMO = os.path.join(HERE, "demo")
 STDLIB = os.path.join(HERE, "stdlib")
 
 
-def palette_partial(answer):
+def palette_holds(answer):
     ledger = json.load(open(os.path.join(HERE, "tests", "fixtures", "bench-obligations.json")))
     expected = {x["id"] for x in ledger["pages"]["bench-palette"]["claims"] if x["route"] == "unsupported"}
     rows = answer.get("unsupported", [])
-    return (answer.get("verdict") == "partial" and not answer.get("refusals")
+    return (not expected and answer.get("verdict") == "holds" and not answer.get("refusals")
             and len(rows) == len(expected) and {x.get("id") for x in rows} == expected
             and all(x.get("address") and x.get("reason") for x in rows))
 
@@ -558,8 +558,8 @@ def main():
                           env={**_pin, "TZ": "Pacific/Chatham", "LC_ALL": "en_US.UTF-8",
                                "COLUMNS": "213", "GATE_BLIND_PROBE": "noise"})
     S.append(("the middle is blind to the world: one verdict under two surroundings",
-              _one.returncode == _two.returncode == 2
-              and _one.stdout.startswith("status: partial")
+              _one.returncode == _two.returncode == 0
+              and _one.stdout.startswith("status: holds")
               and _one.stdout == _two.stdout))
 
     # ── AND THE JUDGE'S OWN LINKAGE OPENS NO SOCKET. DETAILS hands a reviewer
@@ -828,7 +828,7 @@ def main():
     # question is the defect this tool is about.
     _bg = run("badge", cwd=HERE)[1]
     S.append(("the badge counts the claims status counts, on a world of forms too",
-              palette_partial(_bg)
+              palette_holds(_bg)
               # a count reading is a judged claim as an equality is: status counts
               # both, and so does the badge
               and _bg.get("claims") == (run("status", cwd=HERE)[1]["forms"]["equalities"]
@@ -842,7 +842,7 @@ def main():
               and "not counted for one yet" in _bg.get("note", "")
               and _bg.get("mutates") is False))
     S.append(("the survey's fabric is the verdict status gives, on a world of forms too",
-              palette_partial(_sv.get("fabric", {})) and palette_partial(_st)
+              palette_holds(_sv.get("fabric", {})) and palette_holds(_st)
               and _sv["fabric"].get("facts", "").endswith("gate.manifest.swift")
               and _sv["fabric"].get("refusals") == len(_st.get("refusals", []))
               # and the step it offers is chosen by the same reading: this said
@@ -1195,11 +1195,15 @@ console.log(ok);
               _cb.returncode == _cn.returncode == 1 and _cb.stdout == _cn.stdout
               and "'SnugOverTight' count Left = 1, but Answer = 3" in _cb.stdout))
 
+    from d65 import checks as d65_checks
+    for result in d65_checks(HERE, tmp, _premise):
+        S.append(result)
+
     # The pre-migration question set is frozen separately from today's pages.
     ledger_bytes = open(os.path.join(HERE, "tests", "fixtures", "bench-obligations.json"), "rb").read()
     ledger = json.loads(ledger_bytes)
-    S.append(("the bench ledger retains the 113 original obligation IDs at its frozen identity",
-              hashlib.sha256(ledger_bytes).hexdigest() == "b7252dfb49f49ee41d18914102358904822d876fb24f837f92e475909c890ec7"
+    S.append(("the bench ledger retains the 113 original IDs with their checked routes",
+              hashlib.sha256(ledger_bytes).hexdigest() == "b5397af335f8558751595e5ebaaef983d5f58e9931a171489aa813195a60dbc6"
               and {p: len(v["claims"]) for p, v in ledger["pages"].items()} ==
                   {"bench-metrics": 14, "bench-palette": 77, "bench-registers": 22}))
     ledger_ok = True
@@ -1216,12 +1220,18 @@ console.log(ok);
         residual = dict(re.findall(r"^// gate-unsupported: (\w+) \| (.+)$", body, re.M))
         expected = {x["id"]: x["reason"] for x in entry["claims"] if x["route"] == "unsupported"}
         ledger_ok = ledger_ok and residual == expected
+        members = {}
+        for owner, fields in re.findall(r"public enum (\w+)<[^\n]*>:\s*Close\s*\{([^}]+)\}", body):
+            members[owner] = dict(re.findall(r"public typealias (\w+) = (\w+)<", fields))
+        def target_head(target):
+            owner, dot, field = target.partition(".")
+            return members.get(aliases.get(owner), {}).get(field) if dot else aliases.get(owner)
         for item in entry["claims"]:
-            ledger_ok = ledger_ok and all(target in aliases for target in item["targets"])
+            ledger_ok = ledger_ok and all(target_head(target) for target in item["targets"])
             if item["route"] == "where":
                 ledger_ok = ledger_ok and all(aliases.get(t) in ("Same", "StructuralWider") for t in item["targets"])
             elif item["route"] == "count":
-                ledger_ok = ledger_ok and all(reaches_count(aliases.get(t)) for t in item["targets"])
+                ledger_ok = ledger_ok and all(reaches_count(target_head(t)) for t in item["targets"])
     S.append(("each original bench ID still reaches its declared where, count or addressed unsupported route", ledger_ok))
 
     metrics_body = open(os.path.join(HERE, "stdlib", "bench-metrics.swift"), encoding="utf-8").read()
@@ -1246,8 +1256,10 @@ console.log(ok);
         S.append(("equal counts cannot replace the nominal certificate " + claim,
                   before in metrics_body and same and b.returncode == 1 and claim in b.stdout))
 
-    residue_ids = {x["id"] for x in ledger["pages"]["bench-palette"]["claims"] if x["route"] == "unsupported"}
-    palette_body = open(os.path.join(HERE, "stdlib", "bench-palette.swift"), encoding="utf-8").read()
+    # Keep the former partial world as a control. Today's palette must hold,
+    # while an explicitly unjudged old requirement must still travel as such.
+    palette_body = open(os.path.join(HERE, "tests", "fixtures", "bench-palette-before-dag.swift"), encoding="utf-8").read()
+    residue_ids = set(re.findall(r"^// gate-unsupported: (\w+) \|", palette_body, re.M))
     residual_world = tempfile.mkdtemp(dir=tmp)
     residual_file = os.path.join(residual_world, "palette.swift")
     open(residual_file, "w").write(palette_body)
@@ -1306,8 +1318,9 @@ console.log(ok);
     changed = re.sub(r"(public typealias InkLitZ = )(.+)", r"\1Plus<Unit, \2>", palette_body, count=1)
     open(residual_file, "w").write(changed)
     rc, modified = run("status", cwd=residual_world)
-    S.append(("changing an unsolved D65 input retains its addressed remainder without claiming the law",
-              changed != palette_body and rc == 2 and modified.get("verdict") == "partial" and addressed_remainder(modified)))
+    S.append(("the current shelf refuses a changed D65 input even in a copy that still declares an old remainder",
+              changed != palette_body and rc == 1 and modified.get("verdict") == "refused" and addressed_remainder(modified)
+              and any("InkGrey_lit.R" in r.get("claim", "") for r in modified.get("refusals", []))))
     open(residual_file, "w").write(re.sub(r"^public typealias InkGrey_lit = .+\n", "", palette_body, flags=re.M))
     rc, missing = run("status", cwd=residual_world)
     S.append(("deleting an unsupported requirement's relation is an addressed refusal",
@@ -1323,8 +1336,8 @@ console.log(ok);
               and "InkGrey_lit" in blocked.stdout + blocked.stderr))
     open(residual_file, "w").write(re.sub(r"^// gate-unsupported:.*\n", "", palette_body, flags=re.M))
     rc, erased = run("status", cwd=residual_world)
-    S.append(("removing a copy's remainder annotations cannot erase the inherited shelf requirements",
-              rc == 2 and erased.get("verdict") == "partial" and addressed_remainder(erased)))
+    S.append(("removing the old annotations exposes the current shelf's checked D65 laws",
+              rc == 0 and palette_holds(erased) and erased.get("forms", {}).get("readings", 0) >= 119))
     metrics_world = tempfile.mkdtemp(dir=tmp)
     # An independent namespace asks only this supported question, rather than
     # overriding shared names in every shipped bench world at once.
@@ -2398,7 +2411,7 @@ console.log(ok);
                   ["git", "log", "--format=%ae"], cwd=HERE, capture_output=True,
                   text=True).stdout.split()
               # the rung it was offering is taken, and the ladder moved on
-              and palette_partial(_here_said)
+              and palette_holds(_here_said)
               and "gate.policy.swift" not in _here_said.get("next", "")
               # and no rank was invented to make a verb light up. Read from the
               # DECLARATIONS, not the prose: the paragraph explaining why no rank
@@ -5741,9 +5754,9 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               # it is not swept into the plain world: that count is the world's alone
               and frm_status.get("world", {}).get("declarations") == 1
               # and it is not accused of being a stray, because it was declared
-              and palette_partial(frm_status)
+              and palette_holds(frm_status)
               # a word invented in the fork is learned: the truth about it holds
-              and palette_partial(learned)
+              and palette_holds(learned)
               # and a lie about that same invented word is refused, at the file
               and lied.get("verdict") == "refused"
               and any("ArchitectIsTwoLines" in r.get("claim", "")
@@ -5808,7 +5821,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
                       # addressed where it is written, not where it was read
                       and (r.get("address") or "").startswith("forms-b.swift:")
                       for r in caught.get("refusals", []))
-              and palette_partial(mended)
+              and palette_holds(mended)
               # one stream, and one place that says which: a forms file is its
               # own stream, so a law split across two of them is read together
               and "func oneStream(" in shelf_src
@@ -5847,9 +5860,9 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               # the honest one, and it is about provenance rather than a verdict
               # and it holds: the revision it carried unrecorded is written down,
               # so the tool is not asking of anybody a thing it had not done
-              and palette_partial(own_status)
+              and palette_holds(own_status)
               and open(os.path.join(HERE, "bin", "gate-judge.from"),
-                       encoding="utf-8").read().strip().startswith("f5a46c3")
+                       encoding="utf-8").read().strip().startswith("68671515")
               # AND THE EDITOR IS ACCOUNTED FOR TOO. It arrived the way anything
               # of somebody else's should — named, versioned, unchanged, saying
               # so in its own first line — and it was the one dependency an
@@ -5982,7 +5995,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               # and the weak one is named as weak rather than buried in a number
               and "The weak one, said out loud" in pal
               # the floors are live: the count court counts them among what it holds
-              and "COUNT holds: 53 source-bound readings" in subprocess.run(
+              and "COUNT holds: 119 source-bound readings" in subprocess.run(
                   [os.path.join(HERE, "bin", "gate-judge"), "judge", "count",
                    os.path.join(HERE, "stdlib", "bench-palette.swift"), _premise,
                    *(count_question(pal) or [])],
@@ -6209,7 +6222,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               and lang.get("names", {}).get("Unit") == 292
               and lang.get("file", "").endswith("Primitive.swift")
               # at the revision the judge was built from, not some other one
-              and (lang.get("at") or "").startswith("f5a46c3")
+              and (lang.get("at") or "").startswith("68671515")
               # and the way to get it, since this tool will not go and take it
               and "git clone" in lang.get("command", "")
               # the bench reaches them: they join what a click can land on
@@ -6752,7 +6765,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               and any("This copy is yours" in l for l in head)
               and not any("// role:" in l for l in head)
               and took.get("court") == "forms"
-              and took_holds == "partial"
+              and took_holds == "holds"
               # a second call does not overwrite what you have since written
               and again.get("asks") and "already here" in again.get("note", "")
               # and the merge takes it as an override: by path, never by name
@@ -7172,13 +7185,13 @@ console.log(JSON.stringify({
     kept = open(jm, encoding="utf-8").read()
     try:
         open(jm, "w", encoding="utf-8").write(
-            kept.replace("verification-is-identification@f5a46c3",
+            kept.replace("verification-is-identification@68671515",
                          "verification-is-identification@deadbee"))
         lied = run("status", cwd=HERE)[1]
     finally:
         open(jm, "w", encoding="utf-8").write(kept)
     S.append(("a row that names the court may not disagree with the court",
-              palette_partial(run("status", cwd=HERE)[1])
+              palette_holds(run("status", cwd=HERE)[1])
               and lied.get("verdict") == "refused"
               and any("may not disagree with the court" in r.get("claim", "")
                       for r in lied.get("refusals", []))
@@ -7339,7 +7352,7 @@ console.log(JSON.stringify({
               and "is not a count" in _asked["/log?n=notanumber"][1]["error"]
               and "is not a count" in _asked["/log?n=-5"][1]["error"]))
     S.append(("the bench and the command line say the same thing about this repository",
-              agreed and agreed[0] and agreed[1] == "partial"))
+              agreed and agreed[0] and agreed[1] == "holds"))
     S.append(("the panel leaves no scratch behind an answered judgement", swept))
 
     # AND ABOUT A WORLD THAT HAS THE FILES THIS ONE HAPPENS NOT TO. The fence
@@ -7556,12 +7569,12 @@ console.log(JSON.stringify(out));
     # and the law itself rewritten to permit it: refused as a law that is not theirs
     rewrite = _say("public typealias BadChroma_dim = TowardBlue<BadDimY, BadDimZ, Plus<W2, W4>>\n")
     S.append(("say any number, say what holds of it, and the form of a law is not yours",
-              palette_partial(lawful)
+              palette_holds(lawful)
               and green.get("verdict") == "refused"
-              # the hue laws are stated and not judged at count v0.1's budget, so
-              # the floors that stand on BadDimZ are the laws that refuse it
+              # the hue law itself now refuses the changed side, with the
+              # reading kept under its original claim's name
               and any(n in r.get("claim", "") for r in green.get("refusals", [])
-                      for n in ("BadChroma_dim", "'BadApartLaw_Z_dim'", "'TheirsApartBad_Z_dim'"))
+                      for n in ("BadChroma_dim.R1",))
               and all((r.get("address") or "").startswith("my-colours.swift")
                       for r in green.get("refusals", []))
               and rewrite.get("verdict") == "refused"
@@ -7601,7 +7614,7 @@ console.log(JSON.stringify(out));
         "}\n"
         "\npublic enum Sales: Department {}\n")
     judge_bin = os.path.join(HERE, "bin", "gate-judge")
-    plain = subprocess.run([judge_bin, "judge", os.path.join(claim_probe, "world.swift")],
+    plain = subprocess.run([os.path.join(HERE, "bin", "organization-judge"), "judge", os.path.join(claim_probe, "world.swift")],
                            capture_output=True, text=True).stdout
     where = subprocess.run([judge_bin, "judge", "where", os.path.join(claim_probe, "world.swift")],
                            capture_output=True, text=True)
@@ -9303,11 +9316,11 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                                  capture_output=True, timeout=180,
                                  env={**os.environ, "GATE_CLI": CLI_HERE})
             if _shape:
-                valid = _py.returncode == 2 and palette_partial(json.loads(_py.stdout))
+                valid = _py.returncode == 0 and palette_holds(json.loads(_py.stdout))
             else:
-                valid = _py.returncode == 2 and _py.stdout.startswith(b"status: partial")
+                valid = _py.returncode == 0 and _py.stdout.startswith(b"status: holds")
             if not valid:
-                _s9apart.append("the tool's own repository lost its partial outcome")
+                _s9apart.append("the tool's own repository lost its complete outcome")
             if not _shape:
                 _s9said["here"] = (_py.returncode, _py.stdout)
         if _s9apart:
@@ -10562,8 +10575,10 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                                     capture_output=True, timeout=180).stdout)
         _mb = subprocess.run(["swiftc", "-O", os.path.join(_mut, "main.swift"), _mut_shelf,
                               _mut_premise,
-                              *sorted(glob.glob(os.path.join(HERE, "bin", ".court",
-                                                             _pin, "*.swift"))),
+                              *[f for f in sorted(glob.glob(os.path.join(HERE, "bin", ".court",
+                                                             _pin, "*.swift")))
+                                if os.path.basename(f) != "OrganizationJudge.swift"],
+                              os.path.join(_org, "OrganizationJudge.swift"),
                               "-o", _mut_bin], capture_output=True, text=True, timeout=900)
         if _mb.returncode != 0:
             print("   the mutant vein did not build:", "\n   ".join(
@@ -10595,7 +10610,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         # pinned to the world planted for it, by the refusal's own words
         _s9has = lambda n, s: s.encode() in _s9said[n][1]
         S.append(("and every guard family fires on the world planted for it, alike",
-                  _s9said["here"][0] == 2 and b"status: partial" in _s9said["here"][1]
+                  _s9said["here"][0] == 0 and b"status: holds" in _s9said["here"][1]
                   and _s9said["demo"][0] == 1 and _s9has("demo", "Owns_3_carol")
                   and _s9said["org"][0] == 0 and _s9has("org", "declarations")
                   and _s9said["init"][0] == 0 and _s9has("init", "gate serve")
@@ -11561,7 +11576,7 @@ print(bad.isEmpty ? "CORE OK" : "APART: " + bad.joined(separator: ","))
                   and _vb2.stdout == _vv2.stdout
                   and "be equivalent [CourtCarried]" in _vv2.stdout))
         _strip_ms = lambda s: re.sub(r"[\d.]+ ms", "N ms", s.strip())
-        _pb = subprocess.run([os.path.join(HERE, "bin", "gate-judge"),
+        _pb = subprocess.run([os.path.join(HERE, "bin", "organization-judge"),
                               "judge", _where_pages[0]],
                              capture_output=True, text=True)
         _pv = subprocess.run([_cli_bin, "judge", _where_pages[0]],
@@ -11893,7 +11908,7 @@ public enum MyWatch: AccessLedger {
     }
 }
 """)
-    raw = subprocess.run([os.path.join(HERE, "bin", "gate-judge"), "judge",
+    raw = subprocess.run([os.path.join(HERE, "bin", "organization-judge"), "judge",
                           os.path.join(cut, "gate.swift")], capture_output=True, text=True).stdout
     S.append(("the reference judge holds on a commented-out form, as it should",
               "holds" in raw))
@@ -12538,7 +12553,7 @@ public enum MyWatch: AccessLedger {
     finally:
         open(os.path.join(HERE, "stdlib", "verbs.swift"), "w").write(kept_readme)
     S.append(("the table of verbs and the dispatch are held to each other, in both directions",
-              palette_partial(run("status", cwd=HERE)[1])
+              palette_holds(run("status", cwd=HERE)[1])
               # a record for a word this tool does not answer to: a promise it no longer keeps
               and any("`gate surveyy` is a record here" in r["claim"]
                       and r["address"].startswith("stdlib/verbs.swift:")
@@ -12590,8 +12605,8 @@ public enum MyWatch: AccessLedger {
               and said_one == said_two and said_one_port == said_one
               # and nothing tells the operator their law is read by no court
               and not any("read by no court" in r["claim"] for r in joined["refusals"])
-              and palette_partial(joined)
-              and palette_partial(run("status", cwd=HERE)[1])
+              and palette_holds(joined)
+              and palette_holds(run("status", cwd=HERE)[1])
               and "func gateShapeGuards(" not in gate_src))
 
     # ── AND THE HALF NO DECLARATION CAN PROVE. `Run<Act>: Safe where Act.Does ==
@@ -14009,8 +14024,8 @@ public enum MyWatch: AccessLedger {
               and any(r.get("address") == "stdlib/forms-organization.swift:2"
                       and "does not say what it is" in r.get("claim", "")
                       for r in roleless.get("refusals", []))
-              # and restoring the line leaves only the addressed palette remainder
-              and palette_partial(run("status", cwd=HERE)[1])))
+              # and restoring the line restores the complete verdict
+              and palette_holds(run("status", cwd=HERE)[1])))
 
     # ── AND WHOSE VOICE IT SPEAKS IN, WHICH THE ROLE NEVER SAID. The role names
     # the court that reads a file, and by that word the grammar somebody's own
@@ -14034,8 +14049,8 @@ public enum MyWatch: AccessLedger {
               and any(r.get("address") == "stdlib/forms-organization.swift:3"
                       and "does not say whose voice it speaks in" in r.get("claim", "")
                       for r in voiceless.get("refusals", []))
-              # and restoring the line leaves only the addressed palette remainder
-              and palette_partial(run("status", cwd=HERE)[1])))
+              # and restoring the line restores the complete verdict
+              and palette_holds(run("status", cwd=HERE)[1])))
     S.append(("a fifth sort is refused by name, and the refusal carries the whole list",
               fifth.get("verdict") == "refused"
               and any(r.get("address") == "stdlib/forms-organization.swift:3"
@@ -14085,8 +14100,8 @@ public enum MyWatch: AccessLedger {
                       # and the refusal names the three it could have said
                       and "full · bare · table" in r.get("claim", "")
                       for r in _sideways.get("refusals", []))
-              # and restoring its word leaves only the addressed palette remainder
-              and palette_partial(run("status", cwd=HERE)[1])))
+              # and restoring its word restores the complete verdict
+              and palette_holds(run("status", cwd=HERE)[1])))
 
     # ── AND A WORD THAT WAS RETIRED STAYS RETIRED. `genre` named a thing this
     # tool no longer believes in: a kind of world handed down, belonging to the
