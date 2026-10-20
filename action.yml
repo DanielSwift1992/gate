@@ -17,9 +17,14 @@ inputs:
     description: 'directory to check (default: repository root)'
     required: false
     default: '.'
+outputs:
+  refusals:
+    description: 'refusals the check printed at a file and line; 0 when there were none, or when the tool did not answer'
+    value: ${{ steps.audit.outputs.refusals }}
 runs:
   using: 'composite'
   steps:
     - name: check CODEOWNERS and workflow path filters
+      id: audit
       shell: bash
       run: bash "${{ github.action_path }}/bin/gate-audit.sh" "${{ inputs.version }}" "${{ inputs.tree }}"

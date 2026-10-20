@@ -397,7 +397,10 @@ jobs:
           tree: .github/action-fixtures/dead
       - name: and that refusal is this job's negative control
         id: control
-        run: test "${{ steps.dead.outcome }}" = failure
+        # a red without a refusal at an address is not this control: on 19.10
+        # the dead tree went red with no address at all, and that red passed
+        # here for a refusal
+        run: test "${{ steps.dead.outcome }}" = failure && test "${{ steps.dead.outputs.refusals }}" -ge 1
       - name: a clean tree holds
         id: clean
         uses: ./

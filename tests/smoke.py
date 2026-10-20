@@ -1735,24 +1735,64 @@ console.log(ok);
                   for t in _saids} and len(_saids) == 4))
     _fx = os.path.join(HERE, ".github", "action-fixtures")
     _aenv = {**os.environ, "GATE_AUDIT_BIN": GATE, "GATE_CLI": CLI_HERE}
-    def _audit(tree):
-        return subprocess.run(["bash", os.path.join(HERE, "bin", "gate-audit.sh"),
-                               "vLOCAL", tree],
-                              capture_output=True, text=True, timeout=180, env=_aenv)
+    _aout = tempfile.mkdtemp(prefix="gate-audit-out-")
+    def _audit(tree, binary=None):
+        said = os.path.join(_aout, str(len(os.listdir(_aout))))
+        open(said, "w").close()
+        env = {**_aenv, "GITHUB_OUTPUT": said}
+        if binary:
+            env["GATE_AUDIT_BIN"] = binary
+        run = subprocess.run(["bash", os.path.join(HERE, "bin", "gate-audit.sh"),
+                              "vLOCAL", tree],
+                             capture_output=True, text=True, timeout=180, env=env)
+        run.refusals = open(said, encoding="utf-8").read().strip()
+        return run
     _adead = _audit(os.path.join(_fx, "dead"))
     S.append(("a dead row refuses the audit at its address",
               _adead.returncode != 0
-              and "::error file=CODEOWNERS,line=2::" in _adead.stdout))
+              and "::error file=CODEOWNERS,line=2::" in _adead.stdout
+              and _adead.refusals == "refusals=1"))
     _aclean = _audit(os.path.join(_fx, "clean"))
     S.append(("a clean tree holds the audit, and both halves are said aloud",
               _aclean.returncode == 0
               and "import codeowners" in _aclean.stdout
-              and "import workflows: holds" in _aclean.stdout))
+              and "import workflows: holds" in _aclean.stdout
+              and _aclean.refusals == "refusals=0"))
+    # ── AND A TOOL THAT DOES NOT ANSWER IS NOT A REFUSAL. On 19.10 the
+    # published binary went red over the dead tree with no address at all, and
+    # the `action` job's negative control took that red for the refusal it
+    # stands on. Each answer is read as an exit and a first line that go
+    # together: a binary that cannot say its version, one that exits 0 over
+    # rubbish, and one that says its version and then dies on the second half
+    # are each said aloud as the tool not answering, red, with no refusal
+    # counted, so the control can tell the two reds apart.
+    _afake = tempfile.mkdtemp(prefix="audit-fakes-")
+    open(os.path.join(_afake, "rubbish"), "w").write("#!/bin/sh\necho rubbish; exit 0\n")
+    open(os.path.join(_afake, "dies"), "w").write(
+        "#!/bin/sh\ncase \"$1\" in\n"
+        "  --version) echo 'gate 0.0.0 · judge sha256:x'; exit 0 ;;\n"
+        "  import) [ \"$2\" = codeowners ] && { echo 'import codeowners: holds · 1 ms'; exit 0; }\n"
+        "          echo 'Segmentation fault' >&2; exit 139 ;;\n"
+        "esac\n")
+    for _f in ("rubbish", "dies"):
+        os.chmod(os.path.join(_afake, _f), 0o755)
+    _anot = {"false": _audit(os.path.join(_fx, "dead"), shutil.which("false") or "/usr/bin/false"),
+             "rubbish": _audit(os.path.join(_fx, "dead"), os.path.join(_afake, "rubbish")),
+             "dies": _audit(os.path.join(_fx, "clean"), os.path.join(_afake, "dies"))}
+    shutil.rmtree(_afake, ignore_errors=True)
+    S.append(("a tool that does not answer as gate is said so, and counts no refusal",
+              all(r.returncode == 1
+                  and "did not answer as gate answers" in r.stdout
+                  and "::error file=" not in r.stdout
+                  and r.refusals == "refusals=0" for r in _anot.values())
+              and "(exit 139): Segmentation fault" in _anot["dies"].stdout
+              and "(exit 0): rubbish" in _anot["rubbish"].stdout))
     _abare = _audit(tempfile.mkdtemp(prefix="gate-audit-bare-"))
     S.append(("a tree declaring nothing is not refused, and says so twice",
               _abare.returncode == 0
               and "nothing to check on this half" in _abare.stdout
               and "nothing was read" in _abare.stdout))
+    shutil.rmtree(_aout, ignore_errors=True)
 
     # ── AND THE RIM IS A CLOSED SET OF DOORS. The canon says five doors, and a
     # canon nobody counts is a wish: any verb may quietly grow a private spawn
