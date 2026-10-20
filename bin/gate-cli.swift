@@ -499,7 +499,7 @@ func waitDone(_ p: Process) {
     p.terminationHandler = nil
 }
 
-func runGit(_ arguments: [String], _ cwd: String) -> String {
+func runGitBytes(_ arguments: [String], _ cwd: String) -> (code: Int32, bytes: Data) {
     mark("spawn:git")
     spawnCounted("git")
     let p = Process()
@@ -512,11 +512,15 @@ func runGit(_ arguments: [String], _ cwd: String) -> String {
     let pipe = Pipe(), quiet = Pipe()
     p.standardOutput = pipe
     p.standardError = quiet
-    do { try p.run() } catch { return "" }
+    do { try p.run() } catch { return (-1, Data()) }
     let said = pipe.fileHandleForReading.readDataToEndOfFile()
     quiet.fileHandleForReading.readDataToEndOfFile()
     waitDone(p)
-    return String(data: said, encoding: .utf8) ?? ""
+    return (p.terminationStatus, said)
+}
+
+func runGit(_ arguments: [String], _ cwd: String) -> String {
+    String(data: runGitBytes(arguments, cwd).bytes, encoding: .utf8) ?? ""
 }
 
 // and the same call read for its verdict rather than its words: `ls-files
@@ -643,6 +647,7 @@ func manifestRows(_ dir: String) -> (rows: [WorldRow], manifest: String?) {
         case "JudgeFile": role = "judge"
         case "CarriedFile": role = "carried"
         case "ToolFile": role = "tool"
+        case "DrawingProfileFile": role = "drawing-profile"
         case "Seam": role = "seam"
         default:
             // no Kind axis: the older spellings said it in the atom itself
@@ -926,7 +931,15 @@ func jsonPlace(_ text: String) -> (line: Int, column: Int) {
 // outside your own line do not change (kind 12).
 let ROLE_ATOM: [String: String] = ["world": "WorldFile", "seam": "SeamFile",
                                    "forms": "FormsFile", "judge": "JudgeFile",
-                                   "carried": "CarriedFile", "tool": "ToolFile"]
+                                   "carried": "CarriedFile", "tool": "ToolFile",
+                                   "drawing-profile": "DrawingProfileFile"]
+
+// A Role may carry its installed Reader. Its declaration does not stop being
+// a declaration when its body is nonempty. The writer and guard ask alike.
+func declaresRole(_ text: String, _ atom: String) -> Bool {
+    return !matches("public\\s+enum\\s+" + atom + "\\s*:\\s*Role\\s*\\{",
+                    codeOf(text)).isEmpty
+}
 
 func rowAtom(_ rel: String) -> String {
     // the other carrier's `row_atom`: the path without its extension, sanitised,
@@ -1038,7 +1051,7 @@ func upsertRow(_ text: String, name: String, rel: String, kind: String, role: St
     guard let atom = ROLE_ATOM[role] else {
         cannot("no such role: " + role, "a row says which court reads it: world, seam or forms")
     }
-    if !said.contains("public enum " + atom + ": Role {}") {
+    if !declaresRole(said, atom) {
         ensure("public enum " + atom + ": Role {}")
     }
     if let opens = opens {
@@ -1369,13 +1382,15 @@ let STATUS_ROLES: [(String, String)] = [
     ("judge", "the court itself: held by a reproducible build, not by judgement"),
     ("carried", "brought here unchanged: held by its source's name and version, "
               + "and by no court of this world"),
+    ("drawing-profile", "profile structure and declared inputs, read by DrawingProfileReaderV1; "
+                        + "Drawing evidence is separate from the world's relations"),
     ("tool", "the tool's own source: held by the battery's parity, "
            + "and by no court of this world"),
 ]
 let ROLE_OF_KIND: [String: String] = ["WorldFile": "world", "SeamFile": "seam",
                                       "FormsFile": "forms", "JudgeFile": "judge",
                                       "CarriedFile": "carried", "ToolFile": "tool",
-                                      "Seam": "seam"]
+                                      "Seam": "seam", "DrawingProfileFile": "drawing-profile"]
 
 // the shelf, loaded once per run the way the other carrier loads it at import:
 // filled by the status door, empty on every carried argv, so no vein pays for
@@ -1827,6 +1842,78 @@ func undeclaredHere(_ w: WorldState) -> [String] {
 // the forms guard takes a live text: the layout is judged as it is typed, and
 // two of the checks below ask what the DOCUMENT says rather than what its rows
 // say, so the text comes with them.
+// The byte resolver is independent of a file's reader. A v2 record names every
+// taken input, including its local view, Git object and exact source bytes.
+struct TakenResolution {
+    var paths: [String: String] = [:]
+    var bad: [(address: String, claim: String)] = []
+}
+func takenInputs(_ w: WorldState) -> TakenResolution {
+    var result = TakenResolution()
+    guard let root = layoutDir(w), let layout = w.layout else { return result }
+    let record = joinPath(root, ".gate/forms-definitions.json")
+    guard let data = FileManager.default.contents(atPath: record),
+          let spec = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+          spec["format"] as? Int == 2 else { return result }
+    guard let files = spec["files"] as? [[String: String]] else {
+        result.bad.append((".gate/forms-definitions.json:1", "v2 files must be an input list")); return result
+    }
+    var seen = Set<String>()
+    for item in files {
+        let at = ".gate/forms-definitions.json:1"
+        guard Set(item.keys) == Set(["row", "path", "repository", "revision", "source_path", "sha256"]),
+              let name = item["row"], seen.insert(name).inserted,
+              let row = layout.rows.first(where: { $0.name == name && $0.source == "theirs" }),
+              let repository = item["repository"], !repository.isEmpty, !repository.hasPrefix("-"),
+              let revision = item["revision"], revision.range(of: "^[0-9a-f]{40}$", options: .regularExpression) != nil,
+              let source = item["source_path"], !source.isEmpty, !source.hasPrefix("/"), !source.split(separator: "/").contains(".."),
+              let path = item["path"], path == row.path, !leavesWorldHere(path, root),
+              let hash = item["sha256"], hash.range(of: "^[0-9a-f]{64}$", options: .regularExpression) != nil,
+              row.from == repository + "@" + revision else {
+            result.bad.append((at, "input row, local path, repository@revision or sha256 disagrees with its manifest")); continue
+        }
+        let cache = joinPath(toolRoot(), "bin/.inputs/" + sha256Hex(Data(repository.utf8)) + "/" + revision)
+        let target = joinPath(cache, sha256Hex(Data(source.utf8)) + "-" + hash)
+        if let bytes = FileManager.default.contents(atPath: target) {
+            guard sha256Hex(bytes) == hash else {
+                result.bad.append((path + ":1", "cached input bytes differ from their sha256")); continue
+            }
+            result.paths[name] = target; continue
+        }
+        do { try FileManager.default.createDirectory(atPath: cache, withIntermediateDirectories: true) }
+        catch { result.bad.append((path + ":1", "cannot create the input cache")); continue }
+        func git(_ words: [String]) -> (Int32, Data) {
+            let reply = runGitBytes(words, cache)
+            return (reply.code, reply.bytes)
+        }
+        if !FileManager.default.fileExists(atPath: joinPath(cache, ".git")), git(["init", "-q"]).0 != 0 {
+            result.bad.append((path + ":1", "cannot initialize the input object cache")); continue
+        }
+        if git(["cat-file", "-t", revision]).0 != 0,
+           git(["fetch", "-q", "--depth", "1", repository, revision]).0 != 0 {
+            result.bad.append((path + ":1", "cannot fetch the declared input revision")); continue
+        }
+        let objectKind = git(["cat-file", "-t", revision])
+        guard String(data: objectKind.1, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) == "commit",
+              String(data: git(["cat-file", "-t", revision + ":" + source]).1, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) == "blob" else {
+            result.bad.append((path + ":1", "the pin must name a commit and its source_path a file blob")); continue
+        }
+        let blob = git(["show", revision + ":" + source])
+        guard blob.0 == 0, sha256Hex(blob.1) == hash else {
+            result.bad.append((path + ":1", "Git source bytes differ from the declared sha256")); continue
+        }
+        do {
+            try FileManager.default.createDirectory(atPath: cache, withIntermediateDirectories: true)
+            try blob.1.write(to: URL(fileURLWithPath: target), options: .atomic)
+            result.paths[name] = target
+        } catch { result.bad.append((path + ":1", "cannot cache the verified input")) }
+    }
+    for row in layout.rows where row.source == "theirs" && row.name != nil && !seen.contains(row.name!) {
+        result.bad.append(("gate.manifest.swift:\(row.line)", "a v2 taken row has no input record"))
+    }
+    return result
+}
+
 func manifestGuards(_ w: WorldState, liveRows: [LayoutRow]? = nil,
                     liveText: String? = nil) -> [(address: String, claim: String)] {
     // layout guards, both directions: a declared file exists, a neighbouring
@@ -1844,12 +1931,14 @@ func manifestGuards(_ w: WorldState, liveRows: [LayoutRow]? = nil,
     let d = parentPath(layout.manifest) ?? layout.manifest
     let live = liveRows ?? layout.rows
     let liveText = uncommented(liveText ?? (readText(layout.manifest) ?? ""))
+    let taken = takenInputs(w)
+    bad += taken.bad
     var seenPaths: [String: String] = [:]
     for r in live {
         let said = r.name ?? "a row with no name"
         if let role = r.role, let atom = ROLE_ATOM[role],
            liveText.contains("public typealias Kind = " + atom),
-           !liveText.contains("public enum " + atom + ": Role {}") {
+           !declaresRole(liveText, atom) {
             bad.append(("\(man):\(r.line)",
                         "`\(said)` is filed under `\(role)` and this document "
                       + "declares no `\(atom)`: a column is an axis to a declared atom, "
@@ -2264,6 +2353,21 @@ func formsDefinitions(_ w: WorldState) -> (paths: [String], bad: [(address: Stri
           let spec = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
           let files = spec["files"] as? [[String: String]], !files.isEmpty else {
         return ([], [(".gate/forms-definitions.json:1", "cannot read the world's definitions record")])
+    }
+    if spec["format"] as? Int == 2 {
+        let resolved = takenInputs(w)
+        if !resolved.bad.isEmpty { return ([], resolved.bad) }
+        let contexts = spec["languages"] as? [String: [String: Any]] ?? [:]
+        var selected: [String] = []
+        for context in contexts.values {
+            for name in context["definitions"] as? [String] ?? [] {
+                guard let path = resolved.paths[name] else {
+                    return ([], [(".gate/forms-definitions.json:1", "unresolved definition input " + name)])
+                }
+                if !selected.contains(path) { selected.append(path) }
+            }
+        }
+        return (selected, [])
     }
     var paths: [String] = [], bad: [(address: String, claim: String)] = []
     for item in files {
@@ -11494,6 +11598,100 @@ func benchSaid(_ answered: Answered) -> String {
 // than a bare code: the page's own fetch shows a network error for a dropped
 // connection, which reads as "the bench is gone" instead of "that request was
 // wrong".
+// A drawing's input plan is shared by the browser and the static publisher.
+// Only declared rows are delivered. The colour reader stays the installed port.
+func drawingInputs(_ w: WorldState, counts: Bool = true) -> (plan: [String: Any], assets: [String: Data]) {
+    guard let root = layoutDir(w) else { return (["status": "none"], [:]) }
+    let profiles = (w.layout?.rows ?? []).filter { $0.role == "drawing-profile" }
+    if profiles.isEmpty { return (["status": "none"], [:]) }
+    func refused(_ at: String, _ why: String) -> (plan: [String: Any], assets: [String: Data]) {
+        return (["status": "refused", "address": at, "reason": why], [:])
+    }
+    guard profiles.count == 1 else { return refused("gate.manifest.swift:1", "one DrawingProfileFile is required") }
+    let resolved = takenInputs(w)
+    if let bad = resolved.bad.first { return refused(bad.address, bad.claim) }
+    func source(_ row: LayoutRow) -> String {
+        resolved.paths[row.name ?? ""] ?? (leavesWorldHere(row.path, root) ? "" : absPath(joinPath(root, row.path)))
+    }
+    let row = profiles[0], path = source(row)
+    guard let bytes = FileManager.default.contents(atPath: path), let text = String(data: bytes, encoding: .utf8) else { return refused(row.path + ":1", "the drawing profile input is missing") }
+    let structure = codeOf(text)
+    func body(_ name: String) -> String {
+        matches("public enum " + name + "\\b[^\\{]*\\{(.*?)\\n\\}", structure, dotAll: true).first?.first ?? ""
+    }
+    func axis(_ body: String, _ key: String) -> String {
+        matches("typealias " + key + "\\s*=\\s*(\\w+)", body).first?.first ?? ""
+    }
+    let declarations = matches("public enum (\\w+): DrawingProfile \\{", structure)
+    guard declarations.count == 1 else { return refused(row.path + ":1", "one DrawingProfile is required") }
+    let profile = body(declarations[0][0]), paletteName = axis(profile, "Palette")
+    let font = body(axis(profile, "Font")), metrics = body(axis(profile, "Metrics"))
+    let qualified = matches("typeName:\\s*String\\s*\\{\\s*\"(\\w+)::", text).map { $0[0] }
+    let selected = Set([paletteName, axis(font, "Asset"), axis(metrics, "Input"), axis(profile, "License")] + qualified)
+    var inputs: [String: Any] = [:], assets: [String: Data] = [:]
+    for input in (w.layout?.rows ?? []) where selected.contains(input.name ?? "") {
+        guard let name = input.name else { continue }
+        let file = source(input)
+        guard let data = FileManager.default.contents(atPath: file) else {
+            return refused(input.path + ":1", "declared profile input is missing")
+        }
+        let hash = sha256Hex(data); assets[hash] = data
+        var item: [String: Any] = ["path": input.path, "sha256": hash,
+                                   "source": input.source, "revision": input.from ?? "local", "line": input.line]
+        if let source = String(data: data, encoding: .utf8) { item["text"] = source }
+        if name == paletteName, counts, let source = item["text"] as? String, let q = countQuestion(source) {
+            let definitions = formsDefinitions(w)
+            if let bad = definitions.bad.first { return refused(bad.address, bad.claim) }
+            let tmp = scratchDir("gate-drawing-count-")
+            let premise = joinPath(tmp, "Primitive.swift")
+            try? PinnedCorpus.primitive.write(toFile: premise, atomically: false, encoding: .utf8)
+            let borrowed = definitions.paths.isEmpty ? [premise] : definitions.paths
+            let said = courtSays(["count", file] + borrowed + ["--predicate", q.predicate,
+                                  "--encoding", q.encoding, "--sigma", q.sigma])
+            try? FileManager.default.removeItem(atPath: tmp)
+            item["count"] = ["text": said, "source_sha256": hash]
+        }
+        inputs[name] = item
+    }
+    let reader = FileManager.default.contents(atPath: joinPath(toolRoot(), "bin/renderer.js")) ?? Data()
+    let supportData = FileManager.default.contents(atPath: joinPath(toolRoot(), "bin/drawing-fonts.json")) ?? Data()
+    let support = (try? JSONSerialization.jsonObject(with: supportData)) ?? [String: Any]()
+    let recordData = FileManager.default.contents(atPath: joinPath(root, ".gate/forms-definitions.json")) ?? Data()
+    let record = (try? JSONSerialization.jsonObject(with: recordData)) ?? [String: Any]()
+    return (["status": "declared", "record": record,
+             "record_sha256": sha256Hex(recordData), "profile": ["path": row.path, "text": text, "sha256": sha256Hex(Data(text.utf8))],
+             "inputs": inputs, "reader": ["source": String(data: reader, encoding: .utf8) ?? "", "sha256": sha256Hex(reader)],
+             "support": support], assets)
+}
+
+func drawingTakenTexts(_ w: WorldState) -> [(String, String)] {
+    let plan = drawingInputs(w, counts: false).plan
+    guard plan["status"] as? String == "declared" else { return [] }
+    let own = Set(benchFilesOf(w).map { absPath($0.1) })
+    let resolved = takenInputs(w)
+    let root = layoutDir(w) ?? "."
+    var files: [[String: Any]] = []
+    if let profile = plan["profile"] as? [String: Any] { files.append(profile) }
+    if let inputs = plan["inputs"] as? [String: [String: Any]] { files += inputs.keys.sorted().compactMap { inputs[$0] } }
+    for row in w.layout?.rows ?? [] where row.source == "theirs" {
+        // A resource is not a text page. Decoding binary bytes with replacement
+        // would copy the shared asset into every shelf snapshot as broken text.
+        if let name = row.name, let path = resolved.paths[name],
+           let bytes = FileManager.default.contents(atPath: path),
+           let text = String(data: bytes, encoding: .utf8), !text.utf8.contains(0) {
+            files.append(["path": row.path, "text": text])
+        }
+    }
+    var names = Set<String>()
+    return files.compactMap { file in
+        guard let path = file["path"] as? String, let text = file["text"] as? String,
+              !own.contains(absPath(joinPath(root, path))) else { return nil }
+        let name = path.hasSuffix(".swift") ? String(path.dropLast(6)) : path
+        guard names.insert(name).inserted else { return nil }
+        return (name, text)
+    }
+}
+
 func serveFile(_ conn: GateSocket, _ path: String, _ ctype: String) {
     guard let body = FileManager.default.contents(atPath: path) else {
         serveJSON(conn, compactDumps(.object([
@@ -11855,6 +12053,13 @@ func serveDoor(_ a: [String]) -> Never {
         if conn == gateNoSocket { continue }
         let spawnsBefore = SPAWNS
         if let asked = serveRead(conn) {
+            if asked.method == "GET", asked.path.hasPrefix("/drawing-assets/") {
+                let hash = String(asked.path.dropFirst("/drawing-assets/".count))
+                let assets = drawingInputs(servedWorld(), counts: false).assets
+                if let data = assets[hash] { serveSay(conn, 200, "application/octet-stream", data) }
+                else { serveSay(conn, 404, nil, Data()) }
+                continue
+            }
             switch (asked.method, asked.path) {
             case ("GET", "/"), ("GET", "/ui"):
                 serveFile(conn, joinPath(toolRoot(), "web/ui.html"),
@@ -11863,6 +12068,14 @@ func serveDoor(_ a: [String]) -> Never {
                 // the judge this page reads with, served whole
                 serveFile(conn, joinPath(toolRoot(), "bin/judge.js"),
                           "text/javascript")
+            case ("GET", "/drawing-profile.js"):
+                serveFile(conn, joinPath(toolRoot(), "bin/drawing-profile.js"), "text/javascript")
+            case ("GET", "/drawing-fonts.json"):
+                serveFile(conn, joinPath(toolRoot(), "bin/drawing-fonts.json"), "application/json")
+            case ("GET", "/drawing-profile"):
+                let plan = drawingInputs(servedWorld()).plan
+                let data = (try? JSONSerialization.data(withJSONObject: plan, options: [.sortedKeys])) ?? Data()
+                serveSay(conn, 200, "application/json; charset=utf-8", data)
             case ("GET", "/renderer.js"):
                 // the kit's span engine on JS, for the drawing view (bin/drawing.from)
                 serveFile(conn, joinPath(toolRoot(), "bin/renderer.js"),
@@ -11888,9 +12101,12 @@ func serveDoor(_ a: [String]) -> Never {
                 // says it is and the voice it says it speaks in, read off the
                 // page itself rather than guessed from the shape of its name
                 _ = servedWorld()
-                let pages = shelf().map { $0.name }
+                let taken = drawingTakenTexts(servedWorld())
+                let pages = shelf().map { $0.name } + taken.map { $0.0 }
                 if let want = asked.query["m"], !want.isEmpty {
-                    if STDLIB_TEXTS[want] == nil {
+                    if let input = taken.first(where: { $0.0 == want }) {
+                        serveSay(conn, 200, "text/plain; charset=utf-8", Data(input.1.utf8))
+                    } else if STDLIB_TEXTS[want] == nil {
                         serveSay(conn, 404, nil, Data())
                     } else {
                         // THE WORLD AS IT STANDS, not the text as it shipped:

@@ -30,6 +30,11 @@
 // text. `Written` names another row: the words a page is written in, so the
 // two are read together.
 public protocol Role {}
+// The installed reader, fixed by Kind. Local rows cannot replace its reader.
+public enum DrawingProfileReaderV1: Role {}
+public enum DrawingProfileFile: Role {
+    public typealias Reader = DrawingProfileReaderV1
+}
 //
 // ── what a world says when it first takes something begins here ──
 

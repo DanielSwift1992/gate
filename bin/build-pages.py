@@ -23,6 +23,7 @@ from urllib.parse import quote
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GATE = os.path.join(HERE, "gate")
+PUBLICATION_ROOT = None
 
 
 
@@ -55,6 +56,10 @@ def publish(demo, out, context=None):
                      "/log?n=1&scope=world", "/attention"):
             snap[path] = get(port, path)
 
+        drawing_plan = json.loads(get(port, "/drawing-profile"))
+        from drawing_profile import publish as publish_drawing
+        drawing = publish_drawing(HERE, PUBLICATION_ROOT or out, out, drawing_plan, port)
+        snap["/drawing-profile"] = json.dumps(drawing_plan)
         files = json.loads(snap["/files"])
         if context:
             context["carried"] = files.get("carried") or []
@@ -92,8 +97,12 @@ def publish(demo, out, context=None):
         serve.wait()
 
     ui = open(os.path.join(HERE, "web", "ui.html"), encoding="utf-8").read()
-    for asset in ("codemirror.css", "ladder.css", "codemirror.js", "judge.js", "renderer.js", "press.js"):
+    for asset in ("codemirror.css", "ladder.css", "codemirror.js", "judge.js", "renderer.js", "press.js", "drawing-profile.js"):
         ui = ui.replace(f'"/{asset}"', f'"{asset}"')
+
+    if drawing:
+        ui = ui.replace('<link rel="stylesheet" href="ladder.css">',
+            '<link rel="stylesheet" href="ladder.css"><link rel="stylesheet" data-drawing-profile href="' + html.escape(drawing['href'], quote=True) + '">', 1)
 
     forms = set(files.get("forms") or [])
     layout = files.get("layout")
@@ -625,7 +634,7 @@ function judgeWhereTexts(text, extraTexts) {
     open(os.path.join(out, "ladder.css"), "w", encoding="utf-8").write(ladder_css)
     for asset, home in (("codemirror.css", "web"), ("codemirror.js", "web"),
                         ("judge.js", "bin"), ("renderer.js", "bin"), ("press.js", "bin"),
-                        ("drawing.from", "bin")):
+                        ("drawing.from", "bin"), ("drawing-profile.js", "bin"), ("drawing-fonts.json", "bin")):
         src = os.path.join(HERE, home, asset)
         if os.path.exists(src):
             shutil.copy(src, os.path.join(out, asset))
@@ -652,6 +661,10 @@ def main():
     parser.add_argument("out", nargs="?", default=os.path.join(HERE, "_site"))
     parser.add_argument("--worlds", action="store_true", help="add pinned showcase worlds")
     args = parser.parse_args()
+    global PUBLICATION_ROOT
+    PUBLICATION_ROOT = args.out
+    from drawing_profile import begin
+    begin(args.out)
     with tempfile.TemporaryDirectory(prefix="gate-pages-") as tmp:
         demo = os.path.join(tmp, "demo")
         subprocess.run([GATE, "demo", demo], capture_output=True, check=True)
@@ -659,6 +672,8 @@ def main():
         if args.worlds:
             from playground_pages import build_worlds
             build_worlds(HERE, args.out, publish)
+        from drawing_profile import finish
+        finish(args.out)
         from bench_styles import audit_site
         print("interface tokens:", audit_site(args.out, ladder))
 

@@ -78,10 +78,11 @@ def run():
             os.environ.clear()
             os.environ.update(env)
         def prepared(name):
-            world = Path(temp) / ('native-' + name)
-            shutil.copytree(cache / 'showcase/Worlds/Playground' / name, world)
+            workspace = Path(temp) / ('native-' + name)
+            shutil.copytree(cache / 'showcase', workspace)
+            world = workspace / 'Worlds/Playground' / name
             internal = world / '.gate'
-            internal.mkdir()
+            internal.mkdir(exist_ok=True)
             shutil.copyfile(cache / 'worlds.from', internal / 'worlds.from')
             rows = []
             for filename, source in [('Primitive.swift', cache / 'theory/Sources/VerificationIsIdentification/Primitive.swift'),
@@ -140,7 +141,12 @@ def run():
         subprocess.run(['node', str(HERE / 'tests/playground-scale.js'), str(site)], check=True)
         subprocess.run(['node', str(HERE / 'tests/playground-ui.js'), str(site)], check=True)
         door = (site / 'playground/index.html').read_bytes()
-        assert door == (site / 'playground/readme/index.html').read_bytes()
+        import re
+        canonical = (site / 'playground/readme/index.html').read_text()
+        def normal_alias(text):
+            text = re.sub(r'(?:\.\./)+assets/drawing/', 'ASSETS/', text)
+            return re.sub(r"'sha256-[^']+'", 'HASH', text)
+        assert normal_alias(door.decode()) == normal_alias(canonical)
         assert b'world-card' not in door and b'id="worldlist"' not in door
         sys.path.insert(0, str(HERE / 'bin'))
         from bench_styles import audit_site
@@ -148,6 +154,8 @@ def run():
         assert audit_site(site, ladder)['pages'] == 14
         layout_law = runpy.run_path(str(HERE / 'tests/bench-layout.py'))
         layout_law['run'](site)
+        profile_law = runpy.run_path(str(HERE / 'tests/drawing-profile.py'))
+        profile_law['run'](cache, site)
         # The same law must refuse a second palette on EACH finished page.
         # Font and gap controls exercise the CSS branch independently.
         def refused(path, addition):

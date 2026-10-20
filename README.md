@@ -397,6 +397,11 @@ bin/build-pages.py
                 company court reads below it, at the original line addresses.
                 SHOWCASE_SOURCE names a local source at the pin; the published
                 worlds-source.json says local. The default fetches the public pin.
+bin/drawing-profile.js
+                the same declared drawing profile in serve and static pages:
+                explicit role/theme bindings, the palette's count witnesses and
+                a measured font held to its bytes. Resources have shared hash
+                addresses. Drawing evidence stays separate from the verdict.
 web/ui.html     the workbench; bin/judge.js judges it in the browser
 web/codemirror.*  the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC

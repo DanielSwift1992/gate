@@ -122,9 +122,13 @@ def audit_site(root, expected_ladder):
                 sheets.add(sheet)
     # Read even a CSS file with no link: an omitted consumer is not permission
     # for a second palette to wait beside the generated one.
+    from drawing_profile import audit as audit_drawing
+    drawing = audit_drawing(root)
     sheets.update(root.rglob('*.css'))
     for sheet in sheets:
         css = sheet.read_text()
+        if sheet.resolve() in drawing:
+            continue  # exact bytes, recomputed by the installed profile reader
         if sheet.name == 'ladder.css':
             if css != expected_ladder:
                 errors.append(str(sheet.relative_to(root)) + ': differs from the native declared tokens')

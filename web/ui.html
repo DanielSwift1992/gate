@@ -9,7 +9,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"><meta charset="utf-8"><title>gate · world bench</title>
 <!-- zero egress, enforced by the browser as well as by the code: the bench may
      talk to its own loopback server and to nothing else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-5GzCvayhfKIAxAwizJRqS3a05vGAKRgdgfqpOuJGoBs=' 'sha256-pwgI9nfhAWDq7Hy6GY54osL+nqok+un7YyKSyG/Dphg='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-5GzCvayhfKIAxAwizJRqS3a05vGAKRgdgfqpOuJGoBs=' 'sha256-a2kS1So7tsMY9zexOYeefILlCkuyi0U85F0Aa5clygw='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
 <link rel="stylesheet" href="/codemirror.css">
 <script>
 // The theme is a declaration, not a toggle — and the declaration lives in the
@@ -497,6 +497,7 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 <script src="/codemirror.js"></script>
 <script src="/judge.js"></script>
 <script src="/renderer.js"></script>
+<script src="/drawing-profile.js"></script>
 <script src="/press.js"></script>
 <script>
 // the version this page was written against. The bench reads its page off the
@@ -3591,6 +3592,24 @@ function setMode(m) {
 // so the file that carries a state can use keys drawn by its neighbour. A world
 // with no canvas form has neither a drawing nor a button.
 const CANVAS_FORMS = new Set(["Diagram", "GrownDiagram", "HFlow"]);
+// Drawing has its own evidence. A court's green never compares a picture.
+let drawingProfileState = {status:"none",reason:"Drawing without a profile"};
+async function loadDrawingProfile() {
+    if (typeof GateDrawingProfile === "undefined") return;
+    try {
+        const plan = await (await fetch("/drawing-profile")).json();
+        drawingProfileState = await GateDrawingProfile.compile(plan,
+            async hash => new Uint8Array(await (await fetch(plan.asset_urls?.[hash] || "/drawing-assets/" + hash)).arrayBuffer()),
+            (hash,name) => plan.asset_urls?.[hash] || "/drawing-assets/" + hash);
+        if (drawingProfileState.css && !document.querySelector('link[data-drawing-profile]')) {
+            const sheet = document.createElement("style");
+            sheet.id = "drawing-profile-style"; sheet.textContent = drawingProfileState.css;
+            document.head.appendChild(sheet);
+        }
+    } catch (error) {
+        drawingProfileState = {status:error.status || "refused",reason:error.message};
+    }
+}
 function drawable(parsed) {
     if (!parsed || typeof renderAll !== "function") return false;
     for (const d of parsed.declarations.values())
@@ -3652,11 +3671,16 @@ async function drawCanvases() {
             return;
         }
         if (mode !== "drawing") return;
+        if (typeof drawingProfileState !== "undefined" && ["refused","unsupported"].includes(drawingProfileState.status)) {
+            host.textContent = drawingProfileState.status + " · " + drawingProfileState.reason;
+            return;
+        }
         const drawn = renderAll(read.declarations, read.order, read.literals, read.topAliases);
         // The reader states the canvas dimensions in its viewBox. Give those
         // same dimensions to the host without changing the registered SVG.
         host.innerHTML = drawn.canvases.map(c => c.svg.replace(/viewBox="0 0 ([\d.]+) ([\d.]+)"/,
             '$& width="$1" height="$2"')).join("")
+            + (typeof drawingProfileState === "undefined" ? "" : '<div class="caption">' + esc(drawingProfileState.status + " · " + drawingProfileState.reason) + '</div>')
             + '<div class="caption">Keys change an alias in the open file. Literal typing is not available here.</div>'
             + '<div id="drawing-feedback" class="caption" role="status" aria-live="polite"></div>';
         drawingSnapshot = world;
@@ -4103,6 +4127,7 @@ async function readFiles() {
     // or the bench reads the shelf and misses the file sitting next to the world
     const fl = await readFiles();
     try { language = await (await fetch("/language")).json(); } catch { }
+    await loadDrawingProfile();
     wireJudgeRow();
     await loadVocabulary();
     // the rail carries files AND the journal, so it shows for any clone

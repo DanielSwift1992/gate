@@ -13,7 +13,7 @@ RECORD = HERE / 'bin/playground-worlds.from'
 URL = 'https://github.com/DanielSwift1992/'
 
 
-def checked(root, files):
+def checked(root, files, binary=()):
     for name, want in files.items():
         path = root / name
         if not path.is_file() or path.is_symlink():
@@ -22,7 +22,7 @@ def checked(root, files):
         got = hashlib.sha256(data).hexdigest()
         if got != want:
             raise ValueError(f'{path}: sha256 {got}, expected {want}')
-        if b'\r' in data:
+        if name not in binary and b'\r' in data:
             raise ValueError(f'{path}: the record names LF bytes')
 
 
@@ -56,7 +56,7 @@ def materialize():
                     subprocess.run(['git', '-C', str(source), 'fetch', '-q', '--depth', '1',
                                     URL + repo, spec['revision']], check=True)
                     subprocess.run(['git', '-C', str(source), 'checkout', '-q', 'FETCH_HEAD'], check=True)
-                checked(source, spec['files'])
+                checked(source, spec['files'], spec.get('binary', ()))
                 for name in spec['files']:
                     dest = stage / kind / name
                     dest.parent.mkdir(parents=True, exist_ok=True)
@@ -67,7 +67,7 @@ def materialize():
                 shutil.rmtree(cache)
             shutil.copytree(stage, cache)
     for kind in ('showcase', 'theory', 'baseline'):
-        checked(cache / kind, record[kind]['files'])
+        checked(cache / kind, record[kind]['files'], record[kind].get('binary', ()))
     if (cache / 'worlds.from').read_bytes() != RECORD.read_bytes():
         raise ValueError(f'{cache}: changed provenance record')
     return cache

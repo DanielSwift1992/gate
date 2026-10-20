@@ -48,8 +48,9 @@ def build_worlds(here, out, publish):
                    ('Spectrum.swift', cache / 'showcase/Sources/DocumentKit/Spectrum.swift')]
     for tab in entries:
         with tempfile.TemporaryDirectory(prefix='gate-playground-') as temp:
-            world = Path(temp) / tab['id']
-            shutil.copytree(source / tab['world'], world)
+            workspace = Path(temp) / 'source'
+            shutil.copytree(cache / 'showcase', workspace)
+            world = workspace / 'Worlds/Playground' / tab['world']
             if tab['world'] == 'Site':
                 # Manifest is this world's pinned input too, not a second editable copy.
                 (world / 'Manifest.swift').unlink()
@@ -64,7 +65,7 @@ def build_worlds(here, out, publish):
                 manifest += '\npublic enum CarriedFile: Role {}\npublic enum TheGeometry: Mine {\n    public typealias Kind = CarriedFile\n}\nextension TheGeometry {\n    public static var typeName: String { "Dictionary/Design.swift" }\n}\n'
                 (world / 'gate.manifest.swift').write_text(manifest)
             internal = world / '.gate'
-            internal.mkdir()
+            internal.mkdir(exist_ok=True)
             shutil.copyfile(cache / 'worlds.from', internal / 'worlds.from')
             paths, texts = [], []
             fragments = ([dict(path='Company.swift', marker='// gate-company-data')] if tab.get('generated') else
@@ -74,9 +75,15 @@ def build_worlds(here, out, publish):
                 (internal / name).write_bytes(data)
                 paths.append(dict(path='.gate/' + name, sha256=hashlib.sha256(data).hexdigest()))
                 texts.append(dict(name=name, text=data.decode()))
-            (internal / 'forms-definitions.json').write_text(json.dumps(dict(
-                revision=record['theory']['revision'], files=paths, plain_fragments=fragments,
-                shelf_overrides=False), indent=2) + '\n')
+            definitions_record = internal / 'forms-definitions.json'
+            if definitions_record.exists() and json.loads(definitions_record.read_text()).get('format') == 2:
+                authored = json.loads(definitions_record.read_text())
+                authored['plain_fragments'] = fragments
+                definitions_record.write_text(json.dumps(authored, indent=2) + '\n')
+            else:
+                definitions_record.write_text(json.dumps(dict(
+                    revision=record['theory']['revision'], files=paths, plain_fragments=fragments,
+                    shelf_overrides=False), indent=2) + '\n')
             context = dict(pin=record['showcase']['revision'], world=tab['id'], tab=tab,
                 definitions=texts, carried=[], catalog=catalog, provenance=provenance, guard_names=guard_names,
                 compiler=record['theory'], judge=record['judge'], plain_fragments=fragments,

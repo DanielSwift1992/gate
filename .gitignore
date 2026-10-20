@@ -4,6 +4,7 @@ __pycache__/
 private/
 bin/gate-cli
 bin/.court/
+bin/.inputs/
 bin/.worlds/
 # the windows build makes its scratch inside the clone, because the compiler
 # there cannot find a posix temp: it is made and removed by bin/build-cli.sh
