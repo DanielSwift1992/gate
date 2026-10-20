@@ -161,7 +161,7 @@ def run():
                 path.write_text(original)
         for page in site.rglob('*.html'):
             refused(page, '<style>.probe{color:#123456}</style>')
-        for value in ['font:17px fantasy', 'line-height:1.6', 'padding:7px', 'font:var(--not-a-register)']:
+        for value in ['font:17px fantasy', 'line-height:1.6', 'padding:7px', 'padding:7PX', 'COLOR:RED', 'color:oklch(50% .1 90)', 'color:rebeccapurple', 'background:CanvasText', 'text-decoration:underline oklch(50% .1 90)', 'column-rule:1px solid rebeccapurple', 'filter:drop-shadow(0 0 1px oklch(50% .1 90))', '-webkit-text-stroke:1px oklch(50% .1 90)', 'font:var(--not-a-register)']:
             refused(site / 'playground/basics/codemirror.css', '.probe{' + value + '}')
         refused(site / 'playground/basics/ladder.css', ':root{--ink:#123456}')
         tabs = json.loads((site / 'playground/tabs.json').read_text())

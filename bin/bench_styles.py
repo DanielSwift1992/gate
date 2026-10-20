@@ -54,20 +54,47 @@ def check_css(css, address, constants, known=None):
         if (selector, prop, value) in constants:
             continue
         where = address + ': ' + selector + ' ' + prop + ': ' + value
+        # CSS properties and functions are case-insensitive. Custom-property
+        # names stay case-sensitive and may only be defined by the ladder.
+        if not prop.startswith('--'):
+            prop = prop.lower()
         if known is not None:
             if prop.startswith('--'):
                 errors.append(where + ' — a second interface token outside ladder.css')
-            for name in re.findall(r'var\((--[a-z-]+)', value):
+            for name in re.findall(r'var\((--[a-z-]+)', value, re.I):
                 if name not in known:
                     errors.append(where + ' — an undeclared token reference ' + name)
-        if re.search(r'#[\da-fA-F]{3,8}\b|\b(?:rgba?|hsla?|color)\(', value):
+        if re.search(r'#[\da-fA-F]{3,8}\b|\b(?:rgba?|hsla?|color)\(', value, re.I):
             errors.append(where + ' — a colour outside the generated palette')
-        elif re.search(r'\b(?:white|black|red|silver|gr[ae]y|blue|yellow|green|orange|purple|aqua|navy|teal|maroon|lime|olive|fuchsia)\b', value):
+        elif re.search(r'\b(?:white|black|red|silver|gr[ae]y|blue|yellow|green|orange|purple|aqua|navy|teal|maroon|lime|olive|fuchsia)\b', value, re.I):
             errors.append(where + ' — a named colour outside the generated palette')
+        border_paint = prop.startswith('border') and not (
+            prop.endswith(('-width', '-style', '-radius', '-spacing')) or prop == 'border-collapse')
+        if (prop.endswith('color') or prop.startswith(('background', 'outline')) or border_paint
+                or prop in ('box-shadow', 'text-shadow', 'fill', 'stroke', 'text-decoration',
+                            'text-emphasis', 'column-rule', '-webkit-text-stroke',
+                            'filter', 'backdrop-filter')):
+            # Recognize the bench's palette expressions, not a blacklist of
+            # some of CSS's colour notations. OKLCH and a new named colour
+            # must not be a door around the rule that already refuses hex.
+            expression = re.sub(r'var\(--[\w-]+\)', '', value, flags=re.I)
+            expression = re.sub(r'[+-]?(?:\d*\.\d+|\d+)(?:e[+-]?\d+)?(?:[a-z]+|%)?', '', expression, flags=re.I)
+            words = set(re.findall(r'[a-z][a-z-]*', expression.lower()))
+            grammar = {'none', 'transparent', 'currentcolor', 'inherit', 'initial', 'unset',
+                       'revert', 'revert-layer', 'important', 'solid', 'dashed', 'dotted',
+                       'double', 'groove', 'ridge', 'inset', 'outset', 'hidden', 'auto',
+                       'color-mix', 'in', 'srgb', 'calc', 'min', 'max', 'clamp',
+                       'linear-gradient', 'radial-gradient', 'to', 'top', 'bottom',
+                       'left', 'right', 'center', 'closest-side', 'farthest-corner',
+                       'underline', 'overline', 'line-through', 'wavy', 'blink',
+                       'drop-shadow', 'blur', 'brightness', 'contrast', 'grayscale',
+                       'hue-rotate', 'invert', 'opacity', 'saturate', 'sepia'}
+            if words - grammar:
+                errors.append(where + ' — a colour expression outside the declared palette')
         if prop in ('font', 'font-family', 'font-size', 'line-height') and not (
-                value.startswith('var(') or value in ('inherit', 'initial', 'unset')):
+                value.lower().startswith('var(') or value.lower() in ('inherit', 'initial', 'unset')):
             errors.append(where + ' — a font outside the declared registers')
-        if re.fullmatch(r'(?:padding|margin)(?:-[a-z]+)?|(?:row-|column-)?gap', prop) and re.search(r'[\d.]px\b', value):
+        if re.fullmatch(r'(?:padding|margin)(?:-[a-z]+)?|(?:row-|column-)?gap', prop) and re.search(r'[\d.]px\b', value, re.I):
             errors.append(where + ' — a pixel gap outside the declared ladder')
     return errors
 
