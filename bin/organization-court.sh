@@ -40,7 +40,13 @@ if [ ! -f "$CACHE/OrganizationJudge.swift" ]; then
     printf '%s\n%s\n' "$PIN" "$NOTE" > "$CACHE/from"
     [ -n "${FETCH:-}" ] && rm -rf "$FETCH"
 fi
-GOT="$(shasum -a 256 "$CACHE/OrganizationJudge.swift" | cut -c1-64)"
+# the platform's own SHA-256 tool: git's bash on Windows carries sha256sum and
+# no shasum, macOS the other way round, as bin/gate-audit.sh already reads them
+if command -v sha256sum >/dev/null 2>&1; then SUM="sha256sum"
+elif command -v shasum >/dev/null 2>&1; then SUM="shasum -a 256"
+else echo "organization-court: no sha256sum or shasum here to check the court's file with" >&2; exit 1
+fi
+GOT="$($SUM "$CACHE/OrganizationJudge.swift" | cut -c1-64)"
 if [ -n "$WANT" ] && [ "$GOT" != "$WANT" ]; then
     echo "organization-court: OrganizationJudge.swift at $PIN is $GOT, and bin/organization-court.from says $WANT" >&2
     exit 1
