@@ -76,7 +76,11 @@ jobs:
             docs/bench.png
             docs/bench.png.from
   linux:
-    runs-on: ubuntu-latest
+    # the image is named, not "latest": ubuntu-latest began moving to Ubuntu 26
+    # on 19 October 2026 and the battery went red on the linux job (and the
+    # action job, which downloads the released linux binary) with no change in
+    # this tree. A named image moves when somebody here moves it.
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       statuses: write
@@ -278,7 +282,11 @@ jobs:
             -d "$BODY2" > /dev/null
   pages:
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    # the image is named, not "latest": ubuntu-latest began moving to Ubuntu 26
+    # on 19 October 2026 and the battery went red on the linux job (and the
+    # action job, which downloads the released linux binary) with no change in
+    # this tree. A named image moves when somebody here moves it.
+    runs-on: ubuntu-24.04
     # ── AND TWO PUSHES DO NOT RACE FOR ONE DEPLOYMENT. There is one Pages site
     # and one deployment at a time; without a group, a second push while the
     # first is deploying fails the second, and the run goes red for a reason
@@ -373,7 +381,11 @@ jobs:
   # push that bumps VERSION the new tag has no assets yet, and this job is
   # about the road. The default tag is held to VERSION by the battery.
   action:
-    runs-on: ubuntu-latest
+    # the image is named, not "latest": ubuntu-latest began moving to Ubuntu 26
+    # on 19 October 2026 and the battery went red on the linux job (and the
+    # action job, which downloads the released linux binary) with no change in
+    # this tree. A named image moves when somebody here moves it.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4
       - name: a tree with a dead row is refused
