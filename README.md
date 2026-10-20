@@ -58,6 +58,12 @@ them on your machine.
 
 No server. No runtime. No new formats. Nothing leaves your repository.
 
+A one-line check, with no clone or install:
+
+```sh
+curl -sL https://raw.githubusercontent.com/DanielSwift1992/gate/v0.2.5/bin/gate-audit.sh | bash -s v0.2.5 .
+```
+
 ## try it on your own repository
 
 ```sh
@@ -106,7 +112,7 @@ One step checks every CODEOWNERS rule and workflow `paths:` filter
 against the files that actually exist, on every push:
 
 ```yaml
-- uses: DanielSwift1992/gate@v0.2.4
+- uses: DanielSwift1992/gate@v0.2.5
 ```
 
 A rule that points to a deleted or renamed path fails the check, with
@@ -344,7 +350,7 @@ web/codemirror.*  the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
 docs/           DETAILS.md, SECURITY.md, CHANGELOG.md, NOTICE.md, and
                 the cover's picture with its provenance
-tests/smoke.py   the battery: 546 checks this repository holds itself
+tests/smoke.py   the battery: 552 checks this repository holds itself
                  to, end-to-end runs through judge parity through
                  documentation contracts; the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts

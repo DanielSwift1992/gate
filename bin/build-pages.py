@@ -7,6 +7,7 @@
 # the plain court by judge.js; the full cross-file court and the write path
 # belong to the clone, and the page says so on its face.
 import json
+from bench_csp import stamp_csp, script_json
 import os
 import re
 import shutil
@@ -425,6 +426,10 @@ def main():
             }
         } catch (e) { }
     };
+    document.addEventListener("click", function (event) {
+        if (!event.target.closest("#reset-demo")) return;
+        event.preventDefault(); window.__resetDemo();
+    });
     window.__resetDemo = function () {
         window.__resetWipe();
         location.reload();
@@ -446,13 +451,15 @@ body { height: calc(100vh - var(--strip)) !important; }
 #published-note a { color: #c9c9c9; }
 </style>
 """
-    shim = (shim.replace("__SNAP__", json.dumps(snap))
-                .replace("__FORMS__", json.dumps(sorted(forms)))
-                .replace("__LAYOUT__", json.dumps(layout))
-                .replace("__ALL__", json.dumps(list(dict.fromkeys(everyone)))))
+    # Snapshot strings cannot close a script and introduce a program the
+    # CSP stamper would then authorize. Escape HTML before hashing programs.
+    shim = (shim.replace("__SNAP__", script_json(snap))
+                .replace("__FORMS__", script_json(sorted(forms)))
+                .replace("__LAYOUT__", script_json(layout))
+                .replace("__ALL__", script_json(list(dict.fromkeys(everyone)))))
     note = ('<div id="published-note">judged in your browser as you type · '
             'saved on green, in this browser · <a href="#" '
-            'onclick="__resetDemo();return false">reset the demo</a> · '
+            'id="reset-demo">reset the demo</a> · '
             'the tool: <code>git clone '
             'https://github.com/DanielSwift1992/gate</code></div>')
 
@@ -460,7 +467,7 @@ body { height: calc(100vh - var(--strip)) !important; }
     if marker not in ui:
         raise SystemExit("build-pages: ui.html changed shape, the shim has no place to stand")
     ui = ui.replace(marker, shim + marker, 1)
-    ui = ui + note
+    ui = stamp_csp(ui + note)
 
     os.makedirs(OUT, exist_ok=True)
     open(os.path.join(OUT, "index.html"), "w", encoding="utf-8").write(ui)

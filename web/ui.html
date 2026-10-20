@@ -9,7 +9,7 @@
 <meta charset="utf-8"><title>gate · world bench</title>
 <!-- zero egress, enforced by the browser as well as by the code: the bench may
      talk to its own loopback server and to nothing else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-5GzCvayhfKIAxAwizJRqS3a05vGAKRgdgfqpOuJGoBs=' 'sha256-O8UUmqtjDE+udlZ8K7PtUjJrMXdeb5P20SZBLgG2RVI='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
 <link rel="stylesheet" href="/codemirror.css">
 <script>
 // The theme is a declaration, not a toggle — and the declaration lives in the
@@ -468,7 +468,7 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 // is new, the server is the process that was already running. Nothing said so,
 // and a page talking to a server that has never heard of half its answers fails
 // quietly — the one failure this bench must never have.
-const BENCH_FOR = "0.2.4";
+const BENCH_FOR = "0.2.5";
 // A BAR THAT EXPIRES MAY ANSWER AN ACTION; IT MAY NEVER REPORT A STATE. You
 // asked for the save, so a word about the save can go and be forgotten — but a
 // state you did not cause, and that is still true a minute later, must stay
@@ -504,7 +504,7 @@ fetch("/version", { cache: "no-store" }).then(r => r.json()).then(v => {
             + v.gate + ". Restart `gate serve`";
         const el = document.getElementById("status");
         if (el && !el.textContent.includes("restart")) el.innerHTML += '<span class="stale">'
-            + benchStale + "</span>";
+            + esc(benchStale) + "</span>";
     }
 }).catch(() => {});
 
@@ -868,7 +868,7 @@ function buildRail() {
         // your personal world stands apart: it is in your own git, and the
         // shared repository does not have it
         row.innerHTML = '<span class="dot"></span><span class="name">'
-            + (cut < 0 ? f : f.slice(cut + 1)) + "</span>"
+            + esc(cut < 0 ? f : f.slice(cut + 1)) + "</span>"
             + (f === personalFile
             // every file under this heading is mine, so the badge must say the
             // thing that is different about this one: it is not in the repository
@@ -938,7 +938,7 @@ async function openUndeclared(f) {
     refLabel = "<b>" + esc(f) + "</b> \u00b7 here, and no row names it, so nothing reads it. "
         + "A row says which court does: "
         + Object.keys(roleWords).map(k => '<a href="#" class="gesture declare-as" data-role="'
-            + esc(k) + '" title="' + esc(roleWords[k]) + '">' + esc(k) + "</a>").join(" \u00b7 ");
+            + escAttr(k) + '" title="' + escAttr(roleWords[k]) + '">' + esc(k) + "</a>").join(" \u00b7 ");
     buildRail();
     render();
 }
@@ -1947,7 +1947,7 @@ async function render() {
         badFiles = new Set(); buildRail();
         document.getElementById("status").innerHTML = refLabel
             ? refLabel
-            : "<b>" + viewingShelf + ".swift</b> · a printout of what the judge carries, theirs, read-only";
+            : "<b>" + esc(viewingShelf) + ".swift</b> · a printout of what the judge carries, theirs, read-only";
         document.getElementById("chips").innerHTML =
             '<span class="chip" style="background:var(--mist);color:var(--muted)">'
             + (undeclaredView ? "not declared" : "reference") + "</span>";
@@ -1982,11 +1982,11 @@ async function render() {
     repaintNames(local.parsed, r.refusals);
     document.getElementById("status").innerHTML =
         (files.length > 1
-            ? "<b>" + r.declarations + "</b> " + r.premises
-              + (r.wide ? " · <b>" + r.wide + "</b> claims checked" : "")
-            : "<b>" + r.declarations + "</b> declarations · <b>" + r.premises + "</b> claims checked")
+            ? "<b>" + esc(r.declarations) + "</b> " + esc(r.premises)
+              + (r.wide ? " · <b>" + esc(r.wide) + "</b> claims checked" : "")
+            : "<b>" + esc(r.declarations) + "</b> declarations · <b>" + esc(r.premises) + "</b> claims checked")
         + " · " + (+r.milliseconds).toFixed(1) + " ms"
-        + (benchStale ? '<span class="stale">' + benchStale + "</span>" : "");
+        + (benchStale ? '<span class="stale">' + esc(benchStale) + "</span>" : "");
     const pending = r.refusals.filter(x => /states none/.test(x.premise));
     const broken = r.refusals.filter(x => !/states none/.test(x.premise));
     // a refusal and a decision are different things and neither hides the other.
@@ -2034,8 +2034,8 @@ async function render() {
         // `extra.swift:NaN`, which is the tool making a machine's mistake in front
         // of a person who came here to be told exactly where to look.
         const at = Number.isFinite(ref.line) ? ":" + ref.line : "";
-        row.innerHTML = '<code class="fact">' + (ref.file || active) + at
-            + '</code><span class="' + (cls === "pending" ? "caption" : "speech") + '">' + label + "</span>";
+        row.innerHTML = '<code class="fact">' + esc(ref.file || active) + at
+            + '</code><span class="' + (cls === "pending" ? "caption" : "speech") + '">' + esc(label) + "</span>";
         row.onclick = async () => {
             navFrom = navHere();
             // a refusal about an undeclared file opens that file, where the row it
@@ -2064,7 +2064,7 @@ async function render() {
         for (const g of guards) {
             const row = document.createElement("div");
             row.className = "pending";   // guarded, not judged: addressed, calm, never the red a fact earns
-            row.innerHTML = '<code class="fact">' + g.file + ":" + g.line + '</code><span class="caption">' + esc(g.decl + "." + g.axis)
+            row.innerHTML = '<code class="fact">' + esc(g.file) + ":" + esc(g.line) + '</code><span class="caption">' + esc(g.decl + "." + g.axis)
                 + " = " + esc(g.value) + " · the bench's own forms state " + esc(g.allowed) + "</span>";
             row.onclick = async () => {
                 navFrom = navHere();
@@ -2398,7 +2398,7 @@ function buildTables() {
             // `was` is not an axis anybody declared — it is this bench reporting
             // what it read. The observed register says so without a word.
             th.className = key === "was" ? "caption observed" : "caption";
-            th.innerHTML = key + mark(key);
+            th.innerHTML = esc(key) + mark(key);
             th.onclick = () => {
                 const dir = tableSort && tableSort.sig === sig && tableSort.key === key ? -tableSort.dir : 1;
                 tableSort = { sig, key, dir }; buildTables();
@@ -2546,7 +2546,7 @@ function buildTables() {
                          ...(hasNotes ? ["note"] : []), ""];
         for (const key of columns) {
             const th = document.createElement("th"); th.className = "caption";
-            th.innerHTML = key + mark(key);
+            th.innerHTML = esc(key) + mark(key);
             th.onclick = () => {
                 const dir = tableSort && tableSort.sig === sig && tableSort.key === key ? -tableSort.dir : 1;
                 tableSort = { sig, key, dir }; buildTables();
@@ -2743,7 +2743,9 @@ function buildTables() {
 // ── one row of views over the same file: Full · Bare · Table (· Canvas one
 // day). Not two switches of one state — three views of one truth. ──
 let mode = "bare";
-const esc = (s) => s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+// World text stays text in both contexts; quotes have meaning in attributes.
+const esc = (s) => String(s ?? "").replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+const escAttr = (s) => esc(s).replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 
 // Bare: the bare form — the facts with the language's ceremony gone. No enum,
 // no typealias, no public, no braces; scope is indentation, the way Python
@@ -2755,7 +2757,7 @@ function nameTokens(raw) {
     return esc(raw).replace(/(\.?)\b([A-Z][A-Za-z0-9_]*)\b/g, (m, dot, name) => {
         if (dot === ".") return dot + '<span class="known">' + name + "</span>";
         if (unresolved.has(name)) return '<span class="known bad">' + name + "</span>";
-        if (layoutOrActive().has(name)) return '<span class="jump" data-jump="' + name + '">' + name + "</span>";
+        if (layoutOrActive().has(name)) return '<span class="jump" data-jump="' + escAttr(name) + '">' + name + "</span>";
         return '<span class="known">' + name + "</span>";
     });
 }
@@ -3104,9 +3106,12 @@ function noteProse(text, marks) {
     // every paragraph that states it, the first time the paragraph does
     for (const m of marks || []) {
         const lit = esc(m);
-        if (html.includes(lit)) {
-            html = html.replace(lit, '<span class="mark">' + lit + "</span>");
-        }
+        let marked = false;
+        html = html.split(/(<[^>]*>)/g).map((part, i) => {
+            if (i % 2 || marked || !part.includes(lit)) return part;
+            marked = true;
+            return part.replace(lit, () => '<span class="mark">' + lit + "</span>");
+        }).join("");
     }
     return html;
 }
@@ -3127,7 +3132,7 @@ function bareForm(parsed, text) {
     const src = text || "";
     const notes = attachNotes(src, parsed);
     const declSpan = (name, line, bad) =>
-        '<span class="decl' + (bad ? " bad" : "") + '" data-jump="' + name + '">' + esc(name) + "</span>";
+        '<span class="decl' + (bad ? " bad" : "") + '" data-jump="' + escAttr(name) + '">' + esc(name) + "</span>";
     bareSlots = [];
     const slotSpan = (slot, value) => {
         const placeable = !!locateSlot(slot);
@@ -3240,7 +3245,7 @@ function bareForm(parsed, text) {
                 + cut({ kind: "entry", line: e.line, host: name }, "claim") + "</span>");
         }
         if ((d.entries || []).length && !reading())
-            block.push('    <span class="add caption" data-add-claim="' + name + '">+ add claim</span>');
+            block.push('    <span class="add caption" data-add-claim="' + escAttr(name) + '">+ add claim</span>');
         items.push({ line: d.line, note: noteOf(name), block });
     }
     // ── AND A VALUE READS AS ITS VALUE HERE TOO. The same walk the table uses:
@@ -3252,7 +3257,7 @@ function bareForm(parsed, text) {
     for (const [name, a] of (parsed.topAliases || new Map())) {
         const shown = shownTerm(a.target);
         const said = shown === a.target ? nameTokens(a.target)
-            : '<span title="' + esc(a.target) + '">' + nameTokens(shown) + "</span>";
+            : '<span title="' + escAttr(a.target) + '">' + nameTokens(shown) + "</span>";
         // ── AND A CERTIFICATE SHOWS WHEN IT IS THE ONE THAT BROKE. This passed
         // `false` for hurt, always. A certificate is a top-level alias and the
         // where court refuses nothing else, so EVERY refusal that court makes
@@ -3439,7 +3444,7 @@ function describeName(name) {
     if (d && d.conformances && d.conformances.length) {
         const kinds = d.conformances.filter(c => protoAxes[c]);
         const plain = d.conformances.filter(c => !protoAxes[c]);
-        if (FORM_ROWS.gate[name]) return name + " · a gate: " + name + "&lt;" + FORM_ROWS.gate[name].join(", ") + "&gt;";
+        if (FORM_ROWS.gate[name]) return name + " · a gate: " + name + "<" + FORM_ROWS.gate[name].join(", ") + ">";
         return name + " · " + (plain.length ? "a " + plain.join(", ") + " " : "") + "record"
             + (kinds.length ? ", of kind " + kinds.join(", ") : "");
     }
@@ -3454,7 +3459,7 @@ function describeName(name) {
     // name this line answered nothing for: the letter calls every `X = Y` a
     // claim, so the cursor does too, with the claim's own right side
     const said = lastParsed && lastParsed.topAliases && lastParsed.topAliases.get(name);
-    if (said) return name + " · a claim: " + esc(said.target);
+    if (said) return name + " · a claim: " + said.target;
     if (vocabulary[name]) return name + " · declared in " + vocabulary[name];
     return null;
 }
@@ -3486,7 +3491,7 @@ function inspect() {
     const { host } = placeAt(cur);
     const text = (isAxis && describeAxis(host, name)) || describeName(name);
     if (!text) { el.textContent = ""; return; }
-    el.innerHTML = text + (jumpable.has(name) ? " · " + (MAC ? "\u2318" : "Ctrl") + "-click opens it" : "");
+    el.textContent = text + (jumpable.has(name) ? " · " + (MAC ? "\u2318" : "Ctrl") + "-click opens it" : "");
 }
 cm.on("cursorActivity", scheduleInspect);
 async function tick(write) {

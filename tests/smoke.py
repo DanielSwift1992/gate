@@ -1162,6 +1162,8 @@ def main():
               re.search(r"default: 'v([0-9.]+)'", _ay).group(1) == _ver))
     S.append(("the cover's snippet pins the tag the action pins",
               ("DanielSwift1992/gate@v" + _ver)
+              in open(os.path.join(HERE, "README.md"), encoding="utf-8").read()
+              and ("gate/v" + _ver + "/bin/gate-audit.sh | bash -s v" + _ver + " .")
               in open(os.path.join(HERE, "README.md"), encoding="utf-8").read()))
     _saids = re.findall(r"said: ([a-z0-9_-]+)",
                         open(os.path.join(HERE, ".github", "workflows", "release.yml"),
@@ -3144,7 +3146,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               in open(VEIN).read()
               # and the bench prints it in the multi-file line, where it used to vanish
               and "r.wide = r.premises" in ui
-              and '(r.wide ? " · <b>" + r.wide + "</b> claims checked" : "")' in ui))
+              and '(r.wide ? " · <b>" + esc(r.wide) + "</b> claims checked" : "")' in ui))
 
     S.append(("a jump can be walked back and forward, across files too",
               "function navGo(" in ui and "navFrom = navHere()" in ui
@@ -4102,6 +4104,78 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               # and the guard still does its own job
               and [r["address"] for r in with_stray.get("refusals", [])
                    if "no row in the manifest" in r["claim"]] == ["stray.swift"]))
+
+    # ── WORLD TEXT NEVER BECOMES A PROGRAM. The builders below are the real
+    # UI functions; Python's HTML parser reads their fragments independently.
+    # Reverting rowFor must both create the img and trip the isolated probe.
+    _security = os.path.join(HERE, "tests", "bench-security.js")
+    _safe = subprocess.run(["node", _security], capture_output=True, text=True)
+    S.append(("hostile court text, filenames, notes and typeName stay text in the bench",
+              _safe.returncode == 0 and "BENCH SECURITY GREEN" in _safe.stdout))
+    if _safe.returncode: print("   " + (_safe.stdout + _safe.stderr)[-1000:])
+    _old = subprocess.run(["node", _security, "--old-row-for"], capture_output=True, text=True)
+    S.append(("the original rowFor is caught by the hostile fragment probe",
+              _old.returncode != 0 and "the event probe stays unset" in _old.stderr))
+
+    import importlib.util as _security_import
+    _csp_spec = _security_import.spec_from_file_location("bench_csp", os.path.join(HERE, "bin", "bench_csp.py"))
+    _csp_module = _security_import.module_from_spec(_csp_spec)
+    _csp_spec.loader.exec_module(_csp_module)
+    _page = open(os.path.join(HERE, "web", "ui.html"), encoding="utf-8").read()
+    _script_policy = re.search(r"script-src ([^;]+)", _page).group(1)
+    S.append(("the bench authorizes only its exact inline programs and blocks inline handlers",
+              "'unsafe-inline'" not in _script_policy
+              and "'unsafe-hashes'" not in _script_policy
+              and "script-src-attr 'none'" in _page
+              and _csp_module.stamp_csp(_page) == _page))
+    _closing_script = '</script><script>document.body.dataset.probe=1</script>'
+    _encoded = _csp_module.script_json({"world": _closing_script, "name": '<img src=x onerror="probe=1">'})
+    _data_page = _page.replace('<script>', '<script>const hostileSnapshot = ' + _encoded + ';', 1)
+    S.append(("published snapshot strings cannot close a trusted script before CSP is stamped",
+              "<" not in _encoded and json.loads(_encoded)["world"] == _closing_script
+              and len(re.findall(r"<script>", _data_page)) == len(re.findall(r"<script>", _page))
+              and "script-src-attr 'none'" in _csp_module.stamp_csp(_data_page)))
+
+    # The actual server and the native plain court must expose the same hostile
+    # line to the renderer; a sanitized fixture response would hide the bug.
+    _hostile = tempfile.mkdtemp(prefix="hostile-bench-", dir=tmp)
+    _hostile_name = "hostile.swift"
+    _hostile_extra = 'extra-<img src=x onerror="document.body.dataset.probe=1">.swift'
+    open(os.path.join(_hostile, _hostile_extra), "w").write("// an undeclared hostile name\n")
+    _hostile_text = '<img src=x onerror="document.body.dataset.probe=1">\npublic enum Stranger {}\n'
+    open(os.path.join(_hostile, _hostile_name), "w").write(_hostile_text)
+    open(os.path.join(_hostile, "other.swift"), "w").write("public enum Other {}\n")
+    run("mine", _hostile_name, "--role", "world", cwd=_hostile)
+    run("mine", "other.swift", "--role", "world", cwd=_hostile)
+    import urllib.request as _security_http, urllib.parse as _security_url
+    _hp = free_port()
+    _hs = subprocess.Popen([GATE, "serve", str(_hp), "--no-open"], cwd=_hostile,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        wait_serve(_hp)
+        _request = _security_http.Request("http://127.0.0.1:" + str(_hp) + "/verdict?f="
+            + _security_url.quote(_hostile_name), data=_hostile_text.encode(), method="POST")
+        _file_answer = _security_http.urlopen("http://127.0.0.1:" + str(_hp) + "/files", timeout=60).read()
+        _file_answer_path = os.path.join(tmp, "hostile-server-files.json")
+        open(_file_answer_path, "wb").write(_file_answer)
+        _answer = _security_http.urlopen(_request, timeout=60).read()
+        _answer_path = os.path.join(tmp, "hostile-server-answer.json")
+        open(_answer_path, "wb").write(_answer)
+        _served = subprocess.run(["node", _security, "--server-verdict", _answer_path, "--file-list", _file_answer_path],
+                                 capture_output=True, text=True)
+        S.append(("a real loopback verdict quoting a hostile world remains literal in the bench",
+                  _served.returncode == 0 and "BENCH SECURITY GREEN" in _served.stdout))
+        if _served.returncode:
+            print("   verdict: " + _answer.decode()[:1800])
+            print("   " + (_served.stdout + _served.stderr)[-1000:])
+    finally:
+        _hs.terminate(); _hs.wait(timeout=10)
+
+    _builder_src = open(os.path.join(HERE, "bin", "build-pages.py"), encoding="utf-8").read()
+    S.append(("the static builder stamps CSP after escaping snapshot data and resets without an inline handler",
+              "script_json(snap)" in _builder_src and "ui = stamp_csp(ui + note)" in _builder_src
+              and 'id="reset-demo"' in _builder_src and 'closest("#reset-demo")' in _builder_src
+              and 'onclick="__resetDemo' not in _builder_src))
 
     # ── AND THE PAGE HAS TO PARSE. Every check here reads the bench as text and
     # asks whether the right words are in it — which says nothing about whether
