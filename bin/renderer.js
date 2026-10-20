@@ -236,6 +236,16 @@ const portArity = new Map([
     ...["TimedReveal", "LineTally", "XYZWrite", "EdgeSame", "EdgeAtLeast"].map(n => [n,3]),
     ["PouredCoordinate",6]
 ]);
+function executableOverride(env, declaration, seen = new Set()) {
+    if (!declaration || seen.has(declaration.qualified)) return null;
+    seen.add(declaration.qualified);
+    if (declaration.drawingUnsupported) return declaration.drawingUnsupported;
+    for (const name of declaration.conformances) {
+        const reason = executableOverride(env, env.declarations.get(name), seen);
+        if (reason) return reason;
+    }
+    return null;
+}
 function resolveHead(env, node) {
     if (!node) complain(env, "missing type");
     let cursor = node;
@@ -244,7 +254,8 @@ function resolveHead(env, node) {
         if (portArity.has(cursor.head) && cursor.args.length !== portArity.get(cursor.head)) complain(env, cursor.head + ": unsupported argument count");
         const stated = env.declarations.get(cursor.head);
         if (stated && (seedCount.has(cursor.head) || seedText.has(cursor.head) || portArity.has(cursor.head))) complain(env, cursor.head + ": a local definition shadows the kit");
-        if (stated && stated.drawingUnsupported) complain(env, cursor.head + ": " + stated.drawingUnsupported);
+        const override = executableOverride(env, stated);
+        if (override) complain(env, cursor.head + ": " + override);
         const alias = env.topAliases.get(cursor.head);
         // a dotted head reads an axis off a resolved owner: `LampMode.Ink` is the
         // Ink alias of whatever term LampMode stands for
@@ -311,6 +322,7 @@ function runtimeType(env, raw) {
     let node = resolveHead(env, raw);
     if (kitTypeAliases.has(node.head) && !env.declarations.has(node.head)) return runtimeType(env, parseType(kitTypeAliases.get(node.head)));
     if (node.head === "Twice" && node.args.length === 1) node = {head: "Plus", args: [node.args[0], node.args[0]]};
+    if (!env.declarations.has(node.head) && !["Never", "Unit", "Succ", "Plus", "Times", "Half", "Rest", "Tick"].includes(node.head)) complain(env, node.head + ": runtime type name outside this subset");
     return {head: node.head, args: node.args.map(n => runtimeType(env, n))};
 }
 for (const width of [1,2,4,8,16,32,64,128,256,512]) kitTypeAliases.set("U" + width, width === 1 ? "Unit" : "Twice<U" + width / 2 + ">");

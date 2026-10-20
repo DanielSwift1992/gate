@@ -31,6 +31,8 @@ const artName = basic.replaceAll('FixtureArt', 'SomebodysArt');
 assert.equal(draw([{file:'New.swift',text:artName}]).canvases[0].name, 'SomebodysArt');
 for (const text of [
     basic.replace('Half<U2>', 'Mystery<U2>'),
+    basic.replace('public typealias AriaLabel = FixtureTitle', 'public typealias AriaLabel = TermText<Undeclared>'),
+    basic.replace('Half<U2>', 'Custom').concat('\npublic protocol Executable: Close {\n static var count: Int { get }\n}\npublic enum Custom: Executable {}\n'),
     basic.replace('public typealias Across = U64', 'public typealias Across = U64\n public typealias Backdrop = PageBackdrop'),
     basic.replace('public typealias Across = U64', 'public typealias Across = U64\n public typealias Backdrop = MadeUp'),
     basic.replace('Half<U2>', 'Custom').concat('\npublic enum Custom: Close { public static var count: Int { 50 } }\n'),
