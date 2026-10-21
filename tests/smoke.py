@@ -3453,6 +3453,7 @@ async function main() {
     const result = {};
     const withMaterial = bench(atom, 'Atom.swift', { 'AtomPages.swift': pages, 'Evidence.swift': 'public enum Plus {}' });
     withMaterial.context.theirsFiles = {'Evidence.swift': {kind:'CarriedFile'}};
+    withMaterial.context.documentFiles.delete('Evidence.swift');
     await withMaterial.context.drawCanvases();
     assert(withMaterial.host.innerHTML.includes('<svg'));
     assert(!withMaterial.readings.some(t => t.includes('public enum Plus {}')));
@@ -3577,6 +3578,7 @@ async function main() {
     const previous = stale.context.drawCanvases(); await new Promise(resolve => setImmediate(resolve));
     stale.context.resetDrawing(); stale.context.active = 'plain.swift';
     stale.context.files = ['plain.swift', 'empty.swift']; stale.change('public enum Plain {}');
+    stale.context.documentFiles = new Set(stale.context.files);
     const current = stale.context.drawCanvases(); await new Promise(resolve => setImmediate(resolve));
     deliveries[1](''); await current; deliveries[0](pages); await previous;
     assert.equal(stale.button.hidden, true); assert.equal(stale.host.innerHTML, '');
