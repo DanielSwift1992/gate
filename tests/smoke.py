@@ -3317,7 +3317,11 @@ async function main() {
     const b = bench(); b.context.mode = 'bare'; await b.context.drawCanvases();
     assert.equal(b.button.hidden, false); assert.equal(b.host.innerHTML, '');
     assert.equal(b.readings[0], atom + '\n' + pages);
-    b.context.setMode('drawing'); await new Promise(resolve => setImmediate(resolve));
+    // The view switch starts an asynchronous read; wait for its canvas, not
+    // for one turn of the loop, which a loaded machine does not promise.
+    b.context.setMode('drawing');
+    for (let turn = 0; turn < 1000 && !b.host.innerHTML.includes('<svg'); turn++)
+        await new Promise(resolve => setImmediate(resolve));
     const sized = [...b.host.innerHTML.matchAll(/viewBox="0 0 ([\d.]+) ([\d.]+)" width="([\d.]+)" height="([\d.]+)"/g)];
     assert(sized.length, 'a drawn world keeps its stated screen dimensions');
     assert(sized.every(m => m[1] === m[3] && m[2] === m[4]));
