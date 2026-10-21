@@ -419,6 +419,10 @@ bin/build-pages.py
                 root, the world shown on the cover. Each world keeps
                 its own saved files by revision, world and file. Page bodies at
                 the pin compile in showcase; browser edits have no Swift proof.
+                Static pages keep file drafts, not structural writes: changing
+                the manifest, declaring a file or answering a table value
+                refuses with an address. Change the source with gate serve and
+                publish again. A failed disk write in serve refuses too.
                 A mixed company page names its data boundary explicitly; the
                 company court reads below it, at the original line addresses.
                 SHOWCASE_SOURCE names a local source at the pin; the published
@@ -433,7 +437,7 @@ web/codemirror.*  the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
 docs/           DETAILS.md, SECURITY.md, CHANGELOG.md, NOTICE.md, and
                 the cover's picture with its provenance
-tests/smoke.py   the battery: 736 checks this repository holds itself
+tests/smoke.py   the battery: 737 checks this repository holds itself
                  to, end-to-end runs through judge parity through
                  documentation contracts; the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts

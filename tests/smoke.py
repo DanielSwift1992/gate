@@ -5504,6 +5504,12 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               _pending.returncode == 0))
     if _pending.returncode:
         print(_pending.stdout + _pending.stderr, flush=True)
+    _writes = subprocess.run([sys.executable, os.path.join(HERE, "tests", "write-refusal.py")],
+                             capture_output=True, text=True)
+    S.append(("unsupported static writes and failed native writes refuse at their address, including in the UI",
+              _writes.returncode == 0))
+    if _writes.returncode:
+        print(_writes.stdout + _writes.stderr, flush=True)
     _script_policy = re.search(r"script-src ([^;]+)", _page).group(1)
     S.append(("the bench authorizes only its exact inline programs and blocks inline handlers",
               "'unsafe-inline'" not in _script_policy

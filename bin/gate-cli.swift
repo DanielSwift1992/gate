@@ -12014,21 +12014,21 @@ func personalRootPath() -> String {
 // anything, so there is nothing to keep. It lives in a git of its own, in the
 // operator's home, never in the shared clone: colleagues and CI do not have it,
 // and privacy here is the repository boundary rather than a policy.
-func writePersonal(_ w: WorldState, _ text: String) {
+func writePersonal(_ w: WorldState, _ text: String) throws {
     guard let p = personalPathOf(w) else { return }
     let said = text.trimmingCharacters(in: .whitespacesAndNewlines)
     let page = personalTemplate().trimmingCharacters(in: .whitespacesAndNewlines)
     if said.isEmpty || said == page {
-        try? FileManager.default.removeItem(atPath: p)
+        if FileManager.default.fileExists(atPath: p) { try FileManager.default.removeItem(atPath: p) }
         return
     }
     let home = personalRootPath()
-    try? FileManager.default.createDirectory(
+    try FileManager.default.createDirectory(
         atPath: (p as NSString).deletingLastPathComponent, withIntermediateDirectories: true)
     if !FileManager.default.fileExists(atPath: (home as NSString).appendingPathComponent(".git")) {
         _ = runGit(["init", "-q", home], home)
     }
-    try? text.write(toFile: p, atomically: true, encoding: .utf8)
+    try text.write(toFile: p, atomically: true, encoding: .utf8)
     // only text that holds is ever written here, so every commit is a state
     // that held: this is gate's own repository, not the operator's
     _ = runGit(["add", "-A"], home)
@@ -12666,6 +12666,13 @@ func benchTakenRefusal(_ w: WorldState, _ name: String, resolved: TakenResolutio
 func serveReadingRefusal(_ conn: GateSocket, _ bad: (address: String, claim: String)) {
     serveSay(conn, 409, "application/json; charset=utf-8", Data(compactDumps(.object([
         ("verdict", .text("refused")), ("address", .text(bad.address)), ("reason", .text(bad.claim))])).utf8))
+}
+
+func serveWriteFailure(_ conn: GateSocket, _ address: String, _ error: Error) {
+    serveSay(conn, 409, "application/json; charset=utf-8", Data(compactDumps(.object([
+        ("verdict", .text("refused")), ("address", .text(address)),
+        ("reason", .text("the file was not written: " + error.localizedDescription)),
+        ("next", .text("Check this path and its write permissions, then retry in gate serve."))])).utf8))
 }
 
 // Single and grouped reads share the delivery check. They hash the exact
@@ -13482,8 +13489,9 @@ func serveDoor(_ a: [String]) -> Never {
                 } else {
                     lines.append(wrote)
                 }
-                try? lines.joined(separator: "\n").write(toFile: path, atomically: true,
-                                                         encoding: .utf8)
+                do { try lines.joined(separator: "\n").write(toFile: path, atomically: true,
+                                                            encoding: .utf8) }
+                catch { serveWriteFailure(conn, relPath(path, layoutDir(w) ?? "."), error); break }
                 serveJSON(conn, compactDumps(.object([
                     ("wrote", .text(wrote)),
                     ("file", .text(relPath(path, layoutDir(w) ?? "."))),
@@ -13506,11 +13514,13 @@ func serveDoor(_ a: [String]) -> Never {
                     serveSay(conn, 404, nil, Data())
                     break
                 }
-                if p == personalPathOf(w) {
-                    writePersonal(w, text)      // empty means gone, not an empty file
-                } else {
-                    try? text.write(toFile: p, atomically: true, encoding: .utf8)
-                }
+                do {
+                    if p == personalPathOf(w) {
+                        try writePersonal(w, text)      // empty means gone, not an empty file
+                    } else {
+                        try text.write(toFile: p, atomically: true, encoding: .utf8)
+                    }
+                } catch { serveWriteFailure(conn, asked.query["f"] ?? p, error); break }
                 serveSay(conn, 200, nil, Data())
             default:
                 serveSay(conn, 404, nil, Data())

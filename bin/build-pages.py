@@ -170,6 +170,12 @@ function judgeWhereTexts(text, extraTexts) {
         return new Response(body, { status: status || 200,
             headers: { "Content-Type": "application/json" } });
     }
+    // A snapshot may keep a file draft, not rewrite the list that says what
+    // the snapshot reads. A successful answer must name an act this host did.
+    function refuseWrite(address, reason, status) {
+        return reply(JSON.stringify({ verdict: "refused", address, reason,
+            next: "Change the source repository with gate serve, then publish a new snapshot." }), status);
+    }
     function lineOf(text, name) {
         const lines = text.split("\\n");
         for (let i = 0; i < lines.length; i += 1) {
@@ -333,11 +339,18 @@ function judgeWhereTexts(text, extraTexts) {
     }
     window.fetch = async function (url, opts) {
         const u = String(url);
-        const method = (opts && opts.method) || "GET";
-        if (method === "PUT" && u.startsWith("/world")) {
-            const f = decodeURIComponent(u.split("f=")[1] || "");
+        const method = ((opts && opts.method) || "GET").toUpperCase();
+        if (method === "PUT" && u.split("?")[0] === "/world") {
+            let f;
+            try { f = decodeURIComponent((u.split("?")[1] || "").split("&")
+                .find(p => p.startsWith("f="))?.slice(2).replace(/\\+/g, " ") || ""); }
+            catch { return refuseWrite(method + " " + u, "the file name is not a valid URL encoding", 409); }
+            if (f === LAYOUT) return refuseWrite(f + ":1",
+                "this snapshot cannot change its manifest or the files it reads", 409);
             if (THEIRS[f]) return reply(JSON.stringify({ address: THEIRS[f].address,
                 reason: f + ": Theirs is read-only; change the owner and take a new pin" }), 409);
+            if (!JSON.parse(SNAP["/files"]).files.includes(f)) return refuseWrite(method + " " + u,
+                "a draft must name a file this snapshot reads", 409);
             const text = String((opts && opts.body) || "");
             const row = CONTEXT ? JSON.stringify(draftRecord(f, text, readDraft(f, text))) : text;
             try {
@@ -345,8 +358,9 @@ function judgeWhereTexts(text, extraTexts) {
             } catch (e) { return reply(JSON.stringify({ note: "browser storage unavailable" }), 507); }
             return reply("", 200);
         }
-        if (method === "PUT") return reply("", 200);
-        if (method === "POST" && u.startsWith("/verdict")) {
+        if (method === "PUT") return refuseWrite(method + " " + u,
+            "this snapshot does not support this write; no source file was changed", 405);
+        if (method === "POST" && u.split("?")[0] === "/verdict") {
             const f = decodeURIComponent(u.split("f=")[1] || "");
             const text = opts && opts.body ? String(opts.body) : "";
             const said = JSON.parse(SNAP["/verdict?f=" + f] || "{}");
@@ -361,6 +375,8 @@ function judgeWhereTexts(text, extraTexts) {
             said.refusals = refusals;
             return reply(JSON.stringify(said));
         }
+        if (!["GET", "HEAD"].includes(method)) return refuseWrite(method + " " + u,
+            "this snapshot does not support this write; no source file was changed", 405);
         if (u.startsWith("/world?f=") && method === "GET") {
             const f = decodeURIComponent(u.split("f=")[1] || "");
             return new Response(textOf(f), { status: 200,

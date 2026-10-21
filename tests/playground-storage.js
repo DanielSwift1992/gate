@@ -22,18 +22,31 @@ function open(id) {
     return scope;
 }
 (async () => {
-    const a = open("readme"), b = open("basics"), file = "same.swift";
+    const a = open("readme"), b = open("basics"), file = "ReadMePages.swift", basicsFile = "BasicsPages.swift";
     await a.fetch("/world?f=" + file, { method: "PUT", body: "intro text" });
-    await b.fetch("/world?f=" + file, { method: "PUT", body: "basics text" });
+    await b.fetch("/world?f=" + basicsFile, { method: "PUT", body: "basics text" });
     assert.strictEqual(await (await a.fetch("/world?f=" + file)).text(), "intro text");
-    assert.strictEqual(await (await b.fetch("/world?f=" + file)).text(), "basics text");
-    const otherPin = "gate.pages.other-pin.readme.same.swift";
+    assert.strictEqual(await (await b.fetch("/world?f=" + basicsFile)).text(), "basics text");
+    const otherPin = "gate.pages.other-pin.readme." + file;
     storage.setItem(otherPin, "another revision");
     a.__resetWipe();
     open("demo").__resetWipe();
-    assert.strictEqual(await (await b.fetch("/world?f=" + file)).text(), "basics text");
+    assert.strictEqual(await (await b.fetch("/world?f=" + basicsFile)).text(), "basics text");
     assert.strictEqual(storage.getItem(otherPin), "another revision");
     assert.strictEqual(storage.getItem("gate.pages." + record.showcase.revision + ".readme." + file), null);
+    // P6-other-write-routes also runs over the finished HTML, including the
+    // ordinary selected root. No acknowledged structural write may be a no-op.
+    for (const id of ["demo", "readme", "basics", "atom"]) {
+        const page = open(id), before = await (await page.fetch("/files")).text();
+        const layout = JSON.parse(before).layout, kept = JSON.stringify(storage);
+        for (const url of ["/world?f="+encodeURIComponent(layout), "/value?name=Width&to=1",
+                           "/declare?f=New.swift&role=forms", "/world?f=NoSuchFile.swift"]) {
+            const r = await page.fetch(url,{method:"PUT",body:"not written"}), said = await r.json();
+            assert([405,409].includes(r.status) && said.address && said.reason && said.next);
+            assert.strictEqual(await (await page.fetch("/files")).text(),before);
+            assert.strictEqual(JSON.stringify(storage),kept);
+        }
+    }
     for (const id of ["light", "atom", "site"]) {
         const page = open(id), folder = path.join(root, "playground", id);
         const snapshots = JSON.parse(fs.readFileSync(path.join(folder, "snapshots.json")));
@@ -51,6 +64,9 @@ function open(id) {
     const atom = open("atom"), snaps = JSON.parse(fs.readFileSync(path.join(root,"playground/atom/snapshots.json")));
     const f = "Dictionary/Atom.swift", before = snaps["/world?f=" + f];
     const ui = fs.readFileSync(path.join(__dirname,"../web/ui.html"),"utf8");
+    const refusalStart = ui.indexOf("function showWriteRefusal("), refusalEnd = ui.indexOf("\n}",refusalStart) + 2;
+    atom.esc = s=>String(s).replaceAll("<","&lt;");
+    vm.runInContext(ui.slice(refusalStart,refusalEnd),atom);
     const start = ui.indexOf("async function tick("), end = ui.indexOf("\n}",start) + 2;
     const state = { file:f, text:before.replace("Electron = Charged", "Electron = Trapped") };
     assert.notStrictEqual(state.text, before);
@@ -123,7 +139,7 @@ function open(id) {
     const failed = await reopened.fetch("/world?f="+encodeURIComponent(f),{method:"PUT",body:state.text});
     assert.strictEqual(failed.status,507);
     atom.render = async()=>{};
-    await atom.tick(true); assert.strictEqual(el.textContent,"draft not saved: browser storage unavailable");
+    await atom.tick(true); assert(el.textContent.includes("not saved: " + f) && el.textContent.includes("browser storage unavailable"));
     delete storage.setItem;
     reopened.__resetWipe(); assert.strictEqual(storage.getItem(key),null);
     console.log("PLAYGROUND STORAGE GREEN: refused Atom draft and verdict survive reload; native red withholds; stale text, quota and scoped reset");

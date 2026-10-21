@@ -9,7 +9,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"><meta charset="utf-8"><title>gate · world bench</title>
 <!-- zero egress, enforced by the browser as well as by the code: the bench may
      talk to its own loopback server and to nothing else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-5GzCvayhfKIAxAwizJRqS3a05vGAKRgdgfqpOuJGoBs=' 'sha256-qg9vmGLhyzNCnpV83XBWyI9SS+Nfr1oxzSxIF/N8WO8='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-5GzCvayhfKIAxAwizJRqS3a05vGAKRgdgfqpOuJGoBs=' 'sha256-xDGeK1M38JbVR2wi9TS0pZSLwhUMCyKDr4TEfavoMT0='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
 <link rel="stylesheet" href="/codemirror.css">
 <script>
 // The theme is a declaration, not a toggle — and the declaration lives in the
@@ -1045,6 +1045,16 @@ document.getElementById("status").addEventListener("click", (e) => {
     e.preventDefault(); declareHere(a.dataset.role);
 });
 
+// A write refusal stays beside its address, like a reading refusal. The host
+// says why and where to act; the page must not replace that with a saved mark.
+function showWriteRefusal(said, address, fallback) {
+    const at = said.address || address, why = said.reason || said.note || fallback;
+    const next = said.next ? " · " + said.next : "";
+    document.getElementById("verdicts").innerHTML = '<div class="refusal"><code>'
+        + esc(at) + "</code> · " + esc(why + next) + "</div>";
+    return at + " · " + why + next;
+}
+
 async function declareHere(role) {
     const f = undeclaredView;
     if (!f) return;
@@ -1055,8 +1065,7 @@ async function declareHere(role) {
                           { method: "PUT" });
     const said = await r.json().catch(() => ({}));
     if (!r.ok || !said.wrote_in) {
-        document.getElementById("verdicts").innerHTML = '<div class="refusal"><code>'
-            + esc(f) + "</code> \u00b7 " + esc(said.note || "the row was not written") + "</div>";
+        showWriteRefusal(said, f, "the row was not written");
         return;
     }
     const from = navHere();
@@ -2528,11 +2537,9 @@ async function sayValue(name, now, cell) {
         // vanished after three seconds, in a tool whose whole claim is that a refusal
         // is an address you can point at and read twice. It goes where every other
         // refusal on this page goes, and the cell it is about wears the mark.
-        if (!r.ok) {
+        if (!r.ok || !said.file) {
             cell.classList.add("cell-bad");
-            const v = document.getElementById("verdicts");
-            v.innerHTML = '<div class="refusal"><code>' + esc(name) + "</code> · "
-                + esc(said.note || "that value could not be written") + "</div>";
+            showWriteRefusal(said, name, "that value could not be written");
             return;
         }
         // and it is judged from here, like everything else typed on this page:
@@ -3973,9 +3980,11 @@ async function tick(write) {
     if (write && (holds || readerDrafts)) {
         const saved = await fetch("/world?f=" + encodeURIComponent(active), { method: "PUT", body: editor.value });
         if (!saved.ok) {
+            const said = await saved.json().catch(() => ({}));
+            const refusal = showWriteRefusal(said, file, "the file was not written (HTTP " + saved.status + ")");
             const el = document.getElementById("gitstate");
             el.className = "modified";
-            el.textContent = "draft not saved: browser storage unavailable";
+            el.textContent = "not saved: " + refusal;
             return;
         }
         refreshGit();

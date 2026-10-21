@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Static benches refuse unsupported writes with an address, a reason and a way back to the source repository. Manifest edits, declarations and table-value writes no longer acknowledge a change they did not make. Declared file drafts still save locally. The bench shows the host's refusal; native serve also refuses a failed disk write instead of reporting success.
+
 - Reserve `plain_fragments` as empty in input records: absent and `[]` keep their readings; nonempty requests, wrong types and repeated fields refuse at the record line with a hint to split data and page into files. Native and browser company readers now read each complete declared file. Old suffix requests that previously selected a company fragment must split their source before publishing.
 
 - A leftover `.gate/worlds.from` note no longer requires a definitions record in a self-contained Forms world. Missing declared Git inputs still refuse through the common input resolver at their manifest rows.
