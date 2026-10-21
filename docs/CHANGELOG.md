@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- The live bench groups declared file readings through `POST /world`. One HTTP response resolves its taken inputs once; each delivered input is read and hashed into the buffer sent. Startup shares its reading across vocabulary and the first file, and later opens ask again. No file metadata cache replaces SHA-256.
+- The live bench groups declared file readings through `POST /world`. One HTTP response resolves the inputs it reads once; each delivered input is read and hashed into the buffer sent. Resource reads check their requested inputs; unrelated byte failures are reported when that input, the complete file list or a whole-world verdict is read. Structural input-record failures remain global. Startup shares its reading across vocabulary and the first file, and later opens ask again. No file metadata cache replaces SHA-256.
 
 - Generate the README battery count from registrations with `python3 bin/battery_count.py`. The battery refuses a stale stamp with that repair command before building, and checks the executed count against registered cases.
 

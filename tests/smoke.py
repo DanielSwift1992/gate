@@ -14221,7 +14221,7 @@ public enum MyWatch: AccessLedger {
     # scheduled a judgement of what the opener was already judging, so every click
     # on a name paid for two verdicts and two statuses.
     S.append(("the world is asked for all at once, and putting a file on the page judges it once",
-              "await Promise.all(want.map(f =>" in ui
+              "await readWorlds(missing)" in ui and "Promise.all(names.map(async name =>" in ui
               and 'if (!userEdit && change.origin === "setValue") return;' in ui
               # and whoever puts text on the page draws it: every opener that sets
               # the text now says so itself, in the order the world is read in

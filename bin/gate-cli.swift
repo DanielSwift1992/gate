@@ -1887,11 +1887,13 @@ struct TakenRequestEntry {
     var manifest: Data?
     var record: Data?
     var rows: [LayoutRow]
+    var required: Set<String>?
     var result: TakenResolution
 }
 // A response owns its verified bytes. The next HTTP request starts empty;
 // file metadata never substitutes for a byte check, including restored mtimes.
 var TAKEN_REQUEST: [String: TakenRequestEntry]? = nil
+var TAKEN_REQUIRED: Set<String>? = nil
 func inputBytes(_ path: String) -> Data? {
     if let entries = TAKEN_REQUEST {
         for entry in entries.values {
@@ -1907,9 +1909,9 @@ func takenInputs(_ w: WorldState) -> TakenResolution {
     let manifest = FileManager.default.contents(atPath: layout.manifest)
     let record = FileManager.default.contents(atPath: joinPath(root, ".gate/forms-definitions.json"))
     if let entry = TAKEN_REQUEST?[root], entry.manifest == manifest,
-       entry.record == record, entry.rows == layout.rows { return entry.result }
+       entry.record == record, entry.rows == layout.rows, entry.required == TAKEN_REQUIRED { return entry.result }
     let result = resolveTakenInputs(w)
-    TAKEN_REQUEST?[root] = TakenRequestEntry(manifest: manifest, record: record, rows: layout.rows, result: result)
+    TAKEN_REQUEST?[root] = TakenRequestEntry(manifest: manifest, record: record, rows: layout.rows, required: TAKEN_REQUIRED, result: result)
     return result
 }
 func resolveTakenInputs(_ w: WorldState) -> TakenResolution {
@@ -2005,6 +2007,9 @@ func resolveTakenInputs(_ w: WorldState) -> TakenResolution {
     }
     guard result.bad.isEmpty else { return result }
     for (at, input) in valid {
+        // The resource reader needs these inputs, while a list or a verdict
+        // needs the complete set. Structural record errors stay global.
+        if let required = TAKEN_REQUIRED, !required.contains(input["path"]!) { continue }
         let name = input["row"]!, repository = input["repository"]!, revision = input["revision"]!
         let source = input["source_path"]!, hash = input["sha256"]!
         let cache = joinPath(toolRoot(), "bin/.inputs/" + sha256Hex(Data(repository.utf8)) + "/" + revision)
@@ -12603,7 +12608,7 @@ func serveDoor(_ a: [String]) -> Never {
         let spawnsBefore = SPAWNS
         if let asked = serveRead(conn) {
             TAKEN_REQUEST = [:]
-            defer { TAKEN_REQUEST = nil }
+            defer { TAKEN_REQUEST = nil; TAKEN_REQUIRED = nil }
             if hasPublication || !matches(#"public enum \w+: Publication\s*\{"#, uncommented(readText(joinPath(publicationRoot, "gate.manifest.swift")) ?? "")).isEmpty {
                 do {
                     let plan = try buildReadPlan(publicationRoot)
@@ -12874,6 +12879,7 @@ func serveDoor(_ a: [String]) -> Never {
                         ? "true" : "false")))
                 serveJSON(conn, compactDumps(.object(pairs)))
             case ("GET", "/world"):
+                if let name = asked.query["f"], !name.isEmpty { TAKEN_REQUIRED = [name] }
                 let w = servedWorld()
                 let taken = takenInputs(w)
                 let files = benchFilesOf(w, readings: true, resolved: taken)
@@ -12883,6 +12889,7 @@ func serveDoor(_ a: [String]) -> Never {
                 guard let names = (try? JSONSerialization.jsonObject(with: asked.body)) as? [String] else {
                     serveSay(conn, 400, "application/json", Data("{\"error\":\"a list of declared file names is required\"}".utf8)); break
                 }
+                TAKEN_REQUIRED = Set(names)
                 let w = servedWorld()
                 let taken = takenInputs(w)
                 let files = benchFilesOf(w, readings: true, resolved: taken)

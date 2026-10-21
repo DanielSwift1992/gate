@@ -111,6 +111,12 @@ def run():
       os.utime(cached,ns=(before.st_atime_ns,before.st_mtime_ns))
       assert cached.stat().st_ino==before.st_ino
      assert cached.stat().st_size==before.st_size and cached.stat().st_mtime_ns==before.st_mtime_ns
+     # Reading another resource never rehashes or admits this unrelated
+     # input. A whole-world answer must still refuse it.
+     assert ask('/world?f=materials/facts.json')[1]==samples['facts.json']
+     other=json.loads(ask('/world','POST',b'["materials/facts.json"]')[1])['materials/facts.json']
+     assert other['status']==200 and other['text'].encode()==samples['facts.json']
+     assert json.loads(ask('/status')[1])['verdict']=='refused'
      code,body=ask('/world?f=materials/source.md');assert code==409 and json.loads(body)['address'].startswith('.gate/forms-definitions.json:')
      packet=json.loads(ask('/world','POST',b'["materials/source.md"]')[1])['materials/source.md']
      assert packet['status']==409 and json.loads(packet['text'])['address'].startswith('.gate/forms-definitions.json:')

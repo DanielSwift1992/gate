@@ -23,7 +23,7 @@ class Element {
     // A new door without a per-file view still applies the bench's default.
     // The selected button and the visible surface must answer the same word.
     const start=ui.indexOf('        setMode(theirsFiles[first]?.kind');
-    const end=ui.indexOf('        await loadFile(first);',start);
+    const end=ui.indexOf('        await loadFile(first, readings);',start);
     assert(start>=0 && end>start,'door selects its view before reading the file');
     const initial=ui.slice(start,end);
     for(const perFile of [null,'bare','table','full'])for(const askedView of [null,'bare','table','full','unknown']){
