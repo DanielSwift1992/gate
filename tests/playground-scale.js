@@ -45,7 +45,7 @@ const slot=scope.locateSlot({kind:"alias",line:alias.line,host:d.name,axis:"Home
 assert.strictEqual(slot.from.line,alias.line-1);assert(slot.from.line>lines.length * 0.75);
 assert.strictEqual(lines[slot.from.line].slice(slot.from.ch,slot.to.ch),alias.target);
 assert(text.includes("public typealias Home = " + alias.target));
-const list=JSON.parse(snap["/files"]), drawScope={files:list.files,theirsFiles:list.theirs||{}};
+const list=JSON.parse(snap["/files"]), drawScope={files:list.files,theirsFiles:list.theirs||{},documentFiles:new Set(list.drawing_inputs||[])};
 vm.createContext(drawScope);
 const selectionAt=ui.indexOf("function drawingFiles("),selectionEnd=ui.indexOf("\n}",selectionAt)+2;
 vm.runInContext(ui.slice(selectionAt,selectionEnd),drawScope);
