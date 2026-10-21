@@ -88,8 +88,8 @@ assert(ui.includes("viewportMargin: 10, dragDrop: false"));
 measurements.bytes=text.length;measurements.lines=lines.length;measurements.projection_pages=total;
 measurements.first_html_bytes=first.length;measurements.last_html_bytes=last.length;
 (async()=>{
-    const record=JSON.parse(fs.readFileSync(path.join(root,"worlds.from"))), declaration=JSON.parse(fs.readFileSync(path.join(root,"playground/scale/world.json"))).drawing;
-    const contract=JSON.parse(fs.readFileSync(path.join(__dirname,"../bin/.worlds/playground",record.showcase.revision,"showcase/Contracts/Drawing/v0.1/contract.json")));
+    const declaration=JSON.parse(fs.readFileSync(path.join(root,"playground/scale/world.json"))).drawing;
+    const contract=JSON.parse(fs.readFileSync(path.join(process.argv[3],"Contracts/Drawing/v0.1/contract.json")));
     const {compare}=require("../bin/drawing-profile.js");
     assert.equal((await compare({contract},parts,rendered,declaration)).status,"not-compared");
     const changed=parts.map((p,i)=>({...p,text:p.text+(i===0?"\n// changed input":"")}));

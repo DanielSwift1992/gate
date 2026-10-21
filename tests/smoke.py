@@ -76,6 +76,14 @@ class Checks(list):
         super().append(item)
 
 
+def failed_output(label, result, limit=4000):
+    """Keep the cause attached to the preceding FAIL in the CI annotation."""
+    if result.returncode:
+        print(f"   {label}: exit {result.returncode}", flush=True)
+        for line in (result.stdout + result.stderr)[-limit:].splitlines()[-30:]:
+            print("   " + line, flush=True)
+
+
 def say(*args, cwd=None):
     # the human line, not the JSON: the porcelain has its own words and the
     # canon of names governs them
@@ -14605,10 +14613,9 @@ public enum MyWatch: AccessLedger {
 
     _owner_profile = subprocess.run([sys.executable, os.path.join(HERE, "tests", "owner-profile.py")],
                                     capture_output=True, text=True, timeout=900)
-    if _owner_profile.returncode:
-        print("   owner profile:", (_owner_profile.stdout + _owner_profile.stderr)[-4500:])
     S.append(("the owner's resolved profile travels through autonomous publish and serve without a runtime tool",
               _owner_profile.returncode == 0))
+    failed_output("owner profile", _owner_profile)
 
     # The old playground's witnesses travel with the pinned showcase worlds.
     # This builds the actual static benches through serve, then reads their
@@ -14618,10 +14625,21 @@ public enum MyWatch: AccessLedger {
     # allow bounded CI headroom rather than dropping a world or a control.
     _playground = subprocess.run([sys.executable, os.path.join(HERE, "tests", "playground.py")],
                                  capture_output=True, text=True, timeout=600)
-    if _playground.returncode:
-        print("   playground:", (_playground.stdout + _playground.stderr)[-6000:])
     S.append(("the pinned playground worlds keep their drawings, courts and separate state",
               _playground.returncode == 0))
+    failed_output("playground", _playground)
+
+    _worlds_cache = subprocess.run([sys.executable, os.path.join(HERE, "tests", "worlds-cache.py")],
+                                   capture_output=True, text=True, timeout=180)
+    S.append(("parallel materialization preserves complete pinned snapshots and refuses damaged bytes",
+              _worlds_cache.returncode == 0))
+    failed_output("worlds cache", _worlds_cache)
+
+    _ci_output = subprocess.run([sys.executable, os.path.join(HERE, "tests", "ci-output.py")],
+                                capture_output=True, text=True, timeout=30)
+    S.append(("public CI annotations retain the named subprocess failure and its multiline cause",
+              _ci_output.returncode == 0))
+    failed_output("CI output", _ci_output)
 
     _documents = subprocess.run(["node", os.path.join(HERE, "tests", "document-reader.js")],
                                 capture_output=True, text=True, timeout=60)
