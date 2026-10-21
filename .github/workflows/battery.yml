@@ -161,6 +161,9 @@ jobs:
   # have one, until this one grows its own.
   windows-vein:
     runs-on: windows-latest
+    # the walk bounds each call; the job bounds the walk, so a stuck runner
+    # ends red with its status instead of holding the queue for six hours
+    timeout-minutes: 45
     permissions:
       contents: read
       statuses: write

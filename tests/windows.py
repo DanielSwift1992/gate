@@ -37,15 +37,32 @@ def run(*args, cwd=None):
     if cwd is not None and not os.path.isdir(cwd):
         return subprocess.CompletedProcess(
             args, 127, "", "the step before this one never made " + cwd)
-    return subprocess.run([*_door, *args], cwd=cwd,
-                          capture_output=True, text=True,
-                          encoding="utf-8", errors="replace",
-                          env=dict(os.environ, PYTHONUTF8="1"))
+    return bounded([*_door, *args], cwd=cwd,
+                   env=dict(os.environ, PYTHONUTF8="1"))
 
 
 def sh(*args, cwd=None):
-    return subprocess.run(list(args), cwd=cwd, capture_output=True, text=True,
-                          encoding="utf-8", errors="replace")
+    return bounded(list(args), cwd=cwd)
+
+
+# ── AND A STEP THAT DOES NOT RETURN IS NAMED, NOT WAITED ON. On 21.10 the vein
+# built and carried its ledger, then this walk sat for hours on windows-latest:
+# a call with no bound turns one stuck step into a job that never speaks. Each
+# call gets the same bound, and the step that hit it is the line that travels.
+STEP_SECONDS = 180
+
+
+def bounded(command, cwd=None, env=None):
+    try:
+        return subprocess.run(command, cwd=cwd, env=env, capture_output=True,
+                              text=True, encoding="utf-8", errors="replace",
+                              timeout=STEP_SECONDS)
+    except subprocess.TimeoutExpired as stuck:
+        said = stuck.stdout or ""
+        said = said.decode("utf-8", "replace") if isinstance(said, bytes) else said
+        return subprocess.CompletedProcess(
+            command, 124, said, "no answer after " + str(STEP_SECONDS) + " s: "
+            + " ".join(os.path.basename(str(part)) for part in command[:4]))
 
 
 def voice(label, proc):
