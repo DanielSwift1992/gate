@@ -117,6 +117,10 @@ def run():
             try:
                 r=publish();assert r.returncode!=0,(label,r.stdout)
                 assert json.loads(r.stderr)['status']==status,(label,r.stderr)
+                if label.startswith('reserved fragments'):
+                    failure=json.loads(r.stderr)
+                    assert '.gate/forms-definitions.json:' in failure['address'],failure
+                    assert 'split the file into data and page' in failure['reason'],failure
                 after={str(p.relative_to(site)):hashlib.sha256(p.read_bytes()).hexdigest() for p in site.rglob('*') if p.is_file()}
                 assert after==before,label
             finally:undo()
@@ -129,6 +133,11 @@ def run():
         refused('context operation',lambda:(owner/'Island/Facts.swift').write_text('import FourthModule\n'+facts),lambda:(owner/'Island/Facts.swift').write_text(facts),'unsupported')
         # An explicit Language request is never erased to get a green subset.
         world_record=owner/'Island/.gate/forms-definitions.json';saved_record=world_record.read_text()
+        for target in (root_record,world_record):
+            saved=target.read_text(); malformed=json.loads(saved)
+            malformed['plain_fragments']=[dict(path='Facts.swift',marker='// data follows')]
+            refused('reserved fragments '+str(target.relative_to(owner)),
+                    lambda:target.write_text(json.dumps(malformed,indent=2)),lambda:target.write_text(saved))
         with_context=json.loads(saved_record);with_context['languages']={'Local':{'definitions':[],'namespace':'Local','imports':[]}}
         refused('declared context',lambda:world_record.write_text(json.dumps(with_context)),lambda:world_record.write_text(saved_record),'unsupported')
         refused('implicit count input',lambda:(owner/'Island/Facts.swift').write_text((ROOT/'stdlib/bench-metrics.swift').read_text()),lambda:(owner/'Island/Facts.swift').write_text(facts),'unsupported')

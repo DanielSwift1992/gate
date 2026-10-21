@@ -58,14 +58,13 @@ def build_worlds(here, out, publish):
             references = list(dict.fromkeys(ref for language in authored.get('languages', {}).values()
                                              for ref in language.get('definitions', [])))
             definition_paths = [inputs[ref]['path'] for ref in references]
-            fragments = authored.get('plain_fragments', [])
             catalog_input = next(f for f in authored['files']
                                  if f['source_path'] == 'Worlds/Playground/Site/Manifest.swift')
             own_catalog = dict(catalog, revision=catalog_input['revision'], sha256=catalog_input['sha256'],
                                source=catalog_input['path'])
             context = dict(pin=record['showcase']['revision'], world=tab['id'], tab=tab,
                 definition_paths=definition_paths, carried=[], catalog=own_catalog, provenance=provenance, guard_names=guard_names,
-                compiler=record['theory'], judge=record['judge'], plain_fragments=fragments,
+                compiler=record['theory'], judge=record['judge'],
                 drawing=dict(case_id=tab['id']))
             # Carried paths are taken from /files by publish, not guessed here.
             ladder = publish(str(world), str(out / 'playground' / tab['id']), context)

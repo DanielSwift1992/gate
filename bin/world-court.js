@@ -68,7 +68,7 @@
         }
         return out;
     }
-    function verdict(court, groups, texts, definitions, plain, carried, layout, judgePlain, translate, fragments, guards, documents = []) {
+    function verdict(court, groups, texts, definitions, plain, carried, layout, judgePlain, translate, guards, documents = []) {
         const refusals = [], unsupported = [];
         let checked = 0;
         const documentSet = new Set(documents);
@@ -130,16 +130,7 @@
         let nextLine = 1;
         for (const f of plain) {
             if (f === layout || carried.includes(f)) continue;
-            let text = texts[f] || "";
-            const fragment = (fragments || []).find(r => r.path === f);
-            if (fragment) {
-                const pieces = text.split(fragment.marker);
-                if (pieces.length !== 2) {
-                    refusals.push({address: f + ":1", claim: "the declared company fragment marker is missing or repeated"});
-                    continue;
-                }
-                text = "\n".repeat(pieces[0].split("\n").length - 1) + fragment.marker + pieces[1];
-            }
+            const text = texts[f] || "";
             const lines = text.split("\n").length;
             company.push({file: f, text, start: nextLine, lines});
             nextLine += lines;

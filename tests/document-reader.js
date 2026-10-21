@@ -18,7 +18,7 @@ const body=`public enum Page {
     }
 }
 `;
-function ask(text,document=true){return verdict(court,[['Page.swift']],{'Page.swift':text},[],[],[],null,()=>({refusals:[]}),null,[],null,document?['Page.swift']:[]);}
+function ask(text,document=true){return verdict(court,[['Page.swift']],{'Page.swift':text},[],[],[],null,()=>({refusals:[]}),null,null,document?['Page.swift']:[]);}
 const source=claim+body, projected=documentDeclarations(source);
 assert.equal(source.split('\n').length,projected.split('\n').length);
 assert(!projected.includes('MissingDrawing<Stone>'));
@@ -36,7 +36,7 @@ const marked=source+'// gate-unsupported: Owed | remains a requirement\npublic t
 assert.equal(ask(marked).verdict,'partial');
 assert(ask(marked).unsupported.some(r=>r.id==='Owed'));
 assert.equal(ask(marked.replace('public typealias Owed = Coral','')).verdict,'refused');
-const second=verdict(court,[['Claims.swift','Canvas.swift']],{'Claims.swift':claim,'Canvas.swift':body.replace('public enum Page','@Unknown public enum Page')},[],[],[],null,()=>({refusals:[]}),null,[],null,['Claims.swift','Canvas.swift']);
+const second=verdict(court,[['Claims.swift','Canvas.swift']],{'Claims.swift':claim,'Canvas.swift':body.replace('public enum Page','@Unknown public enum Page')},[],[],[],null,()=>({refusals:[]}),null,null,['Claims.swift','Canvas.swift']);
 assert.equal(second.verdict,'unsupported');
 assert(second.unsupported.some(r=>r.address==='Canvas.swift:1'),JSON.stringify(second));
 console.log('DOCUMENT READER GREEN: declaration equality, false equality, unread attribute, empty, original line addresses, body boundary, strings/comments, CRLF and retained requirements');

@@ -94,6 +94,9 @@ def run():
             module.HERE, module.RECORD = old_here, old_record
             os.environ.clear()
             os.environ.update(env)
+        owner_records = list((cache / 'showcase/Worlds/Playground').glob('*/.gate/forms-definitions.json'))
+        assert len(owner_records) == 12
+        assert all(json.loads(p.read_text())['plain_fragments'] == [] for p in owner_records)
         def prepared(name):
             workspace = Path(temp) / ('native-' + name)
             shutil.copytree(cache / 'showcase', workspace)
@@ -179,7 +182,7 @@ def run():
             assert scale_snap['/world?f=' + name] == (cache / 'showcase' / part).read_text(), name
         scale_context = json.loads((site / 'playground/scale/world.json').read_text())
         assert scale_context['tab']['world'] == 'Scale' and scale_context['tab']['reads'] == 'ScaleWorld'
-        assert scale_context['plain_fragments'] == []
+        assert 'plain_fragments' not in scale_context
         subprocess.run(['node', str(HERE / 'tests/playground-scale.js'), str(site), str(cache / 'showcase')], check=True)
         subprocess.run(['node', str(HERE / 'tests/playground-ui.js'), str(site)], check=True)
         door = (site / 'playground/index.html').read_bytes()

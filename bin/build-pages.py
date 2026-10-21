@@ -233,7 +233,7 @@ function judgeWhereTexts(text, extraTexts) {
         if (previous && previous.inputs === inputs) return previous.answer;
         const answer = GateWorldCourt.verdict(wasm_bindgen, WORLDS, texts,
             CONTEXT.definitions, WORLD_FILES, CONTEXT.carried,
-            LAYOUT, judge, (claim, stream) => plainly(claim, lawNotes(stream)), CONTEXT.plain_fragments,
+            LAYOUT, judge, (claim, stream) => plainly(claim, lawNotes(stream)),
             { lint, pageGuards, vocabulary: kitVocabulary, names: CONTEXT.guard_names }, DOCUMENTS);
         answer.compiler = "page bodies have not been checked by Swift";
         readings.set(f, { inputs, answer });

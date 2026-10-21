@@ -1987,6 +1987,13 @@ func resolveTakenInputs(_ w: WorldState) -> TakenResolution {
         }
         result.bad.append((spots.address(path), path + ": " + why + context))
     }
+    let fragmentHint = "plain_fragments is reserved empty; split the file into data and page"
+    if let value = spec["plain_fragments"], !(value is [Any]) || !(value as? [Any] ?? []).isEmpty {
+        bad("/plain_fragments", fragmentHint)
+    }
+    for (path, line) in spots.repeated where path == "/plain_fragments" {
+        result.bad.append((".gate/forms-definitions.json:\(line)", path + ": repeated field; " + fragmentHint))
+    }
     if spec["format"] == nil || spec["format"] as? Int == 1 { return result }
     result.v2 = true
     guard spec["format"] as? Int == 2 else {
@@ -2266,28 +2273,9 @@ func oneStream(_ w: WorldState, _ named: [(String, String)]) -> [(String, String
 func diskSources(_ w: WorldState) -> [(String, String)] {
     var out: [(String, String)] = []
     for (n, p) in oneStream(w, benchFilesOf(w)) where FileManager.default.fileExists(atPath: p) {
-        out.append((n, companyFragment(w, n, readText(p) ?? "")))
+        out.append((n, readText(p) ?? ""))
     }
     return out
-}
-
-// A mixed demonstration file has a compiled page and a company below it.
-// The publication record names that existing boundary explicitly. Blank lines
-// retain the source's addresses; changing or repeating the boundary refuses.
-func companyFragment(_ w: WorldState, _ name: String, _ text: String) -> String {
-    guard let root = layoutDir(w), let bytes = FileManager.default.contents(atPath:
-        (root as NSString).appendingPathComponent(".gate/forms-definitions.json")),
-        let spec = try? JSONSerialization.jsonObject(with: bytes) as? [String: Any],
-        let fragments = spec["plain_fragments"] as? [[String: String]],
-        let marker = fragments.first(where: {
-            $0["path"]?.replacingOccurrences(of: "/", with: "__") == (name as NSString).lastPathComponent
-        })?["marker"] else { return text }
-    let parts = text.components(separatedBy: marker)
-    if parts.count != 2 {
-        return "the declared company fragment marker is missing or repeated\n"
-    }
-    return String(repeating: "\n", count: parts[0].components(separatedBy: "\n").count - 1)
-        + marker + parts[1]
 }
 
 func duplicateGuardsOver(_ sources: [(String, String)]) -> [(address: String, claim: String)] {
@@ -4613,7 +4601,7 @@ func statusAnswer(_ supplied: WorldState? = nil, contexts: GrammarContexts? = ni
     var refusals = judgedRefusals(raw)
     if files.count > 1 {
         let sources = benchFilesOf(w).filter { files.contains($0.1) }
-            .map { ($0.0, companyFragment(w, $0.0, readText($0.1) ?? "")) }
+            .map { ($0.0, readText($0.1) ?? "") }
         refusals = refineSourceRefusals(refusals, sources)
     }
     if !files.isEmpty {
@@ -11518,18 +11506,6 @@ func courtSays(_ asked: [String], wholeCompany: Bool = false) -> String {
     var supplied = asked
     var projected: String? = nil
     var companyLines: [(path: String, start: Int, count: Int)] = []
-    if !keepsRefusal {
-        let w = discoverWorld()
-        for (i, path) in asked.enumerated() where !path.hasPrefix("-") {
-            guard let text = readText(path) else { continue }
-            let fragment = companyFragment(w, path, text)
-            if fragment == text { continue }
-            if projected == nil { projected = scratchDir("gate-company-") }
-            let target = (projected! as NSString).appendingPathComponent((path as NSString).lastPathComponent)
-            try? fragment.write(toFile: target, atomically: false, encoding: .utf8)
-            supplied[i] = target
-        }
-    }
     // WorldFile parts present one company. The court's raw multi-file door
     // checks successive prefixes; this reader asks once about the full set.
     if wholeCompany && supplied.count > 1 {
@@ -13181,7 +13157,7 @@ func serveDoor(_ a: [String]) -> Never {
                 let sources = oneStream(w, benchFilesOf(w))
                     .filter { $0.1 == active || FileManager.default.fileExists(atPath: $0.1) }
                     .map { ($0.0,
-                            companyFragment(w, $0.0, $0.1 == active ? text : (readText($0.1) ?? ""))) }
+                            $0.1 == active ? text : (readText($0.1) ?? "")) }
                 refusals = refineSourceRefusals(refusals, sources)
                 // the same guards the terminal runs, over the text in the editor
                 refusals += duplicateGuardsOver(grammarIndependentSources(w, sources))
@@ -13529,13 +13505,9 @@ func buildReadPlan(_ selected: String) throws -> ReadPlan {
             if let value = record["languages"], !(value is [String: Any]) {
                 throw PublicationFailure(address: address, reason: "languages must be an object")
             }
-            if let value = record["plain_fragments"], !(value is [Any]) {
-                throw PublicationFailure(address: address, reason: "plain_fragments must be a list")
-            }
-            if !(record["plain_fragments"] as? [Any] ?? []).isEmpty
-                || (!prepared && (!(record["languages"] as? [String: Any] ?? [:]).isEmpty
-                || !matches(#"typealias\s+Language\s*=|^\s*import\s+"#, uncommented(text), lines: true).isEmpty)) {
-                throw PublicationFailure(address: address, reason: "this publication needs a complete Language/scope context or an unsupported fragment reader", status: "unsupported")
+            if !prepared && (!(record["languages"] as? [String: Any] ?? [:]).isEmpty
+                || !matches(#"typealias\s+Language\s*=|^\s*import\s+"#, uncommented(text), lines: true).isEmpty) {
+                throw PublicationFailure(address: address, reason: "this publication needs a complete Language/scope context", status: "unsupported")
             }
         }
         try limitedContext(rootRecord, String(decoding: manifestBytes, as: UTF8.self), "gate.manifest.swift:1")

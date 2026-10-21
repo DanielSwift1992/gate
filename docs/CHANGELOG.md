@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Reserve `plain_fragments` as empty in input records: absent and `[]` keep their readings; nonempty requests, wrong types and repeated fields refuse at the record line with a hint to split data and page into files. Native and browser company readers now read each complete declared file. Old suffix requests that previously selected a company fragment must split their source before publishing.
+
 - A leftover `.gate/worlds.from` note no longer requires a definitions record in a self-contained Forms world. Missing declared Git inputs still refuse through the common input resolver at their manifest rows.
 
 - The live bench groups declared file readings through `POST /world`. One HTTP response resolves the inputs it reads once; each delivered input is read and hashed into the buffer sent. Resource reads check their requested inputs; unrelated byte failures are reported when that input, the complete file list or a whole-world verdict is read. Structural input-record failures remain global. Startup shares its reading across vocabulary and the first file, and later opens ask again. No file metadata cache replaces SHA-256.
