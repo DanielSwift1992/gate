@@ -74,7 +74,7 @@ const anchor="VerifiedInDepartment<Emp12796, Finance>";assert(text.includes(anch
 const lies=timed("deep_lie_ms",()=>judge("Company.swift",text.replace(anchor,"VerifiedInDepartment<Emp12796, Sales>"))).refusals;
 assert(lies.some(r=>r.line>120000));
 const worldCourt=require('../bin/world-court.js'), court=require('../bin/court-wasm/node/vi_court.js');
-const ask=changed=>worldCourt.verdict(court,[],changed,[],parts,[],null,judge);
+const ask=changed=>worldCourt.verdict(court,[],changed,[],companyFiles,[],null,judge);
 const clean=ask(texts);assert.equal(clean.verdict,'holds');assert.equal(clean.checked,owner.clean.premises);
 for(const c of owner.cases) {
     assert.strictEqual(text.split(c.anchor).length-1,1,c.id);
