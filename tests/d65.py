@@ -80,6 +80,21 @@ def expected(kind, a):
     return [(25*z, 28*y+1+margin)] if kind == 'TowardBlue' else [(27*y, 25*z+1+margin)]
 
 
+def case_records(here):
+    """Enumerate the original IDs and their relations before running a court."""
+    root = Path(here)
+    old = (root / 'tests/fixtures/bench-palette-before-dag.swift').read_text()
+    defs = definitions((root / 'stdlib/bench-palette.swift').read_text())
+    defs['Twice'] = (('S',), term('Plus<S, S>'))
+    evaluate = evaluator(defs)
+    records = []
+    for ident in re.findall(r'^// gate-unsupported: (\w+) \|', old, re.M):
+        params, (kind, args) = defs[ident]
+        assert not params, ident
+        records.append((ident, kind, args, expected(kind, [evaluate(a) for a in args])))
+    return records
+
+
 def checks(here, scratch, premise):
     root = Path(here)
     old_bytes = (root / 'tests/fixtures/bench-palette-before-dag.swift').read_bytes()
@@ -97,8 +112,8 @@ def checks(here, scratch, premise):
     yield ('the former D65 page is the pinned source of all 26 outstanding IDs',
            hashlib.sha256(old_bytes).hexdigest() == OLD_SHA256 and len(ids) == 26)
     ledger_by_id = {row['id']: row for row in ledger}
-    records = []
-    for ident in ids:
+    records = case_records(here)
+    for ident, kind, args, pairs in records:
         params, expr = defs[ident]
         kind, args = expr
         assert not params and before[ident] == defs[ident], ident
@@ -114,7 +129,6 @@ def checks(here, scratch, premise):
         targets = [ident+'.R'+str(i) for i in range(1, len(pairs)+1)]
         assert actual == pairs and all(a == b for a, b in pairs), (ident, actual, pairs)
         assert ledger_by_id[ident]['route'] == 'count' and ledger_by_id[ident]['targets'] == targets
-        records.append((ident, kind, args, pairs))
     yield ('all 66 D65 relations agree with independent integer arithmetic on unchanged arguments',
            sum(len(row[3]) for row in records) == 66 and 'gate-unsupported:' not in body)
     words = ['judge', 'count', '', str(premise), '--predicate', 'LevelQuestion',

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Generate the README battery count from registrations with `python3 bin/battery_count.py`. The battery refuses a stale stamp with that repair command before building, and checks the executed count against registered cases.
+
 - `serve` prints `Ready: <address>` after its socket starts listening; `--json` retains its route record. Table shows an atom's literal `typeName` beside its name, with its source address. Each `/world` response resolves its pinned inputs once and rechecks them on the next request.
 
 - `bin/build-pages.py` now requires an explicit `--source <repository>`, `--worlds`, or both; it no longer creates a demo on every publication. The gate site explicitly selects `examples/codeowners` for its root; `playground/` opens Read me from showcase. Existing root links to `ownership.swift` keep their destination. Historical typed-playground inputs are test-only, and the scene road test is an external harness. `gate demo`, `gate demo org` and `gate demo seam` remain explicit example installers.

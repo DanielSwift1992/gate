@@ -16,6 +16,8 @@ CLI_HERE = os.path.join(HERE, "bin", "gate-cli")
 VEIN = os.path.join(HERE, "bin", "gate-cli.swift")
 DEMO = os.path.join(HERE, "demo")
 STDLIB = os.path.join(HERE, "stdlib")
+sys.path.insert(0, os.path.join(HERE, "bin"))
+from battery_count import Registry, RegistryError, stamp as stamp_battery
 
 
 def palette_holds(answer):
@@ -207,6 +209,14 @@ GENRE_SAID_HERE = 5
 
 
 def main():
+    # Refuse a stale projection before building or judging. The repair reads
+    # registrations, so a contributor never needs a full run to learn a count.
+    try:
+        stamp_battery(HERE, check=True)
+    except (RegistryError, SyntaxError) as error:
+        print("FAIL", error, flush=True)
+        print("RED", flush=True)
+        sys.exit(1)
     # ── AND THE BATTERY CANNOT HANG IN SILENCE. A judge whose cycle guard is
     # cut does not go red, it goes forever: the mutation was planted, the port
     # span past every clock, and this file would have sat behind it all night,
@@ -14576,23 +14586,23 @@ public enum MyWatch: AccessLedger {
     S.append(("declared languages and the owner's scope map admit an ordinary fourth module",
               _scopes.returncode == 0))
 
-    # ── AND A SHORT RUN SAYS IT WAS SHORT, rather than blaming the README. The
-    # swift vein's checks run only where a toolchain stands, so on a machine
-    # without `swiftc` this battery is smaller, and the count below then went red
-    # under the name "the README counts these checks correctly": a true number on
-    # the cover, accused by a machine that had walked less of the battery. A
-    # contributor reading that edits the cover and breaks it for everybody else.
-    # The run says what it was first, and the count is asked against what it was.
+    _count_controls = subprocess.run([sys.executable, os.path.join(HERE, "tests", "battery-count.py")],
+                                      capture_output=True, text=True, timeout=60)
+    if _count_controls.returncode:
+        print("   battery stamp:", (_count_controls.stdout + _count_controls.stderr)[-4000:])
+    S.append(("the battery stamp repairs a merged registry and refuses manual drift",
+              _count_controls.returncode == 0))
+
+    # A short run names its missing registrations. It cannot change the full
+    # stamp or stand for a run with every toolchain present.
     _whole = shutil.which("swiftc") is not None
+    _registered = Registry(HERE, swift=_whole).count()
     if not _whole:
-        print("   this run walked no swift vein: swiftc is not on this machine, so it "
-              "is short of the README's count by the vein's own checks")
+        print(f"   this run is short: swiftc is not on this machine; "
+              f"{Registry(HERE).count() - _registered} registered checks were not walked")
     S.append(("this run walked the whole battery, toolchains and all", _whole))
-    claimed_n = re.search(r"the battery: (\d+) checks", readme)
-    S.append(("the README counts the whole battery, and a short run says it was short",
-              bool(claimed_n)
-              and (int(claimed_n.group(1)) == len(S) + 1 if _whole
-                   else int(claimed_n.group(1)) > len(S) + 1)))
+    S.append(("the README counts the registered battery, and this run walks its declared cases",
+              len(S) + 1 == _registered))
 
     # the names have been printed as they were decided; what is left is the word
     print("ALL GREEN" if all(ok for _, ok in S) else "RED")

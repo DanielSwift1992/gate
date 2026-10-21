@@ -433,11 +433,19 @@ web/codemirror.*  the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
 docs/           DETAILS.md, SECURITY.md, CHANGELOG.md, NOTICE.md, and
                 the cover's picture with its provenance
-tests/smoke.py   the battery: 727 checks this repository holds itself
+tests/smoke.py   the battery: 728 checks this repository holds itself
                  to, end-to-end runs through judge parity through
                  documentation contracts; the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts
 ```
+
+The battery count is generated from its registrations by
+`python3 bin/battery_count.py`. Run that command after adding checks or
+merging branches; `python3 bin/battery_count.py --check` verifies the stamp.
+The battery checks it before building and compares the run with the registered
+cases at the end. A run without swiftc says it is short and stays red.
+The court contract totals below describe pinned suites, separately checked
+by the battery; they are not additional battery totals.
 
 ## what runs today, and what is next
 
