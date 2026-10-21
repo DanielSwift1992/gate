@@ -5548,6 +5548,13 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               and 'id="reset-copy"' in _builder_src and 'closest("#reset-copy")' in _builder_src
               and 'onclick="__resetCopy' not in _builder_src))
 
+    _static_readings = subprocess.run([sys.executable, os.path.join(HERE, "tests", "static-readings.py")],
+                                      capture_output=True, text=True)
+    S.append(("a published host declares the reading protocol its UI can actually open",
+              _static_readings.returncode == 0 and "STATIC READINGS GREEN" in _static_readings.stdout))
+    if _static_readings.returncode:
+        print("   " + (_static_readings.stdout + _static_readings.stderr)[-2000:])
+
     # ── AND THE PAGE HAS TO PARSE. Every check here reads the bench as text and
     # asks whether the right words are in it — which says nothing about whether
     # the browser can run a line of it. A name collision in one function made the

@@ -368,8 +368,11 @@ function judgeWhereTexts(text, extraTexts) {
         }
         if (CONTEXT && method === "GET" && u === "/version")
             return reply(JSON.stringify({ ...JSON.parse(SNAP["/version"]), playground: CONTEXT }));
-        if (CONTEXT && method === "GET" && u === "/files")
-            return reply(JSON.stringify({ ...JSON.parse(SNAP["/files"]), save_policy: "reader-draft" }));
+        // This delivery carries recorded single-file responses, not the live
+        // server's batch endpoint. Capabilities describe this reader's host.
+        if (method === "GET" && u === "/files")
+            return reply(JSON.stringify({ ...JSON.parse(SNAP["/files"]), batch_readings: false,
+                ...(CONTEXT ? { save_policy: "reader-draft" } : {}) }));
         if (CONTEXT && method === "GET" && u.startsWith("/gitstatus?f=")) {
             const row = keptDraft(decodeURIComponent(u.split("f=")[1] || ""));
             return reply(JSON.stringify(row ? { git: "draft", verdict: row.verdict ? row.verdict.verdict : "not yet judged" }
