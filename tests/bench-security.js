@@ -30,6 +30,7 @@ const context = vm.createContext({document, console, Map, Set, Number, URL,
     theirsFiles: {}, unavailableFiles: [],
     seamRows: [], undeclaredFiles: railUndeclared, viewingShelf: null, undeclaredView: null,
     navHere() {}, loadFile() {}, recordJump() {}, openUndeclared() {},
+    nameLabels: new Map(), lastParsed: null, takenGroupState: new Map(),
     unresolved: new Set(), bareSlots: [], lastRefusals: [], recordBoundaries: new WeakMap(),
     projectionPage: 0, projectionLines: 2000, mode: 'bare',
     cm: {lineCount: () => (context.source || '').split('\n').length},
@@ -43,7 +44,7 @@ function fn(name) {
     return ui.slice(begin, end + 2);
 }
 vm.runInContext(ui.slice(ui.indexOf('const esc ='), ui.indexOf('// Bare:', ui.indexOf('const esc ='))), context);
-for (const name of ['nameTokens','attachNotes','freeComments','noteProse','recordEnd','projectionRange','projected','syncProjection','bareForm','buildRail'])
+for (const name of ['nameTokens','attachNotes','freeComments','noteProse','recordEnd','projectionRange','projected','syncProjection','bareForm','takenGroup','buildRail','collectLabels','refusalLabels'])
     vm.runInContext(fn(name), context);
 let row = ui.slice(ui.indexOf('    const rowFor = (ref, cls) => {'), ui.indexOf('\n    for (const ref of broken)'));
 if (process.argv.includes('--old-row-for')) {

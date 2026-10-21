@@ -9,7 +9,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"><meta charset="utf-8"><title>gate · world bench</title>
 <!-- zero egress, enforced by the browser as well as by the code: the bench may
      talk to its own loopback server and to nothing else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-5GzCvayhfKIAxAwizJRqS3a05vGAKRgdgfqpOuJGoBs=' 'sha256-TdHQZzUSgRcteAB9stufVe3zLqmQxIytwbVGAWR2UCs='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-5GzCvayhfKIAxAwizJRqS3a05vGAKRgdgfqpOuJGoBs=' 'sha256-PfegcqcRvKBgMrVpbDF/4/aq33RiG9fBYygv8g9K7nU='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
 <link rel="stylesheet" href="/codemirror.css">
 <script>
 // The theme is a declaration, not a toggle — and the declaration lives in the
@@ -85,7 +85,10 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 /* what a name overrules is answered at the name, in the table of the world that
    declares it — a panel carrying facts about worlds has stopped being a door */
 .cell-value.observed{color:var(--muted)}
-.folder{padding:var(--near) calc(var(--u)*7) 0}
+.folder,.taken-group>summary{padding:var(--near) calc(var(--u)*7) 0}
+.taken-group>summary{cursor:pointer;overflow-wrap:anywhere}
+.taken-group>summary.bad{color:var(--bad)}
+.refusal-label{display:block;margin-top:var(--near);overflow-wrap:anywhere}
 /* a file in a folder hangs one edge past the heading it sits under —
    `Indent` is what that step is called, and it means exactly this */
 .file.nested{padding-left:var(--indent)}
@@ -478,7 +481,7 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
   <div id="bar">
     <span class="seg" id="nav-seg"><button id="nav-back" disabled>&lsaquo;</button><button id="nav-fwd" disabled>&rsaquo;</button></span>
     <span class="seg" id="view-seg"><button class="on" data-m="bare">Bare</button><button data-m="table">Table</button><button data-m="drawing" id="view-drawing" hidden>Drawing</button><button data-m="full">Full</button></span>
-    <b id="fname" class="fact">gate.swift</b>
+    <b id="fname" class="fact" role="status">Loading world…</b>
     <button id="keys-btn" title="Keyboard shortcuts">?</button>
     <span id="gitstate" class="observed" title="Edits go straight to the file on disk. gate keeps no state of its own: commit or discard with git."></span>
   </div>
@@ -790,7 +793,7 @@ function undoEdit() {
 }
 const cm = CodeMirror(document.getElementById("editor-host"), {
     value: "", mode: "gate-swift", lineNumbers: true, indentUnit: 4,
-    viewportMargin: 10, dragDrop: false,
+    viewportMargin: 10, dragDrop: false, readOnly: true,
     extraKeys: {
         "Cmd-/": toggleComment, "Ctrl-/": toggleComment,
         "Cmd-S": noSave, "Ctrl-S": noSave,
@@ -907,6 +910,10 @@ let badFiles = new Set(), siblingNames = new Set(), layoutDecls = new Map(), dec
 let lastParsed = null, lastRefusals = [], widgets = [], tableSort = null;
 
 // ── the file rail: the declared layout, the same list the judge runs over ──
+const takenGroupState = new Map();
+function takenGroup(origin) {
+    return origin.verified ? origin.repository + "@" + origin.revision : origin.at;
+}
 function buildRail() {
     const list = document.getElementById("filelist");
     list.innerHTML = "";
@@ -918,9 +925,26 @@ function buildRail() {
     // full paths, so the shape a person gave their own world was invisible in
     // the one place that is meant to be an account of it. The folder is a
     // heading; the file keeps its own name under it.
-    const folders = new Map();
+    const folders = new Map(), groups = new Map();
     for (const f of [...new Set([...files, ...unavailableFiles])]) {
-        const target = theirsFiles[f] ? takenList : list;
+        let target = list;
+        const origin = theirsFiles[f];
+        if (origin) {
+            const key = takenGroup(origin);
+            if (!groups.has(key)) {
+                const group = document.createElement("details"), head = document.createElement("summary");
+                group.className = "taken-group"; head.className = "caption";
+                const members = [...new Set([...files, ...unavailableFiles])].filter(n => theirsFiles[n] && takenGroup(theirsFiles[n]) === key);
+                const label = origin.verified ? origin.repository.replace(/\/$/, "").split("/").pop() + "@" + origin.revision.slice(0, 12) : origin.at;
+                head.textContent = label + " · " + members.length;
+                head.title = key;
+                if (members.some(n => badFiles.has(n))) head.className += " bad";
+                group.open = takenGroupState.get(key) ?? members.includes(active);
+                group.ontoggle = () => takenGroupState.set(key, group.open);
+                group.appendChild(head); takenList.appendChild(group); groups.set(key, group);
+            }
+            target = groups.get(key);
+        }
         const folder = folders.get(target);
         const cut = f.lastIndexOf("/");
         const dir = cut < 0 ? "" : f.slice(0, cut);
@@ -2058,7 +2082,7 @@ async function render() {
     // reading it plainly threw away the one thing its rows are made of, the
     // `typeName` string that says which file each claim is about.
     const byWhere = viewingShelf !== null || formsFiles.has(active) || carriedFiles.has(active) || active === layoutFile;
-    const local = judge(active || "gate.swift", text,
+    const local = judge(active, text,
                         carriedFiles.has(active) ? kitVocabulary
                             : byWhere ? { seeds: new Set(), generics: new Set() } : undefined);
     lastParsed = local.parsed;
@@ -2077,6 +2101,7 @@ async function render() {
             + (undeclaredView ? "not declared" : "reference") + "</span>";
         document.getElementById("next").textContent = "";
         document.getElementById("verdicts").innerHTML = "";
+        refreshGit();
         // ── AND A VIEW DOES NOT GO ON SHOWING THE FILE BEFORE IT. This branch
         // answers everything a page of somebody else's needs and returned before
         // the two projections were drawn, so Table and Bare kept whatever had
@@ -2158,7 +2183,7 @@ async function render() {
         // of a person who came here to be told exactly where to look.
         const at = Number.isFinite(ref.line) ? ":" + ref.line : "";
         row.innerHTML = '<code class="fact">' + esc(ref.file || active) + at
-            + '</code><span class="' + (cls === "pending" ? "caption" : "speech") + '">' + esc(label) + "</span>";
+            + '</code><span class="' + (cls === "pending" ? "caption" : "speech") + '">' + esc(label) + refusalLabels(ref.premise) + "</span>";
         row.onclick = async () => {
             navFrom = navHere();
             // a refusal about an undeclared file opens that file, where the row it
@@ -2246,8 +2271,12 @@ async function showNext() {
 // the honest state: has the working-copy file drifted from git, or is it committed
 async function refreshGit() {
     const el = document.getElementById("gitstate");
+    el.className = ""; el.textContent = ""; el.title = "";
+    const name = active, generation = fileLoadGeneration;
+    if (!name || reading() || theirsFiles[name] || window.GatePublication?.readOnly) return;
     try {
-        const state = await (await fetch("/gitstatus?f=" + encodeURIComponent(active))).json();
+        const state = await (await fetch("/gitstatus?f=" + encodeURIComponent(name))).json();
+        if (active !== name || generation !== fileLoadGeneration || reading() || theirsFiles[active]) return;
         const g = state.git;
         if (readerDrafts) {
             el.className = g === "draft" ? "modified" : "observed";
@@ -2258,7 +2287,7 @@ async function refreshGit() {
         el.className = g === "committed" ? "committed" : "modified";
         el.innerHTML = '<span class="g"></span>' + (g === "committed" ? "committed"
             : g === "untracked" ? "not in git yet" : "not committed yet");
-    } catch { el.className = ""; el.textContent = ""; }
+    } catch { if (active === name && generation === fileLoadGeneration) { el.className = ""; el.textContent = ""; } }
 }
 
 // ── the Table surface: the ACTIVE file projected as relations, so all three
@@ -3933,8 +3962,28 @@ async function tick(write) {
     }
 }
 
+let nameLabels = new Map();
+// Literal spellings are the author's words, not another conclusion of the court.
+// Keep their source address and never select between conflicting spellings.
+function collectLabels(labels, parsed, file) {
+    for (const [name, literal] of parsed.literals || []) {
+        if (literal.unsupported) { labels.set(name, null); continue; }
+        const prior = labels.get(name);
+        if (labels.has(name) && (!prior || prior.value !== literal.value || prior.file !== file)) labels.set(name, null);
+        else labels.set(name, { value: literal.value, file, line: literal.line });
+    }
+}
+function refusalLabels(claim) {
+    const labels = new Map([...nameLabels].filter(([, label]) => !label || label.file !== active));
+    if (lastParsed) collectLabels(labels, lastParsed, active);
+    return [...new Set(claim.match(/\b[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*/g) || [])].flatMap(name => {
+        const label = labels.get(name);
+        return label ? ['<small class="caption refusal-label">' + esc(name) + ' · stated name at '
+            + esc(label.file) + ':' + label.line + ' · ' + esc(label.value) + '</small>'] : [];
+    }).join("");
+}
 async function siblings() {
-    siblingNames = new Set(); layoutDecls = new Map(); declFile = new Map();
+    const generation = fileLoadGeneration;
     // ── AND THE WORLD IS ASKED FOR ALL AT ONCE. Opening one file read every
     // other file to learn its names, one after the next, each waiting for the
     // one before: five files meant five round trips laid end to end, and that
@@ -3944,9 +3993,13 @@ async function siblings() {
     const want = files.filter(f => f !== layoutFile && !(theirsFiles[f]?.kind === "CarriedFile"));   // the layout's names are its own
     const texts = await Promise.all(want.map(f =>
         f === active ? Promise.resolve(editor.value)
-                     : fetch("/world?f=" + encodeURIComponent(f)).then(r => r.text())));
+                     : fetch("/world?f=" + encodeURIComponent(f)).then(r => r.ok ? r.text() : "")));
+    if (generation !== fileLoadGeneration) return;
+    siblingNames = new Set(); layoutDecls = new Map(); declFile = new Map(); nameLabels = new Map();
     for (let i = 0; i < want.length; i++) {
-        const f = want[i], parsed = judge(f, texts[i]).parsed;
+        const f = want[i], parsed = judge(f, texts[i], formsFiles.has(f)
+            ? { seeds: new Set(), generics: new Set() } : undefined).parsed;
+        collectLabels(nameLabels, parsed, f);
         if (f !== active && !theirsFiles[f]) namesOf(parsed).forEach(n => siblingNames.add(n));
         for (const [name, d] of parsed.declarations) if (!layoutDecls.has(name)) { layoutDecls.set(name, d); declFile.set(name, f); }
     }
@@ -3967,12 +4020,14 @@ async function loadFile(name) {
     // Until this request returns, the old buffer belongs to neither this door
     // nor a new editable file. A later door also invalidates this response.
     cm.setOption("readOnly", true); viewingShelf = name;
+    refreshGit();
     refLabel = esc(name + " · reading source"); undeclaredView = null;
     editor.value = ""; lastParsed = null;
     document.getElementById("bare").innerHTML = "";
     document.getElementById("table-host").innerHTML = "";
     if (taken?.kind === "CarriedFile") setMode("full");
     active = name;
+    if (taken) takenGroupState.set(takenGroup(taken), true);
     document.getElementById("fname").textContent = name;
     // the address names the open file, so a URL is a door: copy it from the
     // bar and whoever follows it lands on this file, not on the first one
@@ -4158,7 +4213,9 @@ async function loadVocabulary() {
 // what a world is made of, read from the one place that says: the layout. One
 // reader, used at load and again whenever the layout itself is saved.
 async function readFiles() {
-    const fl = await (await fetch("/files")).json().catch(() => ({ files: [] }));
+    const response = await fetch("/files");
+    if (!response.ok) throw new Error("The declared file list is unavailable");
+    const fl = await response.json();
     files = fl.files || []; personalFile = fl.personal || null; personalEmpty = !!fl.personal_empty;
     layoutFile = fl.layout || null;
     formsFiles = new Set(fl.forms || []);
@@ -4177,6 +4234,7 @@ async function readFiles() {
 (async () => {
     // what this world presents has to be known before the vocabulary is built,
     // or the bench reads the shelf and misses the file sitting next to the world
+    cm.setOption("readOnly", true);
     const fl = await readFiles();
     try { language = await (await fetch("/language")).json(); } catch { }
     await loadDrawingProfile();
@@ -4209,7 +4267,6 @@ async function readFiles() {
         ? "" : "Reading this repository's history. Nothing here is judged yet.";
     document.getElementById("rail").style.display = "flex";
     document.getElementById("split-rail").style.display = "block";
-    document.getElementById("fname").style.display = "none";
 buildRail();
     await buildJournal();
     if (!files.length) return showEmpty();   // no world here yet
@@ -4238,7 +4295,7 @@ buildRail();
         const asked = new URLSearchParams(location.search).get("f") || "";
         const askedLine = asked.match(/:(\d+)$/);
         const askedFile = askedLine ? asked.slice(0, askedLine.index) : asked;
-        const first = files.includes(askedFile) || unavailableFiles.includes(askedFile) ? askedFile : (files[0] || "gate.swift");
+        const first = files.includes(askedFile) || unavailableFiles.includes(askedFile) ? askedFile : files[0];
         // A default is a real view too. Merely setting `mode = bare` left
         // CodeMirror visible on worlds that stated no per-file opening view.
         setMode(opensAs[first] || mode);
@@ -4270,11 +4327,15 @@ buildRail();
             if (owner) owner.scrollIntoView({ block: "center" });
         }
     });
-})();
+})().catch(error => {
+    document.getElementById("fname").textContent = "World unavailable";
+    document.getElementById("status").textContent = error.message;
+});
 
 // ── no world yet: the journal on the left is already live, and these are the
 // two ways to get one. Nobody is asked to read a manual first. ──
 function showEmpty() {
+    document.getElementById("fname").textContent = "Repository history";
     document.getElementById("editor-host").style.display = "none";
     document.getElementById("verdict-panel").style.display = "none";
     document.getElementById("view-seg").style.display = "none";

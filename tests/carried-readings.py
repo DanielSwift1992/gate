@@ -45,6 +45,7 @@ def run():
     if binary:
      code,body=ask('/world?f='+name);assert code==409 and 'unsupported text reading' in body.decode();continue
     assert files['theirs'][name]['verified'] and all(files['theirs'][name][k]==v for k,v in entry.items())
+    assert files['theirs'][name]['record_address'].startswith('.gate/forms-definitions.json:')
     code,body=ask('/world?f='+name);assert code==200 and body==samples[entry['source_path']],name
     code,body=ask('/world?f='+name,'PUT',b'forged edit');assert code==409 and 'read-only' in body.decode()
     assert ask('/world?f='+name)[1]==samples[entry['source_path']]
@@ -73,6 +74,9 @@ def run():
     else:descriptor.write_text(json.dumps(changed,indent=2))
     code,body=ask('/world?f=materials/source.md');refusal=json.loads(body)
     assert code==409 and ':' in refusal['address'] and refusal['reason'] and b'FORGED' not in body,(label,code,body)
+    if label in ('wrong hash','missing pin'):
+     assert 'Taken0' in refusal['reason'] and 'gate.manifest.swift:' in refusal['reason']
+     assert changed['files'][0]['repository']+'@'+changed['files'][0]['revision']+':source.md' in refusal['reason']
     fl=json.loads(ask('/files')[1]);assert 'materials/source.md' in fl['unavailable'],label
     assert ask('/world?f=materials/source.md','PUT',b'write despite lost pin')[0]==409
    manifest.write_text(source);descriptor.write_text(json.dumps(record,indent=2))

@@ -1888,6 +1888,7 @@ struct TakenResolution {
     var v2 = false
     var paths: [String: String] = [:]
     var inputs: [String: [String: String]] = [:]
+    var addresses: [String: String] = [:]
     var bad: [(address: String, claim: String)] = []
 }
 func takenInputs(_ w: WorldState) -> TakenResolution {
@@ -1910,7 +1911,18 @@ func takenInputs(_ w: WorldState) -> TakenResolution {
     }
     let spots = RecordSpots(String(decoding: data, as: UTF8.self))
     func bad(_ path: String, _ why: String) {
-        result.bad.append((spots.address(path), path + ": " + why))
+        var context = ""
+        let components = path.split(separator: "/")
+        if components.count >= 2, components[0] == "files", let index = Int(components[1]),
+           let entries = spec["files"] as? [[String: Any]], entries.indices.contains(index) {
+            let input = entries[index], name = input["row"] as? String ?? "?"
+            let row = layout.rows.first { $0.name == name }
+            context = " · declared input " + name
+                + (row.map { " at gate.manifest.swift:\($0.line)" } ?? "")
+                + " · " + (input["repository"] as? String ?? "?") + "@"
+                + (input["revision"] as? String ?? "?") + ":" + (input["source_path"] as? String ?? "?")
+        }
+        result.bad.append((spots.address(path), path + ": " + why + context))
     }
     if spec["format"] == nil || spec["format"] as? Int == 1 { return result }
     result.v2 = true
@@ -1944,6 +1956,7 @@ func takenInputs(_ w: WorldState) -> TakenResolution {
         guard row.kind != nil else {
             bad(at + "/row", "\(name): a v2 input row must declare Kind at gate.manifest.swift:\(row.line)"); continue
         }
+        result.addresses[name] = spots.address(at)
         let before = result.bad.count
         let repository = input["repository"]!, revision = input["revision"]!, source = input["source_path"]!
         let path = input["path"]!, hash = input["sha256"]!
@@ -12466,6 +12479,7 @@ func benchOrigin(_ row: LayoutRow, _ taken: TakenResolution) -> StatusJSON {
     var origin: [(String, StatusJSON)] = [
         ("kind", .text(row.kind ?? "")), ("address", .text("gate.manifest.swift:\(row.line)")),
         ("at", .text(row.from ?? "")), ("verified", .raw(taken.inputs[row.name ?? ""] != nil ? "true" : "false"))]
+    if let address = taken.addresses[row.name ?? ""] { origin.append(("record_address", .text(address))) }
     for (key, value) in (taken.inputs[row.name ?? ""] ?? [:]).sorted(by: { $0.key < $1.key }) {
         origin.append((key, .text(value)))
     }
