@@ -229,7 +229,11 @@ if (site) for (const id of fs.readdirSync(path.join(site, "playground"))) {
         const shelf = JSON.parse(snap['/shelf']);
         assert(shelf.modules.includes('Site/Manifest'));
         assert.equal(snap['/shelf?m=Site/Manifest'], read(path.join(sc,'Worlds/Playground/Site/Manifest.swift')));
-        assert.equal(shelf.inputs['Site/Manifest'].revision, record.showcase.revision);
+        const ownerRecord = JSON.parse(read(path.join(sc, 'Worlds/Playground', ctx.tab.world, '.gate/forms-definitions.json')));
+        const catalogInput = ownerRecord.files.find(f => f.source_path === 'Worlds/Playground/Site/Manifest.swift');
+        assert(catalogInput, id + ': owner declares the catalog input');
+        assert.equal(shelf.inputs['Site/Manifest'].revision, catalogInput.revision);
+        assert.equal(shelf.inputs['Site/Manifest'].sha256, catalogInput.sha256);
         assert(!page.includes('id="world-tabs"') && !page.includes('position:fixed;top:0'));
         const tabs = JSON.parse(read(path.join(site, "playground/tabs.json")));
         assert.deepStrictEqual(tabs.map(t => shelf.inputs['Site/Manifest'].destinations[t.record]), tabs.map(t => t.id));
