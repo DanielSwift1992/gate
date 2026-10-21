@@ -3,7 +3,7 @@
 const fs=require('fs'),path=require('path'),vm=require('vm'),assert=require('assert');
 const {open}=require('./published-bench.js'),{judge}=require('../bin/judge.js'),{kitVocabulary}=require('../bin/renderer.js');
 const {fixedImports,pageGuards}=require('../bin/playground-guards.js');
-const ui=fs.readFileSync(path.join(__dirname,'../web/ui.html'),'utf8');
+let ui;
 function implementation(name){const at=ui.indexOf('function '+name+'('),end=ui.indexOf('\n}',at);assert(at>=0&&end>at,name);return (ui.slice(at-6,at)==='async '?'async ':'')+ui.slice(at,end+2);}
 class Element{
  constructor(tag){this.tag=tag;this.children=[];this.attrs={};this.style={};this.classList={add(){},remove(){}};}
@@ -11,6 +11,7 @@ class Element{
 }
 const escape=s=>String(s??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
 module.exports=async function(root){
+ ui=fs.readFileSync(path.join(root,'playground/basics/index.html'),'utf8');
  const storage={getItem(){return null;},setItem(){throw Error('reference wrote a draft');},removeItem(){}};
  const tabs=JSON.parse(fs.readFileSync(path.join(root,'playground/tabs.json')));
  assert.equal(tabs.length,12);

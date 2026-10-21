@@ -1,0 +1,29 @@
+{
+ "carrier": "MessagesJS",
+ "against": {
+  "contract": "openapi.json",
+  "revision": "a1b2c3d"
+ },
+ "carries": [
+  {
+   "route": "/messages",
+   "field": "to",
+   "as": "Text"
+  },
+  {
+   "route": "/messages",
+   "field": "body",
+   "as": "Text"
+  },
+  {
+   "route": "/messages",
+   "field": "sendAt",
+   "as": "Count"
+  },
+  {
+   "route": "/messages",
+   "field": "replyTo",
+   "as": "Text"
+  }
+ ]
+}

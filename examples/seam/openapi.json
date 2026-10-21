@@ -1,0 +1,36 @@
+{
+ "paths": {
+  "/messages": {
+   "post": {
+    "parameters": [
+     {
+      "name": "sendAt",
+      "in": "query",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "properties": {
+         "to": {
+          "type": "string"
+         },
+         "body": {
+          "type": "string"
+         },
+         "attachments": {
+          "type": "array"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ }
+}

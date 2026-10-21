@@ -323,22 +323,12 @@ jobs:
       - run: bin/build-cli.sh
       # the published bench: the same page, the same browser judges, and the
       # server's own answers recorded from a live serve at build time. The
-      # build itself is a Linux measure: a demo is born and served under the
-      # node port on this runner before anything is published.
-      - run: python3 bin/build-pages.py _site --worlds
-      # the road test: the published page walks the user's own road headless,
-      # type to offer to red to green to kept, and refuses to deploy a page
-      # where any step of it falls over
-      - run: |
-          BROWSER=$(command -v google-chrome || command -v chromium-browser || command -v chromium)
-          # the camera's own words survive: `2>/dev/null` here meant a browser
-          # that could not start failed this step with no reason printed, which
-          # is the shape bin/shoot-bench.sh carried until this phase
-          "$BROWSER" --headless --disable-gpu --no-sandbox --virtual-time-budget=15000 \
-            --dump-dom "file://$PWD/_site/index.html?f=ownership.swift:84&roadtest=1" \
-            2>/tmp/road-err.txt | grep -q "ROAD ALL GREEN" \
-            || { echo "the road test did not reach ROAD ALL GREEN. What the browser said:"; \
-                 tail -5 /tmp/road-err.txt; exit 1; }
+      # Gate owns its root world; showcase owns the playground catalog.
+      # Both are selected inputs to the same publisher, never created here.
+      - run: python3 bin/build-pages.py _site --source examples/codeowners --worlds
+      # The sample's input/offer/refusal/save walk is an external harness.
+      # Its fixture and script never enter the artifact being deployed.
+      - run: python3 tests/roadtest.py --site _site
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9   # v5.0.0
         with:
           path: _site

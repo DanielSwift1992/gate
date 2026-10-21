@@ -227,7 +227,7 @@ where a certificate compares two of them, and nowhere else.
 
 ## The picture on the cover
 
-`docs/bench.png` is taken by `bin/shoot-bench.sh`: a fresh `gate demo`
+`docs/bench.png` is taken by `bin/shoot-bench.sh`: a copy of the declared `examples/codeowners` world
 world, `gate serve` on a free port, one headless Chrome shot of
 `/ui?f=ownership.swift:89`. That door is not the camera's: any refusal
 address pastes into the browser bar as `?f=file:line`, and the bench
@@ -239,7 +239,7 @@ an artifact.
 
 ## Pinned playground worlds
 
-`python3 bin/build-pages.py _site --worlds` adds the showcase worlds to the published bench, at `playground/<id>/index.html`. The pinned `Worlds/Playground/Site/Manifest.swift` stands in THEIRS of every world, including Site. Open it in Bare or Table and follow a record name to `playground/<id>/`; the first ten associations stay in order and the Company and Site source records follow them. `playground/` opens that same bench on Read me; the ordinary demo stays at the repository site root. World inputs are disclosed beside the judge in the rail. The rail has only MINE and THEIRS; no added tab/provenance strip.
+`python3 bin/build-pages.py _site --source examples/codeowners --worlds` publishes gate's declared root and the showcase catalog, at `playground/<id>/index.html`. The pinned `Worlds/Playground/Site/Manifest.swift` stands in THEIRS of every world, including Site. Open it in Bare or Table and follow a record name to `playground/<id>/`; the first ten associations stay in order and the Company and Site source records follow them. The repository site root opens the declared `examples/codeowners` world, with `ownership.swift` and its intentional refusal at line 89, as shown on the cover. `playground/` opens Read me from showcase. For an explicitly selected repository, use `python3 bin/build-pages.py _site --source /path/to/repository`; this command has no default sample. The two options compose: source selects the root, worlds adds the showcase catalog under playground/. With only worlds, the root is not published. World inputs are disclosed beside the judge in the rail. The rail has only MINE and THEIRS; no added tab/provenance strip.
 
 `bin/playground-worlds.from` names the showcase revision, every selected file's SHA-256, the world's compiler theory, the judge and the wasm bytes. `bin/playground-worlds.sh` fetches those revisions directly, with LF checkouts, and checks the files again when its cache is warm. `SHOWCASE_SOURCE` selects a local checkout at the recorded revision; the built site's `worlds-source.json` then says local. A changed selected file is refused.
 
@@ -260,3 +260,5 @@ The published live path calls the same pageGuards and lint as the vectors, over 
 A manifest may name one DrawingProfileFile. Its profile binds each port role to a colour and a luminance reading in each theme; names are references, not suffix conventions. Serve resolves the same pinned inputs the static publisher records, and both use DrawingProfileReaderV1. The font must match the installed port's supported bytes and metric table; another font is addressed as unsupported. Font, stylesheet and license have shared content addresses, and the finished-site law checks every consumer. A missing role or theme refuses the profile. A world with no profile says so in Drawing.
 
 The current owner Drawing contract is not yet declared. The caption therefore says not-compared with that reason; a green relation verdict does not compare a picture with Swift. The profile input slice supports the v2 byte record and its explicit definitions. The collection publication command, full namespace/import plan and external grammar scope interface remain separate work; this slice does not supply them.
+
+The publisher fetches only the showcase and theory inputs in `bin/playground-worlds.from`. The archived typed-playground 400b667 is migration evidence, fetched only by `tests/playground-baseline.py` from `tests/fixtures/playground-baseline.from`; hashes are checked on cache hits too. Its original corpus, guards, lint and renderer still hold the historical parity and security replay controls. Current guard and lint obligations run against the finished site’s shipped scripts and live edit path. The CODEOWNERS road test is `tests/roadtest.py` with `tests/roadtest.js`: it reads the declared example (or the site named by its `--site` option) and injects its test walk only into a temporary copy. CI runs it before deploying the clean catalog.

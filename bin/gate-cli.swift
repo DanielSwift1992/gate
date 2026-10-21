@@ -6781,123 +6781,32 @@ func selfSaid(_ words: [String], _ cwd: String) -> String {
     return answer
 }
 
-let SEAM_DEMO_SPEC = """
-    {
-     "paths": {
-      "/messages": {
-       "post": {
-        "parameters": [
-         {
-          "name": "sendAt",
-          "in": "query",
-          "schema": {
-           "type": "string"
-          }
-         }
-        ],
-        "requestBody": {
-         "content": {
-          "application/json": {
-           "schema": {
-            "properties": {
-             "to": {
-              "type": "string"
-             },
-             "body": {
-              "type": "string"
-             },
-             "attachments": {
-              "type": "array"
-             }
-            }
-           }
-          }
-         }
-        }
-       }
-      }
-     }
-    }
-    """
 
-let SEAM_DEMO_SDK = """
-    {
-     "carrier": "MessagesJS",
-     "against": {
-      "contract": "openapi.json",
-      "revision": "a1b2c3d"
-     },
-     "carries": [
-      {
-       "route": "/messages",
-       "field": "to",
-       "as": "Text"
-      },
-      {
-       "route": "/messages",
-       "field": "body",
-       "as": "Text"
-      },
-      {
-       "route": "/messages",
-       "field": "sendAt",
-       "as": "Count"
-      },
-      {
-       "route": "/messages",
-       "field": "replyTo",
-       "as": "Text"
-      }
-     ]
-    }
-    """
 
-let SEAM_DEMO_KNOWN = """
-    {
-     "diverges": [
-      {
-       "route": "/messages",
-       "field": "sendAt",
-       "because": "PROJ-42",
-       "declared_by": "sdk-team"
-      }
-     ]
-    }
-    """
 
-let SEAM_DEMO_TICKETS = """
-    [
-     {
-      "key": "PROJ-42",
-      "status": "In Progress"
-     }
-    ]
-    """
 
-let SEAM_DEMO_MANIFEST = """
-    // what this folder took, and from where. A seam is not found by looking
-    // at what is lying about: it is here because this side said so, at the
-    // revision it was taken at. The columns are axes to declared atoms, and
-    // the one string is the typeName literal. A revision is an atom too.
-    public protocol Role {}
-    public enum SeamFile: Role {}
-    public protocol Theirs {}
-    public enum Rev_messages_api {}
-    extension Rev_messages_api { public static var typeName: String { "messages-api@a1b2c3d" } }
-    public enum TheContract: Theirs {
-        public typealias Kind = SeamFile
-        public typealias At = Rev_messages_api
-    }
-    extension TheContract { public static var typeName: String { "api.swift" } }
-    public enum Rev_messages_js {}
-    extension Rev_messages_js { public static var typeName: String { "messages-js@4f10e22" } }
-    public enum OurSide: Theirs {
-        public typealias Kind = SeamFile
-        public typealias At = Rev_messages_js
-    }
-    extension OurSide { public static var typeName: String { "sdk.swift" } }
 
-    """
+// Examples are selected recipes. The verbs below still own init, import and status.
+func exampleText(_ name: String) -> String {
+    guard let bytes = runtimeData("examples/" + name), let text = String(data: bytes, encoding: .utf8) else {
+        cannot("examples/" + name + ": missing example input", "restore the installed example, then gate demo")
+    }
+    return text
+}
+func installExample(_ name: String, _ root: String) {
+    guard let bytes = runtimeData("examples/index.json"),
+          let recipes = try? JSONSerialization.jsonObject(with: bytes) as? [String: [String]],
+          let files = recipes[name] else {
+        cannot("examples/index.json: no recipe " + name, "restore the installed examples, then gate demo")
+    }
+    for file in files {
+        let target = joinPath(root, file)
+        do {
+            try FileManager.default.createDirectory(atPath: parentPath(target)!, withIntermediateDirectories: true)
+            try exampleText(name + "/" + file).write(toFile: target, atomically: true, encoding: .utf8)
+        } catch { cannot("examples/" + name + "/" + file + ": " + String(describing: error), "choose a writable example directory") }
+    }
+}
 
 // ── demo [dir] · demo org [dir] · demo seam [dir]: three worlds to look at in
 // thirty seconds, and nothing in any of them talks to a network. The first is
@@ -6938,11 +6847,7 @@ if args.first == "demo" {
         let root = absPath(rest.count > 1 ? rest[1] : "gate-seam-demo")
         if !FileManager.default.fileExists(atPath: root) { FOUNDED_HERE = root }
         try? FileManager.default.createDirectory(atPath: root, withIntermediateDirectories: true)
-        put(root, "openapi.json", SEAM_DEMO_SPEC)
-        put(root, "sdk.declared.json", SEAM_DEMO_SDK)
-        put(root, "known.json", SEAM_DEMO_KNOWN)
-        put(root, "tickets.json", SEAM_DEMO_TICKETS)
-        put(root, "gate.manifest.swift", SEAM_DEMO_MANIFEST)
+        installExample("seam", root)
         func side(_ what: String, _ from: String, _ to: String) -> Int {
             let said = selfSaid(["declare", what, (root as NSString).appendingPathComponent(from),
                                  "-o", (root as NSString).appendingPathComponent(to), "--json"],
@@ -6988,24 +6893,13 @@ if args.first == "demo" {
 
     // ── demo org
     if rest.first == "org" {
-        // the tool's own folder, asked for by name: the demo's `root` is the
-        // world it is making, and the two are not the same place
-        let mine = toolRoot()
+        // The selected recipe is data; import still owns the world it declares.
         let root = absPath(rest.count > 1 ? rest[1] : "gate-demo")
         if !FileManager.default.fileExists(atPath: root) { FOUNDED_HERE = root }
         try? FileManager.default.createDirectory(
             atPath: (root as NSString).appendingPathComponent("tables"),
             withIntermediateDirectories: true)
-        for f in ["people.csv", "grants.csv"] {
-            let src = joinPath(mine, "demo/" + f)
-            if FileManager.default.fileExists(atPath: src) {
-                try? FileManager.default.removeItem(
-                    atPath: (root as NSString).appendingPathComponent("tables/" + f))
-                try? FileManager.default.copyItem(
-                    atPath: src,
-                    toPath: (root as NSString).appendingPathComponent("tables/" + f))
-            }
-        }
+        installExample("organization", root)
         var isDir: ObjCBool = false
         if !(FileManager.default.fileExists(atPath: (root as NSString)
             .appendingPathComponent(".git"), isDirectory: &isDir) && isDir.boolValue) {
@@ -7052,12 +6946,6 @@ if args.first == "demo" {
                     + "{ \"gate-judge\" } }\n"
             try? (head + row).write(toFile: mp, atomically: false, encoding: .utf8)
         }
-        put(root, "gate.policy.swift",
-            "// who someone is, and what an action demands: facts of yours,\n"
-            + "// beside the world and yours to change.\n"
-            + "public enum MailYou: Identity {\n    public typealias Person = Emp9000\n}\n"
-            + "extension MailYou { public static var typeName: String { \"you@example.com\" } }\n\n"
-            + "public enum MergePolicy {\n    public typealias Requires = Manager\n}\n")
         commit(root, "a world of people and grants", false)
         var shown: [String] = []
         let asked = readSaid(selfSaid(["check", "view", "Emp9001", "EngineeringShare", "--json"],
@@ -7094,20 +6982,7 @@ if args.first == "demo" {
     // ── demo: who owns what, in a repository shaped like the reader's own
     let root = absPath(rest.first ?? "gate-demo")
     if !FileManager.default.fileExists(atPath: root) { FOUNDED_HERE = root }
-    for rel in ["src/api", "src/ui", "src/db", "docs"] {
-        try? FileManager.default.createDirectory(
-            atPath: (root as NSString).appendingPathComponent(rel),
-            withIntermediateDirectories: true)
-    }
-    for rel in ["src/api/handler.ts", "src/ui/view.tsx", "src/db/schema.sql", "docs/readme.md"] {
-        put(root, rel, "// a file of this repository\n")
-    }
-    put(root, "CODEOWNERS",
-        "# who owns what, the way every repository already writes it\n"
-        + "src/api/    @alice\nsrc/ui/     @bob\ndocs/       @carol\nsrc/db/     @carol\n")
-    // WHO MAY OWN WHAT is the thing CODEOWNERS cannot say, and without it every
-    // rule is its own authority: a file that answers only to itself
-    put(root, "owners.csv", "owner,zone\nalice,src\nbob,src\ncarol,docs\n")
+    installExample("codeowners", root)
     _ = runGit(["init", "-q", "-b", "main", "."], root)
     _ = selfSaid(["init", "."], root)
     // ── AND WHAT THE CHILD IS TOLD IS WHERE, NOT HERE. These were relative and

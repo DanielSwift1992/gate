@@ -101,7 +101,7 @@ It uploads nothing and fetches nothing. It observes rather than
 judges: the exit code follows a threshold you declare (`--fail-over 30`),
 never a verdict of ours.
 
-No repository of your own at hand? `gate demo` makes one: a small tree
+No repository of your own at hand? `gate demo` installs the [CODEOWNERS example](examples/README.md): a small tree
 with a CODEOWNERS whose one rule reaches outside its zone, so the first
 thing you see is the refusal above. Everything it makes is committed the
 moment it is made, and `git checkout .` is the whole way back.
@@ -411,10 +411,12 @@ bin/playground-worlds.sh
                 file has its SHA-256, checked again on a cache hit. The compiler's
                 theory and the court's pin are recorded separately there.
 bin/build-pages.py
-                builds the bench. The worlds mode in docs/DETAILS.md adds the
+                builds an explicitly named repository or the pinned catalog;
+                commands are in docs/DETAILS.md. The worlds mode publishes the
                 worlds from the pinned Site/Manifest.swift, read in THEIRS, with
                 serve's recorded answers. playground/ opens Read me in that
-                same bench. Each world keeps
+                same bench. CI selects examples/codeowners for gate's own site
+                root, the world shown on the cover. Each world keeps
                 its own saved files by revision, world and file. Page bodies at
                 the pin compile in showcase; browser edits have no Swift proof.
                 A mixed company page names its data boundary explicitly; the

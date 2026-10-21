@@ -1,0 +1,10 @@
+{
+ "diverges": [
+  {
+   "route": "/messages",
+   "field": "sendAt",
+   "because": "PROJ-42",
+   "declared_by": "sdk-team"
+  }
+ ]
+}

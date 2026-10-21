@@ -77,7 +77,7 @@ def build_worlds(here, out, publish):
                 compiler=record['theory'], judge=record['judge'], plain_fragments=fragments,
                 drawing=dict(case_id=tab['id']))
             # Carried paths are taken from /files by publish, not guessed here.
-            publish(str(world), str(out / 'playground' / tab['id']), context)
+            ladder = publish(str(world), str(out / 'playground' / tab['id']), context)
     shutil.copyfile(cache / 'worlds.from', out / 'worlds.from')
     shutil.copyfile(cache / 'from', out / 'worlds-source.json')
     (out / 'playground').mkdir(exist_ok=True)
@@ -90,3 +90,4 @@ def build_worlds(here, out, publish):
         else:
             shutil.copyfile(path, target)
     (out / 'playground/tabs.json').write_text(json.dumps(tabs, indent=2) + '\n')
+    return ladder

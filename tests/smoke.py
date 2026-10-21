@@ -5528,8 +5528,8 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     _builder_src = open(os.path.join(HERE, "bin", "build-pages.py"), encoding="utf-8").read()
     S.append(("the static builder stamps CSP after escaping snapshot data and resets without an inline handler",
               "script_json(snap)" in _builder_src and "ui = stamp_csp(ui.replace(marker, note + marker, 1))" in _builder_src
-              and 'id="reset-demo"' in _builder_src and 'closest("#reset-demo")' in _builder_src
-              and 'onclick="__resetDemo' not in _builder_src))
+              and 'id="reset-copy"' in _builder_src and 'closest("#reset-copy")' in _builder_src
+              and 'onclick="__resetCopy' not in _builder_src))
 
     # ── AND THE PAGE HAS TO PARSE. Every check here reads the bench as text and
     # asks whether the right words are in it — which says nothing about whether
@@ -13543,13 +13543,14 @@ public enum MyWatch: AccessLedger {
     _uncovered = sorted(_panel_paths - _covered - {"/declare", "/seamside"})
     S.append(("the published bench carries every path the panel calls",
               _uncovered == []))
-    # and the road itself is written into the page: CI walks it headless on
-    # every push, from typing to the offer to red to green to kept
+    # The scene walk belongs to the external test harness; a delivery carries
+    # only its selected world. CI still walks typing, offers, red, green and kept.
     _ci = open(os.path.join(HERE, ".github", "workflows", "battery.yml"),
                encoding="utf-8").read()
-    S.append(("the published bench carries the user's road, and CI walks it",
-              "roadtest=1" in _pages_src and "ROAD ALL GREEN" in _pages_src
-              and "roadtest=1" in _ci))
+    _road = open(os.path.join(HERE, "tests", "roadtest.js"), encoding="utf-8").read()
+    S.append(("the user's road lives in the external harness, and CI walks it",
+              "roadtest=1" not in _pages_src and "ROAD ALL GREEN" not in _pages_src
+              and "ROAD ALL GREEN" in _road and "tests/roadtest.py" in _ci))
     # ── AND A RED IS ABOUT THIS REPOSITORY. There is one Pages site and one
     # deployment at a time, and the job had no concurrency group: a second push
     # while the first was deploying failed the second, and run 123 went red with
@@ -13613,7 +13614,7 @@ public enum MyWatch: AccessLedger {
               and "if: steps.site.outputs.on == 'true'" in _ci
               # and the road test is still upstream of the deploy, so a broken
               # page is red before publishing is even asked about
-              and _ci.index("ROAD ALL GREEN") < _ci.index("steps.site.outputs.on")))
+              and _ci.index("tests/roadtest.py") < _ci.index("steps.site.outputs.on")))
     S.append(("the deployment does not race itself, and says what a browser said",
               re.search(r"\n    concurrency:\n      group: pages\n"
                         r"      cancel-in-progress: false\n", _ci)
@@ -13622,7 +13623,7 @@ public enum MyWatch: AccessLedger {
               # gone, which is a guard reading the sentence about itself
               and not [l for l in _ci.split("\n")
                        if "2>/dev/null" in l and not l.lstrip().startswith("#")]
-              and "What the browser said" in _ci))
+              and "result.stderr" in open(os.path.join(HERE, "tests", "roadtest.py"), encoding="utf-8").read()))
 
     # ── AND THE MEASURED PAGE IS THE MEASURER'S OWN WORDS. `docs/BENCH.md` is
     # written by `bin/bench.py`, the cover sends a reader to it for the numbers
@@ -14558,8 +14559,11 @@ public enum MyWatch: AccessLedger {
     # The old playground's witnesses travel with the pinned showcase worlds.
     # This builds the actual static benches through serve, then reads their
     # snapshots with both courts and executes their storage shim under node.
+    # The complete Scale delivery plus native and historical controls measured
+    # 275 s alone and exceeded 300 s within this battery. Keep the full inputs;
+    # allow bounded CI headroom rather than dropping a world or a control.
     _playground = subprocess.run([sys.executable, os.path.join(HERE, "tests", "playground.py")],
-                                 capture_output=True, text=True, timeout=300)
+                                 capture_output=True, text=True, timeout=600)
     if _playground.returncode:
         print("   playground:", (_playground.stdout + _playground.stderr)[-6000:])
     S.append(("the pinned playground worlds keep their drawings, courts and separate state",

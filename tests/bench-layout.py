@@ -22,7 +22,7 @@ class Note(HTMLParser):
         elif self.depth:
             self.depth += 1
             self.disclosure |= tag == 'details' and 'open' not in attrs
-            self.reset |= tag == 'a' and attrs.get('id') == 'reset-demo'
+            self.reset |= tag == 'a' and attrs.get('id') == 'reset-copy'
 
     def handle_endtag(self, tag):
         if self.depth:

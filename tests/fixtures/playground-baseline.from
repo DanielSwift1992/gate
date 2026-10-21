@@ -1,0 +1,24 @@
+{
+  "baseline": {
+    "revision": "400b6674d1c120bb2b86150631093f86ec4d7994",
+    "files": {
+      "corpus/Manifest.swift": "8a4cbc32e4cc14de901520a2da13cdbc6996fb99217dce4b2cab468ade6daa4c",
+      "corpus/Palette.swift": "edfe1b1dd287cdfbbc09af9a544d677c0aad0e5b3084655370cb5d475edf6534",
+      "corpus/worlds/Atom.swift": "3d7c9d5e85de483339c1f1a028e1807257fcf5eeab106c139863e932f628dbda",
+      "corpus/worlds/AtomPages.swift": "da766db6cc0714dcc62fa8ed4fa2d9dc13f1c4e5fc5f7a46c60bc7432b4d1d5d",
+      "corpus/worlds/Basics.swift": "6bb923d2b5e07befe63bf0681880eaa7ef3f85ecb2750a9d11aa6e4cfdd909ec",
+      "corpus/worlds/Company.swift": "e2570be76c11add181cfe034b984a96fac93c895de3f94d5855e8238e84ead72",
+      "corpus/worlds/FAQ.swift": "bc8e4e6f1c092837ef25a8cc9c24570604740b1057290ecb565872de59a43f97",
+      "corpus/worlds/Light.swift": "b3ff0796dfad01004d39c0e6b0092ba3691646ae29493c1f10cb34dabe83988d",
+      "corpus/worlds/LightPages.swift": "8a513832878c9921b76e4b410fb4047caf8e32d6ea92d4270150dbdcff4036a8",
+      "corpus/worlds/Organization.swift": "fb0928e281e1593e2c346a8937f663a8333439a1e6cfa5fa242c1a23c69edcd0",
+      "corpus/worlds/ReadMe.swift": "4b2ad8d82e83e04825d5761e95b9d23ec108d657f7f7a4d7422086f8591b793f",
+      "corpus/worlds/Rules.swift": "d56c0373a8a321d87a735044a6e5002853f974df265a03b8502fd3173a9b9ec9",
+      "corpus/worlds/Typewriter.swift": "a756761596b50d838d489e9869b01bcbb3d522036b025286c6e4dbb2df0d37ea",
+      "corpus/worlds/World.swift": "ab9c11f30d33a6565d2d880861527fea89c05264c1a69db5c179b91eaceb6ba2",
+      "guards.js": "1c26b3221c3b50e22f115a7b3e84b11bb77b1cc7e341b0edb05e541cc38ae44d",
+      "lint.js": "54851d8c894aba470415a727c949c3876a22f3d077ece8e1ed6f6c87872f0db8",
+      "renderer.js": "d553225ca833c0ffd00e9667d93d54326acb18383931cbf1dee25a4adca4f6ce"
+    }
+  }
+}

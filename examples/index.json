@@ -1,0 +1,22 @@
+{
+  "codeowners": [
+    "CODEOWNERS",
+    "docs/readme.md",
+    "owners.csv",
+    "src/api/handler.ts",
+    "src/db/schema.sql",
+    "src/ui/view.tsx"
+  ],
+  "seam": [
+    "gate.manifest.swift",
+    "known.json",
+    "openapi.json",
+    "sdk.declared.json",
+    "tickets.json"
+  ],
+  "organization": [
+    "gate.policy.swift",
+    "tables/grants.csv",
+    "tables/people.csv"
+  ]
+}

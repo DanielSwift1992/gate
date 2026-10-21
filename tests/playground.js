@@ -2,13 +2,13 @@
 "use strict";
 const fs = require("fs"), path = require("path"), cp = require("child_process"), assert = require("assert"), crypto = require("crypto");
 const here = path.resolve(__dirname, ".."), cache = process.argv[2], site = process.argv[3];
-const sc = path.join(cache, "showcase"), base = path.join(cache, "baseline"), checks = path.join(sc, "Checks/Playground");
+const sc = path.join(cache, "showcase"), base = process.argv[4], checks = path.join(sc, "Checks/Playground");
 const read = p => fs.readFileSync(p, "utf8"), fixture = n => JSON.parse(read(path.join(checks, n + ".json")));
 const { judge } = require("../bin/judge.js");
 const { renderAll, kitVocabulary, canonicalShares, seedCount } = require("../bin/renderer.js");
 const historicalRenderer = require(path.join(base, "renderer.js"));
 const historicalJudge = judge;
-const { lint } = require("../bin/playground-lint.js"), { pageGuards } = require("../bin/playground-guards.js");
+const { lint } = require(path.join(site, "playground/basics/playground-lint.js")), { pageGuards } = require(path.join(site, "playground/basics/playground-guards.js"));
 const worldCourt = require("../bin/world-court.js"), court = require("../bin/court-wasm/node/vi_court.js");
 const record = JSON.parse(read(path.join(cache, "worlds.from")));
 assert.strictEqual(read(path.join(here, "bin/playground-guards.js")), read(path.join(base, "guards.js")));

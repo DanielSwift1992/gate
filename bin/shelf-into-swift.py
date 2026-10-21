@@ -8,7 +8,7 @@
 # The snapshot is a SECOND record of the pages, which is the shape this
 # whole tool exists to refuse. So it is never edited by hand, never
 # committed, and the battery holds it byte for byte against stdlib/.
-import base64, os, sys
+import base64, json, os, sys
 
 
 def swift_string(line):
@@ -45,6 +45,16 @@ def main():
                "bin/drawing-fonts.json", "bin/drawing.from", "bin/press-contract.from", "bin/court-wasm.from",
                "bin/court-wasm/web/vi_court.js", "bin/court-wasm/web/vi_court_bytes.js",
                "bin/organization-court.from", "LICENSE", "docs/NOTICE.md"]
+    # Example inputs remain inspectable data; a one-file installation carries the same recipes.
+    example_root = os.path.join(os.path.dirname(os.path.abspath(where)), 'examples')
+    with open(os.path.join(example_root, 'index.json'), encoding='utf-8') as f:
+        recipes = json.load(f)
+    inputs = {'examples/index.json'} | {'examples/' + recipe + '/' + name
+        for recipe, files in recipes.items() for name in files}
+    for folder, _, files in os.walk(example_root):
+        runtime.extend(name for f in sorted(files)
+            if (name := os.path.relpath(os.path.join(folder, f), os.path.dirname(example_root)).replace("\\", "/")) in inputs)
+    runtime.sort()
     out.append("let RUNTIME_EMBEDDED: [String: String] = [")
     for relative in runtime:
         path = os.path.join(os.path.dirname(os.path.abspath(where)), relative)

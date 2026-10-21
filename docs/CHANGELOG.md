@@ -4,6 +4,8 @@
 
 - `serve` prints `Ready: <address>` after its socket starts listening; `--json` retains its route record. Table shows an atom's literal `typeName` beside its name, with its source address. Each `/world` response resolves its pinned inputs once and rechecks them on the next request.
 
+- `bin/build-pages.py` now requires an explicit `--source <repository>`, `--worlds`, or both; it no longer creates a demo on every publication. The gate site explicitly selects `examples/codeowners` for its root; `playground/` opens Read me from showcase. Existing root links to `ownership.swift` keep their destination. Historical typed-playground inputs are test-only, and the scene road test is an external harness. `gate demo`, `gate demo org` and `gate demo seam` remain explicit example installers.
+
 - `status` and the live and static bench read declared WorldFile parts as one complete company. Forward references resolve against the full set, requirements are counted once, and refusals retain the source file and line of each part.
 - Remove the showcase-specific `check administer` / `check delete` compiler probes (and their `ask` aliases), the `hire` edit under `diff` / `apply` / `change`, and implicit world discovery through `GATE_SHOWCASE`. These no longer promise a compiler judgement or a roster edit. Select a local world file or manifest; edit declarations as text. Organization owns its `Administer` / `Delete` type laws in showcase. Other changes remain `transfer`, `grant` and `revoke`.
 

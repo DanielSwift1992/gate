@@ -1,0 +1,5 @@
+# who owns what, the way every repository already writes it
+src/api/    @alice
+src/ui/     @bob
+docs/       @carol
+src/db/     @carol

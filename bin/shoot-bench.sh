@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # The cover's picture of the bench, taken the same way every time: a fresh
-# demo world, `gate serve` on a free port, one headless Chrome shot of the
+# copy of the declared root world, `gate serve` on a free port, one headless Chrome shot of the
 # door /?f=ownership.swift:89&view=bare - the file and line of the demo's
 # one refusal, in the view the bench opens on: the record without ceremony,
 # with the refusing rows marked where they stand. The full Swift is a tab
@@ -41,7 +41,10 @@ SERVE=""
 
 WORLD="$(mktemp -d "${TMPDIR:-/tmp}/gate-shoot-XXXXXX")"
 trap 'kill $SERVE 2>/dev/null || true; wait $SERVE 2>/dev/null || true; rm -rf "$WORLD"' EXIT
-"$HERE/gate" demo "$WORLD" >/dev/null
+cp -R "$HERE/examples/codeowners/." "$WORLD/"
+git -C "$WORLD" init -q -b main
+git -C "$WORLD" add .
+git -C "$WORLD" -c user.name=Fixture -c user.email=fixture@test commit -qm "the declared gate root"
 
 PORT="$(python3 - <<'EOF'
 import socket
@@ -114,7 +117,7 @@ here = sys.argv[1]
 h = hashlib.sha256(open(os.path.join(here, "web", "ui.html"), "rb").read()).hexdigest()
 open(os.path.join(here, "docs", "bench.png.from"), "w").write(
     "web/ui.html sha256:" + h + "\n"
-    "door /?f=ownership.swift:89&view=bare over `gate demo`, 1280x800 at 2x\n"
+    "door /?f=ownership.swift:89&view=bare over examples/codeowners, 1280x800 at 2x\n"
     "retake: bash bin/shoot-bench.sh\n")
 print("docs/bench.png over web/ui.html", h[:12])
 EOF

@@ -1,7 +1,7 @@
 "use strict";
 const fs=require("fs"), path=require("path"), vm=require("vm"), assert=require("assert");
 const {open}=require("./published-bench.js");
-const root=process.argv[2], ui=fs.readFileSync(path.join(__dirname,"../web/ui.html"),"utf8");
+const root=process.argv[2], ui=fs.readFileSync(path.join(root,"playground/basics/index.html"),"utf8");
 const storage={getItem(){return null;}, setItem(){}, removeItem(){}};
 const snapshots=id=>JSON.parse(fs.readFileSync(path.join(root,"playground",id,"snapshots.json")));
 function implementation(name) {
@@ -74,7 +74,10 @@ class Element {
         const ctx=vm.createContext({location:{pathname},document:{getElementById:id=>ids[id],createElement:tag=>new Element(tag)},world});
         vm.runInContext(implementation("showWorldInputs"),ctx);vm.runInContext("showWorldInputs(world)",ctx);
         assert.equal(ids["world-provenance"].hidden,false);
-        assert.equal(ids["world-inputs"].children.filter(e=>e.tag==="a").length,2);
+        const links=ids["world-inputs"].children.filter(e=>e.tag==="a");
+        assert.equal(links.length,2);
+        for(const link of links) assert.equal(new URL(link.href,"https://example.test"+pathname).pathname,
+            "/gate/"+link.href.split("/").pop());
     }
     assert(!ui.includes('id="worlds-section"') && !ui.includes('data-fold="worlds"'));
     await require("./playground-catalog.js")(root);

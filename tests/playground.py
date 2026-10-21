@@ -16,6 +16,8 @@ HERE = Path(__file__).resolve().parent.parent
 
 
 def run():
+    runpy.run_path(str(HERE / 'tests/examples.py'))['run']()
+    runpy.run_path(str(HERE / 'tests/publisher.py'))['run']()
     runpy.run_path(str(HERE / 'tests/inputs-kind.py'))['run']()
     runpy.run_path(str(HERE / 'tests/publication.py'))['run']()
     cache = Path(subprocess.check_output([str(HERE / 'bin/playground-worlds.sh')], text=True).strip())
@@ -64,12 +66,12 @@ def run():
         fixture = Path(temp) / 'door'
         (fixture / 'bin').mkdir(parents=True)
         test_record = {kind: dict(revision=pin, files={'sample.swift': hashlib.sha256((local / 'sample.swift').read_bytes()).hexdigest()})
-                       for kind in ('showcase', 'theory', 'baseline')}
+                       for kind in ('showcase', 'theory')}
         (fixture / 'bin/playground-worlds.from').write_text(json.dumps(test_record))
         old_here, old_record, env = module.HERE, module.RECORD, dict(os.environ)
         try:
             module.HERE, module.RECORD = fixture, fixture / 'bin/playground-worlds.from'
-            for key in ('SHOWCASE_SOURCE', 'VI_THEORY_PATH', 'PLAYGROUND_SOURCE'):
+            for key in ('SHOWCASE_SOURCE', 'VI_THEORY_PATH'):
                 os.environ[key] = str(local)
             laid = module.materialize()
             assert all(v.startswith('local: ') for v in json.loads((laid / 'from').read_text())['sources'].values())
@@ -139,7 +141,18 @@ def run():
         subprocess.run([sys.executable, str(cache / 'showcase/Checks/Playground/palette-count.py'),
                         '--theory', str(cache / 'theory'), '--judge', str(HERE / 'bin/gate-judge')], check=True)
         site = Path(temp) / 'site'
-        subprocess.run([sys.executable, str(HERE / 'bin/build-pages.py'), str(site), '--worlds'], check=True)
+        # A historical checkout is deliberately unavailable to the product.
+        # This also refuses an accidental return of the old mandatory local door.
+        clean_build = dict(os.environ, PLAYGROUND_SOURCE=str(Path(temp) / 'no-historical-checkout'))
+        subprocess.run([sys.executable, str(HERE / 'bin/build-pages.py'), str(site),
+                        '--source', str(HERE / 'examples/codeowners'), '--worlds'], check=True, env=clean_build)
+        assert 'baseline' not in record and not (cache / 'baseline').exists()
+        assert 'baseline' not in json.loads((site / 'worlds-source.json').read_text())['sources']
+        for page in site.rglob('*.html'):
+            assert 'roadtest=1' not in page.read_text() and 'ROAD ALL GREEN' not in page.read_text(), page
+        # Only migration tests ask for the historical source. The finished
+        # site's current guards and lint are read from its delivered assets.
+        history = runpy.run_path(str(HERE / 'tests/playground-baseline.py'))['materialize']()
         csp_spec = importlib.util.spec_from_file_location('bench_csp', HERE / 'bin/bench_csp.py')
         csp = importlib.util.module_from_spec(csp_spec)
         csp_spec.loader.exec_module(csp)
@@ -151,7 +164,7 @@ def run():
             assert csp.stamp_csp(html) == html, str(page) + ': CSP must cover the final programs'
             assert "script-src-attr 'none'" in html
             Handlers().feed(html)
-        subprocess.run(['node', str(HERE / 'tests/playground.js'), str(cache), str(site)], check=True)
+        subprocess.run(['node', str(HERE / 'tests/playground.js'), str(cache), str(site), str(history)], check=True)
         subprocess.run(['node', str(HERE / 'tests/playground-storage.js'), str(site)], check=True)
         scale = json.loads((cache / 'showcase/Checks/Playground/scale-generation.json').read_text())
         assert scale['storage'] == 'versioned' and scale['parameters'] == dict(count=12800, seed=0, part_size=200)
@@ -173,9 +186,19 @@ def run():
         import re
         canonical = (site / 'playground/readme/index.html').read_text()
         def normal_alias(text):
-            text = re.sub(r'(?:\.\./)+assets/drawing/', 'ASSETS/', text)
+            text = re.sub(r'(?:\.\./)*assets/drawing/', 'ASSETS/', text)
             return re.sub(r"'sha256-[^']+'", 'HASH', text)
         assert normal_alias(door.decode()) == normal_alias(canonical)
+        # Gate owns its root; the showcase entry is confined to playground/.
+        # Read the actual delivery, not a second expected template.
+        root_page = (site / 'index.html').read_text()
+        root_snap = json.loads(re.search(r'const SNAP = ([^\n]+);', root_page)[1])
+        root_files = json.loads(root_snap['/files'])
+        assert 'ownership.swift' in root_files['forms']
+        assert root_snap['/world?f=ownership.swift'] == (HERE / 'examples/codeowners/ownership.swift').read_text()
+        root_verdict = json.loads(root_snap['/verdict?f=ownership.swift'])
+        assert len(root_verdict['refusals']) == 1 and root_verdict['refusals'][0]['address'] == 'ownership.swift:89'
+        assert 'const CONTEXT = null;' in root_page
         assert b'world-card' not in door and b'id="worldlist"' not in door
         sys.path.insert(0, str(HERE / 'bin'))
         from bench_styles import audit_site

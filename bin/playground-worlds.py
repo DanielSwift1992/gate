@@ -26,21 +26,18 @@ def checked(root, files, binary=()):
             raise ValueError(f'{path}: the record names LF bytes')
 
 
-def materialize():
-    record = json.loads(RECORD.read_text())
-    pin = record['showcase']['revision']
-    cache = HERE / 'bin/.worlds/playground' / pin
+def materialize_record(record_path, cache, sources):
+    record = json.loads(record_path.read_text())
     local = {k: os.path.abspath(os.environ[e]) if os.environ.get(e) else None
-             for k, e in [('showcase', 'SHOWCASE_SOURCE'), ('theory', 'VI_THEORY_PATH'), ('baseline', 'PLAYGROUND_SOURCE')]}
-    note = {'record_sha256': hashlib.sha256(RECORD.read_bytes()).hexdigest(),
+             for k, repo, e in sources}
+    note = {'record_sha256': hashlib.sha256(record_path.read_bytes()).hexdigest(),
             'sources': {k: ('local: ' + v if v else 'public pin') for k, v in local.items()}}
     if not cache.exists() or json.loads((cache / 'from').read_text()) != note:
         cache.parent.mkdir(parents=True, exist_ok=True)
         with tempfile.TemporaryDirectory(prefix='gate-worlds-') as temp:
             stage = Path(temp) / 'cache'
             stage.mkdir()
-            for kind, repo in [('showcase', 'verification-is-identification-showcase'),
-                               ('theory', 'verification-is-identification'), ('baseline', 'typed-playground')]:
+            for kind, repo, _ in sources:
                 spec = record[kind]
                 if local[kind]:
                     source = Path(local[kind])
@@ -62,15 +59,22 @@ def materialize():
                     dest.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copyfile(source / name, dest)
             (stage / 'from').write_text(json.dumps(note, indent=2) + '\n')
-            shutil.copyfile(RECORD, stage / 'worlds.from')
+            shutil.copyfile(record_path, stage / 'worlds.from')
             if cache.exists():
                 shutil.rmtree(cache)
             shutil.copytree(stage, cache)
-    for kind in ('showcase', 'theory', 'baseline'):
+    for kind, _, _ in sources:
         checked(cache / kind, record[kind]['files'], record[kind].get('binary', ()))
-    if (cache / 'worlds.from').read_bytes() != RECORD.read_bytes():
+    if (cache / 'worlds.from').read_bytes() != record_path.read_bytes():
         raise ValueError(f'{cache}: changed provenance record')
     return cache
+
+
+def materialize():
+    record = json.loads(RECORD.read_text())
+    return materialize_record(RECORD, HERE / 'bin/.worlds/playground' / record['showcase']['revision'],
+        [('showcase', 'verification-is-identification-showcase', 'SHOWCASE_SOURCE'),
+         ('theory', 'verification-is-identification', 'VI_THEORY_PATH')])
 
 
 if __name__ == '__main__':
