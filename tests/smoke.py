@@ -650,14 +650,19 @@ def main():
                   for f in _fh.get("findings", []))
               and not any("nothing checks" in f["sentence"]
                           for f in _fh.get("findings", []))))
-    # A GREEN OVER NOTHING SAYS SO, in the one case where that is what happened: a
-    # world of atoms alone, with no certificate over them for any court to read.
+    # A world of atoms alone presents no application to the court.
     bare = os.path.join(tmp, "bare")
     os.makedirs(bare)
     subprocess.run(["git", "init", "-q", bare])
     run("mine", "bench-atoms", cwd=bare)
-    S.append(("a green over nothing says so, in words",
-              "nothing claimed here yet" in say("status", cwd=bare)))
+    S.append(("an empty request says so without holds",
+              say("status", cwd=bare).startswith("status: empty · no declared applications")))
+    empty_forms = subprocess.run([sys.executable, os.path.join(HERE, "tests", "forms-empty.py")],
+                                 capture_output=True, text=True)
+    S.append(("empty forms stay distinct across status, hook, badge and bench",
+              empty_forms.returncode == 0))
+    if empty_forms.returncode:
+        print(empty_forms.stdout + empty_forms.stderr, flush=True)
     os.makedirs(os.path.join(repo, "tables"), exist_ok=True)
     shutil.copy(os.path.join(DEMO, "people.csv"), os.path.join(repo, "tables", "people.csv"))
     shutil.copy(os.path.join(DEMO, "grants.csv"), os.path.join(repo, "tables", "grants.csv"))
@@ -832,6 +837,7 @@ def main():
               # a count reading is a judged claim as an equality is: status counts
               # both, and so does the badge
               and _bg.get("claims") == (run("status", cwd=HERE)[1]["forms"]["equalities"]
+                                        + run("status", cwd=HERE)[1]["forms"].get("memberships", 0)
                                         + run("status", cwd=HERE)[1]["forms"].get("readings", 0))
               and _bg["claims"] > 0
               # and the run of days is not invented where it cannot be replayed:
@@ -961,7 +967,8 @@ def main():
     open(os.path.join(orig, "gate.manifest.swift"), "w").write(
         layout % "    public typealias Written = Two\n")
     c, r = run("status", cwd=orig)
-    S.append(("and holds once the row says it", c == 0 and r["verdict"] == "holds"))
+    S.append(("the declared grammar leaves an empty request, without a refusal",
+              c == 2 and r["verdict"] == "empty" and not r["refusals"]))
 
     # THE WHERE COURT JUDGES THE FIRST FILE IT IS HANDED AND DROPS THE REST — at
     # canon four the others only lend their definitions (an unreadable second
@@ -2705,7 +2712,7 @@ console.log(ok);
         _lkb.terminate()
     S.append(("a link out of the world is not a file of it, and is not served as one",
               # a link that stays inside is an ordinary file of this world
-              _lk_in.get("file") == "link.swift" and _lk_st.get("verdict") == "holds"
+              _lk_in.get("file") == "link.swift" and _lk_st.get("verdict") == "empty"
               # one that leaves is refused where it would be written down
               and _lk_out.get("asks") and "not inside the world" in _lk_out.get("note", "")
               # and the bench serves neither its bytes nor somebody else's in its
@@ -6782,7 +6789,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     open(dman, "w").write(kept_two)
     S.append(("a file is declared once, and a second row about it is refused at its line",
               twice.get("asks") and "already declared" in twice.get("note", "")
-              and run("status", cwd=dd)[1].get("verdict") == "holds"
+              and run("status", cwd=dd)[1].get("verdict") == "empty"
               and doubled.get("verdict") == "refused"
               and any("second row about api.swift" in r.get("claim", "")
                       for r in doubled.get("refusals", []))))

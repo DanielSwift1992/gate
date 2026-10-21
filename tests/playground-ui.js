@@ -37,7 +37,7 @@ class Element {
     const basics=open(root,"basics",storage), snap=snapshots("basics"), f="Dictionary/Basics.swift", original=snap["/world?f="+f];
     const ask=(text,file=f)=>basics.fetch("/verdict?f="+file,{method:"POST",body:text}).then(r=>r.json());
     const clean=await ask(original);assert.equal(clean.refusals.length,0,JSON.stringify(clean));
-    assert.equal(clean.checked,0);assert(chip(clean).includes("no readings"));assert(chip(clean).includes("Swift bodies unchecked"));
+    assert.equal(clean.checked,0);assert.equal(clean.verdict,"empty");assert(chip(clean).includes("empty · no declared applications"));assert(chip(clean).includes("Swift bodies unchecked"));
     const mutations=[
         ["import NotInThePackage\n"+original,f+":1","imports are fixed"],
         [original+"\npublic extension MissingOwner {}",null,"MissingOwner"],

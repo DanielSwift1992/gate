@@ -2447,7 +2447,17 @@ struct FormResidue {
 func formsOutcome(_ refused: Int, _ residue: [FormResidue], _ checked: Int) -> String {
     if refused != 0 { return "refused" }
     if !residue.isEmpty { return checked == 0 ? "unsupported" : "partial" }
-    return "holds"
+    return checked == 0 ? "empty" : "holds"
+}
+
+func formsChecked(_ size: [String: Int]) -> Int {
+    (size["equalities"] ?? 0) + (size["memberships"] ?? 0) + (size["readings"] ?? 0)
+}
+
+let EMPTY_FORMS_REASON = "no declared applications"
+
+func outcomeLabel(_ verdict: String) -> String {
+    verdict == "empty" ? "empty · " + EMPTY_FORMS_REASON : verdict
 }
 
 // A published world's compiler and its judge may stand at different pins.
@@ -4367,7 +4377,7 @@ struct StatusAnswer {
     var then = ""
     var verdict: String {
         noWorld ? "no world here" : formsOutcome(refusals.count, unsupported,
-            (whereSize["equalities"] ?? 0) + (whereSize["readings"] ?? 0) + (world == nil ? 0 : 1))
+            formsChecked(whereSize) + (world == nil ? 0 : 1))
     }
 }
 
@@ -4489,6 +4499,7 @@ func statusPairs(_ a: StatusAnswer) -> [(String, StatusJSON)] {
         ("wall_ms", .raw(String(a.wallMs))),
         ("mutates", .raw("false")),
     ]
+    if a.verdict == "empty" { pairs.append(("reason", .text(EMPTY_FORMS_REASON))) }
     if !a.readers.isEmpty { pairs.append(("readers", .list(a.readers))) }
     if let m = a.world {
         pairs.append(("world", .object([("declarations", .raw(m[0])),
@@ -4518,8 +4529,8 @@ func statusPrinted(_ a: StatusAnswer) -> [(String, StatusJSON)] {
     return pairs
 }
 
-// The hook prints the same answer. Only a completed judgement with an
-// addressed remainder may pass there; failures to obtain an answer still stop.
+// The hook admits a completed reading with an empty request or an addressed
+// remainder. It prints that state; refusals and failures to read stop a commit.
 func statusDoor(_ asJson: Bool, forCommit: Bool = false) -> Never {
     let a = statusAnswer()
     if a.noWorld {
@@ -4536,7 +4547,7 @@ func statusDoor(_ asJson: Bool, forCommit: Bool = false) -> Never {
     if asJson {
         out(statusDumps(.object(statusPrinted(a)), 0) + "\n")
     } else {
-        let head = refusals.isEmpty ? a.verdict : "refused \(refusals.count)"
+        let head = refusals.isEmpty ? outcomeLabel(a.verdict) : "refused \(refusals.count)"
         var tail: [String] = []
         if let m = worldM {
             tail.append(many(Int(m[0]) ?? 0, "declaration") + " · "
@@ -4544,14 +4555,14 @@ func statusDoor(_ asJson: Bool, forCommit: Bool = false) -> Never {
                       + many(Int(m[2]) ?? 0, "premise"))
         }
         if let n = whereSize["equalities"] {
+            let memberships = whereSize["memberships"] ?? 0
             let counted = whereSize["readings"] ?? 0
-            if n != 0 || counted != 0 {
+            if n != 0 || memberships != 0 || counted != 0 {
                 if n != 0 { tail.append(many(n, "equality", "equalities")) }
+                if memberships != 0 { tail.append(many(memberships, "membership")) }
                 // the count court's measure beside the where court's: a count
                 // reading is not an equality, and adding them would say so
                 if counted != 0 { tail.append(many(counted, "count reading")) }
-            } else if refusals.isEmpty && worldM == nil {
-                tail.append("nothing claimed here yet, so nothing was checked")
             }
         }
         if let ms = times { tail.append(floatRepr(ms) + " ms") }
@@ -4561,7 +4572,7 @@ func statusDoor(_ asJson: Bool, forCommit: Bool = false) -> Never {
         lines.append("  next: " + next)
         out(lines.joined(separator: "\n") + "\n")
     }
-    exit(!refusals.isEmpty ? 1 : (a.unsupported.isEmpty || forCommit ? 0 : 2))
+    exit(!refusals.isEmpty ? 1 : (a.verdict == "holds" || forCommit ? 0 : 2))
 }
 
 // the road's own door: the battery calls this, not a person
@@ -9593,7 +9604,7 @@ if args.first == "badge" {
     let holds = said.verdict == "holds"
     let claims: Int
     // a count reading is a judged claim as an equality is: both are counted
-    if files.isEmpty { claims = (said.whereSize["equalities"] ?? 0) + (said.whereSize["readings"] ?? 0) }
+    if files.isEmpty { claims = formsChecked(said.whereSize) }
     else if let m = said.world, m.count == 3 { claims = Int(m[2]) ?? 0 }
     else { claims = 0 }
     let here = FileManager.default.currentDirectoryPath
@@ -9651,7 +9662,8 @@ if args.first == "badge" {
     // green is, and on a red world there is no green to be wide: it says how
     // many were refused, which is the number that is true then.
     let right = (holds ? many(claims, "claim") + " · holds"
-        : (said.refusals.isEmpty ? said.verdict + " · \(said.unsupported.count) unsupported"
+        : (said.refusals.isEmpty ? (said.verdict == "empty" ? outcomeLabel(said.verdict)
+                                     : said.verdict + " · \(said.unsupported.count) unsupported")
                                 : "refused \(said.refusals.count)"))
         + (days.map { " · \($0)d" } ?? "")
     if let path = outPath {
@@ -9699,6 +9711,7 @@ if args.first == "badge" {
             ("next", .text(next)),
             ("mutates", .raw(outPath != nil ? "true" : "false")),
         ]
+        if said.verdict == "empty" { pairs.append(("reason", .text(EMPTY_FORMS_REASON))) }
         if !said.unsupported.isEmpty { pairs.append(("unsupported", formResidueJSON(said.unsupported))) }
         if let ready = commandIn(next) { pairs.append(("command_to_run", .text(ready))) }
         out(statusDumps(.object(pairs), 0) + "\n")
@@ -9790,7 +9803,7 @@ if args.first == "my" {
     var unsupported: [FormResidue] = []
     refusals += formsGuards(w, &whereSize, unsupported: &unsupported)
     let outcome = formsOutcome(refusals.count, unsupported,
-        (whereSize["equalities"] ?? 0) + (whereSize["readings"] ?? 0))
+        formsChecked(whereSize) + (raw.contains("THE JUDGE holds") ? 1 : 0))
     if asJson {
         var pairs: [(String, StatusJSON)] = [
             ("command", .text("my")),
@@ -9801,15 +9814,16 @@ if args.first == "my" {
             ("refusals", .list(refusals.map {
                 .object([("address", .text($0.address)), ("claim", .text($0.claim))]) })),
         ]
+        if outcome == "empty" { pairs.append(("reason", .text(EMPTY_FORMS_REASON))) }
         if !unsupported.isEmpty { pairs.append(("unsupported", formResidueJSON(unsupported))) }
         out(statusDumps(.object(pairs), 0) + "\n")
     } else {
-        var lines = ["my: " + (refusals.isEmpty ? outcome : "refused \(refusals.count)")]
+        var lines = ["my: " + (refusals.isEmpty ? outcomeLabel(outcome) : "refused \(refusals.count)")]
         for r in refusals { lines.append("  \(r.address) · \(r.claim)") }
         for r in unsupported { lines.append("  \(r.address) · unsupported \(r.id): \(r.reason)") }
         out(lines.joined(separator: "\n") + "\n")
     }
-    exit(!refusals.isEmpty ? 1 : (unsupported.isEmpty ? 0 : 2))
+    exit(!refusals.isEmpty ? 1 : (outcome == "holds" ? 0 : 2))
 }
 
 // ── declare contract SPEC [-o F] · declare carrier DECL.json [-o F]
@@ -13079,16 +13093,19 @@ func serveDoor(_ a: [String]) -> Never {
                 // only `judged together`, which is a verdict with no measure
                 let measured = matches("(\\d+) declarations · (\\d+) lookups · (\\d+) premises",
                                        raw).first
-                serveJSON(conn, compactDumps(.object([
-                    ("verdict", .text(formsOutcome(refusals.count, unsupported,
-                        (size["equalities"] ?? 0) + (size["readings"] ?? 0)))),
+                let checked = formsChecked(size) + (measured == nil ? 0 : 1)
+                let outcome = formsOutcome(refusals.count, unsupported, checked)
+                var pairs: [(String, StatusJSON)] = [
+                    ("verdict", .text(outcome)),
+                    ("checked", .raw(String(checked))),
                     ("unsupported", formResidueJSON(unsupported)),
                     ("refusals", .list(refusals.map {
                         .object([("address", .text($0.address)), ("claim", .text($0.claim))]) })),
                     ("declarations", measured.map { StatusJSON.raw($0[0]) } ?? .null),
                     ("premises", measured.map { StatusJSON.raw($0[2]) } ?? .null),
-                    ("judge_ms", times.last.map { StatusJSON.raw($0) } ?? .null)]),
-                    ascii: true))
+                    ("judge_ms", times.last.map { StatusJSON.raw($0) } ?? .null)]
+                if outcome == "empty" { pairs.append(("reason", .text(EMPTY_FORMS_REASON))) }
+                serveJSON(conn, compactDumps(.object(pairs), ascii: true))
                 // ── AND THE PANEL DOES NOT GROW ON SOMEBODY'S DISK: one
                 // directory per keystroke, removed none, thirty-four thousand
                 // standing in the temp of the machine this was written on

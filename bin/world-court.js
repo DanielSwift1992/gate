@@ -98,7 +98,8 @@
             }
         }
         const result = { verdict: refusals.length ? "refused" : unsupported.length
-            ? (checked ? "partial" : "unsupported") : "holds", refusals, unsupported, checked };
+            ? (checked ? "partial" : "unsupported") : (checked ? "holds" : "empty"), refusals, unsupported, checked };
+        if (result.verdict === "empty") result.reason = "no declared applications";
         if (guards) result.coverage = { readings: checked, guarded_files: guarded, swift_bodies: "not checked" };
         return result;
     }

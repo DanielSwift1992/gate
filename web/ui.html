@@ -9,7 +9,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"><meta charset="utf-8"><title>gate · world bench</title>
 <!-- zero egress, enforced by the browser as well as by the code: the bench may
      talk to its own loopback server and to nothing else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-5GzCvayhfKIAxAwizJRqS3a05vGAKRgdgfqpOuJGoBs=' 'sha256-Ok+CID/jlEgSKqRc+gfwgKAkAIQiELTBJN8L0ugoEfE='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-5GzCvayhfKIAxAwizJRqS3a05vGAKRgdgfqpOuJGoBs=' 'sha256-NldBCVfCJda8sPw9ngkcIgfDJlUO2oPM4qOoxxoOQsc='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
 <link rel="stylesheet" href="/codemirror.css">
 <script>
 // The theme is a declaration, not a toggle — and the declaration lives in the
@@ -2027,9 +2027,11 @@ function readingChip(r, broken) {
                 + escAttr((r.unsupported || []).map(x => x.id + ": " + x.reason).join("; "))
                 + '">' + (r.checked ? 'partial' : 'unsupported') + ' · '
                 + (r.unsupported || []).length + ' unsupported</span>'
-            : (r.coverage && !r.coverage.readings
+            : (r.verdict === "empty"
+                ? '<span class="chip partial" title="No declared applications were presented to the court.">empty · no declared applications</span>'
+                : (r.coverage && !r.coverage.readings
                 ? '<span class="chip partial" title="No supported court readings were presented. Limited page guards ran.">no readings</span>'
-                : '<span class="chip ok" title="The supported relations read by the court hold. This is not Swift compilation.">holds</span>')))
+                : '<span class="chip ok" title="The supported relations read by the court hold. This is not Swift compilation.">holds</span>'))))
         + (r.coverage ? '<span class="chip partial" title="Edited page bodies and generated sources have not been compiled by Swift here.">Swift bodies unchecked</span>' : "");
 }
 async function render() {
