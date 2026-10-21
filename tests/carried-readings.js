@@ -53,7 +53,7 @@ class Element {
  await scope.refreshGit();gitReply({json:async()=>({git:'untracked'})});await gitRequest;
  assert.equal(el('gitstate').textContent,'');assert.equal(el('gitstate').title,'');
  // The author's literal name is shown with an address; the court sentence stays intact.
- for(const name of ['collectLabels','refusalLabels','siblings'])vm.runInContext(implementation(name),scope);
+ for(const name of ['collectLabels','statedLabels','refusalLabels','siblings'])vm.runInContext(implementation(name),scope);
  scope.active='Facts.swift';scope.viewingShelf=null;scope.lastParsed=null;
  scope.judge=require('../bin/judge.js').judge;
  scope.fetch=async()=>({ok:true,text:async()=> 'public enum Fingerprint {}\nextension Fingerprint { public static var typeName: String { "row at gate.manifest.swift:9 <old> -> <new>" } }\n'});

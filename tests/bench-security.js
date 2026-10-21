@@ -44,7 +44,7 @@ function fn(name) {
     return ui.slice(begin, end + 2);
 }
 vm.runInContext(ui.slice(ui.indexOf('const esc ='), ui.indexOf('// Bare:', ui.indexOf('const esc ='))), context);
-for (const name of ['nameTokens','attachNotes','freeComments','noteProse','recordEnd','projectionRange','projected','syncProjection','bareForm','takenGroup','buildRail','collectLabels','refusalLabels'])
+for (const name of ['nameTokens','attachNotes','freeComments','noteProse','recordEnd','projectionRange','projected','syncProjection','bareForm','takenGroup','buildRail','collectLabels','statedLabels','refusalLabels'])
     vm.runInContext(fn(name), context);
 let row = ui.slice(ui.indexOf('    const rowFor = (ref, cls) => {'), ui.indexOf('\n    for (const ref of broken)'));
 if (process.argv.includes('--old-row-for')) {

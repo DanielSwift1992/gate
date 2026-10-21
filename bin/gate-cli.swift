@@ -1735,9 +1735,9 @@ func discoverWorld() -> WorldState {
     return WorldState(facts: nil, tables: nil, layout: nil)
 }
 
-func worldFilesOf(_ w: WorldState) -> [String] {
+func worldFilesOf(_ w: WorldState, resolved: TakenResolution? = nil) -> [String] {
     var files: [String] = []
-    let taken = takenInputs(w)
+    let taken = resolved ?? takenInputs(w)
     if let f = w.facts, FileManager.default.fileExists(atPath: f),
        !(taken.v2 && (w.layout?.rows.contains { $0.source == "theirs" && joinPath(layoutDir(w) ?? ".", $0.path) == f } ?? false)) { files.append(f) }
     if layoutDir(w) != nil {
@@ -3502,19 +3502,19 @@ func benchText(_ path: String) -> Bool {
     return !text.unicodeScalars.contains { ($0.value < 32 && ![9, 10, 13].contains($0.value)) || $0.value == 127 }
 }
 
-func benchFilesOf(_ w: WorldState, readings: Bool = false) -> [(String, String)] {
+func benchFilesOf(_ w: WorldState, readings: Bool = false, resolved: TakenResolution? = nil) -> [(String, String)] {
     // the shared world, its forms, the layout, the policy and the personal
     // slot: the list the panel opens, and the list the stream guards walk
     guard let f = w.facts else { return [] }
     let base = (absPath(f) as NSString).deletingLastPathComponent
-    let taken = takenInputs(w)
+    let taken = resolved ?? takenInputs(w)
     // Resolve each row once. Searching the rows for every source repeated
     // filesystem containment checks for each pair of parts.
     var rowNames: [String: String] = [:]
     for row in w.layout?.rows ?? [] {
         if let path = inputPath(row, w, taken), rowNames[path] == nil { rowNames[path] = row.path }
     }
-    var out: [(String, String)] = worldFilesOf(w).map { path in
+    var out: [(String, String)] = worldFilesOf(w, resolved: taken).map { path in
         (rowNames[path] ?? relPath(path, base), path)
     }
     for r in w.layout?.rows ?? [] where r.role == "forms"
@@ -12418,8 +12418,9 @@ func registerTokens(_ w: WorldState) -> String {
 // read. A name this world does not carry is a miss, never another file: the
 // door opening on the wrong room while saying nothing is the one thing this
 // page may not do. The fallback below is for the question that named nothing.
-func servePick(_ w: WorldState, _ query: [String: String]) -> String? {
-    let named = Dictionary(benchFilesOf(w, readings: true).map { ($0.0, $0.1) }, uniquingKeysWith: { a, _ in a })
+func servePick(_ w: WorldState, _ query: [String: String], files: [(String, String)]? = nil) -> String? {
+    let selected = files ?? benchFilesOf(w, readings: true)
+    let named = Dictionary(selected.map { ($0.0, $0.1) }, uniquingKeysWith: { a, _ in a })
     let want = query["f"] ?? ""
     if let hit = named[want] { return hit }
     if undeclaredHere(w).contains(want), let dir = layoutDir(w) {
@@ -12443,13 +12444,14 @@ func benchOrigin(_ row: LayoutRow, _ taken: TakenResolution) -> StatusJSON {
 }
 
 // Reading a taken page never turns its local view into an alternative source.
-func benchTakenRefusal(_ w: WorldState, _ name: String) -> (address: String, claim: String)? {
+func benchTakenRefusal(_ w: WorldState, _ name: String, resolved: TakenResolution? = nil,
+                       files: [(String, String)]? = nil) -> (address: String, claim: String)? {
     let rows = (w.layout?.rows ?? []).filter { $0.path == name }
     guard let row = rows.first(where: { $0.source == "theirs" }) else { return nil }
-    if rows.count != 1 || Set(benchFilesOf(w, readings: true).filter { $0.0 == name }.map { absPath($0.1) }).count > 1 {
+    if rows.count != 1 || Set((files ?? benchFilesOf(w, readings: true, resolved: resolved)).filter { $0.0 == name }.map { absPath($0.1) }).count > 1 {
         return ("gate.manifest.swift:\(row.line)", "\(name): more than one input declares this path; the source is ambiguous")
     }
-    let taken = takenInputs(w)
+    let taken = resolved ?? takenInputs(w)
     if let bad = taken.bad.first { return bad }
     if row.kind == "CarriedFile" && !taken.v2 {
         return ("gate.manifest.swift:\(row.line)", "\(name): a taken text reading requires a verified v2 input record")
@@ -12634,6 +12636,9 @@ func serveDoor(_ a: [String]) -> Never {
                           .text("/check/view?who=&doc="), .text("/diff/transfer?who=&to=")])),
         ("mutating_routes", .text("none, by design")),
     ])) + "\n")
+    // Bind and listen have succeeded. A person can open this address as soon
+    // as this final startup line arrives; JSON callers keep the route record.
+    if !a.contains("--json") { out("Ready: http://127.0.0.1:\(port)\n") }
     fflush(stdout)
 
     if openIt {
@@ -12935,10 +12940,14 @@ func serveDoor(_ a: [String]) -> Never {
                 // the page obeys the declared layout: `?f=` names a file FROM
                 // that list, and a name the world does not carry is a miss
                 let w = servedWorld()
-                if let bad = benchTakenRefusal(w, asked.query["f"] ?? "") {
+                // One response authenticates the declared inputs once. The next
+                // request resolves them again, including a damaged warm cache.
+                let taken = takenInputs(w)
+                let files = benchFilesOf(w, readings: true, resolved: taken)
+                if let bad = benchTakenRefusal(w, asked.query["f"] ?? "", resolved: taken, files: files) {
                     serveReadingRefusal(conn, bad); break
                 }
-                guard let p = servePick(w, asked.query) else {
+                guard let p = servePick(w, asked.query, files: files) else {
                     serveSay(conn, 404, nil, Data())
                     break
                 }

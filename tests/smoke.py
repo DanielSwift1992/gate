@@ -3935,6 +3935,8 @@ eval(["buildScopes", "admits", "scopesAt", "noteStartAt", "codeOfLine", "placeAt
       // question can be put to them and not to the offer alone
       "describeName", "describeAxis", "aliasValueRange", "locateSlot"]
      .map(n => grab(n)).join("\\n"));
+var nameLabels = new Map();
+eval(grab("collectLabels"));
 eval(grab("loadVocabulary", "async "));
 const world = ["public enum Legal: Realm {}",
                "public enum E9: Keeper {",
@@ -4296,6 +4298,8 @@ global.fetch = async (u) => ({
 eval(["buildScopes", "admits", "scopesAt", "noteStartAt", "codeOfLine", "placeAt", "ungrantedOpenerAt", "walkFormAt",
       "axesOfHost", "declsInView", "declaredNow", "fillersFor", "afterDot", "allowedAt"]
      .map(n => grab(n)).join("\\n"));
+var nameLabels = new Map();
+eval(grab("collectLabels"));
 eval(grab("loadVocabulary", "async "));
 // a world here carries its own forms, the way the demo's ownership.swift does,
 // and is read by the court that reads forms
@@ -4502,6 +4506,12 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
                            capture_output=True, text=True, timeout=60)
     if _table_door_probe.returncode: print("   first Table door:", _table_door_probe.stdout + _table_door_probe.stderr)
     S.append(("a Table URL projects loaded rows before delayed neighbors and verdicts", _table_door_probe.returncode == 0))
+    _words = subprocess.run(["node", os.path.join(HERE, "tests", "table-words.js")], capture_output=True, text=True)
+    if _words.returncode: print("   Table words:", _words.stdout + _words.stderr)
+    S.append(("Table keeps atoms beside their attributed literal words", _words.returncode == 0))
+    _ready = subprocess.run([sys.executable, os.path.join(HERE, "tests", "serve-ready.py"), CLI_HERE, d], capture_output=True, text=True, timeout=60)
+    if _ready.returncode: print("   serve readiness:", _ready.stdout + _ready.stderr)
+    S.append(("serve announces a reachable address and keeps an occupied port unready", _ready.returncode == 0))
     _read_transition = subprocess.run(["node", os.path.join(HERE, "tests", "carried-readings.js")],
                                       capture_output=True, text=True, timeout=60)
     S.append(("and returning to a world file resumes judgement",
@@ -4958,7 +4968,9 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     # every raised thing wore a halo. A shadow belongs to no theme.
     dark_block = style.split(':root[data-theme="dark"]{', 1)[1].split("}", 1)[0]
     S.append(("an offer opens on the value it is asking about, closes when looked away from, and casts a shadow that is dark in both themes",
-              "offerIndex(items, td.textContent)" in ui
+              # Words beside the atom belong to its caption; selection uses
+              # the stated term. table-words.js exercises this actual click.
+              "offerIndex(items, shownTerm(raw))" in ui
               and "offerIndex(items, sl.textContent)" in ui
               # cast toward nothing, and the dark theme may not redefine it
               and "--shade:" in style and "--shade" not in dark_block

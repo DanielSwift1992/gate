@@ -81,6 +81,17 @@ def run():
     assert ask('/world?f=materials/source.md','PUT',b'write despite lost pin')[0]==409
    manifest.write_text(source);descriptor.write_text(json.dumps(record,indent=2))
    assert ask('/world?f=materials/source.md')[1]==samples['source.md']
+   # Every HTTP response reauthenticates its inputs. A prior successful read
+   # must not cover a cache byte changed between requests.
+   entry=entries[0]
+   cached=ROOT/'bin/.inputs'/sha(str(owner).encode())/pin/(sha(b'source.md')+'-'+entry['sha256'])
+   original=cached.read_bytes()
+   try:
+    cached.write_bytes(b'corrupted after the first read')
+    code,body=ask('/world?f=materials/source.md')
+    assert code==409 and 'cached input bytes differ' in json.loads(body)['reason'],(code,body)
+   finally:cached.write_bytes(original)
+   assert ask('/world?f=materials/source.md')[1]==original
   finally:process.terminate();process.wait(timeout=10)
  print('CARRIED READINGS GREEN: exact UTF-8/CRLF/empty bytes, provenance, binary exclusion, no fallback, read-only Theirs and writable Mine')
 if __name__=='__main__':run()

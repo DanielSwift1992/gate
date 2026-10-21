@@ -9,7 +9,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"><meta charset="utf-8"><title>gate · world bench</title>
 <!-- zero egress, enforced by the browser as well as by the code: the bench may
      talk to its own loopback server and to nothing else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-5GzCvayhfKIAxAwizJRqS3a05vGAKRgdgfqpOuJGoBs=' 'sha256-05xGiPrCzC2KJWCkZk5FK9aqB25F+vFIVJ8dSHIcOwg='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-5GzCvayhfKIAxAwizJRqS3a05vGAKRgdgfqpOuJGoBs=' 'sha256-6vLvFlE8NNoVbQBKL72mlNSsERovM+xysy5KiDDtHTo='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
 <link rel="stylesheet" href="/codemirror.css">
 <script>
 // The theme is a declaration, not a toggle — and the declaration lives in the
@@ -89,6 +89,7 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
 .taken-group>summary{cursor:pointer;overflow-wrap:anywhere}
 .taken-group>summary.bad{color:var(--bad)}
 .refusal-label{display:block;margin-top:var(--near);overflow-wrap:anywhere}
+.table-label{display:block;white-space:normal;max-width:44ch;overflow-wrap:anywhere}
 /* a file in a folder hangs one edge past the heading it sits under —
    `Indent` is what that step is called, and it means exactly this */
 .file.nested{padding-left:var(--indent)}
@@ -2547,6 +2548,7 @@ async function sayValue(name, now, cell) {
 
 function buildTables() {
     syncProjection();
+    const labels = statedLabels();
     const host = document.getElementById("table-host");
     host.innerHTML = "";
     if (!lastParsed) { host.innerHTML = '<h3>Loading source…</h3>'; return; }
@@ -2599,7 +2601,7 @@ function buildTables() {
         for (const [name, a] of rows) {
             const tr = document.createElement("tr");
             const nm = document.createElement("td");
-            nm.className = "fact cell-name"; nm.textContent = name;
+            nm.className = "fact cell-name"; tableTerm(nm, name, labels, name);
             nm.title = "go to line " + a.line; nm.onclick = () => jumpTo(name);
             tr.append(nm);
             const iz = document.createElement("td");
@@ -2609,7 +2611,7 @@ function buildTables() {
             // it" clean off the right edge with the spelling of the answer. What
             // is not a number is a law, and a law's spelling IS its content.
             const shownIs = shownTerm(a.target);
-            iz.className = "fact cell-value"; iz.textContent = shownIs;
+            iz.className = "fact cell-value"; tableTerm(iz, a.target, labels);
             if (shownIs !== a.target) iz.title = a.target;
             // ── AND A VALUE CAN BE ANSWERED. A table you may read and not write
             // in is half a table: the value was shown, and saying a different
@@ -2633,7 +2635,7 @@ function buildTables() {
                 const wz = document.createElement("td");
                 wz.className = "cell-value observed";
                 const o = overridden[name];
-                wz.textContent = o ? shownTerm(o.was) : "";
+                tableTerm(wz, o ? o.was : "", labels);
                 if (o) wz.title = "This world ships `" + name + "` as " + o.was + ". Your own "
                     + "declaration in " + o.file + " stands in its place, and the laws that "
                     + "shipped with " + o.world + " go on judging what you put there.";
@@ -2674,7 +2676,7 @@ function buildTables() {
                 const td = document.createElement("td");
                 td.className = "fact " + (c === 0 ? "cell-name" : "cell-value")
                     + (c > 0 && localNames.has(a) ? " mine" : "");
-                td.textContent = a;
+                tableTerm(td, a, labels, a);
                 if (badLines.has(e.line)) td.classList.add("cell-bad");
                 if (declFile.has(a)) { td.style.cursor = "pointer"; td.onclick = () => jumpTo(a); }
                 tr.append(td);
@@ -2748,7 +2750,7 @@ function buildTables() {
             const cellFor = {};
             {
                 const name = document.createElement("td");
-                name.className = "fact cell-name"; name.textContent = d.name;
+                name.className = "fact cell-name"; tableTerm(name, d.name, labels, d.name);
                 const destination = shelfInputs[viewingShelf]?.destinations?.[d.name];
                 name.title = "go to line " + d.line;
                 if (destination) name.title = "open playground/" + destination + "/";
@@ -2812,8 +2814,7 @@ function buildTables() {
                 const td = document.createElement("td");
                 const raw = d.aliases.get(key)?.target ?? "";
                 td.className = "fact cell-value" + (localNames.has(raw) ? " mine" : "");
-                td.textContent = shownTerm(raw);
-                if (td.textContent !== raw) td.title = raw;
+                tableTerm(td, raw, labels);
                 if (badLines.has(d.line)) td.classList.add("cell-bad");
                 // the same closed question the bare view asks, in a cell: the kind
                 // comes from the group's own signature, so a column offers exactly
@@ -2826,7 +2827,7 @@ function buildTables() {
                         const kind = axesOfHost(host)[key];
                         const items = fillersFor(kind, host, key);
                         if (!items) return;
-                        compItems = items; compChosen = offerIndex(items, td.textContent);
+                        compItems = items; compChosen = offerIndex(items, shownTerm(raw));
                         compSlot = { kind: "alias", line: a.line, host: d.name, axis: key };
                         compRect = td.getBoundingClientRect();
                         compEl.dataset.kind = kind ? "a value of " + kind : "";
@@ -3972,9 +3973,26 @@ function collectLabels(labels, parsed, file) {
         else labels.set(name, { value: literal.value, file, line: literal.line });
     }
 }
-function refusalLabels(claim) {
+function statedLabels() {
     const labels = new Map([...nameLabels].filter(([, label]) => !label || label.file !== active));
     if (lastParsed) collectLabels(labels, lastParsed, active);
+    return labels;
+}
+// Keep the atom and its owner's words together. Text nodes preserve literal
+// punctuation; the source address attributes the spelling in every Table.
+function tableTerm(cell, term, labels, shown = shownTerm(term)) {
+    cell.textContent = shown;
+    if (shown !== term) cell.title = term;
+    const label = labels.get(term);
+    if (!label || !label.value || label.value === shown) return;
+    const words = document.createElement("small");
+    words.className = "caption table-label";
+    words.textContent = " · " + label.value;
+    words.title = "stated name at " + label.file + ":" + label.line;
+    cell.append(words);
+}
+function refusalLabels(claim) {
+    const labels = statedLabels();
     return [...new Set(claim.match(/\b[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*/g) || [])].flatMap(name => {
         const label = labels.get(name);
         return label ? ['<small class="caption refusal-label">' + esc(name) + ' · stated name at '
@@ -4152,6 +4170,7 @@ for (const head of document.querySelectorAll("h3.fold")) {
 // child, but the short name is the one the world speaks. ──
 async function loadVocabulary() {
     vocabulary = {}; conformers = {}; axisOf = {}; protoAxes = {}; FORM_ROWS.gate = {};
+    nameLabels = new Map();
     shelfDecls = new Map();
     const list = await (await fetch("/shelf")).json().catch(() => ({}));
     shelfInputs = list.inputs || {};
@@ -4173,6 +4192,7 @@ async function loadVocabulary() {
         // must. The world judge stays plain — its parity is with the CLI.
         const READ = { seeds: new Set(), generics: new Set() };
         const read = judge(mod + ".swift", text, READ);
+        collectLabels(nameLabels, read.parsed, mod);
         buildScopes(read.parsed);   // the walk's records, read off the shelf
         // AND THE VALUES THOSE WORLDS HOLD, on the same pass that reads their
         // words. A number is spelled on its own world's ladder from Unit, so a

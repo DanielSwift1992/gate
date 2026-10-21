@@ -32,15 +32,15 @@ module.exports=async function(root){
    document:{getElementById:n=>n==='table-host'?host:n==='shelf-host'?pane:fname,createElement:tag=>new Element(tag)},
    cm:{setValue:t=>shown=t,setOption:(k,v)=>{if(k==='readOnly')readonly=v;},getValue:()=>text,lineCount:()=>text.split('\n').length},
    buildRail(){},render(){},setMode:m=>selected=m,say(){},reveal:()=>revealed++,navHere:()=>({}),declFile:new Map(),
-   esc:escape,escAttr:escape,lastParsed:parsed,lastRefusals:[],localNames:new Set(),layoutDecls:new Map(),unresolved:new Set(),
+   esc:escape,escAttr:escape,nameLabels:new Map(),lastParsed:parsed,lastRefusals:[],localNames:new Set(),layoutDecls:new Map(),unresolved:new Set(),
    syncProjection(){},projectionRange:()=>({from:0,to:Infinity}),projected:()=>true,attachNotes:()=>new Map(),freeComments:()=>[],
    recordEnd:()=>Infinity,holesOf:()=>[],locateSlot:()=>null,noteProse:escape,shownTerm:x=>x,tableSort:null,seams:[],
    files:files.files,SHELF_SORTS:['a-domain','the-tool','the-bench','the-reader'],SHELF_MEANS:{}});
   ctx.formsFiles=new Set(files.forms);ctx.worldAliases=new Map();ctx.FORM_ROWS={gate:{}};ctx.buildScopes=()=>{};
   ctx.vocabulary={};ctx.conformers={};ctx.axisOf={};ctx.protoAxes={};ctx.shelfDecls=new Map();
-  vm.runInContext(implementation('loadVocabulary'),ctx);await vm.runInContext('loadVocabulary()',ctx);
+  vm.runInContext(implementation('collectLabels'),ctx);vm.runInContext(implementation('loadVocabulary'),ctx);await vm.runInContext('loadVocabulary()',ctx);
   assert(!ctx.vocabulary.ReadMeTab,'a catalog is not a language grant');
-  for(const n of ['reading','layoutOrActive','nameTokens','activeDecls','tableGroups','ledgerGroups','bareForm','buildTables','shelfRank','buildShelf','openShelf','jumpTo'])vm.runInContext(implementation(n),ctx);
+  for(const n of ['reading','layoutOrActive','nameTokens','activeDecls','tableGroups','ledgerGroups','bareForm','collectLabels','statedLabels','tableTerm','buildTables','shelfRank','buildShelf','openShelf','jumpTo'])vm.runInContext(implementation(n),ctx);
   await vm.runInContext('buildShelf()',ctx);
   const reference=pane.children.find(e=>(e.innerHTML||'').includes('Site/Manifest.swift'));assert(reference,'ordinary shelf file row');
   await reference.onclick();assert(readonly);assert.equal(shown,text);assert.equal(selected,'bare');
