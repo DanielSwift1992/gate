@@ -138,6 +138,8 @@ remembers. Here each is a lookup against the file, in milliseconds:
 | Which commit broke this rule? | bisect by hand, if anyone notices | `git bisect run gate status` |
 | Is anything inconsistent right now? | an audit, quarterly | `gate status`, on every keystroke |
 
+`check`/`ask` reads a declared view. `diff`/`change` previews a transfer, grant or revoke; `apply` keeps it when its judgement holds. Add other declarations by editing the world file in the bench or your editor, then judge the result. Organization’s `Administer` and `Delete` laws belong to its Swift types in showcase and are checked by the compiler there. The world is selected by its local file or manifest.
+
 The names come from a sandbox this repository makes for you; your own
 commands use your own names. You pay once, per name you
 translate. Every question after that is a composition of what you already
@@ -429,7 +431,7 @@ web/codemirror.*  the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
 docs/           DETAILS.md, SECURITY.md, CHANGELOG.md, NOTICE.md, and
                 the cover's picture with its provenance
-tests/smoke.py   the battery: 723 checks this repository holds itself
+tests/smoke.py   the battery: 725 checks this repository holds itself
                  to, end-to-end runs through judge parity through
                  documentation contracts; the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts

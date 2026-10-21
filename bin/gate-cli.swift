@@ -135,10 +135,9 @@ usage (the git-shaped porcelain):
                                        R is world|seam|forms, which court reads
                                        the row, and a row gate cannot place is
                                        refused rather than guessed at)
-  gate check view WHO DOC             · gate check administer|delete WHO DOC
+  gate check view WHO DOC
   gate diff  transfer WHO DEPT        · gate diff  grant|revoke WHO DOC
-  gate diff  hire ID RANK HOME GIVEN FAMILY BORN SITE
-  gate apply transfer|grant|revoke|hire ...   (writes only on holds, like a commit)
+  gate apply transfer|grant|revoke ...   (writes only on holds, like a commit)
   gate declare contract SPEC [-o F]   (the act of entry: a view of a document
   gate declare carrier DECL.json [-o F] you publish, or of what your build says
                                        your library carries. After this it is
@@ -1732,14 +1731,6 @@ func discoverWorld() -> WorldState {
         }
         guard let up = parentPath(d), up != d else { break }
         d = up
-    }
-    // the company world lives in the showcase package since the split of the theory corpus
-    // (verification-is-identification T-0015): GATE_SHOWCASE names a checkout of it
-    if let showcase = ProcessInfo.processInfo.environment["GATE_SHOWCASE"], !showcase.isEmpty {
-        let f = (((showcase as NSString).appendingPathComponent("Sources") as NSString)
-            .appendingPathComponent("Organization") as NSString)
-            .appendingPathComponent("System/GeneratedTeam.swift")
-        return WorldState(facts: f, tables: nil, layout: nil)
     }
     return WorldState(facts: nil, tables: nil, layout: nil)
 }
@@ -6476,44 +6467,6 @@ func revokeText(_ text: String, _ who: String, _ doc: String) throws -> String {
     return ns.replacingCharacters(in: hits[0].range, with: "")
 }
 
-func hireText(_ text: String, _ f: [String: String]) throws -> String {
-    func said(_ k: String) -> String { f[k] ?? "" }
-    let block = "\n\npublic enum \(said("id")): Employee, Person {\n"
-        + "    public typealias Rank = \(said("rank"))\n"
-        + "    public typealias Home = \(said("home"))\n"
-        + "    public typealias Given = \(said("given"))\n"
-        + "    public typealias Family = \(said("family"))\n"
-        + "    public typealias Born = \(said("born"))\n"
-        + "    public typealias Site = \(said("site"))\n"
-        + "    public typealias Sex = Given.Sex\n}"
-    let ns = text as NSString
-    guard let roster = try? NSRegularExpression(pattern: "public enum \\w+: Employee, Person \\{.*?\\n\\}",
-                                                options: [.dotMatchesLineSeparators]),
-          let last = roster.matches(in: text,
-                                    range: NSRange(location: 0, length: ns.length)).last else {
-        cannot("hire: no roster entries to anchor on",
-               "hire writes beside an existing person, and the world has none")
-    }
-    let at = last.range.location + last.range.length
-    var out = ns.substring(to: at) + block + ns.substring(from: at)
-    // the corpus world carries a Company list; an imported one does not, and the
-    // judge needs none
-    let outNs = out as NSString
-    if let slice = try? NSRegularExpression(pattern: "(Emp\\w+\\.self;?)(?=\\s*\\n\\s*\\})"),
-       let s = slice.matches(in: out, range: NSRange(location: 0, length: outNs.length)).first {
-        let end = s.range.location + s.range.length
-        out = outNs.substring(to: end) + " \(said("id")).self;" + outNs.substring(from: end)
-    }
-    out = try lastEntryInsert(out, "VerifiedView", said("id"), said("home") + "Share", 12)
-    out = try lastEntryInsert(out, "VerifiedInDepartment", said("id"), said("home"), 8,
-                              anchoredOn: said("home"))
-    out = try lastEntryInsert(out, "VerifiedAtRank", said("id"), said("rank"), 8,
-                              anchoredOn: said("rank"))
-    out = try lastEntryInsert(out, "VerifiedAtWorkplace", said("id"), said("site"), 8,
-                              anchoredOn: said("site"))
-    return out
-}
-
 // ── AN ANSWER, BEFORE ANYBODY SAYS IT. Two surfaces ask these questions: the
 // terminal prints the answer and exits, the bench answers a request with it and
 // stays up. So the asking hands back what it found, and each surface says it in
@@ -6578,7 +6531,7 @@ func askViewAnswer(_ w: WorldState, _ who: String, _ doc: String) -> Answered {
     ])
 }
 
-// ── check view WHO DOC · check administer|delete WHO DOC. A question about one
+// ── check view WHO DOC. A question about one
 // entry: a probe is written beside the world's own entries and judged, and
 // nothing changes. `ask` is the same question spelled the other way, so it
 // travels with the verb.
@@ -6598,7 +6551,7 @@ if args.first == "check" || args.first == "ask" {
         exit(0)
     }
     if rest.isEmpty {
-        asked("check view WHO WHAT  ·  check administer WHO WHERE  ·  check delete WHO WHAT",
+        asked("check view WHO WHAT",
               "gate check view Emp0042 FinanceShare, with names your world declares "
               + "(`gate library` lists that vocabulary)")
     }
@@ -6631,71 +6584,11 @@ if args.first == "check" || args.first == "ask" {
         }
         exit(verdict == "holds" ? 0 : 1)
     }
-    if kind == "administer" || kind == "delete" {
-        // the compiler gates: a probe entry in the corpus's own accesses and a
-        // swift build. Seconds, and the full arbiter.
-        guard let root = ProcessInfo.processInfo.environment["GATE_SHOWCASE"], !root.isEmpty else {
-            cannot("check " + kind + " needs GATE_SHOWCASE (a checkout of the showcase package "
-                   + "with Team.swift)",
-                   "set GATE_SHOWCASE to that checkout, or ask `gate check view` instead, "
-                   + "which needs none")
-        }
-        let asks = "gate check \(kind) Emp0042 FinanceVault, with names your world declares "
-                 + "(`gate library` lists that vocabulary)"
-        if tail.isEmpty {
-            asked("check \(kind) WHO WHAT  ·  the compiler is the arbiter, and it takes seconds",
-                  asks)
-        }
-        if tail.count < 2 { cannot("check \(kind) WHO WHAT: this names only " + tail[0], asks) }
-        let team = (((root as NSString).appendingPathComponent("Sources") as NSString)
-            .appendingPathComponent("Organization") as NSString)
-            .appendingPathComponent("System/Team.swift")
-        let text = readText(team) ?? ""
-        let anchor = "        Granted<Delete<Alice, FinanceVault>>.self         "
-                   + "// only the owner, and only at manager rank, deletes"
-        // the other carrier asserts this, which is a stack trace; a sentence
-        // says the same thing to a person who can act on it
-        if text.components(separatedBy: anchor).count - 1 != 1 {
-            cannot("the showcase checkout at GATE_SHOWCASE does not carry the line this probe "
-                   + "writes beside",
-                   "point GATE_SHOWCASE at a checkout whose Team.swift still states the "
-                   + "delete example, or ask `gate check view` instead")
-        }
-        let gateName = kind.prefix(1).uppercased() + kind.dropFirst()
-        let probe = text.replacingOccurrences(
-            of: anchor,
-            with: anchor + "\n        Granted<\(gateName)<\(tail[0]), \(tail[1])>>.self // gate probe")
-        try? probe.write(toFile: team, atomically: false, encoding: .utf8)
-        let t0 = Date()
-        let built = runSaid("swift build", [])
-        let secs = (Date().timeIntervalSince(t0) * 100).rounded() / 100
-        _ = runGit(["checkout", "--", team], root)
-        var reasons = Set<String>()
-        for m in matches("error: (.+)$", built.said, lines: true) { reasons.insert(m[0]) }
-        let says = Array(reasons.sorted().prefix(3))
-        let verdict = built.code == 0 ? "holds" : "refused"
-        if asJson {
-            out(statusDumps(.object([
-                ("command", .text("ask \(kind)")), ("who", .text(tail[0])),
-                ("doc", .text(tail[1])), ("verdict", .text(verdict)),
-                ("compiler_says", .list(says.map { .text($0) })),
-                ("build_s", .raw(String(secs))),
-                ("mutates", .raw("false")),
-            ]), 0) + "\n")
-        } else {
-            var lines = ["ask \(kind): " + (verdict == "holds" ? "holds" : "refused 0")
-                         + " · build \(secs) s"]
-            for s in says { lines.append("  compiler: " + s) }
-            out(lines.joined(separator: "\n") + "\n")
-        }
-        exit(verdict == "holds" ? 0 : 1)
-    }
-    asked("check view WHO WHAT  ·  check administer WHO WHERE  ·  check delete WHO WHAT",
-          "gate check view Emp0042 FinanceShare, with names your world declares "
-          + "(`gate library` lists that vocabulary)")
+    cannot("unknown check " + kind,
+           "gate check view WHO WHAT, with names your world declares")
 }
 
-// ── diff transfer WHO DEPT · diff hire … · apply the same words. The SINGLE
+// ── diff transfer|grant|revoke · apply the same words. The SINGLE
 // source, the world, is edited, and the diff stays a Swift git diff. `change` is
 // the third spelling of one act and travels with the two doors.
 // the change itself, assembled once for both surfaces: what the world would say
@@ -6739,19 +6632,10 @@ func changeAnswer(_ w: WorldState, _ facts: String, _ rest: [String],
         catch { return .cannot(note: "this change could not be written", next: nil) }
         label = [("command", .text("change revoke")), ("who", .text(rest[1])),
                  ("doc", .text(rest[2]))]
-    case "hire":
-        let keys = ["id", "rank", "home", "given", "family", "born", "site"]
-        var f: [String: String] = [:]
-        for (i, k) in keys.enumerated() where i + 1 < rest.count { f[k] = rest[i + 1] }
-        do { made = try hireText(text, f) }
-        catch let e as CannotSay { return .cannot(note: e.note, next: e.next) }
-        catch { return .cannot(note: "this change could not be written", next: nil) }
-        label = [("command", .text("change hire"))]
-            + keys.compactMap { k in f[k].map { (k, StatusJSON.text($0)) } }
     default:
         return .cannot(note: "unknown change " + rest[0],
-                       next: "the changes this verb makes are `transfer`, `hire`, `grant` "
-                           + "and `revoke`")
+                       next: "the changes this verb makes are `transfer`, `grant` and `revoke`; "
+                           + "edit the world file for other changes")
     }
     let said = judgeFile(withTemp(made, (facts as NSString).lastPathComponent))
     // ── AND `applied` MEANS SOMETHING CHANGED. A transfer to the department
@@ -6787,8 +6671,8 @@ if args.first == "diff" || args.first == "apply" || args.first == "change" {
                + "at. A world declared as a layout alone is judged by `gate status`")
     }
     if rest.isEmpty {
-        let note = "diff transfer WHO DEPT  ·  diff hire ID RANK HOME GIVEN FAMILY "
-                 + "BORN SITE  ·  the same words after `apply` write the change"
+        let note = "diff transfer WHO DEPT  ·  diff grant|revoke WHO DOC  ·  "
+                 + "the same words after `apply` write the change"
         let next = "gate diff transfer Emp0042 Sales shows what would move and what "
                  + "would stop holding, and writes nothing"
         if asJson {

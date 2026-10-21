@@ -99,7 +99,7 @@ extension Drift { public static var typeName: String { "drift" } }
 
 // ── asking a world ──
 
-/// may this person read this document, checked against the file itself
+/// check view asks whether this person may read this document, against the file itself
 public enum Check: Verb {
     public typealias Does = Looks
     public typealias Under = PlainCourt
@@ -112,7 +112,7 @@ public enum Ask: Spelling {
 }
 extension Ask { public static var typeName: String { "ask" } }
 
-/// what would break if this happened, and nothing happens
+/// transfer, grant or revoke, judged as a proposed change without keeping it
 public enum Diff: Verb {
     public typealias Does = Looks
     public typealias Under = PlainCourt
@@ -125,7 +125,7 @@ public enum Change: Spelling {
 }
 extension Change { public static var typeName: String { "change" } }
 
-/// edits the world, and writes only where the judge holds, like a commit
+/// keeps a transfer, grant or revoke only where the judge holds, like a commit
 public enum Apply: Verb {
     public typealias Does = Changes
     public typealias Under = PlainCourt

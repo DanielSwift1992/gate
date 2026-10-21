@@ -854,8 +854,98 @@ def main():
               # and the step it offers is chosen by the same reading: this said
               # "nothing here is judged yet" over a world that holds
               and "nothing here is judged yet" not in _sv.get("next", "")))
-    c, r = run("check", "administer", "X", "Y", cwd=repo)
-    S.append(("check administer honest error without the showcase", "GATE_SHOWCASE" in json.dumps(r)))
+    # P17/P18: an absent action is not a compiler answer or a roster edit.
+    # The same file/manifest reader and text writer serve renamed declarations.
+    def _retired_call(argv, folder, extra=None):
+        env = {k: v for k, v in os.environ.items() if k != "GATE_SHOWCASE"}
+        env.update(extra or {})
+        result = subprocess.run([GATE, *argv, "--json"], cwd=folder, env=env,
+                                capture_output=True, text=True, timeout=120)
+        for channel in (result.stdout, result.stderr):
+            try:
+                return result.returncode, json.loads(channel)
+            except ValueError:
+                pass
+        return result.returncode, {"raw": result.stdout, "stderr": result.stderr}
+
+    _old_sc = os.path.join(tmp, "retired-showcase")
+    _old_system = os.path.join(_old_sc, "Sources", "Organization", "System")
+    os.makedirs(_old_system)
+    _team = os.path.join(_old_system, "Team.swift")
+    _generated = os.path.join(_old_system, "GeneratedTeam.swift")
+    _reference = open(os.path.join(repo, "gate.swift")).read()
+    open(_team, "w").write("        Granted<Delete<Alice, FinanceVault>>.self         "
+                           "// only the owner, and only at manager rank, deletes\n"
+                           "// a reader's uncommitted work stays here\n")
+    open(_generated, "w").write(_reference)
+    _old_bytes = {p: open(p, "rb").read() for p in (_team, _generated)}
+    _empty = os.path.join(tmp, "retired-empty")
+    os.makedirs(_empty)
+    _without = _retired_call(["status"], _empty)
+    _with = _retired_call(["status"], _empty, {"GATE_SHOWCASE": _old_sc})
+    S.append(("P17: an environment checkout never supplies an undeclared world",
+              _with[0] == _without[0]
+              and _with[1].get("error") == _without[1].get("error")
+              and _with[1].get("facts") == _without[1].get("facts")
+              and _old_sc not in json.dumps(_with[1])))
+
+    _retired = []
+    _world_before = open(os.path.join(repo, "gate.swift"), "rb").read()
+    for _extra in ({}, {"GATE_SHOWCASE": _old_sc}):
+        for _verb in ("check", "ask"):
+            for _kind in ("administer", "delete"):
+                _code, _answer = _retired_call([_verb, _kind, "Alice", "FinanceVault"], repo, _extra)
+                if _code != 1 or _answer.get("error") != "unknown check " + _kind:
+                    _retired.append((_verb, _kind, _code, _answer))
+        for _verb in ("diff", "apply", "change"):
+            _code, _answer = _retired_call([_verb, "hire", "NewPerson", "Manager", "Finance",
+                                           "Ada", "Lovelace", "Y1815", "OnSite"], repo, _extra)
+            if _code != 1 or _answer.get("error") != "unknown change hire":
+                _retired.append((_verb, "hire", _code, _answer))
+    if _retired:
+        print("   retired action controls:", _retired[:2])
+    S.append(("P17/P18: removed probes and hire refuse without changing either tree",
+              not _retired
+              and open(os.path.join(repo, "gate.swift"), "rb").read() == _world_before
+              and all(open(p, "rb").read() == data for p, data in _old_bytes.items())))
+
+    _named = os.path.join(tmp, "renamed-crew")
+    os.makedirs(_named)
+    _crew = os.path.join(_named, "crew.swift")
+    _text = re.sub(r"\bEmp(\d+)\b", r"Actor\1", _reference)
+    _text = re.sub(r"\bCompany\b", "Guild", _text)
+    open(_crew, "w").write(_text)
+    _mine_code, _ = run("mine", "crew.swift", cwd=_named)
+    _before_status = run("status", cwd=_named)
+    _port = free_port()
+    _server = subprocess.Popen([GATE, "serve", str(_port), "--no-open"], cwd=_named,
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    _text_ok, _text_error = False, None
+    try:
+        import urllib.request as _crew_http
+        wait_serve(_port)
+        _renamed = _text.replace("Actor9000", "Rowan")
+        assert _renamed != _text
+        _request = _crew_http.Request(f"http://127.0.0.1:{_port}/world?f=crew.swift",
+                                     data=_renamed.encode(), method="PUT")
+        _saved = _crew_http.urlopen(_request, timeout=60).status
+        _after_status = run("status", cwd=_named)
+        _text_ok = (_mine_code == 0 and _before_status[0] == 0 and _after_status[0] == 0
+                    and _saved == 200 and open(_crew).read() == _renamed
+                    and not re.search(r"\bEmp\d+\b", _renamed)
+                    and "Rowan" in _renamed)
+    except Exception as _error:
+        _text_error = str(_error)
+    finally:
+        _server.terminate()
+        try:
+            _server.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            _server.kill(); _server.wait()
+    if not _text_ok:
+        print("   renamed text world:", _text_error, _before_status)
+    S.append(("P18: an explicit renamed world is edited as text and judged without a roster editor",
+              _text_ok))
 
     # the layout is a fact of the world: the manifest splits, judgement runs the list, guards hold both directions
     split = os.path.join(tmp, "split")
@@ -10574,9 +10664,9 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                 ("a transfer, written", ["apply", "transfer", "Emp9001", "Engineering"], True),
                 ("a grant, written", ["apply", "grant", "Emp9000", "EngineeringShare"], True),
                 ("a revoke, written", ["apply", "revoke", "Emp9000", "FinanceShare"], True),
-                ("a hire, written",
+                ("a hire no longer offered",
                  ["apply", "hire", "Emp9100", "Manager", "Finance", "Ada", "Lovelace",
-                  "Y1815", "OnSite"], True),
+                  "Y1815", "OnSite"], False),
                 ("a move to where they already are",
                  ["apply", "transfer", "Emp9000", "Finance"], True)):
             # a writing shape gets its own copy, so nothing here reads what an
@@ -10601,6 +10691,9 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
             if not _keeps and _world != _before:
                 _cqw.append(_tag + ": a dry shape wrote on the world")
             _out = _said[0]
+            if _tag == "a hire no longer offered" and (
+                    _said[2] != 1 or b"unknown change hire" not in _said[1]):
+                _cqw.append(_tag + ": the removed editor still promises an answer")
             if _tag == "a view that holds" and b"ask view: holds" not in _out:
                 _cqw.append(_tag + ": a grant the world states does not hold")
             if _tag == "a view that does not" and b"refused" not in _out:
