@@ -40,7 +40,12 @@ const slot=scope.locateSlot({kind:"alias",line:alias.line,host:d.name,axis:"Home
 assert.strictEqual(slot.from.line,alias.line-1);assert(slot.from.line>lines.length * 0.75);
 assert.strictEqual(lines[slot.from.line].slice(slot.from.ch,slot.to.ch),alias.target);
 assert(text.includes("public typealias Home = " + alias.target));
-const whole=timed("drawing_parse_ms",()=>judge("scale",JSON.parse(snap["/files"]).files.map(f=>snap["/world?f="+f]).join("\n"),kitVocabulary)).parsed;
+const list=JSON.parse(snap["/files"]), drawScope={files:list.files,theirsFiles:list.theirs||{}};
+vm.createContext(drawScope);
+const selectionAt=ui.indexOf("function drawingFiles("),selectionEnd=ui.indexOf("\n}",selectionAt)+2;
+vm.runInContext(ui.slice(selectionAt,selectionEnd),drawScope);
+const parts=drawScope.drawingFiles(null).map(file=>({file,text:snap["/world?f="+file]}));
+const whole=timed("drawing_parse_ms",()=>judge("scale",parts.map(p=>p.text).join("\n"),kitVocabulary)).parsed;
 // The completion/note walker shares line prefixes at a document generation;
 // moving the viewport deep in the file must not rescan its prefix per line.
 Object.assign(scope,{SCOPES:[],NESTS:{},LINE_OPENERS:{},LINE_MODS:{},LINE_CONTINUERS:new Set(),FORM_ROWS:{line:{},gate:{}},SLOT_SPELLING:{},
@@ -66,4 +71,12 @@ assert(lies.some(r=>r.line>120000));
 assert(ui.includes("viewportMargin: 10, dragDrop: false"));
 measurements.bytes=text.length;measurements.lines=lines.length;measurements.projection_pages=total;
 measurements.first_html_bytes=first.length;measurements.last_html_bytes=last.length;
-console.log("PLAYGROUND SCALE GREEN: "+JSON.stringify(measurements));
+(async()=>{
+    const record=JSON.parse(fs.readFileSync(path.join(root,"worlds.from"))), declaration=JSON.parse(fs.readFileSync(path.join(root,"playground/scale/world.json"))).drawing;
+    const contract=JSON.parse(fs.readFileSync(path.join(__dirname,"../bin/.worlds/playground",record.showcase.revision,"showcase/Contracts/Drawing/v0.1/contract.json")));
+    const {compare}=require("../bin/drawing-profile.js");
+    assert.equal((await compare({contract},parts,rendered,declaration)).status,"not-compared");
+    const changed=parts.map((p,i)=>({...p,text:p.text+(i===0?"\n// changed input":"")}));
+    assert.equal((await compare({contract},changed,rendered,declaration)).status,"port-under-contract");
+    console.log("PLAYGROUND SCALE GREEN: "+JSON.stringify(measurements));
+})().catch(e=>{console.error(e);process.exitCode=1;});

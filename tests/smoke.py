@@ -3225,6 +3225,12 @@ console.log(JSON.stringify(out));
               and _dv.get("atomWithPagesDrawable") is True
               and _dv.get("ownDrawable") is False and _dv.get("canvases") == 1 and _dv.get("errors") == 0))
 
+    # The current owner contract is a pinned input even on a cold checkout.
+    # The historical transport replay above materializes a different pin.
+    _current_worlds = subprocess.run([os.path.join(HERE, "bin", "playground-worlds.sh")], capture_output=True, text=True)
+    if _current_worlds.returncode:
+        print("   drawing contract input:", (_current_worlds.stdout + _current_worlds.stderr)[-1500:])
+
     # Click the Atom's rendered keys through the page's own listener, slot
     # locator and writer, keeping Atom.swift and AtomPages.swift separate.
     # The applier and worlds are the pinned engine's.
@@ -3262,7 +3268,7 @@ function bench(text = atom, file = 'Atom.swift', neighbors = { 'AtomPages.swift'
     const elements = { 'canvas-host': host, 'drawing-feedback': feedback, 'view-drawing': button,
         'editor-host': { style: {} }, bare: { style: {}, innerHTML: '' }, 'table-host': { style: {} } };
     const context = vm.createContext({
-        active: file, files: [file, ...Object.keys(neighbors)], viewingShelf: null, mode: 'drawing',
+        active: file, files: [file, ...Object.keys(neighbors)], theirsFiles: {}, viewingShelf: null, mode: 'drawing',
         lastParsed: judge(file, text, kitVocabulary).parsed, kitVocabulary, press,
         compEl: completion, compItems: [], compFrom: null, compSlot: null, compRect: null,
         compChosen: 0, compScaffold: null, pending: null, localNames: new Set(),
@@ -3327,6 +3333,11 @@ function bench(text = atom, file = 'Atom.swift', neighbors = { 'AtomPages.swift'
 }
 async function main() {
     const result = {};
+    const withMaterial = bench(atom, 'Atom.swift', { 'AtomPages.swift': pages, 'Evidence.swift': 'public enum Plus {}' });
+    withMaterial.context.theirsFiles = {'Evidence.swift': {kind:'CarriedFile'}};
+    await withMaterial.context.drawCanvases();
+    assert(withMaterial.host.innerHTML.includes('<svg'));
+    assert(!withMaterial.readings.some(t => t.includes('public enum Plus {}')));
     // The pinned layout stays split. Opening the state file offers Drawing
     // even in Bare; entering that view then exposes its neighbour's keys.
     const b = bench(); b.context.mode = 'bare'; await b.context.drawCanvases();
@@ -4379,8 +4390,10 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               'viewingShelf = mod' in ui
               and 'document.getElementById("chips").innerHTML =' in ui
               and 'a printout of what the judge carries' in ui and "if (viewingShelf)" in ui))
+    _read_transition = subprocess.run(["node", os.path.join(HERE, "tests", "carried-readings.js")],
+                                      capture_output=True, text=True, timeout=60)
     S.append(("and returning to a world file resumes judgement",
-              'viewingShelf = null' in ui and 'cm.setOption("readOnly", false); viewingShelf = null' in ui))
+              _read_transition.returncode == 0))
 
     S.append(("the offer has one source: the grammar, with no pool to fall back to",
               "if (!here) return hideCompletion()" in ui and "function completionPool" not in ui))
@@ -12979,7 +12992,7 @@ public enum MyWatch: AccessLedger {
               # and a door may name its view, which is how the cover's picture
               # is taken in the one the bench opens on
               and 'const askedView = new URLSearchParams(location.search).get("view");' in ui
-              and 'if (["bare", "table", "full"].includes(askedView)) setMode(askedView);' in ui
+              and 'if (["bare", "table", "full"].includes(askedView) && theirsFiles[first]?.kind !== "CarriedFile") setMode(askedView);' in ui
               # the shot is taken through that door, so the picture and the page
               # cannot drift apart about which surface a reader meets
               and "view=bare" in open(os.path.join(HERE, "bin", "shoot-bench.sh"),
@@ -13767,8 +13780,9 @@ public enum MyWatch: AccessLedger {
     S.append(("opening a page keeps the view you are reading in",
               'setMode(opensAs[mod] || opensAs[mod + ".swift"] || mode);' in ui
               and "setMode(opensAs[file] || mode);" in ui
-              # exactly one path still takes Full on purpose, and it shows a line
-              and ui.count('setMode("full")') == 1
+              # Own pages keep the chosen view; taken text and delivery refusals
+              # open as source. Execute those transitions instead of counting calls.
+              and _read_transition.returncode == 0
               and 'setMode("full");' in ui.split("function reveal")[1][:400]
               # and the way back brings the view with the place
               and 'setMode(there.mode || "full");' in ui))
@@ -14369,6 +14383,15 @@ public enum MyWatch: AccessLedger {
               # eight lines in, so the first spelling of this compared a refusal
               # against a sentence about one.
               and _shoot.index("exit 1") < _shoot.rindex("bench.png.from")))
+
+    _carried = subprocess.run([sys.executable, os.path.join(HERE, "tests", "carried-readings.py")],
+                              capture_output=True, text=True, timeout=180)
+    _carried_ui = subprocess.run(["node", os.path.join(HERE, "tests", "carried-readings.js")],
+                                 capture_output=True, text=True, timeout=60)
+    if _carried.returncode or _carried_ui.returncode:
+        print("   carried readings:", (_carried.stdout + _carried.stderr + _carried_ui.stdout + _carried_ui.stderr)[-4000:])
+    S.append(("taken text opens as verified read-only Theirs, without binary assets or a local fallback",
+              _carried.returncode == 0 and _carried_ui.returncode == 0))
 
     # The old playground's witnesses travel with the pinned showcase worlds.
     # This builds the actual static benches through serve, then reads their

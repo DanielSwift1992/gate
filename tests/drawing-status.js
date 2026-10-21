@@ -1,8 +1,10 @@
 // Exercise the same comparison consumer on the actual published input bytes.
 'use strict';
-const fs=require('fs'),path=require('path'),assert=require('assert/strict');
+const fs=require('fs'),path=require('path'),assert=require('assert/strict'),vm=require('vm');
 const {drawingParse}=require('../bin/judge.js'),{renderAll}=require('../bin/renderer.js');
 const profile=require('../bin/drawing-profile.js'),site=process.argv[2];
+const ui=fs.readFileSync(path.join(__dirname,'../web/ui.html'),'utf8');
+const at=ui.indexOf('function drawingFiles('),selection=ui.slice(at,ui.indexOf('\n}',at)+2);
 (async()=>{
     const results=[];
     for(const name of fs.readdirSync(path.join(site,'playground'))) {
@@ -11,7 +13,9 @@ const profile=require('../bin/drawing-profile.js'),site=process.argv[2];
         const snap=JSON.parse(fs.readFileSync(snapshot)),world=JSON.parse(fs.readFileSync(path.join(dir,'world.json')));
         const plan=JSON.parse(snap['/drawing-profile']);
         const state=await profile.compile(plan,async hash=>new Uint8Array(fs.readFileSync(path.join(site,'assets/drawing',hash,'font.ttf'))),(h,n)=>h+'/'+n);
-        const files=JSON.parse(snap['/files']).files;
+        const list=JSON.parse(snap['/files']),reader={files:list.files,theirsFiles:list.theirs||{}};
+        vm.createContext(reader);vm.runInContext(selection,reader);
+        const files=reader.drawingFiles(null);
         const parts=files.map(file=>({file,text:snap['/world?f='+file]}));
         const parsed=drawingParse(parts),drawn=renderAll(parsed.declarations,parsed.order,parsed.literals,parsed.topAliases);
         const declared=state.contract.cases.find(c=>c.id===world.drawing.case_id);

@@ -27,6 +27,7 @@ const document = {body: {dataset: {}}, createElement: tag => new Element(tag),
     getElementById: id => {if (!elements.has(id)) elements.set(id, new Element('div')); return elements.get(id);}};
 const context = vm.createContext({document, console, Map, Set, Number, URL,
     active: filename, files: railFiles, personalFile: null, badFiles: new Set(),
+    theirsFiles: {}, unavailableFiles: [],
     seamRows: [], undeclaredFiles: railUndeclared, viewingShelf: null, undeclaredView: null,
     navHere() {}, loadFile() {}, recordJump() {}, openUndeclared() {},
     unresolved: new Set(), bareSlots: [], lastRefusals: [], recordBoundaries: new WeakMap(),

@@ -73,7 +73,8 @@ def publish(demo, out, context=None):
 
         if context and context.get("drawing"):
             # Bind the declared owner remainder to these exact initial bytes.
-            hashes = sorted(hashlib.sha256(texts[f].encode()).hexdigest() for f in files["files"])
+            hashes = sorted(hashlib.sha256(texts[f].encode()).hexdigest() for f in files["files"]
+                            if files.get("theirs", {}).get(f, {}).get("kind") != "CarriedFile")
             context["drawing"]["source_digest"] = hashlib.sha256(json.dumps(hashes, separators=(",", ":")).encode()).hexdigest()
 
         shelf = json.loads(snap["/shelf"])
@@ -146,7 +147,9 @@ function judgeWhereTexts(text, extraTexts) {
     const STORAGE = __STORAGE__;
     const FORMS = new Set(__FORMS__);
     const LAYOUT = __LAYOUT__;
-    const ALL = __ALL__;
+    const THEIRS = JSON.parse(SNAP["/files"]).theirs || {};
+    // A carried reading is not another input to the relation court.
+    const ALL = __ALL__.filter(f => THEIRS[f]?.kind !== "CarriedFile");
     /* the forms are judged in worlds, and the worlds are the server's: it
        joins forms by the names they use and declare (worldsOf in the vein),
        and records the partition here at build time, so the page never grows
@@ -173,6 +176,7 @@ function judgeWhereTexts(text, extraTexts) {
        The ordinary demo retains its on-green policy. A saved verdict is a
        receipt for that text, never a substitute for judging the reopened world. */
     function keptDraft(f) {
+        if (THEIRS[f]) return null;
         try {
             const raw = localStorage.getItem(STORAGE + f);
             if (raw === null) return null;
@@ -327,6 +331,8 @@ function judgeWhereTexts(text, extraTexts) {
         const method = (opts && opts.method) || "GET";
         if (method === "PUT" && u.startsWith("/world")) {
             const f = decodeURIComponent(u.split("f=")[1] || "");
+            if (THEIRS[f]) return reply(JSON.stringify({ address: THEIRS[f].address,
+                reason: f + ": Theirs is read-only; change the owner and take a new pin" }), 409);
             const text = String((opts && opts.body) || "");
             const row = CONTEXT ? JSON.stringify(draftRecord(f, text, readDraft(f, text))) : text;
             try {
@@ -339,6 +345,7 @@ function judgeWhereTexts(text, extraTexts) {
             const f = decodeURIComponent(u.split("f=")[1] || "");
             const text = opts && opts.body ? String(opts.body) : "";
             const said = JSON.parse(SNAP["/verdict?f=" + f] || "{}");
+            if (THEIRS[f]) return reply(JSON.stringify(said));
             if (CONTEXT) return reply(JSON.stringify(readDraft(f, text)));
             let refusals = [];
             for (const g of ALL) {

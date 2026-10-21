@@ -197,9 +197,10 @@ if (site) for (const id of fs.readdirSync(path.join(site, "playground"))) {
     if (!fs.statSync(folder).isDirectory() || !fs.existsSync(path.join(folder,"world.json"))) continue;
     check("published " + id + " reads the native snapshots and saves separately", () => {
         const snap = JSON.parse(read(path.join(folder, "snapshots.json"))), ctx = JSON.parse(read(path.join(folder, "world.json")));
-        const files = JSON.parse(snap["/files"]), texts = Object.fromEntries(files.files.map(f => [f, snap["/world?f=" + f] || ""]));
+        const files = JSON.parse(snap["/files"]), readable = files.files.filter(f => files.theirs?.[f]?.kind !== "CarriedFile"),
+            texts = Object.fromEntries(readable.map(f => [f, snap["/world?f=" + f] || ""]));
         const result = worldCourt.verdict(court, files.worlds, texts, ctx.definitions,
-            files.files.filter(f => !(files.forms || []).includes(f)), ctx.carried, files.layout, judge, null, ctx.plain_fragments);
+            readable.filter(f => !(files.forms || []).includes(f)), ctx.carried, files.layout, judge, null, ctx.plain_fragments);
         const first = files.forms[0] || files.files[0], native = JSON.parse(snap["/verdict?f=" + first]);
         assert.strictEqual(result.verdict, native.verdict, id + ": " + JSON.stringify({result,native}));
         if (id === "site") { assert.strictEqual(result.verdict,"holds"); assert.strictEqual(result.checked,17); }
@@ -219,7 +220,7 @@ if (site) for (const id of fs.readdirSync(path.join(site, "playground"))) {
         assert.deepStrictEqual(tabs.map(t => shelf.inputs['Site/Manifest'].destinations[t.record]), tabs.map(t => t.id));
         if (id !== "scale") {
             const world = ctx.tab.world;
-            if (world !== "Site") assert.deepStrictEqual(draw(world, files.files.filter(f => f !== files.layout && !f.endsWith("my.swift"))
+            if (world !== "Site") assert.deepStrictEqual(draw(world, readable.filter(f => f !== files.layout && !f.endsWith("my.swift"))
                 .map(f => texts[f]).join("\n")).map(c => c.svg).join(""), drawings[world]);
         }
     });

@@ -1887,6 +1887,7 @@ struct RecordSpots {
 struct TakenResolution {
     var v2 = false
     var paths: [String: String] = [:]
+    var inputs: [String: [String: String]] = [:]
     var bad: [(address: String, claim: String)] = []
 }
 func takenInputs(_ w: WorldState) -> TakenResolution {
@@ -1978,7 +1979,7 @@ func takenInputs(_ w: WorldState) -> TakenResolution {
             guard sha256Hex(bytes) == hash else {
                 bad(at + "/sha256", "\(name): cached input bytes differ from their sha256"); continue
             }
-            result.paths[name] = target; continue
+            result.paths[name] = target; result.inputs[name] = input; continue
         }
         do { try FileManager.default.createDirectory(atPath: cache, withIntermediateDirectories: true) }
         catch { bad(at, "\(name): cannot create the input cache"); continue }
@@ -2007,6 +2008,7 @@ func takenInputs(_ w: WorldState) -> TakenResolution {
         do {
             try blob.1.write(to: URL(fileURLWithPath: target), options: .atomic)
             result.paths[name] = target
+            result.inputs[name] = input
         } catch { bad(at, "\(name): cannot cache the verified input") }
     }
     return result
@@ -3473,7 +3475,15 @@ func personalPathOf(_ w: WorldState) -> String? {
         .appendingPathComponent(repoKey(base)) as NSString).appendingPathComponent("my.swift")
 }
 
-func benchFilesOf(_ w: WorldState) -> [(String, String)] {
+// A text reading is UTF-8 without binary control bytes. Its bytes stay intact;
+// no extension, language parser or desk-specific name decides what is text.
+func benchText(_ path: String) -> Bool {
+    guard let bytes = FileManager.default.contents(atPath: path),
+          let text = String(data: bytes, encoding: .utf8) else { return false }
+    return !text.unicodeScalars.contains { ($0.value < 32 && ![9, 10, 13].contains($0.value)) || $0.value == 127 }
+}
+
+func benchFilesOf(_ w: WorldState, readings: Bool = false) -> [(String, String)] {
     // the shared world, its forms, the layout, the policy and the personal
     // slot: the list the panel opens, and the list the stream guards walk
     guard let f = w.facts else { return [] }
@@ -3483,8 +3493,10 @@ func benchFilesOf(_ w: WorldState) -> [(String, String)] {
         ((w.layout?.rows.first { inputPath($0, w, taken) == path })?.path ?? relPath(path, base), path)
     }
     for r in w.layout?.rows ?? [] where r.role == "forms"
-        || (r.role == "carried" && r.source == "mine" && r.path.hasSuffix(".swift")) {
+        || (r.role == "carried" && r.source == "mine" && r.path.hasSuffix(".swift"))
+        || (readings && r.kind == "CarriedFile" && r.source == "theirs" && taken.v2) {
         if let p = inputPath(r, w, taken), FileManager.default.fileExists(atPath: p),
+           !(r.kind == "CarriedFile" && r.source == "theirs") || benchText(p),
            !out.contains(where: { $0.0 == r.path && $0.1 == p }) {
             out.append((r.path, p))
         }
@@ -12251,9 +12263,8 @@ func drawingInputs(_ w: WorldState, counts: Bool = true) -> (plan: [String: Any]
 func drawingTakenTexts(_ w: WorldState) -> [(String, String)] {
     let plan = drawingInputs(w, counts: false).plan
     guard plan["status"] as? String == "declared" else { return [] }
-    let own = Set(benchFilesOf(w).map { absPath($0.1) })
+    let own = Set(benchFilesOf(w, readings: true).map { $0.0 })
     let resolved = takenInputs(w)
-    let root = layoutDir(w) ?? "."
     var files: [[String: Any]] = []
     if let profile = plan["profile"] as? [String: Any] { files.append(profile) }
     if let inputs = plan["inputs"] as? [String: [String: Any]] { files += inputs.keys.sorted().compactMap { inputs[$0] } }
@@ -12269,7 +12280,7 @@ func drawingTakenTexts(_ w: WorldState) -> [(String, String)] {
     var names = Set<String>()
     return files.compactMap { file in
         guard let path = file["path"] as? String, let text = file["text"] as? String,
-              !own.contains(absPath(joinPath(root, path))) else { return nil }
+              !own.contains(path) else { return nil }
         let name = path.hasSuffix(".swift") ? String(path.dropLast(6)) : path
         guard names.insert(name).inserted else { return nil }
         return (name, text)
@@ -12439,7 +12450,7 @@ func registerTokens(_ w: WorldState) -> String {
 // door opening on the wrong room while saying nothing is the one thing this
 // page may not do. The fallback below is for the question that named nothing.
 func servePick(_ w: WorldState, _ query: [String: String]) -> String? {
-    let named = Dictionary(benchFilesOf(w).map { ($0.0, $0.1) }, uniquingKeysWith: { a, _ in a })
+    let named = Dictionary(benchFilesOf(w, readings: true).map { ($0.0, $0.1) }, uniquingKeysWith: { a, _ in a })
     let want = query["f"] ?? ""
     if let hit = named[want] { return hit }
     if undeclaredHere(w).contains(want), let dir = layoutDir(w) {
@@ -12449,6 +12460,42 @@ func servePick(_ w: WorldState, _ query: [String: String]) -> String? {
     if let facts = w.facts, FileManager.default.fileExists(atPath: facts) { return facts }
     return benchFilesOf(w).first(where: { FileManager.default.fileExists(atPath: $0.1) })?.1
         ?? w.facts
+}
+
+func benchOrigin(_ row: LayoutRow, _ taken: TakenResolution) -> StatusJSON {
+    var origin: [(String, StatusJSON)] = [
+        ("kind", .text(row.kind ?? "")), ("address", .text("gate.manifest.swift:\(row.line)")),
+        ("at", .text(row.from ?? "")), ("verified", .raw(taken.inputs[row.name ?? ""] != nil ? "true" : "false"))]
+    for (key, value) in (taken.inputs[row.name ?? ""] ?? [:]).sorted(by: { $0.key < $1.key }) {
+        origin.append((key, .text(value)))
+    }
+    return .object(origin)
+}
+
+// Reading a taken page never turns its local view into an alternative source.
+func benchTakenRefusal(_ w: WorldState, _ name: String) -> (address: String, claim: String)? {
+    let rows = (w.layout?.rows ?? []).filter { $0.path == name }
+    guard let row = rows.first(where: { $0.source == "theirs" }) else { return nil }
+    if rows.count != 1 || Set(benchFilesOf(w, readings: true).filter { $0.0 == name }.map { absPath($0.1) }).count > 1 {
+        return ("gate.manifest.swift:\(row.line)", "\(name): more than one input declares this path; the source is ambiguous")
+    }
+    let taken = takenInputs(w)
+    if let bad = taken.bad.first { return bad }
+    if row.kind == "CarriedFile" && !taken.v2 {
+        return ("gate.manifest.swift:\(row.line)", "\(name): a taken text reading requires a verified v2 input record")
+    }
+    if taken.v2 && taken.paths[row.name ?? ""] == nil {
+        return ("gate.manifest.swift:\(row.line)", "\(name): the pinned input is unavailable")
+    }
+    if row.kind == "CarriedFile", let path = inputPath(row, w, taken), !benchText(path) {
+        return ("gate.manifest.swift:\(row.line)", "\(name): unsupported text reading; this input contains binary bytes")
+    }
+    return nil
+}
+
+func serveReadingRefusal(_ conn: GateSocket, _ bad: (address: String, claim: String)) {
+    serveSay(conn, 409, "application/json; charset=utf-8", Data(compactDumps(.object([
+        ("verdict", .text("refused")), ("address", .text(bad.address)), ("reason", .text(bad.claim))])).utf8))
 }
 
 // ── WHAT A COMMIT DID, READ AS FACTS WHERE IT CAN BE. This is a world, so
@@ -12812,7 +12859,7 @@ func serveDoor(_ a: [String]) -> Never {
                 }
             case ("GET", "/files"):
                 let w = servedWorld()
-                let named = benchFilesOf(w)
+                let named = benchFilesOf(w, readings: true)
                 let names = named.map { $0.0 }
                 let rows = w.layout?.rows ?? []
                 let factsDir = w.facts.map { (absPath($0) as NSString).deletingLastPathComponent }
@@ -12866,8 +12913,17 @@ func serveDoor(_ a: [String]) -> Never {
                         atPath: (hereRoot as NSString).appendingPathComponent($0.path))
                 }.map { $0.path }
                 let personal = personalPathOf(w)
+                let taken = takenInputs(w)
+                let unavailable = rows.filter { $0.source == "theirs" && ["carried", "forms", "world"].contains($0.role ?? "")
+                    && taken.v2 && taken.paths[$0.name ?? ""] == nil }
+                var origins: [(String, StatusJSON)] = []
+                for row in rows where row.source == "theirs" && (names.contains(row.path) || unavailable.contains(where: { $0.path == row.path })) {
+                    origins.append((row.path, benchOrigin(row, taken)))
+                }
                 var pairs: [(String, StatusJSON)] = [
                     ("files", .list(names.map { .text($0) })),
+                    ("theirs", .object(origins)),
+                    ("unavailable", .list(unavailable.map { .text($0.path) })),
                     ("layout", lay.flatMap { names.contains($0) ? StatusJSON.text($0) : nil } ?? .null),
                     ("forms", .list(formsRows.map { .text($0) })),
                     ("carried", .list(rows.filter { $0.role == "carried" && names.contains($0.path) }
@@ -12885,7 +12941,7 @@ func serveDoor(_ a: [String]) -> Never {
                     // them (worldsOf), so the page judges a form inside its world
                     // and keeps no second rule for joining them
                     ("worlds", .list(worldsOf(rows.filter { $0.role == "forms" && names.contains($0.path) }
-                        .map { r in (r, readText((hereRoot as NSString).appendingPathComponent(r.path)) ?? "") })
+                        .map { r in (r, inputPath(r, w, taken).flatMap(readText) ?? "") })
                         .map { world in .list(world.map { .text($0.path) }) })),
                 ]
                 // WHERE THE COURT WAS TAKEN, so the one line a stranger asks
@@ -12909,6 +12965,9 @@ func serveDoor(_ a: [String]) -> Never {
                 // the page obeys the declared layout: `?f=` names a file FROM
                 // that list, and a name the world does not carry is a miss
                 let w = servedWorld()
+                if let bad = benchTakenRefusal(w, asked.query["f"] ?? "") {
+                    serveReadingRefusal(conn, bad); break
+                }
                 guard let p = servePick(w, asked.query) else {
                     serveSay(conn, 404, nil, Data())
                     break
@@ -12925,6 +12984,9 @@ func serveDoor(_ a: [String]) -> Never {
                 // carries the history, so this says whether the file is
                 // committed or has uncommitted changes, never our own save
                 let w = servedWorld()
+                if w.layout?.rows.contains(where: { $0.path == asked.query["f"] && $0.source == "theirs" }) == true {
+                    serveJSON(conn, compactDumps(.object([("file", .text(asked.query["f"] ?? "")), ("git", .text("source"))]))); break
+                }
                 guard let facts = w.facts else {
                     serveSay(conn, 404, nil, Data())
                     break
@@ -13031,6 +13093,12 @@ func serveDoor(_ a: [String]) -> Never {
                 let base = w.facts.map { (absPath($0) as NSString).deletingLastPathComponent }
                     ?? FileManager.default.currentDirectoryPath
                 let active = servePick(w, asked.query)
+                if let row = w.layout?.rows.first(where: { $0.path == asked.query["f"] && $0.source == "theirs" }) {
+                    if let bad = benchTakenRefusal(w, row.path) { serveReadingRefusal(conn, bad); break }
+                    guard let path = active, FileManager.default.contents(atPath: path) == asked.body else {
+                        serveReadingRefusal(conn, ("gate.manifest.swift:\(row.line)", "\(row.path): Theirs is read-only; an edited body is not the pinned input")); break
+                    }
+                }
                 let d = scratchDir("gate-bench-")
                 let layout = w.layout?.manifest
                 let formsHere = Set((w.layout?.rows ?? []).filter { $0.role == "forms" }
@@ -13210,6 +13278,9 @@ func serveDoor(_ a: [String]) -> Never {
                 // writable names are the bench's own list and nothing else.
                 let w = servedWorld()
                 let text = String(decoding: asked.body, as: UTF8.self)
+                if let row = w.layout?.rows.first(where: { $0.path == asked.query["f"] && $0.source == "theirs" }) {
+                    serveReadingRefusal(conn, ("gate.manifest.swift:\(row.line)", "\(row.path): Theirs is read-only; change the owner and take a new pin")); break
+                }
                 let named = Dictionary(benchFilesOf(w).map { ($0.0, $0.1) },
                                        uniquingKeysWith: { a, _ in a })
                 guard let p = named[asked.query["f"] ?? ""] else {
@@ -13563,6 +13634,7 @@ func buildReadPlan(_ selected: String) throws -> ReadPlan {
                 func json(_ key: String, _ object: Any) { snap[key] = ["body": String(decoding: publicationJSON(object), as: UTF8.self), "type": jsonType] }
                 json("GET /files", ["files": names, "layout": "gate.manifest.swift", "forms": forms,
                      "carried": parsed.rows.filter { $0.kind == "CarriedFile" }.map { $0.path }, "worlds": groups,
+                     "theirs": publicationObject(.object(parsed.rows.filter { $0.source == "theirs" }.map { ($0.path, benchOrigin($0, taken)) })),
                      "roles": Dictionary(uniqueKeysWithValues: STATUS_ROLES), "opens": [:], "seams": [], "undeclared": [], "overridden": [:],
                      "personal": NSNull(), "personal_empty": false, "judge_claim": NSNull(), "save_policy": "read-only",
                      "capabilities": ["read_only": names, "write": []]])

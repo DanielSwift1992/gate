@@ -26,6 +26,8 @@ def run():
         catalog+='public enum IslandWorld: Close {\n    public typealias File = Directory\n    public typealias Name = WorldName\n}\npublic enum Group: Close {\n    public typealias Name = GroupName\n}\n'
         for n,t in [('DoorId','harbor'),('Title','Coral Atlas'),('Shown','Facts.swift'),('Caption','The declared relations'),('Directory','Island'),('WorldName','Coral'),('GroupName','Atlas')]:catalog+=atom(n,t)
         (dependency/'Doors.swift').write_text(catalog)
+        note=b'Owner material at this pin.\r\n'
+        (dependency/'Notes.md').write_bytes(note)
         def git(folder,*args):return subprocess.check_output(['git','-C',str(folder),*args],stderr=subprocess.STDOUT,text=True).strip()
         git(dependency,'init','-q');git(dependency,'add','.')
         git(dependency,'-c','user.name=Fixture','-c','user.email=fixture@test','commit','-qm','a pinned catalog')
@@ -42,10 +44,13 @@ def run():
         record=dict(format=2,files=[dict(row='DoorInput',repository=str(dependency),revision=revision,source_path='Doors.swift',path='.gate/inputs/doors.swift',sha256=hashlib.sha256(catalog.encode()).hexdigest())],languages={},plain_fragments=[],shelf_overrides=False)
         root_record=owner/'.gate/forms-definitions.json';root_record.write_text(json.dumps(record,indent=2)+'\n')
         world_manifest='public protocol Role {}\npublic protocol Mine {}\npublic enum FormsFile: Role {}\npublic enum Facts: Mine {\n    public typealias Kind = FormsFile\n}\nextension Facts { public static var typeName: String { "Facts.swift" } }\n'
+        world_manifest+='public protocol Theirs {}\npublic enum CarriedFile: Role {}\npublic enum Evidence: Theirs {\n public typealias Kind = CarriedFile\n public typealias At = SourcePin\n}\nextension Evidence { public static var typeName: String { "Evidence.md" } }\npublic enum SourcePin {}\nextension SourcePin { public static var typeName: String { '+json.dumps(str(dependency)+'@'+revision)+' } }\n'
         (owner/'Island/gate.manifest.swift').write_text(world_manifest)
+        (owner/'Island/Hidden.txt').write_text('NOT_AN_INPUT')
+        (owner/'Island/Hidden.bin').write_bytes(b'BINARY_NOT_AN_INPUT\0')
         facts='public protocol Choice {}\npublic protocol Paired {}\npublic enum Coral: Choice {}\npublic enum Other: Choice {}\npublic enum Pair<L: Choice, R: Choice> {}\nextension Pair: Paired where L == R {}\npublic typealias Same = Pair<Coral, Coral>\n'
         (owner/'Island/Facts.swift').write_text(facts)
-        (owner/'Island/.gate/forms-definitions.json').write_text(json.dumps(dict(format=2,files=[],languages={},plain_fragments=[],shelf_overrides=False)))
+        (owner/'Island/.gate/forms-definitions.json').write_text(json.dumps(dict(format=2,files=[dict(row='Evidence',path='Evidence.md',repository=str(dependency),revision=revision,source_path='Notes.md',sha256=hashlib.sha256(note).hexdigest())],languages={},plain_fragments=[],shelf_overrides=False)))
         git(owner,'init','-q');git(owner,'add','.');git(owner,'-c','user.name=Fixture','-c','user.email=fixture@test','commit','-qm','a declared publication')
         installed=base/'installation/bin';installed.mkdir(parents=True)
         binary=installed/'gate-cli';shutil.copy2(ROOT/'bin/gate-cli',binary)
@@ -87,6 +92,13 @@ def run():
                 text=snapshot['responses']['GET /world?f='+f]['body']
                 req=urllib.request.Request(origin+'/verdict?f='+f,data=text.encode(),method='POST')
                 assert urllib.request.urlopen(req).read()==snapshot['responses']['POST /verdict?f='+f]['body'].encode()
+            listed=json.loads(get('/files'))
+            assert set(listed['files'])=={'Facts.swift','Evidence.md','gate.manifest.swift'}
+            assert listed['theirs']['Evidence.md']['sha256']==hashlib.sha256(note).hexdigest()
+            assert get('/world?f=Evidence.md')==note
+            for hidden in ('Hidden.txt','Hidden.bin'):
+                try:get('/world?f='+hidden);raise AssertionError('undeclared input exposed')
+                except urllib.error.HTTPError as e:assert e.code==404
             assert get('/assets/vi_court_bytes.js')==(site/'assets/vi_court_bytes.js').read_bytes()
             req=urllib.request.Request(origin+'/world?f=gate.manifest.swift',data=b'changed',method='PUT')
             try:urllib.request.urlopen(req);raise AssertionError('structural write accepted')

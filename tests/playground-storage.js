@@ -95,6 +95,23 @@ function open(id) {
     await scale.fetch("/world?f=Company.swift",{method:"PUT",body:twice});
     assert.strictEqual(await (await open("scale").fetch("/world?f=Company.swift")).text(),twice);
     assert(storage.getItem(bigKey).length < 100000);
+    for (const id of ["readme", "basics", "atom"]) {
+        const page = open(id), snapshots = JSON.parse(fs.readFileSync(path.join(root, "playground", id, "snapshots.json")));
+        const listed = JSON.parse(snapshots["/files"]), taken = Object.keys(listed.theirs || {});
+        assert(taken.length > 0);
+        assert(!listed.files.some(f => f.endsWith(".ttf")));
+        for (const f of taken) {
+            assert(listed.files.includes(f));
+            const pinned = snapshots["/world?f=" + f];
+            const key = "gate.pages." + record.showcase.revision + "." + id + "." + f;
+            storage.setItem(key, JSON.stringify({format: 1, text: "forged prior draft"}));
+            assert.strictEqual(await (await page.fetch("/world?f=" + encodeURIComponent(f))).text(), pinned);
+            const wrote = await page.fetch("/world?f=" + encodeURIComponent(f), {method:"PUT", body:"forged write"});
+            assert.strictEqual(wrote.status, 409);
+            assert.strictEqual(await (await open(id).fetch("/world?f=" + encodeURIComponent(f))).text(), pinned);
+            storage.removeItem(key);
+        }
+    }
     // Storage failure is a failed write, never a cheerful saved receipt.
     storage.setItem = ()=>{throw Error("quota");};
     const failed = await reopened.fetch("/world?f="+encodeURIComponent(f),{method:"PUT",body:state.text});
