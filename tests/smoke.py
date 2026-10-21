@@ -13521,7 +13521,7 @@ public enum MyWatch: AccessLedger {
     # that says what you just cloned did not. The check was green over a listing
     # missing two of its entries, which is a guard reading the wrong side of the
     # pair it holds.
-    _root_allow = {".github", ".githooks", ".gitignore", "README.md"}
+    _root_allow = {".gitattributes", ".github", ".githooks", ".gitignore", "README.md"}
     _tracked = subprocess.run(["git", "ls-files"], cwd=HERE,
                               capture_output=True, text=True).stdout.split("\n")
     _top = sorted({p.split("/")[0] for p in _tracked if p})

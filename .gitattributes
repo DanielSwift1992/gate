@@ -1,0 +1,4 @@
+# Pinned inputs are held to their owners' SHA-256, and the Windows vein reads
+# them from its own checkout: no platform may rewrite a committed byte, line
+# endings included.
+* -text
