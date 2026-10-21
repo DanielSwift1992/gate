@@ -24,6 +24,13 @@ def run(source):
     request=json.loads((source/'Profiles/Playground/request.json').read_text())
     with tempfile.TemporaryDirectory(prefix='gate-owner-profile-') as tmp:
         base=Path(tmp);dep=base/'declared-input';dep.mkdir();owner=base/'HarborAtlas';(owner/'Island/.gate').mkdir(parents=True);(owner/'.gate').mkdir()
+        # These are native owner readings of today's inputs, not frozen copies.
+        # Swift/Python belong to this build-time control; the consumer below has
+        # only git in PATH, exactly as an autonomous installation does.
+        variants=base/'variants'
+        host_env={k:v for k,v in os.environ.items() if not k.startswith('GATE_') and k not in ('PLAYGROUND_SOURCE','SHOWCASE_SOURCE','VI_THEORY_PATH','NODE_USE_SYSTEM_CA')}
+        if shutil.disk_usage(source).free<5*1024**3:raise RuntimeError('owner profile control: less than 5 GiB free before the Swift build')
+        subprocess.run([sys.executable,str(source/'Checks/profile-inputs.py'),'--export',str(variants)],cwd=source,env=host_env,check=True,timeout=600)
         def git(folder,*args):return subprocess.check_output(['git','-C',str(folder),*args],stderr=subprocess.STDOUT,text=True).strip()
         git(dep,'init','-q');git(owner,'init','-q')
         atom=lambda n,t:'public enum '+n+': Close {}\nextension '+n+' { public static var typeName: String { '+json.dumps(t)+' } }\n'
@@ -131,7 +138,7 @@ def run(source):
         values=copy.deepcopy(default);r=json.loads(values['TheDrawing']);r['result']['bindings']=[b for b in r['result']['bindings'] if not(b['theme']=='dark' and b['role']=='text-primary')];values['TheDrawing']=json.dumps(r).encode();refused('missing dark role',values)
         values=copy.deepcopy(default);values['TheMetrics']=values['TheMetrics'].replace(b'"2048"',b'"2049"');r=json.loads(values['TheDrawing']);r['inputs']['TheMetrics']['sha256']=sha(values['TheMetrics']);r['result']['font']['metrics_sha256']=sha(values['TheMetrics']);r['result']['font']['units']=2049;values['TheDrawing']=json.dumps(r).encode();refused('intact unknown metrics',values,'unsupported')
         for name in ['renamed','other-palette']:
-            variant=source/'Profiles/Playground/Controls'/name;values=copy.deepcopy(default);receipt=json.loads((variant/'receipt.json').read_text())
+            variant=variants/name;values=copy.deepcopy(default);receipt=json.loads((variant/'receipt.json').read_text())
             for row,entry in receipt['inputs'].items():
                 p=variant/Path(entry['path']).name
                 if p.exists():values[row]=p.read_bytes()
@@ -169,7 +176,7 @@ def run(source):
             port=subprocess.run(['node',str(ROOT/'bin/drawing-profile.js'),origin],input=json.dumps(value),capture_output=True,text=True,env=host_env,timeout=60)
             assert port.returncode==0,port.stderr
             compiled=json.loads(port.stdout);assert compiled['origin']=='port' and compiled['owner_receipt']['status']=='stale'
-            owner_css=(source/'Profiles/Playground/Controls/other-palette/drawing.css').read_text()
+            owner_css=(variants/'other-palette/drawing.css').read_text()
             roles=lambda css:re.findall(r'--vi-([a-z-]+)\s*:\s*([^;{}]+)',css)
             assert roles(compiled['css'])==roles(owner_css),'the live port colours differ from the genuine owner A4 reading'
             assert (owner/'Palette.swift').read_bytes()==default['ThePalette'],'unsaved reading wrote the source'
@@ -183,7 +190,16 @@ def run(source):
 
 
 if __name__=='__main__':
-    if len(sys.argv)>1:source=Path(sys.argv[1])
+    if len(sys.argv)>1:run(Path(sys.argv[1]).resolve())
     else:
-        cache=Path(subprocess.check_output([str(ROOT/'bin/playground-worlds.sh')],text=True).strip());source=cache/'showcase'
-    run(source)
+        # Only the control needs the owner's build tools. Do not add its SwiftPM
+        # build inputs to the worlds shipped to every published bench.
+        spec=json.loads((ROOT/'bin/playground-worlds.from').read_text())['showcase']
+        with tempfile.TemporaryDirectory(prefix='gate-profile-owner-reader-') as tmp:
+            source=Path(tmp)
+            def git(*args):subprocess.run(['git','-C',str(source),*args],check=True)
+            git('init','-q');git('config','core.autocrlf','false');git('config','core.eol','lf')
+            git('fetch','-q','--depth','1','https://github.com/DanielSwift1992/verification-is-identification-showcase',spec['revision'])
+            git('checkout','-q','FETCH_HEAD')
+            for name,want in spec['files'].items():assert sha((source/name).read_bytes())==want,name+': owner input differs from the publication pin'
+            run(source)
