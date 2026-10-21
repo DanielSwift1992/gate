@@ -9,7 +9,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"><meta charset="utf-8"><title>gate · world bench</title>
 <!-- zero egress, enforced by the browser as well as by the code: the bench may
      talk to its own loopback server and to nothing else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-5GzCvayhfKIAxAwizJRqS3a05vGAKRgdgfqpOuJGoBs=' 'sha256-X7jEiYwvaydrJ4NrVvwI3D4I1pJubp9k+2JiK4WZRps='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-5GzCvayhfKIAxAwizJRqS3a05vGAKRgdgfqpOuJGoBs=' 'sha256-qg9vmGLhyzNCnpV83XBWyI9SS+Nfr1oxzSxIF/N8WO8='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
 <link rel="stylesheet" href="/codemirror.css">
 <script>
 // The theme is a declaration, not a toggle — and the declaration lives in the
@@ -3859,6 +3859,19 @@ updateNavButtons();
 // state lives only in the editor buffer until it holds again. A programmatic
 // load (setValue) judges without writing.
 let timer = null;
+// A verdict and a drawing name the bytes they read. An edit retires that
+// receipt at once, before the next debounced reading, and an older request
+// cannot bring it back after the buffer has changed.
+function readingChanged() {
+    renderGeneration++;
+    resetDrawing();
+    lastRefusals = [];
+    clearFlags();
+    badFiles = new Set(); buildRail();
+    document.getElementById("status").textContent = "Reading changed text…";
+    for (const id of ["chips", "verdicts", "next"])
+        document.getElementById(id).textContent = "";
+}
 cm.on("change", (_, change) => {
     clearTimeout(timer);
     const userEdit = change.origin && change.origin !== "setValue";
@@ -3874,6 +3887,7 @@ cm.on("change", (_, change) => {
     // and the second was of exactly what the first had just answered. Whoever
     // puts text here draws it; edits, including slot choices, schedule a write.
     if (!userEdit && change.origin === "setValue") return;
+    readingChanged();
     timer = setTimeout(() => tick(userEdit), userEdit ? 400 : 150);
 });
 cm.on("blur", () => setTimeout(hideCompletion, 120));

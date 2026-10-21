@@ -20,6 +20,7 @@ class Element {
     setAttribute(k,v){this.attrs[k]=v;}
 }
 (async()=>{
+    await require("./bench-edit-pending.js")(ui);
     // A new door without a per-file view still applies the bench's default.
     // The selected button and the visible surface must answer the same word.
     const start=ui.indexOf('        setMode(theirsFiles[first]?.kind');

@@ -3387,10 +3387,12 @@ function bench(text = atom, file = 'Atom.swift', neighbors = { 'AtomPages.swift'
     const feedback = { textContent: '' };
     const button = { hidden: true };
     const elements = { 'canvas-host': host, 'drawing-feedback': feedback, 'view-drawing': button,
-        'editor-host': { style: {} }, bare: { style: {}, innerHTML: '' }, 'table-host': { style: {} } };
+        'editor-host': { style: {} }, bare: { style: {}, innerHTML: '' }, 'table-host': { style: {} },
+        status: {}, chips: {}, verdicts: {}, next: {} };
     const context = vm.createContext({
         active: file, files: [file, ...Object.keys(neighbors)], drawingInputRefusals: [], documentFiles: new Set([file, ...Object.keys(neighbors)]), theirsFiles: {}, viewingShelf: null, mode: 'drawing',
         lastParsed: judge(file, text, kitVocabulary).parsed, kitVocabulary, press,
+        renderGeneration: 0, clearFlags() {}, buildRail() {},
         compEl: completion, compItems: [], compFrom: null, compSlot: null, compRect: null,
         compChosen: 0, compScaffold: null, pending: null, localNames: new Set(),
         // Supply a grammar answer at the hidden cursor, just as the real page
@@ -3428,7 +3430,7 @@ function bench(text = atom, file = 'Atom.swift', neighbors = { 'AtomPages.swift'
         render: () => {}, bareForm: () => '', buildTables: () => {}, syncProjection: () => {},
     });
     vm.runInContext(['codeOfLine', 'aliasValueRange', 'locateSlot', 'fillSlot', 'setMode',
-        'hideCompletion', 'drawCompletion', 'offerCompletion', 'acceptCompletion'].map(grab).join('\n'), context);
+        'readingChanged', 'hideCompletion', 'drawCompletion', 'offerCompletion', 'acceptCompletion'].map(grab).join('\n'), context);
     const changeStart = ui.indexOf('cm.on("change",');
     assert(changeStart >= 0);
     vm.runInContext('let timer = null;\n' + ui.slice(changeStart, ui.indexOf('\n});', changeStart) + 4), context);
@@ -3507,6 +3509,9 @@ async function main() {
     assert.match(other.feedback.textContent, /the applier refuses: no rule named MissingRule/);
     other.context.applyDrawingPress('append Text x');
     assert.match(other.feedback.textContent, /Literal typing is not available/); assert.equal(other.edits.length, 0);
+    // The preceding press retired its picture. Make a current picture before
+    // testing a click whose buffer then drifts without the editor event.
+    await b.context.drawCanvases();
     const old = b.text(); b.change(old + '\n// typed since the drawing\n');
     b.click(b.key('DropBeta')); assert.equal(b.text(), old + '\n// typed since the drawing\n');
     assert.match(b.feedback.textContent, /drawing changed/);
@@ -5493,6 +5498,12 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     _csp_module = _security_import.module_from_spec(_csp_spec)
     _csp_spec.loader.exec_module(_csp_module)
     _page = open(os.path.join(HERE, "web", "ui.html"), encoding="utf-8").read()
+    _pending = subprocess.run(["node", os.path.join(HERE, "tests", "bench-edit-pending.js")],
+                              capture_output=True, text=True)
+    S.append(("an edit retires old drawing and court receipts before the next reading",
+              _pending.returncode == 0))
+    if _pending.returncode:
+        print(_pending.stdout + _pending.stderr, flush=True)
     _script_policy = re.search(r"script-src ([^;]+)", _page).group(1)
     S.append(("the bench authorizes only its exact inline programs and blocks inline handlers",
               "'unsafe-inline'" not in _script_policy
