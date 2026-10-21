@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- The live bench groups declared file readings through `POST /world`. One HTTP response resolves its taken inputs once; each delivered input is read and hashed into the buffer sent. Startup shares its reading across vocabulary and the first file, and later opens ask again. No file metadata cache replaces SHA-256.
+
 - Generate the README battery count from registrations with `python3 bin/battery_count.py`. The battery refuses a stale stamp with that repair command before building, and checks the executed count against registered cases.
 
 - `serve` prints `Ready: <address>` after its socket starts listening; `--json` retains its route record. Table shows an atom's literal `typeName` beside its name, with its source address. Each `/world` response resolves its pinned inputs once and rechecks them on the next request.

@@ -50,6 +50,13 @@ def run():
     code,body=ask('/world?f='+name,'PUT',b'forged edit');assert code==409 and 'read-only' in body.decode()
     assert ask('/world?f='+name)[1]==samples[entry['source_path']]
     assert ask('/verdict?f='+name,'POST',b'forged edited reading')[0]==409
+   batch=json.loads(ask('/world','POST',json.dumps([e['path'] for e in entries]+['secret.txt']).encode())[1])
+   for entry in entries:
+    item=batch[entry['path']]
+    if entry['source_path'] in ('bad-utf8','asset','control'):
+     assert item['status']==409
+    else:assert item['status']==200 and item['text'].encode()==samples[entry['source_path']]
+   assert batch['secret.txt']['status']==404
    assert 'Facts.swift' not in files['theirs'] and 'secret.txt' not in files['files']
    assert ask('/world?f=secret.txt')[0]==404
    assert ask('/world?f=Facts.swift','PUT',b'public protocol MineStillWorks {}\n')[0]==200
@@ -92,6 +99,32 @@ def run():
     assert code==409 and 'cached input bytes differ' in json.loads(body)['reason'],(code,body)
    finally:cached.write_bytes(original)
    assert ask('/world?f=materials/source.md')[1]==original
+   # A stat cache cannot authorize these bytes: inode, length and mtime stay.
+   before=cached.stat();changed=bytes([original[0]^1])+original[1:]
+   for atomic in (False,True):
+    try:
+     if atomic:
+      replacement=cached.with_name(cached.name+'.replace');replacement.write_bytes(changed)
+      os.utime(replacement,ns=(before.st_atime_ns,before.st_mtime_ns));replacement.replace(cached)
+     else:
+      with cached.open('r+b') as f:f.write(changed)
+      os.utime(cached,ns=(before.st_atime_ns,before.st_mtime_ns))
+      assert cached.stat().st_ino==before.st_ino
+     assert cached.stat().st_size==before.st_size and cached.stat().st_mtime_ns==before.st_mtime_ns
+     code,body=ask('/world?f=materials/source.md');assert code==409 and json.loads(body)['address'].startswith('.gate/forms-definitions.json:')
+     packet=json.loads(ask('/world','POST',b'["materials/source.md"]')[1])['materials/source.md']
+     assert packet['status']==409 and json.loads(packet['text'])['address'].startswith('.gate/forms-definitions.json:')
+    finally:cached.write_bytes(original)
+    assert ask('/world?f=materials/source.md')[1]==original
+   # Removing a cache entry rehydrates the pin with a fresh hash, like a cold
+   # cache. Losing the declared input itself refuses; no held packet survives.
+   saved=descriptor.read_bytes();stat=descriptor.stat()
+   try:
+    descriptor.unlink()
+    packet=json.loads(ask('/world','POST',b'["materials/source.md"]')[1])['materials/source.md']
+    assert packet['status']==409 and 'address' in json.loads(packet['text'])
+   finally:descriptor.write_bytes(saved);os.utime(descriptor,ns=(stat.st_atime_ns,stat.st_mtime_ns))
+   cached.unlink();assert ask('/world?f=materials/source.md')[1]==original
   finally:process.terminate();process.wait(timeout=10)
  print('CARRIED READINGS GREEN: exact UTF-8/CRLF/empty bytes, provenance, binary exclusion, no fallback, read-only Theirs and writable Mine')
 if __name__=='__main__':run()

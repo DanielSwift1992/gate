@@ -3584,7 +3584,7 @@ async function main() {
     broken.context.fetch = async () => ({ ok: false });
     await broken.context.drawCanvases(); assert.match(broken.host.innerHTML, /could not read missing\.swift/);
     assert.equal(vm.runInContext('drawingSnapshot', broken.context), null);
-    assert(ui.includes('async function loadFile(name) {\n    resetDrawing();'));
+    assert(ui.includes('async function loadFile(name, readings = null) {\n    resetDrawing();'));
     assert(ui.includes('<script src="/press.js"></script>'));
     result.generations = true;
     const counted = 'public enum Caption: Close {}\nextension Caption { public static var typeName: String { "Count" } }\npublic enum Art: GrownDiagram {\n public typealias Across = U64\n public typealias AriaLabel = Caption\n @StructureBuilder\n public static var body: some Structure & DividesY {\n Air<Half<U2>>.self\n }\n}\n';
@@ -3947,6 +3947,7 @@ eval(["buildScopes", "admits", "scopesAt", "noteStartAt", "codeOfLine", "placeAt
      .map(n => grab(n)).join("\\n"));
 var nameLabels = new Map();
 eval(grab("collectLabels"));
+eval(grab("readWorlds", "async "));
 eval(grab("loadVocabulary", "async "));
 const world = ["public enum Legal: Realm {}",
                "public enum E9: Keeper {",
@@ -4310,6 +4311,7 @@ eval(["buildScopes", "admits", "scopesAt", "noteStartAt", "codeOfLine", "placeAt
      .map(n => grab(n)).join("\\n"));
 var nameLabels = new Map();
 eval(grab("collectLabels"));
+eval(grab("readWorlds", "async "));
 eval(grab("loadVocabulary", "async "));
 // a world here carries its own forms, the way the demo's ownership.swift does,
 // and is read by the court that reads forms
@@ -6390,7 +6392,7 @@ public enum Use: Admitted {
               and "!formsHere.contains(name)" in shelf_src
               # its words reach what the bench offers
               and "for (const f of formsFiles)" in ui
-              and 'sources.push([f, await (await fetch("/world?f="' in ui))
+              and 'sources.push([f, rows.get(f)?.text || ""])' in ui))
 
     # ── THE LAST MILE, AND WHERE IT STOPS. Every answer ends with a step and the
     # step names a command in backticks — which is a sentence to read, and a
@@ -8774,6 +8776,12 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
     # lock made the battery a different SIZE per machine, and the README
     # count check said so the first time the battery ran on ubuntu.
     if shutil.which("swiftc"):
+        _delivery_buffer = subprocess.run([sys.executable, os.path.join(HERE, "tests", "delivery-buffer.py")],
+                                          capture_output=True, text=True, timeout=60)
+        if _delivery_buffer.returncode:
+            print("   delivery buffer:", (_delivery_buffer.stdout + _delivery_buffer.stderr)[-4000:])
+        S.append(("a file changed or lost after resolution refuses before its bytes are delivered",
+                  _delivery_buffer.returncode == 0))
         _b = subprocess.run(["bash", os.path.join(HERE, "bin", "build-cli.sh")],
                             capture_output=True, text=True)
         _cli_bin = os.path.join(HERE, "bin", "gate-cli")
@@ -14585,6 +14593,13 @@ public enum MyWatch: AccessLedger {
         print("   N2:", (_scopes.stdout + _scopes.stderr)[-3500:])
     S.append(("declared languages and the owner's scope map admit an ordinary fourth module",
               _scopes.returncode == 0))
+
+    _world_readings = subprocess.run(["node", os.path.join(HERE, "tests", "read-worlds.js")],
+                                     capture_output=True, text=True, timeout=60)
+    if _world_readings.returncode:
+        print("   world readings:", (_world_readings.stdout + _world_readings.stderr)[-4000:])
+    S.append(("the first reading batches its files and later operations ask for fresh bytes",
+              _world_readings.returncode == 0))
 
     _count_controls = subprocess.run([sys.executable, os.path.join(HERE, "tests", "battery-count.py")],
                                       capture_output=True, text=True, timeout=60)

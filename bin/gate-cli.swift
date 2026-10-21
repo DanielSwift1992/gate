@@ -1581,7 +1581,7 @@ func canonicalPath(_ p: String, _ st: PathStyle = HOST_PATHS) -> String {
 func readText(_ path: String) -> String? {
     // read with python's errors="replace": a byte that is not utf-8 becomes the
     // replacement character rather than a refusal to read the file at all
-    guard let data = FileManager.default.contents(atPath: path) else { return nil }
+    guard let data = inputBytes(path) else { return nil }
     let text = String(decoding: data, as: UTF8.self)
     // ── AND A MARK AT THE HEAD OF A FILE IS NOT ITS FIRST CHARACTER. A file a
     // Windows editor wrote opens with a byte-order mark, and the other carrier
@@ -1635,7 +1635,7 @@ func matchAt(_ text: String, _ pattern: String) -> [String]? {
     }
 }
 
-struct LayoutRow {
+struct LayoutRow: Equatable {
     var name: String?
     var source: String
     var path: String
@@ -1881,8 +1881,38 @@ struct TakenResolution {
     var inputs: [String: [String: String]] = [:]
     var addresses: [String: String] = [:]
     var bad: [(address: String, claim: String)] = []
+    var bytes: [String: Data] = [:]
+}
+struct TakenRequestEntry {
+    var manifest: Data?
+    var record: Data?
+    var rows: [LayoutRow]
+    var result: TakenResolution
+}
+// A response owns its verified bytes. The next HTTP request starts empty;
+// file metadata never substitutes for a byte check, including restored mtimes.
+var TAKEN_REQUEST: [String: TakenRequestEntry]? = nil
+func inputBytes(_ path: String) -> Data? {
+    if let entries = TAKEN_REQUEST {
+        for entry in entries.values {
+            if let bytes = entry.result.bytes[path] { return bytes }
+        }
+    }
+    return FileManager.default.contents(atPath: path)
 }
 func takenInputs(_ w: WorldState) -> TakenResolution {
+    guard TAKEN_REQUEST != nil, let root = layoutDir(w), let layout = w.layout else {
+        return resolveTakenInputs(w)
+    }
+    let manifest = FileManager.default.contents(atPath: layout.manifest)
+    let record = FileManager.default.contents(atPath: joinPath(root, ".gate/forms-definitions.json"))
+    if let entry = TAKEN_REQUEST?[root], entry.manifest == manifest,
+       entry.record == record, entry.rows == layout.rows { return entry.result }
+    let result = resolveTakenInputs(w)
+    TAKEN_REQUEST?[root] = TakenRequestEntry(manifest: manifest, record: record, rows: layout.rows, result: result)
+    return result
+}
+func resolveTakenInputs(_ w: WorldState) -> TakenResolution {
     var result = TakenResolution()
     guard let root = layoutDir(w), let layout = w.layout else { return result }
     let record = joinPath(root, ".gate/forms-definitions.json")
@@ -1983,7 +2013,8 @@ func takenInputs(_ w: WorldState) -> TakenResolution {
             guard sha256Hex(bytes) == hash else {
                 bad(at + "/sha256", "\(name): cached input bytes differ from their sha256"); continue
             }
-            result.paths[name] = target; result.inputs[name] = input; continue
+            result.paths[name] = target; result.inputs[name] = input
+            result.bytes[target] = bytes; continue
         }
         do { try FileManager.default.createDirectory(atPath: cache, withIntermediateDirectories: true) }
         catch { bad(at, "\(name): cannot create the input cache"); continue }
@@ -2013,6 +2044,7 @@ func takenInputs(_ w: WorldState) -> TakenResolution {
             try blob.1.write(to: URL(fileURLWithPath: target), options: .atomic)
             result.paths[name] = target
             result.inputs[name] = input
+            result.bytes[target] = blob.1
         } catch { bad(at, "\(name): cannot cache the verified input") }
     }
     return result
@@ -2676,11 +2708,11 @@ func readGrammarContexts(_ w: WorldState, live: [String: String],
                 identity = "local:" + row.path // identity is relative to this world, not its checkout location
             }
             if row.source == "theirs", let typed = live[row.path],
-               FileManager.default.contents(atPath: path) != Data(typed.utf8) {
+               inputBytes(path) != Data(typed.utf8) {
                 bad(row.path + ":1", "a taken Language input is read-only at its pin")
                 return
             }
-            guard let data = (row.source == "mine" ? live[row.path].map({ Data($0.utf8) }) : nil) ?? FileManager.default.contents(atPath: path),
+            guard let data = (row.source == "mine" ? live[row.path].map({ Data($0.utf8) }) : nil) ?? inputBytes(path),
                   let text = String(data: data, encoding: .utf8) else {
                 bad(row.path + ":1", "Language source is missing or not UTF-8"); return
             }
@@ -3497,7 +3529,7 @@ func personalPathOf(_ w: WorldState) -> String? {
 // A text reading is UTF-8 without binary control bytes. Its bytes stay intact;
 // no extension, language parser or desk-specific name decides what is text.
 func benchText(_ path: String) -> Bool {
-    guard let bytes = FileManager.default.contents(atPath: path),
+    guard let bytes = inputBytes(path),
           let text = String(data: bytes, encoding: .utf8) else { return false }
     return !text.unicodeScalars.contains { ($0.value < 32 && ![9, 10, 13].contains($0.value)) || $0.value == 127 }
 }
@@ -3550,7 +3582,7 @@ func opensAs(_ w: WorldState, _ path: String) -> (view: String?, said: String?) 
             return (BENCH_VIEWS.contains(said) ? said : nil, said)
         }
     }
-    guard let data = FileManager.default.contents(atPath: path) else { return (nil, nil) }
+    guard let data = inputBytes(path) else { return (nil, nil) }
     let head = String(decoding: data.prefix(2000), as: UTF8.self)
     for line in head.components(separatedBy: "\n").prefix(6) {
         if let m = matchAt(line.trimmingCharacters(in: .whitespaces), "//\\s*opens:\\s*(\\S+)") {
@@ -12054,7 +12086,7 @@ func drawingInputs(_ w: WorldState, counts: Bool = true) -> (plan: [String: Any]
         inputPath(row, w, resolved) ?? ""
     }
     let row = profiles[0], path = source(row)
-    guard let bytes = FileManager.default.contents(atPath: path), let text = String(data: bytes, encoding: .utf8) else { return refused(row.path + ":1", "the drawing profile input is missing") }
+    guard let bytes = inputBytes(path), let text = String(data: bytes, encoding: .utf8) else { return refused(row.path + ":1", "the drawing profile input is missing") }
     let structure = codeOf(text)
     func body(_ name: String) -> String {
         matches("public enum " + name + "\\b[^\\{]*\\{(.*?)\\n\\}", structure, dotAll: true).first?.first ?? ""
@@ -12072,7 +12104,7 @@ func drawingInputs(_ w: WorldState, counts: Bool = true) -> (plan: [String: Any]
     for input in (w.layout?.rows ?? []) where selected.contains(input.name ?? "") {
         guard let name = input.name else { continue }
         let file = source(input)
-        guard let data = FileManager.default.contents(atPath: file) else {
+        guard let data = inputBytes(file) else {
             return refused(input.path + ":1", "declared profile input is missing")
         }
         let hash = sha256Hex(data); assets[hash] = data
@@ -12093,10 +12125,10 @@ func drawingInputs(_ w: WorldState, counts: Bool = true) -> (plan: [String: Any]
         }
         inputs[name] = item
     }
-    let reader = FileManager.default.contents(atPath: joinPath(toolRoot(), "bin/renderer.js")) ?? Data()
-    let supportData = FileManager.default.contents(atPath: joinPath(toolRoot(), "bin/drawing-fonts.json")) ?? Data()
+    let reader = inputBytes(joinPath(toolRoot(), "bin/renderer.js")) ?? Data()
+    let supportData = inputBytes(joinPath(toolRoot(), "bin/drawing-fonts.json")) ?? Data()
     let support = (try? JSONSerialization.jsonObject(with: supportData)) ?? [String: Any]()
-    let recordData = FileManager.default.contents(atPath: joinPath(root, ".gate/forms-definitions.json")) ?? Data()
+    let recordData = inputBytes(joinPath(root, ".gate/forms-definitions.json")) ?? Data()
     let record = (try? JSONSerialization.jsonObject(with: recordData)) ?? [String: Any]()
     return (["status": "declared", "record": record,
              "record_sha256": sha256Hex(recordData), "profile": ["path": row.path, "text": text, "sha256": sha256Hex(Data(text.utf8))],
@@ -12116,7 +12148,7 @@ func drawingTakenTexts(_ w: WorldState) -> [(String, String)] {
         // A resource is not a text page. Decoding binary bytes with replacement
         // would copy the shared asset into every shelf snapshot as broken text.
         if let name = row.name, let path = resolved.paths[name],
-           let bytes = FileManager.default.contents(atPath: path),
+           let bytes = inputBytes(path),
            let text = String(data: bytes, encoding: .utf8), !text.utf8.contains(0) {
             files.append(["path": row.path, "text": text])
         }
@@ -12133,7 +12165,7 @@ func drawingTakenTexts(_ w: WorldState) -> [(String, String)] {
 
 func serveFile(_ conn: GateSocket, _ path: String, _ ctype: String) {
     let relative = path.hasPrefix(toolRoot() + "/") ? String(path.dropFirst(toolRoot().count + 1)) : ""
-    guard let body = FileManager.default.contents(atPath: path) ?? runtimeData(relative) else {
+    guard let body = inputBytes(path) ?? runtimeData(relative) else {
         serveJSON(conn, compactDumps(.object([
             ("error", .text("this request was not one the bench could read: FileNotFoundError")),
             ("next", .text("the terminal answers the same questions and says more: "
@@ -12345,6 +12377,33 @@ func serveReadingRefusal(_ conn: GateSocket, _ bad: (address: String, claim: Str
         ("verdict", .text("refused")), ("address", .text(bad.address)), ("reason", .text(bad.claim))])).utf8))
 }
 
+// Single and grouped reads share the delivery check. They hash the exact
+// buffer sent, after the response's input plan has resolved.
+func worldReading(_ w: WorldState, _ name: String, _ taken: TakenResolution,
+                  _ files: [(String, String)]) -> (code: Int, type: String, data: Data) {
+    if let bad = benchTakenRefusal(w, name, resolved: taken, files: files) {
+        return (409, "application/json; charset=utf-8", publicationJSON([
+            "verdict": "refused", "address": bad.address, "reason": bad.claim]))
+    }
+    if let row = w.layout?.rows.first(where: { $0.path == name && $0.source == "theirs" }),
+       ["CarriedFile", "FormsFile", "WorldFile"].contains(row.kind ?? ""),
+       let input = taken.inputs[row.name ?? ""], let path = taken.paths[row.name ?? ""] {
+        // Authenticate the actual delivery buffer too. A replacement between
+        // plan resolution and this read refuses, even within the same request.
+        guard let bytes = FileManager.default.contents(atPath: path), sha256Hex(bytes) == input["sha256"] else {
+            return (409, "application/json; charset=utf-8", publicationJSON([
+                "verdict": "refused", "address": taken.addresses[row.name ?? ""] ?? row.path + ":1",
+                "reason": "\(row.name ?? name): input changed or disappeared before delivery · \(input["repository"] ?? "")@\(input["revision"] ?? ""):\(input["source_path"] ?? "")"]))
+        }
+        return (200, "text/plain; charset=utf-8", bytes)
+    }
+    guard let path = servePick(w, ["f": name], files: files) else {
+        return (404, "text/plain; charset=utf-8", Data())
+    }
+    if let bytes = inputBytes(path) { return (200, "text/plain; charset=utf-8", bytes) }
+    return (200, "text/plain; charset=utf-8", Data(personalTemplate().utf8))
+}
+
 // ── WHAT A COMMIT DID, READ AS FACTS WHERE IT CAN BE. This is a world, so
 // `Rank: Manager -> Lead` is what changed, never `-`/`+` around plumbing. Lines
 // that are not a fact change stay lines; git's own noise (index, ---/+++, @@) is
@@ -12543,6 +12602,8 @@ func serveDoor(_ a: [String]) -> Never {
         if conn == gateNoSocket { continue }
         let spawnsBefore = SPAWNS
         if let asked = serveRead(conn) {
+            TAKEN_REQUEST = [:]
+            defer { TAKEN_REQUEST = nil }
             if hasPublication || !matches(#"public enum \w+: Publication\s*\{"#, uncommented(readText(joinPath(publicationRoot, "gate.manifest.swift")) ?? "")).isEmpty {
                 do {
                     let plan = try buildReadPlan(publicationRoot)
@@ -12772,6 +12833,7 @@ func serveDoor(_ a: [String]) -> Never {
                 }
                 var pairs: [(String, StatusJSON)] = [
                     ("files", .list(names.map { .text($0) })),
+                    ("batch_readings", .raw("true")),
                     ("theirs", .object(origins)),
                     ("unavailable", .list(unavailable.map { .text($0.path) })),
                     ("layout", lay.flatMap { names.contains($0) ? StatusJSON.text($0) : nil } ?? .null),
@@ -12812,27 +12874,25 @@ func serveDoor(_ a: [String]) -> Never {
                         ? "true" : "false")))
                 serveJSON(conn, compactDumps(.object(pairs)))
             case ("GET", "/world"):
-                // the page obeys the declared layout: `?f=` names a file FROM
-                // that list, and a name the world does not carry is a miss
                 let w = servedWorld()
-                // One response authenticates the declared inputs once. The next
-                // request resolves them again, including a damaged warm cache.
                 let taken = takenInputs(w)
                 let files = benchFilesOf(w, readings: true, resolved: taken)
-                if let bad = benchTakenRefusal(w, asked.query["f"] ?? "", resolved: taken, files: files) {
-                    serveReadingRefusal(conn, bad); break
+                let reply = worldReading(w, asked.query["f"] ?? "", taken, files)
+                serveSay(conn, reply.code, reply.type, reply.data)
+            case ("POST", "/world"):
+                guard let names = (try? JSONSerialization.jsonObject(with: asked.body)) as? [String] else {
+                    serveSay(conn, 400, "application/json", Data("{\"error\":\"a list of declared file names is required\"}".utf8)); break
                 }
-                guard let p = servePick(w, asked.query, files: files) else {
-                    serveSay(conn, 404, nil, Data())
-                    break
+                let w = servedWorld()
+                let taken = takenInputs(w)
+                let files = benchFilesOf(w, readings: true, resolved: taken)
+                var replies: [String: Any] = [:]
+                for name in Set(names).sorted() {
+                    let reply = worldReading(w, name, taken, files)
+                    replies[name] = ["status": reply.code, "text": String(decoding: reply.data, as: UTF8.self)]
                 }
-                if FileManager.default.fileExists(atPath: p) {
-                    serveFile(conn, p, "text/plain; charset=utf-8")
-                } else {
-                    // yours, and nobody has written in it yet
-                    serveSay(conn, 200, "text/plain; charset=utf-8",
-                             Data(personalTemplate().utf8))
-                }
+                let data = (try? JSONSerialization.data(withJSONObject: replies, options: [.sortedKeys])) ?? Data()
+                serveSay(conn, 200, "application/json; charset=utf-8", data)
             case ("GET", "/gitstatus"):
                 // the honest state: a write lands in the working copy and git
                 // carries the history, so this says whether the file is

@@ -9,7 +9,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"><meta charset="utf-8"><title>gate · world bench</title>
 <!-- zero egress, enforced by the browser as well as by the code: the bench may
      talk to its own loopback server and to nothing else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-5GzCvayhfKIAxAwizJRqS3a05vGAKRgdgfqpOuJGoBs=' 'sha256-6vLvFlE8NNoVbQBKL72mlNSsERovM+xysy5KiDDtHTo='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-5GzCvayhfKIAxAwizJRqS3a05vGAKRgdgfqpOuJGoBs=' 'sha256-3lBhYVsE/JZmD+DfZKl6RZ/jQLSR2KEpjtDNK6wpbW0='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
 <link rel="stylesheet" href="/codemirror.css">
 <script>
 // The theme is a declaration, not a toggle — and the declaration lives in the
@@ -1289,6 +1289,7 @@ function wheel(surface) {
     return turners.length === 1 ? turners[0].d : null;
 }
 
+let batchReadings = false;
 let worldRead = false;   // has this page read the world once, layout and all
 function applyMyBench() {
     // ── AND A REMEMBERED DECLARATION IS NOT DROPPED BEFORE THE WORLD IS READ.
@@ -3999,18 +4000,33 @@ function refusalLabels(claim) {
             + esc(label.file) + ':' + label.line + ' · ' + esc(label.value) + '</small>'] : [];
     }).join("");
 }
-async function siblings() {
+// A reading belongs to one operation. Startup passes its map through the
+// vocabulary and first file; later opens ask again, including refused inputs.
+async function readWorlds(names) {
+    if (typeof batchReadings !== "undefined" && batchReadings) {
+        const response = await fetch("/world", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(names) });
+        if (!response.ok) throw new Error("The declared readings are unavailable");
+        const rows = await response.json();
+        return new Map(names.map(name => {
+            const row = rows[name];
+            if (!row || typeof row.text !== "string" || !Number.isInteger(row.status)) throw new Error("Missing reading: " + name);
+            return [name, { ok: row.status === 200, status: row.status, text: row.text }];
+        }));
+    }
+    // Static publications already hold their pinned response bytes. Older
+    // servers use the same single-file protocol, with no retained browser cache.
+    return new Map(await Promise.all(names.map(async name => {
+        const response = await fetch("/world?f=" + encodeURIComponent(name));
+        return [name, { ok: response.ok, status: response.status, text: await response.text() }];
+    })));
+}
+async function siblings(readings = null) {
     const generation = fileLoadGeneration;
-    // ── AND THE WORLD IS ASKED FOR ALL AT ONCE. Opening one file read every
-    // other file to learn its names, one after the next, each waiting for the
-    // one before: five files meant five round trips laid end to end, and that
-    // wait was the whole of the pause between clicking a name and seeing the
-    // page. They do not depend on each other, so they are asked together and
-    // read in the order the list has, which is what keeps the answer the same.
-    const want = files.filter(f => f !== layoutFile && !(theirsFiles[f]?.kind === "CarriedFile"));   // the layout's names are its own
-    const texts = await Promise.all(want.map(f =>
-        f === active ? Promise.resolve(editor.value)
-                     : fetch("/world?f=" + encodeURIComponent(f)).then(r => r.ok ? r.text() : "")));
+    const want = files.filter(f => f !== layoutFile && !(theirsFiles[f]?.kind === "CarriedFile"));
+    const rows = new Map(readings || []);
+    const missing = want.filter(f => f !== active && !rows.has(f));
+    if (missing.length) for (const [name, row] of await readWorlds(missing)) rows.set(name, row);
+    const texts = want.map(f => f === active ? editor.value : rows.get(f)?.ok ? rows.get(f).text : "");
     if (generation !== fileLoadGeneration) return;
     siblingNames = new Set(); layoutDecls = new Map(); declFile = new Map(); nameLabels = new Map();
     for (let i = 0; i < want.length; i++) {
@@ -4028,7 +4044,7 @@ function takenLabel(name) {
         + (origin.verified ? origin.repository + "@" + origin.revision + ":" + origin.source_path
             + " · SHA-256 " + origin.sha256 : origin.at + " · source bytes not verified");
 }
-async function loadFile(name) {
+async function loadFile(name, readings = null) {
     resetDrawing();
     const generation = ++fileLoadGeneration;
     scopesAt.cache = null;
@@ -4050,8 +4066,8 @@ async function loadFile(name) {
     // bar and whoever follows it lands on this file, not on the first one
     try { history.replaceState(null, "", "?f=" + encodeURIComponent(name)); } catch (e) { }
     buildRail();
-    const response = await fetch("/world?f=" + encodeURIComponent(name));
-    const t = await response.text();
+    const response = readings?.get(name) || (await readWorlds([name])).get(name);
+    const t = response.text;
     if (generation !== fileLoadGeneration || active !== name) return;
     cm.setOption("readOnly", !!taken || !!window.GatePublication?.readOnly);
     viewingShelf = taken ? name : null;
@@ -4089,7 +4105,7 @@ async function loadFile(name) {
     // now; neither request is a prerequisite for seeing the opened records.
     if (mode === "table") buildTables();
     if (mode === "bare") document.getElementById("bare").innerHTML = bareForm(lastParsed, t);
-    await siblings();
+    await siblings(readings);
     if (generation !== fileLoadGeneration || active !== name) return;
     worldRead = true;
     render();
@@ -4168,7 +4184,7 @@ for (const head of document.querySelectorAll("h3.fold")) {
 // judge in the browser. Names use each declaration's own short name: a one-line
 // enum body leaves its opener on the parse stack, so a later gate is read as its
 // child, but the short name is the one the world speaks. ──
-async function loadVocabulary() {
+async function loadVocabulary(readings = null) {
     vocabulary = {}; conformers = {}; axisOf = {}; protoAxes = {}; FORM_ROWS.gate = {};
     nameLabels = new Map();
     shelfDecls = new Map();
@@ -4179,8 +4195,8 @@ async function loadVocabulary() {
     // was born knowing while the operator's own file, sitting right there in
     // their repository, had just declared another one.
     const sources = [];
-    for (const f of formsFiles)
-        sources.push([f, await (await fetch("/world?f=" + encodeURIComponent(f))).text()]);
+    const rows = readings || await readWorlds([...formsFiles]);
+    for (const f of formsFiles) sources.push([f, rows.get(f)?.text || ""]);
     // A pinned data input is readable, not a language the world may speak.
     // Only the shipped shelf and the world's own forms grant vocabulary.
     for (const mod of (list.modules || []).filter(m => !shelfInputs[m]))
@@ -4239,6 +4255,7 @@ async function readFiles() {
     const response = await fetch("/files");
     if (!response.ok) throw new Error("The declared file list is unavailable");
     const fl = await response.json();
+    batchReadings = fl.batch_readings === true;
     files = fl.files || []; personalFile = fl.personal || null; personalEmpty = !!fl.personal_empty;
     layoutFile = fl.layout || null;
     formsFiles = new Set(fl.forms || []);
@@ -4262,7 +4279,14 @@ async function readFiles() {
     try { language = await (await fetch("/language")).json(); } catch { }
     await loadDrawingProfile();
     wireJudgeRow();
-    await loadVocabulary();
+    const askedView = new URLSearchParams(location.search).get("view");
+    const asked = new URLSearchParams(location.search).get("f") || "";
+    const askedLine = asked.match(/:(\d+)$/);
+    const askedFile = askedLine ? asked.slice(0, askedLine.index) : asked;
+    const first = files.includes(askedFile) || unavailableFiles.includes(askedFile) ? askedFile : files[0];
+    const initial = [...new Set([...formsFiles, ...(files.includes(first) ? [first] : [])])];
+    const readings = await readWorlds(initial);
+    await loadVocabulary(readings);
     // the rail carries files AND the journal, so it shows for any clone
     // the line says what is true HERE: with a world, the judge is at work;
     // without one, only the history is being read
@@ -4314,16 +4338,11 @@ buildRail();
         // the cover, and any link anybody shares, showed the ceremony rather
         // than the record. `view=bare|table|full` names it, and a line asked
         // for in Bare marks its record instead of selecting its text.
-        const askedView = new URLSearchParams(location.search).get("view");
-        const asked = new URLSearchParams(location.search).get("f") || "";
-        const askedLine = asked.match(/:(\d+)$/);
-        const askedFile = askedLine ? asked.slice(0, askedLine.index) : asked;
-        const first = files.includes(askedFile) || unavailableFiles.includes(askedFile) ? askedFile : files[0];
         // A default is a real view too. Merely setting `mode = bare` left
         // CodeMirror visible on worlds that stated no per-file opening view.
         setMode(theirsFiles[first]?.kind !== "CarriedFile" && ["bare", "table", "full"].includes(askedView)
             ? askedView : opensAs[first] || mode);
-        await loadFile(first);
+        await loadFile(first, readings);
         if (first === askedFile && askedLine) doorLine = +askedLine[1];
         doorView = askedView;
     }

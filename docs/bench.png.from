@@ -1,3 +1,3 @@
-web/ui.html sha256:34ecf581b5d398734f472a30ac994cd5c72e14db37be8d3f02911c6edfb59022
+web/ui.html sha256:37fee4b45868f9a36ce482b6d12201de82045cd6d0e1c90619e626f771d5a91d
 door /?f=ownership.swift:89&view=bare over examples/codeowners, 1280x800 at 2x
 retake: bash bin/shoot-bench.sh

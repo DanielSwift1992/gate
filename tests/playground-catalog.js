@@ -39,7 +39,7 @@ module.exports=async function(root){
    files:files.files,SHELF_SORTS:['a-domain','the-tool','the-bench','the-reader'],SHELF_MEANS:{}});
   ctx.formsFiles=new Set(files.forms);ctx.worldAliases=new Map();ctx.FORM_ROWS={gate:{}};ctx.buildScopes=()=>{};
   ctx.vocabulary={};ctx.conformers={};ctx.axisOf={};ctx.protoAxes={};ctx.shelfDecls=new Map();
-  vm.runInContext(implementation('collectLabels'),ctx);vm.runInContext(implementation('loadVocabulary'),ctx);await vm.runInContext('loadVocabulary()',ctx);
+  vm.runInContext(implementation('collectLabels'),ctx);vm.runInContext(implementation('readWorlds'),ctx);vm.runInContext(implementation('loadVocabulary'),ctx);await vm.runInContext('loadVocabulary()',ctx);
   assert(!ctx.vocabulary.ReadMeTab,'a catalog is not a language grant');
   for(const n of ['reading','layoutOrActive','nameTokens','activeDecls','tableGroups','ledgerGroups','bareForm','collectLabels','statedLabels','tableTerm','buildTables','shelfRank','buildShelf','openShelf','jumpTo'])vm.runInContext(implementation(n),ctx);
   await vm.runInContext('buildShelf()',ctx);
