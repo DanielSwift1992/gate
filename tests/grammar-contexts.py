@@ -324,7 +324,9 @@ def run():
         # These compare the owner's context/foreign/unknown-atom doors too;
         # the input stays an ordinary FormsFile, never a demo switch.
         grammar_vectors = [
-            ('builder context admits its separator', 'public enum Page {\n    public static var body: some Structure { Item.self; Item.self }\n}\n', 'holds'),
+            # A page with no declared applications is admitted, and says so as
+            # empty: the grammar passed, and no relation was there to hold.
+            ('builder context admits its separator', 'public enum Page {\n    public static var body: some Structure { Item.self; Item.self }\n}\n', 'empty'),
             ('plain context refuses that separator', 'public enum Page {\n    public static var body: Other { Item.self; Item.self }\n}\n', 'refused'),
             ('unregistered character', 'public typealias Snow = ' + chr(0x2603) + '\n', 'refused'),
             ('exemption does not register a character', 'public enum Page: GrammarExempt {\n' + chr(0x2603) + '\n}\n', 'refused'),
@@ -333,7 +335,7 @@ def run():
         for label, text, expected in grammar_vectors:
             pages['Pages/Main.swift'] = ('Main', 'HarborLanguage', text)
             write(); ask(label, expected)
-            owner(label + ' agrees with vi', 0 if expected == 'holds' else 1)
+            owner(label + ' agrees with vi', 0 if expected in ('holds', 'empty') else 1)
 
         pages['Pages/Main.swift'] = ('Main', 'HarborLanguage', 'import enum HarborShapes.Token\n')
         write(); ask('an unsupported import form is named', 'unsupported', 'import syntax is not supported')
