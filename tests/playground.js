@@ -51,11 +51,16 @@ const outside = new Set([...kitVocabulary.seeds, ...kitVocabulary.generics, ...k
     "Close", "Open", "Never", "Given", "Structure", "Divides", "DividesY", "SoftShadow", "Female", "Male", "IndividualContributor", "Lead", "Manager",
     "Finance", "Engineering", "Sales", "People", "OnSite", "Hybrid", "Remote", "FinanceShare", "EngineeringShare", "SalesShare", "PeopleShare"]);
 for (const [world, sources] of Object.entries(renderFixture.world_sources)) {
-    const text = sources.map(n => read(path.join(sc, n))).join("\n");
+    // Historical fixtures keep their old paths. The current Drawing owner
+    // names the live composition, including a separately declared data file.
+    const drawingCase = JSON.parse(read(path.join(sc, "Contracts/Drawing/v0.1/manifest.json"))).cases.find(c =>
+        c.target && c.sources.every(n => n.startsWith("Worlds/Playground/" + world + "/")));
+    const currentSources = drawingCase ? drawingCase.sources : sources;
+    const text = currentSources.map(n => read(path.join(sc, n))).join("\n");
     const original = [world + ".swift", ...(["Atom", "Light"].includes(world) ? [world + "Pages.swift"] : [])]
         .map(n => read(path.join(base, "corpus/worlds", n))).join("\n");
     check(world + " historical snapshots stay historical; current file orders agree", () => {
-        const arts = draw(world, text), reverse = draw(world, [...sources].reverse().map(n => read(path.join(sc, n))).join("\n"));
+        const arts = draw(world, text), reverse = draw(world, [...currentSources].reverse().map(n => read(path.join(sc, n))).join("\n"));
         const pinned = fixture("r2-preservation").render.worlds[world];
         if (pinned) assert.deepStrictEqual(hashes(draw(world, original, true)),
             pinned.map(({name,bytes,sha256})=>({name,bytes,sha256})), world + " historical renderer");

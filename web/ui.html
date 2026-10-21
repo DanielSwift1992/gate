@@ -593,6 +593,7 @@ let layoutFile = null;
 // record may be. Their names belong to the vocabulary the bench offers,
 // and their court is `where`, never the plain stream.
 let formsFiles = new Set(), carriedFiles = new Set(), documentFiles = new Set();
+let drawingInputRefusals = [];
 let theirsFiles = {}, unavailableFiles = [];
 let fileLoadGeneration = 0;
 let readerDrafts = false;
@@ -3673,6 +3674,7 @@ function drawingFiles(file) {
     return [...documentFiles].filter(f => f !== file);
 }
 async function drawingWorld() {
+    if (drawingInputRefusals.length) throw new Error(drawingInputRefusals.map(r => r.address + ": " + r.claim).join("; "));
     const file = active, buffer = editor.value, names = drawingFiles(file);
     const key = JSON.stringify([file, names]);
     if (!drawingNeighbors || drawingNeighbors.key !== key) {
@@ -4261,7 +4263,8 @@ async function readFiles() {
     layoutFile = fl.layout || null;
     formsFiles = new Set(fl.forms || []);
     carriedFiles = new Set(fl.carried || []);
-    documentFiles = new Set(fl.documents || []);
+    documentFiles = new Set(fl.drawing_inputs || []);
+    drawingInputRefusals = fl.drawing_input_refusals || [];
     theirsFiles = fl.theirs || {}; unavailableFiles = fl.unavailable || [];
     readerDrafts = fl.save_policy === "reader-draft";
     opensAs = fl.opens || {};

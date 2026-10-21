@@ -127,11 +127,15 @@ def run():
         organization = prepared('Organization')
         assert status(organization)['verdict'] == 'holds'
         source = organization / 'Organization.swift'
-        source.write_text(source.read_text().replace('public typealias Home = Finance', 'public typealias Home = Sales', 1))
+        original_data = source.read_text()
+        source.write_text(original_data.replace('public typealias Home = Finance', 'public typealias Home = Sales', 1))
         lie = status(organization)
         assert lie['verdict'] == 'refused' and all(r['address'].startswith('Organization.swift:') for r in lie['refusals'])
-        source.write_text(source.read_text().replace('// ── the data the page reads', '// boundary erased'))
-        assert status(organization)['verdict'] == 'refused'
+        # A pure WorldFile needs no page/data delimiter. Preserve the company
+        # negative above, then remove the now descriptive comment only.
+        source.write_text(original_data.replace('// ── the data the page reads', '// data follows'))
+        assert status(organization)['verdict'] == 'holds'
+        assert json.loads((organization / '.gate/forms-definitions.json').read_text())['plain_fragments'] == []
         # The new palette preserves the old integer relations and each of its
         # seventeen slack+1 controls refuses in the native court.
         subprocess.run([sys.executable, str(cache / 'showcase/Checks/Playground/palette-count.py'),

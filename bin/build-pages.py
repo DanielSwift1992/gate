@@ -72,7 +72,7 @@ def publish(source, out, context=None):
 
         if context and context.get("drawing"):
             # Bind the declared owner remainder to these exact initial bytes.
-            hashes = sorted(hashlib.sha256(texts[f].encode()).hexdigest() for f in files.get("documents", []))
+            hashes = sorted(hashlib.sha256(texts[f].encode()).hexdigest() for f in files.get("drawing_inputs", []))
             context["drawing"]["source_digest"] = hashlib.sha256(json.dumps(hashes, separators=(",", ":")).encode()).hexdigest()
 
         shelf = json.loads(snap["/shelf"])

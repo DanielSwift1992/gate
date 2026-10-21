@@ -1646,6 +1646,7 @@ struct LayoutRow: Equatable {
     var language: String? = nil
     var line: Int
     var kind: String? = nil
+    var drawingInputs: [String] = []
 }
 struct Layout { var manifest: String; var rows: [LayoutRow] }
 struct WorldState { var facts: String?; var tables: String?; var layout: Layout? }
@@ -1698,7 +1699,8 @@ func layoutRowsFull(_ dir: String, said: String? = nil) -> (rows: [LayoutRow], m
                               source: (atom == "Mine" || atom == "WorldFile") ? "mine" : "theirs",
                               path: path, role: role,
                               from: (from?.isEmpty ?? true) ? nil : from,
-                              written: axis("Written"), opens: axis("Opens"), language: axis("Language"), line: at, kind: kind))
+                              written: axis("Written"), opens: axis("Opens"), language: axis("Language"), line: at, kind: kind,
+                              drawingInputs: matches("typealias DrawingInputs\\s*=\\s*([^\\n}]+)", both).compactMap { $0.first }))
     }
     if rows.isEmpty && !code.contains("Mine") && !code.contains("WorldFile") {
         // older layouts: a bare list of paths, every one of them a world file
@@ -1708,6 +1710,44 @@ func layoutRowsFull(_ dir: String, said: String? = nil) -> (rows: [LayoutRow], m
         }
     }
     return (rows, mp)
+}
+
+// A document can read another declared source without changing its Kind.
+// This is the same input closure for status, serve, publication and Drawing.
+func drawingInputs(_ rows: [LayoutRow]) -> (paths: [String], bad: [(address: String, claim: String)]) {
+    var bad: [(address: String, claim: String)] = [], edges: [String: [String]] = [:]
+    let named = Dictionary(grouping: rows.compactMap { r in r.name.map { ($0, r) } }, by: { $0.0 })
+    for row in rows {
+        guard let name = row.name, !row.drawingInputs.isEmpty else { continue }
+        let at = "gate.manifest.swift:\(row.line)"
+        guard row.drawingInputs.count == 1 else { bad.append((at, "\(name): DrawingInputs must be declared once")); continue }
+        let raw = row.drawingInputs[0].trimmingCharacters(in: .whitespaces)
+        let single = raw.range(of: #"^\w+$"#, options: .regularExpression) != nil
+        let tuple = raw.range(of: #"^\(\s*\w+(?:\s*,\s*\w+)+\s*\)$"#, options: .regularExpression) != nil
+        guard single || tuple else { bad.append((at, "\(name): DrawingInputs needs one manifest row or a tuple of rows")); continue }
+        let refs = matches(#"(\w+)"#, raw).compactMap { $0.first }
+        guard Set(refs).count == refs.count else { bad.append((at, "\(name): DrawingInputs repeats a row")); continue }
+        for ref in refs where named[ref]?.count != 1 { bad.append((at, "\(name): DrawingInputs row '\(ref)' is missing or ambiguous")) }
+        edges[name] = refs
+    }
+    var finished = Set<String>(), visiting = Set<String>()
+    func check(_ name: String) {
+        guard !finished.contains(name) else { return }
+        guard visiting.insert(name).inserted else {
+            bad.append(("gate.manifest.swift:\(named[name]?.first?.1.line ?? 1)", "DrawingInputs cycle at '\(name)'")); return
+        }
+        for next in edges[name] ?? [] { check(next) }
+        visiting.remove(name); finished.insert(name)
+    }
+    for name in edges.keys.sorted() { check(name) }
+    var reached = Set<String>()
+    func include(_ name: String) {
+        guard reached.insert(name).inserted else { return }
+        for next in edges[name] ?? [] { include(next) }
+    }
+    for row in rows where row.kind == "DocumentFile" { if let name = row.name { include(name) } }
+    let paths = reached.compactMap { named[$0]?.first?.1.path }
+    return (Array(Set(paths)).sorted(), bad)
 }
 
 func discoverWorld() -> WorldState {
@@ -2085,6 +2125,7 @@ func manifestGuards(_ w: WorldState, liveRows: [LayoutRow]? = nil,
     let taken = takenInputs(w)
     bad += taken.bad
     bad += kindBindingGuards(live, liveText)
+    bad += drawingInputs(live).bad
     var seenPaths: [String: String] = [:]
     var seenRows = Set<String>()
     for r in live {
@@ -12929,6 +12970,8 @@ func serveDoor(_ a: [String]) -> Never {
                     ("unavailable", .list(unavailable.map { .text($0.path) })),
                     ("layout", lay.flatMap { names.contains($0) ? StatusJSON.text($0) : nil } ?? .null),
                     ("forms", .list(formsRows.map { .text($0) })),
+                    ("drawing_inputs", .list(drawingInputs(rows).paths.map { .text($0) })),
+                    ("drawing_input_refusals", .list(drawingInputs(rows).bad.map { .object([("address", .text($0.address)), ("claim", .text($0.claim))]) })),
                     ("documents", .list(Array(Set(rows.filter { $0.kind == "DocumentFile" }
                         .map(\.path))).sorted().map { .text($0) })),
                     ("carried", .list(rows.filter { $0.role == "carried" && names.contains($0.path) }
@@ -13638,6 +13681,8 @@ func buildReadPlan(_ selected: String) throws -> ReadPlan {
                 json("GET /files", ["files": names, "layout": "gate.manifest.swift", "forms": forms,
                      "world_files": Array(Set(parsed.rows.filter { $0.kind == "WorldFile" }.map(\.path))).sorted(),
                      "carried": parsed.rows.filter { $0.kind == "CarriedFile" }.map { $0.path }, "worlds": groups,
+                     "drawing_inputs": drawingInputs(parsed.rows).paths,
+                     "drawing_input_refusals": drawingInputs(parsed.rows).bad.map { ["address": $0.address, "claim": $0.claim] },
                      "documents": Array(Set(parsed.rows.filter { $0.kind == "DocumentFile" }.map(\.path))).sorted(),
                      "theirs": publicationObject(.object(parsed.rows.filter { $0.source == "theirs" }.map { ($0.path, benchOrigin($0, taken)) })),
                      "roles": Dictionary(uniqueKeysWithValues: STATUS_ROLES), "opens": [:], "seams": [], "undeclared": [], "overridden": [:],
