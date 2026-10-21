@@ -1,5 +1,6 @@
 'use strict';
 const assert=require('assert'),fs=require('fs'),path=require('path'),vm=require('vm'),{webcrypto}=require('crypto');
+const expected=process.argv[3]||'holds',file=process.argv[4]||'Facts.swift';
 const site=process.argv[2],origin='http://fixture.test/book/';
 const source=fs.readFileSync(path.join(site,'assets/publication.js'),'utf8');
 async function transport(broken) {
@@ -19,11 +20,13 @@ async function transport(broken) {
 }
 (async()=>{
     const t=await transport();
-    assert.equal((await (await t.fetch('/status')).json()).verdict,'holds');
-    const f='Facts.swift',text=await(await t.fetch('/world?f='+encodeURIComponent(f))).text();
-    assert.equal((await(await t.fetch('/verdict?f='+f,{method:'POST',body:text})).json()).verdict,'holds');
+    assert.equal((await (await t.fetch('/status')).json()).verdict,expected);
+    const f=file,text=await(await t.fetch('/world?f='+encodeURIComponent(f))).text();
+    assert.equal((await(await t.fetch('/verdict?f='+f,{method:'POST',body:text})).json()).verdict,expected);
     assert.equal((await(await t.fetch('/verdict?f='+f,{method:'POST',body:text+'changed'})).json()).verdict,'unsupported');
     assert.equal((await t.fetch('/world?f=gate.manifest.swift',{method:'PUT',body:'changed'})).status,409);
+    if(t.plan.languages.Island?.resolved.active)
+        assert.deepEqual(await(await t.fetch('/grammar-contexts')).json(),t.plan.languages.Island.resolved);
     const bytes=Object.keys(t.plan.resources).find(n=>n.startsWith('inputs/'));
     const lost=await transport(bytes),answer=await(await lost.fetch('/status')).json();
     assert.equal(answer.verdict,'refused');assert(answer.input_errors.length);

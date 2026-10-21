@@ -49,6 +49,9 @@ public enum CatalogFile: Role {
 // rows taken at the same revision say the same name, not merely the same
 // text. `Written` names another row: the words a page is written in, so the
 // two are read together.
+// A row may declare Language: the key of its format 2 namespace, definitions,
+// imports and vi-owned scope map. Language cannot replace the Kind's reader.
+// docs/LANGUAGES.md states the supported context and the old null-map boundary.
 public protocol Role {}
 // Each Kind names its installed reader. A world's declaration keeps this choice.
 public enum DrawingProfileReaderV1: Role {}

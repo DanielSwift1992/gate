@@ -53,7 +53,7 @@
         const method = (options.method || 'GET').toUpperCase();
         // Browser requests for installed assets remain ordinary HTTP requests.
         const u = new URL(String(url), location.href);
-        if (!['/files', '/world', '/verdict', '/gitstatus', '/status', '/shelf', '/version', '/language', '/attention', '/log', '/drawing-profile', '/value', '/declare'].includes(u.pathname))
+        if (!['/files', '/world', '/verdict', '/gitstatus', '/status', '/shelf', '/version', '/language', '/attention', '/log', '/drawing-profile', '/grammar-contexts', '/value', '/declare'].includes(u.pathname))
             return real(url, options);
         if (method !== 'GET' && !(method === 'POST' && u.pathname === '/verdict'))
             return response({ ...failure('Read-only publication. Change the source repository and publish again.'), code: 'read-only-structure' }, 409);

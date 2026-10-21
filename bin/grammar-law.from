@@ -1,0 +1,19 @@
+{
+  "format": "vi-grammar-port/1",
+  "repository": "https://github.com/DanielSwift1992/verification-is-identification",
+  "revision": "05dced31ea82faad7a04c9a9f28df98759839c0c",
+  "files": {
+    "ScopeMap.swift": {
+      "source_path": "Sources/Tools/Grammar/ScopeMap.swift",
+      "sha256": "fb7bc17270578b974adcee2748154d44c0b8fc3e19ea1f36ea94670d6607f1ad"
+    },
+    "GrammarPolicy.swift": {
+      "source_path": "Sources/Tools/Grammar/GrammarPolicy.swift",
+      "sha256": "02de6fc5db6ab916d1ab6c5a051c20f060e0f3fb5228e46e59a6470462760c02"
+    },
+    "policy.json": {
+      "source_path": "Checks/Grammar/policy.json",
+      "sha256": "8b8d1610f3e3bc5dc0dd5be61d22081c1b37a4e01cad5f7a18d995df42afe38b"
+    }
+  }
+}

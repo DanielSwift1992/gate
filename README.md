@@ -376,6 +376,10 @@ bin/renderer.js · bin/press.js
                 establish equivalence to arbitrary Swift. press.js applies a
                 drawn key to one alias; its historical pin and the archived
                 renderer replay remain recorded in bin/drawing.from.
+bin/grammar-law.from
+                vi's scope reader and compiler-derived grants, pinned together;
+                a world's Language supplies imports, definitions and its own
+                source scope map. [The context contract](docs/LANGUAGES.md).
 bin/gate-cli.swift
                 the CLI, one file of Swift: every verb this tool answers,
                 with the courts compiled in at their own pins
@@ -416,7 +420,7 @@ web/codemirror.*  the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
 docs/           DETAILS.md, SECURITY.md, CHANGELOG.md, NOTICE.md, and
                 the cover's picture with its provenance
-tests/smoke.py   the battery: 715 checks this repository holds itself
+tests/smoke.py   the battery: 716 checks this repository holds itself
                  to, end-to-end runs through judge parity through
                  documentation contracts; the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts

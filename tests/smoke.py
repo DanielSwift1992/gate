@@ -3221,6 +3221,14 @@ console.log(JSON.stringify(out));
     # Click the Atom's rendered keys through the page's own listener, slot
     # locator and writer, keeping Atom.swift and AtomPages.swift separate.
     # The applier and worlds are the pinned engine's.
+    # The fixture owns its input acquisition. A cold clone has no Drawing
+    # contract cache; a later test warming it is not this probe's dependency.
+    _press_inputs = subprocess.run(["bash", os.path.join(HERE, "bin/playground-worlds.sh")],
+                                   capture_output=True, text=True, timeout=240)
+    if _press_inputs.returncode != 0:
+        print("   drawing press inputs: " + _press_inputs.stderr[-700:])
+    _press_contract = os.path.join(_press_inputs.stdout.strip(),
+        "showcase", "Contracts", "Drawing", "v0.1", "contract.json")
     _press_probe = os.path.join(tmp, "drawing-press.js")
     open(_press_probe, "w", encoding="utf-8").write(r"""
 const fs = require('fs'), path = require('path'), vm = require('vm'), assert = require('assert/strict');
@@ -3258,7 +3266,7 @@ function bench(text = atom, file = 'Atom.swift', neighbors = { 'AtomPages.swift'
         clearTimeout: job => { if (job) job.cancelled = true; }, tick: write => writes.push(write),
         judge: (name, source, vocab) => { readings.push(source); return judge(name, source, vocab); },
         renderAll, GateDrawingProfile: require(path.join(root, 'bin/drawing-profile.js')),
-        suppliedDrawingProfile: {contract:JSON.parse(fs.readFileSync(path.join(root, 'bin/.worlds/playground', JSON.parse(fs.readFileSync(path.join(root, 'bin/playground-worlds.from'))).showcase.revision, 'showcase/Contracts/Drawing/v0.1/contract.json'), 'utf8'))}, drawingDeclaration:null,
+        suppliedDrawingProfile: {contract:JSON.parse(fs.readFileSync(process.argv[4], 'utf8'))}, drawingDeclaration:null,
         esc: s => String(s).replaceAll('&', '&amp;').replaceAll('<', '&lt;'),
         editor: { get value() { return buffer; } },
         document: { getElementById: id => elements[id], querySelectorAll: () => [] },
@@ -3459,8 +3467,9 @@ async function main() {
 }
 main().catch(e => { console.error(e.stack); process.exitCode = 1; });
 """)
-    _press_run = subprocess.run(["node", _press_probe, HERE, os.path.join(_dplay, "corpus", "worlds")],
-                                capture_output=True, text=True)
+    _press_run = (subprocess.run(["node", _press_probe, HERE, os.path.join(_dplay, "corpus", "worlds"), _press_contract],
+                                 capture_output=True, text=True)
+                  if _press_inputs.returncode == 0 else _press_inputs)
     try:
         _press_result = json.loads(_press_run.stdout) if _press_run.returncode == 0 else {}
     except Exception:
@@ -6397,7 +6406,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
                       for r in said_my.get("refusals", []))
               # by running the same guards, not by a second opinion of its own
               and "A court that answers about a world may" in shelf_src
-              and shelf_src.count("refusals += duplicateGuardsOver(sources)") >= 1))
+              and shelf_src.count("refusals += duplicateGuardsOver(") >= 1))
 
     # ── A SLOT IS A SLOT WHEREVER IT IS WRITTEN. `associatedtype Next: Cycle`
     # opens a hole and `Enter<Who: Keeper, Into: Room>` opens two — the same
@@ -8322,8 +8331,8 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
     # the bench may not say holds where a hook would refuse: the guards run on
     # the unsaved text as well, not only in the CLI
     S.append(("the bench runs the same guards the CLI does",
-              "duplicateGuardsOver(sources)" in open(VEIN, encoding="utf-8").read()
-              and "entryGuardsOver(sources)" in open(VEIN, encoding="utf-8").read()))
+              open(VEIN, encoding="utf-8").read().count("refusals += duplicateGuardsOver(") >= 3
+              and "refusals += entryGuardsOver(" in open(VEIN, encoding="utf-8").read()))
 
     # ── the two judges say the same words ──
     # The bench judges a single-file world in the browser, with the ported
@@ -10667,8 +10676,12 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
                                      os.path.join(HERE, "bin", ".court", _pin, "premise",
                                                   "Primitive.swift")],
                                     capture_output=True, timeout=180).stdout)
+        _mut_grammar = os.path.join(_mut, "grammar.swift")
+        with open(_mut_grammar, "wb") as _f:
+            _f.write(subprocess.check_output([sys.executable, os.path.join(HERE, "bin", "grammar-into-swift.py")]))
         _mb = subprocess.run(["swiftc", "-O", os.path.join(_mut, "main.swift"), _mut_shelf,
-                              _mut_premise,
+                              _mut_premise, _mut_grammar,
+                              *sorted(glob.glob(os.path.join(HERE, "bin", "grammar-law", "*.swift"))),
                               *[f for f in sorted(glob.glob(os.path.join(HERE, "bin", ".court",
                                                              _pin, "*.swift")))
                                 if os.path.basename(f) != "OrganizationJudge.swift"],
@@ -13239,8 +13252,8 @@ public enum MyWatch: AccessLedger {
     # so `/ladder.css` read as `/ladder` on one side and vanished on the other.
     # Both sides are read the same way: the roster at the head of the door, and
     # the cases the door actually answers.
-    routes = set(re.findall(r'case \("(?:GET|POST|PUT)", "(/[a-z/.]*)"\)', src))
-    contract = set(re.findall(r"^//\s+(?:GET|POST|PUT)\s+(/[a-z/.]*)", src, re.M))
+    routes = set(re.findall(r'case \("(?:GET|POST|PUT)", "(/[a-z/.-]*)"\)', src))
+    contract = set(re.findall(r"^//\s+(?:GET|POST|PUT)\s+(/[a-z/.-]*)", src, re.M))
     S.append(("the bench's promised routes are the routes the server answers",
               contract == routes))
 
@@ -14359,6 +14372,13 @@ public enum MyWatch: AccessLedger {
         print("   playground:", (_playground.stdout + _playground.stderr)[-6000:])
     S.append(("the pinned playground worlds keep their drawings, courts and separate state",
               _playground.returncode == 0))
+
+    _scopes = subprocess.run([sys.executable, os.path.join(HERE, "tests", "grammar-contexts.py")],
+                              capture_output=True, text=True, timeout=240)
+    if _scopes.returncode:
+        print("   N2:", (_scopes.stdout + _scopes.stderr)[-3500:])
+    S.append(("declared languages and the owner's scope map admit an ordinary fourth module",
+              _scopes.returncode == 0))
 
     # ── AND A SHORT RUN SAYS IT WAS SHORT, rather than blaming the README. The
     # swift vein's checks run only where a toolchain stands, so on a machine

@@ -124,6 +124,26 @@ public enum TheSwiftVein: Mine {
 }
 extension TheSwiftVein { public static var typeName: String { "bin/gate-cli.swift" } }
 
+// The grammar reader and its census are vi's bytes, held together by
+// bin/grammar-law.from and the builder's hashes.
+public enum GrammarLawRevision {}
+extension GrammarLawRevision { public static var typeName: String { "verification-is-identification@05dced31" } }
+public enum TheScopeReader: Theirs {
+    public typealias Kind = CarriedFile
+    public typealias At = GrammarLawRevision
+}
+extension TheScopeReader { public static var typeName: String { "bin/grammar-law/ScopeMap.swift" } }
+public enum TheGrammarReader: Theirs {
+    public typealias Kind = CarriedFile
+    public typealias At = GrammarLawRevision
+}
+extension TheGrammarReader { public static var typeName: String { "bin/grammar-law/GrammarPolicy.swift" } }
+public enum TheGrammarCensus: Theirs {
+    public typealias Kind = CarriedFile
+    public typealias At = GrammarLawRevision
+}
+extension TheGrammarCensus { public static var typeName: String { "bin/grammar-law/policy.json" } }
+
 // AND THE EDITOR THIS BENCH IS WRITTEN WITH. It arrived the way anything of
 // somebody else's should: named, versioned, and unchanged — its own first line
 // says CodeMirror 5.65.16, where it came from, its licence, and that it is

@@ -1644,6 +1644,7 @@ struct LayoutRow {
     var from: String?
     var written: String?
     var opens: String?
+    var language: String? = nil
     var line: Int
     var kind: String? = nil
 }
@@ -1698,7 +1699,7 @@ func layoutRowsFull(_ dir: String, said: String? = nil) -> (rows: [LayoutRow], m
                               source: (atom == "Mine" || atom == "WorldFile") ? "mine" : "theirs",
                               path: path, role: role,
                               from: (from?.isEmpty ?? true) ? nil : from,
-                              written: axis("Written"), opens: axis("Opens"), line: at, kind: kind))
+                              written: axis("Written"), opens: axis("Opens"), language: axis("Language"), line: at, kind: kind))
     }
     if rows.isEmpty && !code.contains("Mine") && !code.contains("WorldFile") {
         // older layouts: a bare list of paths, every one of them a world file
@@ -1917,7 +1918,8 @@ func takenInputs(_ w: WorldState) -> TakenResolution {
     }
     let fields: Set<String> = ["format", "files", "languages", "plain_fragments", "shelf_overrides"]
     for field in Set(spec.keys).subtracting(fields).sorted() { bad("/" + field, "unknown v2 record field") }
-    for (path, line) in spots.repeated where path == "/format" || path == "/files" || path.hasPrefix("/files/") {
+    for (path, line) in spots.repeated where path == "/format" || path == "/files" || path.hasPrefix("/files/")
+        || path == "/languages" || path.hasPrefix("/languages/") {
         result.bad.append((".gate/forms-definitions.json:\(line)", path + ": repeated field"))
     }
     guard let files = spec["files"] as? [Any] else {
@@ -2452,7 +2454,422 @@ func formsOutcome(_ refused: Int, _ residue: [FormResidue], _ checked: Int) -> S
 // These are explicit input files, not additional claims or a new file role.
 // The page builder lays this record beside the world; a changed or missing
 // definition is a refusal to read the record, never a fallback to our pin.
-func formsDefinitions(_ w: WorldState) -> (paths: [String], bad: [(address: String, claim: String)]) {
+// ── GRAMMAR CONTEXTS BEGIN: the scope/context slice; Kind remains the reader door.
+
+// Language supplies names and inputs, never a reader. Kind still chooses the
+// court. This is the full context path; the pre-Language checkpoint stays at
+// its existing door until its owner supplies complete data (migration 4a).
+struct GrammarUnit {
+    let row: String
+    let path: String
+    let sourcePath: String
+    let identity: String
+    let namespace: String
+    let text: String
+    let sha256: String
+    let mapSHA256: String
+    let scope: String
+}
+struct GrammarContext {
+    let name: String
+    let namespace: String
+    let rows: [LayoutRow]
+    let units: [GrammarUnit]
+    let definitions: [String]
+}
+struct GrammarContexts {
+    var active = false
+    var recordSHA256 = ""
+    var contexts: [GrammarContext] = []
+    var bad: [(address: String, claim: String)] = []
+    var unsupported: [FormResidue] = []
+    var receipt: [String: Any] {
+        ["format": "gate-grammar-contexts/1", "active": active, "record_sha256": recordSHA256,
+         "law": "vi-grammar-policy/1", "vi_revision": PinnedGrammarLaw.revision,
+         "policy_sha256": PinnedGrammarLaw.digest,
+         "refusals": bad.map { ["address": $0.address, "claim": $0.claim] },
+         "unsupported": unsupported.map { ["address": $0.address, "reason": $0.reason] },
+         "contexts": contexts.map { context -> [String: Any] in
+            ["language": context.name, "namespace": context.namespace,
+             "inputs": context.units.map { unit -> [String: Any] in
+                ["row": unit.row, "path": unit.path, "source_path": unit.sourcePath,
+                 "identity": unit.identity, "namespace": unit.namespace,
+                 "source_sha256": unit.sha256, "scope_map_sha256": unit.mapSHA256,
+                 "scope": unit.scope]
+             }]
+         }]
+    }
+}
+
+func grammarContexts(_ w: WorldState, live: [String: String] = [:],
+                     resolved supplied: TakenResolution? = nil) -> GrammarContexts {
+    var result = readGrammarContexts(w, live: live, resolved: supplied)
+    // A ReadPlan has the same bytes across processes and checkout locations,
+    // including its negative replies; dictionary iteration is not provenance.
+    result.bad.sort { ($0.address, $0.claim) < ($1.address, $1.claim) }
+    result.unsupported.sort { ($0.address, $0.id, $0.reason) < ($1.address, $1.id, $1.reason) }
+    return result
+}
+func readGrammarContexts(_ w: WorldState, live: [String: String],
+                         resolved supplied: TakenResolution?) -> GrammarContexts {
+    var result = GrammarContexts()
+    guard let root = layoutDir(w), let layout = w.layout else { return result }
+    let assigned = layout.rows.filter { $0.language != nil }
+    let recordPath = joinPath(root, ".gate/forms-definitions.json")
+    let originalRecord = FileManager.default.contents(atPath: recordPath)
+    result.recordSHA256 = originalRecord.map(sha256Hex) ?? ""
+    let originalSpec = originalRecord.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
+    // A declared but malformed context is never the null-map checkpoint.
+    if let spec = originalSpec, spec["format"] as? Int == 2, let raw = spec["languages"] {
+        guard let all = raw as? [String: [String: Any]] else {
+            result.active = true
+            result.bad.append((".gate/forms-definitions.json:1", "languages must be a context object"))
+            return result
+        }
+        let fields: Set<String> = ["definitions", "namespace", "imports", "scope_map"]
+        for (name, context) in all {
+            if let extra = Set(context.keys).subtracting(fields).sorted().first {
+                result.bad.append((".gate/forms-definitions.json:1", "Language '" + name + "' has unsupported field '" + extra + "'; Kind chooses the reader"))
+            }
+            if (context["definitions"] != nil && !(context["definitions"] is [String]))
+                || (context["namespace"] != nil && !(context["namespace"] is String))
+                || (context["imports"] != nil && !(context["imports"] is [[String: Any]])) {
+                result.bad.append((".gate/forms-definitions.json:1", "Language '" + name + "' has malformed context data"))
+            }
+        }
+        if !result.bad.isEmpty { result.active = true; return result }
+    }
+    if assigned.isEmpty {
+        if let bytes = FileManager.default.contents(atPath: recordPath),
+           let record = try? JSONSerialization.jsonObject(with: bytes) as? [String: Any],
+           let languages = record["languages"] as? [String: [String: Any]],
+           languages.values.contains(where: { $0["scope_map"] != nil && !($0["scope_map"] is NSNull) }) {
+            result.active = true
+            result.bad.append(("gate.manifest.swift:1", "a prepared scope context requires an explicit Language axis"))
+        }
+        return result
+    }
+    result.active = true
+    func bad(_ address: String, _ reason: String) { result.bad.append((address, reason)) }
+    for row in layout.rows where (row.role == "forms" || row.role == "world") && row.language == nil {
+        bad("gate.manifest.swift:\(row.line)", "\(row.name ?? row.path): a prepared context requires an explicit Language for every judged source")
+    }
+    guard let bytes = FileManager.default.contents(atPath: recordPath),
+          let record = try? JSONSerialization.jsonObject(with: bytes) as? [String: Any],
+          record["format"] as? Int == 2,
+          let languages = record["languages"] as? [String: [String: Any]],
+          let inputs = record["files"] as? [[String: String]] else {
+        bad(".gate/forms-definitions.json:1", "Language requires the complete format 2 context record")
+        return result
+    }
+    let resolved = supplied ?? takenInputs(w)
+    result.bad += resolved.bad
+    if originalRecord != FileManager.default.contents(atPath: recordPath) {
+        result.bad.append((".gate/forms-definitions.json:1", "the input record changed while resolving Language; read it again"))
+    }
+    if !result.bad.isEmpty { return result }
+    let rowsByName = Dictionary(layout.rows.compactMap { row in row.name.map { ($0, row) } },
+                                uniquingKeysWith: { a, _ in a })
+    let inputsByName = Dictionary(inputs.compactMap { input in input["row"].map { ($0, input) } },
+                                  uniquingKeysWith: { a, _ in a })
+    var mapsForSource: [String: String] = [:]
+    // namespace + source identity prevents the same imported declaration from
+    // conflicting with itself while preserving different origins and addresses.
+    var symbols: [String: (identity: String, address: String)] = [:]
+    var sourceNames: [String: Set<String>] = [:]
+    let claimed = Set(assigned.compactMap(\.language))
+    for name in claimed.sorted() {
+        let rows = assigned.filter { $0.language == name }
+        let at = "gate.manifest.swift:\(rows.first?.line ?? 1)"
+        guard let context = languages[name] else { bad(at, "Language '" + name + "' has no context"); continue }
+        let allowed: Set<String> = ["definitions", "namespace", "imports", "scope_map"]
+        if let extra = Set(context.keys).subtracting(allowed).sorted().first {
+            bad(".gate/forms-definitions.json:1", "Language '" + name + "' has unsupported field '" + extra + "'; Kind chooses the reader")
+            continue
+        }
+        guard Set(context.keys) == allowed,
+              let namespace = context["namespace"] as? String, !namespace.isEmpty,
+              let definitions = context["definitions"] as? [String],
+              let imports = context["imports"] as? [[String: Any]],
+              let mapName = context["scope_map"] as? String,
+              let mapRow = rowsByName[mapName], mapRow.source == "theirs", mapRow.role == "carried",
+              let mapPath = resolved.paths[mapName], let mapBytes = FileManager.default.contents(atPath: mapPath),
+              let mapText = String(data: mapBytes, encoding: .utf8) else {
+            bad(at, "Language '" + name + "' needs namespace, definitions, imports and a pinned CarriedFile scope_map")
+            continue
+        }
+        let map: GrammarScopeMap
+        do { map = try GrammarScopeMap.read(mapText, scopes: Set(PinnedGrammarLaw.policy.scopes)) }
+        catch { bad(mapRow.path + ":1", String(describing: error)); continue }
+        let mapHash = sha256Hex(mapBytes)
+        guard mapHash == inputsByName[mapName]?["sha256"] else {
+            bad(mapRow.path + ":1", "scope map bytes differ from the resolved pin")
+            continue
+        }
+        var permitted: [String: [String]] = [:], namespaceFor: [String: String] = [:]
+        var references = definitions
+        for entry in imports {
+            guard Set(entry.keys) == ["module", "inputs", "namespace"],
+                  let module = entry["module"] as? String,
+                  module.first.map({ $0.isLetter || $0 == "_" }) == true,
+                  module.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "_" }),
+                  let refs = entry["inputs"] as? [String], !refs.isEmpty,
+                  let importedNS = entry["namespace"] as? String, !importedNS.isEmpty,
+                  permitted[module] == nil else {
+                bad(at, "Language '" + name + "' has an import declaration with missing fields or a repeated module")
+                continue
+            }
+            permitted[module] = refs
+            for ref in refs {
+                if let prior = namespaceFor[ref], prior != importedNS {
+                    bad(at, "input '" + ref + "' is exported into conflicting namespaces '" + prior + "' and '" + importedNS + "'")
+                }
+                namespaceFor[ref] = importedNS
+                if !references.contains(ref) { references.append(ref) }
+            }
+        }
+        var units: [GrammarUnit] = [], borrowed: [String] = []
+        func carry(_ row: LayoutRow, _ ns: String) {
+            guard let name = row.name else { bad(row.path + ":1", "Language input has no row identity"); return }
+            let path: String, sourcePath: String, identity: String
+            if row.source == "theirs" {
+                guard let input = inputsByName[name], let cached = resolved.paths[name],
+                      let origin = input["source_path"], let repository = input["repository"],
+                      let revision = input["revision"], let digest = input["sha256"] else {
+                    bad(row.path + ":1", "Language input '" + name + "' is not resolved"); return
+                }
+                path = cached; sourcePath = origin
+                identity = repository + "@" + revision + ":" + origin + "#" + digest
+            } else {
+                path = joinPath(root, row.path); sourcePath = row.path
+                identity = "local:" + row.path // identity is relative to this world, not its checkout location
+            }
+            if row.source == "theirs", let typed = live[row.path],
+               FileManager.default.contents(atPath: path) != Data(typed.utf8) {
+                bad(row.path + ":1", "a taken Language input is read-only at its pin")
+                return
+            }
+            guard let data = (row.source == "mine" ? live[row.path].map({ Data($0.utf8) }) : nil) ?? FileManager.default.contents(atPath: path),
+                  let text = String(data: data, encoding: .utf8) else {
+                bad(row.path + ":1", "Language source is missing or not UTF-8"); return
+            }
+            if let prior = mapsForSource[identity], prior != mapHash {
+                bad(row.path + ":1", "one source identity has conflicting scope maps at vi " + PinnedGrammarLaw.revision)
+                return
+            }
+            if row.source == "theirs", sha256Hex(data) != inputsByName[name]?["sha256"] {
+                bad(row.path + ":1", "Language source bytes differ from the resolved pin")
+                return
+            }
+            mapsForSource[identity] = mapHash
+            let scope: String
+            do { scope = try map.scope(for: sourcePath) }
+            catch { bad(row.path + ":1", String(describing: error)); return }
+            do {
+                for f in try PinnedGrammarLaw.policy.findings(text, scope: scope) {
+                    bad(row.path + ":\(f.line)", "grammar: \(f.atom) is not granted \(f.scope)/\(f.context)")
+                }
+                let clean = try WhereJudge.stripComments(text)
+                let scopeInfo = WhereJudge.Scope(clean)
+                let header = try NSRegularExpression(pattern: "\\b(?:enum|struct|class|actor|protocol|typealias)\\s+(\\w+)")
+                let nsText = clean as NSString
+                var top: [String: [Int]] = [:]
+                for hit in header.matches(in: clean, range: NSRange(location: 0, length: nsText.length))
+                    where scopeInfo.depth[hit.range.location] == 0 {
+                    top[nsText.substring(with: hit.range(at: 1)), default: []].append(scopeInfo.line[hit.range.location])
+                }
+                sourceNames[identity] = Set(top.keys)
+                for (symbol, lines) in top {
+                    let key = ns + ":" + symbol
+                    let address = row.path + ":\(lines.first ?? 1)"
+                    if lines.count > 1 { bad(address, "namespace '" + ns + "' repeats '" + symbol + "' at lines " + lines.map(String.init).joined(separator: ", ")) }
+                    if let prior = symbols[key], prior.identity != identity {
+                        bad(address, "namespace '" + ns + "' conflicts on '" + symbol + "' with " + prior.address)
+                    } else { symbols[key] = (identity, address) }
+                }
+                for (clause, line) in matchesAt("\\bimport\\s+([^\\n;]+)", clean) {
+                    let module = clause[0].trimmingCharacters(in: .whitespacesAndNewlines)
+                    if module.first.map({ $0.isLetter || $0 == "_" }) != true
+                        || !module.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "_" }) {
+                        result.unsupported.append(FormResidue(id: name, address: row.path + ":\(line)",
+                            reason: "Language import syntax is not supported: " + module))
+                    } else if permitted[module] == nil {
+                        bad(row.path + ":\(line)", "import '" + module + "' is not declared by Language '" + name + "'")
+                    }
+                }
+            } catch {
+                result.unsupported.append(FormResidue(id: name, address: row.path + ":1",
+                    reason: "Language declaration reader: " + String(describing: error)))
+            }
+            let unit = GrammarUnit(row: name, path: row.path, sourcePath: sourcePath, identity: identity,
+                namespace: ns, text: text, sha256: sha256Hex(data), mapSHA256: mapHash, scope: scope)
+            if !units.contains(where: { $0.identity == identity && $0.namespace == ns }) { units.append(unit) }
+        }
+        for ref in references {
+            guard let row = rowsByName[ref], row.source == "theirs", let path = resolved.paths[ref] else {
+                bad(at, "Language '" + name + "' has missing definition input '" + ref + "'"); continue
+            }
+            carry(row, namespaceFor[ref] ?? namespace)
+            if !rows.contains(where: { $0.name == ref }), !borrowed.contains(path) { borrowed.append(path) }
+        }
+        for row in rows {
+            guard row.role == "forms" || row.role == "world" else {
+                bad(row.path + ":1", "Language cannot select a reader for this Kind"); continue
+            }
+            carry(row, namespace)
+        }
+        // A flat court cannot choose between homonymous imported symbols.
+        // Name the unsupported construction rather than collapse namespaces.
+        var visible: [String: String] = [:]
+        for unit in units {
+            for symbol in sourceNames[unit.identity] ?? [] {
+                if let prior = visible[symbol], prior != unit.namespace {
+                    result.unsupported.append(FormResidue(id: name, address: unit.path + ":1",
+                        reason: "qualified namespace resolution is not supported for '" + symbol + "' (" + prior + ", " + unit.namespace + ")"))
+                } else { visible[symbol] = unit.namespace }
+            }
+        }
+        let built = GrammarContext(name: name, namespace: namespace, rows: rows,
+                                   units: units, definitions: borrowed)
+        if result.bad.isEmpty { result.unsupported += grammarBindings(built) }
+        result.contexts.append(built)
+    }
+    return result
+}
+
+// Name availability is a context obligation, before nominal equality. The
+// where court may compare an opaque term with itself; that does not supply
+// the declaration an import promised. Bodies remain outside this reading.
+func grammarBindings(_ context: GrammarContext) -> [FormResidue] {
+    guard context.rows.contains(where: { $0.role == "forms" }) else { return [] }
+    var parsed: [(GrammarUnit, WhereJudge.World)] = []
+    for unit in context.units {
+        do { parsed.append((unit, try WhereJudge.read(unit.text))) }
+        catch { return [FormResidue(id: unit.row, address: unit.path + ":1",
+            reason: "Language declaration reader: " + String(describing: error))] }
+    }
+    let visible = Set(parsed.flatMap { $0.1.fileTypes })
+    var parents: [String: [String]] = [:], axes: [String: Set<String>] = [:]
+    for (_, world) in parsed {
+        for (name, values) in world.protocolParents { parents[name] = values }
+        for (name, values) in world.protocolAxes { axes[name] = values }
+    }
+    func inherited(_ name: String, _ seen: Set<String> = []) -> Set<String> {
+        if seen.contains(name) { return [] }
+        return (axes[name] ?? []).union((parents[name] ?? []).reduce(into: Set<String>()) {
+            $0.formUnion(inherited($1, seen.union([name])))
+        })
+    }
+    var out: [FormResidue] = [], recorded = Set<String>()
+    for (unit, world) in parsed {
+        if context.rows.contains(where: { $0.name == unit.row && $0.role == "world" }) { continue }
+        func missing(_ name: String) {
+            let key = unit.path + ":" + name
+            guard recorded.insert(key).inserted else { return }
+            let line = matchesAt("\\b" + NSRegularExpression.escapedPattern(for: name) + "\\b", world.clean).first?.1 ?? 1
+            out.append(FormResidue(id: name, address: unit.path + ":\(line)",
+                reason: "Language '" + context.name + "' has no declared definition for '" + name + "' in its inputs"))
+        }
+        func walk(_ expression: DefinitionReduction.Expression, _ bound: Set<String>) {
+            switch expression {
+            case let .application(name, args):
+                // Never is the existing reader's intrinsic empty floor. Self
+                // and parameters are supplied only by their declaration.
+                if !visible.contains(name) && !bound.contains(name) && name != "Never" { missing(name) }
+                for arg in args { walk(arg, bound) }
+            case let .field(owner, _): walk(owner, bound)
+            }
+        }
+        func term(_ raw: String, _ bound: Set<String> = []) {
+            do { walk(try DefinitionReduction.parse(raw), bound) }
+            catch {
+                let key = unit.path + ":term:" + raw
+                if recorded.insert(key).inserted {
+                    out.append(FormResidue(id: unit.row, address: unit.path + ":1",
+                        reason: "Language type expression is not supported: " + String(describing: error)))
+                }
+            }
+        }
+        for (_, rule) in world.aliases { term(rule.body, Set(rule.parameters)) }
+        for (_, declaration) in world.conformers {
+            let bound = Set(declaration.parameters + Array(declaration.table.keys) + ["Self"])
+            for name in declaration.protocols { term(name) }
+            for raw in declaration.table.values { term(raw, bound) }
+        }
+        for (name, values) in world.protocolParents { for parent in values { term(parent, inherited(name).union(["Self"])) } }
+        for (name, gate) in world.gatedProtocols {
+            let bound = inherited(name).union(["Self"])
+            for (left, right) in gate.equalities + gate.memberships { term(left, bound); term(right, bound) }
+        }
+        for gate in world.gates {
+            let bound = Set(world.parameters[gate.head] ?? []).union(inherited(gate.head)).union(["Self"])
+            term(gate.head); term(gate.proto)
+            for (left, right) in gate.equalities + gate.memberships { term(left, bound); term(right, bound) }
+        }
+        for raw in world.uses { term(raw) }
+    }
+    return out
+}
+
+func grammarContextGuards(_ w: WorldState, _ size: inout [String: Int],
+                          unsupported: inout [FormResidue], live: [String: String],
+                          contexts: GrammarContexts? = nil)
+    -> [(address: String, claim: String)]? {
+    let plan = contexts ?? grammarContexts(w, live: live)
+    guard plan.active else { return nil }
+    var bad = plan.bad
+    unsupported += plan.unsupported
+    guard bad.isEmpty else { return bad }
+    let temp = scratchDir("gate-language-")
+    defer { try? FileManager.default.removeItem(atPath: temp) }
+    for (index, context) in plan.contexts.enumerated() {
+        if plan.unsupported.contains(where: { residue in
+            residue.id == context.name || context.units.contains { residue.address.hasPrefix($0.path + ":") }
+        }) { continue }
+        let formRows = context.rows.filter { $0.role == "forms" }
+        guard !formRows.isEmpty else { continue } // WorldFile keeps its plain court.
+        let own = context.units.filter { unit in formRows.contains { $0.name == unit.row } }
+        let text = own.map(\.text).joined(separator: "\n")
+        let file = joinPath(temp, "context-\(index).swift")
+        do { try text.write(toFile: file, atomically: false, encoding: .utf8) }
+        catch { bad.append((context.rows.first?.path ?? "gate.manifest.swift", "cannot carry Language sources")); continue }
+        var addresses: [String: String] = [:]
+        for unit in context.units {
+            for (found, line) in matchesAt("(?m)^\\s*public (?:enum|protocol|typealias) (\\w+)", unit.text) {
+                if addresses[found[0]] == nil { addresses[found[0]] = unit.path + ":\(line)" }
+            }
+        }
+        let said = courtSays(["where", file] + context.definitions)
+        bad += canonGuard(w, said, said.contains("THE WHERE") || said.contains("✗"), "judge where")
+        for (id, claim) in whereRefused(said) {
+            let at = id.flatMap { addresses[$0] } ?? (context.rows.first?.path ?? "gate.manifest.swift") + ":1"
+            if claim.contains("normalization limit reached at '") && claim.hasSuffix("; no impossibility inferred") {
+                unsupported.append(FormResidue(id: id ?? context.name, address: at, reason: claim))
+            } else { bad.append((at, claim)) }
+        }
+        if let m = matches("(\\d+) equalities and (\\d+) memberships judged across (\\d+) uses", said).first {
+            for (key, n) in zip(["equalities", "memberships", "uses"], m) { size[key, default: 0] += Int(n) ?? 0 }
+        } else if said.contains(WhereAnswer.nothingAsked) { size["equalities", default: 0] += 0 }
+        if let q = countQuestion(text) {
+            let counted = courtSays(["count", file] + context.definitions + ["--predicate", q.predicate, "--encoding", q.encoding, "--sigma", q.sigma])
+            bad += canonGuard(w, counted, counted.contains("COUNT"), "judge count")
+            for line in counted.components(separatedBy: "\n") where line.hasPrefix("✗") {
+                bad.append(((context.rows.first?.path ?? "gate.manifest.swift") + ":1", String(line.dropFirst()).trimmingCharacters(in: .whitespaces)))
+            }
+            if let m = matches("(\\d+) source-bound readings checked", counted).first { size["readings", default: 0] += Int(m[0]) ?? 0 }
+        }
+    }
+    return bad
+}
+
+func grammarIndependentSources(_ w: WorldState, _ sources: [(String, String)]) -> [(String, String)] {
+    let contextual = Set((w.layout?.rows ?? []).filter { $0.language != nil }.map(\.path))
+    return sources.filter { !contextual.contains($0.0) }
+}
+
+// ── GRAMMAR CONTEXTS END.
+
+func formsDefinitions(_ w: WorldState, language: String? = nil) -> (paths: [String], bad: [(address: String, claim: String)]) {
     guard let root = layoutDir(w) else { return ([], []) }
     let record = (root as NSString).appendingPathComponent(".gate/forms-definitions.json")
     guard FileManager.default.fileExists(atPath: record) else {
@@ -2469,6 +2886,16 @@ func formsDefinitions(_ w: WorldState) -> (paths: [String], bad: [(address: Stri
         let resolved = takenInputs(w)
         if !resolved.bad.isEmpty { return ([], resolved.bad) }
         let contexts = spec["languages"] as? [String: [String: Any]] ?? [:]
+        if (w.layout?.rows ?? []).contains(where: { $0.language != nil })
+            || contexts.values.contains(where: { $0["scope_map"] != nil && !($0["scope_map"] is NSNull) }) {
+            let plan = grammarContexts(w)
+            if !plan.bad.isEmpty { return ([], plan.bad) }
+            guard let language = language,
+                  let context = plan.contexts.first(where: { $0.name == language }) else {
+                return ([], [(".gate/forms-definitions.json:1", "this definition read requires its row's explicit Language")])
+            }
+            return (context.definitions, [])
+        }
         var selected: [String] = []
         for context in contexts.values {
             for name in context["definitions"] as? [String] ?? [] {
@@ -2500,7 +2927,8 @@ func formsDefinitions(_ w: WorldState) -> (paths: [String], bad: [(address: Stri
 }
 
 func formsGuards(_ w: WorldState, _ size: inout [String: Int],
-                 unsupported: inout [FormResidue], live: [String: String] = [:]) -> [(address: String, claim: String)] {
+                 unsupported: inout [FormResidue], live: [String: String] = [:],
+                 contexts: GrammarContexts? = nil) -> [(address: String, claim: String)] {
     // ── ONE WORLD IS WHAT A CLAIM REACHES. The forms rows of a layout are glued
     // into worlds by the names they use: a row joins every row that declares a
     // name it uses and does not declare itself, and the rows so joined are one
@@ -2521,6 +2949,7 @@ func formsGuards(_ w: WorldState, _ size: inout [String: Int],
                 reason: "Kind CatalogFile uses CatalogReaderV1 in a Publication plan; it has no standalone relation court"))
         }
     }
+    if let guarded = grammarContextGuards(w, &size, unsupported: &unsupported, live: live, contexts: contexts) { return guarded }
     let taken = takenInputs(w)
     if !taken.bad.isEmpty { return taken.bad }
     let rows = layout.rows.filter { $0.role == "forms" && inputPath($0, w, taken) != nil }
@@ -3942,7 +4371,7 @@ struct StatusAnswer {
     }
 }
 
-func statusAnswer(_ supplied: WorldState? = nil) -> StatusAnswer {
+func statusAnswer(_ supplied: WorldState? = nil, contexts: GrammarContexts? = nil) -> StatusAnswer {
     // ── THE ANSWER THE BATTERY OPENS THROUGH A DOOR, and no argv a person
     // types: byte for byte against the other carrier on the worlds the battery
     // keeps. The verb itself moves with the asking pack, because the tables
@@ -3996,13 +4425,13 @@ func statusAnswer(_ supplied: WorldState? = nil) -> StatusAnswer {
     refusals += manifestGuards(w)
     var whereSize: [String: Int] = [:]
     var unsupported: [FormResidue] = []
-    refusals += formsGuards(w, &whereSize, unsupported: &unsupported)
+    refusals += formsGuards(w, &whereSize, unsupported: &unsupported, contexts: contexts)
     refusals += policyGuards(w)
     refusals += stdlibGuards(w)
     refusals += ownSurfaceGuards(w) + opensGuards(w)
     refusals += vendoredGuards(w) + takenJudgeGuard(w)
     refusals += codeownersPairGuards(w)
-    refusals += duplicateGuardsOver(diskSources(w))
+    refusals += duplicateGuardsOver(grammarIndependentSources(w, diskSources(w)))
     refusals += entryGuardsOver(diskSources(w))
     let times = matches("([\\d.]+) ms", raw).compactMap { $0.first }
     var judged = files
@@ -9355,7 +9784,7 @@ if args.first == "my" {
     // `holds`, which is the one command a person runs about the file that
     // carries the second one.
     let sources = oneStream(w, named).map { ($0.0, readText($0.1) ?? "") }
-    refusals += duplicateGuardsOver(sources)
+    refusals += duplicateGuardsOver(grammarIndependentSources(w, sources))
     refusals += entryGuardsOver(sources)
     var whereSize: [String: Int] = [:]
     var unsupported: [FormResidue] = []
@@ -11347,12 +11776,16 @@ if args.first == "seam" {
 //   GET  /codemirror.css       the editor's own stylesheet, carried here
 //   GET  /codemirror.js        the editor, carried here: nothing is fetched
 //   GET  /diff/transfer        what a change would do, and nothing done
+//   GET  /drawing-fonts.json   supported drawing font and metrics identities
+//   GET  /drawing-profile      declared profile inputs and their hashes
+//   GET  /drawing-profile.js   the profile reader shared by drawing consumers
 //   GET  /files                the world's files, their roles and verdicts
 //   GET  /gitstatus            what git says about this working copy
 //   GET  /judge.js             the ported court, for the page to judge with
 //   GET  /renderer.js          the kit's span engine on JS, for the drawing view
 //   GET  /press.js             the kit's rule applier on JS, for a key on a drawing
 //   GET  /ladder.css           the ladder and the palette, as this world says
+//   GET  /grammar-contexts     source identities, namespace and pinned scope coverage
 //   GET  /language             the grammar the page highlights and offers by
 //   GET  /log                  the journal of this world
 //   GET  /seamside             one side of a seam, read-only
@@ -11777,7 +12210,7 @@ func drawingInputs(_ w: WorldState, counts: Bool = true) -> (plan: [String: Any]
                                    "source": input.source, "revision": input.from ?? "local", "line": input.line]
         if let source = String(data: data, encoding: .utf8) { item["text"] = source }
         if name == paletteName, counts, let source = item["text"] as? String, let q = countQuestion(source) {
-            let definitions = formsDefinitions(w)
+            let definitions = formsDefinitions(w, language: input.language)
             if let bad = definitions.bad.first { return refused(bad.address, bad.claim) }
             let tmp = scratchDir("gate-drawing-count-")
             let premise = joinPath(tmp, "Primitive.swift")
@@ -12231,6 +12664,10 @@ func serveDoor(_ a: [String]) -> Never {
                 serveFile(conn, joinPath(toolRoot(), "bin/drawing-profile.js"), "text/javascript")
             case ("GET", "/drawing-fonts.json"):
                 serveFile(conn, joinPath(toolRoot(), "bin/drawing-fonts.json"), "application/json")
+            case ("GET", "/grammar-contexts"):
+                let plan = grammarContexts(servedWorld()).receipt
+                let data = (try? JSONSerialization.data(withJSONObject: plan, options: [.sortedKeys])) ?? Data()
+                serveSay(conn, 200, "application/json; charset=utf-8", data)
             case ("GET", "/drawing-profile"):
                 let plan = drawingInputs(servedWorld()).plan
                 let data = (try? JSONSerialization.data(withJSONObject: plan, options: [.sortedKeys])) ?? Data()
@@ -12622,7 +13059,7 @@ func serveDoor(_ a: [String]) -> Never {
                     }
                 }
                 // the same guards the terminal runs, over the text in the editor
-                refusals += duplicateGuardsOver(sources)
+                refusals += duplicateGuardsOver(grammarIndependentSources(w, sources))
                 refusals += entryGuardsOver(sources)
                 let typedLayout = active == layout ? text : nil
                 let liveRows = typedLayout.map { layoutRowsFull(base, said: $0).rows }
@@ -12957,16 +13394,17 @@ func buildReadPlan(_ selected: String) throws -> ReadPlan {
         let recordBytes = try take(rootRecordPath, ".gate/forms-definitions.json:1")
         let rootRecord = (try? JSONSerialization.jsonObject(with: recordBytes)) as? [String: Any] ?? [:]
         if let bad = manifestGuards(rootWorld).first { throw PublicationFailure(address: bad.address, reason: bad.claim) }
-        func limitedContext(_ record: [String: Any], _ text: String, _ address: String) throws {
+        func limitedContext(_ record: [String: Any], _ text: String, _ address: String, prepared: Bool = false) throws {
             if let value = record["languages"], !(value is [String: Any]) {
                 throw PublicationFailure(address: address, reason: "languages must be an object")
             }
             if let value = record["plain_fragments"], !(value is [Any]) {
                 throw PublicationFailure(address: address, reason: "plain_fragments must be a list")
             }
-            if !(record["languages"] as? [String: Any] ?? [:]).isEmpty || !(record["plain_fragments"] as? [Any] ?? []).isEmpty
-                || !matches(#"typealias\s+Language\s*=|^\s*import\s+"#, uncommented(text), lines: true).isEmpty {
-                throw PublicationFailure(address: address, reason: "this publication needs Language/import/scope or fragment operations outside this NoDrawing delivery", status: "unsupported")
+            if !(record["plain_fragments"] as? [Any] ?? []).isEmpty
+                || (!prepared && (!(record["languages"] as? [String: Any] ?? [:]).isEmpty
+                || !matches(#"typealias\s+Language\s*=|^\s*import\s+"#, uncommented(text), lines: true).isEmpty)) {
+                throw PublicationFailure(address: address, reason: "this publication needs a complete Language/scope context or an unsupported fragment reader", status: "unsupported")
             }
         }
         try limitedContext(rootRecord, String(decoding: manifestBytes, as: UTF8.self), "gate.manifest.swift:1")
@@ -13038,6 +13476,7 @@ func buildReadPlan(_ selected: String) throws -> ReadPlan {
         }
         if FileManager.default.fileExists(atPath: joinPath(toolRoot(), "web/ui.html")) { watched[joinPath(toolRoot(), "web/ui.html")] = sha256Hex(template) }
         var coverage: [[String: Any]] = []
+        var languagePlans: [String: Any] = [:]
         for door in doors {
             let worldRoot = joinPath(root, door.directory)
             let worldData = try publicationCWD(worldRoot) { () throws -> [String: Any] in
@@ -13051,7 +13490,11 @@ func buildReadPlan(_ selected: String) throws -> ReadPlan {
                 let rb = try take(rp, door.directory + "/.gate/forms-definitions.json:1")
                 let record = (try? JSONSerialization.jsonObject(with: rb)) as? [String: Any] ?? [:]
                 guard record["format"] as? Int == 2 else { throw PublicationFailure(address: door.directory + "/.gate/forms-definitions.json:1", reason: "world requires a v2 record") }
-                try limitedContext(record, String(decoding: mb, as: UTF8.self), door.directory + "/gate.manifest.swift:1")
+                // Resolve Language once into this ReadPlan; both transports carry the
+                // same scope/input receipt and the same court responses.
+                let contexts = grammarContexts(w, resolved: taken)
+                try limitedContext(record, String(decoding: mb, as: UTF8.self), door.directory + "/gate.manifest.swift:1", prepared: contexts.active)
+                languagePlans[door.directory] = ["declared": record["languages"] ?? [:], "resolved": contexts.receipt]
                 if let bad = manifestGuards(w).first { throw PublicationFailure(address: door.directory + "/" + bad.address, reason: bad.claim) }
                 manifests.append(["path": door.directory + "/gate.manifest.swift", "sha256": sha256Hex(mb)])
                 records.append(["path": door.directory + "/.gate/forms-definitions.json", "sha256": sha256Hex(rb)])
@@ -13062,27 +13505,42 @@ func buildReadPlan(_ selected: String) throws -> ReadPlan {
                     }
                     guard let path = inputPath(row, w, taken) else { throw PublicationFailure(address: "\(door.directory)/gate.manifest.swift:\(row.line)", reason: "unresolved input") }
                     let bytes = try take(path, door.directory + "/" + row.path + ":1")
+                    let origin = (record["files"] as? [[String: Any]] ?? []).first { $0["row"] as? String == row.name }
+                    let sourceHash = sha256Hex(bytes)
+                    if row.source == "theirs", origin?["sha256"] as? String != sourceHash {
+                        throw PublicationFailure(address: door.directory + "/" + row.path + ":1", reason: "taken input changed after resolution")
+                    }
+                    for unit in contexts.contexts.flatMap(\.units) where unit.row == row.name && unit.sha256 != sourceHash {
+                        throw PublicationFailure(address: door.directory + "/" + row.path + ":1", reason: "source changed between its Language reading and the delivery snapshot")
+                    }
                     guard let text = String(data: bytes, encoding: .utf8), !text.utf8.contains(0) else {
                         throw PublicationFailure(address: door.directory + "/" + row.path + ":1", reason: "binary carried inputs need their asset reader", status: "unsupported")
                     }
-                    try limitedContext([:], text, door.directory + "/" + row.path + ":1")
-                    if row.kind == "FormsFile", countQuestion(text) != nil {
+                    try limitedContext([:], text, door.directory + "/" + row.path + ":1", prepared: row.language != nil && contexts.active)
+                    if !contexts.active, row.kind == "FormsFile", countQuestion(text) != nil {
                         throw PublicationFailure(address: door.directory + "/" + row.path + ":1", reason: "count needs a declared definition context; this delivery never substitutes its installed Primitive", status: "unsupported")
                     }
                     texts[row.path] = text; kinds[row.path] = kind
                     inputs.append(["manifest": door.directory + "/gate.manifest.swift", "row": row.name ?? "", "path": row.path,
-                        "kind": kind, "reader": reader, "source": row.source, "sha256": sha256Hex(bytes)])
+                        "kind": kind, "reader": reader, "source": row.source, "sha256": sha256Hex(bytes),
+                        "language": row.language as Any? ?? NSNull(),
+                        "origin": origin as Any? ?? NSNull()])
                 }
                 guard texts[door.shown] != nil, door.shown != "gate.manifest.swift" else {
                     throw PublicationFailure(address: catalog.file + ":1", reason: "Shown is not a declared source in " + door.directory)
                 }
-                var answer = publicationObject(.object(statusPairs(statusAnswer(w))))
+                var answer = publicationObject(.object(statusPairs(statusAnswer(w, contexts: contexts))))
                 answer["judge_ms"] = NSNull(); answer["wall_ms"] = NSNull()
                 answer["facts"] = parsed.rows.filter { $0.kind == "WorldFile" }.map { $0.path }
                 answer["next"] = "Read-only publication. Change the source repository and publish again."
                 // Addresses stay source-relative even when a taken file is cached elsewhere.
                 let forms = parsed.rows.filter { $0.kind == "FormsFile" }.map { $0.path }
-                let groups = worldsOf(parsed.rows.filter { $0.kind == "FormsFile" }.map { ($0, texts[$0.path] ?? "") }).map { $0.map { $0.path } }
+                let rowGroups = contexts.active
+                    ? contexts.contexts.map { $0.rows.filter { $0.kind == "FormsFile" } }
+                    : [parsed.rows.filter { $0.kind == "FormsFile" }]
+                let groups = rowGroups.flatMap { rows in
+                    worldsOf(rows.map { ($0, texts[$0.path] ?? "") }).map { $0.map { $0.path } }
+                }
                 let names = [door.shown] + texts.keys.sorted().filter { $0 != door.shown }
                 var snap: [String: Any] = [:]
                 func json(_ key: String, _ object: Any) { snap[key] = ["body": String(decoding: publicationJSON(object), as: UTF8.self), "type": jsonType] }
@@ -13092,6 +13550,7 @@ func buildReadPlan(_ selected: String) throws -> ReadPlan {
                      "personal": NSNull(), "personal_empty": false, "judge_claim": NSNull(), "save_policy": "read-only",
                      "capabilities": ["read_only": names, "write": []]])
                 json("GET /status", answer)
+                json("GET /grammar-contexts", contexts.receipt)
                 var verdict = answer
                 verdict["declarations"] = (answer["world"] as? [String: Any])?["declarations"] ?? NSNull()
                 verdict["premises"] = (answer["world"] as? [String: Any])?["premises"] ?? NSNull()
@@ -13138,7 +13597,7 @@ func buildReadPlan(_ selected: String) throws -> ReadPlan {
         let assets = Dictionary(uniqueKeysWithValues: replies.filter { $0.key.hasPrefix("assets/") }.map { ($0.key, sha256Hex($0.value.data)) })
         let resources = Dictionary(uniqueKeysWithValues: replies.filter { $0.key.hasPrefix("assets/") || $0.key.hasPrefix("inputs/") || $0.key.hasPrefix("styles/") }.map { ($0.key, sha256Hex($0.value.data)) })
         var doc: [String: Any] = ["format": "publication/1", "publication": ["id": identity, "entry": entry.name],
-            "manifests": manifests, "records": records, "inputs": inputs, "languages": [:], "worlds": worlds, "routes": routes,
+            "manifests": manifests, "records": records, "inputs": inputs, "languages": languagePlans, "worlds": worlds, "routes": routes,
             "plain_fragments": [], "capabilities": ["read_only": true, "structure": "read-only-structure", "delivery": "NoDrawing/ReadOnly"],
             "draft_policy": "ReadOnly", "drawing_profile": "NoDrawing", "coverage": coverage,
             "installed": ["gate": gateVersion(), "organization_revision": runtimeData("bin/organization-court.from").flatMap { String(data: $0, encoding: .utf8)?.components(separatedBy: "\n").first } ?? "", "binary_sha256": FileManager.default.contents(atPath: absPath(CommandLine.arguments[0])).map { sha256Hex($0) } ?? "", "judge_revision": judgeFrom() ?? "", "wasm": assets["assets/vi_court_bytes.js"] ?? "", "stdlib": Dictionary(uniqueKeysWithValues: shelf().map { ($0.name, sha256Hex(Data($0.text.utf8))) })], "assets": assets, "resources": resources]
@@ -13169,6 +13628,9 @@ func buildReadPlan(_ selected: String) throws -> ReadPlan {
             replies[path + "index.html"] = PublicationReply(data: Data(html.utf8), contentType: "text/html; charset=utf-8")
         }
         let plan = ReadPlan(document: doc, replies: replies, watched: watched, directories: directories)
+        guard plan.current() else {
+            throw PublicationFailure(address: "read-plan.json:1", reason: "an input changed while building the plan; read again")
+        }
         PUBLICATION_CACHE = (root, plan)
         return plan
     }
