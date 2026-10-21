@@ -293,6 +293,12 @@ jobs:
           curl -s -X POST -H "Authorization: Bearer $GH_TOKEN" \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
             -d "$BODY2" > /dev/null
+          # ── AND THE WHOLE WALK TRAVELS AS AN ANNOTATION. Three statuses of
+          # 138 characters named the failing verb on 21.10 and still not why it
+          # failed. An annotation is public through the check-runs API, needs
+          # no token to read, and holds the road's every FAIL with its own out
+          # and err lines, so the next repair starts from what the machine said.
+          python -c 'import sys; t=open("vein-out.txt",encoding="utf-8",errors="replace").read().splitlines(); i=next((n for n,l in enumerate(t) if l.startswith("FAIL")),max(0,len(t)-60)); s="\n".join(t[i:i+80]); print("::error title=what the windows road said::"+s.replace("%","%25").replace("\r","%0D").replace("\n","%0A"))'
   pages:
     if: github.ref == 'refs/heads/main'
     # the image is named, not "latest": ubuntu-latest began moving to Ubuntu 26
