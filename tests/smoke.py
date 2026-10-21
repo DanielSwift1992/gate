@@ -4405,6 +4405,10 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               'viewingShelf = mod' in ui
               and 'document.getElementById("chips").innerHTML =' in ui
               and 'a printout of what the judge carries' in ui and "if (viewingShelf)" in ui))
+    _table_door_probe = subprocess.run(["node", os.path.join(HERE, "tests", "bench-door.js")],
+                           capture_output=True, text=True, timeout=60)
+    if _table_door_probe.returncode: print("   first Table door:", _table_door_probe.stdout + _table_door_probe.stderr)
+    S.append(("a Table URL projects loaded rows before delayed neighbors and verdicts", _table_door_probe.returncode == 0))
     _read_transition = subprocess.run(["node", os.path.join(HERE, "tests", "carried-readings.js")],
                                       capture_output=True, text=True, timeout=60)
     S.append(("and returning to a world file resumes judgement",
@@ -5927,6 +5931,38 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
     S.append(("the where verdict a reader sees keeps the pair in the court's own order",
               bool(_raw_pair)
               and (_raw_pair.group(1) + " against " + _raw_pair.group(2)) in _said_pair))
+
+    # Equal resolved atoms do not make Review.Input and Run.Input one question.
+    _two = tempfile.mkdtemp(dir=tmp)
+    open(os.path.join(_two, "gate.swift"), "w").write("public enum Sales: Department {}\n")
+    open(os.path.join(_two, "evidence.swift"), "w").write("""
+public protocol Atom {}
+public enum Old: Atom {}
+public enum New: Atom {}
+public protocol Evidence { associatedtype Input: Atom }
+public protocol Application {
+    associatedtype Input: Atom
+    associatedtype Review: Evidence
+    associatedtype Run: Evidence
+}
+public protocol Admitted: Application where Input == Review.Input, Input == Run.Input {}
+public enum Reviewed: Evidence { public typealias Input = Old }
+public enum Executed: Evidence { public typealias Input = Old }
+public enum Use: Admitted {
+    public typealias Input = New
+    public typealias Review = Reviewed
+    public typealias Run = Executed
+}
+""")
+    run("theirs", "evidence.swift", "--at", "acme/evidence@9d1e", "--role", "forms", cwd=_two)
+    _two_said = run("status", cwd=_two)[1]
+    _two_bad = [r for r in _two_said.get("refusals", []) if "Use ·" in r.get("claim", "")]
+    S.append(("equal resolved pairs retain the two distinct symbolic requirements",
+              len(_two_bad) == 2 and len({r["claim"] for r in _two_bad}) == 2
+              and len({r["address"] for r in _two_bad}) == 1
+              and all("New against Old" in r["claim"] for r in _two_bad)
+              and any("Input == Review.Input" in r["claim"] for r in _two_bad)
+              and any("Input == Run.Input" in r["claim"] for r in _two_bad)))
 
     # ── AND THE FORMS ROWS ARE JUDGED AS ONE STREAM, WHICH IS NOT A DETAIL.
     # `where` over a LIST of files is blind, and its silence is selective by
@@ -13009,7 +13045,8 @@ public enum MyWatch: AccessLedger {
               # and a door may name its view, which is how the cover's picture
               # is taken in the one the bench opens on
               and 'const askedView = new URLSearchParams(location.search).get("view");' in ui
-              and 'if (["bare", "table", "full"].includes(askedView) && theirsFiles[first]?.kind !== "CarriedFile") setMode(askedView);' in ui
+              and _table_door_probe.returncode == 0
+              and '? askedView : opensAs[first] || mode);' in ui
               # the shot is taken through that door, so the picture and the page
               # cannot drift apart about which surface a reader meets
               and "view=bare" in open(os.path.join(HERE, "bin", "shoot-bench.sh"),

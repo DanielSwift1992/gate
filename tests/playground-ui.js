@@ -22,15 +22,18 @@ class Element {
 (async()=>{
     // A new door without a per-file view still applies the bench's default.
     // The selected button and the visible surface must answer the same word.
-    const initial=ui.match(/setMode\(opensAs\[first\] \|\| mode\);/);assert(initial,'apply even the default view');
-    for(const requested of [null,'bare','table','full']){
+    const start=ui.indexOf('        setMode(theirsFiles[first]?.kind');
+    const end=ui.indexOf('        await loadFile(first);',start);
+    assert(start>=0 && end>start,'door selects its view before reading the file');
+    const initial=ui.slice(start,end);
+    for(const perFile of [null,'bare','table','full'])for(const askedView of [null,'bare','table','full','unknown']){
         const ids=Object.fromEntries(['editor-host','bare','table-host','canvas-host'].map(n=>[n,{style:{}}]));
         const selected={};
-        const ctx=vm.createContext({mode:'bare',drawingSnapshot:null,lastParsed:null,opensAs:requested?{first:requested}:{},first:'first',
+        const ctx=vm.createContext({mode:'bare',drawingSnapshot:null,lastParsed:null,opensAs:perFile?{first:perFile}:{},first:'first',askedView,theirsFiles:{},
             document:{getElementById:n=>ids[n],querySelectorAll:()=>['bare','table','full','drawing'].map(m=>({dataset:{m},classList:{toggle:(_,on)=>selected[m]=on}}))},
             syncProjection(){},buildTables(){},drawCanvases(){},cm:{refresh(){}}});
-        vm.runInContext(implementation('setMode'),ctx);vm.runInContext(initial[0],ctx);
-        const expected=requested||'bare';assert(selected[expected]);
+        vm.runInContext(implementation('setMode'),ctx);vm.runInContext(initial,ctx);
+        const expected=['bare','table','full'].includes(askedView)?askedView:perFile||'bare';assert(selected[expected]);
         assert.equal(ids['editor-host'].style.display,expected==='full'?'':'none');
         for(const [id,m] of [['bare','bare'],['table-host','table'],['canvas-host','drawing']])assert.equal(ids[id].style.display,expected===m?'block':'none');
     }

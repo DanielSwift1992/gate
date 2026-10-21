@@ -15,7 +15,7 @@ class Element {
  const scope=vm.createContext({theirsFiles:{[foreign]:origin},unavailableFiles:[],files:['Facts.swift',foreign],fileLoadGeneration:0,personalFile:null,badFiles:new Set(),seamRows:[],undeclaredFiles:[],active:'',viewingShelf:null,refLabel:null,undeclaredView:null,takenGroupState:new Map(),nameLabels:new Map(),readerDrafts:false,
  document:{getElementById:el,createElement:()=>new Element()},esc:s=>String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'),cm,window:{},history:{replaceState(){}},
  resetDrawing(){},scopesAt:{},projectionPage:0,setMode(m){scope.mode=m;},mode:'table',editor:{value:''},
- fetch:async()=>({ok:true,text:async()=>'# actual bytes\r\n🧭'}),judge:()=>({parsed:{declarations:new Map(),topAliases:new Map()}}),carriedFiles:new Set([foreign]),formsFiles:new Set(),layoutFile:'gate.manifest.swift',kitVocabulary:{},repaintNames(){},siblings:async()=>{},render(){},refreshGit(){},navHere(){},recordJump(){}});
+ fetch:async()=>({ok:true,text:async()=>'# actual bytes\r\n🧭'}),judge:()=>({parsed:{declarations:new Map(),topAliases:new Map()}}),carriedFiles:new Set([foreign]),formsFiles:new Set(),layoutFile:'gate.manifest.swift',kitVocabulary:{},repaintNames(){},siblings:async()=>{},render(){},buildTables(){},bareForm:()=>'',refreshGit(){},navHere(){},recordJump(){}});
  for(const name of ['takenLabel','takenGroup','buildRail','loadFile','reading'])vm.runInContext(implementation(name),scope);
  await scope.loadFile(foreign);
  assert.equal(cm.options.readOnly,true);assert.equal(scope.viewingShelf,foreign);assert(scope.reading());assert.equal(scope.mode,'full');

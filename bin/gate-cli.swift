@@ -2333,14 +2333,16 @@ func lawNotes(_ texts: [String]) -> [String: String] {
     return out
 }
 
-func plainly(_ claim: String, _ notes: [String: String]) -> String {
-    // the where court's sentence, said the way the plain court says its own:
-    // the certificate, the two sides, and the law in the law's own words
-    guard let m = matchAt(claim, "'(\\w+)[^']*' requires the types '[^']*' \\(aka '([^']+)'\\) "
-                               + "and '[^']*' \\(aka '([^']+)'\\) be equivalent(?: \\[(\\w+)\\])?")
+func plainly(_ claim: String, _ notes: [String: String], distinguishing: Bool = false) -> String {
+    // Keep the symbolic equality as well as its resolved pair: two different
+    // requirements can resolve to the same atoms at the same application.
+    guard let m = matchAt(claim, "'(\\w+)[^']*' requires the types '([^']*)' \\(aka '([^']+)'\\) "
+                               + "and '([^']*)' \\(aka '([^']+)'\\) be equivalent(?: \\[(\\w+)\\])?")
     else { return claim }
-    let said = notes[m[4]]
-    return "\(m[1]) · \(m[2]) against \(m[3])" + (said.map { ": " + $0 } ?? "")
+    let said = notes[m[6]]
+    return "\(m[1]) · \(m[3]) against \(m[5])"
+        + (distinguishing ? " · \(m[2]) == \(m[4])" : "")
+        + (said.map { ": " + $0 } ?? "")
 }
 
 func presentedOver(_ w: WorldState, _ shelfName: String)
@@ -2447,6 +2449,19 @@ func whereRefused(_ out: String) -> [(cert: String?, claim: String)] {
         found.append((matchAt(claim, "'(\\w+)").map { $0[1] }, claim))
     }
     return found
+}
+
+// Show symbolic sides only when different requirements would otherwise wear
+// the same sentence. A single refusal keeps the law's own words.
+func plainWhereRefusals(_ out: String, _ notes: [String: String])
+    -> [(cert: String?, claim: String, presentation: String)] {
+    let readings = whereRefused(out).map { ($0, plainly($0.claim, notes)) }
+    var originals: [String: Set<String>] = [:]
+    for (raw, plain) in readings { originals[plain, default: []].insert(raw.claim) }
+    return readings.map { raw, plain in
+        (raw.cert, raw.claim, (originals[plain]?.count ?? 0) > 1
+            ? plainly(raw.claim, notes, distinguishing: true) : plain)
+    }
 }
 
 // `live` overrides what is on disk for the files it names, so the bench can
@@ -3046,7 +3061,7 @@ func formsGuards(_ w: WorldState, _ size: inout [String: Int],
                           (said.contains("THE WHERE") && said.contains("canon v"))
                               || said.contains("✗"),
                           "judge where")
-        for (cert, claim) in whereRefused(said) {
+        for (cert, claim, presentation) in plainWhereRefusals(said, lawNotes([text])) {
             // Exhausting normalization does not disprove a requirement.
             // Keep its original ID and address in the outstanding ledger.
             if claim.hasPrefix("THE WHERE: ") && claim.contains("normalization limit reached at '")
@@ -3067,7 +3082,7 @@ func formsGuards(_ w: WorldState, _ size: inout [String: Int],
                     spot = mine.first(where: { $0.0 == t })?.1
                 }
             }
-            bad.append((spot ?? among.first?.path ?? rows[0].path, plainly(claim, lawNotes([text]))))
+            bad.append((spot ?? among.first?.path ?? rows[0].path, presentation))
         }
         if let m = matches("(\\d+) equalities and (\\d+) memberships judged across (\\d+) uses",
                            said).first {
@@ -8071,10 +8086,10 @@ if args.first == "import" {
         let notes = lawNotes([world])
         mark("notes-built")
         var refusals: [(certificate: String, source: String, address: String, claim: String)] = []
-        for (cert, claim) in whereRefused(outp) {
+        for (cert, _, presentation) in plainWhereRefusals(outp, notes) {
             guard let cert = cert, let source = srcmap[cert] else { continue }
             refusals.append((cert, source, source.components(separatedBy: " · ")[0],
-                             plainly(claim, notes)))
+                             presentation))
         }
         // a pattern matching no file in the tree: CODEOWNERS says it, the tree does not
         var ghosts: [(address: String, claim: String)] = []
