@@ -1,8 +1,8 @@
 "use strict";
 
 // THE APPLIER, ported: a line-for-line reading of `Press` from the theory's
-// Sources/Tools/Press.swift (the triples-2 matcher), over one file instead of
-// two. A button over a state file is a rewrite triple, not a program: find the
+// Sources/Court/Press.swift (the triples-2 matcher), over one file instead of
+// two by default. The owner contract is pinned in press-contract.from. A button over a state file is a rewrite triple, not a program: find the
 // rule's slot alias, unify the slot's term with the rule's pattern, substitute
 // the template. One match or none, and a mismatch leaves the file byte-identical.
 // No domain logic stands here or ever will: a system's behaviour is its triples,
@@ -146,9 +146,17 @@ function unify(pattern, term, variables, bindings) {
 // that could escape the literal (quotes, slashes, angles) is outside it, so the
 // literal's FORM survives every press and the judge only ever sees a well-formed
 // file. The refusal names the character.
+function characters(text) {
+    if (typeof Intl === "undefined" || typeof Intl.Segmenter !== "function") {
+        throw new Error("unsupported: Press requires Intl.Segmenter for Character boundaries");
+    }
+    return [...new Intl.Segmenter("und", { granularity: "grapheme" }).segment(text)]
+        .map(part => part.segment);
+}
+
 function vetLiteral(text) {
-    for (const ch of text) {
-        const allowed = /[\p{L}\p{N}]/u.test(ch) || ch === " " || ch === "."
+    for (const ch of characters(text)) {
+        const allowed = /^[\p{L}\p{N}]/u.test(ch) || ch === " " || ch === "."
             || ch === "," || ch === "!" || ch === "?" || ch === "-";
         if (!allowed) {
             return '"' + ch + '" is outside the literal\'s alphabet'
@@ -178,11 +186,14 @@ function pressLiteral(text, operation, slotName, payload) {
         const current = shape[1];
         let next = current;
         if (operation === "append") {
-            const objection = vetLiteral(payload);
+            let objection;
+            try { objection = vetLiteral(payload); }
+            catch (error) { return { text, applied: false, error: error.message }; }
             if (objection !== null) return { text, applied: false, error: objection };
             next = current + payload;
         } else if (operation === "rubout") {
-            next = current.slice(0, -1);
+            try { next = characters(current).slice(0, -1).join(""); }
+            catch (error) { return { text, applied: false, error: error.message }; }
         } else {
             next = "";
         }
@@ -197,12 +208,16 @@ function pressLiteral(text, operation, slotName, payload) {
 // instance: `TypeGlyph<Letter.h>` hands the rule the arguments its pattern
 // cannot bind — the judge of the NEXT state is what vets them. At any state at
 // most one member may match; two matches name an unlawful chord and refuse.
-function press(text, ruleArgument) {
+function press(text, ruleArgument, dictionary = text, paths = {}) {
+    const statePath = paths.statePath ?? "state.swift";
+    const dictionaryPath = paths.dictionaryPath ?? "rules.swift";
     // the literal genre first: "append <Slot> <raw text>", "rubout <Slot>",
     // "clear <Slot>" are the applier's own movements, not dictionary rules
     const literal = ruleArgument.match(/^(append|rubout|clear) (\S+)(?: ([\s\S]*))?$/);
     if (literal) {
-        return pressLiteral(text, literal[1], literal[2], literal[3] ?? "");
+        const result = pressLiteral(text, literal[1], literal[2], literal[3] ?? "");
+        if (result.error) result.address = statePath + "#" + literal[2];
+        return result;
     }
     const memberTexts = [];
     let depth = 0;
@@ -221,13 +236,13 @@ function press(text, ruleArgument) {
     const members = [];
     for (const memberText of memberTexts) {
         const spelled = parseTerm(memberText);
-        const rule = readRule(spelled.head, text);
-        if (rule.error) return { text, applied: false, error: rule.error };
+        const rule = readRule(spelled.head, dictionary);
+        if (rule.error) return { text, applied: false, error: rule.error, address: dictionaryPath + "#" + spelled.head };
         members.push({ rule, instance: spelled.args });
     }
     const slots = new Set(members.map((member) => member.rule.slot));
     if (slots.size !== 1) {
-        return { text, applied: false, error: "a chord holds one slot: "
+        return { text, applied: false, address: dictionaryPath + "#" + ruleArgument, error: "a chord holds one slot: "
             + ruleArgument + " mixes " + [...slots].sort().join(", ") };
     }
 
@@ -241,13 +256,13 @@ function press(text, ruleArgument) {
         if (lines[index].trim().replace(/^public /, "").startsWith(marker)) {
             if (slotLine >= 0) {
                 return { text, applied: false,
-                    error: "slot " + aliasName + " appears twice in this file" };
+                    address: statePath + "#" + aliasName, error: "slot " + aliasName + " appears twice in this file" };
             }
             slotLine = index;
         }
     }
     if (slotLine < 0) {
-        return { text, applied: false, error: "no slot " + aliasName + " in this file" };
+        return { text, applied: false, address: statePath + "#" + aliasName, error: "no slot " + aliasName + " in this file" };
     }
     const found = lines[slotLine];
     const current = found.slice(found.indexOf(marker) + marker.length).trim();
@@ -264,7 +279,7 @@ function press(text, ruleArgument) {
         occurrences(pattern, rule.variables, counts);
         for (const [variable, count] of counts) {
             if (count > 1) {
-                return { text, applied: false, error: rule.name + " repeats "
+                return { text, applied: false, address: dictionaryPath + "#" + rule.name, error: rule.name + " repeats "
                     + variable
                     + " in its pattern: linearity is the premise of the unique match" };
             }
@@ -272,12 +287,12 @@ function press(text, ruleArgument) {
         const bindings = new Map();
         const instanceBound = rule.variables.filter((variable) => !counts.has(variable));
         if (instance.length > instanceBound.length) {
-            return { text, applied: false, error: rule.name + " takes "
+            return { text, applied: false, address: dictionaryPath + "#" + rule.name, error: rule.name + " takes "
                 + instanceBound.length + " instance argument(s), "
                 + instance.length + " given" };
         }
         if (instance.length < instanceBound.length) {
-            return { text, applied: false, error: rule.name
+            return { text, applied: false, address: dictionaryPath + "#" + rule.name, error: rule.name
                 + " needs its instance argument(s) " + instanceBound.join(", ")
                 + ": press " + rule.name + "<…>" };
         }
@@ -296,7 +311,7 @@ function press(text, ruleArgument) {
             continue;
         }
         if (matched !== null) {
-            return { text, applied: false, error: "ambiguous chord: "
+            return { text, applied: false, address: statePath + "#" + aliasName, error: "ambiguous chord: "
                 + matched.rule.name + " and " + rule.name + " both match "
                 + aliasName + " = " + current };
         }
@@ -312,7 +327,20 @@ function press(text, ruleArgument) {
     return { text: lines.join("\n"), applied: true, line: slotLine + 1 };
 }
 
+// JSON contract and the bench call the same applier. Separate texts are transport,
+// not a concatenation that can accidentally rewrite a dictionary alias.
+function apply(arguments_, state, dictionary, paths = {}) {
+    const operation = arguments_[0];
+    const literal = ["append", "rubout", "clear"].includes(operation);
+    if (!operation || (literal && arguments_.length < 2)) {
+        return { state, changed: false, refusal: { address: "arguments", reason: "usage: Tools press" } };
+    }
+    const result = press(state, literal ? arguments_.join(" ") : operation, dictionary, paths);
+    return { state: result.text, changed: result.text !== state,
+        refusal: result.error ? { address: result.address, reason: result.error } : null };
+}
+
 if (typeof module !== "undefined") {
-    module.exports = { press, readRule, fillTemplate, parseTerm, serializeTerm,
+    module.exports = { press, apply, readRule, fillTemplate, parseTerm, serializeTerm,
         pressLiteral, vetLiteral };
 }

@@ -3138,7 +3138,14 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # and the drawing view's engine travels with the same carry, with its record
     S.append(("a vendored copy carries the drawing view's engine and its record",
               all(os.path.exists(os.path.join(ven, ".gate", "bin", f))
-                  for f in ("renderer.js", "press.js", "drawing.from", "renderer-security.patch"))))
+                  for f in ("renderer.js", "press.js", "drawing.from", "press-contract.from", "renderer-security.patch"))))
+
+    _press_suite = subprocess.run([sys.executable, os.path.join(HERE, "tests", "press-contract.py")],
+                                  capture_output=True, text=True, timeout=180)
+    if _press_suite.returncode:
+        print("   Press owner contract:", (_press_suite.stdout + _press_suite.stderr)[-1800:])
+    S.append(("the carried Press matches the pinned owner contract, including whole Characters",
+              _press_suite.returncode == 0 and "33/33" in _press_suite.stdout))
 
     # Historical transport replay only: the archived renderer and the carried
     # press still satisfy the old page. Current renderer semantics are held by
@@ -3160,8 +3167,9 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     # then the original playground checks still run over the resulting engine.
     _drawing_patch = subprocess.run(["git", "-C", _dplay, "apply",
         os.path.join(HERE, "bin", "renderer-security.patch")], capture_output=True)
-    _dsame = all(open(os.path.join(HERE, "bin", f), "rb").read() == open(os.path.join(_dplay, f), "rb").read()
-                 for f in ("press.js",)) if os.path.exists(os.path.join(_dplay, "check.js")) else False
+    # Press may change under its owner's versioned contract; historical byte
+    # equality would prohibit the Character repair. Replay the old functional
+    # controls below and ask the current owner suite independently.
     for f in ("press.js",):
         if os.path.exists(_dplay):
             shutil.copy(os.path.join(HERE, "bin", f), os.path.join(_dplay, f))
@@ -3171,7 +3179,7 @@ extension MailBossMine { public static var typeName: String { "boss@corp" } }
     if not (_dcheck and _dcheck.returncode == 0):
         print("   the playground's checks over the drawing engine:", _dsaid.strip().split("\n")[-1][:120])
     S.append(("the archived drawing engine and current press pass the historical playground checks at the pin",
-              _drawing_patch.returncode == 0 and _dsame and _dcheck is not None and _dcheck.returncode == 0
+              _drawing_patch.returncode == 0 and _dcheck is not None and _dcheck.returncode == 0
               and "29/29" in _dcheck.stdout))
 
     # ── AND THE DRAWING VIEW IS OFFERED TO A WORLD THAT PRESENTS A CANVAS, AND

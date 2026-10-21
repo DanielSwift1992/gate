@@ -647,7 +647,7 @@ function judgeWhereTexts(text, extraTexts) {
     open(os.path.join(out, "ladder.css"), "w", encoding="utf-8").write(ladder_css)
     for asset, home in (("codemirror.css", "web"), ("codemirror.js", "web"),
                         ("judge.js", "bin"), ("renderer.js", "bin"), ("press.js", "bin"),
-                        ("drawing.from", "bin"), ("drawing-profile.js", "bin"), ("drawing-fonts.json", "bin")):
+                        ("drawing.from", "bin"), ("press-contract.from", "bin"), ("drawing-profile.js", "bin"), ("drawing-fonts.json", "bin")):
         src = os.path.join(HERE, home, asset)
         if os.path.exists(src):
             shutil.copy(src, os.path.join(out, asset))

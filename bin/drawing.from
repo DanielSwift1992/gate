@@ -1,4 +1,4 @@
 400b6674d1c120bb2b86150631093f86ec4d7994
-Historical typed-playground transport: press.js stays byte for byte; renderer-security.patch replays the archived renderer only. Current renderer.js follows showcase Contracts/Drawing/v0.1 through playground-worlds.from; tests/drawing.js checks native bytes/refusals. The T-0038 profile carries the owner Drawing input; drawing-profile.js alone states comparison status.
+Historical typed-playground transport: renderer-security.patch replays the archived renderer. Press now follows the VI-owned contract pinned in bin/press-contract.from; its local byte hash is below. Current renderer.js follows showcase Contracts/Drawing/v0.1 through playground-worlds.from; tests/drawing.js checks native bytes/refusals.
 8eee1cf3ed8023753677039362b112d6c86ef8db90ba24c56c697164cc7ac34e  bin/renderer.js
-a9fbf7f4e0333ea5a262d38ceb30e58de53ad99cff00d94dc3fe40145a0289f6  bin/press.js
+7ed486bedbebbad0b916dd141f9efb38223ffc07066dc6da7306e1699c0da06f  bin/press.js

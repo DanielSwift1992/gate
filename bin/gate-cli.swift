@@ -10678,7 +10678,7 @@ func vendorInto(_ rootDir: String) -> (carried: [String], digest: String?, shim:
     // platform this binary was not built for still has a court that way.
     for rel in ["bin/judge.js", "bin/judge-wasm.js", "bin/court-wasm.from",
                 "bin/court-wasm/node/vi_court.js", "bin/court-wasm/node/vi_court_bg.wasm",
-                "bin/renderer.js", "bin/press.js", "bin/drawing.from", "bin/renderer-security.patch",
+                "bin/renderer.js", "bin/press.js", "bin/drawing.from", "bin/press-contract.from", "bin/renderer-security.patch",
                 "web/ui.html", "web/codemirror.js", "web/codemirror.css", "LICENSE", "docs/NOTICE.md"] {
         let src = (here as NSString).appendingPathComponent(rel)
         if FileManager.default.fileExists(atPath: src) {

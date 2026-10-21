@@ -373,9 +373,18 @@ bin/renderer.js · bin/press.js
                 equals a native case. No extra source is discarded for comparison.
                 XYZRatioWrite prints the palette's explicit integer scale,
                 without asking Half for a fractional count. This contract does not
-                establish equivalence to arbitrary Swift. press.js applies a
-                drawn key to one alias; its historical pin and the archived
-                renderer replay remain recorded in bin/drawing.from.
+                establish equivalence to arbitrary Swift.
+bin/press-contract.from
+                Press belongs to VI Sources/Court/Press.swift. Its pinned v0.1
+                contract holds press.js to 33 substitution and Character cases,
+                including rubout of a non-BMP or combined character. The bench
+                and the contract use the same applier. Intl.Segmenter supplies
+                Character boundaries; without it the literal press names an
+                unsupported operation and leaves the state alone. The battery
+                runs the owner's driver (tests/press-contract.py); this finite
+                suite grants neither arbitrary Swift coverage nor atomic file
+                publication. bin/drawing.from retains the historical renderer
+                replay, whose old controls still run over the current press.
 bin/grammar-law.from
                 vi's scope reader and compiler-derived grants, pinned together;
                 a world's Language supplies imports, definitions and its own
@@ -420,7 +429,7 @@ web/codemirror.*  the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
 docs/           DETAILS.md, SECURITY.md, CHANGELOG.md, NOTICE.md, and
                 the cover's picture with its provenance
-tests/smoke.py   the battery: 718 checks this repository holds itself
+tests/smoke.py   the battery: 719 checks this repository holds itself
                  to, end-to-end runs through judge parity through
                  documentation contracts; the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts
