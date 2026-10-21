@@ -66,6 +66,11 @@
                     return response({ verdict: 'unsupported', unsupported: [{ id: 'read-only', address: (u.searchParams.get('f') || 'world') + ':1', reason: 'This plan grants reading. Reopen the source repository to change it.' }], refusals: [] }, 409);
             }
             const item = snapshots[key(url, method)];
+            if(item && u.pathname === '/drawing-profile') {
+                const plan=JSON.parse(item.body);
+                if(plan.asset_urls) plan.asset_urls=Object.fromEntries(Object.entries(plan.asset_urls).map(([hash,path])=>[hash,new URL(path,root).href]));
+                return response(plan,200,item.type);
+            }
             return item ? response(item.body, 200, item.type) : response(failure('This request has no declared publication reader.'), 404);
         } catch (e) {
             return response(failure(e.message), 409);

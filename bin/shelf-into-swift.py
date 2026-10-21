@@ -42,7 +42,7 @@ def main():
     # the files beside the binary first.
     runtime = ["web/ui.html", "web/codemirror.js", "web/codemirror.css", "web/publication.js",
                "bin/judge.js", "bin/renderer.js", "bin/press.js", "bin/drawing-profile.js",
-               "bin/drawing-fonts.json", "bin/drawing.from", "bin/press-contract.from", "bin/court-wasm.from",
+               "bin/drawing-fonts.json", "bin/drawing-contract.from", "bin/drawing.from", "bin/press-contract.from", "bin/court-wasm.from",
                "bin/court-wasm/web/vi_court.js", "bin/court-wasm/web/vi_court_bytes.js",
                "bin/organization-court.from", "LICENSE", "docs/NOTICE.md"]
     # Example inputs remain inspectable data; a one-file installation carries the same recipes.

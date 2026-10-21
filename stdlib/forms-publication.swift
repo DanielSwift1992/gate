@@ -15,9 +15,10 @@
 // the selected repository and names its manifest directory. Shown names one of
 // that world's declared files. Literal atoms keep their text in typeName.
 //
-// This delivery supports NoDrawing and ReadOnly. ReaderDraft, Drawing profiles
-// and context operations need their own readers; this delivery reports them as
-// unsupported. Count also needs its declared definition context; the delivery
+// This delivery supports ReadOnly. DrawingProfile is NoDrawing or the name of
+// a pinned DrawingProfileFile carrying an owner's resolved CSS/input receipt.
+// ReaderDraft and unsupported context operations need their own readers.
+// Count also needs its declared definition context; the delivery
 // supplies no implicit Primitive. It makes no claim to complete Language/import/scope semantics.
 // A snapshot's structure and sources are read-only. Change the repository and
 // publish it again to produce another plan. serve and publish build that plan

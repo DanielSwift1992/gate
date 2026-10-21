@@ -2,5 +2,11 @@
   "profile": "gate/font-table-v1",
   "fonts": [
     "4989b125924991b90d05b2d16e0e388c48f7d5bb8b30539bbf9c755278d0ccaf"
-  ]
+  ],
+  "metrics": {
+    "units": 2048,
+    "cap": 1490,
+    "advances_sha256": "0fe78d7cf3fc9d9ac97196aa971bf70637b9574de4d2f6e1a0641f0124a8d1b9",
+    "missingGlyph": "advance-of-U+006D"
+  }
 }

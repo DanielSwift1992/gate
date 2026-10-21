@@ -1,13 +1,8 @@
-"""Static transport for the same DrawingProfileReaderV1 used by the live bench.
-
-This does not read a palette or choose a profile. Serve supplies the declared
-input plan. The shared browser reader supplies its CSS and evidence.
-"""
+"""Carry the owner's resolved CSS and its native-validated receipt unchanged."""
 import hashlib
 import json
 import os
 from pathlib import Path
-import subprocess
 import urllib.request
 
 
@@ -15,12 +10,14 @@ def publish(here, site, page, plan, port):
     if plan['status'] == 'none':
         return None
     base = 'http://127.0.0.1:' + str(port)
-    result = subprocess.run(['node', str(Path(here) / 'bin/drawing-profile.js'), base],
-                            input=json.dumps(plan), capture_output=True, text=True)
-    if result.returncode:
-        raise ValueError(result.stderr.strip())
-    profile = json.loads(result.stdout)
-    css = profile.pop('css')
+    if plan['status'] != 'resolved':
+        raise ValueError(plan.get('address', 'drawing-profile:1') + ': ' + plan.get('reason', 'an owner-resolved profile is required for publication'))
+    profile = dict(plan['resolved'])
+    plan['port_allowed'] = False
+    css_data = urllib.request.urlopen(base + '/drawing-assets/' + plan['css_sha256']).read()
+    if hashlib.sha256(css_data).hexdigest() != plan['css_sha256']:
+        raise ValueError('owner CSS delivery changed')
+    css = css_data.decode()
     assets = Path(site) / 'assets/drawing'
     for item in profile['assets']:
         data = urllib.request.urlopen(base + '/drawing-assets/' + item['sha256']).read()
@@ -35,10 +32,9 @@ def publish(here, site, page, plan, port):
     folder = assets / css_hash
     folder.mkdir(parents=True, exist_ok=True)
     (folder / 'drawing.css').write_text(css)
-    (folder / 'profile.json').write_text(json.dumps(profile, indent=2) + '\n')
     index_path = Path(site) / '.drawing-profiles.json'
     index = json.loads(index_path.read_text()) if index_path.exists() else {}
-    index[css_hash] = dict(plan=plan, receipt=profile, consumers=[])
+    index[plan['owner_receipt_sha256']] = dict(plan=plan, receipt=profile, css_sha256=css_hash, consumers=[])
     index_path.write_text(json.dumps(index, indent=2) + '\n')
     plan['asset_urls'] = {item['sha256']: Path(os.path.relpath(assets / item['sha256'] / item['name'], page)).as_posix()
                           for item in profile['assets']}
@@ -57,9 +53,10 @@ def begin(site):
     for key, row in index.items():
         if not re.fullmatch('[0-9a-f]{64}', key):
             raise ValueError('invalid previous drawing resource key')
-        managed.update([site / 'assets/drawing' / key / 'drawing.css', site / 'assets/drawing' / key / 'profile.json'])
+        css_hash=row.get('css_sha256',key)
+        managed.update([site / 'assets/drawing' / css_hash / 'drawing.css', site / 'assets/drawing' / css_hash / 'profile.json'])
         for item in row['receipt']['assets']:
-            if not re.fullmatch('[0-9a-f]{64}', item['sha256']) or item['name'] not in ('font.ttf', 'license.txt'):
+            if not re.fullmatch('[0-9a-f]{64}', item['sha256']) or item['name'] not in ('font.ttf', 'license.txt', 'resolution.json', 'drawing.css'):
                 raise ValueError('invalid previous drawing asset')
             managed.add(site / 'assets/drawing' / item['sha256'] / item['name'])
     for path in managed:
@@ -83,11 +80,11 @@ def finish(site):
         snap = json.loads(match[1]);plan = json.loads(snap.get('/drawing-profile', '{"status":"none"}'))
         if plan.get('status') == 'none':
             continue
-        options = [(key, row) for key, row in index.items() if row['plan']['profile']['sha256'] == plan['profile']['sha256']]
+        options = [(key, row) for key, row in index.items() if key == plan['owner_receipt_sha256']]
         if len(options) != 1:
             raise ValueError(str(page) + ': no unique drawing resource')
         key, row = options[0];profile = row['receipt']
-        href = Path(os.path.relpath(site / 'assets/drawing' / key / 'drawing.css', page.parent)).as_posix()
+        href = Path(os.path.relpath(site / 'assets/drawing' / row['css_sha256'] / 'drawing.css', page.parent)).as_posix()
         text = re.sub(r'(<link rel="stylesheet" data-drawing-profile href=")[^"]+(">)', lambda m:m[1]+href+m[2], text)
         plan['asset_urls'] = {item['sha256']: Path(os.path.relpath(site / 'assets/drawing' / item['sha256'] / item['name'], page.parent)).as_posix() for item in profile['assets']}
         snap['/drawing-profile'] = json.dumps(plan)
@@ -103,7 +100,7 @@ def finish(site):
 
 
 def audit(site):
-    """Recompute the shared CSS from recorded input bytes and the same reader."""
+    """Hold the carried CSS and resource set to the owner's input receipt."""
     import re
     site = Path(site);record = site / '.drawing-profiles.json'
     if not record.exists():
@@ -111,17 +108,33 @@ def audit(site):
     index = json.loads(record.read_text());expected = {};used = set();asset_files = set()
     here = Path(__file__).resolve().parent.parent
     for key, row in index.items():
-        result = subprocess.run(['node', str(here / 'bin/drawing-profile.js'), '--assets', str(site / 'assets/drawing')], input=json.dumps(row['plan']), capture_output=True, text=True)
-        if result.returncode:
-            raise ValueError('drawing profile: ' + result.stderr.strip())
-        profile = json.loads(result.stdout);css = profile['css']
-        if hashlib.sha256(css.encode()).hexdigest() != key:
-            raise ValueError(str(record) + ': regenerated CSS differs')
-        sheet = site / 'assets/drawing' / key / 'drawing.css'
+        plan = row['plan']
+        if plan['status'] != 'resolved':
+            raise ValueError('drawing profile: a resolved owner input is required')
+        profile = plan['resolved']
+        css_hash=row['css_sha256']
+        sheet = site / 'assets/drawing' / css_hash / 'drawing.css'
+        if not sheet.exists():
+            raise ValueError('drawing profile: CSS delivery is missing')
+        css = sheet.read_text()
+        owner_hash = plan['owner_receipt_sha256']
+        owner_file = site / 'assets/drawing' / owner_hash / 'resolution.json'
+        if not owner_file.exists() or hashlib.sha256(owner_file.read_bytes()).hexdigest() != owner_hash:
+            raise ValueError('drawing profile: owner receipt delivery differs')
+        owner = json.loads(owner_file.read_text())
+        if owner['format'] != 'drawing-profile/1' or owner['css']['sha256'] != hashlib.sha256(css.encode()).hexdigest():
+            raise ValueError('drawing profile: CSS differs from the owner receipt')
+        inputs = {name: value['sha256'] for name, value in plan['inputs'].items()}
+        inputs[plan['profile_row']] = plan['profile']['sha256']
+        if inputs != {name: value['sha256'] for name, value in owner['inputs'].items()}:
+            raise ValueError('drawing profile: owner receipt names different inputs')
+        if hashlib.sha256(css.encode()).hexdigest() != css_hash or plan['owner_receipt_sha256'] != key:
+            raise ValueError(str(record) + ': carried CSS or receipt differs')
+        sheet = site / 'assets/drawing' / css_hash / 'drawing.css'
         if not sheet.exists() or sheet.read_text() != css:
             raise ValueError(str(sheet.relative_to(site)) + ': differs from the declared drawing profile')
         expected[sheet.resolve()] = css
-        asset_files.update([sheet.resolve(), (sheet.parent / 'profile.json').resolve()])
+        asset_files.add(sheet.resolve())
         for item in profile['assets']:
             asset = site / 'assets/drawing' / item['sha256'] / item['name']
             if not asset.exists() or hashlib.sha256(asset.read_bytes()).hexdigest() != item['sha256']:

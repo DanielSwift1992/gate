@@ -61,6 +61,8 @@ public enum CatalogFile: Role {
 public protocol Role {}
 // Each Kind names its installed reader. A world's declaration keeps this choice.
 public enum DrawingProfileReaderV1: Role {}
+// A resolved owner receipt (drawing-profile/1), bound to its declared CSS and
+// source inputs. The Swift profile metadata and bindings travel as CarriedFile.
 public enum DrawingProfileFile: Role {
     public typealias Reader = DrawingProfileReaderV1
 }

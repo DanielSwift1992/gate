@@ -14586,6 +14586,13 @@ public enum MyWatch: AccessLedger {
     S.append(("taken text opens as verified read-only Theirs, without binary assets or a local fallback",
               _carried.returncode == 0 and _carried_ui.returncode == 0))
 
+    _owner_profile = subprocess.run([sys.executable, os.path.join(HERE, "tests", "owner-profile.py")],
+                                    capture_output=True, text=True, timeout=240)
+    if _owner_profile.returncode:
+        print("   owner profile:", (_owner_profile.stdout + _owner_profile.stderr)[-4500:])
+    S.append(("the owner's resolved profile travels through autonomous publish and serve without a runtime tool",
+              _owner_profile.returncode == 0))
+
     # The old playground's witnesses travel with the pinned showcase worlds.
     # This builds the actual static benches through serve, then reads their
     # snapshots with both courts and executes their storage shim under node.

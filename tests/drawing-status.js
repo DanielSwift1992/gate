@@ -12,7 +12,7 @@ const at=ui.indexOf('function drawingFiles('),selection=ui.slice(at,ui.indexOf('
         if(!fs.existsSync(snapshot))continue;
         const snap=JSON.parse(fs.readFileSync(snapshot)),world=JSON.parse(fs.readFileSync(path.join(dir,'world.json')));
         const plan=JSON.parse(snap['/drawing-profile']);
-        const state=await profile.compile(plan,async hash=>new Uint8Array(fs.readFileSync(path.join(site,'assets/drawing',hash,'font.ttf'))),(h,n)=>h+'/'+n);
+        const state=await profile.compile(plan,async hash=>new Uint8Array(fs.readFileSync(path.join(site,'assets/drawing',hash,(plan.resolved?.assets||[]).find(a=>a.sha256===hash)?.name||'font.ttf'))),(h,n)=>h+'/'+n);
         const list=JSON.parse(snap['/files']),reader={documentFiles:new Set(list.drawing_inputs||[])};
         vm.createContext(reader);vm.runInContext(selection,reader);
         const files=reader.drawingFiles(null);

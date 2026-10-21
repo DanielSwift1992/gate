@@ -424,16 +424,16 @@ bin/build-pages.py
                 SHOWCASE_SOURCE names a local source at the pin; the published
                 worlds-source.json says local. The default fetches the public pin.
 bin/drawing-profile.js
-                the same declared drawing profile in serve and static pages:
-                explicit role/theme bindings, the palette's count witnesses and
-                a measured font held to its bytes. Resources have shared hash
-                addresses. Drawing evidence stays separate from the verdict.
+                the browser transport for the owner's resolved profile, and
+                the labelled port for a live MINE palette. Native publish and
+                serve check the owner's input hashes and carry its CSS.
+                Font, license and receipt have shared hash addresses.
 web/ui.html     the workbench; bin/judge.js judges it in the browser
 web/codemirror.*  the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
 docs/           DETAILS.md, SECURITY.md, CHANGELOG.md, NOTICE.md, and
                 the cover's picture with its provenance
-tests/smoke.py   the battery: 734 checks this repository holds itself
+tests/smoke.py   the battery: 735 checks this repository holds itself
                  to, end-to-end runs through judge parity through
                  documentation contracts; the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts
@@ -489,12 +489,17 @@ layout · more domain forms.
 Something drifts? Gate it
 
 Publish a declared repository with `gate publish /path/to/repository -o /path/to/site`.
-The current binary delivers `publication/1` with `NoDrawing` and `ReadOnly`, including
-the bench, stdlib and browser court. It needs Git for declared pinned inputs; it
+The current binary delivers `publication/1` with `ReadOnly`, including the bench,
+stdlib, browser court and an optional owner-resolved drawing profile. `NoDrawing`
+selects none; a pinned `DrawingProfileFile` names the owner's CSS and input receipt.
+It needs Git for declared pinned inputs; it
 needs no Python, Node or Swift at publication time. Serve the same repository with
 `gate serve /path/to/repository`. The record format and current supported boundary
 are on `gate stdlib show forms-publication`. The existing `build-pages.py` showcase
 recipe still builds gate's own showcase site.
+
+The [profile input](docs/DRAWING-PROFILE.md) binds the actual palette, bindings,
+font, metrics and license. A changed input needs another reading at the owner.
 
 The read-only browser checks delivery with Web Crypto over HTTPS or localhost;
 a missing capability or damaged resource removes the verdict.

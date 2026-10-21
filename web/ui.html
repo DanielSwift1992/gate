@@ -9,7 +9,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"><meta charset="utf-8"><title>gate · world bench</title>
 <!-- zero egress, enforced by the browser as well as by the code: the bench may
      talk to its own loopback server and to nothing else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-5GzCvayhfKIAxAwizJRqS3a05vGAKRgdgfqpOuJGoBs=' 'sha256-oIg9WuukjTdJtNNKGyldWWn5DysGL3RVtavMRnbCiSw='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-5GzCvayhfKIAxAwizJRqS3a05vGAKRgdgfqpOuJGoBs=' 'sha256-X7jEiYwvaydrJ4NrVvwI3D4I1pJubp9k+2JiK4WZRps='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
 <link rel="stylesheet" href="/codemirror.css">
 <script>
 // The theme is a declaration, not a toggle — and the declaration lives in the
@@ -3637,20 +3637,32 @@ function setMode(m) {
 const CANVAS_FORMS = new Set(["Diagram", "GrownDiagram", "HFlow"]);
 // Drawing has its own evidence. A court's green never compares a picture.
 let drawingProfileState = {status:"none",reason:"Drawing without a profile"};
-async function loadDrawingProfile() {
+let drawingProfilePlan = null;
+async function loadDrawingProfile(liveInput = null) {
     if (typeof GateDrawingProfile === "undefined") return;
     try {
-        const plan = await (await fetch("/drawing-profile")).json();
+        let plan = await (await fetch("/drawing-profile")).json();
+        const palette = plan.inputs?.[plan.palette_row];
+        if(liveInput && liveInput.path === palette?.path
+            && await GateDrawingProfile.sha(new TextEncoder().encode(liveInput.text)) !== palette.sha256) {
+            if(!plan.port_allowed) {
+                const error = new Error(liveInput.path + ":1: the published palette needs a new reading by its owner");
+                error.status = "unsupported"; throw error;
+            }
+            plan = await (await fetch("/drawing-profile",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(liveInput)})).json();
+        }
+        drawingProfilePlan = plan;
         drawingProfileState = await GateDrawingProfile.compile(plan,
             async hash => new Uint8Array(await (await fetch(plan.asset_urls?.[hash] || "/drawing-assets/" + hash)).arrayBuffer()),
             (hash,name) => plan.asset_urls?.[hash] || "/drawing-assets/" + hash);
         if (drawingProfileState.css && !document.querySelector('link[data-drawing-profile]')) {
-            const sheet = document.createElement("style");
+            const sheet = document.getElementById("drawing-profile-style") || document.createElement("style");
             sheet.id = "drawing-profile-style"; sheet.textContent = drawingProfileState.css;
             document.head.appendChild(sheet);
         }
     } catch (error) {
         drawingProfileState = {status:error.status || "refused",reason:error.message};
+        document.getElementById("drawing-profile-style")?.remove();
     }
 }
 function drawable(parsed) {
@@ -3717,6 +3729,10 @@ async function drawCanvases() {
         for (const d of read.declarations.values()) {
             const part = world.parts.find(p => d.line >= p.first && d.line <= p.last);
             if (part) d.file = part.file;
+        }
+        if(world.file === drawingProfilePlan?.inputs?.[drawingProfilePlan.palette_row]?.path) {
+            await loadDrawingProfile({path:world.file,text:world.buffer});
+            if(generation !== drawingGeneration || !drawingCurrent(world))return;
         }
         const canDraw = drawable(read);
         button.hidden = !canDraw;

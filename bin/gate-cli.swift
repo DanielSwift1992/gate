@@ -12168,11 +12168,11 @@ func benchSaid(_ answered: Answered) -> String {
 // than a bare code: the page's own fetch shows a network error for a dropped
 // connection, which reads as "the bench is gone" instead of "that request was
 // wrong".
-// A drawing's input plan is shared by the browser and the static publisher.
-// Only declared rows are delivered. The colour reader stays the installed port.
-func drawingInputs(_ w: WorldState, counts: Bool = true) -> (plan: [String: Any], assets: [String: Data]) {
+// The live port gets declared source inputs from the same verified delivery.
+// Resolved owner profiles below carry their native reading instead of evaluating it.
+func drawingPortInputs(_ w: WorldState, profileRow: LayoutRow? = nil, counts: Bool = true, paletteOverride: (path: String, text: String)? = nil) -> (plan: [String: Any], assets: [String: Data]) {
     guard let root = layoutDir(w) else { return (["status": "none"], [:]) }
-    let profiles = (w.layout?.rows ?? []).filter { $0.role == "drawing-profile" }
+    let profiles = profileRow.map { [$0] } ?? (w.layout?.rows ?? []).filter { $0.role == "drawing-profile" }
     if profiles.isEmpty { return (["status": "none"], [:]) }
     func refused(_ at: String, _ why: String) -> (plan: [String: Any], assets: [String: Data]) {
         return (["status": "refused", "address": at, "reason": why], [:])
@@ -12205,9 +12205,11 @@ func drawingInputs(_ w: WorldState, counts: Bool = true) -> (plan: [String: Any]
     for input in (w.layout?.rows ?? []) where selected.contains(input.name ?? "") {
         guard let name = input.name else { continue }
         let file = source(input)
-        guard let data = inputBytes(file) else {
+        guard let original = inputBytes(file) else {
             return refused(input.path + ":1", "declared profile input is missing")
         }
+        let data = name == paletteName && input.source == "mine" && paletteOverride?.path == input.path
+            ? Data(paletteOverride!.text.utf8) : original
         let hash = sha256Hex(data); assets[hash] = data
         var item: [String: Any] = ["path": input.path, "sha256": hash,
                                    "source": input.source, "revision": input.from ?? "local", "line": input.line]
@@ -12218,23 +12220,211 @@ func drawingInputs(_ w: WorldState, counts: Bool = true) -> (plan: [String: Any]
             let tmp = scratchDir("gate-drawing-count-")
             let premise = joinPath(tmp, "Primitive.swift")
             try? PinnedCorpus.primitive.write(toFile: premise, atomically: false, encoding: .utf8)
+            let countPath: String
+            if data != original {
+                countPath = joinPath(tmp, "Palette.swift")
+                try? data.write(to: URL(fileURLWithPath: countPath))
+            } else { countPath = file }
             let borrowed = definitions.paths.isEmpty ? [premise] : definitions.paths
-            let said = courtSays(["count", file] + borrowed + ["--predicate", q.predicate,
-                                  "--encoding", q.encoding, "--sigma", q.sigma])
+            let said = courtSays(["count", countPath] + borrowed + ["--predicate", q.predicate,
+                                  "--encoding", q.encoding, "--sigma", q.sigma]).replacingOccurrences(of: countPath, with: input.path)
             try? FileManager.default.removeItem(atPath: tmp)
             item["count"] = ["text": said, "source_sha256": hash]
         }
         inputs[name] = item
     }
-    let reader = inputBytes(joinPath(toolRoot(), "bin/renderer.js")) ?? Data()
-    let supportData = inputBytes(joinPath(toolRoot(), "bin/drawing-fonts.json")) ?? Data()
+    let reader = inputBytes(joinPath(toolRoot(), "bin/renderer.js")) ?? runtimeData("bin/renderer.js") ?? Data()
+    let supportData = inputBytes(joinPath(toolRoot(), "bin/drawing-fonts.json")) ?? runtimeData("bin/drawing-fonts.json") ?? Data()
     let support = (try? JSONSerialization.jsonObject(with: supportData)) ?? [String: Any]()
     let recordData = inputBytes(joinPath(root, ".gate/forms-definitions.json")) ?? Data()
     let record = (try? JSONSerialization.jsonObject(with: recordData)) ?? [String: Any]()
+    let accepted = runtimeData("bin/drawing-contract.from").flatMap { try? JSONSerialization.jsonObject(with: $0) } ?? [String: Any]()
     return (["status": "declared", "record": record,
              "record_sha256": sha256Hex(recordData), "profile": ["path": row.path, "text": text, "sha256": sha256Hex(Data(text.utf8))],
              "inputs": inputs, "reader": ["source": String(data: reader, encoding: .utf8) ?? "", "sha256": sha256Hex(reader)],
-             "support": support], assets)
+             "support": support, "accepted_contract": accepted], assets)
+}
+
+// DocumentKit computed this profile at its owner. This reader checks delivery,
+// membership of the input set and installed capabilities; it computes no colour.
+func drawingInputs(_ w: WorldState, counts: Bool = true, allowPort: Bool = true, paletteOverride: (path: String, text: String)? = nil) -> (plan: [String: Any], assets: [String: Data]) {
+    let rows = w.layout?.rows ?? [], profiles = rows.filter { $0.role == "drawing-profile" }
+    if profiles.isEmpty { return (["status": "none", "reason": "Drawing without a profile"], [:]) }
+    func failed(_ at: String, _ why: String, _ status: String = "refused") -> (plan: [String: Any], assets: [String: Data]) {
+        return (["status": status, "address": at, "reason": why], [:])
+    }
+    guard profiles.count == 1, let profile = profiles.first else { return failed("gate.manifest.swift:1", "one DrawingProfileFile is required") }
+    let at = profile.path + ":1", taken = takenInputs(w)
+    if let bad = taken.bad.first { return failed(bad.address, bad.claim) }
+    guard profile.source == "theirs" else {
+        return failed(at, "a pinned owner-resolved Drawing profile is required", "unsupported")
+    }
+    guard let path = inputPath(profile, w, taken), let data = inputBytes(path),
+          let receipt = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else {
+        return failed(at, "the owner profile receipt is not a delivered JSON object")
+    }
+    guard receipt["format"] as? String == "drawing-profile/1" else {
+        return failed(at, "this owner profile receipt format is not installed", "unsupported")
+    }
+    guard let reader = receipt["reader"] as? [String: Any], reader["id"] as? String == "showcase/DocumentKitProfileReader",
+          reader["version"] as? Int == 1, let readerFiles = reader["files"] as? [String: String], !readerFiles.isEmpty,
+          readerFiles.values.allSatisfy({ $0.range(of: "^[a-f0-9]{64}$", options: .regularExpression) != nil }) else {
+        return failed(at, "this owner profile reader is not installed", "unsupported")
+    }
+    guard let sourceName = receipt["profile_row"] as? String, let sourceRow = rows.first(where: { $0.name == sourceName }),
+          let bound = receipt["inputs"] as? [String: [String: String]],
+          let cssSpec = receipt["css"] as? [String: String], let cssName = cssSpec["row"],
+          let cssRow = rows.first(where: { $0.name == cssName }), cssRow.source == "theirs",
+          let cssPath = inputPath(cssRow, w, taken), let cssData = inputBytes(cssPath),
+          cssSpec["sha256"] == sha256Hex(cssData), String(data: cssData, encoding: .utf8) != nil,
+          var result = receipt["result"] as? [String: Any] else {
+        return failed(at, "the owner profile or its CSS delivery is incomplete")
+    }
+    var port = drawingPortInputs(w, profileRow: sourceRow, counts: counts, paletteOverride: paletteOverride)
+    guard port.plan["status"] as? String == "declared", let inputs = port.plan["inputs"] as? [String: [String: Any]],
+          let source = port.plan["profile"] as? [String: Any], let sourceText = source["text"] as? String,
+          let paletteName = receipt["palette_row"] as? String, inputs[paletteName] != nil else {
+        return failed(at, (port.plan["reason"] as? String) ?? "the profile's source inputs are incomplete")
+    }
+    guard Set(bound.keys) == Set(inputs.keys).union([sourceName]), bound[sourceName]?["sha256"] == source["sha256"] as? String else {
+        return failed(at, "the receipt does not name exactly the resolved profile inputs")
+    }
+    var changed: [String] = []
+    for (name, input) in inputs where bound[name]?["sha256"] != input["sha256"] as? String { changed.append(name) }
+    let paletteRow = rows.first { $0.name == paletteName }
+    port.plan["palette_row"] = paletteName
+    port.plan["port_allowed"] = allowPort && paletteRow?.source == "mine"
+    if let livePalette = paletteOverride, !allowPort || paletteRow?.source != "mine" || livePalette.path != paletteRow?.path {
+        return failed(at, "only the MINE palette may request a live profile-port reading")
+    }
+    if !changed.isEmpty {
+        if allowPort, changed == [paletteName], paletteRow?.source == "mine" {
+            port.plan["owner_receipt"] = ["status": "stale", "sha256": sha256Hex(data), "reason": "The MINE palette differs from the owner's resolved profile"]
+            port.plan["origin"] = "port"
+            return port
+        }
+        return failed((changed.first.flatMap { inputs[$0]?["path"] as? String } ?? profile.path) + ":1", "the owner receipt names different input bytes")
+    }
+    // No field of the resolved receipt grants a different source-font identity.
+    do {
+        let metadata = try PublicationSource(sourceText, sourceRow.path)
+        guard let declaration = metadata.nodes.first(where: { $0.role == "DrawingProfile" }) else {
+            return failed(sourceRow.path + ":1", "one DrawingProfile source is required")
+        }
+        let axes = try declaration.axes(["Reader", "Contract", "Palette", "Bindings", "Font", "Metrics", "License", "Legible"], sourceRow.path)
+        let fontAxes = try metadata.node(axes["Font"]!).axes(["Asset", "Family", "Face"], sourceRow.path)
+        let metricAxes = try metadata.node(axes["Metrics"]!).axes(["Input", "Profile", "Font", "SourceFontSHA256", "UnitsPerEm", "CapHeight", "Advances", "MissingGlyph"], sourceRow.path)
+        let fontName = fontAxes["Asset"]!, metricName = metricAxes["Input"]!, licenseName = axes["License"]!
+        guard let fontHash = inputs[fontName]?["sha256"] as? String,
+              try metadata.word(metricAxes["SourceFontSHA256"]!) == fontHash,
+              let font = result["font"] as? [String: Any], font["sha256"] as? String == fontHash,
+              font["metrics_sha256"] as? String == inputs[metricName]?["sha256"] as? String,
+              let license = inputs[licenseName]?["text"] as? String, !license.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return failed(at, "font identity, metrics input or license delivery differs")
+        }
+        let support = port.plan["support"] as? [String: Any] ?? [:]
+        let supportedMetrics = support["metrics"] as? [String: Any] ?? [:]
+        guard support["profile"] as? String == font["profile"] as? String,
+              (support["fonts"] as? [String] ?? []).contains(fontHash), font["face"] as? String == "default",
+              font["units"] as? Int == supportedMetrics["units"] as? Int,
+              font["cap"] as? Int == supportedMetrics["cap"] as? Int,
+              font["advances_sha256"] as? String == supportedMetrics["advances_sha256"] as? String,
+              font["missingGlyph"] as? String == supportedMetrics["missingGlyph"] as? String else {
+            return failed((inputs[metricName]?["path"] as? String ?? profile.path) + ":1", "intact metrics are outside the installed drawing profile", "unsupported")
+        }
+        let bindings = result["bindings"] as? [[String: Any]] ?? []
+        let renderer = String(data: runtimeData("bin/renderer.js") ?? Data(), encoding: .utf8) ?? ""
+        let roles = Set(matches(#"var\(--vi-([a-z-]+),"#, renderer).map { $0[0] })
+        let keys = bindings.compactMap { b -> String? in
+            guard let role = b["role"] as? String, role.range(of: "^[a-z][a-z0-9-]*$", options: .regularExpression) != nil,
+                  let theme = b["theme"] as? String, ["light", "dark"].contains(theme) else { return nil }
+            return theme + "/" + role
+        }
+        let required = Set(roles.flatMap { ["light/" + $0, "dark/" + $0] })
+        guard keys.count == bindings.count, Set(keys).count == keys.count, required.isSubset(of: Set(keys)) else {
+            return failed(at, "the owner profile is missing a drawing role or theme")
+        }
+        let assets = result["assets"] as? [[String: String]] ?? []
+        guard assets.count == 2, Set(assets.compactMap { $0["name"] }) == ["font.ttf", "license.txt"],
+              assets.first(where: { $0["name"] == "font.ttf" })?["sha256"] == fontHash,
+              assets.first(where: { $0["name"] == "license.txt" })?["sha256"] == inputs[licenseName]?["sha256"] as? String,
+              assets.allSatisfy({ a in a["sha256"].flatMap { port.assets[$0] } != nil }) else {
+            return failed(at, "the owner profile resource set differs from its input bytes")
+        }
+        let accepted = (runtimeData("bin/drawing-contract.from").flatMap { try? JSONSerialization.jsonObject(with: $0) }) as? [String: Any] ?? [:]
+        var contract: [String: Any]? = nil
+        if let contractRow = receipt["contract_row"] as? String {
+            guard contractRow == axes["Contract"], let body = inputs[contractRow]?["text"] as? String,
+                  let candidate = (try? JSONSerialization.jsonObject(with: Data(body.utf8))) as? [String: Any] else {
+                return failed(at, "the Drawing contract input is damaged")
+            }
+            if candidate["format"] as? String == "drawing/1" {
+                let address = (inputs[contractRow]?["path"] as? String ?? profile.path) + ":1"
+                guard let cases = candidate["cases"] as? [[String: Any]],
+                      (candidate["owner"] as? [String: Any])?["files"] is [String: Any] else {
+                    return failed(address, "the Drawing contract receipt is incomplete")
+                }
+                var ids = Set<String>()
+                for item in cases {
+                    guard let id = item["id"] as? String, !id.isEmpty, ids.insert(id).inserted,
+                          let status = item["status"] as? String, ["svg", "refused", "not-compared"].contains(status),
+                          item["root"] is String, item["address"] is String else {
+                        return failed(address, "the Drawing contract case receipt is incomplete")
+                    }
+                    if status == "not-compared" {
+                        guard let reason = item["reason"] as? String, !reason.isEmpty else { return failed(address, "the Drawing remainder has no reason") }
+                    } else {
+                        guard let hashes = item["sourceSHA256"] as? [String], let sources = item["sources"] as? [String], hashes.count == sources.count,
+                              (hashes + [item["inputSHA256"] as? String ?? ""]).allSatisfy({ $0.range(of: "^[a-f0-9]{64}$", options: .regularExpression) != nil }) else {
+                            return failed(address, "the Drawing contract input hashes are damaged")
+                        }
+                        if status == "svg" {
+                            guard let svg = item["svg"] as? String, item["svgSHA256"] as? String == sha256Hex(Data(svg.utf8)) else {
+                                return failed(address, "the Drawing contract output hash differs")
+                            }
+                        }
+                    }
+                }
+            }
+            if inputs[contractRow]?["sha256"] as? String == accepted["sha256"] as? String {
+                contract = candidate
+            }
+        } else if (try? metadata.word(axes["Contract"]!)) != "" {
+            return failed(at, "the receipt omits the declared Drawing contract input")
+        }
+        result["contract"] = contract.map { $0 as Any } ?? NSNull()
+        let acceptedPin = accepted.filter { ["repository", "revision", "source_path", "sha256"].contains($0.key) }
+        result["contract_pin"] = contract == nil ? NSNull() : acceptedPin
+        result["port_under_contract"] = contract != nil && accepted["port_sha256"] as? String == (port.plan["reader"] as? [String: Any])?["sha256"] as? String
+        result["case_count"] = result["port_under_contract"] as? Bool == true ? ((contract?["cases"] as? [Any])?.count ?? 0) : 0
+        result["status"] = contract == nil ? "not-compared" : "ready"
+        result["reason"] = contract == nil ? "The owner Drawing contract is not declared or has not been accepted" : "Owner-resolved profile; Drawing contract is installed"
+        if let declared = contract?["profile"] as? [String: Any], let expected = declared["inputSHA256"] as? [String] {
+            let actual = inputs.filter { $0.key != axes["Contract"]! }.compactMap { $0.value["sha256"] as? String }.sorted()
+            result["ownerInputsMatch"] = declared["profileSHA256"] as? String == source["sha256"] as? String && expected.sorted() == actual
+        } else { result["ownerInputsMatch"] = false }
+    } catch {
+        return failed(at, "the profile source metadata is incomplete: " + String(describing: error))
+    }
+    let hash = sha256Hex(data), cssHash = sha256Hex(cssData)
+    result["css_sha256"] = cssHash
+    result["inputSHA256"] = sha256Hex(publicationJSON(["owner_receipt": hash, "inputs": bound.mapValues { $0["sha256"] ?? "" }, "port": (port.plan["reader"] as? [String: Any])?["sha256"] ?? ""]))
+    result["origin"] = "owner"
+    result["owner_receipt"] = ["sha256": hash, "reader": reader]
+    var deliveredAssets = result["assets"] as? [[String: String]] ?? []
+    deliveredAssets.append(["sha256": hash, "name": "resolution.json"])
+    deliveredAssets.append(["sha256": cssHash, "name": "drawing.css"])
+    result["assets"] = deliveredAssets
+    port.plan["status"] = "resolved"
+    port.plan["resolved"] = result
+    port.plan["owner_receipt_sha256"] = hash
+    port.plan["css_sha256"] = cssHash
+    port.plan["css_row"] = cssName
+    port.plan["profile_row"] = sourceName
+    port.plan["resolved_row"] = profile.name ?? ""
+    port.assets[cssHash] = cssData
+    port.assets[hash] = data
+    return port
 }
 
 func drawingTakenTexts(_ w: WorldState) -> [(String, String)] {
@@ -12719,9 +12909,11 @@ func serveDoor(_ a: [String]) -> Never {
                 continue
             }
             if asked.method == "GET", asked.path.hasPrefix("/drawing-assets/") {
-                let hash = String(asked.path.dropFirst("/drawing-assets/".count))
+                let parts = asked.path.dropFirst("/drawing-assets/".count).split(separator: "/")
+                let hash = parts.first.map(String.init) ?? ""
                 let assets = drawingInputs(servedWorld(), counts: false).assets
-                if let data = assets[hash] { serveSay(conn, 200, "application/octet-stream", data) }
+                let type = parts.last == "drawing.css" ? "text/css; charset=utf-8" : "application/octet-stream"
+                if let data = assets[hash], parts.count <= 2 { serveSay(conn, 200, type, data) }
                 else { serveSay(conn, 404, nil, Data()) }
                 continue
             }
@@ -12745,6 +12937,14 @@ func serveDoor(_ a: [String]) -> Never {
                 let plan = drawingInputs(servedWorld()).plan
                 let data = (try? JSONSerialization.data(withJSONObject: plan, options: [.sortedKeys])) ?? Data()
                 serveSay(conn, 200, "application/json; charset=utf-8", data)
+            case ("POST", "/drawing-profile"):
+                if let request = (try? JSONSerialization.jsonObject(with: asked.body)) as? [String: String],
+                   let path = request["path"], let text = request["text"] {
+                    let plan = drawingInputs(servedWorld(), paletteOverride: (path, text)).plan
+                    serveSay(conn, 200, "application/json; charset=utf-8", publicationJSON(plan))
+                } else {
+                    serveSay(conn, 400, "application/json; charset=utf-8", publicationJSON(["status": "refused", "address": "drawing-profile:1", "reason": "a MINE palette path and source text are required"]))
+                }
             case ("GET", "/renderer.js"):
                 // the kit's span engine on JS, for the drawing view (bin/drawing.from)
                 serveFile(conn, joinPath(toolRoot(), "bin/renderer.js"),
@@ -13446,6 +13646,7 @@ let PUBLICATION_ASSETS = [
     "codemirror.js": "web/codemirror.js", "codemirror.css": "web/codemirror.css",
     "publication.js": "web/publication.js", "judge.js": "bin/judge.js", "renderer.js": "bin/renderer.js",
     "press.js": "bin/press.js", "drawing-profile.js": "bin/drawing-profile.js",
+    "drawing-fonts.json": "bin/drawing-fonts.json", "drawing-contract.from": "bin/drawing-contract.from",
     "vi_court.js": "bin/court-wasm/web/vi_court.js", "vi_court_bytes.js": "bin/court-wasm/web/vi_court_bytes.js",
     "court-wasm.from": "bin/court-wasm.from", "LICENSE": "LICENSE", "NOTICE.md": "docs/NOTICE.md"
 ]
@@ -13487,8 +13688,8 @@ func buildReadPlan(_ selected: String) throws -> ReadPlan {
         }
         let publication = publications[0]
         let axes = try publication.axes(["Id", "Entry", "Catalog", "DraftPolicy", "DrawingProfile", "Aliases"], source.file)
-        guard axes["DrawingProfile"] == "NoDrawing", axes["DraftPolicy"] == "ReadOnly" else {
-            throw PublicationFailure(address: "gate.manifest.swift:\(publication.line)", reason: "this delivery supports NoDrawing and ReadOnly; the requested policy or profile needs its reader", status: "unsupported")
+        guard axes["DraftPolicy"] == "ReadOnly" else {
+            throw PublicationFailure(address: "gate.manifest.swift:\(publication.line)", reason: "this delivery supports ReadOnly; the requested draft policy needs its reader", status: "unsupported")
         }
         let identity = try source.word(axes["Id"]!)
         guard !identity.isEmpty else { throw PublicationFailure(address: "gate.manifest.swift:\(publication.line)", reason: "Publication.Id is empty") }
@@ -13501,6 +13702,32 @@ func buildReadPlan(_ selected: String) throws -> ReadPlan {
         let recordBytes = try take(rootRecordPath, ".gate/forms-definitions.json:1")
         let rootRecord = (try? JSONSerialization.jsonObject(with: recordBytes)) as? [String: Any] ?? [:]
         if let bad = manifestGuards(rootWorld).first { throw PublicationFailure(address: bad.address, reason: bad.claim) }
+        let drawingName = axes["DrawingProfile"]!
+        var drawingPlan: [String: Any] = ["status": "none", "reason": "NoDrawing"]
+        var drawingAssets: [String: Data] = [:], profileNames = Set<String>()
+        if drawingName != "NoDrawing" {
+            guard rootLayout.rows.first(where: { $0.name == drawingName })?.kind == "DrawingProfileFile" else {
+                throw PublicationFailure(address: "gate.manifest.swift:\(publication.line)", reason: "DrawingProfile must name an installed owner-resolved profile row", status: "unsupported")
+            }
+            let profile = drawingInputs(rootWorld, counts: false, allowPort: false)
+            guard profile.plan["status"] as? String == "resolved" else {
+                throw PublicationFailure(address: profile.plan["address"] as? String ?? "gate.manifest.swift:\(publication.line)",
+                    reason: profile.plan["reason"] as? String ?? "the owner-resolved drawing profile is unavailable",
+                    status: profile.plan["status"] as? String == "unsupported" ? "unsupported" : "refused")
+            }
+            drawingPlan = profile.plan; drawingAssets = profile.assets
+            profileNames = Set((profile.plan["inputs"] as? [String: Any] ?? [:]).keys)
+            for key in ["profile_row", "resolved_row", "css_row"] {
+                if let name = profile.plan[key] as? String { profileNames.insert(name) }
+            }
+            var urls: [String: String] = [:]
+            let result = drawingPlan["resolved"] as? [String: Any] ?? [:]
+            for asset in result["assets"] as? [[String: String]] ?? [] {
+                if let hash = asset["sha256"], let name = asset["name"] { urls[hash] = "assets/drawing/" + hash + "/" + name }
+            }
+            drawingPlan["asset_urls"] = urls
+        }
+        let delivery = drawingName == "NoDrawing" ? "NoDrawing/ReadOnly" : "OwnerProfile/ReadOnly"
         func limitedContext(_ record: [String: Any], _ text: String, _ address: String, prepared: Bool = false) throws {
             if let value = record["languages"], !(value is [String: Any]) {
                 throw PublicationFailure(address: address, reason: "languages must be an object")
@@ -13517,11 +13744,11 @@ func buildReadPlan(_ selected: String) throws -> ReadPlan {
         }
         var inputs: [[String: Any]] = [], manifests: [[String: Any]] = [], records: [[String: Any]] = []
         for row in rootLayout.rows {
-            guard row.source == "theirs", row.kind == "CatalogFile", let path = inputPath(row, rootWorld, resolved) else {
+            guard row.source == "theirs", (row.kind == "CatalogFile" || profileNames.contains(row.name ?? "")), let path = inputPath(row, rootWorld, resolved) else {
                 throw PublicationFailure(address: "gate.manifest.swift:\(row.line)", reason: "root input Kind needs a supported publication reader", status: "unsupported")
             }
             let bytes = try take(path, row.path + ":1")
-            inputs.append(["manifest": "gate.manifest.swift", "row": row.name ?? "", "path": row.path, "kind": "CatalogFile", "reader": "CatalogReaderV1", "source": "theirs", "sha256": sha256Hex(bytes)])
+            inputs.append(["manifest": "gate.manifest.swift", "row": row.name ?? "", "path": row.path, "kind": row.kind ?? "", "reader": installedKindReaders()[row.kind ?? ""] ?? "", "source": "theirs", "sha256": sha256Hex(bytes)])
         }
         manifests.append(["path": "gate.manifest.swift", "sha256": sha256Hex(manifestBytes)])
         records.append(["path": ".gate/forms-definitions.json", "sha256": sha256Hex(recordBytes)])
@@ -13573,6 +13800,16 @@ func buildReadPlan(_ selected: String) throws -> ReadPlan {
             if FileManager.default.fileExists(atPath: joinPath(toolRoot(), file)) { watched[joinPath(toolRoot(), file)] = sha256Hex(bytes) }
             let type = asset.hasSuffix(".js") ? "text/javascript" : asset.hasSuffix(".css") ? "text/css" : "text/plain; charset=utf-8"
             replies["assets/" + asset] = PublicationReply(data: bytes, contentType: type)
+        }
+        if drawingName != "NoDrawing", let result = drawingPlan["resolved"] as? [String: Any],
+           let cssHash = drawingPlan["css_sha256"] as? String, let css = drawingAssets[cssHash] {
+            replies["assets/drawing/" + cssHash + "/drawing.css"] = PublicationReply(data: css, contentType: "text/css; charset=utf-8")
+            for asset in result["assets"] as? [[String: String]] ?? [] {
+                if let hash = asset["sha256"], let name = asset["name"], let bytes = drawingAssets[hash] {
+                    let type = name.hasSuffix(".css") ? "text/css; charset=utf-8" : "application/octet-stream"
+                    replies["assets/drawing/" + hash + "/" + name] = PublicationReply(data: bytes, contentType: type)
+                }
+            }
         }
         guard let template = runtimeData("web/ui.html"), let ui = String(data: template, encoding: .utf8) else {
             throw PublicationFailure(address: "web/ui.html:1", reason: "installed UI is missing")
@@ -13678,7 +13915,7 @@ func buildReadPlan(_ selected: String) throws -> ReadPlan {
                 json("GET /shelf", ["modules": modules, "roles": Dictionary(uniqueKeysWithValues: modules.map { ($0, shelfHeadLine($0, "// role:") ?? "") }),
                     "speaks": Dictionary(uniqueKeysWithValues: modules.map { ($0, shelfHeadLine($0, "// speaks-for:") ?? "") })])
                 for page in shelf() { snap["GET /shelf?m=" + publicationQuery(page.name)] = ["body": presentedWorld(w, page.name), "type": textType] }
-                json("GET /drawing-profile", ["status": "none", "reason": "NoDrawing"])
+                json("GET /drawing-profile", drawingPlan)
                 json("GET /version", ["gate": gateVersion(), "judge_from": judgeFrom() ?? "", "publication": identity])
                 json("GET /language", ["names": Dictionary(uniqueKeysWithValues: languageNames()), "file": languageFile(), "court": NSNull(), "at": judgeFrom() ?? "", "present": false])
                 json("GET /attention", ["command": "attention", "seams": []])
@@ -13699,15 +13936,16 @@ func buildReadPlan(_ selected: String) throws -> ReadPlan {
         }
         // The reader records each input when taking it; delivery follows that
         // record rather than guessing whether its cache path looks structural.
-        for (hash, bytes) in blobs {
+        let carriedDrawingHashes = Set(replies.filter { $0.key.hasPrefix("assets/drawing/") }.map { sha256Hex($0.value.data) })
+        for (hash, bytes) in blobs where !carriedDrawingHashes.contains(hash) {
             replies["inputs/" + hash] = PublicationReply(data: bytes, contentType: "application/octet-stream")
         }
         let assets = Dictionary(uniqueKeysWithValues: replies.filter { $0.key.hasPrefix("assets/") }.map { ($0.key, sha256Hex($0.value.data)) })
         let resources = Dictionary(uniqueKeysWithValues: replies.filter { $0.key.hasPrefix("assets/") || $0.key.hasPrefix("inputs/") || $0.key.hasPrefix("styles/") }.map { ($0.key, sha256Hex($0.value.data)) })
         var doc: [String: Any] = ["format": "publication/1", "publication": ["id": identity, "entry": entry.name],
             "manifests": manifests, "records": records, "inputs": inputs, "languages": languagePlans, "worlds": worlds, "routes": routes,
-            "plain_fragments": [], "capabilities": ["read_only": true, "structure": "read-only-structure", "delivery": "NoDrawing/ReadOnly"],
-            "draft_policy": "ReadOnly", "drawing_profile": "NoDrawing", "coverage": coverage,
+            "plain_fragments": [], "capabilities": ["read_only": true, "structure": "read-only-structure", "delivery": delivery],
+            "draft_policy": "ReadOnly", "drawing_profile": drawingName, "coverage": coverage,
             "installed": ["gate": gateVersion(), "organization_revision": runtimeData("bin/organization-court.from").flatMap { String(data: $0, encoding: .utf8)?.components(separatedBy: "\n").first } ?? "", "binary_sha256": FileManager.default.contents(atPath: absPath(CommandLine.arguments[0])).map { sha256Hex($0) } ?? "", "judge_revision": judgeFrom() ?? "", "wasm": assets["assets/vi_court_bytes.js"] ?? "", "stdlib": Dictionary(uniqueKeysWithValues: shelf().map { ($0.name, sha256Hex(Data($0.text.utf8))) })], "assets": assets, "resources": resources]
         doc["inputs_digest"] = sha256Hex(publicationJSON(["manifests": manifests, "records": records, "inputs": inputs]))
         let planID = sha256Hex(publicationJSON(doc)); doc["plan_id"] = planID
@@ -13730,9 +13968,15 @@ func buildReadPlan(_ selected: String) throws -> ReadPlan {
             }
             html = html.replacingOccurrences(of: "\"/ladder.css\"", with: "\"" + prefix + "styles/" + door.id + ".css\"")
             let loader = "<script src=\"" + prefix + "assets/publication.js\" data-replies=\"" + prefix + "snapshots/" + door.id + ".json\" data-plan=\"" + planID + "\"></script>\n"
-            html = html.replacingOccurrences(of: "<head>", with: "<head>\n" + loader)
-            let navigation = doors.map { "<a href=\"" + prefix + $0.id + "/\">" + publicationEscape($0.title) + "</a>" }.joined(separator: " · ")
-            html = html.replacingOccurrences(of: "<body>", with: "<body>\n<nav aria-label=\"Publication\">" + navigation + " · Read-only publication</nav>")
+            let marker = "<link rel=\"stylesheet\" href=\"" + prefix + "assets/codemirror.css\">"
+            guard html.components(separatedBy: marker).count == 2 else {
+                throw PublicationFailure(address: "web/ui.html:1", reason: "the publication transport has no unique bench boundary")
+            }
+            var transport = loader
+            if let hash = drawingPlan["css_sha256"] as? String {
+                transport += "<link rel=\"stylesheet\" data-drawing-profile href=\"" + prefix + "assets/drawing/" + hash + "/drawing.css\">\n"
+            }
+            html = html.replacingOccurrences(of: marker, with: transport + marker)
             replies[path + "index.html"] = PublicationReply(data: Data(html.utf8), contentType: "text/html; charset=utf-8")
         }
         let plan = ReadPlan(document: doc, replies: replies, watched: watched, directories: directories)
@@ -13806,9 +14050,10 @@ func publishDoor(_ raw: [String]) -> Never {
         catch { if existed { try? FileManager.default.moveItem(atPath: backup, toPath: output) }; throw error }
         if existed { try? FileManager.default.removeItem(atPath: backup) }
         if raw.contains("--json") {
-            out(String(decoding: publicationJSON(["command": "publish", "site": output, "plan_id": plan.document["plan_id"]!, "format": "publication/1", "delivery": "NoDrawing/ReadOnly"]), as: UTF8.self) + "\n")
+            out(String(decoding: publicationJSON(["command": "publish", "site": output, "plan_id": plan.document["plan_id"]!, "format": "publication/1", "delivery": (plan.document["capabilities"] as? [String: Any])?["delivery"] ?? ""]), as: UTF8.self) + "\n")
         } else {
-            out("publish: " + output + " · NoDrawing/ReadOnly\n  next: gate serve " + saidPath(root) + "\n")
+            let delivery = (plan.document["capabilities"] as? [String: Any])?["delivery"] as? String ?? ""
+            out("publish: " + output + " · " + delivery + "\n  next: gate serve " + saidPath(root) + "\n")
         }
         exit(0)
     } catch {

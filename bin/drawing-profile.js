@@ -1,5 +1,5 @@
-// DrawingProfileReaderV1. One reader in the live bench and the static publisher.
-// Colour expressions belong to the installed DocumentKit port, not this reader.
+// Carry the owner's resolved profile. Only a live MINE palette uses the port.
+// Its colour expressions belong to the installed DocumentKit port.
 (function (host) {
 "use strict";
 const node = typeof module !== 'undefined';
@@ -35,6 +35,23 @@ function parsed(file) {
 async function compile(plan, getBytes, assetURL) {
     if(plan.status==='none')return {status:'none',reason:'Drawing without a profile',css:'',assets:[]};
     if(plan.status==='refused')throw new ProfileError(plan.address,plan.reason);
+    if(plan.status==='unsupported')throw new ProfileError(plan.address,plan.reason,'unsupported');
+    if(plan.status==='resolved') {
+        const result=plan.resolved,at=plan.profile.path+':1';
+        if(!result)throw new ProfileError(at,'owner profile delivery is missing');
+        const delivered=new Map();
+        for(const item of result.assets||[]) {
+            const data=await getBytes(item.sha256);
+            if(await sha(data)!==item.sha256)throw new ProfileError(at,'owner profile resource delivery differs: '+item.name);
+            delivered.set(item.sha256,data);
+        }
+        const cssBytes=delivered.get(plan.css_sha256);
+        if(!cssBytes)throw new ProfileError(at,'owner CSS delivery is missing');
+        const css=new TextDecoder().decode(cssBytes);
+        // Transport only: an inline live sheet needs a server URL; a published
+        // link retains the relative URL in the owner's checked CSS bytes.
+        return {...result,css:css.replaceAll('../'+result.font.sha256+'/font.ttf',assetURL(result.font.sha256,'font.ttf'))};
+    }
     if(plan.status!=='declared'||!plan.profile||!plan.reader)throw new ProfileError('drawing-profile:1','cannot read the drawing input plan','unsupported');
     const support = node ? require('./drawing-fonts.json') : await (await fetch('drawing-fonts.json')).json();
     if(await sha(bytes(plan.reader.source))!==plan.reader.sha256)throw new ProfileError('drawing-profile:1','reader bytes differ from their snapshot');
@@ -63,7 +80,9 @@ async function compile(plan, getBytes, assetURL) {
     if(p.literals.get(contractName)?.value!=='') {
         const file=input(contractName);
         try { contract=JSON.parse(file.text); } catch { fail('invalid Drawing contract','refused',file.path+':1'); }
-        if(contract.format!=='drawing/1'||!Array.isArray(contract.cases)||!contract.owner?.files)fail('unsupported Drawing contract','unsupported',file.path+':1');
+        if(!contract||typeof contract!=='object'||Array.isArray(contract))fail('Drawing contract input must be a record','refused',file.path+':1');
+        if(contract.format==='drawing/1') {
+        if(!Array.isArray(contract.cases)||!contract.owner?.files)fail('incomplete Drawing contract','refused',file.path+':1');
         const ids=new Set();
         for(const c of contract.cases) {
             if(typeof c.id!=='string'||!c.id||ids.has(c.id)||!['svg','refused','not-compared'].includes(c.status)||!c.root||!c.address)fail('invalid Drawing case','refused',file.path+':1');
@@ -72,8 +91,10 @@ async function compile(plan, getBytes, assetURL) {
             if(!/^[a-f0-9]{64}$/.test(c.inputSHA256)||!Array.isArray(c.sources)||!Array.isArray(c.sourceSHA256)||c.sourceSHA256.length!==c.sources.length||c.sourceSHA256.some(h=>!/^[a-f0-9]{64}$/.test(h)))fail('Drawing input hashes are missing');
             if(c.status==='svg'&&(typeof c.svg!=='string'||await sha(bytes(c.svg))!==c.svgSHA256))fail('Drawing output bytes differ','refused',file.path+':1');
         }
+        }
         const provenance=(plan.record?.files||[]).find(row=>row.row===contractName);
         contractPin={sha256:file.sha256,...(provenance?{repository:provenance.repository,revision:provenance.revision,source_path:provenance.source_path}:{path:file.path,source:file.source})};
+        if(plan.accepted_contract?.sha256!==file.sha256){contract=null;contractPin=null;}
     }
     const palette=input(axis(d,'Palette')), pp=parsed(palette), env=kit.makeEnvironment(pp.declarations,pp.literals,pp.topAliases);
     const colour=term=>{const value=kit.textOf(env,kit.parseType(term));if(!/^color\(xyz-d65 [\d.]+ [\d.]+ [\d.]+\)$/.test(value))fail('unsupported colour '+term,'unsupported');return value;};
@@ -130,15 +151,12 @@ async function compile(plan, getBytes, assetURL) {
     shape(metrics,['Input','Profile','Font','SourceFontSHA256','UnitsPerEm','CapHeight','Advances','MissingGlyph'],plan.profile);
     const asset=input(axis(font,'Asset')),mf=input(axis(metrics,'Input')),license=input(axis(d,'License')),mp=parsed(mf);
     const family=word(axis(font,'Family')),face=word(axis(font,'Face'));
-    if(!/^[a-zA-Z0-9 -]+$/.test(family))fail('unsupported font family spelling','unsupported');
+    // Family is the owner's label. Registration uses the content hash, so a
+    // different label never selects a different table or overwrites a bench font.
     if(word(axis(metrics,'SourceFontSHA256'))!==asset.sha256)fail('font bytes differ from SourceFontSHA256','refused',asset.path+':1');
     if(face!=='default'||word(axis(metrics,'Profile'))!==support.profile||!support.fonts.includes(asset.sha256))fail('font/face is outside the installed metric profile','unsupported',asset.path+':1');
     const units=Number(word(axis(metrics,'UnitsPerEm'),mp)),cap=Number(word(axis(metrics,'CapHeight'),mp)),advances=word(axis(metrics,'Advances'),mp),missing=word(axis(metrics,'MissingGlyph'));
     if(units!==Number(plan.reader.source.match(/const fontUnitsPerEm = (\d+)/)?.[1])||cap!==Number(plan.reader.source.match(/const fontCapHeight = (\d+)/)?.[1])||advances!==plan.reader.source.match(/const fontAdvances = new Map\("([^"]+)"/)?.[1]||missing!=='advance-of-U+006D')fail('metrics differ from the installed drawing reader','unsupported',mf.path+':1');
-    if(contract) {
-        const owner=contract.owner.files;
-        if(owner['showcase/Sources/DocumentKit/GeneratedFontMetrics.swift']!==mf.sha256)fail('metrics differ from the Drawing owner','refused',mf.path+':1');
-    }
     const fontBytes=await getBytes(asset.sha256);
     if(await sha(fontBytes)!==asset.sha256)fail('font delivery hash differs','refused',asset.path+':1');
     let faceInfo;
@@ -153,7 +171,8 @@ async function compile(plan, getBytes, assetURL) {
         && contract.profile.profileSHA256===plan.profile.sha256
         && JSON.stringify([...contract.profile.inputSHA256].sort())===JSON.stringify(Object.entries(plan.inputs).filter(([name])=>name!==contractName).map(([,file])=>file.sha256).sort());
     const inputSHA256=await sha(bytes(JSON.stringify({profile:plan.profile.sha256,reader:plan.reader.sha256,inputs:Object.keys(plan.inputs).sort().map(name=>[name,plan.inputs[name].sha256])})));
-    return {inputSHA256,ownerInputsMatch,status:contract?'ready':'not-compared',reason:contract?'Drawing contract is installed':'The owner Drawing contract is not declared',contract,contract_pin:contractPin,css,bindings,witnesses,reader:{id:'gate/documentkit-drawing',sha256:plan.reader.sha256},font:{sha256:asset.sha256,family,cssFamily,face,units,cap,metrics_sha256:mf.sha256,missingGlyph:missing},assets:[{sha256:asset.sha256,name:'font.ttf'},{sha256:license.sha256,name:'license.txt'}],profile_sha256:plan.profile.sha256,source:{record_sha256:plan.record_sha256,inputs:plan.record?.files||[]}};
+    if(plan.accepted_contract?.sha256!==contractPin?.sha256){contract=null;contractPin=null;}
+    return {inputSHA256,ownerInputsMatch:!!contract&&ownerInputsMatch,status:contract?'ready':'not-compared',reason:contract?'Drawing contract is installed':'The owner Drawing contract is not declared or has not been accepted',contract,contract_pin:contractPin,port_under_contract:!!contract&&plan.accepted_contract.port_sha256===plan.reader.sha256,origin:'port',owner_receipt:plan.owner_receipt||null,css,bindings,witnesses,reader:{id:'gate/documentkit-drawing',sha256:plan.reader.sha256},font:{sha256:asset.sha256,family,cssFamily,face,units,cap,metrics_sha256:mf.sha256,missingGlyph:missing},assets:[{sha256:asset.sha256,name:'font.ttf'},{sha256:license.sha256,name:'license.txt'}],profile_sha256:plan.profile.sha256,source:{record_sha256:plan.record_sha256,inputs:plan.record?.files||[]}};
 }
 // One comparison for live and static readings. File labels do not grant parity:
 // every semantic source byte and every actual result must match the owner.
@@ -162,8 +181,9 @@ async function compare(profile, parts, drawn, declaration=null) {
     const sourceDigest=await sha(bytes(JSON.stringify([...hashes].sort())));
     const digest=await sha(bytes(JSON.stringify({sources:sourceDigest,profile:profile?.inputSHA256||null})));
     const contract=profile?.contract;
-    const base={status:'port-under-contract',inputs_digest:digest,source_digest:sourceDigest,contract_pin:profile?.contract_pin||null,case_count:contract?.cases.length||0};
+    const base={status:'port-under-contract',inputs_digest:digest,source_digest:sourceDigest,contract_pin:profile?.contract_pin||null,case_count:contract?.cases.length||0,profile_origin:profile?.origin||'none',owner_receipt:profile?.owner_receipt||null};
     if(!contract)return {...base,status:'not-compared',reason:profile?.reason||'The owner Drawing contract is not declared'};
+    if(profile.port_under_contract===false)return {...base,status:'not-compared',case_count:0,reason:'The installed drawing port has not passed this owner contract'};
     if(profile.ownerInputsMatch===false)return {...base,reason:'The drawing profile inputs differ from the owner case environment'};
     const stated=contract.cases.find(c=>c.id===declaration?.case_id&&c.status==='not-compared');
     if(stated&&declaration.source_digest===sourceDigest)return {...base,status:'not-compared',case_id:stated.id,address:stated.address,reason:stated.reason};
@@ -184,9 +204,9 @@ async function compare(profile, parts, drawn, declaration=null) {
     return {...base,reason:'This input has not been read by the owner'};
 }
 function caption(comparison) {
-    return comparison.status+(comparison.case_id?' · '+comparison.case_id:'')+(comparison.reason?' · '+(comparison.address?comparison.address+': ':'')+comparison.reason:'');
+    return comparison.status+(comparison.case_id?' · '+comparison.case_id:'')+(comparison.reason?' · '+(comparison.address?comparison.address+': ':'')+comparison.reason:'')+(comparison.profile_origin==='port'?' · palette: browser port; owner receipt stale':'');
 }
 const api={compile,compare,caption,ProfileError,sha};
-if(node){module.exports=api;if(require.main===module){let s='';process.stdin.setEncoding('utf8');process.stdin.on('data',b=>s+=b);process.stdin.on('end',async()=>{try{const plan=JSON.parse(s),base=process.argv[2];const result=await compile(plan,async h=>base==='--assets'?new Uint8Array(require('fs').readFileSync(require('path').join(process.argv[3],h,'font.ttf'))):new Uint8Array(await(await fetch(base+'/drawing-assets/'+h)).arrayBuffer()),(h,n)=>'../'+h+'/'+n);console.log(JSON.stringify(result));}catch(e){console.error(JSON.stringify({status:e.status||'refused',address:e.address||'drawing-profile:1',message:e.message}));process.exitCode=1;}});}}
+if(node){module.exports=api;if(require.main===module){let s='';process.stdin.setEncoding('utf8');process.stdin.on('data',b=>s+=b);process.stdin.on('end',async()=>{try{const plan=JSON.parse(s),base=process.argv[2];const result=await compile(plan,async h=>base==='--assets'?new Uint8Array(require('fs').readFileSync(require('path').join(process.argv[3],h,(plan.resolved?.assets||[]).find(a=>a.sha256===h)?.name||'font.ttf'))):new Uint8Array(await(await fetch(base+'/drawing-assets/'+h)).arrayBuffer()),(h,n)=>'../'+h+'/'+n);console.log(JSON.stringify(result));}catch(e){console.error(JSON.stringify({status:e.status||'refused',address:e.address||'drawing-profile:1',message:e.message}));process.exitCode=1;}});}}
 else host.GateDrawingProfile=api;
 })(globalThis);

@@ -10,6 +10,8 @@
 
 - Generate the README battery count from registrations with `python3 bin/battery_count.py`. The battery refuses a stale stamp with that repair command before building, and checks the executed count against registered cases.
 
+- Drawing profiles carry CSS and a byte-bound receipt read by the owner's DocumentKit. Native `publish` and `serve` validate the same inputs and shared resources without Python or Node; a stale or damaged delivery refuses before replacing a publication. A live MINE palette can use the labelled browser port, with its owner receipt marked stale. Drawing contract acceptance names the installed receipt; another candidate remains not compared.
+
 - `serve` prints `Ready: <address>` after its socket starts listening; `--json` retains its route record. Table shows an atom's literal `typeName` beside its name, with its source address. Each `/world` response resolves its pinned inputs once and rechecks them on the next request.
 
 - `bin/build-pages.py` now requires an explicit `--source <repository>`, `--worlds`, or both; it no longer creates a demo on every publication. The gate site explicitly selects `examples/codeowners` for its root; `playground/` opens Read me from showcase. Existing root links to `ownership.swift` keep their destination. Historical typed-playground inputs are test-only, and the scene road test is an external harness. `gate demo`, `gate demo org` and `gate demo seam` remain explicit example installers.
