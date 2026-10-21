@@ -62,6 +62,7 @@ public typealias Input_agrees = Pair<InputAtom, Coral>
                 assert line > 1 and field.rsplit('/', 1)[-1] in record.read_text().splitlines()[line-1], (label, error)
             if claim: assert any(claim in e['claim'] for e in errors), (label, answer)
             write(); manifest.write_text(text)
+            return answer
         cache = ROOT / 'bin/.inputs' / hashlib.sha256(str(dependency).encode()).hexdigest()
         try:
             write()
@@ -111,7 +112,22 @@ public typealias Input_agrees = Pair<InputAtom, Coral>
             changed = copy.deepcopy(spec); changed['format'] = 3
             refused('unknown version', changed, field='/format')
             record.write_text('{broken'); refused('broken JSON', claim='JSON object')
-            record.unlink(); refused('lost record', claim='pinned input record')
+            record.unlink(); lost = refused('lost record', claim='pinned input record')
+            # The old publisher left this note beside its definitions. A lost
+            # declared input must refuse through N1 with or without that note.
+            legacy_note = owner / '.gate/worlds.from'
+            historical = ROOT / 'tests/fixtures/legacy-worlds-note.from'
+            provenance = json.loads(historical.with_suffix('.source.json').read_text())
+            assert hashlib.sha256(historical.read_bytes()).hexdigest() == provenance['sha256']
+            legacy_note.write_bytes(historical.read_bytes())
+            record.unlink(); noted = refused('lost record with legacy note', claim='pinned input record')
+            legacy_note.unlink()
+            for answer in (lost, noted):
+                assert any(e['address'].startswith('gate.manifest.swift:') and 'Claims:' in e['claim']
+                           and 'pinned input record' in e['claim'] for e in answer['refusals']), answer
+            assert lost['refusals'] == noted['refusals'], (lost, noted)
+            print('INPUT RECORD LOSS: ' + json.dumps([dict(legacy_note=flag,refusals=answer['refusals'])
+                  for flag,answer in [(False,lost),(True,noted)]]))
             manifest.write_text(text + text[text.index('public enum Claims:'):text.index('public enum Vocabulary:')])
             refused('repeated manifest row', claim='repeated manifest row')
             manifest.write_text(text.replace('    public typealias Kind = FormsFile', '    public static var role: String { "forms" }'))
@@ -152,6 +168,28 @@ public typealias Input_agrees = Pair<InputAtom, Coral>
             (installed / 'stdlib/manifest.swift').write_text(shelf.replace('Reader = FormsReaderV1', 'Reader = FutureReaderV9'))
             answer = status(executable)
             assert answer['verdict'] in ('partial', 'unsupported') and any('FutureReaderV9' in r['reason'] for r in answer['unsupported']), answer
+            # A self-contained world declares no taken inputs. An old publisher
+            # note is evidence, not a new requirement for an external record.
+            plain = base / 'SelfContained'; (plain / '.gate').mkdir(parents=True)
+            (plain / 'gate.manifest.swift').write_text('''public protocol Role {}
+public protocol Mine {}
+public enum FormsFile: Role {}
+public enum Claims: Mine {
+    public typealias Kind = FormsFile
+}
+extension Claims { public static var typeName: String { "Claims.swift" } }
+''')
+            (plain / 'Claims.swift').write_text(forms + (dependency / 'Types.swift').read_text())
+            def plain_status():
+                r = subprocess.run([str(ROOT/'bin/gate-cli'),'status','--json'],cwd=plain,capture_output=True,text=True,timeout=30)
+                return json.loads(r.stdout)
+            without_note = plain_status()
+            assert without_note['verdict'] == 'holds' and without_note['forms']['equalities'] == 1, without_note
+            (plain / '.gate/worlds.from').write_bytes(historical.read_bytes())
+            with_note = plain_status()
+            assert with_note['verdict'] == 'holds' and with_note['forms'] == without_note['forms'], with_note
+            assert not with_note['refusals'] and not with_note.get('unsupported'), with_note
+            print('SELF-CONTAINED LEGACY NOTE: ' + json.dumps(dict(without_note=without_note,with_note=with_note)))
             print('INPUTS/KIND ALL GREEN: cold/warm bytes, schema, source addresses and installed readers')
         finally:
             shutil.rmtree(cache, ignore_errors=True)

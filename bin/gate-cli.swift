@@ -3039,10 +3039,7 @@ func formsDefinitions(_ w: WorldState, language: String? = nil) -> (paths: [Stri
     guard let root = layoutDir(w) else { return ([], []) }
     let record = (root as NSString).appendingPathComponent(".gate/forms-definitions.json")
     guard FileManager.default.fileExists(atPath: record) else {
-        if FileManager.default.fileExists(atPath: (root as NSString).appendingPathComponent(".gate/worlds.from")) {
-            return ([], [(".gate/forms-definitions.json:1", "the world's definitions record is missing")])
-        }
-        return ([], [])
+        return ([], takenInputs(w).bad)
     }
     guard let data = FileManager.default.contents(atPath: record),
           let spec = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
