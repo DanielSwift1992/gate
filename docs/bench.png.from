@@ -1,3 +1,3 @@
-web/ui.html sha256:ffd7b927237323f29b1c43d670f4b388308b3ff62affa1578a002e3e542783fe
+web/ui.html sha256:5aafb514eab8d0479fa50220052fe8e68b10456d2d90e50889984dac2497a8ac
 door /?f=ownership.swift:89&view=bare over `gate demo`, 1280x800 at 2x
 retake: bash bin/shoot-bench.sh
