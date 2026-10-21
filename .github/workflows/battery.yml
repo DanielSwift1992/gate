@@ -20,7 +20,7 @@ jobs:
       # toolchain is installed here on purpose
       # the judge is rebuilt from the public theory corpus at the pin,
       # so the battery never trusts a stale vendored binary
-      - run: bin/build-judge.sh 68671515
+      - run: bin/build-judge.sh "$(cat bin/gate-judge.from)"
       # and the company's plain court from the showcase at its own pin
       - run: bin/build-organization-judge.sh
       # the same tee as linux: this job went red once with its log closed
@@ -101,7 +101,7 @@ jobs:
       - run: |
           command -v swift || { echo "the runner image no longer carries swift; install a toolchain step here"; exit 1; }
           swift --version
-      - run: bin/build-judge.sh 68671515
+      - run: bin/build-judge.sh "$(cat bin/gate-judge.from)"
       - run: bin/build-organization-judge.sh
       - run: |
           python3 tests/smoke.py 2>&1 | tee /tmp/smoke-out.txt

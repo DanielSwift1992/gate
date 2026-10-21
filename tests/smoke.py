@@ -1041,6 +1041,13 @@ def main():
         S.append((f"the company's plain court answers {_release} through the native carrier and the port",
                   _oc_native.returncode == 0 and _expected in _oc_native.stdout
                   and _oc_port.returncode == 0 and _expected in _oc_port.stdout))
+    _court_contract = subprocess.run(
+        [sys.executable, os.path.join(HERE, "tests", "court-contract.py")],
+        capture_output=True, text=True)
+    if _court_contract.returncode:
+        print(_court_contract.stdout + _court_contract.stderr, flush=True)
+    S.append(("both Court carriers answer the owner's three byte-bound contracts",
+              _court_contract.returncode == 0 and "COURT CONTRACT GREEN" in _court_contract.stdout))
     # The browser's vocabulary changes inspection records, never the plain
     # verdict. These witnesses previously invoked extra domain requirements
     # or admitted entries that the Swift reference refuses.
@@ -5993,7 +6000,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               # so the tool is not asking of anybody a thing it had not done
               and palette_holds(own_status)
               and open(os.path.join(HERE, "bin", "gate-judge.from"),
-                       encoding="utf-8").read().strip().startswith("68671515")
+                       encoding="utf-8").read().strip() == json.load(open(os.path.join(HERE, "bin", "court-contract.from")))["revision"]
               # AND THE EDITOR IS ACCOUNTED FOR TOO. It arrived the way anything
               # of somebody else's should — named, versioned, unchanged, saying
               # so in its own first line — and it was the one dependency an
@@ -6353,7 +6360,7 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               and lang.get("names", {}).get("Unit") == 292
               and lang.get("file", "").endswith("Primitive.swift")
               # at the revision the judge was built from, not some other one
-              and (lang.get("at") or "").startswith("68671515")
+              and lang.get("at") == open(os.path.join(HERE, "bin", "gate-judge.from")).read().strip()
               # and the way to get it, since this tool will not go and take it
               and "git clone" in lang.get("command", "")
               # the bench reaches them: they join what a click can land on
@@ -7316,7 +7323,7 @@ console.log(JSON.stringify({
     kept = open(jm, encoding="utf-8").read()
     try:
         open(jm, "w", encoding="utf-8").write(
-            kept.replace("verification-is-identification@68671515",
+            kept.replace("verification-is-identification@" + open(os.path.join(HERE, "bin", "gate-judge.from")).read().strip()[:8],
                          "verification-is-identification@deadbee"))
         lied = run("status", cwd=HERE)[1]
     finally:
@@ -8455,15 +8462,17 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
     # manifest lies about the court. One equality, all three records.
     _man_pin = re.search(r"verification-is-identification@([0-9a-f]+)",
                          open(os.path.join(HERE, "gate.manifest.swift")).read())
-    _ci_pin = re.search(r"bin/build-judge\.sh ([0-9a-f]+)",
-                        open(os.path.join(HERE, ".github", "workflows", "battery.yml")).read())
+    _ci_builds = re.findall(r'(?m)^\s*- run: (bin/build-judge\.sh[^\n]*)$',
+                            open(os.path.join(HERE, ".github", "workflows", "battery.yml")).read())
     _from = ""
     _fp = os.path.join(HERE, "bin", "gate-judge.from")
     if os.path.exists(_fp):
         _from = open(_fp).read().strip()
     S.append(("the manifest, CI and the build name one judge revision",
-              _man_pin and _ci_pin and _man_pin.group(1) == _ci_pin.group(1)
-              and _from.startswith(_man_pin.group(1))))
+              _man_pin and _from.startswith(_man_pin.group(1))
+              and len(_ci_builds) == 2
+              and all(command == 'bin/build-judge.sh "$(cat bin/gate-judge.from)"'
+                      for command in _ci_builds)))
 
     # ── AND THE ONE PLACE A SHIPPED BINARY IS BORN SAYS SO IN ITS OWN TEXT. A
     # release workflow is a claim about provenance, and a claim nobody checks is
