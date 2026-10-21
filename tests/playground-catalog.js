@@ -22,7 +22,14 @@ module.exports=async function(root){
   const text=await(await page.fetch('/shelf?m=Site%2FManifest')).text();
   assert.equal(require('crypto').createHash('sha256').update(text).digest('hex'),input.sha256);
   const files=await(await page.fetch('/files')).json();
-  if(id==='site')assert(!files.files.includes('Manifest.swift'));
+  if(id==='site') {
+   // The owner declares this taken catalog; the publisher never deletes it.
+   assert(files.files.includes('Manifest.swift') && !files.forms.includes('Manifest.swift'));
+   const origin=files.theirs['Manifest.swift'];
+   assert(origin.verified && origin.kind==='CarriedFile');
+   assert.equal(origin.revision,input.revision);assert.equal(origin.sha256,input.sha256);
+   assert.equal(await(await page.fetch('/world?f=Manifest.swift')).text(),text);
+  }
   const parsed=judge('Site/Manifest.swift',text,kitVocabulary).parsed;
   const doors=tabs.map(t=>[t.record,t.id]).concat(tabs.map(t=>[t.reads,t.id]));
   assert.deepEqual(Object.entries(input.destinations),doors);
