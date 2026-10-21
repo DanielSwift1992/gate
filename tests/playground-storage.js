@@ -78,22 +78,25 @@ function open(id) {
     atom.readerDrafts = true;
     atom.render = async()=>{atom.editor.value += "\n// newer edit";};
     await atom.tick(true); assert.strictEqual(writes,1);
-    // A deep edit in the five-megabyte source fits a small reader record,
+    // A deep edit in the final owner part fits a small reader record,
     // reopens byte-for-byte, and retains its refusal. A second edit is still
     // based on the pin, not an unrecorded intermediate buffer.
     const scale = open("scale"), scaleSnap = JSON.parse(fs.readFileSync(path.join(root,"playground/scale/snapshots.json")));
-    const big = scaleSnap["/world?f=Company.swift"], needle = "VerifiedInDepartment<Emp12796, Finance>";
-    const wrong = big.replace(needle,"VerifiedInDepartment<Emp12796, Sales>"); assert.notStrictEqual(wrong,big);
-    await scale.fetch("/world?f=Company.swift",{method:"PUT",body:wrong});
-    const bigKey = "gate.pages." + record.showcase.revision + ".scale.Company.swift";
+    const scaleFile=JSON.parse(scaleSnap['/files']).files.find(f=>(scaleSnap['/world?f='+f]||'').includes('VerifiedView<Emp12799, PeopleShare>'));
+    assert(scaleFile);
+    const big = scaleSnap["/world?f="+scaleFile], needle = "VerifiedView<Emp12799, PeopleShare>";
+    assert(big.length >= 300000, "exercise compact drafts on a large owner part");
+    const wrong = big.replace(needle,"VerifiedView<Emp12799, FinanceShare>"); assert.notStrictEqual(wrong,big);
+    await scale.fetch("/world?f="+scaleFile,{method:"PUT",body:wrong});
+    const bigKey = "gate.pages." + record.showcase.revision + ".scale."+scaleFile;
     assert(storage.getItem(bigKey).length < 100000);
     assert.strictEqual(JSON.parse(storage.getItem(bigKey)).verdict.verdict,"refused");
-    assert.strictEqual(await (await open("scale").fetch("/world?f=Company.swift")).text(),wrong);
+    assert.strictEqual(await (await open("scale").fetch("/world?f="+scaleFile)).text(),wrong);
     const heading = "// reader's heading\n" + wrong;
-    await scale.fetch("/world?f=Company.swift",{method:"PUT",body:heading});
+    await scale.fetch("/world?f="+scaleFile,{method:"PUT",body:heading});
     const twice = heading + "\n// reader's ending";
-    await scale.fetch("/world?f=Company.swift",{method:"PUT",body:twice});
-    assert.strictEqual(await (await open("scale").fetch("/world?f=Company.swift")).text(),twice);
+    await scale.fetch("/world?f="+scaleFile,{method:"PUT",body:twice});
+    assert.strictEqual(await (await open("scale").fetch("/world?f="+scaleFile)).text(),twice);
     assert(storage.getItem(bigKey).length < 100000);
     for (const id of ["readme", "basics", "atom"]) {
         const page = open(id), snapshots = JSON.parse(fs.readFileSync(path.join(root, "playground", id, "snapshots.json")));

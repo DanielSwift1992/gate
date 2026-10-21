@@ -3517,8 +3517,14 @@ func benchFilesOf(_ w: WorldState, readings: Bool = false) -> [(String, String)]
     guard let f = w.facts else { return [] }
     let base = (absPath(f) as NSString).deletingLastPathComponent
     let taken = takenInputs(w)
+    // Resolve each row once. Searching the rows for every source repeated
+    // filesystem containment checks for each pair of parts.
+    var rowNames: [String: String] = [:]
+    for row in w.layout?.rows ?? [] {
+        if let path = inputPath(row, w, taken), rowNames[path] == nil { rowNames[path] = row.path }
+    }
     var out: [(String, String)] = worldFilesOf(w).map { path in
-        ((w.layout?.rows.first { inputPath($0, w, taken) == path })?.path ?? relPath(path, base), path)
+        (rowNames[path] ?? relPath(path, base), path)
     }
     for r in w.layout?.rows ?? [] where r.role == "forms"
         || (r.role == "carried" && r.source == "mine" && r.path.hasSuffix(".swift"))
@@ -4459,15 +4465,13 @@ func statusAnswer(_ supplied: WorldState? = nil, contexts: GrammarContexts? = ni
         return answer
     }
     let t0 = Date()
-    let raw = courtSays(files)
+    let raw = courtSays(files, wholeCompany: true)
     let wallMs = ((Date().timeIntervalSince(t0) * 1000 * 10).rounded(.toNearestOrEven)) / 10
     var refusals = judgedRefusals(raw)
     if files.count > 1 {
-        // the declared list, not the readable list: a ghost row is the layout
-        // guard's to name, and both carriers place claims over what is here
-        let sources = files.filter { FileManager.default.fileExists(atPath: $0) }
-            .map { (($0 as NSString).lastPathComponent, readText($0) ?? "") }
-        refusals = attributeRefusals(refusals, sources)
+        let sources = benchFilesOf(w).filter { files.contains($0.1) }
+            .map { ($0.0, companyFragment(w, $0.0, readText($0.1) ?? "")) }
+        refusals = refineSourceRefusals(refusals, sources)
     }
     if !files.isEmpty {
         refusals += canonGuard(w, raw, raw.contains("THE JUDGE"), "judge")
@@ -5883,6 +5887,23 @@ func refineAddresses(_ text: String, _ refusals: [(address: String, claim: Strin
             }
         }
         return ref
+    }
+}
+
+// Refine within the source part already named by the court's line map.
+func refineSourceRefusals(_ refusals: [(address: String, claim: String)],
+                          _ sources: [(String, String)]) -> [(address: String, claim: String)] {
+    return refusals.map { ref in
+        let name = ref.address.components(separatedBy: ":")[0]
+        guard let source = sources.first(where: { $0.0 == name }) else { return ref }
+        let line = Int(ref.address.components(separatedBy: ":").last ?? "") ?? 1
+        let lines = source.1.components(separatedBy: "\n")
+        let start = max(0, min(lines.count, line - 4))
+        let end = max(start, min(lines.count, line + 8))
+        if let at = locateClaim(lines[start..<end].joined(separator: "\n"), ref.claim) {
+            return (address: "\(name):\(start + at)", claim: ref.claim)
+        }
+        return refineAddresses(source.1, [ref], name)[0]
     }
 }
 
@@ -11574,12 +11595,13 @@ enum WhereAnswer {
     static let nothingAsked = "✗ THE WHERE: no equalities or memberships were judged; no certificate established"
 }
 
-func courtSays(_ asked: [String]) -> String {
+func courtSays(_ asked: [String], wholeCompany: Bool = false) -> String {
     spawnCounted("court")
     let keepsRefusal = asked.first == "where" || asked.first == "count"
     let bin = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath().path
     var supplied = asked
     var projected: String? = nil
+    var companyLines: [(path: String, start: Int, count: Int)] = []
     if !keepsRefusal {
         let w = discoverWorld()
         for (i, path) in asked.enumerated() where !path.hasPrefix("-") {
@@ -11591,6 +11613,41 @@ func courtSays(_ asked: [String]) -> String {
             try? fragment.write(toFile: target, atomically: false, encoding: .utf8)
             supplied[i] = target
         }
+    }
+    // WorldFile parts present one company. The court's raw multi-file door
+    // checks successive prefixes; this reader asks once about the full set.
+    if wholeCompany && supplied.count > 1 {
+        let texts = supplied.compactMap { readText($0) }
+        if texts.count == supplied.count {
+            let named = benchFilesOf(discoverWorld())
+            let sourceNames = Dictionary(named.map { (canonicalPath($0.1), $0.0) },
+                                         uniquingKeysWith: { first, _ in first })
+            let liveNames = Dictionary(named.map { ($0.0.replacingOccurrences(of: "/", with: "__"), $0.0) },
+                                       uniquingKeysWith: { first, _ in first })
+            var start = 1
+            for (path, text) in zip(asked, texts) {
+                let name = sourceNames[canonicalPath(path)]
+                    ?? liveNames[(path as NSString).lastPathComponent] ?? path
+                let count = text.components(separatedBy: "\n").count
+                companyLines.append((name, start, count))
+                start += count
+            }
+            if projected == nil { projected = scratchDir("gate-company-") }
+            let target = joinPath(projected!, "gate-company-stream.swift")
+            try? texts.joined(separator: "\n").write(toFile: target, atomically: false, encoding: .utf8)
+            supplied = [target]
+        }
+    }
+    func addressed(_ answer: String) -> String {
+        guard !companyLines.isEmpty,
+              let pattern = try? NSRegularExpression(pattern: "gate-company-stream\\.swift:([0-9]+)") else { return answer }
+        let source = answer as NSString, result = NSMutableString(string: answer)
+        for hit in pattern.matches(in: answer, range: NSRange(location: 0, length: source.length)).reversed() {
+            guard let line = Int(source.substring(with: hit.range(at: 1))),
+                  let part = companyLines.first(where: { line >= $0.start && line < $0.start + $0.count }) else { continue }
+            result.replaceCharacters(in: hit.range, with: part.path + ":\(line - part.start + 1)")
+        }
+        return result as String
     }
     defer { if let d = projected { try? FileManager.default.removeItem(atPath: d) } }
     let words: [String] = [bin, "judge"] + supplied
@@ -11632,7 +11689,7 @@ func courtSays(_ asked: [String]) -> String {
     }
     var status: Int32 = 0
     waitpid(child, &status, 0)
-    let out = String(data: said, encoding: .utf8) ?? ""
+    let out = addressed(String(data: said, encoding: .utf8) ?? "")
     guard keepsRefusal else { return out }
     let err = readText(errPath) ?? ""
     unlink(errPath)
@@ -11648,7 +11705,7 @@ func courtSays(_ asked: [String]) -> String {
     p.standardOutput = pipe
     p.standardError = errPipe
     guard (try? p.run()) != nil else { return "" }
-    let said = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+    let said = addressed(String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? "")
     let err = String(data: errPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
     waitDone(p)
     return keepsRefusal && p.terminationStatus == 2 ? said + err : said
@@ -13153,22 +13210,16 @@ func serveDoor(_ a: [String]) -> Never {
                 // `courtSays` names the court itself: passing it again made the
                 // judge take `judge` for a file, and a run with a file that is
                 // not there says nothing about the files that are
-                let raw = courtSays(paths)
+                let raw = courtSays(paths, wholeCompany: true)
                 var refusals = judgedRefusals(raw).map {
                     (address: $0.address.replacingOccurrences(of: "__", with: "/"),
                      claim: $0.claim)
                 }
                 let sources = oneStream(w, benchFilesOf(w))
                     .filter { $0.1 == active || FileManager.default.fileExists(atPath: $0.1) }
-                    .map { (($0.0 as NSString).lastPathComponent,
+                    .map { ($0.0,
                             companyFragment(w, $0.0, $0.1 == active ? text : (readText($0.1) ?? ""))) }
-                if sources.count > 1 {
-                    refusals = attributeRefusals(refusals, sources)
-                } else {
-                    for (name, src) in sources {
-                        refusals = refineAddresses(src, refusals, name)
-                    }
-                }
+                refusals = refineSourceRefusals(refusals, sources)
                 // the same guards the terminal runs, over the text in the editor
                 refusals += duplicateGuardsOver(grammarIndependentSources(w, sources))
                 refusals += entryGuardsOver(sources)

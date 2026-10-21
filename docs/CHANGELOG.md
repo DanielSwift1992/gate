@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `status` and the live and static bench read declared WorldFile parts as one complete company. Forward references resolve against the full set, requirements are counted once, and refusals retain the source file and line of each part.
+
 - `status` and `fsck` report `empty · no declared applications` when a Forms world presents no relations, with `verdict: "empty"` and `reason: "no declared applications"` in JSON. They return exit 2 instead of the former `holds` and exit 0. `status --hook` prints the same empty state and permits the commit; refusals and input errors still stop it. The bench, `badge` and `my` carry the empty state too. Memberships count as checked relations alongside equalities and count readings.
 
 ## 0.2.5

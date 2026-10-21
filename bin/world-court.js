@@ -59,6 +59,8 @@
                 }
             }
         }
+        const company = [];
+        let nextLine = 1;
         for (const f of plain) {
             if (f === layout || carried.includes(f)) continue;
             let text = texts[f] || "";
@@ -71,10 +73,18 @@
                 }
                 text = "\n".repeat(pieces[0].split("\n").length - 1) + fragment.marker + pieces[1];
             }
-            const answer = judgePlain(f, text);
+            const lines = text.split("\n").length;
+            company.push({file: f, text, start: nextLine, lines});
+            nextLine += lines;
+        }
+        if (company.length) {
+            const answer = judgePlain(company[0].file, company.map(p => p.text).join("\n"));
             checked += answer.premises || 0;
-            for (const r of answer.refusals)
-                refusals.push({ address: f + ":" + r.line, claim: r.premise });
+            for (const r of answer.refusals) {
+                const part = company.find(p => r.line >= p.start && r.line < p.start + p.lines);
+                refusals.push({ address: (part ? part.file + ":" + (r.line - part.start + 1)
+                    : company[0].file + ":" + r.line), claim: r.premise });
+            }
         }
         let guarded = 0;
         if (guards) {

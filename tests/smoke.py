@@ -870,6 +870,9 @@ def main():
         'extension GrantsFile { public static var typeName: String { "grants.swift" } }\n')
     c, r = run("status", cwd=split)
     S.append(("manifest: cross-file judgement holds", c == 0 and r["verdict"] == "holds"))
+    company_parts = subprocess.run([sys.executable, os.path.join(HERE, "tests", "company-parts.py")], capture_output=True, text=True)
+    S.append(("WorldFile parts present one company with their original source addresses", company_parts.returncode == 0))
+    if company_parts.returncode: print(company_parts.stdout + company_parts.stderr, flush=True)
     open(os.path.join(split, "gate.policy.swift"), "w").write("// policy beside a manifest world\n")
     c, r = run("status", cwd=split)
     S.append(("manifest: the policy file is meta, not a shadow", c == 0 and r["verdict"] == "holds"))
@@ -10723,7 +10726,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         _mut = os.path.join(tmp, "mutant-vein")
         os.makedirs(_mut, exist_ok=True)
         _mut_src = open(os.path.join(HERE, "bin", "gate-cli.swift"), encoding="utf-8").read()
-        _mut_anchor = "func courtSays(_ asked: [String]) -> String {\n"
+        _mut_anchor = "func courtSays(_ asked: [String], wholeCompany: Bool = false) -> String {\n"
         open(os.path.join(_mut, "main.swift"), "w").write(_mut_src.replace(
             _mut_anchor,
             _mut_anchor + '    return "\\u{2713} THE JUDGE holds: 0 claims in 0.0 ms\\ncanon v2\\n"\n',

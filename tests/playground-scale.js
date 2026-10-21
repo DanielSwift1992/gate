@@ -1,10 +1,15 @@
-// The large published source is read whole, while projections allocate one page.
+// The owner parts recover the former large source for the projection regression.
+// The actual published files below are judged together with their source addresses.
 // Run the real UI projection functions without a browser or a second parser.
 "use strict";
 const fs=require("fs"), path=require("path"), vm=require("vm"), assert=require("assert"), {performance}=require("perf_hooks");
 const {judge}=require("../bin/judge.js"), {kitVocabulary,renderAll}=require("../bin/renderer.js");
 const root=process.argv[2], snap=JSON.parse(fs.readFileSync(path.join(root,"playground/scale/snapshots.json")));
-const text=snap["/world?f=Company.swift"], lines=text.split("\n"), measurements={};
+const owner=JSON.parse(fs.readFileSync(path.join(process.argv[3],"Checks/Playground/scale-court.json")));
+const companyFiles=owner.company_files.map(p=>p.replace('Worlds/Playground/Scale/',''));
+const texts=Object.fromEntries(companyFiles.map(f=>[f,snap['/world?f='+f]]));
+const text=companyFiles.map((f,i)=>i?texts[f].split('\n').slice(5).join('\n'):texts[f]).join(''), lines=text.split("\n"), measurements={};
+assert.equal(require('crypto').createHash('sha256').update(text).digest('hex'),owner.canonical_company_sha256);
 function timed(name,fn) {const at=performance.now(), result=fn();measurements[name]=+(performance.now()-at).toFixed(1);return result;}
 const parsed=timed("parse_ms",()=>judge("Company.swift",text,kitVocabulary)).parsed;
 assert.strictEqual([...parsed.declarations.keys()].filter(n=>/^Emp\d+$/.test(n)).length,12800);
@@ -68,11 +73,16 @@ assert.strictEqual(rendered.errors.length,0);
 const anchor="VerifiedInDepartment<Emp12796, Finance>";assert(text.includes(anchor));
 const lies=timed("deep_lie_ms",()=>judge("Company.swift",text.replace(anchor,"VerifiedInDepartment<Emp12796, Sales>"))).refusals;
 assert(lies.some(r=>r.line>120000));
-const owner=JSON.parse(fs.readFileSync(path.join(process.argv[3],"Checks/Playground/scale-court.json")));
+const worldCourt=require('../bin/world-court.js'), court=require('../bin/court-wasm/node/vi_court.js');
+const ask=changed=>worldCourt.verdict(court,[],changed,[],parts,[],null,judge);
+const clean=ask(texts);assert.equal(clean.verdict,'holds');assert.equal(clean.checked,owner.clean.premises);
 for(const c of owner.cases) {
     assert.strictEqual(text.split(c.anchor).length-1,1,c.id);
     const refused=judge("Company.swift",text.replace(c.anchor,c.replacement)).refusals;
-    assert.deepStrictEqual(refused.map(({line,premise})=>({line,premise})),c.refusals,c.id);
+    assert.deepStrictEqual(refused.map(({line,premise})=>({line,premise})),c.canonical_refusals,c.id);
+    const file=c.path.replace('Worlds/Playground/Scale/',''), changed={...texts,[file]:texts[file].replace(c.anchor,c.replacement)};
+    const actual=ask(changed);assert.equal(actual.verdict,'refused');
+    assert.deepStrictEqual(actual.refusals,c.refusals.map(r=>({address:r.file+':'+r.line,claim:r.premise})),c.id+' physical addresses');
 }
 assert(ui.includes("viewportMargin: 10, dragDrop: false"));
 measurements.bytes=text.length;measurements.lines=lines.length;measurements.projection_pages=total;

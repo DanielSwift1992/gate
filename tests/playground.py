@@ -154,13 +154,16 @@ def run():
         subprocess.run(['node', str(HERE / 'tests/playground.js'), str(cache), str(site)], check=True)
         subprocess.run(['node', str(HERE / 'tests/playground-storage.js'), str(site)], check=True)
         scale = json.loads((cache / 'showcase/Checks/Playground/scale-generation.json').read_text())
-        assert scale['storage'] == 'versioned' and scale['parameters'] == dict(count=12800, seed=0)
+        assert scale['storage'] == 'versioned' and scale['parameters'] == dict(count=12800, seed=0, part_size=200)
         for output in scale['outputs']:
             data = (cache / 'showcase' / output['path']).read_bytes()
             assert len(data) == output['bytes'] and hashlib.sha256(data).hexdigest() == output['sha256']
         scale_snap = json.loads((site / 'playground/scale/snapshots.json').read_text())
         for name in ('Company.swift', 'ScalePages.swift', 'Dictionary/Design.swift', 'gate.manifest.swift'):
             assert scale_snap['/world?f=' + name] == (cache / 'showcase/Worlds/Playground/Scale' / name).read_text(), name
+        for part in scale['company_files']:
+            name = str(Path(part).relative_to('Worlds/Playground/Scale'))
+            assert scale_snap['/world?f=' + name] == (cache / 'showcase' / part).read_text(), name
         scale_context = json.loads((site / 'playground/scale/world.json').read_text())
         assert scale_context['tab']['world'] == 'Scale' and scale_context['tab']['reads'] == 'ScaleWorld'
         assert scale_context['plain_fragments'] == []
