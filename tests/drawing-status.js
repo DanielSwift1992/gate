@@ -13,7 +13,7 @@ const at=ui.indexOf('function drawingFiles('),selection=ui.slice(at,ui.indexOf('
         const snap=JSON.parse(fs.readFileSync(snapshot)),world=JSON.parse(fs.readFileSync(path.join(dir,'world.json')));
         const plan=JSON.parse(snap['/drawing-profile']);
         const state=await profile.compile(plan,async hash=>new Uint8Array(fs.readFileSync(path.join(site,'assets/drawing',hash,'font.ttf'))),(h,n)=>h+'/'+n);
-        const list=JSON.parse(snap['/files']),reader={documentFiles:new Set(list.documents||[])};
+        const list=JSON.parse(snap['/files']),reader={documentFiles:new Set(list.drawing_inputs||[])};
         vm.createContext(reader);vm.runInContext(selection,reader);
         const files=reader.drawingFiles(null);
         const parts=files.map(file=>({file,text:snap['/world?f='+file]}));
@@ -24,7 +24,7 @@ const at=ui.indexOf('function drawingFiles('),selection=ui.slice(at,ui.indexOf('
         if(declared.status==='not-compared') {
             assert.equal(actual.status,'not-compared',name+': '+JSON.stringify(actual));
         } else {
-            // Only declared DocumentFile rows enter the drawing input.
+            // DocumentFile roots and their declared dependencies enter the drawing input.
             const hashes=await Promise.all(parts.map(p=>profile.sha(new TextEncoder().encode(p.text))));
             const ownerParts=declared.sourceSHA256.map(h=>parts[hashes.indexOf(h)]);
             assert(ownerParts.every(Boolean),name+': all owner source bytes are present');
@@ -43,5 +43,5 @@ const at=ui.indexOf('function drawingFiles('),selection=ui.slice(at,ui.indexOf('
     assert.equal(results.filter(r=>r.status==='compared').length,9);
     assert.equal(results.filter(r=>r.status==='not-compared').length,1);
     console.log(JSON.stringify(results,null,2));
-    console.log('DRAWING STATUS GREEN: 9 declared DocumentFile input sets compare byte for byte; added, dropped and changed sources lose comparison; bound At scale remainder; edits lose exact comparison');
+    console.log('DRAWING STATUS GREEN: 9 declared Drawing input closures compare byte for byte; added, dropped and changed sources lose comparison; bound At scale remainder; edits lose exact comparison');
 })().catch(e=>{console.error(e);process.exitCode=1;});
