@@ -441,7 +441,7 @@ tests/windows.py the Windows measure: the reviewer's road as asserts
 
 The battery count is generated from its registrations by
 `python3 bin/battery_count.py`. Run that command after adding checks or
-merging branches; `python3 bin/battery_count.py --check` verifies the stamp.
+merging branches. The tool also has a read-only verification mode, listed in its help.
 The battery checks it before building and compares the run with the registered
 cases at the end. A run without swiftc says it is short and stays red.
 The court contract totals below describe pinned suites, separately checked
