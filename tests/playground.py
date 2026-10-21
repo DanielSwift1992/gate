@@ -39,6 +39,18 @@ def run():
             raise AssertionError('a changed cached file was accepted')
         except ValueError as e:
             assert 'sha256' in str(e)
+        scale_input = 'Worlds/Playground/Scale/Company.swift'
+        try:
+            module.checked(Path(temp) / 'missing-scale', {scale_input: record['showcase']['files'][scale_input]})
+            raise AssertionError('a missing materialized input was regenerated or accepted')
+        except ValueError as e:
+            assert scale_input in str(e) and 'missing recorded file' in str(e)
+        catalog = cache / 'showcase/Worlds/Playground/Site/Manifest.swift'
+        legacy = Path(temp) / 'legacy-catalog.swift'
+        legacy.write_text(catalog.read_text().replace('Reads = ScaleWorld', 'Reads = GeneratedText'))
+        result = subprocess.run(['node', str(HERE / 'bin/playground-site.js'), str(legacy)], capture_output=True, text=True)
+        assert result.returncode != 0 and 'unreadable tab ScaleTab' in result.stderr
+        assert not (HERE / 'bin/playground-company.js').exists()
         # Exercise the whole local door with an isolated git, including a
         # warm hit and a wrong HEAD. No user's checkout is changed for this.
         local = Path(temp) / 'local'
@@ -141,7 +153,18 @@ def run():
             Handlers().feed(html)
         subprocess.run(['node', str(HERE / 'tests/playground.js'), str(cache), str(site)], check=True)
         subprocess.run(['node', str(HERE / 'tests/playground-storage.js'), str(site)], check=True)
-        subprocess.run(['node', str(HERE / 'tests/playground-scale.js'), str(site)], check=True)
+        scale = json.loads((cache / 'showcase/Checks/Playground/scale-generation.json').read_text())
+        assert scale['storage'] == 'versioned' and scale['parameters'] == dict(count=12800, seed=0)
+        for output in scale['outputs']:
+            data = (cache / 'showcase' / output['path']).read_bytes()
+            assert len(data) == output['bytes'] and hashlib.sha256(data).hexdigest() == output['sha256']
+        scale_snap = json.loads((site / 'playground/scale/snapshots.json').read_text())
+        for name in ('Company.swift', 'ScalePages.swift', 'Dictionary/Design.swift', 'gate.manifest.swift'):
+            assert scale_snap['/world?f=' + name] == (cache / 'showcase/Worlds/Playground/Scale' / name).read_text(), name
+        scale_context = json.loads((site / 'playground/scale/world.json').read_text())
+        assert scale_context['tab']['world'] == 'Scale' and scale_context['tab']['reads'] == 'ScaleWorld'
+        assert scale_context['plain_fragments'] == []
+        subprocess.run(['node', str(HERE / 'tests/playground-scale.js'), str(site), str(cache / 'showcase')], check=True)
         subprocess.run(['node', str(HERE / 'tests/playground-ui.js'), str(site)], check=True)
         door = (site / 'playground/index.html').read_bytes()
         import re

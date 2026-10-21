@@ -68,6 +68,12 @@ assert.strictEqual(rendered.errors.length,0);
 const anchor="VerifiedInDepartment<Emp12796, Finance>";assert(text.includes(anchor));
 const lies=timed("deep_lie_ms",()=>judge("Company.swift",text.replace(anchor,"VerifiedInDepartment<Emp12796, Sales>"))).refusals;
 assert(lies.some(r=>r.line>120000));
+const owner=JSON.parse(fs.readFileSync(path.join(process.argv[3],"Checks/Playground/scale-court.json")));
+for(const c of owner.cases) {
+    assert.strictEqual(text.split(c.anchor).length-1,1,c.id);
+    const refused=judge("Company.swift",text.replace(c.anchor,c.replacement)).refusals;
+    assert.deepStrictEqual(refused.map(({line,premise})=>({line,premise})),c.refusals,c.id);
+}
 assert(ui.includes("viewportMargin: 10, dragDrop: false"));
 measurements.bytes=text.length;measurements.lines=lines.length;measurements.projection_pages=total;
 measurements.first_html_bytes=first.length;measurements.last_html_bytes=last.length;

@@ -32,9 +32,8 @@ def build_worlds(here, out, publish):
         sha256=record['showcase']['files']['Worlds/Playground/Site/Manifest.swift'],
         text=(source / 'Site/Manifest.swift').read_text(),
         destinations={tab['record']: tab['id'] for tab in tabs})
-    # Both the catalog record and the world it Reads have a door. Seeds name a
-    # source world, not the generated world's identity (CompanyWorld -> company).
-    catalog['destinations'].update({tab['reads']: tab['id'] for tab in tabs if not tab['generated']})
+    # Both the catalog record and the ordinary world it Reads have a door.
+    catalog['destinations'].update({tab['reads']: tab['id'] for tab in tabs})
     primitive = 'Sources/VerificationIsIdentification/Primitive.swift'
     guard_sources = [str(cache / 'theory' / name) for name in record['theory']['files']]
     guard_sources += [str(cache / 'showcase' / name) for name in record['showcase']['files']
@@ -54,22 +53,11 @@ def build_worlds(here, out, publish):
             if tab['world'] == 'Site':
                 # Manifest is this world's pinned input too, not a second editable copy.
                 (world / 'Manifest.swift').unlink()
-            if tab.get('generated'):
-                # The generator reads the pinned organization page, and its
-                # geometry stays in that world's dictionary after the split.
-                generated = subprocess.check_output(['node', str(here / 'bin/playground-site.js'),
-                    str(source / 'Organization/Organization.swift'), '--company'])
-                (world / 'Company.swift').write_bytes(generated)
-                shutil.copytree(source / 'Organization/Dictionary', world / 'Dictionary')
-                manifest = (world / 'gate.manifest.swift').read_text()
-                manifest += '\npublic enum CarriedFile: Role {}\npublic enum TheGeometry: Mine {\n    public typealias Kind = CarriedFile\n}\nextension TheGeometry {\n    public static var typeName: String { "Dictionary/Design.swift" }\n}\n'
-                (world / 'gate.manifest.swift').write_text(manifest)
             internal = world / '.gate'
             internal.mkdir(exist_ok=True)
             shutil.copyfile(cache / 'worlds.from', internal / 'worlds.from')
             paths, texts = [], []
-            fragments = ([dict(path='Company.swift', marker='// gate-company-data')] if tab.get('generated') else
-                [dict(path='Organization.swift', marker='// ── the data the page reads')] if tab['world'] == 'Organization' else [])
+            fragments = ([dict(path='Organization.swift', marker='// ── the data the page reads')] if tab['world'] == 'Organization' else [])
             for name, path in definitions:
                 data = path.read_bytes()
                 (internal / name).write_bytes(data)
@@ -87,8 +75,7 @@ def build_worlds(here, out, publish):
             context = dict(pin=record['showcase']['revision'], world=tab['id'], tab=tab,
                 definitions=texts, carried=[], catalog=catalog, provenance=provenance, guard_names=guard_names,
                 compiler=record['theory'], judge=record['judge'], plain_fragments=fragments,
-                drawing=dict(case_id=tab['id']),
-                generated_from='Organization/Organization.swift' if tab.get('generated') else None)
+                drawing=dict(case_id=tab['id']))
             # Carried paths are taken from /files by publish, not guessed here.
             publish(str(world), str(out / 'playground' / tab['id']), context)
     shutil.copyfile(cache / 'worlds.from', out / 'worlds.from')

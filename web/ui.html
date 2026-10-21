@@ -530,9 +530,7 @@ function showWorldInputs(world) {
         row.append(name, datum); values.appendChild(row);
     }
     const note = document.createElement("p"); note.className = "source-input";
-    note.textContent = world.generated_from
-        ? "Generated from " + world.generated_from + ". This generated file has not been checked by Swift."
-        : "Page bodies were compiled at the source pin. Edited page bodies have not been checked by Swift.";
+    note.textContent = "The source pin records these bytes. The courts read the declared relations; Swift page bodies remain unchecked here.";
     values.appendChild(note);
     for (const [file, label] of [["worlds.from", "all input hashes"], ["worlds-source.json", "public or local source"]]) {
         const link = document.createElement("a"); link.className = "file fact";

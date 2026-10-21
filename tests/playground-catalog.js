@@ -23,9 +23,9 @@ module.exports=async function(root){
   const files=await(await page.fetch('/files')).json();
   if(id==='site')assert(!files.files.includes('Manifest.swift'));
   const parsed=judge('Site/Manifest.swift',text,kitVocabulary).parsed;
-  const doors=tabs.map(t=>[t.record,t.id]).concat(tabs.filter(t=>!t.generated).map(t=>[t.reads,t.id]));
+  const doors=tabs.map(t=>[t.record,t.id]).concat(tabs.map(t=>[t.reads,t.id]));
   assert.deepEqual(Object.entries(input.destinations),doors);
-  assert.equal(input.destinations.CompanyWorld,'company');assert.equal(input.destinations.ScaleTab,'scale');
+  assert.equal(input.destinations.CompanyWorld,'company');assert.equal(input.destinations.ScaleTab,'scale');assert.equal(input.destinations.ScaleWorld,'scale');assert(!tabs.some(t=>'generated' in t));
   const pane=new Element('div'),fname=new Element('div'),host=new Element('div');let readonly=false,selected='bare',shown='',revealed=0,moved;
   const ctx=vm.createContext({Map,Set,console,judge,location:{pathname:'/gate/playground/'+id+'/',assign:url=>moved=url},
    fetch:page.fetch,shelfInputs:shelf.inputs,viewingShelf:null,active:'Palette.swift',refLabel:null,undeclaredView:null,mode:'bare',opensAs:{},

@@ -16,7 +16,7 @@ assert.strictEqual(read(path.join(here, "bin/playground-lint.js")), read(path.jo
 const definitions = [{ name: "Primitive.swift", text: read(path.join(cache, "theory/Sources/VerificationIsIdentification/Primitive.swift")) },
     { name: "Spectrum.swift", text: read(path.join(sc, "Sources/DocumentKit/Spectrum.swift")) }];
 const renderFixture = fixture("renderer"), courtFixture = fixture("courts"), drawings = {}, reports = [];
-const copy = fixture("copy-r3"), catalog = fixture("catalog-r4");
+const copy = fixture("copy-r3"), catalog = fixture("catalog-r4"), scaleCatalog = fixture("scale-catalog");
 function updated(text, paths) {
     for (const c of copy.changes.filter(c => paths.includes(c.path))) {
         assert(text.includes(c.before), c.path + ": copy anchor lost");
@@ -84,9 +84,19 @@ for (const name of ["Manifest", "Palette"]) check("Site/" + name + " preserves i
     if (name === "Manifest") {
         const a = judge(name, original, kitVocabulary).parsed, b = judge(name, text, kitVocabulary).parsed;
         const links = p => [...p.declarations].map(([n,d]) => [n,[...d.aliases].map(([k,v]) => [k,v.target])]);
-        assert.deepStrictEqual(links(b).filter(([n])=>!catalog.added_declarations.includes(n)), links(a), "order, IDs, groups, Reads, Seeds and page associations");
+        const additions = [...catalog.added_declarations, ...Object.keys(scaleCatalog.added_declarations)];
+        const expectedLinks = links(a);
+        for (const change of scaleCatalog.changes) {
+            const row = expectedLinks.find(([n])=>n===change.record);
+            assert(row,change.record);
+            for (const [key,value] of Object.entries(change.before)) assert.deepStrictEqual(row[1].find(([k])=>k===key),[key,value]);
+            row[1] = row[1].filter(([k])=>!change.removed.includes(k)).map(([k,v])=>[k,change.after[k]||v]);
+        }
+        assert.deepStrictEqual(links(b).filter(([n])=>!additions.includes(n)), expectedLinks, "only the recorded Scale association changes");
+        for (const [name,axes] of Object.entries(scaleCatalog.added_declarations)) assert.deepStrictEqual(Object.fromEntries(links(b).find(([n])=>n===name)[1]),axes);
+        for (const [name,word] of Object.entries(scaleCatalog.words)) assert.strictEqual(b.literals.get(name).value,word);
         const expected = judge(name, updated(original, ["Worlds/Playground/Site/Manifest.swift"]), kitVocabulary).parsed;
-        assert.deepStrictEqual([...b.literals].filter(([n])=>!catalog.added_declarations.includes(n)).map(([n,x])=>[n,x.value]), [...expected.literals].map(([n,x])=>[n,x.value]), "only recorded phrases change");
+        assert.deepStrictEqual([...b.literals].filter(([n])=>!additions.includes(n)).map(([n,x])=>[n,x.value]), [...expected.literals].map(([n,x])=>[n,x.value]), "only recorded phrases change");
     } else assert.strictEqual(read(path.join(checks, "origins/Palette.swift")), original);
     assert.deepStrictEqual(lint(name, text), []);
     assert.deepStrictEqual(pageGuards(judge(name, text, kitVocabulary).parsed, text.split("\n"), outside), []);
