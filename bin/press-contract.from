@@ -1,11 +1,11 @@
 {
   "repository": "https://github.com/DanielSwift1992/verification-is-identification",
-  "revision": "9fe60fbb038b30891d86d2a51974dbc6e0cf143d",
+  "revision": "be34074c895245651420d262afc70cabd773fab2",
   "contract": "Contracts/Press/v0.1/contract.json",
   "files": {
     "Sources/Court/Press.swift": "09c13263c3e0a254dd4cd41ac016f248ee5718687847948e12af3eed2de961c4",
-    "Checks/press-contract.py": "69246366a810aa32d6447cb15e77f085fa98a9f10aacbe16c98b4c040bf77f23",
-    "Checks/press-contract-test.py": "e2506c3bd450d29123434900b741ebecc62e7df4900ae37a8d1c402d3678cbb6",
+    "Checks/press-contract.py": "0e8bb32049c12c349ee1e2663c1df10b2dc0dfc1d9e9642b5425caedc89bc123",
+    "Checks/press-contract-test.py": "c9ff2c969707cd5ae9e48a4bbc3617d74c2bc3d4c9b2f9b82704192a9a5da6a3",
     "Checks/press-contract/main.swift": "a8a2ba432703bd66d9354f9153c05e4c317e16982484c40e8f4d01fddc029641",
     "Contracts/Press/v0.1/contract.json": "cf01573a6326db2c7749046867c10de5e6a8ef50b41941ffcbbaf630dc105b64",
     "Contracts/Press/v0.1/README.md": "0830dd240a6f3f1d9f27ef1e6bd5be98ff773e75241a39e31eb01024528577d6",
