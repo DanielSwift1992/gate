@@ -48,6 +48,13 @@ jobs:
           curl -s -X POST -H "Authorization: Bearer $GH_TOKEN" \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
             -d "$BODY" > /dev/null
+          # and every FAIL with the lines it said travels as a public annotation,
+          # since a status holds 138 letters and the log needs a token
+          python3 -c 'import sys; t=open("/tmp/smoke-out.txt",encoding="utf-8",errors="replace").read().splitlines(); k=[]; on=False
+          for l in t:
+              on = l.startswith("FAIL") or (on and l.startswith(" "))
+              if on and len(k)<120: k.append(l)
+          print("::error title=what the battery said::"+"\n".join(k or t[-40:]).replace("%","%25").replace("\r","%0D").replace("\n","%0A"))'
       # the camera's subject: the battery above compiles the vein into its
       # own scratch and sweeps it, so a fresh runner holds no binary here.
       # The shot is of this revision's bench, and the subject is built first.
@@ -146,6 +153,13 @@ jobs:
           curl -s -X POST -H "Authorization: Bearer $GH_TOKEN" \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
             -d "$BODY" > /dev/null
+          # and every FAIL with the lines it said travels as a public annotation,
+          # since a status holds 138 letters and the log needs a token
+          python3 -c 'import sys; t=open("/tmp/smoke-out.txt",encoding="utf-8",errors="replace").read().splitlines(); k=[]; on=False
+          for l in t:
+              on = l.startswith("FAIL") or (on and l.startswith(" "))
+              if on and len(k)<120: k.append(l)
+          print("::error title=what the battery said::"+"\n".join(k or t[-40:]).replace("%","%25").replace("\r","%0D").replace("\n","%0A"))'
   # ── AND THE REVIEWER'S ROAD RUNS WHERE THE TOOL IS. This walk had a job of
   # its own that checked out and ran, because the CLI was python and needed
   # nothing built. The tool is a binary now, so the road runs in the job that
