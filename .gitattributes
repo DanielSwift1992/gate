@@ -2,3 +2,7 @@
 # them from its own checkout: no platform may rewrite a committed byte, line
 # endings included.
 * -text
+# The one exception is read by cmd.exe, which parses a batch file by CRLF
+# lines: on 21.10, once gate.cmd came out with LF, every verb behind it hung
+# on windows-latest while the binary called directly answered.
+*.cmd text eol=crlf
