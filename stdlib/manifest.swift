@@ -15,10 +15,16 @@
 //
 // The installed Kind bindings stay on the shelf, above the world template.
 public enum FormsReaderV1: Role {}
+public enum DocumentReaderV1: Role {}
 public enum OrganizationReaderV1: Role {}
 public enum CarriedReaderV1: Role {}
 public enum FormsFile: Role {
     public typealias Reader = FormsReaderV1
+}
+// Declarations use the same where/count court; page bodies are unchecked.
+// Drawing is a separate consumer of exactly these declared source rows.
+public enum DocumentFile: Role {
+    public typealias Reader = DocumentReaderV1
 }
 public enum WorldFile: Role {
     public typealias Reader = OrganizationReaderV1

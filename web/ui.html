@@ -9,7 +9,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"><meta charset="utf-8"><title>gate · world bench</title>
 <!-- zero egress, enforced by the browser as well as by the code: the bench may
      talk to its own loopback server and to nothing else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-5GzCvayhfKIAxAwizJRqS3a05vGAKRgdgfqpOuJGoBs=' 'sha256-3lBhYVsE/JZmD+DfZKl6RZ/jQLSR2KEpjtDNK6wpbW0='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-5GzCvayhfKIAxAwizJRqS3a05vGAKRgdgfqpOuJGoBs=' 'sha256-fDhKeUEmnZPWoxvPe1lgLktmvxI9BlQkzEAzx/L1Y2s='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
 <link rel="stylesheet" href="/codemirror.css">
 <script>
 // The theme is a declaration, not a toggle — and the declaration lives in the
@@ -592,7 +592,7 @@ let layoutFile = null;
 // the forms this world presents: the operator's own files saying what a
 // record may be. Their names belong to the vocabulary the bench offers,
 // and their court is `where`, never the plain stream.
-let formsFiles = new Set(), carriedFiles = new Set();
+let formsFiles = new Set(), carriedFiles = new Set(), documentFiles = new Set();
 let theirsFiles = {}, unavailableFiles = [];
 let fileLoadGeneration = 0;
 let readerDrafts = false;
@@ -3670,7 +3670,7 @@ function resetDrawing() {
     document.getElementById("canvas-host").innerHTML = "";
 }
 function drawingFiles(file) {
-    return (files || []).filter(f => f !== file && theirsFiles[f]?.kind !== "CarriedFile");
+    return [...documentFiles].filter(f => f !== file);
 }
 async function drawingWorld() {
     const file = active, buffer = editor.value, names = drawingFiles(file);
@@ -3682,7 +3682,8 @@ async function drawingWorld() {
             return { file: name, text: await response.text() };
         })) };
     }
-    const parts = [{ file, text: buffer }, ...(await drawingNeighbors.promise).map(part => ({ ...part }))];
+    const parts = [...(documentFiles.has(file) ? [{ file, text: buffer }] : []),
+        ...(await drawingNeighbors.promise).map(part => ({ ...part }))];
     let first = 1;
     for (const part of parts) {
         part.first = first;
@@ -4260,6 +4261,7 @@ async function readFiles() {
     layoutFile = fl.layout || null;
     formsFiles = new Set(fl.forms || []);
     carriedFiles = new Set(fl.carried || []);
+    documentFiles = new Set(fl.documents || []);
     theirsFiles = fl.theirs || {}; unavailableFiles = fl.unavailable || [];
     readerDrafts = fl.save_policy === "reader-draft";
     opensAs = fl.opens || {};

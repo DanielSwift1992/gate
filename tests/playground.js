@@ -210,7 +210,7 @@ if (site) for (const id of fs.readdirSync(path.join(site, "playground"))) {
         const files = JSON.parse(snap["/files"]), readable = files.files.filter(f => files.theirs?.[f]?.kind !== "CarriedFile"),
             texts = Object.fromEntries(readable.map(f => [f, snap["/world?f=" + f] || ""]));
         const result = worldCourt.verdict(court, files.worlds, texts, ctx.definitions,
-            readable.filter(f => !(files.forms || []).includes(f)), ctx.carried, files.layout, judge, null, ctx.plain_fragments);
+            files.world_files, ctx.carried, files.layout, judge, null, ctx.plain_fragments, null, files.documents);
         const first = files.forms[0] || files.files[0], native = JSON.parse(snap["/verdict?f=" + first]);
         assert.strictEqual(result.verdict, native.verdict, id + ": " + JSON.stringify({result,native}));
         if (id === "site") { assert.strictEqual(result.verdict,"holds"); assert.strictEqual(result.checked,17); }

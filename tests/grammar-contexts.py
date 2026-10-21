@@ -80,7 +80,7 @@ def run():
             page_rows = page_rows or pages
             contexts = copy.deepcopy(contexts or {'HarborLanguage': language})
             record = dict(format=2, files=[], languages=contexts, shelf_overrides=False, plain_fragments=[])
-            manifest = 'public protocol Mine {}\npublic protocol Theirs {}\npublic protocol Role {}\npublic enum FormsFile: Role {}\npublic enum WorldFile: Role {}\npublic enum CarriedFile: Role {}\n'
+            manifest = 'public protocol Mine {}\npublic protocol Theirs {}\npublic protocol Role {}\npublic enum FormsFile: Role {}\npublic enum DocumentFile: Role {}\npublic enum WorldFile: Role {}\npublic enum CarriedFile: Role {}\n'
             manifest += 'public enum Origin: Role {}\nextension Origin {\npublic static var typeName: String { ' + json.dumps(source.as_uri() + '@' + revision) + ' }\n}\n'
             for row, path in selected.items():
                 local = 'vendor/' + row + '.swift'
@@ -227,6 +227,25 @@ def run():
         baseline = plan(); assert baseline['active'] and len(baseline['contexts'][0]['inputs']) == 5
         assert all(u['source_path'].startswith(('Definitions/', 'Pages/')) for u in baseline['contexts'][0]['inputs'])
         owner('same source and pinned scope bytes', 0)
+        write(kinds={'Main': 'DocumentFile'})
+        a = ask('DocumentFile uses the declared where context')
+        assert a['forms']['equalities'] >= 1, a
+        publication_case('DocumentFile is carried by the common ReadPlan', 'holds')
+        doc_bad = {'Pages/Main.swift': ('Main', 'HarborLanguage', body.replace('Value = Token', 'Value = One'))}
+        write(page_rows=doc_bad, kinds={'Main': 'DocumentFile'})
+        ask('DocumentFile preserves a false equality', 'refused')
+        doc_body = body + 'public enum Paper {\n    public static var body: some Structure {\n        UnknownDrawing<One>.self\n    }\n}\n'
+        write(page_rows={'Pages/Main.swift': ('Main', 'HarborLanguage', doc_body)}, kinds={'Main': 'DocumentFile'})
+        a = ask('DocumentReader keeps builder implementation outside the relation claim')
+        assert a['forms']['equalities'] >= 1 and any('builder bodies are unchecked' in x['reason'] for x in a['unchecked']), a
+        write(page_rows={'Pages/Main.swift': ('Main', 'HarborLanguage', doc_body.replace('Value = Token', 'Value = One'))}, kinds={'Main': 'DocumentFile'})
+        ask('an unchecked body cannot hide a false declared equality', 'refused')
+        wrong_doc = copy.deepcopy(language); wrong_doc['definitions'] = ['MissingDefinition']
+        write({'HarborLanguage': wrong_doc}, kinds={'Main': 'DocumentFile'})
+        ask('DocumentFile cannot lose a declared definition', 'refused', 'MissingDefinition')
+        write(page_rows={'Pages/Main.swift': ('Main', 'HarborLanguage', body + '\n@Unknown public enum Mystery {}\n')}, kinds={'Main': 'DocumentFile'})
+        ask('DocumentFile names unread syntax', 'unsupported', 'Language declaration reader')
+        write()
         # A decoder's first/last-key preference cannot erase context fields.
         record_path = world / '.gate/forms-definitions.json'
         for label, level in [('duplicate Language root', 'root'), ('duplicate context name', 'context'), ('duplicate namespace', 'namespace')]:

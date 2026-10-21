@@ -101,13 +101,6 @@ def run():
             internal = world / '.gate'
             internal.mkdir(exist_ok=True)
             shutil.copyfile(cache / 'worlds.from', internal / 'worlds.from')
-            rows = []
-            for filename, source in [('Primitive.swift', cache / 'theory/Sources/VerificationIsIdentification/Primitive.swift'),
-                                     ('Spectrum.swift', cache / 'showcase/Sources/DocumentKit/Spectrum.swift')]:
-                shutil.copyfile(source, internal / filename)
-                rows.append(dict(path='.gate/' + filename, sha256=hashlib.sha256(source.read_bytes()).hexdigest()))
-            fragments = [dict(path='Organization.swift', marker='// ── the data the page reads')] if name == 'Organization' else []
-            (internal / 'forms-definitions.json').write_text(json.dumps(dict(files=rows, plain_fragments=fragments, shelf_overrides=False)))
             return world
         def status(world):
             answer = subprocess.run([str(HERE / 'gate'), 'status', '--json'], cwd=world,
@@ -123,9 +116,12 @@ def run():
         assert named['verdict'] == 'refused' and not named.get('unsupported')
         assert any('budget' in r['claim'] for r in named['refusals'])
         declaration.write_text(original)
-        (light / '.gate/Primitive.swift').write_bytes(b'changed\n')
+        spec_path = light / '.gate/forms-definitions.json'
+        spec = json.loads(spec_path.read_text())
+        next(r for r in spec['files'] if r['row'] == 'ThePrimitive')['sha256'] = '0' * 64
+        spec_path.write_text(json.dumps(spec, indent=2) + '\n')
         broken = status(light)
-        assert broken['verdict'] == 'refused' and any(r['address'] == '.gate/Primitive.swift:1' for r in broken['refusals'])
+        assert broken['verdict'] == 'refused' and any(r['address'].startswith('.gate/forms-definitions.json:') for r in broken['refusals'])
         (light / '.gate/forms-definitions.json').unlink()
         assert status(light)['verdict'] == 'refused'
         organization = prepared('Organization')

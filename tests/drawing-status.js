@@ -13,7 +13,7 @@ const at=ui.indexOf('function drawingFiles('),selection=ui.slice(at,ui.indexOf('
         const snap=JSON.parse(fs.readFileSync(snapshot)),world=JSON.parse(fs.readFileSync(path.join(dir,'world.json')));
         const plan=JSON.parse(snap['/drawing-profile']);
         const state=await profile.compile(plan,async hash=>new Uint8Array(fs.readFileSync(path.join(site,'assets/drawing',hash,'font.ttf'))),(h,n)=>h+'/'+n);
-        const list=JSON.parse(snap['/files']),reader={files:list.files,theirsFiles:list.theirs||{}};
+        const list=JSON.parse(snap['/files']),reader={documentFiles:new Set(list.documents||[])};
         vm.createContext(reader);vm.runInContext(selection,reader);
         const files=reader.drawingFiles(null);
         const parts=files.map(file=>({file,text:snap['/world?f='+file]}));
@@ -24,22 +24,24 @@ const at=ui.indexOf('function drawingFiles('),selection=ui.slice(at,ui.indexOf('
         if(declared.status==='not-compared') {
             assert.equal(actual.status,'not-compared',name+': '+JSON.stringify(actual));
         } else {
-            // /files also carries the manifest and the personal bench record.
-            // Their presence must not silently inherit a native source hash.
+            // Only declared DocumentFile rows enter the drawing input.
             const hashes=await Promise.all(parts.map(p=>profile.sha(new TextEncoder().encode(p.text))));
             const ownerParts=declared.sourceSHA256.map(h=>parts[hashes.indexOf(h)]);
             assert(ownerParts.every(Boolean),name+': all owner source bytes are present');
             assert.equal(drawn.canvases.find(c=>c.name===declared.root)?.svg,declared.svg,name+': actual published SVG equals native bytes');
             assert.equal((await profile.compare(state,ownerParts,drawn)).status,'compared',name+': exact owner input and actual output');
-            assert(parts.length>ownerParts.length,name+': publication includes additional product records');
-            assert.equal(actual.status,'port-under-contract',name+': extra inputs do not gain exact-case evidence');
+            assert.equal(parts.length,ownerParts.length,name+': declaration and native case select the same sources');
+            assert.equal(actual.status,'compared',name+': unchanged DocumentFile input compares');
+            const extra=[...parts,{file:'arbitrary.swift',text:'// an undeclared extra input'}];
+            assert.equal((await profile.compare(state,extra,drawn)).status,'port-under-contract',name+': extra source loses comparison');
+            assert.equal((await profile.compare(state,parts.slice(1),drawn)).status,'port-under-contract',name+': missing source loses comparison');
         }
         const edited=parts.map((p,i)=>({...p,text:p.text+(i===0?'\n// browser edit':'')}));
         assert.equal((await profile.compare(state,edited,drawn,world.drawing)).status,'port-under-contract',name+' edit');
         results.push({world:name,status:actual.status,case_id:actual.case_id,inputs_digest:actual.inputs_digest});
     }
-    assert.equal(results.filter(r=>r.status==='port-under-contract').length,9);
+    assert.equal(results.filter(r=>r.status==='compared').length,9);
     assert.equal(results.filter(r=>r.status==='not-compared').length,1);
     console.log(JSON.stringify(results,null,2));
-    console.log('DRAWING STATUS GREEN: 9 published SVGs equal native bytes; exact owner inputs compare; additional product records remain port-under-contract; bound At scale remainder; edits lose exact comparison');
+    console.log('DRAWING STATUS GREEN: 9 declared DocumentFile input sets compare byte for byte; added, dropped and changed sources lose comparison; bound At scale remainder; edits lose exact comparison');
 })().catch(e=>{console.error(e);process.exitCode=1;});

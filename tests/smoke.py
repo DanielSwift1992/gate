@@ -3386,7 +3386,7 @@ function bench(text = atom, file = 'Atom.swift', neighbors = { 'AtomPages.swift'
     const elements = { 'canvas-host': host, 'drawing-feedback': feedback, 'view-drawing': button,
         'editor-host': { style: {} }, bare: { style: {}, innerHTML: '' }, 'table-host': { style: {} } };
     const context = vm.createContext({
-        active: file, files: [file, ...Object.keys(neighbors)], theirsFiles: {}, viewingShelf: null, mode: 'drawing',
+        active: file, files: [file, ...Object.keys(neighbors)], documentFiles: new Set([file, ...Object.keys(neighbors)]), theirsFiles: {}, viewingShelf: null, mode: 'drawing',
         lastParsed: judge(file, text, kitVocabulary).parsed, kitVocabulary, press,
         compEl: completion, compItems: [], compFrom: null, compSlot: null, compRect: null,
         compChosen: 0, compScaffold: null, pending: null, localNames: new Set(),
@@ -3557,7 +3557,7 @@ async function main() {
     const moves = bench(whole, 'a.swift', { 'neighbor.swift': '' }), releases = [];
     moves.context.fetch = async () => ({ ok: true, text: () => new Promise(resolve => releases.push(resolve)) });
     const oldRead = moves.context.drawCanvases(); await new Promise(resolve => setImmediate(resolve));
-    moves.context.resetDrawing(); moves.context.active = 'b.swift'; moves.context.files = ['b.swift', 'neighbor.swift'];
+    moves.context.resetDrawing(); moves.context.active = 'b.swift'; moves.context.files = ['b.swift', 'neighbor.swift']; moves.context.documentFiles = new Set(moves.context.files);
     moves.change(whole.replace('public typealias Electron = Charged', 'public typealias Electron = Trapped'));
     const newRead = moves.context.drawCanvases(); await new Promise(resolve => setImmediate(resolve));
     assert.equal(releases.length, 2); releases[1](''); await newRead;
@@ -14586,6 +14586,13 @@ public enum MyWatch: AccessLedger {
         print("   playground:", (_playground.stdout + _playground.stderr)[-6000:])
     S.append(("the pinned playground worlds keep their drawings, courts and separate state",
               _playground.returncode == 0))
+
+    _documents = subprocess.run(["node", os.path.join(HERE, "tests", "document-reader.js")],
+                                capture_output=True, text=True, timeout=60)
+    if _documents.returncode:
+        print("   DocumentReader:", (_documents.stdout + _documents.stderr)[-2500:])
+    S.append(("DocumentReader keeps declaration claims, body boundaries and outstanding requirements",
+              _documents.returncode == 0))
 
     _scopes = subprocess.run([sys.executable, os.path.join(HERE, "tests", "grammar-contexts.py")],
                               capture_output=True, text=True, timeout=240)

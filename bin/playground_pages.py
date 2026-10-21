@@ -43,37 +43,28 @@ def build_worlds(here, out, publish):
     provenance = dict(showcase=record['showcase']['revision'], compiler=record['theory']['revision'],
         judge=record['judge']['revision'], compiler_primitive=record['theory']['files'][primitive],
         judge_primitive=record['judge']['primitive_sha256'])
-    definitions = [('Primitive.swift', cache / 'theory' / primitive),
-                   ('Spectrum.swift', cache / 'showcase/Sources/DocumentKit/Spectrum.swift')]
     for tab in entries:
         with tempfile.TemporaryDirectory(prefix='gate-playground-') as temp:
             workspace = Path(temp) / 'source'
             shutil.copytree(cache / 'showcase', workspace)
             world = workspace / 'Worlds/Playground' / tab['world']
-            if tab['world'] == 'Site':
-                # Manifest is this world's pinned input too, not a second editable copy.
-                (world / 'Manifest.swift').unlink()
             internal = world / '.gate'
             internal.mkdir(exist_ok=True)
             shutil.copyfile(cache / 'worlds.from', internal / 'worlds.from')
-            paths, texts = [], []
-            fragments = ([dict(path='Organization.swift', marker='// ── the data the page reads')] if tab['world'] == 'Organization' else [])
-            for name, path in definitions:
-                data = path.read_bytes()
-                (internal / name).write_bytes(data)
-                paths.append(dict(path='.gate/' + name, sha256=hashlib.sha256(data).hexdigest()))
-                texts.append(dict(name=name, text=data.decode()))
-            definitions_record = internal / 'forms-definitions.json'
-            if definitions_record.exists() and json.loads(definitions_record.read_text()).get('format') == 2:
-                authored = json.loads(definitions_record.read_text())
-                authored['plain_fragments'] = fragments
-                definitions_record.write_text(json.dumps(authored, indent=2) + '\n')
-            else:
-                definitions_record.write_text(json.dumps(dict(
-                    revision=record['theory']['revision'], files=paths, plain_fragments=fragments,
-                    shelf_overrides=False), indent=2) + '\n')
+            # The owner already declared the source composition. Publication
+            # takes that record without writing definitions or choosing a suffix.
+            authored = json.loads((internal / 'forms-definitions.json').read_text())
+            inputs = {f['row']: f for f in authored['files']}
+            references = list(dict.fromkeys(ref for language in authored.get('languages', {}).values()
+                                             for ref in language.get('definitions', [])))
+            definition_paths = [inputs[ref]['path'] for ref in references]
+            fragments = authored.get('plain_fragments', [])
+            catalog_input = next(f for f in authored['files']
+                                 if f['source_path'] == 'Worlds/Playground/Site/Manifest.swift')
+            own_catalog = dict(catalog, revision=catalog_input['revision'], sha256=catalog_input['sha256'],
+                               source=catalog_input['path'])
             context = dict(pin=record['showcase']['revision'], world=tab['id'], tab=tab,
-                definitions=texts, carried=[], catalog=catalog, provenance=provenance, guard_names=guard_names,
+                definition_paths=definition_paths, carried=[], catalog=own_catalog, provenance=provenance, guard_names=guard_names,
                 compiler=record['theory'], judge=record['judge'], plain_fragments=fragments,
                 drawing=dict(case_id=tab['id']))
             # Carried paths are taken from /files by publish, not guessed here.

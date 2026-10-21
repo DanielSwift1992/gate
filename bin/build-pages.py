@@ -72,8 +72,7 @@ def publish(source, out, context=None):
 
         if context and context.get("drawing"):
             # Bind the declared owner remainder to these exact initial bytes.
-            hashes = sorted(hashlib.sha256(texts[f].encode()).hexdigest() for f in files["files"]
-                            if files.get("theirs", {}).get(f, {}).get("kind") != "CarriedFile")
+            hashes = sorted(hashlib.sha256(texts[f].encode()).hexdigest() for f in files.get("documents", []))
             context["drawing"]["source_digest"] = hashlib.sha256(json.dumps(hashes, separators=(",", ":")).encode()).hexdigest()
 
         shelf = json.loads(snap["/shelf"])
@@ -83,7 +82,12 @@ def publish(source, out, context=None):
         if context:
             # A frozen input uses the shelf's ordinary read-only path. The same
             # declaration parse that orders the build records each name's door.
+            context["definitions"] = [dict(name=f, text=texts[f]) for f in context.pop("definition_paths", [])]
             catalog = dict(context.pop("catalog"))
+            declared_text = texts[catalog.pop("source")]
+            if hashlib.sha256(declared_text.encode()).hexdigest() != catalog["sha256"]:
+                raise ValueError("the declared catalog differs from the selected pinned input")
+            catalog["text"] = declared_text
             mod = catalog["file"].removesuffix(".swift")
             snap[f"/shelf?m={mod}"] = catalog.pop("text")
             shelf.setdefault("modules", []).append(mod)
@@ -145,6 +149,8 @@ function judgeWhereTexts(text, extraTexts) {
     const CONTEXT = __CONTEXT__;
     const STORAGE = __STORAGE__;
     const FORMS = new Set(__FORMS__);
+    const WORLD_FILES = JSON.parse(SNAP["/files"]).world_files || [];
+    const DOCUMENTS = JSON.parse(SNAP["/files"]).documents || [];
     const LAYOUT = __LAYOUT__;
     const THEIRS = JSON.parse(SNAP["/files"]).theirs || {};
     // A carried reading is not another input to the relation court.
@@ -226,9 +232,9 @@ function judgeWhereTexts(text, extraTexts) {
         const inputs = JSON.stringify(texts), previous = readings.get(f);
         if (previous && previous.inputs === inputs) return previous.answer;
         const answer = GateWorldCourt.verdict(wasm_bindgen, WORLDS, texts,
-            CONTEXT.definitions, ALL.filter(g => !FORMS.has(g)), CONTEXT.carried,
+            CONTEXT.definitions, WORLD_FILES, CONTEXT.carried,
             LAYOUT, judge, (claim, stream) => plainly(claim, lawNotes(stream)), CONTEXT.plain_fragments,
-            { lint, pageGuards, vocabulary: kitVocabulary, names: CONTEXT.guard_names });
+            { lint, pageGuards, vocabulary: kitVocabulary, names: CONTEXT.guard_names }, DOCUMENTS);
         answer.compiler = "page bodies have not been checked by Swift";
         readings.set(f, { inputs, answer });
         return answer;

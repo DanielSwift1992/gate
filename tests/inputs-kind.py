@@ -123,7 +123,14 @@ public typealias Input_agrees = Pair<InputAtom, Coral>
             changed = copy.deepcopy(spec); changed['files'][0]['row'] = 'EntryRenamed'; write(changed)
             assert status()['verdict'] == 'holds'
             manifest.write_text(text); write()
-            for kind in ('DocumentFile', 'CatalogFile'):
+            manifest.write_text(text.replace('Kind = FormsFile', 'Kind = DocumentFile') + '\npublic enum DocumentFile: Role {}\n')
+            answer = status()
+            assert answer['verdict'] == 'holds' and answer['forms']['equalities'] > 0, answer
+            assert next(r for r in answer['readers'] if r['row'] == 'Claims')['reader'] == 'DocumentReaderV1', answer
+            changed = copy.deepcopy(spec); changed['files'][0]['sha256'] = '0' * 64
+            refused('DocumentFile cannot substitute unverified input', changed)
+            write()
+            for kind in ('FutureDocumentFile', 'CatalogFile'):
                 manifest.write_text(text.replace('Kind = FormsFile', 'Kind = ' + kind) + ('\npublic enum CatalogFile: Role {}\n' if kind == 'CatalogFile' else ''))
                 answer = status()
                 assert answer['verdict'] in ('partial', 'unsupported') and any(kind in r['reason'] for r in answer['unsupported']), answer
