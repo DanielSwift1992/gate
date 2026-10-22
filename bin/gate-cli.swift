@@ -13,7 +13,11 @@
 // binary, a vendored one, or one on PATH, and says so in one sentence when
 // there is none.
 import Foundation
+// CoreFoundation is a module of its own on Darwin and linux; Windows keeps it
+// inside Foundation, and the one question asked of it below has a second door.
+#if canImport(CoreFoundation)
 import CoreFoundation
+#endif
 // the socket calls the bench is served over. Foundation carries them on Darwin,
 // linux keeps them in Glibc, and Windows in WinSDK under names of its own: this
 // vein builds on all three, so each says where its calls come from.
@@ -3149,8 +3153,18 @@ func grammarCourtRequestHash(_ request: [String: Any]) -> String {
 }
 
 // JSON booleans bridge through NSNumber too; they are not checked counts.
+func jsonBoolean(_ number: NSNumber) -> Bool {
+    #if canImport(CoreFoundation)
+    return CFGetTypeID(number) == CFBooleanGetTypeID()
+    #else
+    // Foundation without the CoreFoundation module still types a boolean as `c`;
+    // a parsed JSON integer is a long long or a double, never a char.
+    return String(cString: number.objCType) == "c"
+    #endif
+}
+
 func grammarCourtInteger(_ value: Any?) -> Int? {
-    guard let number = value as? NSNumber, CFGetTypeID(number) != CFBooleanGetTypeID(),
+    guard let number = value as? NSNumber, !jsonBoolean(number),
           let integer = value as? Int, integer >= -9_007_199_254_740_991, integer <= 9_007_199_254_740_991 else { return nil }
     return integer
 }
