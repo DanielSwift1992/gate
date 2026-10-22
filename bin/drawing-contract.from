@@ -1,8 +1,8 @@
 {
   "repository": "https://github.com/DanielSwift1992/verification-is-identification-showcase",
-  "revision": "1cb65d4113011131fa1afcdf54ea2ee94deecda4",
+  "revision": "c5e174440e4945099022d3bbc81b78c8f7917043",
   "source_path": "Contracts/Drawing/v0.1/contract.json",
-  "sha256": "bcc5c7ac15215466cdec803384c238f871f2df26190cfc7c71ab94f7398b565e",
+  "sha256": "6d210aacee8fa5ecdfbf16c48d242eb6ebd3171e40feb66bbcd23c4010d4d1e4",
   "port_sha256": "8eee1cf3ed8023753677039362b112d6c86ef8db90ba24c56c697164cc7ac34e",
   "case_count": 22
 }

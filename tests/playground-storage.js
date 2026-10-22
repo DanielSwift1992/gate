@@ -94,7 +94,7 @@ function open(id, options = {}) {
         assert.strictEqual(live.verdict, native.verdict, id);
         assert.strictEqual((await (await page.fetch("/gitstatus?f=" + encodeURIComponent(f))).json()).git, "source");
     }
-    // Execute tick itself against the real shim. A refused Atom key change
+    // Execute tick itself against the real shim. A refused Atom count change
     // survives reopening, together with its red receipt; the repository policy
     // still withholds a red file. No unconditional write is hidden in a stub.
     const atom = open("atom"), snaps = JSON.parse(fs.readFileSync(path.join(root,"playground/atom/snapshots.json")));
@@ -104,7 +104,15 @@ function open(id, options = {}) {
     atom.esc = s=>String(s).replaceAll("<","&lt;");
     vm.runInContext(ui.slice(refusalStart,refusalEnd),atom);
     const start = ui.indexOf("async function tick("), end = ui.indexOf("\n}",start) + 2;
-    const state = { file:f, text:before.replace("Electron = Charged", "Electron = Trapped") };
+    // Charged -> Trapped is a declared SlotRule transition. EdgeSame guards
+    // rendering in an excluded function body; it is not a nominal where gate.
+    const station = before.replace("Electron = Charged", "Electron = Trapped");
+    assert.notStrictEqual(station,before);
+    const stationVerdict = await (await atom.fetch("/verdict?f="+f,{method:"POST",body:station})).json();
+    assert.strictEqual(stationVerdict.verdict,"holds");
+    assert.deepStrictEqual(stationVerdict.refusals,[]);
+    assert.deepStrictEqual(stationVerdict.unsupported,[]);
+    const state = { file:f, text:before.replace("BalmerAlphaDrop = Plus<U16, U4>", "BalmerAlphaDrop = Plus<U16, Plus<U4, U1>>") };
     assert.notStrictEqual(state.text, before);
     const flag = await (await atom.fetch("/files")).json();
     assert.strictEqual(flag.save_policy, "reader-draft");
@@ -113,7 +121,11 @@ function open(id, options = {}) {
     Object.assign(atom, { active:f, editor:{value:state.text}, readerDrafts:true, lastRefusals:[], layoutFile:"gate.manifest.swift",
         paintUngranted(){}, refreshGit(){}, readFiles(){}, document:{getElementById(){return el;}},
         render:async()=>{ const r = await (await atom.fetch("/verdict?f=" + f,{method:"POST",body:atom.editor.value})).json();
-            atom.lastRefusals=r.refusals.map(r=>({file:r.address.split(":")[0]})); assert(r.refusals.length > 0); }
+            atom.lastRefusals=r.refusals.map(r=>({file:r.address.split(":")[0]}));
+            assert.strictEqual(r.verdict,"refused"); assert.deepStrictEqual(r.unsupported,[]);
+            assert.strictEqual(r.refusals.length,2);
+            for(const name of ["SecondFloorStitch.Right","TwoRoadsOneDrop.Right"])
+                assert(r.refusals.some(row=>row.claim.includes(name)),name); }
     });
     const fetch = atom.fetch;
     atom.fetch = (...args)=>{ if(args[1]?.method === "PUT") writes++; return fetch(...args); };

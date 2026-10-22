@@ -5,6 +5,13 @@ const {drawingParse} = require('../bin/judge.js'), {renderAll} = require('../bin
 const sc = path.join(process.argv[2], 'showcase'), contract = path.join(sc, 'Contracts/Drawing/v0.1');
 const read = p => fs.readFileSync(p, 'utf8'), sha = s => crypto.createHash('sha256').update(s).digest('hex');
 const manifest = JSON.parse(read(path.join(contract, 'manifest.json')));
+// Acceptance and world inputs share the owner's complete published pin.
+const accepted = JSON.parse(read(path.join(__dirname, '../bin/drawing-contract.from')));
+const worldPin = JSON.parse(read(path.join(process.argv[2], 'worlds.from'))).showcase;
+assert.equal(accepted.revision, worldPin.revision, 'bin/drawing-contract.from must take the same showcase revision as the worlds');
+assert.equal(accepted.sha256, sha(read(path.join(contract, 'contract.json'))), 'bin/drawing-contract.from must accept these owner contract bytes');
+assert.equal(accepted.port_sha256, sha(read(path.join(__dirname, '../bin/renderer.js'))), 'the accepted contract must name this port');
+assert.equal(accepted.case_count, manifest.cases.length, 'the accepted Drawing case count must match the owner');
 const counts = {svg:0, refused:0, 'not-compared':0};
 function draw(files) { const p = drawingParse(files); return renderAll(p.declarations, p.order, p.literals, p.topAliases); }
 const profile = {contract:JSON.parse(read(path.join(contract, 'contract.json')))};

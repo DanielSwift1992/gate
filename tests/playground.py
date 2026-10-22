@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """The transferred vectors, and the actual published benches that read them."""
 import importlib.util
+from concurrent.futures import ThreadPoolExecutor
 import hashlib
 from html.parser import HTMLParser
 import json
@@ -167,8 +168,15 @@ def run():
             assert csp.stamp_csp(html) == html, str(page) + ': CSP must cover the final programs'
             assert "script-src-attr 'none'" in html
             Handlers().feed(html)
-        subprocess.run(['node', str(HERE / 'tests/playground.js'), str(cache), str(site), str(history)], check=True)
-        subprocess.run(['node', str(HERE / 'tests/playground-storage.js'), str(site)], check=True)
+        # Independent browser states read the same immutable published bytes.
+        # Keep every assertion and the existing outer timeout; neither process
+        # writes the site or shares its in-memory draft store with the other.
+        with ThreadPoolExecutor(max_workers=2) as readers:
+            jobs = [readers.submit(subprocess.run, command, check=True) for command in [
+                ['node', str(HERE / 'tests/playground.js'), str(cache), str(site), str(history)],
+                ['node', str(HERE / 'tests/playground-storage.js'), str(site)]]]
+            for job in jobs:
+                job.result()
         scale = json.loads((cache / 'showcase/Checks/Playground/scale-generation.json').read_text())
         assert scale['storage'] == 'versioned' and scale['parameters'] == dict(count=12800, seed=0, part_size=200)
         for output in scale['outputs']:
