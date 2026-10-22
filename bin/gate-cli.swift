@@ -5107,7 +5107,7 @@ func statusDoor(_ asJson: Bool, forCommit: Bool = false) -> Never {
 // time with a second set of rules. Observed, never judged: a commit is closed
 // exactly when the default branch reaches it, and open otherwise.
 struct JournalCommit {
-    var hash = "", email = "", when = "", subject = ""
+    var hash = "", email = "", author = "", when = "", subject = ""
     var files: [String] = []
     var touches = false
     var closed: Bool? = nil
@@ -5156,7 +5156,7 @@ func repoJournal(_ base: String, _ world: Set<String>, scope: String, limit: Int
     }
     journal.narrowed = !(scope == "world" && world.isEmpty)
     var arguments = ["log", "--all", "-\(limit)",
-                     "--format=%x01%H%x1f%ae%x1f%aI%x1f%s", "--name-only"]
+                     "--format=%x01%H%x1f%ae%x1f%aI%x1f%s%x1f%an", "--name-only"]
     if scope == "world" && !world.isEmpty { arguments += ["--"] + world.sorted() }
     for line in runGit(arguments, base).components(separatedBy: "\n") {
         if line.hasPrefix("\u{01}") {
@@ -5166,6 +5166,7 @@ func repoJournal(_ base: String, _ world: Set<String>, scope: String, limit: Int
             c.email = parts.count > 1 ? parts[1] : ""
             c.when = parts.count > 2 ? parts[2] : ""
             c.subject = parts.count > 3 ? parts[3] : ""
+            c.author = parts.count > 4 ? parts[4] : ""
             c.closed = merged.isEmpty ? nil : merged.contains(c.hash)
             journal.commits.append(c)
         } else if !line.trimmingCharacters(in: .whitespaces).isEmpty,
@@ -11590,7 +11591,7 @@ if args.first == "mine" || args.first == "theirs" {
 // for the object alone.
 func journalPairs(_ journal: Journal, scope: String, limit: Int, onlyMe: Bool,
                   world: Set<String>, who: [String: String], nextSaid: String,
-                  lastMile: Bool) -> [(String, StatusJSON)] {
+                  lastMile: Bool, publication: Bool = false) -> [(String, StatusJSON)] {
     var pairs: [(String, StatusJSON)] = [
         ("command", .text("log")),
         ("default_branch", journal.branch.isEmpty ? .null : .text(journal.branch)),
@@ -11602,7 +11603,17 @@ func journalPairs(_ journal: Journal, scope: String, limit: Int, onlyMe: Bool,
         ("me", .text(journal.me)),
         ("world_files", .list(world.sorted().map { .text($0) })),
         ("commits", .list(journal.commits.map { c in
-            .object([
+            // A published history reads these four fields, never a mail
+            // identity or an email-derived fallback for the author's name.
+            if publication {
+                return .object([
+                    ("short", .text(String(c.hash.prefix(8)))),
+                    ("when", .text(c.when)),
+                    ("subject", .text(c.subject)),
+                    ("author", .text(c.author)),
+                ])
+            }
+            return .object([
                 ("hash", .text(c.hash)),
                 ("short", .text(String(c.hash.prefix(8)))),
                 ("email", .text(c.email)),
@@ -11615,6 +11626,7 @@ func journalPairs(_ journal: Journal, scope: String, limit: Int, onlyMe: Bool,
             ])
         })),
     ]
+    if publication { pairs.removeAll { $0.0 == "me" } }
     if lastMile, let ready = commandIn(nextSaid) {
         pairs.append(("command_to_run", .text(ready)))
     }
@@ -13393,7 +13405,8 @@ func serveDoor(_ a: [String]) -> Never {
                     : "run `gate status` to have the judge read what these commits changed"
                 serveJSON(conn, compactDumps(.object(journalPairs(
                     journal, scope: scope, limit: n ?? 200, onlyMe: false, world: world,
-                    who: identities(base), nextSaid: nextSaid, lastMile: false))))
+                    who: identities(base), nextSaid: nextSaid, lastMile: false,
+                    publication: asked.query["publication"] == "1"))))
             case ("GET", "/show"):
                 let w = servedWorld()
                 let base = w.facts.map { (absPath($0) as NSString).deletingLastPathComponent }
@@ -14303,10 +14316,8 @@ func buildReadPlan(_ selected: String) throws -> ReadPlan {
                 json("GET /language", ["names": Dictionary(uniqueKeysWithValues: languageNames()), "file": languageFile(), "court": NSNull(), "at": judgeFrom() ?? "", "present": false])
                 json("GET /attention", ["command": "attention", "seams": []])
                 let journal = repoJournal(worldRoot, Set(parsed.rows.map { $0.path }), scope: "world", limit: 200, onlyMe: false)
-                var publishedJournal = publicationObject(.object(journalPairs(journal, scope: "world", limit: 200, onlyMe: false,
-                    world: Set(parsed.rows.map { $0.path }), who: identities(worldRoot), nextSaid: "Read-only publication", lastMile: false)))
-                // Local Git configuration is not an input of the publication.
-                publishedJournal.removeValue(forKey: "me")
+                let publishedJournal = publicationObject(.object(journalPairs(journal, scope: "world", limit: 200, onlyMe: false,
+                    world: Set(parsed.rows.map { $0.path }), who: [:], nextSaid: "Read-only publication", lastMile: false, publication: true)))
                 json("GET /log", publishedJournal)
                 coverage.append(["world": door.directory, "verdict": answer["verdict"] ?? "unsupported", "forms": answer["forms"] ?? [:],
                     "world_counts": answer["world"] ?? [:], "unsupported": answer["unsupported"] ?? [], "unchecked": parsed.rows.filter { $0.kind == "CarriedFile" }.map { $0.path },

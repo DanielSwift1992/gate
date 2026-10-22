@@ -56,7 +56,7 @@ for text in ordinary:
 
 with tempfile.TemporaryDirectory(prefix='publication-boundary-controls-') as temporary:
     tree = Path(temporary)/'site'; tree.mkdir()
-    path = tree/'snapshot.json'; path.write_text(json.dumps({'me': email}))
+    path = tree/'snapshot.json'; path.write_text(json.dumps({'commits': [{'email': email}]}))
     command = [sys.executable, str(ROOT/'tests/publication-boundary.py'), '--publication-tree', str(tree)]
     refusal = subprocess.run(command, capture_output=True, text=True)
     assert refusal.returncode == 1 and 'site/snapshot.json:byte ' in refusal.stdout

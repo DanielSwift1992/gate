@@ -53,16 +53,15 @@ def publish(source, out, context=None):
 
         snap = {}
         for path in ("/files", "/language", "/version", "/status", "/shelf",
-                     "/log?n=1&scope=world", "/attention", "/grammar-contexts"):
+                     "/attention", "/grammar-contexts"):
             snap[path] = get(port, path)
+        # The same Swift projection as PublicationPlan owns the public history.
+        snap["/log?n=1&scope=world"] = get(port, "/log?n=1&scope=world&publication=1")
 
         drawing_plan = json.loads(get(port, "/drawing-profile"))
         from drawing_profile import publish as publish_drawing
         drawing = publish_drawing(HERE, PUBLICATION_ROOT or out, out, drawing_plan, port)
         snap["/drawing-profile"] = json.dumps(drawing_plan)
-        journal = json.loads(snap["/log?n=1&scope=world"])
-        journal.pop("me", None)
-        snap["/log?n=1&scope=world"] = json.dumps(journal)
         files = json.loads(snap["/files"])
         if context:
             context["carried"] = files.get("carried") or []
@@ -600,8 +599,12 @@ def main():
     finish(args.out)
     from bench_styles import audit_site
     print("interface tokens:", audit_site(args.out, ladder))
-    subprocess.run([sys.executable, os.path.join(HERE, "tests", "publication-boundary.py"),
-                    "--publication-tree", args.out], check=True)
+    boundary = subprocess.run([sys.executable, os.path.join(HERE, "tests", "publication-boundary.py"),
+                               "--publication-tree", args.out])
+    if boundary.returncode:
+        # The law has already named the byte address. Do not add a traceback
+        # containing the builder's private source and temporary directories.
+        raise SnapshotFailure("publication byte boundary refused; see the addressed findings above")
 
 
 if __name__ == "__main__":
