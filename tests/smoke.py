@@ -12145,10 +12145,11 @@ print(bad.isEmpty ? "CORE OK" : "APART: " + bad.joined(separator: ","))
     for _m in re.finditer(r"^\s*import (\w+)", open(VEIN).read(), re.M):
         _imp.add(_m.group(1))
     # the vein is swift now, and its whole list is the platform's own library:
-    # Foundation everywhere, and the two libcs behind a `canImport` because one
+    # Foundation/CoreFoundation (including JSON boolean identity), and the libcs
+    # behind a `canImport` because one
     # file builds on all three platforms. No package manager, no lockfile, and
     # nothing that could reach a network by being imported.
-    _white = {"Foundation", "Glibc", "WinSDK", "Darwin"}
+    _white = {"Foundation", "CoreFoundation", "Glibc", "WinSDK", "Darwin"}
     S.append(("the CLI imports the platform's own library alone, from a named list",
               _imp <= _white and "Foundation" in _imp))
     # ── AND A NUMBER IN THE PROSE IS THE NUMBER ITS OWNER HOLDS. Two counts

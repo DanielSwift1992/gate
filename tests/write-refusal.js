@@ -32,7 +32,8 @@ async function check(source) {
         let script = source.shim.replace(/^<script[^>]*>.*<\/script>\s*$/gm, "")
             .replace(/^<\/?script>\s*$/gm, "");
         for (const [k,v] of Object.entries({__SNAP__:snap,__CONTEXT__:context,__STORAGE__:"draft.",
-            __FORMS__:files.forms,__WORLDS__:files.worlds,__LAYOUT__:files.layout,__ALL__:names}))
+            __FORMS__:files.forms,__WORLDS__:files.worlds,__LAYOUT__:files.layout,__ALL__:names,
+            __COURT_WORKER_GLUE__:"",__COURT_WORKER_HANDLER__:""}))
             script = script.split(k).join(JSON.stringify(v));
         vm.runInContext(script, c);
         const before = await (await c.fetch("/files")).text();

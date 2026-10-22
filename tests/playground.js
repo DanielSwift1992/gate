@@ -28,6 +28,26 @@ function updated(text, paths) {
 const hashes = arts => arts.map(c => ({name:c.name,bytes:Buffer.byteLength(c.svg),
     sha256:crypto.createHash("sha256").update(c.svg).digest("hex")}));
 const contexts = require('../bin/court-contexts.js'), grammar = require('../bin/grammar-policy.js');
+const {Worker} = require('node:worker_threads');
+// These independent comparisons retain every original input and exact reply.
+// At most three cases run together; the battery's time limits stay unchanged.
+async function mapCases(values, action) {
+    let next = 0;
+    await Promise.all(Array.from({length:Math.min(3, values.length)}, async () => {
+        while (next < values.length) { const index = next++; await action(values[index]); }
+    }));
+}
+function wasmCall(operation, input) {
+    return new Promise((resolve, reject) => {
+        const worker = new Worker(path.join(__dirname, 'court-call-worker.js'), {workerData:{operation,input}});
+        let answered = false, reply;
+        worker.once('message', value => { answered = true; reply = value; });
+        worker.once('error', reject);
+        worker.once('exit', code => code === 0 && answered ? resolve(reply) : reject(Error('Court worker did not answer: ' + code)));
+    });
+}
+const notationCourt = {source_notation: input => wasmCall('source_notation', input)};
+
 function declaredPlan(world) {
     const id = world.split('/')[0].toLowerCase();
     const snapshot = JSON.parse(read(path.join(site, 'playground', id, 'snapshots.json')));
@@ -37,33 +57,39 @@ async function declaredRequest(world, source, text, question, selector) {
     const plan = declaredPlan(world), ownPath = path.relative('Worlds/Playground/' + world.split('/')[0], source);
     const context = plan.contexts.find(c => c.court && c.court.sources.some(s => s.input === ownPath));
     assert(context, source + ': no declared source context');
-    const prepared = await contexts.requests(court, context, {[ownPath]:text}, JSON.parse(plan.policy), grammar);
+    const prepared = await contexts.requests(notationCourt, context, {[ownPath]:text}, JSON.parse(plan.policy), grammar);
     assert.deepStrictEqual(prepared.refusals, []);
     const selected = prepared.requests.filter(r => r.arguments[0] === question && (!selector ||
         ['predicate','encoding','sigma'].every(k => r.arguments[r.arguments.indexOf('--' + k) + 1] === selector[k])));
     assert.strictEqual(selected.length, 1, source + ': question must be declared exactly once');
     return selected[0];
 }
-function nativeAnswer(request) {
+async function nativeAnswer(request) {
     const temp = fs.mkdtempSync(path.join(require('os').tmpdir(), 'gate-playground-court-'));
     try {
         for (const file of request.files) {
             const target = path.join(temp, file.name); fs.mkdirSync(path.dirname(target), {recursive:true});
             fs.writeFileSync(target, file.text);
         }
-        const result = cp.spawnSync(path.join(here, 'bin/gate-judge'), ['judge', ...request.arguments],
-            {cwd:temp, encoding:'utf8', maxBuffer:8*1024*1024});
-        assert.ifError(result.error);
-        return {exit:result.status, stdout:result.stdout, stderr:result.stderr};
+        return await new Promise((resolve, reject) => cp.execFile(path.join(here, 'bin/gate-judge'), ['judge', ...request.arguments],
+            {cwd:temp, encoding:'utf8', maxBuffer:8*1024*1024}, (error, stdout, stderr) => {
+                if (error && typeof error.code !== 'number') reject(error);
+                else resolve({exit:error ? error.code : 0, stdout, stderr});
+            }));
     } finally { fs.rmSync(temp, {recursive:true, force:true}); }
 }
 let vectors = 0;
-async function check(name, fn) { await fn(); vectors++; reports.push(name); }
+async function check(name, fn) {
+    const start = performance.now();
+    process.stderr.write('PLAYGROUND START ' + name + '\n');
+    await fn(); vectors++; reports.push(name);
+    process.stderr.write('PLAYGROUND PASS ' + name + ' ' + ((performance.now()-start)/1000).toFixed(3) + 's\n');
+}
 await check("a refused certificate named budget stays a refusal", async () => {
     const c = courtFixture.cases.find(c => c.id === "light-halving"), source = courtFixture.declaration_files.Light;
     const text = read(path.join(sc, source)).replace(...c.mutation).replace("public typealias HalfFact =", "public typealias budget =");
     const request = await declaredRequest('Light', source, text, 'where');
-    const answer = JSON.parse(court.judge(JSON.stringify({arguments:request.arguments, files:request.files})));
+    const answer = JSON.parse(await wasmCall('judge',JSON.stringify({arguments:request.arguments, files:request.files})));
     const report = await contexts.bound(request, answer);
     assert.equal(report.outcome, 'not-established');
     assert(report.results.some(r => r.diagnostics.some(d => d.includes('budget'))));
@@ -152,7 +178,7 @@ await check("where budget remains unsupported at its original requirement addres
 });
 await check("all seventeen palette reading lies remain addressed in wasm", async () => {
     const text = read(path.join(sc, "Worlds/Playground/Site/Palette.swift"));
-    for (const row of fixture("palette-residue").requirements) {
+    await mapCases(fixture("palette-residue").requirements, async row => {
         const line = new RegExp("^public typealias " + row.id + " = Legible<([^\\n]+)>$", "m");
         const m = text.match(line); assert(m, row.id);
         const args = m[1].split(", "); assert.strictEqual(args.length, 3);
@@ -161,12 +187,12 @@ await check("all seventeen palette reading lies remain addressed in wasm", async
         const request = await declaredRequest("Site/Palette", "Worlds/Playground/Site/Palette.swift",
             text.replace(m[0], wrong), "count",
             {predicate:"PaletteContrastQuestion",encoding:"UnaryArithmeticEncoding",sigma:"PaletteLight"});
-        const result = JSON.parse(court.judge(JSON.stringify({arguments:request.arguments,files:request.files})));
+        const result = JSON.parse(await wasmCall('judge',JSON.stringify({arguments:request.arguments,files:request.files})));
         assert.strictEqual(result.exit, 1, row.id);
         const report = await contexts.bound(request, result), refusals = report.results.flatMap(r => r.diagnostics);
         assert.strictEqual(refusals.length, 1, row.id);
         assert(refusals[0].includes("'" + row.id + ".R1'"), refusals[0]);
-    }
+    });
 });
 await check("company's four vectors", () => {
     const clean = judge("Company.swift", companyText), want = company.golden.clean;
@@ -215,14 +241,14 @@ await check("every supported kit name and its native vector obligation", () => {
     for (const n of Object.values(kit.GOLDENS)) if (!n.startsWith("pending")) assert(fs.existsSync(path.join(checks, n)));
     assert.strictEqual(kit.SUPPORTED.filter(n => kit.GOLDENS[n].startsWith("pending")).length, 15);
 });
-for (const c of courtFixture.cases) await check(c.id + " native and wasm", async () => {
+await mapCases(courtFixture.cases, c => check(c.id + " native and wasm", async () => {
     const source = c.world === "Site/Palette" ? "Worlds/Playground/Site/Palette.swift" : courtFixture.declaration_files[c.world];
     let text = read(path.join(sc, source));
     if (c.mutation) { assert(text.includes(c.mutation[0]), c.id); text = text.replace(...c.mutation); }
     const request = await declaredRequest(c.world, source, text, c.court, c.question);
-    const answer = JSON.parse(court.judge(JSON.stringify({arguments:request.arguments,files:request.files})));
+    const answer = JSON.parse(await wasmCall('judge',JSON.stringify({arguments:request.arguments,files:request.files})));
     assert.strictEqual(answer.exit, c.exit, c.id + ': ' + answer.stdout + answer.stderr);
-    assert.deepStrictEqual(nativeAnswer(request), answer, c.id + ': exact native/wasm response');
+    assert.deepStrictEqual(await nativeAnswer(request), answer, c.id + ': exact native/wasm response');
     const report = await contexts.bound(request, answer), objections = report.results.flatMap(r => r.diagnostics);
     for (const key of ['equalities','memberships','readings']) if (c[key] !== undefined)
         assert.equal(report.results.reduce((sum,r) => sum+r[key],0), c[key], c.id + ': ' + key);
@@ -235,7 +261,7 @@ for (const c of courtFixture.cases) await check(c.id + " native and wasm", async
         const stitches = ['ThirdFloorStitch.Right','SecondFloorStitch.Right','GroundFloorStitch.Right','TwoRoadsOneDrop.Right'];
         assert.deepEqual(stitches.filter(name => objections.some(d => d.includes("'" + name + "'"))).sort(), [...c.stitch_refusals].sort());
     }
-});
+}));
 
 if (site) for (const id of fs.readdirSync(path.join(site, "playground"))) {
     const folder = path.join(site, "playground", id);

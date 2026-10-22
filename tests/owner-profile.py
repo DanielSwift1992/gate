@@ -19,6 +19,16 @@ ROOT=Path(__file__).resolve().parents[1]
 def sha(data):return hashlib.sha256(data).hexdigest()
 
 
+def owner_repository(spec, local=None):
+    if local:
+        source=Path(local).resolve()
+        head=subprocess.check_output(['git','-C',str(source),'rev-parse','HEAD'],text=True).strip()
+        if head!=spec['revision']:
+            raise ValueError(str(source)+': local owner source is not at the publication pin')
+        return str(source)
+    return 'https://github.com/DanielSwift1992/verification-is-identification-showcase'
+
+
 def run(source):
     source=Path(source)
     request=json.loads((source/'Profiles/Playground/request.json').read_text())
@@ -195,11 +205,19 @@ if __name__=='__main__':
         # Only the control needs the owner's build tools. Do not add its SwiftPM
         # build inputs to the worlds shipped to every published bench.
         spec=json.loads((ROOT/'bin/playground-worlds.from').read_text())['showcase']
+        # Use the same explicit local-source option as the worlds door during
+        # a cross-repository review. It still supplies a committed pin: fetch a
+        # clean snapshot, never copy the caller's build or uncommitted files.
+        repository=owner_repository(spec,os.environ.get('SHOWCASE_SOURCE'))
         with tempfile.TemporaryDirectory(prefix='gate-profile-owner-reader-') as tmp:
             source=Path(tmp)
             def git(*args):subprocess.run(['git','-C',str(source),*args],check=True)
             git('init','-q');git('config','core.autocrlf','false');git('config','core.eol','lf')
-            git('fetch','-q','--depth','1','https://github.com/DanielSwift1992/verification-is-identification-showcase',spec['revision'])
+            git('fetch','-q','--depth','1',repository,spec['revision'])
             git('checkout','-q','FETCH_HEAD')
             for name,want in spec['files'].items():assert sha((source/name).read_bytes())==want,name+': owner input differs from the publication pin'
+            assert owner_repository(spec,source)==str(source.resolve())
+            try:owner_repository(dict(revision='0'*40),source)
+            except ValueError:pass
+            else:raise AssertionError('a local owner source at another revision was accepted')
             run(source)

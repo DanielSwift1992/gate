@@ -2966,7 +2966,7 @@ func readGrammarContexts(_ w: WorldState, live: [String: String],
                               let response = receipt["response"] as? [String: Any],
                               Set(response.keys) == ["exit", "stdout", "stderr"],
                               grammarCourtInteger(response["exit"]) != nil, response["stdout"] is String, response["stderr"] is String else {
-                            bad(row.path + ":1", "invalid or repeated court receipt"); continue
+                            bad(row.path + ":1", "court receipt fields are outside the supported form or repeat"); continue
                         }
                         var taken = receipt
                         taken["origin"] = inputsByName[reference] ?? [:]
@@ -3132,7 +3132,7 @@ func grammarCourtRequests(_ context: GrammarContext) -> [[String: Any]] {
 func grammarCourtAnswer(_ request: [String: Any]) -> CourtSourcesReport.Answer {
     guard let arguments = request["arguments"] as? [String], let question = arguments.first,
           let files = request["files"] as? [[String: String]] else {
-        return CourtSourcesReport.Answer(exit: 2, stdout: Data(), stderr: Data("invalid court request\n".utf8))
+        return CourtSourcesReport.Answer(exit: 2, stdout: Data(), stderr: Data("court request is outside the supported form\n".utf8))
     }
     let texts = Dictionary(files.compactMap { f in f["name"].flatMap { name in f["text"].map { (name, $0) } } },
                            uniquingKeysWith: { first, _ in first })
@@ -3216,7 +3216,7 @@ func grammarRecordedAnswer(_ request: [String: Any], receipts: [[String: Any]]) 
         if grammarBoundAnswer(request, answer) {
             return answer
         }
-        return CourtSourcesReport.Answer(exit: 2, stdout: Data(), stderr: Data("the declared court receipt has invalid coverage or input hashes\n".utf8))
+        return CourtSourcesReport.Answer(exit: 2, stdout: Data(), stderr: Data("the declared court receipt does not cover the stated inputs and hashes\n".utf8))
     }
     if let cached = GRAMMAR_COURT_ANSWERS[hash] { return cached }
     let answer = grammarCourtAnswer(request)

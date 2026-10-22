@@ -21,7 +21,8 @@ snapshot = {'/files': json.dumps({'files': files, 'batch_readings': True}),
 for context in [None, {'pin': 'pin', 'world': 'external'}]:
     script = shim
     for key, value in {'SNAP': snapshot, 'CONTEXT': context, 'STORAGE': 'probe.',
-                       'FORMS': [], 'LAYOUT': None, 'ALL': files, 'WORLDS': []}.items():
+                       'FORMS': [], 'LAYOUT': None, 'ALL': files, 'WORLDS': [],
+                       'COURT_WORKER_GLUE': '', 'COURT_WORKER_HANDLER': ''}.items():
         script = script.replace('__' + key + '__', json.dumps(value))
     # Court initialization precedes the snapshot closure and is unrelated to transport.
     script = script[script.index('(function () {'):script.rindex('</script>')]
