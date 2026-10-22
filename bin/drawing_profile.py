@@ -3,24 +3,23 @@ import hashlib
 import json
 import os
 from pathlib import Path
-import urllib.request
+from snapshot_http import read as snapshot_read
 
 
 def publish(here, site, page, plan, port):
     if plan['status'] == 'none':
         return None
-    base = 'http://127.0.0.1:' + str(port)
     if plan['status'] != 'resolved':
         raise ValueError(plan.get('address', 'drawing-profile:1') + ': ' + plan.get('reason', 'an owner-resolved profile is required for publication'))
     profile = dict(plan['resolved'])
     plan['port_allowed'] = False
-    css_data = urllib.request.urlopen(base + '/drawing-assets/' + plan['css_sha256']).read()
+    css_data = snapshot_read(port, '/drawing-assets/' + plan['css_sha256'])
     if hashlib.sha256(css_data).hexdigest() != plan['css_sha256']:
         raise ValueError('owner CSS delivery changed')
     css = css_data.decode()
     assets = Path(site) / 'assets/drawing'
     for item in profile['assets']:
-        data = urllib.request.urlopen(base + '/drawing-assets/' + item['sha256']).read()
+        data = snapshot_read(port, '/drawing-assets/' + item['sha256'])
         if hashlib.sha256(data).hexdigest() != item['sha256']:
             raise ValueError('drawing input delivery changed: ' + item['sha256'])
         dest = assets / item['sha256'] / item['name']

@@ -18,8 +18,9 @@ import socket
 import subprocess
 import sys
 import time
-import urllib.request
+import tempfile
 from urllib.parse import quote
+from snapshot_http import read as snapshot_read, SnapshotFailure
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GATE = os.path.join(HERE, "gate")
@@ -28,27 +29,26 @@ PUBLICATION_ROOT = None
 
 
 def get(port, path):
-    with urllib.request.urlopen(f"http://127.0.0.1:{port}{path}", timeout=120) as r:
-        return r.read().decode("utf-8")
+    return snapshot_read(port, path).decode("utf-8")
 
 
 def post(port, path, body):
-    req = urllib.request.Request(f"http://127.0.0.1:{port}{path}",
-                                 data=body.encode("utf-8"), method="POST")
-    with urllib.request.urlopen(req, timeout=120) as r:
-        return r.read().decode("utf-8")
+    return snapshot_read(port, path, body.encode("utf-8")).decode("utf-8")
 
 
 def publish(source, out, context=None):
     s = socket.socket(); s.bind(("127.0.0.1", 0)); port = s.getsockname()[1]; s.close()
+    serve_log = tempfile.TemporaryFile()
     serve = subprocess.Popen([GATE, "serve", str(port), "--no-open"],
-                             cwd=source, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                             cwd=source, stdout=serve_log, stderr=serve_log)
     try:
         for _ in range(60):
             try:
                 get(port, "/files")
                 break
-            except Exception:
+            except SnapshotFailure:
+                if serve.poll() is not None:
+                    raise
                 time.sleep(0.25)
 
         snap = {}
@@ -102,9 +102,21 @@ def publish(source, out, context=None):
                 snap[f"/value?name={n}"] = get(port, f"/value?name={n}")
             except Exception:
                 pass
+    except SnapshotFailure as error:
+        serve_log.seek(0, os.SEEK_END)
+        serve_log.seek(max(0, serve_log.tell() - 2000))
+        diagnostic = serve_log.read().decode('utf-8', errors='replace').strip()
+        raise SnapshotFailure(str(source) + ': ' + str(error) + '; gate serve exit='
+                              + str(serve.poll()) + '; output=' + repr(diagnostic)) from None
     finally:
-        serve.terminate()
-        serve.wait()
+        if serve.poll() is None:
+            serve.terminate()
+        try:
+            serve.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            serve.kill()
+            serve.wait()
+        serve_log.close()
 
     ui = open(os.path.join(HERE, "web", "ui.html"), encoding="utf-8").read()
     for asset in ("codemirror.css", "ladder.css", "codemirror.js", "judge.js", "renderer.js", "press.js", "drawing-profile.js"):
@@ -571,4 +583,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except SnapshotFailure as error:
+        sys.exit('build-pages: ' + str(error))
