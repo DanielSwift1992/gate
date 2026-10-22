@@ -14632,7 +14632,7 @@ public enum MyWatch: AccessLedger {
     # Full context/2 publication measured about 320 s, and the independent
     # draft-storage probe 271 s, before the other native/browser controls.
     # This is the composite test's wall clock, not a Court reduction budget.
-    # Keep the battery's 1440 s deadline and every source-bound assertion.
+    # Keep the battery's 2400 s deadline and every source-bound assertion.
     _playground_command = [sys.executable, os.path.join(HERE, "tests", "playground.py")]
     with subprocess.Popen(_playground_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                           text=True, start_new_session=(os.name != "nt")) as _playground_process:
