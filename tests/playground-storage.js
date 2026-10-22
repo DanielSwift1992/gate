@@ -5,9 +5,10 @@ const court = require("../bin/court-wasm/node/vi_court.js"), { judge } = require
 
 const {kitVocabulary} = require("../bin/renderer.js");
 const GateWorldCourt = require("../bin/world-court.js");
+const GateCourtContexts = require("../bin/court-contexts.js");
 const root = process.argv[2], record = JSON.parse(fs.readFileSync(path.join(root, "worlds.from")));
 const storage = Object.create({ getItem(k) { return this[k] ?? null; }, setItem(k,v) { this[k] = String(v); }, removeItem(k) { delete this[k]; } });
-function open(id) {
+function open(id, options = {}) {
     const folder = id === "demo" ? root : path.join(root, "playground", id);
     const {lint} = fs.existsSync(path.join(folder, "playground-lint.js")) ? require(path.join(folder, "playground-lint.js")) : {};
     const {pageGuards} = fs.existsSync(path.join(folder, "playground-guards.js")) ? require(path.join(folder, "playground-guards.js")) : {};
@@ -15,9 +16,44 @@ function open(id) {
     const at = page.indexOf("wasm_bindgen.initSync("), start = page.lastIndexOf("<script>", at) + 8, end = page.indexOf("</script>", at);
     assert(at >= 0 && end > start);
     const scope = { localStorage: storage, wasm_bindgen: { ...court, initSync() {} }, VI_COURT_WASM_BASE64: "",
-        Uint8Array, atob, Response, Map, GateWorldCourt, judge, lint, pageGuards, kitVocabulary, location: { search: "" }, fetch: async () => { throw Error("unexpected network"); } };
+        Uint8Array, atob, Response, Map, GateWorldCourt, GateCourtContexts, judge, lint, pageGuards, kitVocabulary, location: { search: "" }, fetch: async () => { throw Error("unexpected network"); } };
     scope.document = {addEventListener(){}};
     scope.window = scope;
+    if (options.fileWorker) {
+        // Run the finished file-page shim and its actual carried Blob body.
+        // Node supplies the thread, not a replacement Court or transport rule.
+        const {Worker: Thread} = require("worker_threads"), urls = new Map(), workers = [];
+        let sequence = 0;
+        scope.location.protocol = "file:";
+        scope.Blob = class { constructor(parts) { this.source = parts.join(""); } };
+        scope.URL = {createObjectURL(blob) { const url = "blob:fixture/" + ++sequence; urls.set(url, blob.source); return url; },
+            revokeObjectURL(url) { urls.delete(url); }};
+        scope.Worker = class {
+            constructor(url) {
+                this.pending = []; workers.push(this);
+                // Loading happens after construction; the URL must remain live.
+                setImmediate(() => {
+                    if (this.closed) return;
+                    try {
+                        assert(urls.has(url), "file worker URL retired before its source was read");
+                        const source = "const {parentPort}=require('worker_threads');global.self=global;self.postMessage=data=>parentPort.postMessage(data);\n"
+                            + urls.get(url) + "\nparentPort.on('message',data=>self.onmessage({data}));";
+                        this.thread = new Thread(source, {eval:true});
+                        this.thread.on("message", data => this.onmessage?.({data}));
+                        this.thread.on("error", error => this.onerror?.({message:error.message}));
+                        for (const message of this.pending) this.thread.postMessage(message);
+                        this.pending = [];
+                    } catch (error) { this.onerror?.({message:error.message}); }
+                });
+            }
+            postMessage(message) { if (this.thread) this.thread.postMessage(message); else this.pending.push(message); }
+            terminate() { this.closed = true; return this.thread?.terminate(); }
+        };
+        scope.__workerFixture = {workers, urls, stop:() => Promise.all(workers.map(w => w.terminate()))};
+        assert(page.includes("worker-src 'self' blob:"));
+        // The finished artifact supplies the same wasm bytes to its Blob.
+        vm.runInNewContext(fs.readFileSync(path.join(folder,"court/vi_court_bytes.js"),"utf8"), scope);
+    }
     vm.runInNewContext(page.slice(start, end), scope);
     return scope;
 }
@@ -142,6 +178,18 @@ function open(id) {
     await atom.tick(true); assert(el.textContent.includes("not saved: " + f) && el.textContent.includes("browser storage unavailable"));
     delete storage.setItem;
     reopened.__resetWipe(); assert.strictEqual(storage.getItem(key),null);
+    const fromFile = open("atom", {fileWorker:true}), fixture = fromFile.__workerFixture;
+    try {
+        const changed = before.replace("public typealias BalmerAlphaDrop = Plus<U16, U4>",
+            "public typealias BalmerAlphaDrop = Plus<U16, Plus<U4, U1>>");
+        assert.notStrictEqual(changed,before);
+        const answer = await (await fromFile.fetch("/verdict?f="+encodeURIComponent(f),{method:"POST",body:changed})).json();
+        assert.strictEqual(answer.verdict,"refused"); assert.deepStrictEqual(answer.unsupported,[]);
+        assert.strictEqual(answer.refusals.length,2);
+        for (const name of ["SecondFloorStitch.Right","TwoRoadsOneDrop.Right"])
+            assert(answer.refusals.some(r => r.claim.includes(name)),name);
+        assert.strictEqual(fixture.workers.length,1); assert.strictEqual(fixture.urls.size,0);
+    } finally { await fixture.stop(); }
     console.log("PLAYGROUND STORAGE GREEN: refused Atom draft and verdict survive reload; native red withholds; stale text, quota and scoped reset");
 
 })().catch(e => { console.error(e); process.exitCode = 1; });

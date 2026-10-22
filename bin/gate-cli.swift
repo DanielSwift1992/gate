@@ -13,6 +13,7 @@
 // binary, a vendored one, or one on PATH, and says so in one sentence when
 // there is none.
 import Foundation
+import CoreFoundation
 // the socket calls the bench is served over. Foundation carries them on Darwin,
 // linux keeps them in Glibc, and Windows in WinSDK under names of its own: this
 // vein builds on all three, so each says where its calls come from.
@@ -2566,6 +2567,8 @@ struct GrammarUnit {
     let sha256: String
     let mapSHA256: String
     let scope: String
+    var courtSource: [String: Any] = [:]
+    var countQuestions: [[String: String]] = []
 }
 struct GrammarContext {
     let name: String
@@ -2573,6 +2576,17 @@ struct GrammarContext {
     let rows: [LayoutRow]
     let units: [GrammarUnit]
     let definitions: [String]
+    var courtContext: [String: Any]? = nil
+    var courtReceipts: [[String: Any]] = []
+    var permittedImports: [String] = []
+}
+final class GrammarCoverage {
+    var sources = Set<String>()
+    var unchecked = Set<String>()
+    var reports: [StatusJSON] = []
+    var exclusions: [StatusJSON] {
+        unchecked.sorted().map { .object([("address", .text($0)), ("reason", .text("excluded from the court reading"))]) }
+    }
 }
 struct GrammarContexts {
     var active = false
@@ -2584,10 +2598,14 @@ struct GrammarContexts {
         ["format": "gate-grammar-contexts/1", "active": active, "record_sha256": recordSHA256,
          "law": "vi-grammar-policy/1", "vi_revision": PinnedGrammarLaw.revision,
          "policy_sha256": PinnedGrammarLaw.digest,
+         "policy": String(decoding: PinnedGrammarLaw.bytes, as: UTF8.self),
          "refusals": bad.map { ["address": $0.address, "claim": $0.claim] },
          "unsupported": unsupported.map { ["address": $0.address, "reason": $0.reason] },
          "contexts": contexts.map { context -> [String: Any] in
             ["language": context.name, "namespace": context.namespace,
+             "court": context.courtContext as Any? ?? NSNull(),
+             "requests": grammarCourtRequests(context), "receipts": context.courtReceipts,
+             "imports": context.permittedImports,
              "inputs": context.units.map { unit -> [String: Any] in
                 ["row": unit.row, "path": unit.path, "source_path": unit.sourcePath,
                  "identity": unit.identity, "namespace": unit.namespace,
@@ -2598,13 +2616,40 @@ struct GrammarContexts {
     }
 }
 
+// Keep only the latest plan. Every lookup resolves the pins again and hashes
+// the complete delivered row bytes, the record and manifest, including live
+// buffers. A saved plan is a parsing result for those bytes, never an old green.
+var GRAMMAR_CONTEXT_PLAN: (key: String, value: GrammarContexts)? = nil
+func grammarContextKey(_ w: WorldState, live: [String: String], resolved: TakenResolution) -> String? {
+    guard resolved.bad.isEmpty, let root = layoutDir(w), let layout = w.layout,
+          layout.rows.contains(where: { $0.language != nil }),
+          let manifest = FileManager.default.contents(atPath: layout.manifest),
+          let record = FileManager.default.contents(atPath: joinPath(root, ".gate/forms-definitions.json")) else { return nil }
+    let rows: [[String: String]] = layout.rows.map { row in
+        let path = row.source == "theirs" ? row.name.flatMap { resolved.paths[$0] } : joinPath(root, row.path)
+        let bytes = live[row.path].map { Data($0.utf8) } ?? path.flatMap(inputBytes)
+        return ["row": row.name ?? "", "path": row.path, "input": bytes.map(sha256Hex) ?? "missing",
+            "source": row.source, "role": row.role ?? "", "kind": row.kind ?? "", "language": row.language ?? "",
+            "from": row.from ?? "", "written": row.written ?? "", "opens": row.opens ?? "", "line": String(row.line),
+            "drawingInputs": row.drawingInputs.joined(separator: "\u{0}")]
+
+    }
+    return sha256Hex(publicationJSON(["root": root, "manifest": sha256Hex(manifest), "record": sha256Hex(record),
+        "rows": rows, "live": live, "law": PinnedGrammarLaw.digest, "reader": judgeFrom() ?? ""] as [String: Any]))
+}
 func grammarContexts(_ w: WorldState, live: [String: String] = [:],
                      resolved supplied: TakenResolution? = nil) -> GrammarContexts {
-    var result = readGrammarContexts(w, live: live, resolved: supplied)
+    let resolved = supplied ?? takenInputs(w)
+    let key = grammarContextKey(w, live: live, resolved: resolved)
+    if let key, let cached = GRAMMAR_CONTEXT_PLAN, cached.key == key { return cached.value }
+    var result = readGrammarContexts(w, live: live, resolved: resolved)
     // A ReadPlan has the same bytes across processes and checkout locations,
     // including its negative replies; dictionary iteration is not provenance.
     result.bad.sort { ($0.address, $0.claim) < ($1.address, $1.claim) }
     result.unsupported.sort { ($0.address, $0.id, $0.reason) < ($1.address, $1.id, $1.reason) }
+    if let key, key == grammarContextKey(w, live: live, resolved: resolved) {
+        GRAMMAR_CONTEXT_PLAN = (key, result)
+    }
     return result
 }
 func readGrammarContexts(_ w: WorldState, live: [String: String],
@@ -2623,7 +2668,7 @@ func readGrammarContexts(_ w: WorldState, live: [String: String],
             result.bad.append((".gate/forms-definitions.json:1", "languages must be a context object"))
             return result
         }
-        let fields: Set<String> = ["definitions", "namespace", "imports", "scope_map"]
+        let fields: Set<String> = ["definitions", "namespace", "imports", "scope_map", "module", "intrinsics", "receipts"]
         for (name, context) in all {
             if let extra = Set(context.keys).subtracting(fields).sorted().first {
                 result.bad.append((".gate/forms-definitions.json:1", "Language '" + name + "' has unsupported field '" + extra + "'; Kind chooses the reader"))
@@ -2669,6 +2714,7 @@ func readGrammarContexts(_ w: WorldState, live: [String: String],
                                 uniquingKeysWith: { a, _ in a })
     let inputsByName = Dictionary(inputs.compactMap { input in input["row"].map { ($0, input) } },
                                   uniquingKeysWith: { a, _ in a })
+    let spots = RecordSpots(String(decoding: bytes, as: UTF8.self))
     var mapsForSource: [String: String] = [:]
     // namespace + source identity prevents the same imported declaration from
     // conflicting with itself while preserving different origins and addresses.
@@ -2679,12 +2725,16 @@ func readGrammarContexts(_ w: WorldState, live: [String: String],
         let rows = assigned.filter { $0.language == name }
         let at = "gate.manifest.swift:\(rows.first?.line ?? 1)"
         guard let context = languages[name] else { bad(at, "Language '" + name + "' has no context"); continue }
-        let allowed: Set<String> = ["definitions", "namespace", "imports", "scope_map"]
-        if let extra = Set(context.keys).subtracting(allowed).sorted().first {
+        let contextV2 = context["module"] != nil || context["intrinsics"] != nil
+        let allowed: Set<String> = contextV2
+            ? ["definitions", "namespace", "imports", "scope_map", "module", "intrinsics"]
+            : ["definitions", "namespace", "imports", "scope_map"]
+        let accepted = contextV2 ? allowed.union(["receipts"]) : allowed
+        if let extra = Set(context.keys).subtracting(accepted).sorted().first {
             bad(".gate/forms-definitions.json:1", "Language '" + name + "' has unsupported field '" + extra + "'; Kind chooses the reader")
             continue
         }
-        guard Set(context.keys) == allowed,
+        guard Set(context.keys).subtracting(contextV2 ? ["receipts"] : []) == allowed,
               let namespace = context["namespace"] as? String, !namespace.isEmpty,
               let definitions = context["definitions"] as? [String],
               let imports = context["imports"] as? [[String: Any]],
@@ -2695,6 +2745,28 @@ func readGrammarContexts(_ w: WorldState, live: [String: String],
             bad(at, "Language '" + name + "' needs namespace, definitions, imports and a pinned CarriedFile scope_map")
             continue
         }
+        let ownerModule = context["module"] as? String ?? namespace
+        let contextPath = "/languages/" + name
+        // Stable field addresses: appending a receipt does not change its own
+        // question. The containing record still carries its ordinary byte hash.
+        func courtAt(_ pointer: String) -> String { ".gate/forms-definitions.json#" + pointer }
+        let intrinsic = context["intrinsics"] as? [[String: Any]] ?? []
+        if contextV2 && (!(context["module"] is String) || ownerModule.isEmpty || !(context["intrinsics"] is [[String: Any]])) {
+            bad(spots.address(contextPath), "Language needs an explicit module and intrinsics"); continue
+        }
+        var intrinsicInputs: [[String: Any]] = []
+        for (index, item) in intrinsic.enumerated() {
+            guard Set(item.keys) == ["namespace", "version", "exports"],
+                  let exports = item["exports"] as? [String] else {
+                bad(spots.address(contextPath + "/intrinsics/\(index)"), "malformed intrinsic declaration"); continue
+            }
+            var carried = item
+            let path = contextPath + "/intrinsics/\(index)"
+            carried["at"] = ["namespace": courtAt(path + "/namespace"),
+                "version": courtAt(path + "/version"),
+                "exports": exports.indices.map { courtAt(path + "/exports/\($0)") }] as [String: Any]
+            intrinsicInputs.append(carried)
+        }
         let map: GrammarScopeMap
         do { map = try GrammarScopeMap.read(mapText, scopes: Set(PinnedGrammarLaw.policy.scopes)) }
         catch { bad(mapRow.path + ":1", String(describing: error)); continue }
@@ -2704,8 +2776,9 @@ func readGrammarContexts(_ w: WorldState, live: [String: String],
             continue
         }
         var permitted: [String: [String]] = [:], namespaceFor: [String: String] = [:]
+        var moduleFor: [String: String] = [:], importIndex: [String: Int] = [:]
         var references = definitions
-        for entry in imports {
+        for (entryIndex, entry) in imports.enumerated() {
             guard Set(entry.keys) == ["module", "inputs", "namespace"],
                   let module = entry["module"] as? String,
                   module.first.map({ $0.isLetter || $0 == "_" }) == true,
@@ -2721,7 +2794,11 @@ func readGrammarContexts(_ w: WorldState, live: [String: String],
                 if let prior = namespaceFor[ref], prior != importedNS {
                     bad(at, "input '" + ref + "' is exported into conflicting namespaces '" + prior + "' and '" + importedNS + "'")
                 }
+                if let prior = moduleFor[ref], prior != module {
+                    bad(at, "input '" + ref + "' is exported by conflicting modules")
+                }
                 namespaceFor[ref] = importedNS
+                moduleFor[ref] = module; importIndex[ref] = entryIndex
                 if !references.contains(ref) { references.append(ref) }
             }
         }
@@ -2774,6 +2851,7 @@ func readGrammarContexts(_ w: WorldState, live: [String: String],
                     bad(row.path + ":\(f.line)", "grammar: \(f.atom) is not granted \(f.scope)/\(f.context)")
                 }
                 let clean = try WhereJudge.stripComments(text, lent: lentBuilders)
+                if !contextV2 {
                 let scopeInfo = WhereJudge.Scope(clean)
                 let header = try NSRegularExpression(pattern: "\\b(?:enum|struct|class|actor|protocol|typealias)\\s+(\\w+)")
                 let nsText = clean as NSString
@@ -2791,13 +2869,14 @@ func readGrammarContexts(_ w: WorldState, live: [String: String],
                         bad(address, "namespace '" + ns + "' conflicts on '" + symbol + "' with " + prior.address)
                     } else { symbols[key] = (identity, address) }
                 }
-                for (clause, line) in matchesAt("\\bimport\\s+([^\\n;]+)", clean) {
-                    let module = clause[0].trimmingCharacters(in: .whitespacesAndNewlines)
+                }
+                for declaration in try CourtNotation.imports(text, lent: lentBuilders) {
+                    let module = declaration.module, line = declaration.line
                     if module.first.map({ $0.isLetter || $0 == "_" }) != true
                         || !module.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "_" }) {
                         result.unsupported.append(FormResidue(id: name, address: row.path + ":\(line)",
                             reason: "Language import syntax is not supported: " + module))
-                    } else if permitted[module] == nil {
+                    } else if permitted[module] == nil && !(contextV2 && intrinsicInputs.contains { $0["namespace"] as? String == module }) {
                         bad(row.path + ":\(line)", "import '" + module + "' is not declared by Language '" + name + "'")
                     }
                 }
@@ -2805,9 +2884,31 @@ func readGrammarContexts(_ w: WorldState, live: [String: String],
                 result.unsupported.append(FormResidue(id: name, address: row.path + ":1",
                     reason: "Language declaration reader: " + String(describing: error)))
             }
-            let unit = GrammarUnit(row: name, path: row.path, sourcePath: sourcePath, identity: identity,
+            var unit = GrammarUnit(row: name, path: row.path, sourcePath: sourcePath, identity: identity,
                 namespace: ns, text: text, sha256: sha256Hex(data), mapSHA256: mapHash, scope: scope)
-            if !units.contains(where: { $0.identity == identity && $0.namespace == ns }) { units.append(unit) }
+            if contextV2 {
+                let rowAt = "gate.manifest.swift:\(row.line)"
+                let inputIndex = inputs.firstIndex { $0["row"] == name }
+                let fileAt = inputIndex.map { "/files/\($0)" }
+                let importedAt = importIndex[name].map { contextPath + "/imports/\($0)" }
+                let declarations = (try? CourtNotation.imports(text, lent: lentBuilders)) ?? []
+                let declaredImports = declarations.map(\.module)
+                let isOwn = rows.contains { $0.name == name && $0.role == "forms" }
+                if isOwn {
+                    do { unit.countQuestions = try CourtNotation.countQuestions(text, path: sourcePath, lent: lentBuilders) }
+                    catch { result.unsupported.append(FormResidue(id: name, address: row.path + ":1", reason: String(describing: error))) }
+                }
+                unit.courtSource = ["input": row.path, "source": sourcePath,
+                    "sha256": unit.sha256, "namespace": ns,
+                    "module": moduleFor[name] ?? ownerModule, "role": isOwn ? "own" : "borrowed",
+                    "imports": declaredImports,
+                    "at": ["input": rowAt, "source": fileAt.map { courtAt($0 + "/source_path") } ?? rowAt,
+                        "sha256": fileAt.map { courtAt($0 + "/sha256") } ?? rowAt,
+                        "namespace": courtAt((importedAt ?? contextPath) + "/namespace"),
+                        "module": courtAt((importedAt ?? contextPath) + "/module"), "role": rowAt,
+                        "imports": declarations.map { sourcePath + ":\($0.line)" }] as [String: Any]]
+            }
+            if !units.contains(where: { contextV2 ? $0.path == unit.path : ($0.identity == identity && $0.namespace == ns) }) { units.append(unit) }
         }
         for ref in references {
             guard let row = rowsByName[ref], row.source == "theirs", let path = resolved.paths[ref] else {
@@ -2817,13 +2918,14 @@ func readGrammarContexts(_ w: WorldState, live: [String: String],
             if !rows.contains(where: { $0.name == ref }), !borrowed.contains(path) { borrowed.append(path) }
         }
         for row in rows {
-            guard row.role == "forms" || row.role == "world" else {
+            guard row.role == "forms" || row.role == "world" || (contextV2 && row.role == "carried") else {
                 bad(row.path + ":1", "Language cannot select a reader for this Kind"); continue
             }
             carry(row, namespace)
         }
         // A flat court cannot choose between homonymous imported symbols.
         // Name the unsupported construction rather than collapse namespaces.
+        if !contextV2 {
         var visible: [String: String] = [:]
         for unit in units {
             for symbol in sourceNames[unit.identity] ?? [] {
@@ -2833,9 +2935,46 @@ func readGrammarContexts(_ w: WorldState, live: [String: String],
                 } else { visible[symbol] = unit.namespace }
             }
         }
-        let built = GrammarContext(name: name, namespace: namespace, rows: rows,
+        }
+        var built = GrammarContext(name: name, namespace: namespace, rows: rows,
                                    units: units, definitions: borrowed)
-        if result.bad.isEmpty { result.unsupported += grammarBindings(built) }
+        if contextV2 {
+            built.permittedImports = (Array(permitted.keys) + intrinsicInputs.compactMap { $0["namespace"] as? String }).sorted()
+            built.courtContext = ["schema": "vi.court.context/2",
+                "sources": units.map(\.courtSource), "intrinsics": intrinsicInputs]
+            if let declaredReceipts = context["receipts"] {
+                guard let references = declaredReceipts as? [String], Set(references).count == references.count else {
+                    bad(courtAt(contextPath + "/receipts"), "court receipts must name distinct pinned CarriedFile rows"); continue
+                }
+                var seen = Set<String>()
+                for reference in references {
+                    guard let row = rowsByName[reference], row.source == "theirs", row.kind == "CarriedFile",
+                          let path = resolved.paths[reference], let bytes = inputBytes(path),
+                          sha256Hex(bytes) == inputsByName[reference]?["sha256"],
+                          let document = (try? JSONSerialization.jsonObject(with: bytes)) as? [String: Any],
+                          Set(document.keys) == ["schema", "receipts"],
+                          document["schema"] as? String == "gate.court.receipts/1",
+                          let receipts = document["receipts"] as? [[String: Any]] else {
+                        bad(courtAt(contextPath + "/receipts"), "court receipt '" + reference + "' is not a verified pinned receipt input"); continue
+                    }
+                    for receipt in receipts {
+                        guard Set(receipt.keys) == ["schema", "request_sha256", "response"],
+                              receipt["schema"] as? String == "gate.court.receipt/1",
+                              let digest = receipt["request_sha256"] as? String,
+                              digest.range(of: #"^[0-9a-f]{64}$"#, options: .regularExpression) != nil,
+                              seen.insert(digest).inserted,
+                              let response = receipt["response"] as? [String: Any],
+                              Set(response.keys) == ["exit", "stdout", "stderr"],
+                              grammarCourtInteger(response["exit"]) != nil, response["stdout"] is String, response["stderr"] is String else {
+                            bad(row.path + ":1", "invalid or repeated court receipt"); continue
+                        }
+                        var taken = receipt
+                        taken["origin"] = inputsByName[reference] ?? [:]
+                        built.courtReceipts.append(taken)
+                    }
+                }
+            }
+        } else if result.bad.isEmpty { result.unsupported += grammarBindings(built) }
         result.contexts.append(built)
     }
     return result
@@ -2952,9 +3091,187 @@ func grammarBindings(_ context: GrammarContext) -> [FormResidue] {
     return out
 }
 
+// One request names the original files and the owner's complete context. This
+// value is also the browser transport; source text is never joined or masked.
+func grammarCourtRequest(_ context: GrammarContext, question: String,
+                         count: (predicate: String, encoding: String, sigma: String)? = nil) -> [String: Any]? {
+    guard let declared = context.courtContext else { return nil }
+    let contextFile = ".gate/court/" + context.name + ".json"
+    let bytes = (try? JSONSerialization.data(withJSONObject: declared,
+        options: [.sortedKeys, .withoutEscapingSlashes])) ?? Data()
+    let documents = context.rows.filter { $0.kind == "DocumentFile" }.map(\.path).sorted()
+    var arguments = [question] + context.units.map(\.path).sorted() + ["--context", contextFile, "--report"]
+    for path in documents { arguments += ["--document", path] }
+    if let q = count { arguments += ["--predicate", q.predicate, "--encoding", q.encoding, "--sigma", q.sigma] }
+    let files = context.units.sorted { $0.path < $1.path }.map { ["name": $0.path, "text": $0.text] }
+        + [["name": contextFile, "text": String(decoding: bytes, as: UTF8.self)]]
+    return ["arguments": arguments, "files": files,
+        "reader": ["revision": COURT_PIN_BUILT_IN.trimmingCharacters(in: .whitespacesAndNewlines),
+                   "response": "vi.court.sources/1", "grammar_revision": PinnedGrammarLaw.revision,
+                   "grammar_sha256": PinnedGrammarLaw.digest],
+        "scope": context.units.sorted { $0.path < $1.path }.map { ["path": $0.path, "map_sha256": $0.mapSHA256, "scope": $0.scope,
+                                       "identity": $0.identity] }]
+}
+
+func grammarCourtRequests(_ context: GrammarContext) -> [[String: Any]] {
+    guard context.courtContext != nil else { return [] }
+    let own = context.rows.filter { $0.role == "forms" }
+    var requests: [[String: Any]] = []
+    if !own.isEmpty { requests.append(grammarCourtRequest(context, question: "where")!) }
+    var questions = Set<String>()
+    for unit in context.units where own.contains(where: { $0.path == unit.path }) {
+        for q in unit.countQuestions {
+            if let p = q["predicate"], let e = q["encoding"], let s = q["sigma"], questions.insert([p, e, s].joined(separator: "\u{0}")).inserted {
+                requests.append(grammarCourtRequest(context, question: "count", count: (p, e, s))!)
+            }
+        }
+    }
+    return requests
+}
+
+func grammarCourtAnswer(_ request: [String: Any]) -> CourtSourcesReport.Answer {
+    guard let arguments = request["arguments"] as? [String], let question = arguments.first,
+          let files = request["files"] as? [[String: String]] else {
+        return CourtSourcesReport.Answer(exit: 2, stdout: Data(), stderr: Data("invalid court request\n".utf8))
+    }
+    let texts = Dictionary(files.compactMap { f in f["name"].flatMap { name in f["text"].map { (name, $0) } } },
+                           uniquingKeysWith: { first, _ in first })
+    return CourtSourcesReport.answer(Array(arguments.dropFirst()), question: question, load: { path in
+        guard let text = texts[path] else { throw WhereJudge.Failure.input(["missing input '\(path)'"]) }
+        return text
+    })
+}
+
+func grammarCourtRequestHash(_ request: [String: Any]) -> String {
+    let bytes = (try? JSONSerialization.data(withJSONObject: request,
+        options: [.sortedKeys, .withoutEscapingSlashes])) ?? Data()
+    return sha256Hex(bytes)
+}
+
+// JSON booleans bridge through NSNumber too; they are not checked counts.
+func grammarCourtInteger(_ value: Any?) -> Int? {
+    guard let number = value as? NSNumber, CFGetTypeID(number) != CFBooleanGetTypeID(),
+          let integer = value as? Int, integer >= -9_007_199_254_740_991, integer <= 9_007_199_254_740_991 else { return nil }
+    return integer
+}
+
+func grammarBoundAnswer(_ request: [String: Any], _ answer: CourtSourcesReport.Answer) -> Bool {
+    guard answer.stderr.isEmpty,
+          let arguments = request["arguments"] as? [String], let question = arguments.first,
+          let files = request["files"] as? [[String: String]],
+          let report = (try? JSONSerialization.jsonObject(with: answer.stdout)) as? [String: Any],
+          Set(report.keys) == ["schema", "question", "inputs", "outcome", "results", "diagnostics"],
+          report["schema"] as? String == "vi.court.sources/1", report["question"] as? String == question,
+          let outcome = report["outcome"] as? String,
+          ["holds", "empty", "refused", "not-established", "unsupported"].contains(outcome),
+          let diagnostics = report["diagnostics"] as? [String],
+          let inputs = report["inputs"] as? [[String: String]],
+          let results = report["results"] as? [[String: Any]],
+          let at = arguments.firstIndex(of: "--context"), at + 1 < arguments.count,
+          let contextText = files.first(where: { $0["name"] == arguments[at + 1] })?["text"],
+          let context = (try? JSONSerialization.jsonObject(with: Data(contextText.utf8))) as? [String: Any],
+          let sources = context["sources"] as? [[String: Any]] else { return false }
+    let wantedInputs = files.map { ["path": $0["name"] ?? "", "sha256": sha256Hex(Data(($0["text"] ?? "").utf8))] }
+        .sorted { $0["path"]! < $1["path"]! }
+    guard inputs == wantedInputs,
+          answer.exit == (outcome == "holds" ? 0 : (["refused", "not-established"].contains(outcome) ? 1 : 2)) else { return false }
+    if results.isEmpty && !diagnostics.isEmpty { return outcome == "unsupported" }
+    let selected = sources.filter { question == "count" || $0["role"] as? String == "own" }
+    let paths = selected.compactMap { $0["input"] as? String }.sorted()
+    guard results.compactMap({ $0["path"] as? String }) == paths else { return false }
+    var total = 0
+    for row in results {
+        guard Set(row.keys) == ["path", "source", "outcome", "equalities", "memberships", "readings", "unchecked", "diagnostics"],
+              let path = row["path"] as? String,
+              row["source"] as? String == selected.first(where: { $0["input"] as? String == path })?["source"] as? String,
+              let state = row["outcome"] as? String,
+              ["holds", "empty", "refused", "not-established", "unsupported"].contains(state),
+              row["unchecked"] is [String], row["diagnostics"] is [String] else { return false }
+        var checked = 0
+        for key in ["equalities", "memberships", "readings"] {
+            guard let count = grammarCourtInteger(row[key]), count >= 0 else { return false }
+            let sum = checked.addingReportingOverflow(count)
+            guard !sum.overflow else { return false }
+            checked = sum.partialValue
+        }
+        let sum = total.addingReportingOverflow(checked)
+        guard !sum.overflow, sum.partialValue <= 9_007_199_254_740_991 else { return false }
+        total = sum.partialValue
+        if (state == "holds" && checked == 0) || (state == "empty" && checked != 0) { return false }
+        if ["refused", "not-established", "unsupported"].contains(state), (row["diagnostics"] as? [String])?.isEmpty != false { return false }
+    }
+    let states = results.compactMap { $0["outcome"] as? String }
+    let aggregate = ["unsupported", "refused", "not-established", "holds"].first(where: { states.contains($0) }) ?? "empty"
+    return aggregate == outcome && diagnostics.isEmpty
+}
+
+var GRAMMAR_COURT_ANSWERS: [String: CourtSourcesReport.Answer] = [:]
+func grammarRecordedAnswer(_ request: [String: Any], receipts: [[String: Any]]) -> CourtSourcesReport.Answer {
+    let hash = grammarCourtRequestHash(request)
+    if let receipt = receipts.first(where: { $0["request_sha256"] as? String == hash }),
+       let response = receipt["response"] as? [String: Any],
+       let integer = grammarCourtInteger(response["exit"]), let code = Int32(exactly: integer), let stdout = response["stdout"] as? String,
+       let stderr = response["stderr"] as? String {
+        let answer = CourtSourcesReport.Answer(exit: code, stdout: Data(stdout.utf8), stderr: Data(stderr.utf8))
+        if grammarBoundAnswer(request, answer) {
+            return answer
+        }
+        return CourtSourcesReport.Answer(exit: 2, stdout: Data(), stderr: Data("the declared court receipt has invalid coverage or input hashes\n".utf8))
+    }
+    if let cached = GRAMMAR_COURT_ANSWERS[hash] { return cached }
+    let answer = grammarCourtAnswer(request)
+    // This process cache holds the complete request hash, never a path, label,
+    // or a previous green state. Changed bytes ask the owner again.
+    GRAMMAR_COURT_ANSWERS[hash] = answer
+    return answer
+}
+
+func grammarCourtGuards(_ context: GrammarContext, _ size: inout [String: Int],
+                        unsupported: inout [FormResidue], coverage: GrammarCoverage? = nil) -> [(address: String, claim: String)] {
+    let own = context.rows.filter { $0.role == "forms" }
+    guard !own.isEmpty else { return [] } // CarriedFile does not acquire a court through Language.
+    coverage?.sources.formUnion(own.map(\.path))
+    let requests = grammarCourtRequests(context)
+    var bad: [(address: String, claim: String)] = []
+    for request in requests {
+        let answer = grammarRecordedAnswer(request, receipts: context.courtReceipts)
+        guard let report = (try? JSONSerialization.jsonObject(with: answer.stdout)) as? [String: Any],
+              report["schema"] as? String == "vi.court.sources/1",
+              let results = report["results"] as? [[String: Any]] else {
+            unsupported.append(FormResidue(id: context.name, address: own[0].path + ":1", reason: answer.stderr.isEmpty ? "court returned no source coverage" : String(decoding: answer.stderr, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)))
+            continue
+        }
+        for reason in report["diagnostics"] as? [String] ?? [] {
+            unsupported.append(FormResidue(id: context.name, address: own[0].path + ":1", reason: reason))
+        }
+        let question = (request["arguments"] as? [String])?.first
+        let expected = question == "where" ? Set(own.map(\.path)) : Set(context.units.map(\.path))
+        let actual = results.compactMap { $0["path"] as? String }
+        if (report["diagnostics"] as? [String] ?? []).isEmpty && (Set(actual) != expected || actual.count != expected.count) {
+            unsupported.append(FormResidue(id: context.name, address: own[0].path + ":1", reason: "court source coverage differs from the declared request"))
+            continue
+        }
+        coverage?.reports.append(.raw(String(decoding: answer.stdout, as: UTF8.self)))
+        for row in results {
+            coverage?.unchecked.formUnion(row["unchecked"] as? [String] ?? [])
+            let path = row["path"] as? String ?? own[0].path
+            let outcome = row["outcome"] as? String ?? "unsupported"
+            for key in ["equalities", "memberships", "readings"] { size[key, default: 0] += row[key] as? Int ?? 0 }
+            for reason in row["diagnostics"] as? [String] ?? [] {
+                if outcome == "unsupported" {
+                    unsupported.append(FormResidue(id: path, address: path + ":1", reason: reason))
+                } else if outcome == "refused" || outcome == "not-established" {
+                    bad.append((path + ":1", reason))
+                }
+            }
+        }
+    }
+    return bad
+}
+
 func grammarContextGuards(_ w: WorldState, _ size: inout [String: Int],
                           unsupported: inout [FormResidue], live: [String: String],
-                          contexts: GrammarContexts? = nil)
+                          contexts: GrammarContexts? = nil, coverage: GrammarCoverage? = nil)
     -> [(address: String, claim: String)]? {
     let plan = contexts ?? grammarContexts(w, live: live)
     guard plan.active else { return nil }
@@ -2967,6 +3284,10 @@ func grammarContextGuards(_ w: WorldState, _ size: inout [String: Int],
         if plan.unsupported.contains(where: { residue in
             residue.id == context.name || context.units.contains { residue.address.hasPrefix($0.path + ":") }
         }) { continue }
+        if context.courtContext != nil {
+            bad += grammarCourtGuards(context, &size, unsupported: &unsupported, coverage: coverage)
+            continue
+        }
         let formRows = context.rows.filter { $0.role == "forms" }
         guard !formRows.isEmpty else { continue } // WorldFile keeps its plain court.
         let own = context.units.filter { unit in formRows.contains { $0.path == unit.path } }
@@ -3079,7 +3400,7 @@ func formsDefinitions(_ w: WorldState, language: String? = nil) -> (paths: [Stri
 
 func formsGuards(_ w: WorldState, _ size: inout [String: Int],
                  unsupported: inout [FormResidue], live: [String: String] = [:],
-                 contexts: GrammarContexts? = nil) -> [(address: String, claim: String)] {
+                 contexts: GrammarContexts? = nil, coverage: GrammarCoverage? = nil) -> [(address: String, claim: String)] {
     // ── ONE WORLD IS WHAT A CLAIM REACHES. The forms rows of a layout are glued
     // into worlds by the names they use: a row joins every row that declares a
     // name it uses and does not declare itself, and the rows so joined are one
@@ -3100,7 +3421,7 @@ func formsGuards(_ w: WorldState, _ size: inout [String: Int],
                 reason: "Kind CatalogFile uses CatalogReaderV1 in a Publication plan; it has no standalone relation court"))
         }
     }
-    if let guarded = grammarContextGuards(w, &size, unsupported: &unsupported, live: live, contexts: contexts) { return guarded }
+    if let guarded = grammarContextGuards(w, &size, unsupported: &unsupported, live: live, contexts: contexts, coverage: coverage) { return guarded }
     let taken = takenInputs(w)
     if !taken.bad.isEmpty { return taken.bad }
     let rows = layout.rows.filter { $0.role == "forms" && inputPath($0, w, taken) != nil }
@@ -4547,6 +4868,7 @@ struct StatusAnswer {
     var unsupported: [FormResidue] = []
     var readers: [StatusJSON] = []
     var unchecked: [StatusJSON] = []
+    var courtReadings: [StatusJSON] = []
     var next = ""
     // the same ladder read from the bench: the room the reader is in is a rung
     // already taken, so it is not offered back to them (`serve`, below)
@@ -4610,7 +4932,8 @@ func statusAnswer(_ supplied: WorldState? = nil, contexts: GrammarContexts? = ni
     refusals += manifestGuards(w)
     var whereSize: [String: Int] = [:]
     var unsupported: [FormResidue] = []
-    refusals += formsGuards(w, &whereSize, unsupported: &unsupported, contexts: contexts)
+    let courtCoverage = GrammarCoverage()
+    refusals += formsGuards(w, &whereSize, unsupported: &unsupported, contexts: contexts, coverage: courtCoverage)
     refusals += policyGuards(w)
     refusals += stdlibGuards(w)
     refusals += ownSurfaceGuards(w) + opensGuards(w)
@@ -4629,10 +4952,12 @@ func statusAnswer(_ supplied: WorldState? = nil, contexts: GrammarContexts? = ni
         return .object([("row", .text(row.name ?? row.path)), ("kind", .text(kind)),
                         ("reader", .text(reader)), ("address", .text("gate.manifest.swift:\(row.line)"))])
     }
-    answer.unchecked = (w.layout?.rows ?? []).filter { $0.kind == "DocumentFile" }.map { row in
+    answer.unchecked = (w.layout?.rows ?? []).filter { $0.kind == "DocumentFile" && !courtCoverage.sources.contains($0.path) }.map { row in
         .object([("address", .text(row.path + ":1")),
                  ("reason", .text("DocumentReaderV1 reads declarations; Swift builder bodies are unchecked. Drawing is a separate reading."))])
     }
+    answer.unchecked += courtCoverage.exclusions
+    answer.courtReadings = courtCoverage.reports
     answer.refusals = refusals
     answer.judgeMs = times.last
     answer.wallMs = wallMs
@@ -4681,6 +5006,7 @@ func statusPairs(_ a: StatusAnswer) -> [(String, StatusJSON)] {
     if a.verdict == "empty" { pairs.append(("reason", .text(EMPTY_FORMS_REASON))) }
     if !a.readers.isEmpty { pairs.append(("readers", .list(a.readers))) }
     if !a.unchecked.isEmpty { pairs.append(("unchecked", .list(a.unchecked))) }
+    if !a.courtReadings.isEmpty { pairs.append(("court_readings", .list(a.courtReadings))) }
     if let m = a.world {
         pairs.append(("world", .object([("declarations", .raw(m[0])),
                                         ("lookups", .raw(m[1])),
@@ -12215,6 +12541,26 @@ func drawingPortInputs(_ w: WorldState, profileRow: LayoutRow? = nil, counts: Bo
                                    "source": input.source, "revision": input.from ?? "local", "line": input.line]
         if let source = String(data: data, encoding: .utf8) { item["text"] = source }
         if name == paletteName, counts, let source = item["text"] as? String, let q = countQuestion(source) {
+            let livePalette = paletteOverride.map { [$0.path: $0.text] } ?? [:]
+            let contexts = grammarContexts(w, live: livePalette)
+            if let context = contexts.contexts.first(where: { $0.name == input.language }), context.courtContext != nil {
+                if let bad = contexts.bad.first { return refused(bad.address, bad.claim) }
+                if let residue = contexts.unsupported.first { return refused(residue.address, residue.reason) }
+                let request = grammarCourtRequest(context, question: "count", count: q)!
+                let answer = grammarRecordedAnswer(request, receipts: context.courtReceipts)
+                guard grammarBoundAnswer(request, answer),
+                      let report = (try? JSONSerialization.jsonObject(with: answer.stdout)) as? [String: Any],
+                      let rows = report["results"] as? [[String: Any]] else {
+                    return refused(input.path + ":1", "the count court did not bind its complete source input")
+                }
+                let total = rows.reduce(0) { $0 + ($1["readings"] as? Int ?? 0) }
+                let diagnostics = (report["diagnostics"] as? [String] ?? []) + rows.flatMap { $0["diagnostics"] as? [String] ?? [] }
+                let held = report["outcome"] as? String == "holds"
+                let said = held ? "COUNT: \(total) source-bound readings checked\n"
+                    : diagnostics.map { "✗ " + $0 }.joined(separator: "\n") + "\n"
+                item["count"] = ["text": said, "source_sha256": hash, "reading": report,
+                                 "request_sha256": grammarCourtRequestHash(request)]
+            } else {
             let definitions = formsDefinitions(w, language: input.language)
             if let bad = definitions.bad.first { return refused(bad.address, bad.claim) }
             let tmp = scratchDir("gate-drawing-count-")
@@ -12230,6 +12576,7 @@ func drawingPortInputs(_ w: WorldState, profileRow: LayoutRow? = nil, counts: Bo
                                   "--encoding", q.encoding, "--sigma", q.sigma]).replacingOccurrences(of: countPath, with: input.path)
             try? FileManager.default.removeItem(atPath: tmp)
             item["count"] = ["text": said, "source_sha256": hash]
+            }
         }
         inputs[name] = item
     }
@@ -13378,7 +13725,8 @@ func serveDoor(_ a: [String]) -> Never {
                 var size: [String: Int] = [:]
                 refusals += manifestGuards(w, liveRows: liveRows, liveText: typedLayout)
                 var unsupported: [FormResidue] = []
-                refusals += formsGuards(w, &size, unsupported: &unsupported, live: typed)
+                let courtCoverage = GrammarCoverage()
+                refusals += formsGuards(w, &size, unsupported: &unsupported, live: typed, coverage: courtCoverage)
                 refusals += policyGuards(w) + stdlibGuards(w) + vendoredGuards(w)
                 refusals += takenJudgeGuard(w) + codeownersPairGuards(w)
                 let times = matches("([\\d.]+) ms", raw).compactMap { $0.first }
@@ -13393,6 +13741,8 @@ func serveDoor(_ a: [String]) -> Never {
                     ("verdict", .text(outcome)),
                     ("checked", .raw(String(checked))),
                     ("unsupported", formResidueJSON(unsupported)),
+                    ("unchecked", .list(courtCoverage.exclusions)),
+                    ("court_readings", .list(courtCoverage.reports)),
                     ("refusals", .list(refusals.map {
                         .object([("address", .text($0.address)), ("claim", .text($0.claim))]) })),
                     ("declarations", measured.map { StatusJSON.raw($0[0]) } ?? .null),

@@ -14662,6 +14662,27 @@ public enum MyWatch: AccessLedger {
     S.append(("declared languages and the owner's scope map admit an ordinary fourth module",
               _scopes.returncode == 0))
 
+    _court_contexts = subprocess.run([sys.executable, os.path.join(HERE, "tests", "court-contexts.py")],
+                                      capture_output=True, text=True, timeout=240)
+    if _court_contexts.returncode:
+        print("   Court context/2:", (_court_contexts.stdout + _court_contexts.stderr)[-3500:])
+    S.append(("Court context/2 keeps module identity, own-file coverage and addressed exclusions",
+              _court_contexts.returncode == 0))
+
+    _context_edits = subprocess.run(["node", os.path.join(HERE, "tests", "court-contexts.js")],
+                                     capture_output=True, text=True, timeout=60)
+    if _context_edits.returncode:
+        print("   Court edits:", (_context_edits.stdout + _context_edits.stderr)[-3500:])
+    S.append(("edits replace owner question selectors and cannot retain an unrelated stale green",
+              _context_edits.returncode == 0))
+
+    _browser_grammar = subprocess.run([sys.executable, os.path.join(HERE, "tests", "grammar-policy.py")],
+                                      capture_output=True, text=True, timeout=240)
+    if _browser_grammar.returncode:
+        print("   Browser grammar:", (_browser_grammar.stdout + _browser_grammar.stderr)[-3500:])
+    S.append(("browser grammar findings match the pinned Swift policy inside the declared subset",
+              _browser_grammar.returncode == 0))
+
     _world_readings = subprocess.run(["node", os.path.join(HERE, "tests", "read-worlds.js")],
                                      capture_output=True, text=True, timeout=60)
     if _world_readings.returncode:

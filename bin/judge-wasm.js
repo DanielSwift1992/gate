@@ -10,15 +10,15 @@
 // the same module answers through bin/court-wasm/web.
 //
 // It is a second implementation, not the corpus's Swift court: the contract
-// driver of the corpus (Checks/court-contract.py) holds it to the suite's
-// thirteen cases, and the battery holds it to the binary page for page.
+// driver of the corpus (Checks/court-contract.py) holds both carriers to the
+// finite suites named by bin/court-contract.from.
 const fs = require("fs");
 const path = require("path");
 const { TextDecoder } = require("util");
 // Decode the same UTF-8 byte domain as Rust read_to_string; keep a supplied BOM.
 const sourceDecoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
 
-const OPTIONS_WITH_VALUE = new Set(["--predicate", "--encoding", "--sigma"]);
+const OPTIONS_WITH_VALUE = new Set(["--predicate", "--encoding", "--sigma", "--document"]);
 
 // Node lowercases the system message of an I/O error ("ENOENT: no such file or
 // directory, open '…'"); the court's line keeps the platform's own text, so the

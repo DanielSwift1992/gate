@@ -122,6 +122,27 @@ let wasm_bindgen;
         }
     };
 
+    /**
+     * Import declarations and count question selectors after an edit.
+     * This uses the where/count notation reader and establishes no judgement.
+     * @param {string} request
+     * @returns {string}
+     */
+    __exports.source_notation = function(request) {
+        let deferred2_0;
+        let deferred2_1;
+        try {
+            const ptr0 = passStringToWasm0(request, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.source_notation(ptr0, len0);
+            deferred2_0 = ret[0];
+            deferred2_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+        }
+    };
+
     const EXPECTED_RESPONSE_TYPES = new Set(['basic', 'cors', 'default']);
 
     async function __wbg_load(module, imports) {

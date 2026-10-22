@@ -235,7 +235,7 @@ def run():
         assert (site / 'worlds.from').read_bytes() == (HERE / 'bin/playground-worlds.from').read_bytes()
         assert record['theory']['files']['Sources/VerificationIsIdentification/Primitive.swift'] == record['judge']['primitive_sha256']
         assert all((site / 'playground' / t['id'] / 'index.html').is_file() for t in tabs)
-    print('PLAYGROUND ALL GREEN: pinned inputs, ten worlds, native/wasm, snapshots and isolated storage')
+    print('PLAYGROUND ALL GREEN: pinned inputs, twelve worlds, native/wasm, snapshots and isolated storage')
 
 
 if __name__ == '__main__':

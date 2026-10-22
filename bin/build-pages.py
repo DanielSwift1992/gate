@@ -53,7 +53,7 @@ def publish(source, out, context=None):
 
         snap = {}
         for path in ("/files", "/language", "/version", "/status", "/shelf",
-                     "/log?n=1&scope=world", "/attention"):
+                     "/log?n=1&scope=world", "/attention", "/grammar-contexts"):
             snap[path] = get(port, path)
 
         drawing_plan = json.loads(get(port, "/drawing-profile"))
@@ -233,14 +233,68 @@ function judgeWhereTexts(text, extraTexts) {
         return { format: 2, splices, verdict };
     }
     const readings = new Map();
-    function readDraft(f, text) {
+    const LANGUAGE_PLAN = JSON.parse(SNAP["/grammar-contexts"] || "{}");
+    const COURT_WORKER_GLUE = __COURT_WORKER_GLUE__;
+    const COURT_WORKER_HANDLER = __COURT_WORKER_HANDLER__;
+    let courtWorker, courtWorkerURL, workerSequence = 0;
+    const pendingCourt = new Map();
+    function releaseCourtWorkerURL() {
+        if (courtWorkerURL) { URL.revokeObjectURL(courtWorkerURL); courtWorkerURL = null; }
+    }
+    function courtCall(method, request) {
+        if (typeof Worker === "undefined") return Promise.resolve(wasm_bindgen[method](request));
+        if (!courtWorker) {
+            if (location.protocol === "file:") {
+                // A file page cannot import a neighbouring worker script. Its
+                // worker receives exactly the same carried glue and wasm bytes.
+                const source = COURT_WORKER_GLUE + "\\nvar VI_COURT_WASM_BASE64="
+                    + JSON.stringify(VI_COURT_WASM_BASE64) + ";\\n" + COURT_WORKER_HANDLER;
+                const url = URL.createObjectURL(new Blob([source], {type:"text/javascript"}));
+                try { courtWorker = new Worker(url); courtWorkerURL = url; }
+                catch (error) { URL.revokeObjectURL(url); throw error; }
+            } else courtWorker = new Worker("court-worker.js");
+            courtWorker.onmessage = ({data}) => {
+                releaseCourtWorkerURL();
+                const pending = pendingCourt.get(data.id);
+                if (!pending) return;
+                pendingCourt.delete(data.id);
+                if (data.error) pending.reject(Error(data.error)); else pending.resolve(data.result);
+            };
+            courtWorker.onerror = event => {
+                releaseCourtWorkerURL();
+                for (const pending of pendingCourt.values()) pending.reject(Error(event.message || "court worker failed"));
+                pendingCourt.clear(); courtWorker.terminate(); courtWorker = null;
+            };
+        }
+        return new Promise((resolve, reject) => {
+            const id = ++workerSequence; pendingCourt.set(id, {resolve,reject});
+            courtWorker.postMessage({id,method,request});
+        });
+    }
+    const contextualCourt = {judge: request => courtCall("judge",request), source_notation: request => courtCall("source_notation",request)};
+    async function readDraft(f, text) {
         const texts = Object.fromEntries(ALL.map(g => [g, g === f ? text : textOf(g)]));
         const inputs = JSON.stringify(texts), previous = readings.get(f);
         if (previous && previous.inputs === inputs) return previous.answer;
-        const answer = GateWorldCourt.verdict(wasm_bindgen, WORLDS, texts,
+        const contextual = new Set((LANGUAGE_PLAN.contexts || []).flatMap(c => c.court
+            ? c.court.sources.filter(s => s.role === "own").map(s => s.input) : []));
+        const groups = WORLDS.map(group => group.filter(path => !contextual.has(path))).filter(group => group.length);
+        const answer = GateWorldCourt.verdict(wasm_bindgen, groups, texts,
             CONTEXT.definitions, WORLD_FILES, CONTEXT.carried,
             LAYOUT, judge, (claim, stream) => plainly(claim, lawNotes(stream)),
             { lint, pageGuards, vocabulary: kitVocabulary, names: CONTEXT.guard_names }, DOCUMENTS);
+        if (contextual.size) {
+            const read = await GateCourtContexts.read(contextualCourt, LANGUAGE_PLAN, texts);
+            answer.checked += read.checked;
+            answer.refusals.push(...read.refusals);
+            answer.unsupported.push(...read.unsupported);
+            answer.unchecked = read.unchecked;
+            answer.court_readings = read.court_readings;
+            answer.verdict = answer.refusals.length ? "refused" : answer.unsupported.length
+                ? (answer.checked ? "partial" : "unsupported") : (answer.checked ? "holds" : "empty");
+            if (answer.verdict === "empty") answer.reason = "no declared applications";
+            else delete answer.reason;
+        }
         answer.compiler = "page bodies have not been checked by Swift";
         readings.set(f, { inputs, answer });
         return answer;
@@ -352,7 +406,7 @@ function judgeWhereTexts(text, extraTexts) {
             if (!JSON.parse(SNAP["/files"]).files.includes(f)) return refuseWrite(method + " " + u,
                 "a draft must name a file this snapshot reads", 409);
             const text = String((opts && opts.body) || "");
-            const row = CONTEXT ? JSON.stringify(draftRecord(f, text, readDraft(f, text))) : text;
+            const row = CONTEXT ? JSON.stringify(draftRecord(f, text, await readDraft(f, text))) : text;
             try {
                 localStorage.setItem(STORAGE + f, row);
             } catch (e) { return reply(JSON.stringify({ note: "browser storage unavailable" }), 507); }
@@ -365,7 +419,7 @@ function judgeWhereTexts(text, extraTexts) {
             const text = opts && opts.body ? String(opts.body) : "";
             const said = JSON.parse(SNAP["/verdict?f=" + f] || "{}");
             if (THEIRS[f]) return reply(JSON.stringify(said));
-            if (CONTEXT) return reply(JSON.stringify(readDraft(f, text)));
+            if (CONTEXT) return reply(JSON.stringify(await readDraft(f, text)));
             let refusals = [];
             for (const g of ALL) {
                 if (g !== f) refusals = refusals.concat(refusalsFor(g, textOf(g)));
@@ -426,6 +480,11 @@ function judgeWhereTexts(text, extraTexts) {
 """
     shim = (shim.replace("__SNAP__", script_json(snap))
                 .replace("__CONTEXT__", script_json(context))
+                .replace("__COURT_WORKER_GLUE__", script_json(
+                    open(os.path.join(HERE, "bin/court-wasm/web/vi_court.js"), encoding="utf-8").read() if context else ""))
+                .replace("__COURT_WORKER_HANDLER__", script_json(
+                    open(os.path.join(HERE, "bin/court-worker.js"), encoding="utf-8").read().replace(
+                        "importScripts('court/vi_court.js','court/vi_court_bytes.js');", "") if context else ""))
                 .replace("__STORAGE__", script_json("gate.pages." if not context else
                     "gate.pages." + context["pin"] + "." + context["world"] + "."))
                 .replace("__FORMS__", script_json(sorted(forms)))
@@ -447,13 +506,14 @@ function judgeWhereTexts(text, extraTexts) {
         raise SystemExit("build-pages: ui.html changed shape, the shim has no place to stand")
     ui = ui.replace(marker, shim + marker, 1)
     if context:
+        ui = ui.replace("default-src 'self';", "default-src 'self'; worker-src 'self' blob:;", 1)
         scope = "gate.pages." + context["pin"] + "." + context["world"] + "."
         ui = ui.replace('<title>gate · world bench</title>', '<title>gate · ' + html.escape(context['tab']['title']) + '</title>')
         ui = ui.replace('"gate.theme.declared"', script_json(scope + "theme"))
         ui = ui.replace('"gate.bench.layout"', script_json(scope + "layout"))
         ui = ui.replace('<script src="court/vi_court.js">',
             '<script src="playground-lint.js"></script><script src="playground-guards.js"></script>'
-            '<script src="world-court.js"></script><script src="court/vi_court.js">', 1)
+            '<script src="world-court.js"></script><script src="grammar-policy.js"></script><script src="court-contexts.js"></script><script src="court/vi_court.js">', 1)
 
 
     marker = '</div>\n<script src="codemirror.js">'
@@ -477,7 +537,7 @@ function judgeWhereTexts(text, extraTexts) {
     shutil.copy(os.path.join(HERE, "bin", "court-wasm.from"),
                 os.path.join(out, "court", "court-wasm.from"))
     if context:
-        for asset in ("world-court.js", "playground-lint.js", "playground-guards.js"):
+        for asset in ("world-court.js", "court-contexts.js", "court-worker.js", "grammar-policy.js", "playground-lint.js", "playground-guards.js"):
             shutil.copy(os.path.join(HERE, "bin", asset), os.path.join(out, asset))
         with open(os.path.join(out, "snapshots.json"), "w", encoding="utf-8") as f:
             json.dump(snap, f, indent=2)

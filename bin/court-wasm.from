@@ -1,5 +1,5 @@
-fcfb7d359dc66ea43dbf01a3a0e50d981adf428b
-built from the committed public corpus at fcfb7d359dc66ea43dbf01a3a0e50d981adf428b; local Git objects, cargo --offline
+0e8b26362c6ae7be65d305bf1c63909eefc46320
+built from committed corpus 0e8b26362c6ae7be65d305bf1c63909eefc46320; local Git objects, cargo --offline; publication pending
 wasm-bindgen 0.2.105; rustc 1.83.0 (90b35a623 2024-11-26)
-e3a87c7823ac7f7d95758343855f8ce64fa499b986c63e194a85fa8fbd114225  court-wasm/node/vi_court_bg.wasm
-c3fd2637bc965bd5615f0f1962caaf783645f94ddaccfcbc963b67bff854fecd  court-wasm/web/(as base64 in) vi_court_bg.wasm
+060764cf02b28ff5645461fa8269ce6558c67ef12209b1a3f979c8492c1715e5  court-wasm/node/vi_court_bg.wasm
+495bc32697a0555cc9507b6a4f2531a63efc34514945780d7eb0236d0068c848  court-wasm/web/(as base64 in) vi_court_bg.wasm
