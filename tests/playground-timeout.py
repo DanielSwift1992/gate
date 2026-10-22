@@ -6,7 +6,7 @@ import subprocess
 import sys
 import tempfile
 import time
-from playground_runner import run_playground
+from playground_runner import run_playground, summary, annotation
 
 success = run_playground([sys.executable, '-c', 'print("a complete reply")'], timeout=3)
 assert success.returncode == 0 and success.stdout.strip() == 'a complete reply' and not success.stderr
@@ -33,4 +33,49 @@ with tempfile.TemporaryDirectory(prefix='gate-playground-timeout-') as temp:
     size = heartbeat.stat().st_size
     time.sleep(.2)
     assert heartbeat.stat().st_size == size, 'the descendant survived the timeout'
-print('PLAYGROUND DEADLINE GREEN: phase, active address, exit status and descendant termination')
+# Public annotations are a small surface: put phase/cost before the tail,
+# preserve source addresses, and count escaped UTF-8 bytes, not Python chars.
+output = ('PLAYGROUND PHASE {"phase":"fresh world site","seconds":410,"duration_seconds":400}\n'
+          'PLAYGROUND BEGIN {"phase":"browser courts and draft storage","seconds":410}\n'
+          'PLAYGROUND START storage: source.swift:17\n'
+          'PLAYGROUND PASS all palette readings 213.456s\n' + 'filler % \u044f' * 6000 + '\n'
+          'Traceback: source.swift:17: the actual % cause\r\n')
+public = annotation(output, 1200)
+assert len(public.encode('utf-8')) <= 4096
+assert public.startswith('::error title=playground contracts::playground: 1200s; browser courts and draft storage')
+assert public.index('phase fresh world site') < public.index('last output:')
+assert 'slow 213.456s all palette readings' in public
+assert 'source.swift:17' in public and 'the actual %25 cause%0D' in public
+assert '\n' not in public and '\r' not in public
+assert '%0A' in public
+
+# Run the actual CLI as CI does; the fixture is only its child, not a second
+# runner. A failed child keeps its exit and complete log plus a bounded summary.
+with tempfile.TemporaryDirectory(prefix='gate-playground-job-') as temp:
+    root = Path(temp)
+    runner = root / 'playground_runner.py'
+    runner.write_bytes(Path(__file__).with_name('playground_runner.py').read_bytes())
+    (root/'playground.py').write_text('print("PLAYGROUND PHASE {\\"phase\\":\\"fixture\\",\\"seconds\\":0.01}")\nprint("source.swift:17: refused")\nraise SystemExit(23)\n')
+    log = root/'complete.txt'
+    reply = subprocess.run([sys.executable,str(runner),'--timeout','3','--log',str(log)],capture_output=True,text=True)
+    assert reply.returncode == 23, reply
+    assert 'source.swift:17: refused' in log.read_text()
+    assert '::error title=playground contracts::playground:' in reply.stdout
+    assert reply.stdout.index('phase fixture') < reply.stdout.index('last output:')
+    (root/'playground.py').write_text('print("fixture complete")\n')
+    reply = subprocess.run([sys.executable,str(runner),'--timeout','3','--log',str(log)],capture_output=True,text=True)
+    assert reply.returncode == 0, reply
+    assert 'PASS the pinned playground worlds keep their drawings, courts and separate state' in reply.stdout
+    assert '::error' not in reply.stdout
+
+workflow = Path(__file__).resolve().parents[1].joinpath('.github/workflows/battery.yml').read_text()
+job = workflow.split('\n  playground:\n',1)[1].split('\n  windows-vein:\n',1)[0]
+assert 'os: [ubuntu-24.04, macos-latest]' in job and 'fail-fast: false' in job
+assert 'timeout-minutes: 45' in job
+assert 'tests/playground_runner.py --timeout 2100 --log' in job
+for build in ['bin/build-judge.sh','bin/build-organization-judge.sh','bin/build-cli.sh']:
+    assert build in job, build
+assert 'if: always()' in job and 'playground-out.txt' in job
+smoke = Path(__file__).with_name('smoke.py').read_text()
+assert 'run_playground(' not in smoke, 'the composite must not also consume the ordinary battery deadline'
+print('PLAYGROUND DEADLINE GREEN: dedicated job, phase/cost before bounded tail, child exit and descendant termination')

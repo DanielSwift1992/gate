@@ -443,7 +443,7 @@ web/codemirror.*  the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
 docs/           DETAILS.md, SECURITY.md, CHANGELOG.md, NOTICE.md, and
                 the cover's picture with its provenance
-tests/smoke.py   the battery: 745 checks this repository holds itself
+tests/smoke.py   the battery: 744 checks this repository holds itself
                  to, end-to-end runs through judge parity through
                  documentation contracts; the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts
@@ -459,6 +459,8 @@ The court contract totals below describe pinned suites, separately checked
 by the battery; they are not additional battery totals.
 
 Each decision prints a `TIMING` record: seconds since the preceding decision and elapsed time for the run. The first includes the CLI build and setup. The healthy CLI is built once; the changed-source refusal control still gets its own build. The full battery keeps a forty-minute deadline.
+
+The published world contracts run beside it on Linux and macOS. `tests/playground_runner.py` takes an explicit deadline and log destination, recorded in the workflow. A refusal names its phase, active source and longest readings before the output tail.
 
 ## what runs today, and what is next
 

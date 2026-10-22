@@ -8682,7 +8682,7 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
         _from = open(_fp).read().strip()
     S.append(("the manifest, CI and the build name one judge revision",
               _man_pin and _from.startswith(_man_pin.group(1))
-              and len(_ci_builds) == 2
+              and len(_ci_builds) == 3
               and all(command == 'bin/build-judge.sh "$(cat bin/gate-judge.from)"'
                       for command in _ci_builds)))
 
@@ -13672,7 +13672,7 @@ public enum MyWatch: AccessLedger {
         import yaml as _yaml
         # the windows road used to have a job of its own, which checked out and
         # ran with nothing built: it walks in the job that builds the binary now
-        _ci_parses = list(_yaml.safe_load(_ci)["jobs"]) == ["green", "linux",
+        _ci_parses = list(_yaml.safe_load(_ci)["jobs"]) == ["green", "linux", "playground",
                                                             "windows-vein", "pages",
                                                             "action"]
     except ImportError:
@@ -14632,23 +14632,8 @@ public enum MyWatch: AccessLedger {
               _owner_profile.returncode == 0))
     failed_output("owner profile", _owner_profile)
 
-    # The old playground's witnesses travel with the pinned showcase worlds.
-    # This builds the actual static benches through serve, then reads their
-    # snapshots with both courts and executes their storage shim under node.
-    # Context/2 keeps distinct owner-bound controls under both carriers.
-    # The old CI steps spent 1750/1879 s with a 900 s composite cutoff;
-    # 1200 s leaves 350/221 s inside the unchanged 2400 s battery deadline,
-    # even before the saving from preparing identical context bytes once.
-    # Its runner kills the whole process tree and names the last phase on a hang.
-    from playground_runner import run_playground
-    _playground = run_playground([sys.executable, os.path.join(HERE, "tests", "playground.py")])
-    for _phase in _playground.stdout.splitlines():
-        if _phase.startswith("PLAYGROUND PHASE "):
-            print(_phase, flush=True)
-    S.append(("the pinned playground worlds keep their drawings, courts and separate state",
-              _playground.returncode == 0))
-    failed_output("playground", _playground)
-
+    # World publication has its own Linux/macOS CI job and deadline. Its
+    # assertions are unchanged; it no longer consumes this battery's 2400 s.
     _context_cache = subprocess.run([sys.executable, os.path.join(HERE, "tests", "context-cache.py")],
                                     capture_output=True, text=True, timeout=120)
     S.append(("context preparation shares identical effective bytes and invalidates changed sources, declarations and pins",

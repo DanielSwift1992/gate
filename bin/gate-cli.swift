@@ -2621,7 +2621,7 @@ struct GrammarContexts {
 }
 
 // Keep only the latest plan. Every lookup resolves the pins again and hashes
-// the complete delivered row bytes, the record and manifest, including live
+// effective delivered row bytes, the record and manifest, plus undeclared
 // buffers. A saved plan is a parsing result for those bytes, never an old green.
 var GRAMMAR_CONTEXT_PLAN: (key: String, value: GrammarContexts)? = nil
 func grammarContextKey(_ w: WorldState, live: [String: String], resolved: TakenResolution) -> String? {

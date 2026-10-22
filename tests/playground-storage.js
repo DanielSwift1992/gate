@@ -57,7 +57,14 @@ function open(id, options = {}) {
     vm.runInNewContext(page.slice(start, end), scope);
     return scope;
 }
+let phase, phaseStart;
+function mark(name) {
+    if (phase) console.log('PLAYGROUND PASS storage: ' + phase + ' ' + ((performance.now()-phaseStart)/1000).toFixed(3) + 's');
+    phase = name; phaseStart = performance.now();
+    if (name) console.log('PLAYGROUND START storage: ' + name);
+}
 (async () => {
+    mark('independent worlds and pin reset');
     const a = open("readme"), b = open("basics"), file = "ReadMePages.swift", basicsFile = "BasicsPages.swift";
     await a.fetch("/world?f=" + file, { method: "PUT", body: "intro text" });
     await b.fetch("/world?f=" + basicsFile, { method: "PUT", body: "basics text" });
@@ -70,6 +77,7 @@ function open(id, options = {}) {
     assert.strictEqual(await (await b.fetch("/world?f=" + basicsFile)).text(), "basics text");
     assert.strictEqual(storage.getItem(otherPin), "another revision");
     assert.strictEqual(storage.getItem("gate.pages." + record.showcase.revision + ".readme." + file), null);
+    mark('unsupported write routes');
     // P6-other-write-routes also runs over the finished HTML, including the
     // ordinary selected root. No acknowledged structural write may be a no-op.
     for (const id of ["demo", "readme", "basics", "atom"]) {
@@ -114,6 +122,7 @@ function open(id, options = {}) {
         assert.strictEqual(live.verdict, native.verdict, id);
         assert.strictEqual((await (await page.fetch("/gitstatus?f=" + encodeURIComponent(f))).json()).git, "source");
     }
+    mark('Atom red draft, stale text and native on-holds');
     // Execute tick itself against the real shim. A refused Atom count change
     // survives reopening, together with its red receipt; the repository policy
     // still withholds a red file. No unconditional write is hidden in a stub.
@@ -165,6 +174,7 @@ function open(id, options = {}) {
     atom.readerDrafts = true;
     atom.render = async()=>{atom.editor.value += "\n// newer edit";};
     await atom.tick(true); assert.strictEqual(writes,1);
+    mark('Scale compact draft and reload');
     // A deep edit in the final owner part fits a small reader record,
     // reopens byte-for-byte, and retains its refusal. A second edit is still
     // based on the pin, not an unrecorded intermediate buffer.
@@ -185,6 +195,7 @@ function open(id, options = {}) {
     await scale.fetch("/world?f="+scaleFile,{method:"PUT",body:twice});
     assert.strictEqual(await (await open("scale").fetch("/world?f="+scaleFile)).text(),twice);
     assert(storage.getItem(bigKey).length < 100000);
+    mark('taken inputs reject forged drafts');
     for (const id of ["readme", "basics", "atom"]) {
         const page = open(id), snapshots = JSON.parse(fs.readFileSync(path.join(root, "playground", id, "snapshots.json")));
         const listed = JSON.parse(snapshots["/files"]), taken = Object.keys(listed.theirs || {});
@@ -202,6 +213,7 @@ function open(id, options = {}) {
             storage.removeItem(key);
         }
     }
+    mark('quota failure and scoped reset');
     // Storage failure is a failed write, never a cheerful saved receipt.
     storage.setItem = ()=>{throw Error("quota");};
     const failed = await reopened.fetch("/world?f="+encodeURIComponent(f),{method:"PUT",body:state.text});
@@ -210,6 +222,7 @@ function open(id, options = {}) {
     await atom.tick(true); assert(el.textContent.includes("not saved: " + f) && el.textContent.includes("browser storage unavailable"));
     delete storage.setItem;
     reopened.__resetWipe(); assert.strictEqual(storage.getItem(key),null);
+    mark('Atom file-worker court and Blob lifetime');
     const fromFile = open("atom", {fileWorker:true}), fixture = fromFile.__workerFixture;
     try {
         const changed = before.replace("public typealias BalmerAlphaDrop = Plus<U16, U4>",
@@ -222,6 +235,7 @@ function open(id, options = {}) {
             assert(answer.refusals.some(r => r.claim.includes(name)),name);
         assert.strictEqual(fixture.workers.length,1); assert.strictEqual(fixture.urls.size,0);
     } finally { await fixture.stop(); }
+    mark(null);
     console.log("PLAYGROUND STORAGE GREEN: refused Atom draft and verdict survive reload; native red withholds; stale text, quota and scoped reset");
 
 })().catch(e => { console.error(e); process.exitCode = 1; });

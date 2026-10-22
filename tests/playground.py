@@ -23,7 +23,7 @@ def run():
     def begin(name):
         nonlocal phase_started
         phase_started = time.monotonic()
-        print('PLAYGROUND BEGIN ' + json.dumps(dict(phase=name)), flush=True)
+        print('PLAYGROUND BEGIN ' + json.dumps(dict(phase=name, seconds=round(phase_started-started, 3))), flush=True)
     def checkpoint(name):
         now = time.monotonic()
         print('PLAYGROUND PHASE ' + json.dumps(dict(phase=name, seconds=round(now-started, 3),
@@ -189,8 +189,15 @@ def run():
         # Independent browser states read the same immutable published bytes.
         # Keep every assertion and the existing outer timeout; neither process
         # writes the site or shares its in-memory draft store with the other.
+        def browser_process(command):
+            name = 'process ' + Path(command[1]).name
+            before = time.monotonic()
+            print('PLAYGROUND START ' + name, flush=True)
+            result = subprocess.run(command, check=True)
+            print('PLAYGROUND PASS ' + name + ' ' + str(round(time.monotonic()-before, 3)) + 's', flush=True)
+            return result
         with ThreadPoolExecutor(max_workers=2) as readers:
-            jobs = [readers.submit(subprocess.run, command, check=True) for command in [
+            jobs = [readers.submit(browser_process, command) for command in [
                 ['node', str(HERE / 'tests/playground.js'), str(cache), str(site), str(history)],
                 ['node', str(HERE / 'tests/playground-storage.js'), str(site)]]]
             for job in jobs:

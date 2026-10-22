@@ -173,6 +173,45 @@ jobs:
   # compiles there and the binary answers the one question the python side asks
   # it. Everything past that is measured by the battery on the platforms that
   # have one, until this one grows its own.
+  playground:
+    name: playground (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-latest]
+    # Forecast from the measured runner ratio is about 1485 s for the
+    # composite on macOS. Give it 2100 s, plus build/upload time outside it.
+    # The ordinary battery keeps its separate 2400 s deadline.
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4
+        with:
+          fetch-tags: true
+      - run: git fetch --tags --quiet --force || true
+      - name: an isolated temp and the runner's toolchain
+        run: |
+          mkdir -p "$RUNNER_TEMP/gate-playground"
+          echo "TMPDIR=$RUNNER_TEMP/gate-playground" >> "$GITHUB_ENV"
+          command -v swift
+          swift --version
+          df -h .
+          python3 -c 'import shutil; assert shutil.disk_usage(".").free >= 5*2**30, "less than 5 GiB before world builds"'
+      - run: bin/build-judge.sh "$(cat bin/gate-judge.from)"
+      - run: bin/build-organization-judge.sh
+      - run: bin/build-cli.sh
+      - name: the complete published world contracts
+        run: python3 tests/playground_runner.py --timeout 2100 --log "$RUNNER_TEMP/playground-out.txt"
+      - if: always()
+        name: the full world log
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02   # v4
+        with:
+          name: playground-${{ matrix.os }}
+          path: ${{ runner.temp }}/playground-out.txt
+          if-no-files-found: warn
+
   windows-vein:
     runs-on: windows-latest
     # the walk bounds each call; the job bounds the walk, so a stuck runner
