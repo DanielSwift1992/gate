@@ -1,5 +1,6 @@
 """A publication must name its input; a sample is never an implicit dependency."""
 import json
+import runpy
 import shutil
 from pathlib import Path
 import subprocess
@@ -8,6 +9,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parent.parent
 
 def run():
+    runpy.run_path(str(ROOT / 'tests/snapshot-http.py'))['run']()
     with tempfile.TemporaryDirectory(prefix='gate-publisher-') as tmp:
         root = Path(tmp); out = root / 'site'; source = root / 'a-different-repository'
         def build(*args):

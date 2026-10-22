@@ -28,7 +28,9 @@ with tempfile.TemporaryDirectory(prefix='gate-ci-output-') as temp:
         namespace['S'] = namespace['Checks'](time.monotonic())
         namespace['_owner_profile'] = subprocess.CompletedProcess([], 1,
             'INPUT RECORD LOSS: ' + 'x' * 8000 + '\n',
-            'Traceback (most recent call last):\n  source.py:42\nValueError: the actual % cause\r\n')
+            'Traceback (most recent call last):\n  source.py:42\nValueError: the actual % cause\r\n'
+            'build-pages: /selected/world: POST http://127.0.0.1:1234/verdict?f=Page.swift: '
+            'RemoteDisconnected: Remote end closed connection without response; output=server diagnostic\n')
         exec(compile(ast.Module(body=statements, type_ignores=[]), 'owner-profile handoff', 'exec'), namespace)
         print('PASS the next check')
         namespace['failed_output']('success', subprocess.CompletedProcess([], 0, '', ''))
@@ -51,6 +53,8 @@ with tempfile.TemporaryDirectory(prefix='gate-ci-output-') as temp:
         assert "FAIL the owner's resolved profile" in annotation
         assert 'Traceback (most recent call last):' in annotation
         assert 'ValueError: the actual %25 cause' in annotation
+        assert 'POST http://127.0.0.1:1234/verdict?f=Page.swift: RemoteDisconnected' in annotation
+        assert '/selected/world' in annotation and 'output=server diagnostic' in annotation
         assert '%0A' in annotation and '\n' not in annotation and '\r' not in annotation
         assert 'PASS the next check' not in annotation and 'success' not in annotation
         assert 'TIMING' not in annotation, 'telemetry must not break the failure/traceback pair'
