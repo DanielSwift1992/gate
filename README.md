@@ -451,6 +451,8 @@ cases at the end. A run without swiftc says it is short and stays red.
 The court contract totals below describe pinned suites, separately checked
 by the battery; they are not additional battery totals.
 
+Each decision prints a `TIMING` record: seconds since the preceding decision and elapsed time for the run. The first includes the CLI build and setup. The healthy CLI is built once; the changed-source refusal control still gets its own build. The full battery keeps its twenty-four-minute deadline.
+
 ## what runs today, and what is next
 
 ```

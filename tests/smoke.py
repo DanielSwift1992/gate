@@ -62,6 +62,10 @@ def seams_here_probe(folder):
 
 
 class Checks(list):
+    def __init__(self, started):
+        super().__init__()
+        self.started = self.previous = started
+
     # ── A CHECK SPEAKS WHEN IT IS DECIDED, NOT WHEN THE RUN IS OVER. Every
     # result used to be held until the end and printed in one go, so a run that
     # died on its way printed NOTHING: four hundred decided checks went down
@@ -72,7 +76,15 @@ class Checks(list):
     # are decided, so a run that stops still says everything it reached and the
     # last name printed is the neighbour of whatever stopped it.
     def append(self, item):
+        now = time.monotonic()
+        # Time between decisions, not an invented duration for assertions which
+        # share a probe. The first interval includes building the CLI and setup.
+        # Keep telemetry before the result: CI carries the indented traceback
+        # immediately after FAIL as one annotation.
+        print("TIMING " + json.dumps(dict(check=item[0], seconds=round(now-self.previous, 6),
+                                         elapsed=round(now-self.started, 6))), flush=True)
         print(("PASS" if item[1] else "FAIL"), item[0], flush=True)
+        self.previous = now
         super().append(item)
 
 
@@ -217,6 +229,7 @@ GENRE_SAID_HERE = 5
 
 
 def main():
+    started = time.monotonic()
     # Refuse a stale projection before building or judging. The repair reads
     # registrations, so a contributor never needs a full run to learn a count.
     try:
@@ -229,17 +242,11 @@ def main():
     # cut does not go red, it goes forever: the mutation was planted, the port
     # span past every clock, and this file would have sat behind it all night,
     # because no subprocess here carries a timeout. One wall clock for the
-    # whole run turns that class into a red line with a sentence. Twenty
-    # minutes is ten times the slowest run on record.
+    # whole run turns that class into a red line with a sentence.
     #
-    # ── AND THE RETURN TICKET IS SPENT. The clock was raised to thirty-five
-    # minutes while two carriers were alive, because every moved verb was judged
-    # twice, once on each side; the note here said to measure the new worst day
-    # after the death commit and put the tenfold margin back. Measured: 144
-    # seconds on the machine that wrote this, with the parity gone and the wait
-    # in every spawn fixed, against about ten minutes before. Twenty-four
-    # minutes is ten times that, which leaves a CI runner room to be four times
-    # slower and still fail only on a hang, which is the one thing this catches.
+    # Twenty-four minutes remains the full battery's deadline. Each decision
+    # prints its elapsed interval, including setup in the first interval, so a
+    # growing check has a measured price rather than an assumed tenfold margin.
     if hasattr(signal, "alarm"):
         def _overdue(sig, frame):
             # os._exit skips every buffer, so the sentence is flushed by hand:
@@ -256,22 +263,28 @@ def main():
     # in the clone. CI checks out clean, and the run went red three hundred
     # times over one missing minute of build. Built here once, at the top,
     # where it is one sentence rather than three hundred.
-    if not os.path.exists(CLI_HERE):
-        if shutil.which("swiftc") is None:
-            print("FAIL this tool is one binary, and there is neither one here nor a "
-                  "swiftc to build it: bin/build-cli.sh, or a release", flush=True)
-            print("RED", flush=True)
-            sys.exit(1)
-        print("   no binary in this clone: building it once, about a minute", flush=True)
-        _built = subprocess.run(["bash", os.path.join(HERE, "bin", "build-cli.sh")],
-                                capture_output=True, text=True)
-        if _built.returncode != 0 or not os.path.exists(CLI_HERE):
+    _cli_build = None
+    _cli_build_sha = None
+    if shutil.which("swiftc") is not None:
+        # Every question uses this revision's carrier. The later build check
+        # reads this receipt instead of compiling the identical healthy source
+        # twice; the deliberately changed carrier still builds separately.
+        print("BUILD this revision's CLI once, about a minute", flush=True)
+        _cli_build = subprocess.run(["bash", os.path.join(HERE, "bin", "build-cli.sh")],
+                                    capture_output=True, text=True)
+        if _cli_build.returncode != 0 or not os.path.exists(CLI_HERE):
             print("FAIL the vein did not build, and every check below would blame "
                   "the tool for it: " + "; ".join(
-                      [l for l in _built.stderr.split("\n") if "error:" in l][:3]
-                      or _built.stderr.strip().split("\n")[-3:]), flush=True)
+                      [l for l in _cli_build.stderr.split("\n") if "error:" in l][:3]
+                      or _cli_build.stderr.strip().split("\n")[-3:]), flush=True)
             print("RED", flush=True)
             sys.exit(1)
+        _cli_build_sha = hashlib.sha256(open(CLI_HERE, "rb").read()).hexdigest()
+    elif not os.path.exists(CLI_HERE):
+        print("FAIL this tool is one binary, and there is neither one here nor a "
+              "swiftc to build it: bin/build-cli.sh, or a release", flush=True)
+        print("RED", flush=True)
+        sys.exit(1)
     tmp = tempfile.mkdtemp(prefix="gate-smoke-")
     # ── AND THIS BATTERY DOES NOT WRITE IN THE HOUSE OF WHOEVER RUNS IT. A personal
     # world lives in `~/.gate/me` unless `GATE_ME` says otherwise, and that was set
@@ -289,7 +302,7 @@ def main():
     # bare machine, a fresh CI runner, has no global user.name for it to lean on
     subprocess.run(["git", "config", "user.name", "A Fixture"], cwd=repo)
     subprocess.run(["git", "config", "user.email", "fixture@client"], cwd=repo)
-    S = Checks()
+    S = Checks(started)
     S.append(("the battery keeps its personal worlds inside its own temp dir",
               os.environ.get("GATE_ME", "").startswith(tmp)))
     # and every fixture directory too, so a run leaves the machine as it found it
@@ -8803,8 +8816,8 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
     # ── what the strangler left: the Swift CLI answers every verb, and this
     # block walks them. The door is proven with a stub first, a fake binary
     # that claims a vein and speaks a marker, so the run knows delegation
-    # happened rather than assuming it; then the real binary is built and
-    # asked what each verb owes. GATE_CLI names the binary a run judges,
+    # happened rather than assuming it; the healthy binary built at the start
+    # is then asked what each verb owes. GATE_CLI names the binary a run judges,
     # which is the same lever a reader uses to try one by hand.
     # It runs wherever a toolchain stands, not wherever a mac does: the vein
     # is one
@@ -8819,19 +8832,11 @@ console.log(JSON.stringify(pairs.map(([w, a, b]) => [w, a, b, a !== b])));
             print("   delivery buffer:", (_delivery_buffer.stdout + _delivery_buffer.stderr)[-4000:])
         S.append(("a file changed or lost after resolution refuses before its bytes are delivered",
                   _delivery_buffer.returncode == 0))
-        _b = subprocess.run(["bash", os.path.join(HERE, "bin", "build-cli.sh")],
-                            capture_output=True, text=True)
-        _cli_bin = os.path.join(HERE, "bin", "gate-cli")
-        # and when it does not build, the compiler's own words are in the run.
-        # A vein that compiled here and not on the other machine printed a red
-        # line and nothing else, and the job log is not readable without rights
-        # to the repository, so the platform difference had to be guessed at.
-        if _b.returncode != 0:
-            print("   swiftc said:", "\n   ".join(
-                [l for l in _b.stderr.split("\n") if "error:" in l][:4]
-                or _b.stderr.strip().split("\n")[:4]))
+        _cli_bin = CLI_HERE
         S.append(("the swift vein builds, the court's sources compiled in at the judge's pin",
-                  _b.returncode == 0 and os.path.exists(_cli_bin)))
+                  _cli_build is not None and _cli_build.returncode == 0
+                  and os.path.exists(_cli_bin)
+                  and hashlib.sha256(open(_cli_bin, "rb").read()).hexdigest() == _cli_build_sha))
         _stub = os.path.join(tmp, "cli-stub")
         with open(_stub, "w") as f:
             f.write("#!/bin/sh\n"

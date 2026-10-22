@@ -55,10 +55,10 @@ jobs:
               on = l.startswith("FAIL") or (on and l.startswith(" "))
               if on and len(k)<120: k.append(l)
           print("::error title=what the battery said::"+"\n".join(k or t[-40:]).replace("%","%25").replace("\r","%0D").replace("\n","%0A"))'
-      # the camera's subject: the battery above compiles the vein into its
-      # own scratch and sweeps it, so a fresh runner holds no binary here.
-      # The shot is of this revision's bench, and the subject is built first.
-      - run: bin/build-cli.sh
+      # The battery builds this revision's healthy carrier once and holds its
+      # hash through the late build check. Photograph that same binary rather
+      # than compiling identical sources a third time in this job.
+      - run: test -x bin/gate-cli && bin/gate-cli --version
       # a fresh shot of the bench on every run, downloadable from the run's
       # artifacts. The battery holds docs/bench.png.from to web/ui.html, so a
       # stale committed picture is already red above; committing the fresh

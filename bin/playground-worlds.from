@@ -1,7 +1,7 @@
 {
   "format": 1,
   "showcase": {
-    "revision": "7e5c5ba32cfad9eb80a8f06ad8395bd92c7d63f1",
+    "revision": "3f7c122b673be6596858585446a96cb6b60d84ad",
     "files": {
       "Assets/InterLicense.txt": "262481e844521b326f5ecd053e59b98c8b2da78c8ee1bdbb6e8174305e54935a",
       "Assets/InterVariable.ttf": "4989b125924991b90d05b2d16e0e388c48f7d5bb8b30539bbf9c755278d0ccaf",
@@ -63,9 +63,9 @@
       "Contracts/Drawing/v0.1/manifest.json": "3718f1e9864c8276e9394bd1810f7d5d988e1d3132810f809942cde1240bd639",
       "Contracts/Drawing/v0.1/requests.json": "de36f49dced6c56ea826e4929e407ebd428104c6c2894914b6e3c7842189b47b",
       "Package.swift": "afba11c7e3d7a0351b188db63f1a06971b3de63a470dcbe1afd6001aa6869028",
-      "Profiles/Playground/Controls/variants.json": "be1f408dd90722d5122b924b750a23729b7377f0a5fba4fea023c0d9b5204595",
+      "Profiles/Playground/Controls/variants.json": "dad9c3bccdffd2fdc75e0bb174a8827d95e074dd8e48ec0a0c09369c81c13e74",
       "Profiles/Playground/drawing.css": "46ae65f529fb306319ebe1c85269f4f495e406888b8af77bbd43bed51deeec41",
-      "Profiles/Playground/receipt.json": "5b2684796cf3d32f524ffc652464662c17fdcd18043336c1efab25bc6a76d247",
+      "Profiles/Playground/receipt.json": "19b82620468b2c30a34b57aea74c082475f990b0f7084aa177d74256bc0caabe",
       "Profiles/Playground/request.json": "e71046385e38fad39f3153c3ed0e2182e496e532254c38986ffb00a39376ae8a",
       "Profiles/README.md": "fc396aa3d7d6d2a637ac5d72f73a33b85985149db09d7757d3e51009dbe318b2",
       "Sources/DocumentKit/Alphabet.swift": "99382d24f496cf5cab36ee55942f1c7cb7c3a05bd9a5cf923602528661a7686d",
@@ -134,7 +134,7 @@
       "Sources/Organization/Wayfinding.swift": "1ec0a5785b969146d586684becc5d0dc73f634bc22ae424bb006cab0801dc7b0",
       "Tools/Playground/company-seed.json": "fa9f58dfb72714ace11946b779d75bee354fcd98e09e66b7a8ee5e07f03e7667",
       "Tools/Playground/generate-company.js": "12f589e9a4061e6ea138e46800fcb2086f1a40640c6d4e96e9e20ee673f8e166",
-      "Tools/drawing.py": "6166334c2ddba7f371eabe68927210f3e258e4c2b801b4d3db4527fc8e459a10",
+      "Tools/drawing.py": "12344bb220e600b22cad758ad9281993270f7d4ea40496c3d80d6ccd232e1332",
       "Worlds/Playground/Atom/.gate/forms-definitions.json": "5331332c92ab1df0438e7d2aeaa3f198a7dbf7b471f6f716918c7a99b8d69012",
       "Worlds/Playground/Atom/AtomPages.swift": "98e5bb236a96bf5e45a357f7adeac1b27d903320bf5957773dbf108bb2f70898",
       "Worlds/Playground/Atom/Dictionary/Atom.swift": "ff50043a7cd079eaf1a5756ef3ae6be4a6acc69ce62565280614e9f114c255c6",
