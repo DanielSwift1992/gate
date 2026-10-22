@@ -416,9 +416,15 @@ bin/build-pages.py
                 worlds from the pinned Site/Manifest.swift, read in THEIRS, with
                 serve's recorded answers. playground/ opens Read me in that
                 same bench. CI selects examples/codeowners for gate's own site
-                root, the world shown on the cover. Each world keeps
+                root, the world shown on the cover. Each pinned showcase world keeps
                 its own saved files by revision, world and file. Page bodies at
                 the pin compile in showcase; browser edits have no Swift proof.
+                Editable static worlds keep reader text with its reading, including
+                refusals. Selected repositories keep complete file drafts;
+                large drafts in pinned worlds keep lossless source splices.
+                Reopening judges the text again. Previous browser drafts stay readable.
+                This does not write the repository:
+                serve writes a file only when that file holds.
                 Static pages keep file drafts, not structural writes: changing
                 the manifest, declaring a file or answering a table value
                 refuses with an address. Change the source with gate serve and
@@ -437,7 +443,7 @@ web/codemirror.*  the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
 docs/           DETAILS.md, SECURITY.md, CHANGELOG.md, NOTICE.md, and
                 the cover's picture with its provenance
-tests/smoke.py   the battery: 744 checks this repository holds itself
+tests/smoke.py   the battery: 745 checks this repository holds itself
                  to, end-to-end runs through judge parity through
                  documentation contracts; the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts

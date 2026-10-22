@@ -8,8 +8,6 @@
                 await settle(900);
                 step("the door opens on the named file",
                      typeof cm !== "undefined" && active === "ownership.swift");
-                const kept0 = Object.keys(localStorage).filter(
-                    k => k.startsWith("gate.pages.")).length;
                 const line = (() => {
                     for (let i = 0; i < cm.lineCount(); i += 1) {
                         if (cm.getLine(i).includes("Owns_3_carol")) return i;
@@ -65,9 +63,11 @@
                 step("a broken claim goes red",
                      lastRefusals && lastRefusals.some(r => r.file === "ownership.swift"
                          || !r.file));
-                step("and red reaches no storage",
-                     Object.keys(localStorage).filter(
-                         k => k.startsWith("gate.pages.")).length === kept0);
+                // This harness opens static snapshots. Native on-holds is
+                // checked by reader-draft.js and playground-storage.js.
+                const draft = JSON.parse(localStorage.getItem("gate.reader-draft.v1.ownership.swift") || "null");
+                step("and red keeps its reader draft and refusal",
+                     readerDrafts && draft && draft.text === cm.getValue() && draft.verdict.verdict === "refused");
                 // the refusal is a door: a click on the row lands the hand
                 // on the claim's own line, in Full, selected
                 const row = document.querySelector("#verdicts .refusal");
@@ -86,7 +86,7 @@
                 await tick(true);
                 step("a mended world goes green and is kept",
                      document.getElementById("verdicts").textContent === "" ||
-                     localStorage.getItem("gate.pages.ownership.swift") !== null);
+                     localStorage.getItem("gate.reader-draft.v1.ownership.swift") !== null);
                 // the offer and the judge, held as a pair, both ways: over
                 // the mended world, every name of it lands in each slot of
                 // the carol claim, and the two readings must agree name by
@@ -178,11 +178,11 @@
                 // reset executed for real: what was kept is forgotten and
                 // the world is the print again; the reload is a gesture
                 const keptHere = localStorage.getItem(
-                    "gate.pages.ownership.swift") !== null;
+                    "gate.reader-draft.v1.ownership.swift") !== null;
                 window.__resetWipe();
                 step("reset takes the demo back to its print",
                      keptHere
-                     && localStorage.getItem("gate.pages.ownership.swift") === null
+                     && localStorage.getItem("gate.reader-draft.v1.ownership.swift") === null
                      && textOf("ownership.swift")
                         === (SNAP["/world?f=ownership.swift"] || ""));
             } catch (e) {

@@ -160,6 +160,13 @@ function judgeWhereTexts(text, extraTexts) {
     const SNAP = __SNAP__;
     const CONTEXT = __CONTEXT__;
     const STORAGE = __STORAGE__;
+    // Older ordinary pages read their key as raw Swift. Keep structured drafts
+    // in a different protocol namespace so an open old page never reads JSON.
+    const LEGACY_STORAGE = CONTEXT ? null : "gate.pages.";
+    // A legacy snapshot grants reader drafts unless its declared plan says
+    // otherwise. A transport never widens an explicit ReadOnly capability.
+    const SAVE_POLICY = JSON.parse(SNAP["/files"]).save_policy || "reader-draft";
+    const READER_DRAFT = SAVE_POLICY === "reader-draft";
     const FORMS = new Set(__FORMS__);
     const WORLD_FILES = JSON.parse(SNAP["/files"]).world_files || [];
     const DOCUMENTS = JSON.parse(SNAP["/files"]).documents || [];
@@ -195,30 +202,34 @@ function judgeWhereTexts(text, extraTexts) {
         }
         return 1;
     }
-    /* A published world stores reader text and its verdict, including red.
-       An ordinary selected repository retains its on-green policy. A saved verdict is a
-       receipt for that text, never a substitute for judging the reopened world. */
+    /* A snapshot stores reader text and its verdict, including red. This is
+       a browser draft, not the native host's on-holds write to a repository.
+       A saved verdict never substitutes for judging the reopened world. */
     function keptDraft(f) {
-        if (THEIRS[f]) return null;
+        if (!READER_DRAFT || THEIRS[f]) return null;
         try {
             const raw = localStorage.getItem(STORAGE + f);
-            if (raw === null) return null;
-            if (CONTEXT) {
-                try {
-                    const row = JSON.parse(raw);
-                    if (row.format === 1 && typeof row.text === "string") return row;
-                    if (row.format === 2 && Array.isArray(row.splices)) {
-                        let text = SNAP["/world?f=" + f] || "";
-                        for (const cut of row.splices) {
-                            if (!Number.isInteger(cut.from) || !Number.isInteger(cut.to) || cut.from < 0
-                                || cut.to < cut.from || cut.to > text.length || typeof cut.insert !== "string")
-                                throw new Error("invalid reader splice");
-                            text = text.slice(0, cut.from) + cut.insert + text.slice(cut.to);
-                        }
-                        return { text, verdict: row.verdict, splices: row.splices };
-                    }
-                } catch (e) { }
+            if (raw === null) {
+                const legacy = LEGACY_STORAGE ? localStorage.getItem(LEGACY_STORAGE + f) : null;
+                return legacy === null ? null : { text: legacy, verdict: null };
             }
+            try {
+                const row = JSON.parse(raw);
+                if (row.format === 1 && typeof row.text === "string") return row;
+                if (row.format === 2) {
+                    // Ordinary snapshots have no pinned base identity yet.
+                    // An inapplicable envelope is never reader source text.
+                    if (!CONTEXT || !Array.isArray(row.splices)) return null;
+                    let text = SNAP["/world?f=" + f] || "";
+                    for (const cut of row.splices) {
+                        if (!Number.isInteger(cut.from) || !Number.isInteger(cut.to) || cut.from < 0
+                            || cut.to < cut.from || cut.to > text.length || typeof cut.insert !== "string")
+                            return null;
+                        text = text.slice(0, cut.from) + cut.insert + text.slice(cut.to);
+                    }
+                    return { text, verdict: row.verdict, splices: row.splices };
+                }
+            } catch (e) { }
             return { text: raw, verdict: null }; // old browser drafts remain readable
         } catch (e) { return null; }
     }
@@ -226,12 +237,12 @@ function judgeWhereTexts(text, extraTexts) {
         const row = keptDraft(f);
         return row ? row.text : SNAP["/world?f=" + f] || "";
     }
-    // A five-megabyte source is already pinned in SNAP. Keep the reader's
-    // splice against those bytes, not a second full copy beyond localStorage's
-    // quota. This is lossless text, including edits outside the visible page.
+    // Pinned worlds can keep a small splice against their recorded source.
+    // Ordinary snapshots keep complete text until their storage names a base;
+    // republishing must not splice a previous draft into different bytes.
     function draftRecord(f, text, verdict) {
         const base = SNAP["/world?f=" + f] || "";
-        if (base.length < 300000) return { format: 1, text, verdict };
+        if (!CONTEXT || base.length < 300000) return { format: 1, text, verdict };
         const splice = (base, text) => {
             let from = 0, tail = 0;
             while (from < base.length && from < text.length && base[from] === text[from]) from++;
@@ -288,6 +299,18 @@ function judgeWhereTexts(text, extraTexts) {
         const texts = Object.fromEntries(ALL.map(g => [g, g === f ? text : textOf(g)]));
         const inputs = JSON.stringify(texts), previous = readings.get(f);
         if (previous && previous.inputs === inputs) return previous.answer;
+        if (!CONTEXT) {
+            const answer = JSON.parse(SNAP["/verdict?f=" + f] || "{}");
+            let refusals = [];
+            for (const g of ALL) {
+                if (g !== f) refusals = refusals.concat(refusalsFor(g, texts[g]));
+            }
+            refusals = refusals.concat(refusalsFor(f, text));
+            answer.verdict = refusals.length ? "refused" : "holds";
+            answer.refusals = refusals;
+            readings.set(f, { inputs, answer });
+            return answer;
+        }
         const contextual = new Set((LANGUAGE_PLAN.contexts || []).flatMap(c => c.court
             ? c.court.sources.filter(s => s.role === "own").map(s => s.input) : []));
         const groups = WORLDS.map(group => group.filter(path => !contextual.has(path))).filter(group => group.length);
@@ -412,6 +435,8 @@ function judgeWhereTexts(text, extraTexts) {
             try { f = decodeURIComponent((u.split("?")[1] || "").split("&")
                 .find(p => p.startsWith("f="))?.slice(2).replace(/\\+/g, " ") || ""); }
             catch { return refuseWrite(method + " " + u, "the file name is not a valid URL encoding", 409); }
+            if (!READER_DRAFT) return refuseWrite(f + ":1",
+                "this snapshot's declared save policy does not grant reader drafts", 409);
             if (f === LAYOUT) return refuseWrite(f + ":1",
                 "this snapshot cannot change its manifest or the files it reads", 409);
             if (THEIRS[f]) return reply(JSON.stringify({ address: THEIRS[f].address,
@@ -419,7 +444,7 @@ function judgeWhereTexts(text, extraTexts) {
             if (!JSON.parse(SNAP["/files"]).files.includes(f)) return refuseWrite(method + " " + u,
                 "a draft must name a file this snapshot reads", 409);
             const text = String((opts && opts.body) || "");
-            const row = CONTEXT ? JSON.stringify(draftRecord(f, text, await readDraft(f, text))) : text;
+            const row = JSON.stringify(draftRecord(f, text, await readDraft(f, text)));
             try {
                 localStorage.setItem(STORAGE + f, row);
             } catch (e) { return reply(JSON.stringify({ note: "browser storage unavailable" }), 507); }
@@ -432,15 +457,9 @@ function judgeWhereTexts(text, extraTexts) {
             const text = opts && opts.body ? String(opts.body) : "";
             const said = JSON.parse(SNAP["/verdict?f=" + f] || "{}");
             if (THEIRS[f]) return reply(JSON.stringify(said));
-            if (CONTEXT) return reply(JSON.stringify(await readDraft(f, text)));
-            let refusals = [];
-            for (const g of ALL) {
-                if (g !== f) refusals = refusals.concat(refusalsFor(g, textOf(g)));
-            }
-            refusals = refusals.concat(refusalsFor(f, text));
-            said.verdict = refusals.length ? "refused" : "holds";
-            said.refusals = refusals;
-            return reply(JSON.stringify(said));
+            if (!READER_DRAFT && text !== SNAP["/world?f=" + f]) return refuseWrite(f + ":1",
+                "this snapshot's declared save policy grants only the published reading", 409);
+            return reply(JSON.stringify(await readDraft(f, text)));
         }
         if (!["GET", "HEAD"].includes(method)) return refuseWrite(method + " " + u,
             "this snapshot does not support this write; no source file was changed", 405);
@@ -455,8 +474,8 @@ function judgeWhereTexts(text, extraTexts) {
         // server's batch endpoint. Capabilities describe this reader's host.
         if (method === "GET" && u === "/files")
             return reply(JSON.stringify({ ...JSON.parse(SNAP["/files"]), batch_readings: false,
-                ...(CONTEXT ? { save_policy: "reader-draft" } : {}) }));
-        if (CONTEXT && method === "GET" && u.startsWith("/gitstatus?f=")) {
+                save_policy: SAVE_POLICY }));
+        if (method === "GET" && u.startsWith("/gitstatus?f=")) {
             const row = keptDraft(decodeURIComponent(u.split("f=")[1] || ""));
             return reply(JSON.stringify(row ? { git: "draft", verdict: row.verdict ? row.verdict.verdict : "not yet judged" }
                 : { git: "source" }));
@@ -473,7 +492,7 @@ function judgeWhereTexts(text, extraTexts) {
         try {
             for (const key of Object.keys(localStorage)) {
                 if (CONTEXT ? key.startsWith(STORAGE)
-                    : ALL.some(f => key === STORAGE + f) || key === "gate.theme.declared"
+                    : ALL.some(f => key === STORAGE + f || key === LEGACY_STORAGE + f) || key === "gate.theme.declared"
                         || key === "gate.bench.layout") {
                     localStorage.removeItem(key);
                 }
@@ -498,7 +517,7 @@ function judgeWhereTexts(text, extraTexts) {
                 .replace("__COURT_WORKER_HANDLER__", script_json(
                     open(os.path.join(HERE, "bin/court-worker.js"), encoding="utf-8").read().replace(
                         "importScripts('court/vi_court.js','court/vi_court_bytes.js');", "") if context else ""))
-                .replace("__STORAGE__", script_json("gate.pages." if not context else
+                .replace("__STORAGE__", script_json("gate.reader-draft.v1." if not context else
                     "gate.pages." + context["pin"] + "." + context["world"] + "."))
                 .replace("__FORMS__", script_json(sorted(forms)))
                 .replace("__WORLDS__", script_json(files.get("worlds") or []))
@@ -506,13 +525,10 @@ function judgeWhereTexts(text, extraTexts) {
                 .replace("__ALL__", script_json(list(dict.fromkeys(everyone)))))
     note = ('<div id="published-note"><details><summary>browser copy</summary>'
             '<div>judged in your browser as you type · '
-            'saved on green, in this browser · '
+            'draft and verdict saved in this browser, including refusals · '
             'the tool: <code>git clone '
             'https://github.com/DanielSwift1992/gate</code></div></details>'
             '<a href="#" id="reset-copy">reset this browser copy</a></div>')
-
-    if context:
-        note = note.replace('saved on green, in this browser', 'draft and verdict saved in this browser, including refusals')
 
     marker = '<link rel="stylesheet" href="codemirror.css">'
     if marker not in ui:

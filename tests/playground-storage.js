@@ -83,6 +83,26 @@ function open(id, options = {}) {
             assert.strictEqual(JSON.stringify(storage),kept);
         }
     }
+    // The selected gate root is an ordinary world, not a showcase context.
+    // Its deliberately red reading must now survive in the same draft format.
+    const note = page => page.match(/<div id="published-note">([\s\S]*?)<\/div>/)?.[1];
+    const rootNote = note(fs.readFileSync(path.join(root, "index.html"), "utf8"));
+    assert(rootNote && rootNote.includes("draft and verdict saved in this browser, including refusals"),
+        "the finished root must say that refused reader drafts are saved");
+    assert(!rootNote.includes("saved on green"));
+    for (const id of ["readme", "basics", "atom"])
+        assert.strictEqual(note(fs.readFileSync(path.join(root,"playground",id,"index.html"),"utf8")), rootNote,
+            "all published snapshots use the same base note");
+    const ordinary = open("demo"), rootFiles = await (await ordinary.fetch("/files")).json();
+    const rootFile = rootFiles.forms[0];
+    const rootEdit = await (await ordinary.fetch("/world?f="+rootFile)).text() + "\n// reader's ordinary-world edit\n";
+    assert.strictEqual((await (await ordinary.fetch("/files")).json()).save_policy,"reader-draft");
+    assert((await ordinary.fetch("/world?f="+rootFile,{method:"PUT",body:rootEdit})).ok);
+    const ordinaryRow = JSON.parse(storage.getItem("gate.reader-draft.v1."+rootFile));
+    assert.strictEqual(ordinaryRow.text,rootEdit);
+    assert.strictEqual(ordinaryRow.verdict.verdict,"refused");
+    assert.strictEqual(await (await open("demo").fetch("/world?f="+rootFile)).text(),rootEdit);
+    ordinary.__resetWipe();
     for (const id of ["light", "atom", "site"]) {
         const page = open(id), folder = path.join(root, "playground", id);
         const snapshots = JSON.parse(fs.readFileSync(path.join(folder, "snapshots.json")));

@@ -2,6 +2,7 @@
 """The published host's declared protocol must open its recorded worlds."""
 import ast
 import json
+import itertools
 from pathlib import Path
 import re
 import subprocess
@@ -18,9 +19,13 @@ files = ['page.swift', 'dictionary.swift', 'sub/space name.swift']
 texts = {f: 'enum Recorded' + str(i) + ' {}\n' for i, f in enumerate(files)}
 snapshot = {'/files': json.dumps({'files': files, 'batch_readings': True}),
             **{'/world?f=' + f: text for f, text in texts.items()}}
-for context in [None, {'pin': 'pin', 'world': 'external'}]:
+for context, policy in itertools.product([None, {'pin': 'pin', 'world': 'external'}],
+                                         [None, 'reader-draft', 'read-only']):
+    carried = dict(snapshot)
+    if policy is not None:
+        carried['/files'] = json.dumps({**json.loads(snapshot['/files']), 'save_policy': policy})
     script = shim
-    for key, value in {'SNAP': snapshot, 'CONTEXT': context, 'STORAGE': 'probe.',
+    for key, value in {'SNAP': carried, 'CONTEXT': context, 'STORAGE': 'probe.',
                        'FORMS': [], 'LAYOUT': None, 'ALL': files, 'WORLDS': [],
                        'COURT_WORKER_GLUE': '', 'COURT_WORKER_HANDLER': ''}.items():
         script = script.replace('__' + key + '__', json.dumps(value))
@@ -46,7 +51,7 @@ global.fetch = (...args) => {calls.push(args); return window.fetch(...args);};
     }
     assert.equal(fl.batch_readings, false);
     assert.equal(calls.filter(x => x[1]?.method === 'POST').length, 0);
-    assert.equal(fl.save_policy, ''' + json.dumps('reader-draft' if context else None) + ''' ?? undefined);
+    assert.equal(fl.save_policy, ''' + json.dumps(policy or 'reader-draft') + ''');
 })().catch(e => {console.error(e); process.exitCode = 1;});
 '''
     result = subprocess.run(['node', '-'], input=probe, capture_output=True, text=True)
