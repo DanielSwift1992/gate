@@ -2638,8 +2638,13 @@ func grammarContextKey(_ w: WorldState, live: [String: String], resolved: TakenR
             "drawingInputs": row.drawingInputs.joined(separator: "\u{0}")]
 
     }
+    // Declared overlays are already represented by their effective row bytes.
+    // Opening those same bytes in the editor is not a different parser input.
+    // Keep undeclared overlays distinct: they have no row digest above.
+    let declared = Set(layout.rows.map { $0.path })
+    let unassigned = live.filter { !declared.contains($0.key) }
     return sha256Hex(publicationJSON(["root": root, "manifest": sha256Hex(manifest), "record": sha256Hex(record),
-        "rows": rows, "live": live, "law": PinnedGrammarLaw.digest, "reader": judgeFrom() ?? ""] as [String: Any]))
+        "rows": rows, "live": unassigned, "law": PinnedGrammarLaw.digest, "reader": judgeFrom() ?? ""] as [String: Any]))
 }
 func grammarContexts(_ w: WorldState, live: [String: String] = [:],
                      resolved supplied: TakenResolution? = nil) -> GrammarContexts {

@@ -19,13 +19,22 @@ HERE = Path(__file__).resolve().parent.parent
 
 def run():
     started = time.monotonic()
+    phase_started = started
+    def begin(name):
+        nonlocal phase_started
+        phase_started = time.monotonic()
+        print('PLAYGROUND BEGIN ' + json.dumps(dict(phase=name)), flush=True)
     def checkpoint(name):
-        print('PLAYGROUND PHASE ' + json.dumps(dict(phase=name, seconds=round(time.monotonic()-started, 3))), flush=True)
+        now = time.monotonic()
+        print('PLAYGROUND PHASE ' + json.dumps(dict(phase=name, seconds=round(now-started, 3),
+                                                   duration_seconds=round(now-phase_started, 3))), flush=True)
+    begin('independent publication controls')
     runpy.run_path(str(HERE / 'tests/examples.py'))['run']()
     runpy.run_path(str(HERE / 'tests/publisher.py'))['run']()
     runpy.run_path(str(HERE / 'tests/inputs-kind.py'))['run']()
     runpy.run_path(str(HERE / 'tests/publication.py'))['run']()
     checkpoint('independent publication controls')
+    begin('native world and palette controls')
     cache = Path(subprocess.check_output([str(HERE / 'bin/playground-worlds.sh')], text=True).strip())
     subprocess.run(['node', str(HERE / 'tests/drawing.js'), str(cache)], check=True)
     spec = importlib.util.spec_from_file_location('worlds', HERE / 'bin/playground-worlds.py')
@@ -150,6 +159,7 @@ def run():
         subprocess.run([sys.executable, str(cache / 'showcase/Checks/Playground/palette-count.py'),
                         '--theory', str(cache / 'theory'), '--judge', str(HERE / 'bin/gate-judge')], check=True)
         checkpoint('native world and palette controls')
+        begin('fresh world site')
         site = Path(temp) / 'site'
         # A historical checkout is deliberately unavailable to the product.
         # This also refuses an accidental return of the old mandatory local door.
@@ -163,6 +173,7 @@ def run():
             assert 'roadtest=1' not in page.read_text() and 'ROAD ALL GREEN' not in page.read_text(), page
         # Only migration tests ask for the historical source. The finished
         # site's current guards and lint are read from its delivered assets.
+        begin('browser courts and draft storage')
         history = runpy.run_path(str(HERE / 'tests/playground-baseline.py'))['materialize']()
         csp_spec = importlib.util.spec_from_file_location('bench_csp', HERE / 'bin/bench_csp.py')
         csp = importlib.util.module_from_spec(csp_spec)
@@ -185,6 +196,7 @@ def run():
             for job in jobs:
                 job.result()
         checkpoint('browser courts and draft storage')
+        begin('site provenance and interface controls')
         scale = json.loads((cache / 'showcase/Checks/Playground/scale-generation.json').read_text())
         assert scale['storage'] == 'versioned' and scale['parameters'] == dict(count=12800, seed=0, part_size=200)
         for output in scale['outputs']:
@@ -252,6 +264,7 @@ def run():
         assert (site / 'worlds.from').read_bytes() == (HERE / 'bin/playground-worlds.from').read_bytes()
         assert record['theory']['files']['Sources/VerificationIsIdentification/Primitive.swift'] == record['judge']['primitive_sha256']
         assert all((site / 'playground' / t['id'] / 'index.html').is_file() for t in tabs)
+    checkpoint('site provenance and interface controls')
     print('PLAYGROUND ALL GREEN: pinned inputs, twelve worlds, native/wasm, snapshots and isolated storage')
 
 

@@ -14629,38 +14629,31 @@ public enum MyWatch: AccessLedger {
     # The old playground's witnesses travel with the pinned showcase worlds.
     # This builds the actual static benches through serve, then reads their
     # snapshots with both courts and executes their storage shim under node.
-    # Full context/2 publication measured about 320 s, and the independent
-    # draft-storage probe 271 s, before the other native/browser controls.
-    # This is the composite test's wall clock, not a Court reduction budget.
-    # Keep the battery's 2400 s deadline and every source-bound assertion.
-    _playground_command = [sys.executable, os.path.join(HERE, "tests", "playground.py")]
-    with subprocess.Popen(_playground_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                          text=True, start_new_session=(os.name != "nt")) as _playground_process:
-        _playground_timed_out = False
-        try:
-            _playground_stdout, _playground_stderr = _playground_process.communicate(timeout=900)
-        except subprocess.TimeoutExpired:
-            _playground_timed_out = True
-            # A stopped parent must not leave wasm readers consuming resources
-            # after this battery releases its external gate lock.
-            if os.name == "nt":
-                subprocess.run(["taskkill", "/PID", str(_playground_process.pid), "/T", "/F"],
-                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
-            else:
-                try:
-                    os.killpg(_playground_process.pid, signal.SIGKILL)
-                except ProcessLookupError:
-                    pass
-            _playground_stdout, _playground_stderr = _playground_process.communicate()
-            _playground_stderr += "\nplayground composite probe exceeded 900 seconds\n"
-        _playground = subprocess.CompletedProcess(_playground_command, 124 if _playground_timed_out else _playground_process.returncode,
-                                                  _playground_stdout, _playground_stderr)
+    # Context/2 keeps distinct owner-bound controls under both carriers.
+    # The old CI steps spent 1750/1879 s with a 900 s composite cutoff;
+    # 1200 s leaves 350/221 s inside the unchanged 2400 s battery deadline,
+    # even before the saving from preparing identical context bytes once.
+    # Its runner kills the whole process tree and names the last phase on a hang.
+    from playground_runner import run_playground
+    _playground = run_playground([sys.executable, os.path.join(HERE, "tests", "playground.py")])
     for _phase in _playground.stdout.splitlines():
         if _phase.startswith("PLAYGROUND PHASE "):
             print(_phase, flush=True)
     S.append(("the pinned playground worlds keep their drawings, courts and separate state",
               _playground.returncode == 0))
     failed_output("playground", _playground)
+
+    _context_cache = subprocess.run([sys.executable, os.path.join(HERE, "tests", "context-cache.py")],
+                                    capture_output=True, text=True, timeout=120)
+    S.append(("context preparation shares identical effective bytes and invalidates changed sources, declarations and pins",
+              _context_cache.returncode == 0))
+    failed_output("context cache", _context_cache)
+
+    _playground_runner = subprocess.run([sys.executable, os.path.join(HERE, "tests", "playground-timeout.py")],
+                                        capture_output=True, text=True, timeout=30)
+    S.append(("the playground deadline kills a hanging reader tree and names its active phase",
+              _playground_runner.returncode == 0))
+    failed_output("playground deadline", _playground_runner)
 
     _worlds_cache = subprocess.run([sys.executable, os.path.join(HERE, "tests", "worlds-cache.py")],
                                    capture_output=True, text=True, timeout=180)
