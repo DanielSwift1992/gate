@@ -39,6 +39,12 @@ def run():
     except OSError:time.sleep(.05)
    else:raise AssertionError('server did not start')
    status,body=ask('/files');assert status==200;files=json.loads(body)
+   personal=files['personal'];assert personal and personal in files['files']
+   personal_status=json.loads(ask('/gitstatus?f='+personal)[1])
+   assert personal_status['file']==personal, 'personal git status must name its bench address, not its backing storage'
+   assert personal_status['git'] in ('untracked','committed','modified')
+   assert json.loads(ask('/gitstatus?f=Facts.swift')[1])['file']=='Facts.swift'
+   print('GITSTATUS ADDRESSES HOLD: personal and owned files keep their logical bench names')
    for entry in entries:
     name=entry['path'];binary=entry['source_path'] in ('bad-utf8','asset','control')
     assert (name in files['files']) != binary,(name,files)

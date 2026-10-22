@@ -13590,13 +13590,17 @@ func serveDoor(_ a: [String]) -> Never {
                     break
                 }
                 let base = (absPath(facts) as NSString).deletingLastPathComponent
-                if let p = servePick(w, asked.query) {
+                let files = benchFilesOf(w, readings: true)
+                if let p = servePick(w, asked.query, files: files) {
+                    // The reply names the bench resource, not its private backing store.
+                    let address = files.first(where: { $0.1 == p })?.0
+                        ?? asked.query["f"] ?? relPath(p, base)
                     let dirty = runGit(["status", "--porcelain", "--", p], base)
                         .trimmingCharacters(in: .whitespacesAndNewlines)
                     let tracked = gitExitCode(["ls-files", "--error-unmatch", p], base)
                     let state = tracked != 0 ? "untracked" : (dirty.isEmpty ? "committed" : "modified")
                     serveJSON(conn, compactDumps(.object([
-                        ("file", .text(relPath(p, base))),
+                        ("file", .text(address)),
                         ("git", .text(state))])))
                 } else {
                     // the other carrier hands `None` to a path join here and
@@ -14299,8 +14303,11 @@ func buildReadPlan(_ selected: String) throws -> ReadPlan {
                 json("GET /language", ["names": Dictionary(uniqueKeysWithValues: languageNames()), "file": languageFile(), "court": NSNull(), "at": judgeFrom() ?? "", "present": false])
                 json("GET /attention", ["command": "attention", "seams": []])
                 let journal = repoJournal(worldRoot, Set(parsed.rows.map { $0.path }), scope: "world", limit: 200, onlyMe: false)
-                json("GET /log", publicationObject(.object(journalPairs(journal, scope: "world", limit: 200, onlyMe: false,
-                    world: Set(parsed.rows.map { $0.path }), who: identities(worldRoot), nextSaid: "Read-only publication", lastMile: false))))
+                var publishedJournal = publicationObject(.object(journalPairs(journal, scope: "world", limit: 200, onlyMe: false,
+                    world: Set(parsed.rows.map { $0.path }), who: identities(worldRoot), nextSaid: "Read-only publication", lastMile: false)))
+                // Local Git configuration is not an input of the publication.
+                publishedJournal.removeValue(forKey: "me")
+                json("GET /log", publishedJournal)
                 coverage.append(["world": door.directory, "verdict": answer["verdict"] ?? "unsupported", "forms": answer["forms"] ?? [:],
                     "world_counts": answer["world"] ?? [:], "unsupported": answer["unsupported"] ?? [], "unchecked": parsed.rows.filter { $0.kind == "CarriedFile" }.map { $0.path },
                     "area": "declared relations; Swift bodies are unchecked"])

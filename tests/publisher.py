@@ -29,9 +29,13 @@ extension MyInput { public static var typeName: String { "Rooms.swift" } }
         text = 'public enum A {}\npublic enum B {}\npublic enum Claim where A == B {}\n'
         (source / 'Rooms.swift').write_text(text)
         subprocess.run(['git', '-C', str(source), 'init', '-q'], check=True)
+        local_email = 'private-pages-builder' + '@' + 'mailbox.net'
+        subprocess.run(['git','-C',str(source),'config','user.email',local_email],check=True)
         answer = build('--source', str(source))
         assert answer.returncode == 0, (answer.stdout, answer.stderr)
         html = (out / 'index.html').read_text()
+        assert local_email not in html, 'Pages retained local Git identity'
+        print('PAGES IDENTITY HOLDS: configured email is absent from the publication')
         assert 'Rooms.swift' in html and 'roadtest=1' not in html and 'ROAD ALL GREEN' not in html
         assert not (source / 'CODEOWNERS').exists() and not (source / 'ownership.swift').exists()
         # An explicitly selected example still goes through the same generic door.

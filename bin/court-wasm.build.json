@@ -1,0 +1,52 @@
+{
+  "cargo": "cargo 1.83.0 (5ffbef321 2024-10-29)",
+  "cargo_locked": true,
+  "format": "gate-court-wasm-build/1",
+  "outputs": {
+    "court-wasm/node/vi_court.js": "67bc2df063dfea240c321f27f4355cc2960349db978483930ba6c516982bd775",
+    "court-wasm/node/vi_court_bg.wasm": "be36ac99ae1a307abb4fc484d80a23538a859b65b062dc79b47b2c56a2e91aef",
+    "court-wasm/web/vi_court.js": "c4eb904ed1b8fd15added8648bbf3698a030b18b031b76e425e21430c6ac9837",
+    "court-wasm/web/vi_court_bytes.js": "5fbf8cf58b943e5ac66043331913b5314c6ac2ec6704bdc3d91b2e361771fb2e"
+  },
+  "path_mappings": [
+    "user-home=/build-home",
+    "build-root=/build",
+    "source=/vi/Contracts/Court/rust-sample",
+    "cargo-home=/cargo",
+    "sysroot=/rust-toolchain"
+  ],
+  "recipe_sha256": "349b47c9e09d0218bab9c864eb4710b11cebd6a6a90a0560601145fe1a46feef",
+  "repository": "https://github.com/DanielSwift1992/verification-is-identification",
+  "reproducibility_scope": "Same pinned sources, lockfile, recipe and toolchain; independent clean builds must be compared. No cross-toolchain claim.",
+  "revision": "0e8b26362c6ae7be65d305bf1c63909eefc46320",
+  "rustc": "rustc 1.83.0 (90b35a623 2024-11-26)",
+  "source_files": {
+    "Cargo.lock": "7485145489ca18b2be2deff373bad44c3dfb5bc43512b33989fff2bb4b0a3f74",
+    "Cargo.toml": "5921a0baee7b848d48e155960a945402aaaf83f7787832190e436e2cf5d51208",
+    "README.md": "00ed9885c8d074d5e6da14238399a1ee8b19c6f11dacd4b5674577b9e0c270d2",
+    "build-wasm.sh": "25d2cc6eeadef3a51ea7c4d01b58d55a81805d4a757ecc9bb34f9cd487e0617d",
+    "diff-court.py": "01a0da466ee4d5a6589c4c490350c4ffbee62b4bc3f5983c375f1622402663c2",
+    "node/vi-court.js": "74c9f8cd61241aeb93cf3121cb6dcb32cd49867e65064078e4203a1e620a823f",
+    "src/context.rs": "d73569d612225fa4205c5fcce6e616a81a1f0d7563653b31e80a7182cdf7fbfd",
+    "src/count_court.rs": "f6499f6138d68f36efa8f39f8892f37493e80ae5c4aad9b8da8c8eda2dfc9e1f",
+    "src/court_notation.rs": "c2c0d0bfc1c1adab8dc8ed5c50fb646534522a2853bea533b2cd57c53f9ac83d",
+    "src/definition_view.rs": "e1f4cf0d620965e232e3c20b0a236b77c55adff792e933dcb0ad2b406fd01f54",
+    "src/digest.rs": "845a59fbb65c0e181b53aec592f6f48accdd8348e9117ada681fe4147ff02690",
+    "src/expression.rs": "ebb94d66e9ab2571f65e12d2ab407f7c4c3e747e95bac71c6579a6823b910a51",
+    "src/failure.rs": "0ff0d4ebd8ef6a128f67980639f343134434af8e63ce83d13235b7cc83bdd09f",
+    "src/generic_membership.rs": "820fd3bd052453777a0ca29d90c36f1d1dc4ff9c630b1e4a25d4eb748689cc5e",
+    "src/lexical.rs": "1247381ea87281d80bfa6dc68b798d8fca09a28f8c8b196bf5494420d6adf7aa",
+    "src/lib.rs": "c313aa71669e78bc70349d40fed8d3e6c31ab7cffb0970374479bdd9360b94a4",
+    "src/main.rs": "85f641ca31f9d84d28c8e03d00d6e43a2e13ae7b1f58b464e62c46b0a4fd2ca8",
+    "src/notation.rs": "c68dc3cb8169736a2a43bda1b5c7fa5b7b1a4be5c24a3956ea418bf381044cc1",
+    "src/shared_count.rs": "51e803e0d7a8f026ca3ca1305e797fc75334940f4afa8f4be5e7c388ec6c8ae5",
+    "src/sources_report.rs": "fb833731b114e9ac7c1eab5322e2795572e0bd6be91179f03bc970d2e61aea10",
+    "src/structural.rs": "c29d55e95bd24daea8179ea5ece5fb8f652e89493a114ee1b80e14946575a55d",
+    "src/wasm.rs": "7f783e44ff6ed56e11e014a13bb05206654eebe8bef4fae2df4f59b209d5a474",
+    "src/where_judge.rs": "67d52755ecb210f2e01b1564e5b6b3827a3f24d83e941b76b9c0f0ffe1c6f9fd",
+    "web/index.html": "10fd2cd5e8d8d15d67f5199ff6d88ca9b19fccd7772cfa1a62c0d32aa6104e62"
+  },
+  "target": "wasm32-unknown-unknown",
+  "wasm_bindgen": "wasm-bindgen 0.2.105",
+  "web_decoded_sha256": "264412f4cd7dd0f40ea7dba279d029f497cc7fb4b2dbf98130dd5608b04eb8d9"
+}

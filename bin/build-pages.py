@@ -60,6 +60,9 @@ def publish(source, out, context=None):
         from drawing_profile import publish as publish_drawing
         drawing = publish_drawing(HERE, PUBLICATION_ROOT or out, out, drawing_plan, port)
         snap["/drawing-profile"] = json.dumps(drawing_plan)
+        journal = json.loads(snap["/log?n=1&scope=world"])
+        journal.pop("me", None)
+        snap["/log?n=1&scope=world"] = json.dumps(journal)
         files = json.loads(snap["/files"])
         if context:
             context["carried"] = files.get("carried") or []
@@ -597,6 +600,8 @@ def main():
     finish(args.out)
     from bench_styles import audit_site
     print("interface tokens:", audit_site(args.out, ladder))
+    subprocess.run([sys.executable, os.path.join(HERE, "tests", "publication-boundary.py"),
+                    "--publication-tree", args.out], check=True)
 
 
 if __name__ == "__main__":

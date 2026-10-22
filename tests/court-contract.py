@@ -2,6 +2,9 @@
 """Both delivered carriers answer the owner's pinned suites, including raw CRLF."""
 from pathlib import Path
 import json
+import base64
+import hashlib
+import re
 import shutil
 import subprocess
 import sys
@@ -12,6 +15,25 @@ source = subprocess.run([sys.executable, str(ROOT/'bin/court-contract-input.py')
 assert source.returncode == 0, source.stdout + source.stderr
 owner = Path(source.stdout.strip())
 record = json.loads((ROOT/'bin/court-contract.from').read_text())
+# The receipt binds every delivered carrier, including the encoded browser
+# module, to one recipe and source pin. This is byte provenance, not a proof
+# that arbitrary compiler/toolchain versions reproduce those bytes.
+build = json.loads((ROOT/'bin/court-wasm.build.json').read_text())
+assert build['format'] == 'gate-court-wasm-build/1'
+assert build['revision'] == record['revision'], 'court-wasm.build.json: source pin differs'
+assert build['recipe_sha256'] == hashlib.sha256((ROOT/'bin/build-court-wasm.py').read_bytes()).hexdigest(), 'court-wasm.build.json: recipe differs'
+expected_files = {'court-wasm/node/vi_court.js', 'court-wasm/node/vi_court_bg.wasm',
+                  'court-wasm/web/vi_court.js', 'court-wasm/web/vi_court_bytes.js'}
+assert set(build['outputs']) == expected_files, 'court-wasm.build.json: incomplete carrier roster'
+for name, digest in build['outputs'].items():
+    assert hashlib.sha256((ROOT/'bin'/name).read_bytes()).hexdigest() == digest, name + ': hash differs'
+encoded = (ROOT/'bin/court-wasm/web/vi_court_bytes.js').read_bytes()
+match = re.search(rb'VI_COURT_WASM_BASE64 = "([A-Za-z0-9+/=]+)"', encoded)
+assert match, 'court-wasm/web/vi_court_bytes.js: missing module'
+web_hash = hashlib.sha256(base64.b64decode(match[1], validate=True)).hexdigest()
+assert web_hash == build['web_decoded_sha256'], 'court-wasm.build.json: decoded web hash differs'
+receipt = (ROOT/'bin/court-wasm.from').read_text().splitlines()
+assert receipt[0] == record['revision'] and receipt[3].split()[0] == build['outputs']['court-wasm/node/vi_court_bg.wasm'] and receipt[4].split()[0] == web_hash, 'court-wasm.from: carrier receipt differs'
 native = ROOT/'bin/gate-cli'
 if not native.exists():
     native = native.with_suffix('.exe')

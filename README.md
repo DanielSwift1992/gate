@@ -520,3 +520,13 @@ The read-only browser checks delivery with Web Crypto over HTTPS or localhost;
 a missing capability or damaged resource removes the verdict.
 
 The [boundary law](docs/BOUNDARIES.md) checks declared dependency debt through a pinned owner implementation.
+
+### Publication byte boundary
+
+`python3 tests/publication-boundary.py` checks tracked source files for the path class; declared source identities are not silently removed. `--artifact FILE` and `--publication-tree DIR` check explicitly selected release bytes or every file of a built site. The wasm builder, Pages builder and release job use this same law; it has no dependency on the subject-boundary ledger or Git history. A missing input refuses with its address. Refusals name the file, representation and zero-based byte offset, without echoing private bytes.
+
+The finite path class is absolute POSIX account homes under `/Users/<account>/` and `/home/<account>/`, nonempty paths under the root account's home, Windows drive/UNC account homes, and macOS account temporary paths under `/private/var/folders/<bucket>/<account>/` (also without `private`). POSIX spelling is case-sensitive, and a root cannot follow an ASCII letter, digit, underscore or hyphen. Thus lowercase user API routes and embedded URL path components are outside the class. macOS Shared is not an account home. Examples should use `~/…`.
+
+Generated artifacts and publication trees are also checked for the current local build username bounded by bytes other than ASCII letters or digits; the current CI account is not attributed as author to every tracked source. Generated artifacts and publication trees are checked for ASCII mailbox addresses with a DNS domain ending in a letter-only label of at least two characters. The policy declares reserved example domains; these synthetic mailboxes are allowed. Version pins such as `repo@v0.2.5` are not email. No username or username fingerprint is stored in the policy. An unknown historical username by itself is not claimed detectable; historical home paths remain in the path class.
+
+These classes are read as raw bytes, ASCII UTF-16LE/BE at either alignment, one layer of slash/backslash unescaping, and the declared browser wasm base64 carrier. Arbitrary encodings and all possible personal data are not claimed. The publication journal omits the local `me` field; commit history remains source data. Linux and Windows release bytes must pass on their actual runners.

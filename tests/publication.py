@@ -52,6 +52,8 @@ def run():
         (owner/'Island/Facts.swift').write_text(facts)
         (owner/'Island/.gate/forms-definitions.json').write_text(json.dumps(dict(format=2,files=[dict(row='Evidence',path='Evidence.md',repository=str(dependency),revision=revision,source_path='Notes.md',sha256=hashlib.sha256(note).hexdigest())],languages={},plain_fragments=[],shelf_overrides=False)))
         git(owner,'init','-q');git(owner,'add','.');git(owner,'-c','user.name=Fixture','-c','user.email=fixture@test','commit','-qm','a declared publication')
+        local_email = 'private-publisher' + '@' + 'mailbox.net'
+        git(owner,'config','user.email',local_email)
         installed=base/'installation/bin';installed.mkdir(parents=True)
         binary=installed/'gate-cli';shutil.copy2(ROOT/'bin/gate-cli',binary)
         # The child has no Python, Node, Swift or neighbouring gate source files.
@@ -63,6 +65,10 @@ def run():
             return subprocess.run([str(binary),'publish',str(repository),'-o',str(destination),'--json'],cwd=base,env=env,capture_output=True,text=True,timeout=90)
         answer=publish();assert answer.returncode==0,(answer.stdout,answer.stderr)
         plan=json.loads((site/'read-plan.json').read_text())
+        journal=json.loads(json.loads((site/'snapshots/harbor.json').read_text())['responses']['GET /log']['body'])
+        assert 'me' not in journal, 'publication must not include local Git identity'
+        assert local_email.encode() not in (site/'snapshots/harbor.json').read_bytes()
+        print('PUBLICATION IDENTITY HOLDS: configured local email is absent from the journal snapshot')
         assert plan['format']=='publication/1' and plan['drawing_profile']=='NoDrawing' and plan['draft_policy']=='ReadOnly'
         assert plan['coverage'][0]['verdict']=='holds' and plan['coverage'][0]['forms']['equalities']==1,plan['coverage']
         assert (site/'index.html').exists() and (site/'harbor/index.html').exists() and (site/'archive/start/index.html').exists()

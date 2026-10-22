@@ -82,7 +82,8 @@ if [ -n "$WINDOWS" ]; then
     rm -rf "$BUILD"
     mkdir -p "$BUILD"
 else
-    BUILD=$(mktemp -d)
+    BUILD=$(mktemp -d "${TMPDIR:-/tmp}/gate-cli.XXXXXX")
+    BUILD=$(cd "$BUILD" && pwd -P)
 fi
 cp "$HERE/bin/gate-cli.swift" "$BUILD/main.swift"
 
@@ -115,7 +116,7 @@ cp "$HERE/bin/grammar-law/"*.swift "$BUILD/court/"
 if [ -n "$WINDOWS" ]; then
     # the same three places, spelled the way that toolchain reads them
     SAID="$(cd "$HERE" && pwd -W)"
-    swiftc -O "$SAID/bin/.build/main.swift" "$SAID/bin/.build/shelf.swift" \
+    swiftc -O -file-prefix-map "$SAID/bin/.build=/gate-build" -debug-prefix-map "$SAID/bin/.build=/gate-build" "$SAID/bin/.build/main.swift" "$SAID/bin/.build/shelf.swift" \
         "$SAID/bin/.build/premise.swift" "$SAID/bin/.build/grammar.swift" \
         "$SAID/bin/.build/court"/*.swift $LINK \
         -o "$SAID/bin/gate-cli$EXT"
@@ -130,7 +131,7 @@ else
     # release builds on a named image rather than the newest one.
     STATIC=""
     [ "$(uname -s)" = "Linux" ] && STATIC="-static-stdlib"
-    swiftc -O $STATIC "$BUILD/main.swift" "$BUILD/shelf.swift" "$BUILD/premise.swift" "$BUILD/grammar.swift" "$BUILD/court"/*.swift \
+    swiftc -O $STATIC -file-prefix-map "$BUILD=/gate-build" -debug-prefix-map "$BUILD=/gate-build" "$BUILD/main.swift" "$BUILD/shelf.swift" "$BUILD/premise.swift" "$BUILD/grammar.swift" "$BUILD/court"/*.swift \
         -o "$HERE/bin/gate-cli$EXT"
 fi
 rm -rf "$BUILD"

@@ -1,0 +1,20 @@
+{
+  "format": "publication-boundary/2",
+  "scope": "Paths in Git-tracked source files; paths, current builder name and email in explicit artifacts and every file of a publication tree",
+  "base64_binding": "VI_COURT_WASM_BASE64",
+  "base64_file": "bin/court-wasm/web/vi_court_bytes.js",
+  "example_email_domains": [
+    "example.com",
+    "example.net",
+    "example.org",
+    "example",
+    "test",
+    "invalid",
+    "localhost"
+  ],
+  "example_email_suffixes": [
+    ".example",
+    ".test",
+    ".invalid"
+  ]
+}
