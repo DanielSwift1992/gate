@@ -83,6 +83,18 @@ function open(id, options = {}) {
             assert.strictEqual(JSON.stringify(storage),kept);
         }
     }
+    // The selected gate root is an ordinary world, not a showcase context.
+    // Its deliberately red reading must now survive in the same draft format.
+    const ordinary = open("demo"), rootFiles = await (await ordinary.fetch("/files")).json();
+    const rootFile = rootFiles.forms[0];
+    const rootEdit = await (await ordinary.fetch("/world?f="+rootFile)).text() + "\n// reader's ordinary-world edit\n";
+    assert.strictEqual((await (await ordinary.fetch("/files")).json()).save_policy,"reader-draft");
+    assert((await ordinary.fetch("/world?f="+rootFile,{method:"PUT",body:rootEdit})).ok);
+    const ordinaryRow = JSON.parse(storage.getItem("gate.reader-draft.v1."+rootFile));
+    assert.strictEqual(ordinaryRow.text,rootEdit);
+    assert.strictEqual(ordinaryRow.verdict.verdict,"refused");
+    assert.strictEqual(await (await open("demo").fetch("/world?f="+rootFile)).text(),rootEdit);
+    ordinary.__resetWipe();
     for (const id of ["light", "atom", "site"]) {
         const page = open(id), folder = path.join(root, "playground", id);
         const snapshots = JSON.parse(fs.readFileSync(path.join(folder, "snapshots.json")));

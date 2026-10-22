@@ -23,7 +23,7 @@ async function check(source) {
         for (const f of names) { snap["/world?f="+f] = "owner " + f; snap["/verdict?f="+f] = "{}"; }
         const kept = storage(), nodes = {verdicts:{},gitstate:{}};
         const c = vm.createContext({Response,Uint8Array,atob,localStorage:kept,
-            VI_COURT_WASM_BASE64:"",wasm_bindgen:{initSync(){}},
+            VI_COURT_WASM_BASE64:"",wasm_bindgen:{initSync(){},judge(){return JSON.stringify({exit:0,stdout:"",stderr:""});}},
             judge(){return {refusals:[]};},kitVocabulary:{},lint(){},pageGuards(){},
             GateWorldCourt:{verdict(){return {verdict:"holds",refusals:[]};}},
             document:{addEventListener(){},getElementById:id=>nodes[id]},location:{},
