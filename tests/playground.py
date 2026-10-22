@@ -209,6 +209,7 @@ def run():
         assert audit_site(site, ladder)['pages'] == 14
         layout_law = runpy.run_path(str(HERE / 'tests/bench-layout.py'))
         layout_law['run'](site)
+        runpy.run_path(str(HERE / 'tests/bench-width.py'))['run'](site)
         profile_law = runpy.run_path(str(HERE / 'tests/drawing-profile.py'))
         profile_law['run'](cache, site)
         # The same law must refuse a second palette on EACH finished page.

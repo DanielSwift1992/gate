@@ -448,6 +448,7 @@ The battery count is generated from its registrations by
 merging branches. The tool also has a read-only verification mode, listed in its help.
 The battery checks it before building and compares the run with the registered
 cases at the end. A run without swiftc says it is short and stays red.
+The finished-page width check needs headless Chrome or Chromium. It reads every published bench at 375 and 1280 in both themes, and must catch the old answer that would not wrap.
 The court contract totals below describe pinned suites, separately checked
 by the battery; they are not additional battery totals.
 

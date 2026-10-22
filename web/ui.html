@@ -401,7 +401,9 @@ body{font:var(--speech);margin:0;color:var(--ink);background:var(--paper);displa
    second quietly answered for the first. */
 #verdict-head{display:flex;flex-wrap:wrap;align-items:flex-start;gap:calc(var(--u)*5);padding:calc(var(--u)*4) calc(var(--u)*8) calc(var(--u)*4);flex:none}
 #chips{display:flex;max-width:100%;flex-wrap:wrap;align-items:center;gap:calc(var(--u)*3);flex:none}
-.chip{font-family:var(--mono);display:inline-block;flex:none;min-width:4.6em;white-space:nowrap;text-align:center;font-size:var(--caption-size);font-weight:600;padding:calc(var(--u)*2) calc(var(--u)*5);border-radius:8px;font-variant-numeric:tabular-nums}
+/* Keeping the words also means letting one answer take another line. A chip
+   wider than its group escaped the pane even after the group itself wrapped. */
+.chip{font-family:var(--mono);display:inline-block;flex:none;min-width:4.6em;max-width:100%;white-space:normal;overflow-wrap:anywhere;text-align:center;font-size:var(--caption-size);font-weight:600;padding:calc(var(--u)*2) calc(var(--u)*5);border-radius:8px;font-variant-numeric:tabular-nums}
 .chip.ok{background:color-mix(in srgb,var(--ok) 12%,transparent);color:var(--ok)}
 /* a refusal wears its colour the way a green does: the WORD carries it, over a
    backing of the same hue at a tenth. A solid fill made one chip a block of
