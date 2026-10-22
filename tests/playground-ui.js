@@ -41,7 +41,7 @@ class Element {
     const basics=open(root,"basics",storage), snap=snapshots("basics"), f="Dictionary/Basics.swift", original=snap["/world?f="+f];
     const ask=(text,file=f)=>basics.fetch("/verdict?f="+file,{method:"POST",body:text}).then(r=>r.json());
     const clean=await ask(original);assert.equal(clean.refusals.length,0,JSON.stringify(clean));
-    assert.equal(clean.checked,0);assert.equal(clean.verdict,"empty");assert(chip(clean).includes("empty · no declared applications"));assert(chip(clean).includes("Swift bodies unchecked"));
+    assert.equal(clean.checked,0);assert.equal(clean.coverage.readings,0);assert.equal(clean.verdict,"empty");assert(chip(clean).includes("empty · no declared applications"));assert(chip(clean).includes("Swift bodies unchecked"));
     const mutations=[
         ["import NotInThePackage\n"+original,f+":1","imports are fixed"],
         [original+"\npublic extension MissingOwner {}",null,"MissingOwner"],
@@ -60,7 +60,8 @@ class Element {
     for(const id of ["light","site"]){
         const page=open(root,id,storage), s=snapshots(id), file=JSON.parse(s["/files"]).forms[0];
         const answer=await (await page.fetch("/verdict?f="+file,{method:"POST",body:s["/world?f="+file]})).json();
-        assert.equal(answer.refusals.length,0,JSON.stringify(answer));assert(answer.checked>0);assert(chip(answer).includes(">holds</span>"));
+        assert.equal(answer.refusals.length,0,JSON.stringify(answer));assert.equal(answer.verdict,"holds");assert(answer.checked>0);
+        assert.equal(answer.coverage.readings,answer.checked,JSON.stringify(answer));assert(chip(answer).includes(">holds</span>"));
     }
     assert(chip({checked:0,coverage:{readings:0},unsupported:[{id:"waiting",reason:"budget"}]}).includes(">unsupported ·"));
     const empty={premise:"Home states none"}, broken={premise:"a claim disagrees"};

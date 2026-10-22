@@ -298,6 +298,7 @@ function judgeWhereTexts(text, extraTexts) {
         if (contextual.size) {
             const read = await GateCourtContexts.read(contextualCourt, LANGUAGE_PLAN, texts);
             answer.checked += read.checked;
+            if (answer.coverage) answer.coverage.readings = answer.checked;
             answer.refusals.push(...read.refusals);
             answer.unsupported.push(...read.unsupported);
             answer.unchecked = read.unchecked;
