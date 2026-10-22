@@ -12,15 +12,20 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 
 HERE = Path(__file__).resolve().parent.parent
 
 
 def run():
+    started = time.monotonic()
+    def checkpoint(name):
+        print('PLAYGROUND PHASE ' + json.dumps(dict(phase=name, seconds=round(time.monotonic()-started, 3))), flush=True)
     runpy.run_path(str(HERE / 'tests/examples.py'))['run']()
     runpy.run_path(str(HERE / 'tests/publisher.py'))['run']()
     runpy.run_path(str(HERE / 'tests/inputs-kind.py'))['run']()
     runpy.run_path(str(HERE / 'tests/publication.py'))['run']()
+    checkpoint('independent publication controls')
     cache = Path(subprocess.check_output([str(HERE / 'bin/playground-worlds.sh')], text=True).strip())
     subprocess.run(['node', str(HERE / 'tests/drawing.js'), str(cache)], check=True)
     spec = importlib.util.spec_from_file_location('worlds', HERE / 'bin/playground-worlds.py')
@@ -144,12 +149,14 @@ def run():
         # seventeen slack+1 controls refuses in the native court.
         subprocess.run([sys.executable, str(cache / 'showcase/Checks/Playground/palette-count.py'),
                         '--theory', str(cache / 'theory'), '--judge', str(HERE / 'bin/gate-judge')], check=True)
+        checkpoint('native world and palette controls')
         site = Path(temp) / 'site'
         # A historical checkout is deliberately unavailable to the product.
         # This also refuses an accidental return of the old mandatory local door.
         clean_build = dict(os.environ, PLAYGROUND_SOURCE=str(Path(temp) / 'no-historical-checkout'))
         subprocess.run([sys.executable, str(HERE / 'bin/build-pages.py'), str(site),
                         '--source', str(HERE / 'examples/codeowners'), '--worlds'], check=True, env=clean_build)
+        checkpoint('fresh world site')
         assert 'baseline' not in record and not (cache / 'baseline').exists()
         assert 'baseline' not in json.loads((site / 'worlds-source.json').read_text())['sources']
         for page in site.rglob('*.html'):
@@ -177,6 +184,7 @@ def run():
                 ['node', str(HERE / 'tests/playground-storage.js'), str(site)]]]
             for job in jobs:
                 job.result()
+        checkpoint('browser courts and draft storage')
         scale = json.loads((cache / 'showcase/Checks/Playground/scale-generation.json').read_text())
         assert scale['storage'] == 'versioned' and scale['parameters'] == dict(count=12800, seed=0, part_size=200)
         for output in scale['outputs']:
