@@ -3,6 +3,7 @@
 import ast
 import contextlib
 import io
+from itertools import product
 import json
 import os
 import shlex
@@ -84,7 +85,8 @@ def run_block(identifier):
     assert lines, identifier + ': workflow run block missing'
     return '\n'.join(lines)
 
-for identifier, path in [('build_site', 'bin/build-pages.py'), ('roadtest', 'tests/roadtest.py'), ('build_cli', 'bin/build-cli.sh')]:
+children = [('build_site', 'bin/build-pages.py'), ('roadtest', 'tests/roadtest.py'), ('build_cli', 'bin/build-cli.sh')]
+for buffering, (identifier, path) in product((0, 8192, 131072), children):
     with tempfile.TemporaryDirectory(prefix='gate-pages-output-') as temp:
         root = Path(temp)
         (root / 'bin').mkdir()
@@ -92,7 +94,14 @@ for identifier, path in [('build_site', 'bin/build-pages.py'), ('roadtest', 'tes
         (root / 'bin/ci-pages.py').write_bytes((ROOT / 'bin/ci-pages.py').read_bytes())
         child = root / path
         error = 'T0066 CONTROL: Traceback at selected-world/Page.swift:42\nactual % cause\r\n::error::quoted child text\nFINAL TAIL '+identifier+'\n'
-        program = 'import sys\nprint("preamble " + "x" * 20000)\nsys.stderr.write(' + repr(error) + ')\nsys.exit(23)\n'
+        # stdout and stderr share the workflow pipe, but keep separate buffers.
+        # Flush the preamble before the error so the error is the actual tail,
+        # including when a carrier's stdout buffer holds the whole preamble.
+        program = ('import io, sys\n'
+                   f'sys.stdout = io.TextIOWrapper(open(sys.stdout.fileno(), "wb", buffering={buffering}, '
+                   'closefd=False), encoding="utf-8", write_through=True)\n'
+                   'print("preamble " + "x" * 20000, flush=True)\n'
+                   'sys.stderr.write(' + repr(error) + ')\nsys.stderr.flush()\nsys.exit(23)\n')
         if identifier == 'build_cli':
             child.write_text('#!/bin/bash\nexec ' + shlex.quote(sys.executable) + ' -c ' + shlex.quote(program) + '\n')
             child.chmod(0o755)
@@ -102,6 +111,7 @@ for identifier, path in [('build_site', 'bin/build-pages.py'), ('roadtest', 'tes
         # The source script is reached under exactly its workflow pathname.
         result = subprocess.run(['bash', '-e', '-o', 'pipefail', '-c', run_block(identifier)], cwd=root, env=env, capture_output=True)
         assert result.returncode == 23, (identifier, 'tee masked the child status', result)
+        assert result.stdout.endswith(error.encode()), (identifier, buffering, 'error is not the emitted tail', result.stdout[-600:])
         outcomes = {key: dict(outcome='skipped') for key in ['checkout','build_cli','build_site','roadtest','upload','site','deployment']}
         outcomes['checkout']['outcome'] = 'success'
         if identifier != 'build_cli': outcomes['build_cli']['outcome'] = 'success'
@@ -119,7 +129,7 @@ for identifier, path in [('build_site', 'bin/build-pages.py'), ('roadtest', 'tes
         annotation = report.stdout.strip()
         expected = {'build_site':'build-pages.py','roadtest':'roadtest.py','build_cli':'gate binary build'}[identifier]
         assert annotation.startswith('::error title=what pages '+expected+' said::'), annotation
-        assert 'selected-world/Page.swift:42' in annotation and 'FINAL TAIL '+identifier in annotation
+        assert 'selected-world/Page.swift:42' in annotation and 'FINAL TAIL '+identifier in annotation, (identifier, buffering, annotation)
         assert 'actual %25 cause%0D%0A' in annotation and '%0A::error::quoted child text' in annotation
         assert '\n' not in annotation and '\r' not in annotation and len(annotation) < 5000
         assert 'preamble' not in annotation
