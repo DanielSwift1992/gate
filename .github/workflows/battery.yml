@@ -11,6 +11,7 @@ jobs:
         with:
           # the changelog pair reads `git tag`: a shallow checkout
           # without tags starves that reader and the red blames the log
+          fetch-depth: 0
           fetch-tags: true
       # the pinned checkout predates that input and ignored it in silence:
       # the tags are fetched by a word this job can see running
@@ -96,6 +97,7 @@ jobs:
         with:
           # the changelog pair reads `git tag`: a shallow checkout
           # without tags starves that reader and the red blames the log
+          fetch-depth: 0
           fetch-tags: true
       # the pinned checkout predates that input and ignored it in silence:
       # the tags are fetched by a word this job can see running
@@ -189,6 +191,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4
         with:
+          fetch-depth: 0
           fetch-tags: true
       - run: git fetch --tags --quiet --force || true
       - name: an isolated temp and the runner's toolchain

@@ -443,7 +443,7 @@ web/codemirror.*  the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
 docs/           DETAILS.md, SECURITY.md, CHANGELOG.md, NOTICE.md, and
                 the cover's picture with its provenance
-tests/smoke.py   the battery: 745 checks this repository holds itself
+tests/smoke.py   the battery: 746 checks this repository holds itself
                  to, end-to-end runs through judge parity through
                  documentation contracts; the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts
@@ -518,3 +518,5 @@ font, metrics and license. A changed input needs another reading at the owner.
 
 The read-only browser checks delivery with Web Crypto over HTTPS or localhost;
 a missing capability or damaged resource removes the verdict.
+
+The [boundary law](docs/BOUNDARIES.md) checks declared dependency debt through a pinned owner implementation.

@@ -14682,6 +14682,15 @@ public enum MyWatch: AccessLedger {
               _ci_output.returncode == 0))
     failed_output("CI output", _ci_output)
 
+    _dependency_boundary = subprocess.run([sys.executable, os.path.join(HERE, "tests", "dependency-boundary.py")],
+                                          capture_output=True, text=True, timeout=120)
+    if _dependency_boundary.returncode == 0:
+        _dependency_boundary = subprocess.run([sys.executable, os.path.join(HERE, "tests", "dependency-boundary-controls.py")],
+                                              capture_output=True, text=True, timeout=120)
+    S.append(("named subject dependencies cannot grow and retired ledger entries cannot return",
+              _dependency_boundary.returncode == 0))
+    failed_output("dependency boundary", _dependency_boundary)
+
     _documents = subprocess.run(["node", os.path.join(HERE, "tests", "document-reader.js")],
                                 capture_output=True, text=True, timeout=60)
     if _documents.returncode:
