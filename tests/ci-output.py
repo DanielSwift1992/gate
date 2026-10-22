@@ -4,6 +4,9 @@ import ast
 import contextlib
 import io
 import json
+import os
+import shlex
+import sys
 from pathlib import Path
 import re
 import subprocess
@@ -59,4 +62,88 @@ with tempfile.TemporaryDirectory(prefix='gate-ci-output-') as temp:
         assert 'PASS the next check' not in annotation and 'success' not in annotation
         assert 'TIMING' not in annotation, 'telemetry must not break the failure/traceback pair'
         assert len(annotation) < 5000
-print('CI OUTPUT GREEN: both public readers retain the named failure and escaped traceback tail')
+
+
+# Exercise the Pages job's actual shell blocks, including tee, with failing
+# children and an inert curl. No workflow command or network request escapes.
+pages = workflow.split('\n  pages:\n', 1)[1].split('\n  action:\n', 1)[0]
+assert 'PAGES_STEPS: ${{ toJSON(steps) }}' in pages
+assert '- if: failure()\n        name: what pages said' in pages
+
+def run_block(identifier):
+    if identifier == 'diagnostic':
+        block = pages.split('        name: what pages said\n', 1)[1]
+    else:
+        block = pages.split('        id: ' + identifier + '\n', 1)[1]
+    body = block.split('        run: |\n', 1)[1].splitlines()
+    lines = []
+    for line in body:
+        if line and not line.startswith('          '):
+            break
+        lines.append(line[10:] if line else '')
+    assert lines, identifier + ': workflow run block missing'
+    return '\n'.join(lines)
+
+for identifier, path in [('build_site', 'bin/build-pages.py'), ('roadtest', 'tests/roadtest.py'), ('build_cli', 'bin/build-cli.sh')]:
+    with tempfile.TemporaryDirectory(prefix='gate-pages-output-') as temp:
+        root = Path(temp)
+        (root / 'bin').mkdir()
+        (root / 'tests').mkdir()
+        (root / 'bin/ci-pages.py').write_bytes((ROOT / 'bin/ci-pages.py').read_bytes())
+        child = root / path
+        error = 'T0066 CONTROL: Traceback at selected-world/Page.swift:42\nactual % cause\r\n::error::quoted child text\nFINAL TAIL '+identifier+'\n'
+        program = 'import sys\nprint("preamble " + "x" * 20000)\nsys.stderr.write(' + repr(error) + ')\nsys.exit(23)\n'
+        if identifier == 'build_cli':
+            child.write_text('#!/bin/bash\nexec ' + shlex.quote(sys.executable) + ' -c ' + shlex.quote(program) + '\n')
+            child.chmod(0o755)
+        else:
+            child.write_text(program)
+        env = dict(os.environ, GH_TOKEN='control-only', GITHUB_REPOSITORY='control/repository', GITHUB_SHA='control-sha')
+        # The source script is reached under exactly its workflow pathname.
+        result = subprocess.run(['bash', '-e', '-o', 'pipefail', '-c', run_block(identifier)], cwd=root, env=env, capture_output=True)
+        assert result.returncode == 23, (identifier, 'tee masked the child status', result)
+        outcomes = {key: dict(outcome='skipped') for key in ['checkout','build_cli','build_site','roadtest','upload','site','deployment']}
+        outcomes['checkout']['outcome'] = 'success'
+        if identifier != 'build_cli': outcomes['build_cli']['outcome'] = 'success'
+        if identifier == 'roadtest': outcomes['build_site']['outcome'] = 'success'
+        outcomes[identifier]['outcome'] = 'failure'
+        env['PAGES_STEPS'] = json.dumps(outcomes)
+        fake_bin = root / 'fake-bin'
+        fake_bin.mkdir()
+        curl = fake_bin / 'curl'
+        curl.write_text('#!/usr/bin/env python3\nfrom pathlib import Path\nimport sys\nvalue=sys.argv[sys.argv.index("-d")+1]\nassert value.startswith("@")\nPath("posted-status.json").write_bytes(Path(value[1:]).read_bytes())\n')
+        curl.chmod(0o755)
+        env['PATH'] = str(fake_bin) + os.pathsep + env['PATH']
+        report = subprocess.run(['bash', '-e', '-o', 'pipefail', '-c', run_block('diagnostic')], cwd=root, env=env, capture_output=True, text=True)
+        assert report.returncode == 0, report
+        annotation = report.stdout.strip()
+        expected = {'build_site':'build-pages.py','roadtest':'roadtest.py','build_cli':'gate binary build'}[identifier]
+        assert annotation.startswith('::error title=what pages '+expected+' said::'), annotation
+        assert 'selected-world/Page.swift:42' in annotation and 'FINAL TAIL '+identifier in annotation
+        assert 'actual %25 cause%0D%0A' in annotation and '%0A::error::quoted child text' in annotation
+        assert '\n' not in annotation and '\r' not in annotation and len(annotation) < 5000
+        assert 'preamble' not in annotation
+        status = json.loads((root / 'posted-status.json').read_text())
+        assert status['state'] == 'failure' and status['context'] == 'pages-publish'
+        assert status['description'].startswith(expected+' failed;') and len(status['description']) <= 138
+        assert 'built and walked' not in status['description']
+        assert 'site='+outcomes['build_site']['outcome'] in status['description']
+        assert 'roadtest='+outcomes['roadtest']['outcome'] in status['description']
+        # A failure without a log still names the missing diagnostic; a later
+        # deployment failure must not quote an unrelated successful build log.
+        for log in root.glob('pages-*.txt'): log.unlink()
+        missing = subprocess.run([sys.executable, 'bin/ci-pages.py', '--context', 'pages-publish', '--status', 'missing.json'], cwd=root, env=env, capture_output=True, text=True)
+        assert missing.returncode == 0 and 'did not write its log' in missing.stdout
+        (root / 'pages-build.txt').write_text('PASS unrelated successful output\n')
+        outcomes[identifier]['outcome'] = 'success'
+        outcomes['build_site']['outcome'] = 'success'
+        outcomes['roadtest']['outcome'] = 'success'
+        outcomes['upload']['outcome'] = 'success'
+        outcomes['site']['outcome'] = 'success'
+        outcomes['deployment']['outcome'] = 'failure'
+        env['PAGES_STEPS'] = json.dumps(outcomes)
+        late = subprocess.run([sys.executable, 'bin/ci-pages.py', '--context', 'pages-publish', '--status', 'late.json'], cwd=root, env=env, capture_output=True, text=True)
+        assert late.returncode == 0 and not late.stdout
+        late_status = json.loads((root / 'late.json').read_text())
+        assert late_status['description'].startswith('deployment failed; site=success; roadtest=success;')
+print('CI OUTPUT GREEN: battery readers and Pages shell blocks retain escaped failure tails and truthful step outcomes')

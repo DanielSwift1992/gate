@@ -14645,7 +14645,7 @@ public enum MyWatch: AccessLedger {
 
     _ci_output = subprocess.run([sys.executable, os.path.join(HERE, "tests", "ci-output.py")],
                                 capture_output=True, text=True, timeout=30)
-    S.append(("public CI annotations retain the named subprocess failure and its multiline cause",
+    S.append(("public CI annotations retain failure tails and Pages status names the failed step",
               _ci_output.returncode == 0))
     failed_output("CI output", _ci_output)
 

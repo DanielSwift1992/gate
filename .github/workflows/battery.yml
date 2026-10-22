@@ -337,22 +337,36 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4
+      - id: checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4
       # ── AND THE PAGE IS BUILT BY THE TOOL, SO THE TOOL IS BUILT FIRST. This
       # job asked the shim on a clean checkout, which can only say where to get
       # a binary: it worked while the CLI was python and needed nothing built.
       # Swift comes with the runner image, the same way the linux job leans on
       # it, and the guard there says so loudly if it ever leaves.
-      - run: bin/build-cli.sh
+      - name: build the pages binary
+        id: build_cli
+        run: |
+          bin/build-cli.sh 2>&1 | tee pages-cli.txt
+          exit ${PIPESTATUS[0]}
       # the published bench: the same page, the same browser judges, and the
       # server's own answers recorded from a live serve at build time. The
       # Gate owns its root world; showcase owns the playground catalog.
       # Both are selected inputs to the same publisher, never created here.
-      - run: python3 bin/build-pages.py _site --source examples/codeowners --worlds
+      - name: build the site
+        id: build_site
+        run: |
+          python3 bin/build-pages.py _site --source examples/codeowners --worlds 2>&1 | tee pages-build.txt
+          exit ${PIPESTATUS[0]}
       # The sample's input/offer/refusal/save walk is an external harness.
       # Its fixture and script never enter the artifact being deployed.
-      - run: python3 tests/roadtest.py --site _site
-      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9   # v5.0.0
+      - name: walk the site
+        id: roadtest
+        run: |
+          python3 tests/roadtest.py --site _site 2>&1 | tee pages-roadtest.txt
+          exit ${PIPESTATUS[0]}
+      - id: upload
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9   # v5.0.0
         with:
           path: _site
       # ── AND PUBLISHING IS ASKED ABOUT BEFORE IT IS ATTEMPTED. `deploy-pages`
@@ -382,20 +396,18 @@ jobs:
       - if: steps.site.outputs.on == 'true'
         id: deployment
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128   # v5.0.0
-      # ── AND A RED FROM THIS JOB SAYS IT IS THIS JOB. Only the linux battery
-      # posted a commit status, so a failing deployment left none at all and the
-      # run read as a mystery: three of them in a row, with the battery green on
-      # three platforms, and the job had to be named by asking the API for it.
-      # The page is built and walked before this step, so a red here is about
-      # publishing and not about the repository, and the status says which.
+      # Keep the actual failed step and its output public, including failures
+      # before publishing. A successful tee cannot turn a child failure green.
       - if: failure()
+        name: what pages said
         env:
           GH_TOKEN: ${{ github.token }}
+          PAGES_STEPS: ${{ toJSON(steps) }}
         run: |
-          BODY=$(python3 -c 'import json;print(json.dumps({"state":"failure","context":"pages-publish","description":"the page built and walked its road; publishing it failed with Pages switched on. The battery is the other jobs"}))')
+          python3 bin/ci-pages.py --context pages-publish --status pages-status.json
           curl -s -X POST -H "Authorization: Bearer $GH_TOKEN" \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
-            -d "$BODY" > /dev/null
+            -d @pages-status.json > /dev/null
 
   # ── THE ROAD A STRANGER'S CI WALKS. `uses: ./` runs action.yml from this
   # very push: the published binary is fetched at a pinned tag, its bytes
