@@ -29,7 +29,7 @@ def palette_holds(answer):
             and all(x.get("address") and x.get("reason") for x in rows))
 
 
-def run(*args, cwd=None):
+def run(*args, cwd=None, expected_code=None):
     # ── AND THE ANSWER MAY BE ON EITHER CHANNEL. A verb that cannot answer here
     # says so on stderr with a code, which is this tool's canon, and this helper
     # read stdout alone: every check that met a non-answer got the fallback
@@ -38,6 +38,20 @@ def run(*args, cwd=None):
     # equal sentences a difference, which is the reader being blind rather than
     # the two surfaces being apart.
     r = subprocess.run([GATE, *args, "--json"], capture_output=True, text=True, cwd=cwd)
+    # The exit is part of an answer, before JSON selects either channel.
+    # A file reader must not replace a failed producer's reason with ENOENT.
+    if expected_code is not None:
+        if r.returncode != expected_code:
+            # CI annotations select FAIL before a bounded traceback tail.
+            # Keep the command and exit there; the assertion keeps both channels whole.
+            reason = next((line for line in (r.stderr or r.stdout).splitlines() if line.strip()), "no output")
+            print("FAIL gate " + " ".join(args) + " in " + str(cwd)
+                  + ": expected exit " + str(expected_code) + ", got " + str(r.returncode)
+                  + "; " + reason[:512], flush=True)
+        assert r.returncode == expected_code, (
+            "gate " + " ".join(args) + " in " + str(cwd)
+            + ": expected exit " + str(expected_code) + ", got " + str(r.returncode)
+            + "\nstdout:\n" + r.stdout + "\nstderr:\n" + r.stderr)
     for said in (r.stdout, r.stderr):
         try:
             return r.returncode, json.loads(said)
@@ -3128,6 +3142,13 @@ public enum MyWatch: AccessLedger {{
               and "VerifiedInDepartment" in x["claim"]]
     S.append(("no ghost address: grants.swift is not blamed for a claim it never makes", not ghosts))
 
+    _report_output = subprocess.run([sys.executable, os.path.join(HERE, "tests", "report-output.py")],
+                                    capture_output=True, text=True, timeout=60)
+    if _report_output.returncode:
+        print("   report output:", _report_output.stdout, _report_output.stderr, flush=True)
+    S.append(("a refused audit page names its command's exit and both channels before opening a file",
+              _report_output.returncode == 0))
+
     # ── who somebody is, and what merging demands, are facts of the world ──
     grepo = os.path.join(tmp, "policy")
     os.makedirs(os.path.join(grepo, "tables"))
@@ -3151,7 +3172,10 @@ public enum MergePolicy {
                     "-c", "user.name=B", "commit", "-qm", "state the policy in the world"], cwd=grepo)
     c, r = run("status", cwd=grepo)
     S.append(("the world still holds with the policy file beside it", r["verdict"] == "holds"))
-    c, r = run("report", "-o", "audit.html", cwd=grepo)
+    c, r = run("report", "-o", "audit.html", cwd=grepo, expected_code=0)
+    assert os.path.isfile(os.path.join(grepo, "audit.html")), (
+        "gate report -o audit.html in " + grepo
+        + ": exit 0 without its output file; answer: " + json.dumps(r))
     page = open(os.path.join(grepo, "audit.html")).read()
     S.append(("the audit page carries the policy and when it last changed",
               "<h2>Policy</h2>" in page and "merge requires" in page
