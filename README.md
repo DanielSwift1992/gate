@@ -452,7 +452,7 @@ The finished-page width check needs headless Chrome or Chromium. It reads every 
 The court contract totals below describe pinned suites, separately checked
 by the battery; they are not additional battery totals.
 
-Each decision prints a `TIMING` record: seconds since the preceding decision and elapsed time for the run. The first includes the CLI build and setup. The healthy CLI is built once; the changed-source refusal control still gets its own build. The full battery keeps its twenty-four-minute deadline.
+Each decision prints a `TIMING` record: seconds since the preceding decision and elapsed time for the run. The first includes the CLI build and setup. The healthy CLI is built once; the changed-source refusal control still gets its own build. The full battery keeps a forty-minute deadline.
 
 ## what runs today, and what is next
 

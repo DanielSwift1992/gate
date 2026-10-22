@@ -244,18 +244,21 @@ def main():
     # because no subprocess here carries a timeout. One wall clock for the
     # whole run turns that class into a red line with a sentence.
     #
-    # Twenty-four minutes remains the full battery's deadline. Each decision
-    # prints its elapsed interval, including setup in the first interval, so a
-    # growing check has a measured price rather than an assumed tenfold margin.
+    # Forty minutes is the full battery's deadline. Each decision prints its
+    # elapsed interval, including setup in the first interval, so a growing
+    # check has a measured price rather than an assumed tenfold margin. The
+    # price was measured on 22.10: the macOS runner took 22 to 26 minutes for
+    # a battery that runs in about ten on a desk machine, so twenty-four
+    # minutes fired on runner speed rather than on a hang.
     if hasattr(signal, "alarm"):
         def _overdue(sig, frame):
             # os._exit skips every buffer, so the sentence is flushed by hand:
             # a red with no words would be the silence this clock exists against
-            print("FAIL the battery ran past twenty-four minutes: something hangs", flush=True)
+            print("FAIL the battery ran past forty minutes: something hangs", flush=True)
             print("RED", flush=True)
             os._exit(1)
         signal.signal(signal.SIGALRM, _overdue)
-        signal.alarm(1440)
+        signal.alarm(2400)
     # ── AND THE TOOL EXISTS BEFORE THE FIRST QUESTION IS ASKED OF IT. The tool
     # is a binary now and `gate` is a shim that finds one; a fresh clone has
     # none, so every check up to the swiftc block asked a launcher that could
