@@ -7,7 +7,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = 'tests/dependency-boundary.json'
-POLICY_SHA256 = 'ef9e6a741c8bbfd4a72a1381137d50c6313b6334c2f86379ef00a84c9a1d7c08'
+POLICY_SHA256 = '3597f4780a426923d2b382f1a440f2ebece720f3724553f41e922af37a8f98d2'
 specification = importlib.util.spec_from_file_location('boundary_owner', ROOT / 'bin/boundary-owner.py')
 owner = importlib.util.module_from_spec(specification)
 specification.loader.exec_module(owner)
