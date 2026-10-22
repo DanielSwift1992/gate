@@ -21,6 +21,9 @@ def run():
                 self.send_response(409); self.end_headers()
                 self.wfile.write(b'Palette.swift:12: selected input refused')
             else:
+                # Consume the declared POST body before the deliberate EOF.
+                # Unread bytes can make close reset TCP instead of ending HTTP.
+                self.rfile.read(int(self.headers.get('Content-Length', '0')))
                 self.close_connection = True
         do_POST = do_GET
         def log_message(self, *args):
