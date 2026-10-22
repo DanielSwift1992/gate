@@ -8,8 +8,6 @@
                 await settle(900);
                 step("the door opens on the named file",
                      typeof cm !== "undefined" && active === "ownership.swift");
-                const kept0 = Object.keys(localStorage).filter(
-                    k => k.startsWith("gate.pages.") || k.startsWith("gate.reader-draft.v1.")).length;
                 const line = (() => {
                     for (let i = 0; i < cm.lineCount(); i += 1) {
                         if (cm.getLine(i).includes("Owns_3_carol")) return i;
@@ -65,15 +63,11 @@
                 step("a broken claim goes red",
                      lastRefusals && lastRefusals.some(r => r.file === "ownership.swift"
                          || !r.file));
-                if (readerDrafts) {
-                    const draft = JSON.parse(localStorage.getItem("gate.reader-draft.v1.ownership.swift") || "null");
-                    step("and red keeps its reader draft and refusal",
-                         draft && draft.text === cm.getValue() && draft.verdict.verdict === "refused");
-                } else {
-                    step("and red reaches no storage",
-                         Object.keys(localStorage).filter(
-                             k => k.startsWith("gate.pages.") || k.startsWith("gate.reader-draft.v1.")).length === kept0);
-                }
+                // This harness opens static snapshots. Native on-holds is
+                // checked by reader-draft.js and playground-storage.js.
+                const draft = JSON.parse(localStorage.getItem("gate.reader-draft.v1.ownership.swift") || "null");
+                step("and red keeps its reader draft and refusal",
+                     readerDrafts && draft && draft.text === cm.getValue() && draft.verdict.verdict === "refused");
                 // the refusal is a door: a click on the row lands the hand
                 // on the claim's own line, in Full, selected
                 const row = document.querySelector("#verdicts .refusal");

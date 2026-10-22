@@ -85,6 +85,14 @@ function open(id, options = {}) {
     }
     // The selected gate root is an ordinary world, not a showcase context.
     // Its deliberately red reading must now survive in the same draft format.
+    const note = page => page.match(/<div id="published-note">([\s\S]*?)<\/div>/)?.[1];
+    const rootNote = note(fs.readFileSync(path.join(root, "index.html"), "utf8"));
+    assert(rootNote && rootNote.includes("draft and verdict saved in this browser, including refusals"),
+        "the finished root must say that refused reader drafts are saved");
+    assert(!rootNote.includes("saved on green"));
+    for (const id of ["readme", "basics", "atom"])
+        assert.strictEqual(note(fs.readFileSync(path.join(root,"playground",id,"index.html"),"utf8")), rootNote,
+            "all published snapshots use the same base note");
     const ordinary = open("demo"), rootFiles = await (await ordinary.fetch("/files")).json();
     const rootFile = rootFiles.forms[0];
     const rootEdit = await (await ordinary.fetch("/world?f="+rootFile)).text() + "\n// reader's ordinary-world edit\n";

@@ -216,12 +216,15 @@ function judgeWhereTexts(text, extraTexts) {
             try {
                 const row = JSON.parse(raw);
                 if (row.format === 1 && typeof row.text === "string") return row;
-                if (row.format === 2 && Array.isArray(row.splices)) {
+                if (row.format === 2) {
+                    // Ordinary snapshots have no pinned base identity yet.
+                    // An inapplicable envelope is never reader source text.
+                    if (!CONTEXT || !Array.isArray(row.splices)) return null;
                     let text = SNAP["/world?f=" + f] || "";
                     for (const cut of row.splices) {
                         if (!Number.isInteger(cut.from) || !Number.isInteger(cut.to) || cut.from < 0
                             || cut.to < cut.from || cut.to > text.length || typeof cut.insert !== "string")
-                            throw new Error("invalid reader splice");
+                            return null;
                         text = text.slice(0, cut.from) + cut.insert + text.slice(cut.to);
                     }
                     return { text, verdict: row.verdict, splices: row.splices };
@@ -234,12 +237,12 @@ function judgeWhereTexts(text, extraTexts) {
         const row = keptDraft(f);
         return row ? row.text : SNAP["/world?f=" + f] || "";
     }
-    // A five-megabyte source is already pinned in SNAP. Keep the reader's
-    // splice against those bytes, not a second full copy beyond localStorage's
-    // quota. This is lossless text, including edits outside the visible page.
+    // Pinned worlds can keep a small splice against their recorded source.
+    // Ordinary snapshots keep complete text until their storage names a base;
+    // republishing must not splice a previous draft into different bytes.
     function draftRecord(f, text, verdict) {
         const base = SNAP["/world?f=" + f] || "";
-        if (base.length < 300000) return { format: 1, text, verdict };
+        if (!CONTEXT || base.length < 300000) return { format: 1, text, verdict };
         const splice = (base, text) => {
             let from = 0, tail = 0;
             while (from < base.length && from < text.length && base[from] === text[from]) from++;
@@ -522,13 +525,10 @@ function judgeWhereTexts(text, extraTexts) {
                 .replace("__ALL__", script_json(list(dict.fromkeys(everyone)))))
     note = ('<div id="published-note"><details><summary>browser copy</summary>'
             '<div>judged in your browser as you type · '
-            'saved on green, in this browser · '
+            'draft and verdict saved in this browser, including refusals · '
             'the tool: <code>git clone '
             'https://github.com/DanielSwift1992/gate</code></div></details>'
             '<a href="#" id="reset-copy">reset this browser copy</a></div>')
-
-    if context:
-        note = note.replace('saved on green, in this browser', 'draft and verdict saved in this browser, including refusals')
 
     marker = '<link rel="stylesheet" href="codemirror.css">'
     if marker not in ui:

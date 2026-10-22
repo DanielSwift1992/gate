@@ -113,19 +113,44 @@ async function read(page, route) { return (await page.fetch(route)).text(); }
             assert.strictEqual(await read(open(context,held),'/world?f='+file),original);
         }
 
-        // Large, separated edits fit a small record in an ordinary world too.
+        // A pinned world can use compact edits. An ordinary snapshot has no
+        // base identity yet, so a republished page must keep the complete draft.
         const base = '// padding\n'.repeat(60000), big = open(context, held, base);
         const first = base.slice(0,100)+'// refused reading\n'+base.slice(100);
         const second = first+'// end\n';
         assert((await big.fetch('/world?f='+file,{method:'PUT',body:first})).ok);
         assert((await big.fetch('/world?f='+file,{method:'PUT',body:second})).ok);
         const compact = JSON.parse(held.getItem('draft.'+file));
-        assert.strictEqual(compact.format, 2); assert.strictEqual(compact.verdict.verdict,'refused');
-        assert(held.getItem('draft.'+file).length < 2000);
+        assert.strictEqual(compact.verdict.verdict,'refused');
         assert.strictEqual(await read(open(context, held, base), '/world?f='+file), second);
+        if (!context) {
+            const changedBases = [['short', 'public enum NewSource {}\n'],
+                ['equal-length', base.replaceAll('padding', 'changed')]];
+            for (const [kind, replacement] of changedBases) {
+                assert.strictEqual(await read(open(null, held, replacement), '/world?f='+file), second,
+                    'republished ' + kind + ' base must preserve the complete reader text');
+            }
+            assert.strictEqual(compact.format, 1);
+            assert.strictEqual(compact.text, second);
+            // Previously produced, unbound format 2 is inapplicable here.
+            // Never expose its JSON envelope or splice it into a new source.
+            held.setItem('draft.'+file, JSON.stringify({format:2,
+                splices:[{from:100,to:100,insert:'// old edit\n'}],verdict:compact.verdict}));
+            for (const replacement of [base, 'short', base.replaceAll('padding', 'changed')])
+                assert.strictEqual(await read(open(null, held, replacement), '/world?f='+file), replacement);
+        } else {
+            assert.strictEqual(compact.format, 2);
+            assert(held.getItem('draft.'+file).length < 2000);
+        }
+        for (const splices of ['broken', [{from:-1,to:0,insert:'bad'}],
+            [{from:0,to:base.length+1,insert:'bad'}]]) {
+            held.setItem('draft.'+file, JSON.stringify({format:2,splices}));
+            assert.strictEqual(await read(open(context, held, base), '/world?f='+file), base,
+                'an inapplicable format 2 must return source, never its JSON envelope');
+        }
         // A storage failure must not acknowledge a draft it did not keep.
         const denied = {getItem(){return null;},setItem(){throw Error('quota');}};
         assert.strictEqual((await open(context, denied).fetch('/world?f='+file,{method:'PUT',body:red})).status,507);
     }
-    console.log('READER DRAFT GREEN: both carriers keep red receipts, compact edits and native on-holds');
+    console.log('READER DRAFT GREEN: both carriers keep red receipts; ordinary drafts survive republishing; pinned edits stay compact; native on-holds');
 })().catch(e=>{console.error(e);process.exitCode=1;});
