@@ -71,6 +71,7 @@ def run():
         journal=json.loads(json.loads((site/'snapshots/harbor.json').read_text())['responses']['GET /log']['body'])
         assert 'me' not in journal, 'publication must not include local Git identity'
         assert journal['commits']==[expected_commit], journal
+        assert journal['next']=='Publish a new snapshot from the source repository to update this history.', journal
         for path in site.rglob('*'):
             if path.is_file():
                 assert local_email.encode() not in path.read_bytes(), path

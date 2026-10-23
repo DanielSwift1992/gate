@@ -11599,7 +11599,9 @@ func journalPairs(_ journal: Journal, scope: String, limit: Int, onlyMe: Bool,
         ("limit", .raw(String(limit))),
         ("mine_only", .raw(onlyMe ? "true" : "false")),
         ("narrowed", .raw(journal.narrowed ? "true" : "false")),
-        ("next", .text(nextSaid)),
+        ("next", .text(publication
+            ? "Publish a new snapshot from the source repository to update this history."
+            : nextSaid)),
         ("me", .text(journal.me)),
         ("world_files", .list(world.sorted().map { .text($0) })),
         ("commits", .list(journal.commits.map { c in
@@ -14317,7 +14319,7 @@ func buildReadPlan(_ selected: String) throws -> ReadPlan {
                 json("GET /attention", ["command": "attention", "seams": []])
                 let journal = repoJournal(worldRoot, Set(parsed.rows.map { $0.path }), scope: "world", limit: 200, onlyMe: false)
                 let publishedJournal = publicationObject(.object(journalPairs(journal, scope: "world", limit: 200, onlyMe: false,
-                    world: Set(parsed.rows.map { $0.path }), who: [:], nextSaid: "Read-only publication", lastMile: false, publication: true)))
+                    world: Set(parsed.rows.map { $0.path }), who: [:], nextSaid: "", lastMile: false, publication: true)))
                 json("GET /log", publishedJournal)
                 coverage.append(["world": door.directory, "verdict": answer["verdict"] ?? "unsupported", "forms": answer["forms"] ?? [:],
                     "world_counts": answer["world"] ?? [:], "unsupported": answer["unsupported"] ?? [], "unchecked": parsed.rows.filter { $0.kind == "CarriedFile" }.map { $0.path },

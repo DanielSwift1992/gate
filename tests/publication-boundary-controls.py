@@ -17,6 +17,7 @@ builder = 'BoundaryBuilder'
 home = '/' + 'home' + '/account/source.swift'
 windows = 'C:' + '\\' + 'Users' + '\\account\\source.swift'
 private = '/' + 'private/var/folders/ab/accountid/T/source.swift'
+personal = '../../../../../' + 'Users/account/.gate/me/worlds/world/my.swift'
 email = 'private-author' + '@' + 'mailbox.net'
 cases = [
     ('posix home', home), ('macOS home', '/' + 'Users/account/source.swift'),
@@ -28,6 +29,7 @@ cases = [
     ('hostname dot', builder+'.local'), ('underscore', '_'+builder), ('name alone', builder),
     ('root account', '/'+'root/.config/cache'), ('email', email),
     ('file URL', 'file://'+home), ('assignment', 'file='+home), ('relative climb', '../..'+home),
+    ('relative personal storage', personal),
 ]
 count = 0
 for label, text in cases:
@@ -67,4 +69,22 @@ with tempfile.TemporaryDirectory(prefix='publication-boundary-controls-') as tem
     missing = subprocess.run([sys.executable, str(ROOT/'tests/publication-boundary.py'), '--artifact', str(tree/'missing')], capture_output=True)
     assert missing.returncode != 0 and b'missing:byte 0' in missing.stdout
     count += 3
+    # The actual snapshot transport nests the JSON endpoint body in JSON;
+    # HTML carries that same snapshot map. Both must refuse a leaked path.
+    for address in (personal, '../../../../../' + 'home/runner/.gate/me/worlds/world/my.swift'):
+        snapshot = {'/gitstatus?f=my.swift': json.dumps({'file': address, 'git': 'untracked'})}
+        (tree/'snapshots.json').write_text(json.dumps(snapshot))
+        (tree/'index.html').write_text('<script>const SNAP = '+json.dumps(snapshot)+';</script>')
+        refusal = subprocess.run(command, capture_output=True, text=True)
+        assert refusal.returncode == 1, refusal.stdout
+        for name in ('index.html','snapshots.json'):
+            assert 'site/'+name+':byte ' in refusal.stdout, refusal.stdout
+        assert address not in refusal.stdout and str(tree) not in refusal.stdout
+        print('REFUSED: private gitstatus snapshot in index.html and snapshots.json ->', refusal.stdout.strip())
+        count += 1
+    snapshot['/gitstatus?f=my.swift'] = json.dumps({'file': 'my.swift', 'git': 'untracked'})
+    (tree/'snapshots.json').write_text(json.dumps(snapshot))
+    (tree/'index.html').write_text('<script>const SNAP = '+json.dumps(snapshot)+';</script>')
+    assert subprocess.run(command, capture_output=True).returncode == 0
+    count += 1
 print('PUBLICATION CONTROLS HOLD:', count, 'twins and addressed input controls')

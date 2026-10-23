@@ -44,6 +44,10 @@ extension MyInput { public static var typeName: String { "Rooms.swift" } }
         snapshots,_ = json.JSONDecoder().raw_decode(html.split('const SNAP = ',1)[1])
         journal = json.loads(snapshots['/log?n=1&scope=world'])
         assert 'me' not in journal and journal['commits']==[expected_commit], journal
+        assert journal['next']=='Publish a new snapshot from the source repository to update this history.', journal
+        files=json.loads(snapshots['/files']);personal=files['personal']
+        assert personal and json.loads(snapshots['/gitstatus?f='+personal])['file']==personal
+        print('PAGES GITSTATUS HOLDS: the personal snapshot names its bench file, never private storage')
         assert subprocess.check_output(['git','-C',str(source),'log','-1','--format=%ae'],text=True).strip()==author_email
         print('PAGES HISTORY HOLDS: same four-field Swift projection; repository author email intact')
         assert 'Rooms.swift' in html and 'roadtest=1' not in html and 'ROAD ALL GREEN' not in html
