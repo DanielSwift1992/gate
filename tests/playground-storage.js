@@ -197,13 +197,24 @@ function mark(name) {
     const wrong = big.replace(needle,"VerifiedView<Emp12799, FinanceShare>"); assert.notStrictEqual(wrong,big);
     await scale.fetch("/world?f="+scaleFile,{method:"PUT",body:wrong});
     const bigKey = await draftKey(scale,scaleFile);
+    function completeScaleReceipt() {
+        const answer = JSON.parse(storage.getItem(bigKey)).verdict;
+        // A company refusal must not conceal a trapped relation court. All
+        // three distinct buffers must retain its complete, byte-bound report.
+        assert.deepStrictEqual(answer.unsupported, []);
+        assert.strictEqual(answer.court_readings.length, 1);
+        assert.strictEqual(answer.court_readings[0].outcome, "empty");
+    }
+    completeScaleReceipt();
     assert(storage.getItem(bigKey).length < 100000);
     assert.strictEqual(JSON.parse(storage.getItem(bigKey)).verdict.verdict,"refused");
     assert.strictEqual(await (await open("scale").fetch("/world?f="+scaleFile)).text(),wrong);
     const heading = "// reader's heading\n" + wrong;
     await scale.fetch("/world?f="+scaleFile,{method:"PUT",body:heading});
+    completeScaleReceipt();
     const twice = heading + "\n// reader's ending";
     await scale.fetch("/world?f="+scaleFile,{method:"PUT",body:twice});
+    completeScaleReceipt();
     assert.strictEqual(await (await open("scale").fetch("/world?f="+scaleFile)).text(),twice);
     assert(storage.getItem(bigKey).length < 100000);
     mark('taken inputs reject forged drafts');

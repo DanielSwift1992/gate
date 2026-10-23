@@ -1,7 +1,7 @@
 {
   "format": "vi-court-contract-input/1",
   "repository": "https://github.com/DanielSwift1992/verification-is-identification",
-  "revision": "0e8b26362c6ae7be65d305bf1c63909eefc46320",
+  "revision": "7b2ce5b294111954fc29e395ea0353d93d177be1",
   "suites": [
     "v0.1",
     "v0.2",

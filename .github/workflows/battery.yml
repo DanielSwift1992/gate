@@ -182,8 +182,9 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04, macos-latest]
-    # Forecast from the measured runner ratio is about 1485 s for the
-    # composite on macOS. Give it 2100 s, plus build/upload time outside it.
+    # Run 39830404651 measured the contracts at 1474 s on Linux and 1172 s
+    # on macOS; builds cost 307/261 s. Keep 2100 s inside 45 minutes for the
+    # whole job. The ordinary battery measured 925/927 s on that same run.
     # The ordinary battery keeps its separate 2400 s deadline.
     timeout-minutes: 45
     permissions:
@@ -196,8 +197,9 @@ jobs:
       - run: git fetch --tags --quiet --force || true
       - name: an isolated temp and the runner's toolchain
         run: |
-          mkdir -p "$RUNNER_TEMP/gate-playground"
+          mkdir -p "$RUNNER_TEMP/gate-playground/me"
           echo "TMPDIR=$RUNNER_TEMP/gate-playground" >> "$GITHUB_ENV"
+          echo "GATE_ME=$RUNNER_TEMP/gate-playground/me" >> "$GITHUB_ENV"
           command -v swift
           swift --version
           df -h .
@@ -433,7 +435,7 @@ jobs:
             echo "Settings > Pages > Source must be GitHub Actions."
             echo "The page was built and walked its own road in the steps above:"
             echo "nothing here is about this repository's claims, and the battery"
-            echo "is the other three jobs."
+            echo "and the Linux/macOS world contracts are checked by their own jobs."
           fi
       - if: steps.site.outputs.on == 'true'
         id: deployment

@@ -22,11 +22,11 @@ def progress(output):
     return phase + ('; active: ' + ', '.join(active) if active else '')
 
 
-def run_playground(command, timeout):
+def run_playground(command, timeout, env=None):
     # One pipe preserves the order of phase boundaries and native/browser
     # diagnostics. All original child output travels, including tracebacks.
     with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                          text=True, start_new_session=(os.name != 'nt')) as child:
+                          text=True, env=env, start_new_session=(os.name != 'nt')) as child:
         try:
             output, _ = child.communicate(timeout=timeout)
             return subprocess.CompletedProcess(command, child.returncode, output, '')
@@ -67,7 +67,7 @@ def summary(output, elapsed=None):
     return '\n'.join(lines)
 
 
-def annotation(output, elapsed=None):
+def annotation(output, elapsed=None, level="error"):
     def escape(text):
         return text.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
     def fit(text, budget, tail=False):
@@ -78,8 +78,10 @@ def annotation(output, elapsed=None):
                 break
             chars.append(char); used += size
         return ''.join(reversed(chars) if tail else chars)
-    prefix = '::error title=playground contracts::'
-    head = fit(summary(output, elapsed), 2400)
+    prefix = '::' + level + ' title=playground contracts::'
+    head = fit(summary(output, elapsed), 4096 - len(prefix.encode('utf-8')) if level == 'notice' else 2400)
+    if level == 'notice':
+        return prefix + escape(head)
     separator = '\nlast output:\n'
     budget = 4096 - len((prefix + escape(head + separator)).encode('utf-8'))
     tail = fit('\n'.join(output.split('\n')[-30:]), max(0, budget), tail=True)
@@ -91,6 +93,7 @@ def main():
     from pathlib import Path
     import sys
     import time
+    import tempfile
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--timeout', type=float, required=True)
     parser.add_argument('--log', type=Path, required=True)
@@ -98,7 +101,11 @@ def main():
     if args.timeout <= 0:
         parser.error('--timeout must be positive')
     started = time.monotonic()
-    answer = run_playground([sys.executable, str(Path(__file__).with_name('playground.py'))], args.timeout)
+    # A local invocation gets the same isolation as CI. The job also gives
+    # its build steps a scratch GATE_ME; this child owns a fresh slot.
+    with tempfile.TemporaryDirectory(prefix='gate-playground-me-') as personal:
+        answer = run_playground([sys.executable, str(Path(__file__).with_name('playground.py'))],
+                               args.timeout, env=dict(os.environ, GATE_ME=str(Path(personal) / 'me')))
     elapsed = time.monotonic() - started
     output = answer.stdout + answer.stderr
     args.log.write_text(output, encoding='utf-8')
@@ -107,6 +114,7 @@ def main():
     if answer.returncode:
         print(annotation(output, elapsed), flush=True)
     else:
+        print(annotation(output, elapsed, level='notice'), flush=True)
         print('PASS the pinned playground worlds keep their drawings, courts and separate state', flush=True)
     return answer.returncode
 

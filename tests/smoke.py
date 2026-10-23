@@ -1192,6 +1192,13 @@ def main():
         print(_court_contract.stdout + _court_contract.stderr, flush=True)
     S.append(("both Court carriers answer the owner's three byte-bound contracts",
               _court_contract.returncode == 0 and "COURT CONTRACT GREEN" in _court_contract.stdout))
+    _wasm_build = subprocess.run(
+        [sys.executable, os.path.join(HERE, "tests", "wasm-build.py")],
+        capture_output=True, text=True, timeout=30)
+    if _wasm_build.returncode:
+        print((_wasm_build.stdout + _wasm_build.stderr)[-3500:], flush=True)
+    S.append(("the wasm builder preserves encoded flags and carries no local source roots",
+              _wasm_build.returncode == 0))
     # The browser's vocabulary changes inspection records, never the plain
     # verdict. These witnesses previously invoked extra domain requirements
     # or admitted entries that the Swift reference refuses.

@@ -288,15 +288,15 @@
     }
   },
   "judge": {
-    "revision": "0e8b26362c6ae7be65d305bf1c63909eefc46320",
+    "revision": "7b2ce5b294111954fc29e395ea0353d93d177be1",
     "primitive_path": "Sources/VerificationIsIdentification/Primitive.swift",
     "primitive_sha256": "c2700f5d176d4f30159b9996cbe41d33fc2f14dfb6e7ad355e081014f8c4482a"
   },
   "wasm": {
-    "revision": "0e8b26362c6ae7be65d305bf1c63909eefc46320",
+    "revision": "7b2ce5b294111954fc29e395ea0353d93d177be1",
     "files": {
-      "bin/court-wasm/node/vi_court_bg.wasm": "060764cf02b28ff5645461fa8269ce6558c67ef12209b1a3f979c8492c1715e5",
-      "bin/court-wasm/web/vi_court_bytes.js": "955457538309212532d96a5df933b2d1beea68ca51ff3cb4bbfb7bdcdcdf6f0e"
+      "bin/court-wasm/node/vi_court_bg.wasm": "b31a52aa3e01631814c2341f79b55e3da5a07f9e56042a3da09639a1dfd453b4",
+      "bin/court-wasm/web/vi_court_bytes.js": "b6af3dff6670a534b8f1050ad793d2c7ea35aa48551534cdc5851685255d72f8"
     }
   }
 }

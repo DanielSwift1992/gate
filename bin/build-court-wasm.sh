@@ -15,7 +15,7 @@ PIN=${1:-main}
 OUT="$(cd "$(dirname "$0")" && pwd)"
 if [ -n "${VI_SOURCE:-}" ]; then
     SRC="$VI_SOURCE"
-    NOTE="built from the local checkout $VI_SOURCE, not from the public pin"
+    NOTE="built from a local checkout, not from the public pin"
 else
     TMP=$(mktemp -d)
     git clone --depth 50 https://github.com/DanielSwift1992/verification-is-identification "$TMP/vi"
@@ -25,7 +25,23 @@ else
 fi
 cd "$SRC"
 REV=$(git rev-parse HEAD)
-Contracts/Court/rust-sample/build-wasm.sh
+# Compiler paths are delivery bytes too. Keep the user's flags, then name
+# the two machine-specific roots without carrying their local spelling.
+python3 - <<'PY'
+import os
+from pathlib import Path
+import subprocess
+env = dict(os.environ)
+encoded = env.get('CARGO_ENCODED_RUSTFLAGS')
+if encoded is not None:
+    flags = encoded.split('\x1f') if encoded else []
+else:
+    flags = env.get('RUSTFLAGS', '').split()
+flags += ['--remap-path-prefix=' + str(Path.home()) + '=/build/home',
+          '--remap-path-prefix=' + str(Path.cwd()) + '=/build/vi']
+env['CARGO_ENCODED_RUSTFLAGS'] = '\x1f'.join(flags)
+subprocess.run(['Contracts/Court/rust-sample/build-wasm.sh'], env=env, check=True)
+PY
 PKG="$SRC/Contracts/Court/rust-sample/pkg"
 mkdir -p "$OUT/court-wasm/node" "$OUT/court-wasm/web"
 cp "$PKG/node/vi_court.js" "$PKG/node/vi_court_bg.wasm" "$OUT/court-wasm/node/"
@@ -43,6 +59,7 @@ cd "$OUT"
 {
     echo "$REV"
     echo "$NOTE"
+    echo "compiler source paths: HOME=/build/home; SOURCE=/build/vi"
     echo "wasm-bindgen $(wasm-bindgen --version | awk '{print $2}'); $(rustc --version)"
     shasum -a 256 court-wasm/node/vi_court_bg.wasm "$PKG/no-modules/vi_court_bg.wasm" | sed "s|$PKG/no-modules/|court-wasm/web/(as base64 in) |"
 } > court-wasm.from
