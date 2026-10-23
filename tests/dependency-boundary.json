@@ -924,7 +924,7 @@
       "channel": "text",
       "line": 141,
       "name": "Organization",
-      "text": "`check`/`ask` reads a declared view. `diff`/`change` previews a transfer, grant or revoke; `apply` keeps it when its judgement holds. Add other declarations by editing the world file in the bench or your editor, then judge the result. Organization\u2019s `Administer` and `Delete` laws belong to its Swift types in showcase and are checked by the compiler there. The world is selected by its local file or manifest.",
+      "text": "`check`/`ask` reads a declared view. `diff`/`change` previews a transfer, grant or revoke; `apply` keeps it when its judgement holds. Add other declarations by editing the world file in the bench or your editor, then judge the result. Organization’s `Administer` and `Delete` laws belong to its Swift types in showcase and are checked by the compiler there. The world is selected by its local file or manifest.",
       "occurrence": 1,
       "task": "T0069",
       "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
@@ -962,7 +962,7 @@
     {
       "path": "bin/build-cli.sh",
       "channel": "text",
-      "line": 100,
+      "line": 101,
       "name": "organization-court",
       "text": "# (bin/organization-court.from), beside the policy it reads. The theory's copy",
       "occurrence": 1,
@@ -972,7 +972,7 @@
     {
       "path": "bin/build-cli.sh",
       "channel": "text",
-      "line": 103,
+      "line": 104,
       "name": "organization-court",
       "text": "ORG=\"$(\"$HERE/bin/organization-court.sh\")\"",
       "occurrence": 1,
@@ -982,7 +982,7 @@
     {
       "path": "bin/build-cli.sh",
       "channel": "text",
-      "line": 106,
+      "line": 107,
       "name": "OrganizationJudge",
       "text": "[ \"$(basename \"$f\")\" = \"OrganizationJudge.swift\" ] || cp \"$f\" \"$BUILD/court/\"",
       "occurrence": 1,
@@ -992,7 +992,7 @@
     {
       "path": "bin/build-cli.sh",
       "channel": "text",
-      "line": 108,
+      "line": 109,
       "name": "OrganizationJudge",
       "text": "cp \"$ORG/OrganizationJudge.swift\" \"$BUILD/court/\"",
       "occurrence": 1,
@@ -1002,7 +1002,7 @@
     {
       "path": "bin/build-cli.sh",
       "channel": "text",
-      "line": 137,
+      "line": 138,
       "name": "company",
       "text": "echo \"built bin/gate-cli$EXT (court at $(printf %.7s \"$PIN\"), company court at $(head -1 \"$ORG/from\" | cut -c1-7))\"",
       "occurrence": 1,
@@ -1084,7 +1084,7 @@
       "channel": "text",
       "line": 5,
       "name": "organization",
-      "text": "# ShowcaseTools judge and the node port speak: `organization-judge judge FILE\u2026`.",
+      "text": "# ShowcaseTools judge and the node port speak: `organization-judge judge FILE…`.",
       "occurrence": 1,
       "task": "architecture-v1/r4/company-reader-after-T0038",
       "reason": "Architecture revision 4, Court of the company: owner artifacts and contracts, declared reader input, removal of built-in policy and subject-specific controls after T0038."
@@ -1094,7 +1094,7 @@
       "channel": "text",
       "line": 5,
       "name": "organization-judge",
-      "text": "# ShowcaseTools judge and the node port speak: `organization-judge judge FILE\u2026`.",
+      "text": "# ShowcaseTools judge and the node port speak: `organization-judge judge FILE…`.",
       "occurrence": 1,
       "task": "architecture-v1/r4/company-reader-after-T0038",
       "reason": "Architecture revision 4, Court of the company: owner artifacts and contracts, declared reader input, removal of built-in policy and subject-specific controls after T0038."
@@ -1124,7 +1124,7 @@
       "channel": "text",
       "line": 15,
       "name": "organization",
-      "text": "// `organization-judge judge FILE\u2026` and `organization-judge judge parse FILE\u2026`:",
+      "text": "// `organization-judge judge FILE…` and `organization-judge judge parse FILE…`:",
       "occurrence": 1,
       "task": "architecture-v1/r4/company-reader-after-T0038",
       "reason": "Architecture revision 4, Court of the company: owner artifacts and contracts, declared reader input, removal of built-in policy and subject-specific controls after T0038."
@@ -1134,7 +1134,7 @@
       "channel": "text",
       "line": 15,
       "name": "organization-judge",
-      "text": "// `organization-judge judge FILE\u2026` and `organization-judge judge parse FILE\u2026`:",
+      "text": "// `organization-judge judge FILE…` and `organization-judge judge parse FILE…`:",
       "occurrence": 1,
       "task": "architecture-v1/r4/company-reader-after-T0038",
       "reason": "Architecture revision 4, Court of the company: owner artifacts and contracts, declared reader input, removal of built-in policy and subject-specific controls after T0038."
@@ -1154,7 +1154,7 @@
       "channel": "text",
       "line": 19,
       "name": "organization",
-      "text": "FileHandle.standardError.write(Data(\"usage: organization-judge judge [parse] FILE\u2026\\n\".utf8))",
+      "text": "FileHandle.standardError.write(Data(\"usage: organization-judge judge [parse] FILE…\\n\".utf8))",
       "occurrence": 1,
       "task": "architecture-v1/r4/company-reader-after-T0038",
       "reason": "Architecture revision 4, Court of the company: owner artifacts and contracts, declared reader input, removal of built-in policy and subject-specific controls after T0038."
@@ -1164,7 +1164,7 @@
       "channel": "text",
       "line": 19,
       "name": "organization-judge",
-      "text": "FileHandle.standardError.write(Data(\"usage: organization-judge judge [parse] FILE\u2026\\n\".utf8))",
+      "text": "FileHandle.standardError.write(Data(\"usage: organization-judge judge [parse] FILE…\\n\".utf8))",
       "occurrence": 1,
       "task": "architecture-v1/r4/company-reader-after-T0038",
       "reason": "Architecture revision 4, Court of the company: owner artifacts and contracts, declared reader input, removal of built-in policy and subject-specific controls after T0038."
@@ -1282,7 +1282,7 @@
     {
       "path": "bin/build-pages.py",
       "channel": "text",
-      "line": 122,
+      "line": 124,
       "name": "judge.js",
       "text": "for asset in (\"codemirror.css\", \"ladder.css\", \"codemirror.js\", \"judge.js\", \"renderer.js\", \"press.js\", \"drawing-profile.js\"):",
       "occurrence": 1,
@@ -1292,7 +1292,7 @@
     {
       "path": "bin/build-pages.py",
       "channel": "text",
-      "line": 557,
+      "line": 559,
       "name": "judge.js",
       "text": "(\"judge.js\", \"bin\"), (\"renderer.js\", \"bin\"), (\"press.js\", \"bin\"),",
       "occurrence": 1,
@@ -1314,7 +1314,7 @@
       "channel": "text",
       "line": 144,
       "name": "diff  grant|revoke",
-      "text": "gate diff  transfer WHO DEPT        \u00b7 gate diff  grant|revoke WHO DOC",
+      "text": "gate diff  transfer WHO DEPT        · gate diff  grant|revoke WHO DOC",
       "occurrence": 1,
       "task": "T0069",
       "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
@@ -1324,7 +1324,7 @@
       "channel": "text",
       "line": 144,
       "name": "diff  transfer",
-      "text": "gate diff  transfer WHO DEPT        \u00b7 gate diff  grant|revoke WHO DOC",
+      "text": "gate diff  transfer WHO DEPT        · gate diff  grant|revoke WHO DOC",
       "occurrence": 1,
       "task": "T0069",
       "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
@@ -1444,7 +1444,7 @@
       "channel": "text",
       "line": 413,
       "name": "grants.csv",
-      "text": "// \u2500\u2500 export WORLD -o people.csv grants.csv: the tables printed back out of a",
+      "text": "// ── export WORLD -o people.csv grants.csv: the tables printed back out of a",
       "occurrence": 1,
       "task": "T0069",
       "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
@@ -1454,7 +1454,7 @@
       "channel": "text",
       "line": 413,
       "name": "people.csv",
-      "text": "// \u2500\u2500 export WORLD -o people.csv grants.csv: the tables printed back out of a",
+      "text": "// ── export WORLD -o people.csv grants.csv: the tables printed back out of a",
       "occurrence": 1,
       "task": "T0069",
       "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
@@ -1802,7 +1802,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6337,
+      "line": 6338,
       "name": "worldRows",
       "text": "func worldRows(_ text: String) -> (people: [[(String, String)]], grants: [(String, String)]) {",
       "occurrence": 1,
@@ -1812,7 +1812,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6339,
+      "line": 6340,
       "name": "Employee",
       "text": "for m in matches(\"public enum (\\\\w+): Employee, Person \\\\{(.*?)\\\\n\\\\}\", text, dotAll: true) {",
       "occurrence": 1,
@@ -1822,7 +1822,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6339,
+      "line": 6340,
       "name": "Person",
       "text": "for m in matches(\"public enum (\\\\w+): Employee, Person \\\\{(.*?)\\\\n\\\\}\", text, dotAll: true) {",
       "occurrence": 1,
@@ -1832,7 +1832,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6346,
+      "line": 6347,
       "name": "VerifiedView",
       "text": "let grants = matches(\"VerifiedView<\\\\s*(\\\\w+),\\\\s*(\\\\w+)\\\\s*>\\\\.self;\", text)",
       "occurrence": 1,
@@ -1842,9 +1842,9 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6391,
+      "line": 6392,
       "name": "THE JUDGE",
-      "text": "// \u2500\u2500 THE JUDGE'S OWN READING, ASKED FOR. Nothing here grows a grammar over",
+      "text": "// ── THE JUDGE'S OWN READING, ASKED FOR. Nothing here grows a grammar over",
       "occurrence": 1,
       "task": "architecture-v1/r4/company-reader-after-T0038",
       "reason": "Architecture revision 4, Court of the company: owner artifacts and contracts, declared reader input, removal of built-in policy and subject-specific controls after T0038."
@@ -1852,7 +1852,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6670,
+      "line": 6671,
       "name": "seededWorld",
       "text": "let world = seededWorld(peoplePath, grantsPath)",
       "occurrence": 1,
@@ -1862,7 +1862,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6679,
+      "line": 6680,
       "name": "THE JUDGE",
       "text": "return (said.contains(\"THE JUDGE holds\") && refusals.isEmpty ? \"holds\" : \"refused\",",
       "occurrence": 1,
@@ -1872,9 +1872,9 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6700,
+      "line": 6701,
       "name": "grants.csv",
-      "text": "// \u2500\u2500 verify people.csv grants.csv [--against CMD]: the differential rule check.",
+      "text": "// ── verify people.csv grants.csv [--against CMD]: the differential rule check.",
       "occurrence": 1,
       "task": "T0069",
       "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
@@ -1882,9 +1882,9 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6700,
+      "line": 6701,
       "name": "people.csv",
-      "text": "// \u2500\u2500 verify people.csv grants.csv [--against CMD]: the differential rule check.",
+      "text": "// ── verify people.csv grants.csv [--against CMD]: the differential rule check.",
       "occurrence": 1,
       "task": "T0069",
       "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
@@ -1892,7 +1892,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6763,
+      "line": 6764,
       "name": "people.csv",
       "text": "let pp = (d as NSString).appendingPathComponent(\"people.csv\")",
       "occurrence": 1,
@@ -1902,7 +1902,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6764,
+      "line": 6765,
       "name": "grants.csv",
       "text": "let gp = (d as NSString).appendingPathComponent(\"grants.csv\")",
       "occurrence": 1,
@@ -1912,7 +1912,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6820,
+      "line": 6821,
       "name": "THE JUDGE",
       "text": "return (said.contains(\"THE JUDGE holds\") ? \"holds\" : \"refused\", refusals,",
       "occurrence": 1,
@@ -1922,7 +1922,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6930,
+      "line": 6931,
       "name": "func transferText",
       "text": "func transferText(_ text: String, _ who: String, _ dept: String) throws -> String {",
       "occurrence": 1,
@@ -1932,7 +1932,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6930,
+      "line": 6931,
       "name": "transferText",
       "text": "func transferText(_ text: String, _ who: String, _ dept: String) throws -> String {",
       "occurrence": 1,
@@ -1942,7 +1942,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6932,
+      "line": 6933,
       "name": "Employee",
       "text": "\"(public enum \\(who): Employee, Person \\\\{[^}]*?public typealias Home = )\\\\w+\",",
       "occurrence": 1,
@@ -1952,7 +1952,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6932,
+      "line": 6933,
       "name": "Person",
       "text": "\"(public enum \\(who): Employee, Person \\\\{[^}]*?public typealias Home = )\\\\w+\",",
       "occurrence": 1,
@@ -1962,7 +1962,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6935,
+      "line": 6936,
       "name": "VerifiedInDepartment",
       "text": "if let re = try? NSRegularExpression(pattern: \"(VerifiedInDepartment<\\\\s*\\(who),\\\\s*)\\\\w+\") {",
       "occurrence": 1,
@@ -1972,7 +1972,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6943,
+      "line": 6944,
       "name": "func grantText",
       "text": "func grantText(_ text: String, _ who: String, _ doc: String) throws -> String {",
       "occurrence": 1,
@@ -1982,7 +1982,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6943,
+      "line": 6944,
       "name": "grantText",
       "text": "func grantText(_ text: String, _ who: String, _ doc: String) throws -> String {",
       "occurrence": 1,
@@ -1992,7 +1992,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6944,
+      "line": 6945,
       "name": "VerifiedView",
       "text": "try lastEntryInsert(text, \"VerifiedView\", who, doc, 12)",
       "occurrence": 1,
@@ -2002,7 +2002,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6947,
+      "line": 6948,
       "name": "func revokeText",
       "text": "func revokeText(_ text: String, _ who: String, _ doc: String) throws -> String {",
       "occurrence": 1,
@@ -2012,7 +2012,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6947,
+      "line": 6948,
       "name": "revokeText",
       "text": "func revokeText(_ text: String, _ who: String, _ doc: String) throws -> String {",
       "occurrence": 1,
@@ -2022,7 +2022,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6948,
+      "line": 6949,
       "name": "VerifiedView",
       "text": "let pattern = \"\\\\n\\\\s*VerifiedView<\\\\s*\\(who),\\\\s*\\(doc)\\\\s*>\\\\.self;?\"",
       "occurrence": 1,
@@ -2032,7 +2032,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6996,
+      "line": 6997,
       "name": "func askViewAnswer",
       "text": "func askViewAnswer(_ w: WorldState, _ who: String, _ doc: String) -> Answered {",
       "occurrence": 1,
@@ -2042,7 +2042,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7007,
+      "line": 7008,
       "name": "VerifiedView",
       "text": "guard let probe = try? lastEntryInsert(readText(facts) ?? \"\", \"VerifiedView\", who, doc, 12)",
       "occurrence": 1,
@@ -2052,7 +2052,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7009,
+      "line": 7010,
       "name": "VerifiedView",
       "text": "return .cannot(note: \"no VerifiedView entries to anchor on\",",
       "occurrence": 1,
@@ -2062,7 +2062,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7045,
+      "line": 7046,
       "name": "FinanceShare",
       "text": "\"gate check view Emp0042 FinanceShare, with names your world declares \"",
       "occurrence": 1,
@@ -2072,7 +2072,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7051,
+      "line": 7052,
       "name": "FinanceShare",
       "text": "let asks = \"gate check view Emp0042 FinanceShare, with names your world declares \"",
       "occurrence": 1,
@@ -2082,9 +2082,9 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7081,
+      "line": 7082,
       "name": "diff transfer|grant|revoke",
-      "text": "// \u2500\u2500 diff transfer|grant|revoke \u00b7 apply the same words. The SINGLE",
+      "text": "// ── diff transfer|grant|revoke · apply the same words. The SINGLE",
       "occurrence": 1,
       "task": "T0069",
       "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
@@ -2092,7 +2092,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7087,
+      "line": 7088,
       "name": "func changeAnswer",
       "text": "func changeAnswer(_ w: WorldState, _ facts: String, _ rest: [String],",
       "occurrence": 1,
@@ -2102,7 +2102,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7093,
+      "line": 7094,
       "name": "\"transfer\"",
       "text": "case \"transfer\":",
       "occurrence": 1,
@@ -2112,7 +2112,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7093,
+      "line": 7094,
       "name": "case \"transfer\"",
       "text": "case \"transfer\":",
       "occurrence": 1,
@@ -2122,7 +2122,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7095,
+      "line": 7096,
       "name": "change transfer",
       "text": "return .cannot(note: \"change transfer WHO DEPT: this names too little\",",
       "occurrence": 1,
@@ -2132,7 +2132,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7098,
+      "line": 7099,
       "name": "transferText",
       "text": "do { made = try transferText(text, rest[1], rest[2]) }",
       "occurrence": 1,
@@ -2142,7 +2142,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7101,
+      "line": 7102,
       "name": "change transfer",
       "text": "label = [(\"command\", .text(\"change transfer\")), (\"who\", .text(rest[1])),",
       "occurrence": 1,
@@ -2152,7 +2152,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7105,
+      "line": 7106,
       "name": "\"grant\"",
       "text": "case \"grant\":",
       "occurrence": 1,
@@ -2162,7 +2162,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7105,
+      "line": 7106,
       "name": "case \"grant\"",
       "text": "case \"grant\":",
       "occurrence": 1,
@@ -2172,7 +2172,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7107,
+      "line": 7108,
       "name": "change grant",
       "text": "return .cannot(note: \"change grant WHO DOC: this names too little\",",
       "occurrence": 1,
@@ -2182,7 +2182,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7110,
+      "line": 7111,
       "name": "grantText",
       "text": "do { made = try grantText(text, rest[1], rest[2]) }",
       "occurrence": 1,
@@ -2192,7 +2192,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7113,
+      "line": 7114,
       "name": "change grant",
       "text": "label = [(\"command\", .text(\"change grant\")), (\"who\", .text(rest[1])),",
       "occurrence": 1,
@@ -2202,7 +2202,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7115,
+      "line": 7116,
       "name": "\"revoke\"",
       "text": "case \"revoke\":",
       "occurrence": 1,
@@ -2212,7 +2212,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7115,
+      "line": 7116,
       "name": "case \"revoke\"",
       "text": "case \"revoke\":",
       "occurrence": 1,
@@ -2222,7 +2222,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7117,
+      "line": 7118,
       "name": "change revoke",
       "text": "return .cannot(note: \"change revoke WHO DOC: this names too little\",",
       "occurrence": 1,
@@ -2232,7 +2232,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7120,
+      "line": 7121,
       "name": "revokeText",
       "text": "do { made = try revokeText(text, rest[1], rest[2]) }",
       "occurrence": 1,
@@ -2242,7 +2242,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7123,
+      "line": 7124,
       "name": "change revoke",
       "text": "label = [(\"command\", .text(\"change revoke\")), (\"who\", .text(rest[1])),",
       "occurrence": 1,
@@ -2252,9 +2252,9 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7164,
+      "line": 7165,
       "name": "diff grant|revoke",
-      "text": "let note = \"diff transfer WHO DEPT  \u00b7  diff grant|revoke WHO DOC  \u00b7  \"",
+      "text": "let note = \"diff transfer WHO DEPT  ·  diff grant|revoke WHO DOC  ·  \"",
       "occurrence": 1,
       "task": "T0069",
       "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
@@ -2262,9 +2262,9 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7164,
+      "line": 7165,
       "name": "diff transfer",
-      "text": "let note = \"diff transfer WHO DEPT  \u00b7  diff grant|revoke WHO DOC  \u00b7  \"",
+      "text": "let note = \"diff transfer WHO DEPT  ·  diff grant|revoke WHO DOC  ·  \"",
       "occurrence": 1,
       "task": "T0069",
       "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
@@ -2272,7 +2272,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7166,
+      "line": 7167,
       "name": "Sales",
       "text": "let next = \"gate diff transfer Emp0042 Sales shows what would move and what \"",
       "occurrence": 1,
@@ -2282,7 +2282,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7166,
+      "line": 7167,
       "name": "diff transfer",
       "text": "let next = \"gate diff transfer Emp0042 Sales shows what would move and what \"",
       "occurrence": 1,
@@ -2292,7 +2292,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7385,
+      "line": 7386,
       "name": "if rest.first == \"org\"",
       "text": "if rest.first == \"org\" {",
       "occurrence": 1,
@@ -2302,7 +2302,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7392,
+      "line": 7393,
       "name": "installExample(\"organization\"",
       "text": "installExample(\"organization\", root)",
       "occurrence": 1,
@@ -2312,7 +2312,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7399,
+      "line": 7400,
       "name": "people.csv",
       "text": "_ = selfSaid([\"import\", (root as NSString).appendingPathComponent(\"tables/people.csv\"),",
       "occurrence": 1,
@@ -2322,7 +2322,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7400,
+      "line": 7401,
       "name": "grants.csv",
       "text": "(root as NSString).appendingPathComponent(\"tables/grants.csv\"),",
       "occurrence": 1,
@@ -2332,7 +2332,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7405,
+      "line": 7406,
       "name": "STDLIB_TEXTS[\"forms-organization\"]",
       "text": "var body = (STDLIB_TEXTS[\"forms-organization\"] ?? \"\").components(separatedBy: \"\\n\")",
       "occurrence": 1,
@@ -2342,7 +2342,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7405,
+      "line": 7406,
       "name": "organization",
       "text": "var body = (STDLIB_TEXTS[\"forms-organization\"] ?? \"\").components(separatedBy: \"\\n\")",
       "occurrence": 1,
@@ -2352,7 +2352,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7414,
+      "line": 7415,
       "name": "organization",
       "text": "put(root, \"forms-organization.swift\", forms)",
       "occurrence": 1,
@@ -2362,7 +2362,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7415,
+      "line": 7416,
       "name": "organization",
       "text": "_ = declareSideHere((root as NSString).appendingPathComponent(\"forms-organization.swift\"),",
       "occurrence": 1,
@@ -2372,9 +2372,9 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7417,
+      "line": 7418,
       "name": "THE JUDGE",
-      "text": "// \u2500\u2500 AND THE JUDGE'S OWN ROW, WRITTEN IN YOUR NAME. Nothing stands in",
+      "text": "// ── AND THE JUDGE'S OWN ROW, WRITTEN IN YOUR NAME. Nothing stands in",
       "occurrence": 1,
       "task": "architecture-v1/r4/company-reader-after-T0038",
       "reason": "Architecture revision 4, Court of the company: owner artifacts and contracts, declared reader input, removal of built-in policy and subject-specific controls after T0038."
@@ -2382,7 +2382,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7441,
+      "line": 7442,
       "name": "EngineeringShare",
       "text": "let asked = readSaid(selfSaid([\"check\", \"view\", \"Emp9001\", \"EngineeringShare\", \"--json\"],",
       "occurrence": 1,
@@ -2392,18 +2392,8 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7452,
+      "line": 7453,
       "name": "FinanceShare",
-      "text": "\"gate apply revoke Emp9002 FinanceShare  an edit judged before it lands\",",
-      "occurrence": 1,
-      "task": "T0069",
-      "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
-    },
-    {
-      "path": "bin/gate-cli.swift",
-      "channel": "text",
-      "line": 7452,
-      "name": "apply revoke",
       "text": "\"gate apply revoke Emp9002 FinanceShare  an edit judged before it lands\",",
       "occurrence": 1,
       "task": "T0069",
@@ -2413,6 +2403,16 @@
       "path": "bin/gate-cli.swift",
       "channel": "text",
       "line": 7453,
+      "name": "apply revoke",
+      "text": "\"gate apply revoke Emp9002 FinanceShare  an edit judged before it lands\",",
+      "occurrence": 1,
+      "task": "T0069",
+      "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
+    },
+    {
+      "path": "bin/gate-cli.swift",
+      "channel": "text",
+      "line": 7454,
       "name": "Engineering",
       "text": "\"open gate.swift and change one Home to Engineering, and the judge \"",
       "occurrence": 1,
@@ -2422,7 +2422,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7457,
+      "line": 7458,
       "name": "EngineeringShare",
       "text": "words.append(\"  asked `gate check view Emp9001 EngineeringShare` for you, \"",
       "occurrence": 1,
@@ -2432,7 +2432,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7465,
+      "line": 7466,
       "name": "EngineeringShare",
       "text": "(\"asked\", .text(\"gate check view Emp9001 EngineeringShare\")),",
       "occurrence": 1,
@@ -2442,7 +2442,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 8123,
+      "line": 8124,
       "name": "VerifiedAtRank",
       "text": "do { probe = try lastEntryInsert(readText(facts) ?? \"\", \"VerifiedAtRank\", who, required, 8) }",
       "occurrence": 1,
@@ -2452,7 +2452,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 8148,
+      "line": 8149,
       "name": "grants.csv",
       "text": "let next = \"gate verify people.csv grants.csv [--against CMD]: the two tables, \"",
       "occurrence": 1,
@@ -2462,7 +2462,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 8148,
+      "line": 8149,
       "name": "people.csv",
       "text": "let next = \"gate verify people.csv grants.csv [--against CMD]: the two tables, \"",
       "occurrence": 1,
@@ -2472,7 +2472,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 8255,
+      "line": 8256,
       "name": "people.csv",
       "text": "let said = verifySeeds((tables as NSString).appendingPathComponent(\"people.csv\"),",
       "occurrence": 1,
@@ -2482,7 +2482,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 8256,
+      "line": 8257,
       "name": "grants.csv",
       "text": "(tables as NSString).appendingPathComponent(\"grants.csv\"), nil)",
       "occurrence": 1,
@@ -2492,9 +2492,9 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 9134,
+      "line": 9135,
       "name": "grants.csv",
-      "text": "// \u2500\u2500 import people.csv grants.csv [-o gate.swift]",
+      "text": "// ── import people.csv grants.csv [-o gate.swift]",
       "occurrence": 1,
       "task": "T0069",
       "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
@@ -2502,9 +2502,9 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 9134,
+      "line": 9135,
       "name": "people.csv",
-      "text": "// \u2500\u2500 import people.csv grants.csv [-o gate.swift]",
+      "text": "// ── import people.csv grants.csv [-o gate.swift]",
       "occurrence": 1,
       "task": "T0069",
       "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
@@ -2512,9 +2512,9 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 9137,
+      "line": 9138,
       "name": "grants.csv",
-      "text": "let note = \"import people.csv grants.csv [-o gate.swift]  \u00b7  \"",
+      "text": "let note = \"import people.csv grants.csv [-o gate.swift]  ·  \"",
       "occurrence": 1,
       "task": "T0069",
       "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
@@ -2522,9 +2522,9 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 9137,
+      "line": 9138,
       "name": "people.csv",
-      "text": "let note = \"import people.csv grants.csv [-o gate.swift]  \u00b7  \"",
+      "text": "let note = \"import people.csv grants.csv [-o gate.swift]  ·  \"",
       "occurrence": 1,
       "task": "T0069",
       "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
@@ -2532,7 +2532,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 9278,
+      "line": 9279,
       "name": "worldRows",
       "text": "let (people, grants) = worldRows(text)",
       "occurrence": 1,
@@ -2542,7 +2542,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 9282,
+      "line": 9283,
       "name": "THE JUDGE",
       "text": "let holds = said.contains(\"THE JUDGE holds\")",
       "occurrence": 1,
@@ -2552,9 +2552,9 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 9342,
+      "line": 9343,
       "name": "\"grant\"",
-      "text": "<p>\\(many(people.count, \"person\", \"people\")) \u00b7 \\(many(grants.count, \"grant\")) \u00b7 judged in \\(judgeMs.map { floatRepr($0) + \" ms\" } ?? \"an unread clock\")</p>",
+      "text": "<p>\\(many(people.count, \"person\", \"people\")) · \\(many(grants.count, \"grant\")) · judged in \\(judgeMs.map { floatRepr($0) + \" ms\" } ?? \"an unread clock\")</p>",
       "occurrence": 1,
       "task": "T0069",
       "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
@@ -2562,7 +2562,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 9344,
+      "line": 9345,
       "name": "People",
       "text": "<h2>People</h2>\\(table(people, [\"id\", \"rank\", \"home\", \"site\", \"given\", \"family\", \"born\"]))",
       "occurrence": 1,
@@ -2572,7 +2572,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 9961,
+      "line": 9962,
       "name": "THE JUDGE",
       "text": "let ok = !wrote.isEmpty && courtSays(wrote).contains(\"THE JUDGE holds\")",
       "occurrence": 1,
@@ -2582,7 +2582,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 10116,
+      "line": 10117,
       "name": "THE JUDGE",
       "text": "formsChecked(whereSize) + (raw.contains(\"THE JUDGE holds\") ? 1 : 0))",
       "occurrence": 1,
@@ -2592,7 +2592,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 10977,
+      "line": 10978,
       "name": "judge.js",
       "text": "for rel in [\"bin/judge.js\", \"bin/judge-wasm.js\", \"bin/court-wasm.from\",",
       "occurrence": 1,
@@ -2602,7 +2602,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11024,
+      "line": 11025,
       "name": "company",
       "text": "// and the company's plain court beside it, built from the showcase at its",
       "occurrence": 1,
@@ -2612,7 +2612,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11026,
+      "line": 11027,
       "name": "organization-judge",
       "text": "let osrc = (here as NSString).appendingPathComponent(\"bin/organization-judge\")",
       "occurrence": 1,
@@ -2622,7 +2622,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11028,
+      "line": 11029,
       "name": "organization-judge",
       "text": "let odst = (dst as NSString).appendingPathComponent(\"bin/organization-judge\")",
       "occurrence": 1,
@@ -2632,7 +2632,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11031,
+      "line": 11032,
       "name": "organization-judge",
       "text": "carried.append(\"bin/organization-judge\")",
       "occurrence": 1,
@@ -2642,7 +2642,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11034,
+      "line": 11035,
       "name": "organization-judge",
       "text": "carried.append(\"bin/organization-judge.from\")",
       "occurrence": 1,
@@ -2652,7 +2652,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11710,
+      "line": 11724,
       "name": "grants.csv",
       "text": "let next = \"gate export gate.swift -o people.csv grants.csv, then diff each \"",
       "occurrence": 1,
@@ -2662,7 +2662,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11710,
+      "line": 11724,
       "name": "people.csv",
       "text": "let next = \"gate export gate.swift -o people.csv grants.csv, then diff each \"",
       "occurrence": 1,
@@ -2672,7 +2672,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11721,
+      "line": 11735,
       "name": "grants.csv",
       "text": "+ \"`gate export gate.swift -o people.csv grants.csv`\",",
       "occurrence": 1,
@@ -2682,7 +2682,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11721,
+      "line": 11735,
       "name": "people.csv",
       "text": "+ \"`gate export gate.swift -o people.csv grants.csv`\",",
       "occurrence": 1,
@@ -2692,7 +2692,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11742,
+      "line": 11756,
       "name": "GivenNameCycle",
       "text": "let sexPool = Dictionary(matches(\"public enum (\\\\w+): GivenNameCycle \\\\{.*?Sex = (\\\\w+)\",",
       "occurrence": 1,
@@ -2702,7 +2702,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11748,
+      "line": 11762,
       "name": "Employee",
       "text": "pattern: \"public enum (\\\\w+): Employee, Person \\\\{(.*?)\\\\n\\\\}\",",
       "occurrence": 1,
@@ -2712,7 +2712,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11748,
+      "line": 11762,
       "name": "Person",
       "text": "pattern: \"public enum (\\\\w+): Employee, Person \\\\{(.*?)\\\\n\\\\}\",",
       "occurrence": 1,
@@ -2722,7 +2722,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11782,
+      "line": 11796,
       "name": "VerifiedView",
       "text": "let grants = matches(\"VerifiedView<\\\\s*(\\\\w+),\\\\s*(\\\\w+)\\\\s*>\\\\.self;?\", text)",
       "occurrence": 1,
@@ -2732,9 +2732,9 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11800,
+      "line": 11814,
       "name": "\"grant\"",
-      "text": "+ many(grants.count, \"grant\") + \" \u2192 \"",
+      "text": "+ many(grants.count, \"grant\") + \" → \"",
       "occurrence": 1,
       "task": "T0069",
       "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
@@ -2742,7 +2742,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11847,
+      "line": 11861,
       "name": "wholeCompany",
       "text": "func courtSays(_ asked: [String], wholeCompany: Bool = false) -> String {",
       "occurrence": 1,
@@ -2752,7 +2752,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11853,
+      "line": 11867,
       "name": "companyLines",
       "text": "var companyLines: [(path: String, start: Int, count: Int)] = []",
       "occurrence": 1,
@@ -2762,7 +2762,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11856,
+      "line": 11870,
       "name": "wholeCompany",
       "text": "if wholeCompany && supplied.count > 1 {",
       "occurrence": 1,
@@ -2772,7 +2772,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11869,
+      "line": 11883,
       "name": "companyLines",
       "text": "companyLines.append((name, start, count))",
       "occurrence": 1,
@@ -2782,7 +2782,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11872,
+      "line": 11886,
       "name": "company",
       "text": "if projected == nil { projected = scratchDir(\"gate-company-\") }",
       "occurrence": 1,
@@ -2792,7 +2792,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11873,
+      "line": 11887,
       "name": "company",
       "text": "let target = joinPath(projected!, \"gate-company-stream.swift\")",
       "occurrence": 1,
@@ -2802,7 +2802,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11879,
+      "line": 11893,
       "name": "companyLines",
       "text": "guard !companyLines.isEmpty,",
       "occurrence": 1,
@@ -2812,7 +2812,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11880,
+      "line": 11894,
       "name": "company",
       "text": "let pattern = try? NSRegularExpression(pattern: \"gate-company-stream\\\\.swift:([0-9]+)\") else { return answer }",
       "occurrence": 1,
@@ -2822,7 +2822,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11884,
+      "line": 11898,
       "name": "companyLines",
       "text": "let part = companyLines.first(where: { line >= $0.start && line < $0.start + $0.count }) else { continue }",
       "occurrence": 1,
@@ -2832,7 +2832,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 12123,
+      "line": 12137,
       "name": "/check/view",
       "text": "//   GET  /check/view           does this grant hold, asked without writing",
       "occurrence": 1,
@@ -2842,7 +2842,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 12126,
+      "line": 12140,
       "name": "/diff/transfer",
       "text": "//   GET  /diff/transfer        what a change would do, and nothing done",
       "occurrence": 1,
@@ -2852,7 +2852,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 12132,
+      "line": 12146,
       "name": "judge.js",
       "text": "//   GET  /judge.js             the ported court, for the page to judge with",
       "occurrence": 1,
@@ -2862,7 +2862,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 13234,
+      "line": 13248,
       "name": "/check/view",
       "text": ".text(\"/check/view?who=&doc=\"), .text(\"/diff/transfer?who=&to=\")])),",
       "occurrence": 1,
@@ -2872,7 +2872,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 13234,
+      "line": 13248,
       "name": "/diff/transfer",
       "text": ".text(\"/check/view?who=&doc=\"), .text(\"/diff/transfer?who=&to=\")])),",
       "occurrence": 1,
@@ -2882,7 +2882,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 13297,
+      "line": 13311,
       "name": "judge.js",
       "text": "case (\"GET\", \"/judge.js\"):",
       "occurrence": 1,
@@ -2892,7 +2892,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 13299,
+      "line": 13313,
       "name": "judge.js",
       "text": "serveFile(conn, joinPath(toolRoot(), \"bin/judge.js\"),",
       "occurrence": 1,
@@ -2902,7 +2902,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 13413,
+      "line": 13428,
       "name": "/check/view",
       "text": "case (\"GET\", \"/check/view\"):",
       "occurrence": 1,
@@ -2912,7 +2912,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 13424,
+      "line": 13439,
       "name": "/check/view",
       "text": "next: \"/check/view?who=Emp0042&doc=FinanceShare\")))",
       "occurrence": 1,
@@ -2922,7 +2922,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 13424,
+      "line": 13439,
       "name": "FinanceShare",
       "text": "next: \"/check/view?who=Emp0042&doc=FinanceShare\")))",
       "occurrence": 1,
@@ -2932,7 +2932,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 13428,
+      "line": 13443,
       "name": "/diff/transfer",
       "text": "case (\"GET\", \"/diff/transfer\"):",
       "occurrence": 1,
@@ -2942,7 +2942,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 13433,
+      "line": 13448,
       "name": "diff transfer",
       "text": "note: \"diff transfer asks who moves, and where to\",",
       "occurrence": 1,
@@ -2952,7 +2952,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 13434,
+      "line": 13449,
       "name": "/diff/transfer",
       "text": "next: \"/diff/transfer?who=Emp0042&to=Sales\")))",
       "occurrence": 1,
@@ -2962,7 +2962,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 13434,
+      "line": 13449,
       "name": "Sales",
       "text": "next: \"/diff/transfer?who=Emp0042&to=Sales\")))",
       "occurrence": 1,
@@ -2972,7 +2972,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 13437,
+      "line": 13452,
       "name": "\"transfer\"",
       "text": "changeAnswer(w, facts, [\"transfer\", who, to], applyIt: false)))",
       "occurrence": 1,
@@ -2982,7 +2982,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 13725,
+      "line": 13744,
       "name": "wholeCompany",
       "text": "let raw = courtSays(paths, wholeCompany: true)",
       "occurrence": 1,
@@ -2992,7 +2992,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 14026,
+      "line": 14045,
       "name": "judge.js",
       "text": "\"publication.js\": \"web/publication.js\", \"judge.js\": \"bin/judge.js\", \"renderer.js\": \"bin/renderer.js\",",
       "occurrence": 1,
@@ -3002,7 +3002,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 14328,
+      "line": 14348,
       "name": "organization-court",
       "text": "\"installed\": [\"gate\": gateVersion(), \"organization_revision\": runtimeData(\"bin/organization-court.from\").flatMap { String(data: $0, encoding: .utf8)?.components(separatedBy: \"\\n\").first } ?? \"\", \"binary_sha256\": FileManager.default.contents(atPath: absPath(CommandLine.arguments[0])).map { sha256Hex($0) } ?? \"\", \"judge_revision\": judgeFrom() ?? \"\", \"wasm\": assets[\"assets/vi_court_bytes.js\"] ?? \"\", \"stdlib\": Dictionary(uniqueKeysWithValues: shelf().map { ($0.name, sha256Hex(Data($0.text.utf8))) })], \"assets\": assets, \"resources\": resources]",
       "occurrence": 1,
@@ -3012,7 +3012,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 14328,
+      "line": 14348,
       "name": "organization_revision",
       "text": "\"installed\": [\"gate\": gateVersion(), \"organization_revision\": runtimeData(\"bin/organization-court.from\").flatMap { String(data: $0, encoding: .utf8)?.components(separatedBy: \"\\n\").first } ?? \"\", \"binary_sha256\": FileManager.default.contents(atPath: absPath(CommandLine.arguments[0])).map { sha256Hex($0) } ?? \"\", \"judge_revision\": judgeFrom() ?? \"\", \"wasm\": assets[\"assets/vi_court_bytes.js\"] ?? \"\", \"stdlib\": Dictionary(uniqueKeysWithValues: shelf().map { ($0.name, sha256Hex(Data($0.text.utf8))) })], \"assets\": assets, \"resources\": resources]",
       "occurrence": 1,
@@ -3022,7 +3022,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 14345,
+      "line": 14365,
       "name": "judge.js",
       "text": "for asset in [\"codemirror.js\", \"codemirror.css\", \"judge.js\", \"renderer.js\", \"press.js\", \"drawing-profile.js\"] {",
       "occurrence": 1,
@@ -3032,7 +3032,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 14482,
+      "line": 14502,
       "name": "organization-court",
       "text": "let orgFrom = joinPath(toolRoot(), \"bin/organization-court.from\")",
       "occurrence": 1,
@@ -3042,7 +3042,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 14484,
+      "line": 14504,
       "name": "company",
       "text": "lines.append(\"  company court from verification-is-identification-showcase \"",
       "occurrence": 1,
@@ -3052,7 +3052,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 14485,
+      "line": 14505,
       "name": "organization-judge",
       "text": "+ String(org.prefix(12)) + \". `bin/build-organization-judge.sh` builds it\")",
       "occurrence": 1,
@@ -3104,7 +3104,7 @@
       "channel": "text",
       "line": 65,
       "name": "THE JUDGE",
-      "text": "process.stderr.write(\"\u2717 THE JUDGE needs the files it reads: `swift run ShowcaseTools judge <path>\u2026`\\n\");",
+      "text": "process.stderr.write(\"✗ THE JUDGE needs the files it reads: `swift run ShowcaseTools judge <path>…`\\n\");",
       "occurrence": 1,
       "task": "architecture-v1/r4/company-reader-after-T0038",
       "reason": "Architecture revision 4, Court of the company: owner artifacts and contracts, declared reader input, removal of built-in policy and subject-specific controls after T0038."
@@ -3124,7 +3124,7 @@
       "channel": "text",
       "line": 78,
       "name": "THE JUDGE",
-      "text": "process.stderr.write(\"\u2717 THE JUDGE cannot read the corpus\\n\");",
+      "text": "process.stderr.write(\"✗ THE JUDGE cannot read the corpus\\n\");",
       "occurrence": 1,
       "task": "architecture-v1/r4/company-reader-after-T0038",
       "reason": "Architecture revision 4, Court of the company: owner artifacts and contracts, declared reader input, removal of built-in policy and subject-specific controls after T0038."
@@ -3134,7 +3134,7 @@
       "channel": "text",
       "line": 86,
       "name": "THE JUDGE",
-      "text": "console.log(`\u2717 THE JUDGE refuses ${refusals.length} claim(s) in ${t} ms:`);",
+      "text": "console.log(`✗ THE JUDGE refuses ${refusals.length} claim(s) in ${t} ms:`);",
       "occurrence": 1,
       "task": "architecture-v1/r4/company-reader-after-T0038",
       "reason": "Architecture revision 4, Court of the company: owner artifacts and contracts, declared reader input, removal of built-in policy and subject-specific controls after T0038."
@@ -3144,7 +3144,7 @@
       "channel": "text",
       "line": 90,
       "name": "THE JUDGE",
-      "text": "console.log(`\u2713 THE JUDGE holds: ${decl} declarations \u00b7 ${lookups} lookups \u00b7 `",
+      "text": "console.log(`✓ THE JUDGE holds: ${decl} declarations · ${lookups} lookups · `",
       "occurrence": 1,
       "task": "architecture-v1/r4/company-reader-after-T0038",
       "reason": "Architecture revision 4, Court of the company: owner artifacts and contracts, declared reader input, removal of built-in policy and subject-specific controls after T0038."
@@ -7774,7 +7774,7 @@
       "channel": "text",
       "line": 613,
       "name": "THE JUDGE",
-      "text": "# \u2500\u2500 AND THE JUDGE'S OWN LINKAGE OPENS NO SOCKET. DETAILS hands a reviewer",
+      "text": "# ── AND THE JUDGE'S OWN LINKAGE OPENS NO SOCKET. DETAILS hands a reviewer",
       "occurrence": 1,
       "task": "architecture-v1/r4/company-reader-after-T0038",
       "reason": "Architecture revision 4, Court of the company: owner artifacts and contracts, declared reader input, removal of built-in policy and subject-specific controls after T0038."
@@ -8414,7 +8414,7 @@
       "channel": "text",
       "line": 3277,
       "name": "judge.js",
-      "text": "# \u2500\u2500 AND EVERY COURT TRAVELS, OR THE CARRY IS HALF A TOOL. `bin/judge.js` went",
+      "text": "# ── AND EVERY COURT TRAVELS, OR THE CARRY IS HALF A TOOL. `bin/judge.js` went",
       "occurrence": 1,
       "task": "architecture-v1/r4/company-reader-after-T0038",
       "reason": "Architecture revision 4, Court of the company: owner artifacts and contracts, declared reader input, removal of built-in policy and subject-specific controls after T0038."
@@ -8734,7 +8734,7 @@
       "channel": "text",
       "line": 5762,
       "name": "Ranked",
-      "text": "# Department, Ranked, Site \u2014 and they are plain Swift, readable and copyable.",
+      "text": "# Department, Ranked, Site — and they are plain Swift, readable and copyable.",
       "occurrence": 1,
       "task": "T0069",
       "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
@@ -9064,7 +9064,7 @@
       "channel": "text",
       "line": 6378,
       "name": "THE JUDGE",
-      "text": "# \u2500\u2500 THE JUDGE'S TABLES ARE A RESTATEMENT OF A FILE WE ALREADY SHIP. Our port",
+      "text": "# ── THE JUDGE'S TABLES ARE A RESTATEMENT OF A FILE WE ALREADY SHIP. Our port",
       "occurrence": 1,
       "task": "architecture-v1/r4/company-reader-after-T0038",
       "reason": "Architecture revision 4, Court of the company: owner artifacts and contracts, declared reader input, removal of built-in policy and subject-specific controls after T0038."
@@ -9584,7 +9584,7 @@
       "channel": "text",
       "line": 7249,
       "name": "THE JUDGE",
-      "text": "# \u2500\u2500 NOT EVERYTHING UNDER `THEIRS` IS THE JUDGE'S, and the panel says which",
+      "text": "# ── NOT EVERYTHING UNDER `THEIRS` IS THE JUDGE'S, and the panel says which",
       "occurrence": 1,
       "task": "architecture-v1/r4/company-reader-after-T0038",
       "reason": "Architecture revision 4, Court of the company: owner artifacts and contracts, declared reader input, removal of built-in policy and subject-specific controls after T0038."
@@ -11604,7 +11604,7 @@
       "channel": "text",
       "line": 1104,
       "name": "THE JUDGE",
-      "text": "// \u2500\u2500 THE WORDS THE JUDGE CARRIES, and the reason they are not on either of the",
+      "text": "// ── THE WORDS THE JUDGE CARRIES, and the reason they are not on either of the",
       "occurrence": 1,
       "task": "architecture-v1/r4/company-reader-after-T0038",
       "reason": "Architecture revision 4, Court of the company: owner artifacts and contracts, declared reader input, removal of built-in policy and subject-specific controls after T0038."
@@ -11624,7 +11624,7 @@
       "channel": "text",
       "line": 1177,
       "name": "THE JUDGE",
-      "text": "// \u2500\u2500 AND NOT EVERYTHING UNDER `THEIRS` IS THE JUDGE'S. Three different things",
+      "text": "// ── AND NOT EVERYTHING UNDER `THEIRS` IS THE JUDGE'S. Three different things",
       "occurrence": 1,
       "task": "architecture-v1/r4/company-reader-after-T0038",
       "reason": "Architecture revision 4, Court of the company: owner artifacts and contracts, declared reader input, removal of built-in policy and subject-specific controls after T0038."
@@ -11654,7 +11654,7 @@
       "channel": "text",
       "line": 2331,
       "name": "VerifiedInDepartment",
-      "text": "// VerifiedInDepartment \u2026). Each becomes a table of the entry's arguments.",
+      "text": "// VerifiedInDepartment …). Each becomes a table of the entry's arguments.",
       "occurrence": 1,
       "task": "architecture-v1/r4/company-reader-after-T0038",
       "reason": "Architecture revision 4, Court of the company: owner artifacts and contracts, declared reader input, removal of built-in policy and subject-specific controls after T0038."
@@ -11721,7 +11721,7 @@
       "channel": "text",
       "line": 348,
       "name": "judge.js",
-      "text": "bin/judge.js \u00b7 bin/judge-cli.js \u00b7 bin/judge-wasm.js \u00b7 bin/court-wasm/",
+      "text": "bin/judge.js · bin/judge-cli.js · bin/judge-wasm.js · bin/court-wasm/",
       "occurrence": 1,
       "class": "reference",
       "reason": "Public navigation and description of the existing commands; the executable dependencies are recorded separately."
