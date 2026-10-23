@@ -8,6 +8,16 @@ const GateWorldCourt = require("../bin/world-court.js");
 const GateCourtContexts = require("../bin/court-contexts.js");
 const root = process.argv[2], record = JSON.parse(fs.readFileSync(path.join(root, "worlds.from")));
 const storage = Object.create({ getItem(k) { return this[k] ?? null; }, setItem(k,v) { this[k] = String(v); }, removeItem(k) { delete this[k]; } });
+async function draftKey(page, file) {
+    const files = await (await page.fetch("/files")).json();
+    assert(files.reader_draft_namespace, "the delivered snapshot must name its draft namespace");
+    return files.reader_draft_namespace + file;
+}
+function baseDigest(id) {
+    const folder = id === "demo" ? root : path.join(root,"playground",id);
+    const match = fs.readFileSync(path.join(folder,"index.html"),"utf8").match(/const BASE_INPUTS = ("[a-f0-9]{64}");/);
+    assert(match,"the finished snapshot must bind its base"); return JSON.parse(match[1]);
+}
 function open(id, options = {}) {
     const folder = id === "demo" ? root : path.join(root, "playground", id);
     const {lint} = fs.existsSync(path.join(folder, "playground-lint.js")) ? require(path.join(folder, "playground-lint.js")) : {};
@@ -16,7 +26,7 @@ function open(id, options = {}) {
     const at = page.indexOf("wasm_bindgen.initSync("), start = page.lastIndexOf("<script>", at) + 8, end = page.indexOf("</script>", at);
     assert(at >= 0 && end > start);
     const scope = { localStorage: storage, wasm_bindgen: { ...court, initSync() {} }, VI_COURT_WASM_BASE64: "",
-        Uint8Array, atob, Response, Map, GateWorldCourt, GateCourtContexts, judge, lint, pageGuards, kitVocabulary, location: { search: "" }, fetch: async () => { throw Error("unexpected network"); } };
+        Uint8Array, atob, Response, Map, TextEncoder, crypto:require("crypto").webcrypto, GateWorldCourt, GateCourtContexts, judge, lint, pageGuards, kitVocabulary, location: { search: "" }, fetch: async () => { throw Error("unexpected network"); } };
     scope.document = {addEventListener(){}};
     scope.window = scope;
     if (options.fileWorker) {
@@ -54,6 +64,7 @@ function open(id, options = {}) {
         // The finished artifact supplies the same wasm bytes to its Blob.
         vm.runInNewContext(fs.readFileSync(path.join(folder,"court/vi_court_bytes.js"),"utf8"), scope);
     }
+    vm.runInNewContext(fs.readFileSync(path.join(folder, "reader-draft.js"), "utf8"), scope);
     vm.runInNewContext(page.slice(start, end), scope);
     return scope;
 }
@@ -106,7 +117,7 @@ function mark(name) {
     const rootEdit = await (await ordinary.fetch("/world?f="+rootFile)).text() + "\n// reader's ordinary-world edit\n";
     assert.strictEqual((await (await ordinary.fetch("/files")).json()).save_policy,"reader-draft");
     assert((await ordinary.fetch("/world?f="+rootFile,{method:"PUT",body:rootEdit})).ok);
-    const ordinaryRow = JSON.parse(storage.getItem("gate.reader-draft.v1."+rootFile));
+    const ordinaryRow = JSON.parse(storage.getItem(await draftKey(ordinary,rootFile)));
     assert.strictEqual(ordinaryRow.text,rootEdit);
     assert.strictEqual(ordinaryRow.verdict.verdict,"refused");
     assert.strictEqual(await (await open("demo").fetch("/world?f="+rootFile)).text(),rootEdit);
@@ -163,7 +174,7 @@ function mark(name) {
     assert.strictEqual(writes,1);
     const reopened = open("atom");
     assert.strictEqual(await (await reopened.fetch("/world?f="+encodeURIComponent(f))).text(), state.text);
-    const key = "gate.pages." + record.showcase.revision + ".atom." + f;
+    const key = await draftKey(atom,f);
     const kept = JSON.parse(storage.getItem(key));
     assert.strictEqual(kept.text,state.text); assert.strictEqual(kept.verdict.verdict,"refused");
     assert(kept.verdict.refusals.length > 0);
@@ -185,7 +196,7 @@ function mark(name) {
     assert(big.length >= 300000, "exercise compact drafts on a large owner part");
     const wrong = big.replace(needle,"VerifiedView<Emp12799, FinanceShare>"); assert.notStrictEqual(wrong,big);
     await scale.fetch("/world?f="+scaleFile,{method:"PUT",body:wrong});
-    const bigKey = "gate.pages." + record.showcase.revision + ".scale."+scaleFile;
+    const bigKey = await draftKey(scale,scaleFile);
     assert(storage.getItem(bigKey).length < 100000);
     assert.strictEqual(JSON.parse(storage.getItem(bigKey)).verdict.verdict,"refused");
     assert.strictEqual(await (await open("scale").fetch("/world?f="+scaleFile)).text(),wrong);
@@ -204,8 +215,8 @@ function mark(name) {
         for (const f of taken) {
             assert(listed.files.includes(f));
             const pinned = snapshots["/world?f=" + f];
-            const key = "gate.pages." + record.showcase.revision + "." + id + "." + f;
-            storage.setItem(key, JSON.stringify({format: 1, text: "forged prior draft"}));
+            const key = await draftKey(page,f);
+            storage.setItem(key, JSON.stringify({format: 1, text: "forged prior draft", base_inputs_digest:baseDigest(id)}));
             assert.strictEqual(await (await page.fetch("/world?f=" + encodeURIComponent(f))).text(), pinned);
             const wrote = await page.fetch("/world?f=" + encodeURIComponent(f), {method:"PUT", body:"forged write"});
             assert.strictEqual(wrote.status, 409);
@@ -219,7 +230,7 @@ function mark(name) {
     const failed = await reopened.fetch("/world?f="+encodeURIComponent(f),{method:"PUT",body:state.text});
     assert.strictEqual(failed.status,507);
     atom.render = async()=>{};
-    await atom.tick(true); assert(el.textContent.includes("not saved: " + f) && el.textContent.includes("browser storage unavailable"));
+    await atom.tick(true); assert(el.textContent.includes("not saved: " + f) && el.textContent.includes("reader draft not saved"));
     delete storage.setItem;
     reopened.__resetWipe(); assert.strictEqual(storage.getItem(key),null);
     mark('Atom file-worker court and Blob lifetime');

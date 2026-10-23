@@ -5564,6 +5564,12 @@ const filled = (body, name) => body.concat(["public enum H1: Holder {",
               _drafts.returncode == 0))
     if _drafts.returncode:
         print(_drafts.stdout + _drafts.stderr, flush=True)
+    _storage = subprocess.run(["node", os.path.join(HERE, "tests", "draft-storage.js")],
+                              capture_output=True, text=True)
+    S.append(("reader drafts bind their namespace and base, recover scoped records and never replay stored verdicts",
+              _storage.returncode == 0))
+    if _storage.returncode:
+        print(_storage.stdout + _storage.stderr, flush=True)
     _script_policy = re.search(r"script-src ([^;]+)", _page).group(1)
     S.append(("the bench authorizes only its exact inline programs and blocks inline handlers",
               "'unsafe-inline'" not in _script_policy

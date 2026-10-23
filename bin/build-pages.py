@@ -128,7 +128,18 @@ def publish(source, out, context=None):
 
     forms = set(files.get("forms") or [])
     layout = files.get("layout")
+    # This older carrier has no declared Publication. Its compatibility
+    # namespace is bound to the recorded source bytes and declared pin/world;
+    # it is not presented as a publication/1 identity.
+    origin = {"pin": context["pin"], "world": context["world"], "source": context.get("origin")} if context else None
+    inputs_digest = hashlib.sha256(json.dumps({"texts": texts, "origin": origin},
+        sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")).hexdigest()
+    storage_prefix = "gate.snapshot.draft." + inputs_digest + "/"
+    old_prefix = "gate.pages." + context["pin"] + "." + context["world"] + "." if context else None
+    legacy_drafts = [{"prefix": old_prefix, "format": "records", "baseInputsDigest": inputs_digest}] if old_prefix and context.get("origin", {}).get("kind") == "pinned" else []
+    preference_keys = [old_prefix + "theme", old_prefix + "layout"] if old_prefix else ["gate.theme.declared", "gate.bench.layout"]
     shim = """
+<script src="reader-draft.js"></script>
 <script src="court/vi_court.js"></script>
 <script src="court/vi_court_bytes.js"></script>
 <script>
@@ -160,9 +171,8 @@ function judgeWhereTexts(text, extraTexts) {
     const SNAP = __SNAP__;
     const CONTEXT = __CONTEXT__;
     const STORAGE = __STORAGE__;
-    // Older ordinary pages read their key as raw Swift. Keep structured drafts
-    // in a different protocol namespace so an open old page never reads JSON.
-    const LEGACY_STORAGE = CONTEXT ? null : "gate.pages.";
+    const BASE_INPUTS = __INPUTS_DIGEST__;
+    const LEGACY_DRAFTS = __LEGACY_DRAFTS__;
     // A legacy snapshot grants reader drafts unless its declared plan says
     // otherwise. A transport never widens an explicit ReadOnly capability.
     const SAVE_POLICY = JSON.parse(SNAP["/files"]).save_policy || "reader-draft";
@@ -205,56 +215,15 @@ function judgeWhereTexts(text, extraTexts) {
     /* A snapshot stores reader text and its verdict, including red. This is
        a browser draft, not the native host's on-holds write to a repository.
        A saved verdict never substitutes for judging the reopened world. */
-    function keptDraft(f) {
-        if (!READER_DRAFT || THEIRS[f]) return null;
-        try {
-            const raw = localStorage.getItem(STORAGE + f);
-            if (raw === null) {
-                const legacy = LEGACY_STORAGE ? localStorage.getItem(LEGACY_STORAGE + f) : null;
-                return legacy === null ? null : { text: legacy, verdict: null };
-            }
-            try {
-                const row = JSON.parse(raw);
-                if (row.format === 1 && typeof row.text === "string") return row;
-                if (row.format === 2) {
-                    // Ordinary snapshots have no pinned base identity yet.
-                    // An inapplicable envelope is never reader source text.
-                    if (!CONTEXT || !Array.isArray(row.splices)) return null;
-                    let text = SNAP["/world?f=" + f] || "";
-                    for (const cut of row.splices) {
-                        if (!Number.isInteger(cut.from) || !Number.isInteger(cut.to) || cut.from < 0
-                            || cut.to < cut.from || cut.to > text.length || typeof cut.insert !== "string")
-                            return null;
-                        text = text.slice(0, cut.from) + cut.insert + text.slice(cut.to);
-                    }
-                    return { text, verdict: row.verdict, splices: row.splices };
-                }
-            } catch (e) { }
-            return { text: raw, verdict: null }; // old browser drafts remain readable
-        } catch (e) { return null; }
-    }
-    function textOf(f) {
-        const row = keptDraft(f);
-        return row ? row.text : SNAP["/world?f=" + f] || "";
-    }
-    // Pinned worlds can keep a small splice against their recorded source.
-    // Ordinary snapshots keep complete text until their storage names a base;
-    // republishing must not splice a previous draft into different bytes.
-    function draftRecord(f, text, verdict) {
-        const base = SNAP["/world?f=" + f] || "";
-        if (!CONTEXT || base.length < 300000) return { format: 1, text, verdict };
-        const splice = (base, text) => {
-            let from = 0, tail = 0;
-            while (from < base.length && from < text.length && base[from] === text[from]) from++;
-            while (tail < base.length - from && tail < text.length - from
-                && base[base.length - 1 - tail] === text[text.length - 1 - tail]) tail++;
-            return { from, to: base.length - tail, insert: text.slice(from, text.length - tail) };
-        };
-        const direct = [splice(base, text)], previous = keptDraft(f);
-        const chain = previous && previous.splices ? [...previous.splices, splice(previous.text, text)] : direct;
-        const splices = JSON.stringify(chain).length < JSON.stringify(direct).length ? chain : direct;
-        return { format: 2, splices, verdict };
-    }
+    const drafts = GateReaderDraft.open({storage: {
+        getItem: key => localStorage.getItem(key), setItem: (key, value) => localStorage.setItem(key, value),
+        removeItem: key => localStorage.removeItem(key)}, prefix: STORAGE,
+        inputsDigest: BASE_INPUTS, legacy: LEGACY_DRAFTS, compact: true,
+        allowed: f => READER_DRAFT && !THEIRS[f] && f !== LAYOUT,
+        base: f => SNAP["/world?f=" + f] || ""});
+    const keptDraft = f => drafts.kept(f);
+    const textOf = f => drafts.text(f);
+    const draftTexts = (f, text) => Object.fromEntries(ALL.map(g => [g, g === f ? text : textOf(g)]));
     const readings = new Map();
     const LANGUAGE_PLAN = JSON.parse(SNAP["/grammar-contexts"] || "{}");
     const COURT_WORKER_GLUE = __COURT_WORKER_GLUE__;
@@ -296,7 +265,7 @@ function judgeWhereTexts(text, extraTexts) {
     }
     const contextualCourt = {judge: request => courtCall("judge",request), source_notation: request => courtCall("source_notation",request)};
     async function readDraft(f, text) {
-        const texts = Object.fromEntries(ALL.map(g => [g, g === f ? text : textOf(g)]));
+        const texts = draftTexts(f, text);
         const inputs = JSON.stringify(texts), previous = readings.get(f);
         if (previous && previous.inputs === inputs) return previous.answer;
         if (!CONTEXT) {
@@ -444,10 +413,10 @@ function judgeWhereTexts(text, extraTexts) {
             if (!JSON.parse(SNAP["/files"]).files.includes(f)) return refuseWrite(method + " " + u,
                 "a draft must name a file this snapshot reads", 409);
             const text = String((opts && opts.body) || "");
-            const row = JSON.stringify(draftRecord(f, text, await readDraft(f, text)));
+            const answer = await readDraft(f, text);
             try {
-                localStorage.setItem(STORAGE + f, row);
-            } catch (e) { return reply(JSON.stringify({ note: "browser storage unavailable" }), 507); }
+                await drafts.save(f, text, answer, draftTexts(f, text));
+            } catch (e) { return reply(JSON.stringify({ verdict: "refused", address: f + ":1", reason: "reader draft not saved: " + e.message, note: "reader draft not saved" }), 507); }
             return reply("", 200);
         }
         if (method === "PUT") return refuseWrite(method + " " + u,
@@ -474,10 +443,10 @@ function judgeWhereTexts(text, extraTexts) {
         // server's batch endpoint. Capabilities describe this reader's host.
         if (method === "GET" && u === "/files")
             return reply(JSON.stringify({ ...JSON.parse(SNAP["/files"]), batch_readings: false,
-                save_policy: SAVE_POLICY }));
+                save_policy: SAVE_POLICY, reader_draft_namespace: READER_DRAFT ? STORAGE : null }));
         if (method === "GET" && u.startsWith("/gitstatus?f=")) {
             const row = keptDraft(decodeURIComponent(u.split("f=")[1] || ""));
-            return reply(JSON.stringify(row ? { git: "draft", verdict: row.verdict ? row.verdict.verdict : "not yet judged" }
+            return reply(JSON.stringify(row ? { git: "draft", verdict: "read again on open" }
                 : { git: "source" }));
         }
         const recorded = u.replace(/%2F/gi, "/");
@@ -490,13 +459,8 @@ function judgeWhereTexts(text, extraTexts) {
        wipe alone, so what it judges is what the reset button does. */
     window.__resetWipe = function () {
         try {
-            for (const key of Object.keys(localStorage)) {
-                if (CONTEXT ? key.startsWith(STORAGE)
-                    : ALL.some(f => key === STORAGE + f || key === LEGACY_STORAGE + f) || key === "gate.theme.declared"
-                        || key === "gate.bench.layout") {
-                    localStorage.removeItem(key);
-                }
-            }
+            drafts.reset(ALL);
+            for (const key of __PREFERENCE_KEYS__) localStorage.removeItem(key);
         } catch (e) { }
     };
     document.addEventListener("click", function (event) {
@@ -517,8 +481,10 @@ function judgeWhereTexts(text, extraTexts) {
                 .replace("__COURT_WORKER_HANDLER__", script_json(
                     open(os.path.join(HERE, "bin/court-worker.js"), encoding="utf-8").read().replace(
                         "importScripts('court/vi_court.js','court/vi_court_bytes.js');", "") if context else ""))
-                .replace("__STORAGE__", script_json("gate.reader-draft.v1." if not context else
-                    "gate.pages." + context["pin"] + "." + context["world"] + "."))
+                .replace("__STORAGE__", script_json(storage_prefix))
+                .replace("__INPUTS_DIGEST__", script_json(inputs_digest))
+                .replace("__LEGACY_DRAFTS__", script_json(legacy_drafts))
+                .replace("__PREFERENCE_KEYS__", script_json(preference_keys))
                 .replace("__FORMS__", script_json(sorted(forms)))
                 .replace("__WORLDS__", script_json(files.get("worlds") or []))
                 .replace("__LAYOUT__", script_json(layout))
@@ -536,7 +502,7 @@ function judgeWhereTexts(text, extraTexts) {
     ui = ui.replace(marker, shim + marker, 1)
     if context:
         ui = ui.replace("default-src 'self';", "default-src 'self'; worker-src 'self' blob:;", 1)
-        scope = "gate.pages." + context["pin"] + "." + context["world"] + "."
+        scope = old_prefix
         ui = ui.replace('<title>gate · world bench</title>', '<title>gate · ' + html.escape(context['tab']['title']) + '</title>')
         ui = ui.replace('"gate.theme.declared"', script_json(scope + "theme"))
         ui = ui.replace('"gate.bench.layout"', script_json(scope + "layout"))
@@ -553,7 +519,7 @@ function judgeWhereTexts(text, extraTexts) {
     os.makedirs(out, exist_ok=True)
     open(os.path.join(out, "index.html"), "w", encoding="utf-8").write(ui)
     open(os.path.join(out, "ladder.css"), "w", encoding="utf-8").write(ladder_css)
-    for asset, home in (("codemirror.css", "web"), ("codemirror.js", "web"),
+    for asset, home in (("codemirror.css", "web"), ("codemirror.js", "web"), ("reader-draft.js", "web"),
                         ("judge.js", "bin"), ("renderer.js", "bin"), ("press.js", "bin"),
                         ("drawing.from", "bin"), ("press-contract.from", "bin"), ("drawing-profile.js", "bin"), ("drawing-fonts.json", "bin")):
         src = os.path.join(HERE, home, asset)

@@ -164,7 +164,7 @@ def run():
             (source / 'Doors.swift').write_text(catalog)
             catalog_revision = pin() if git('status', '--porcelain') else git('rev-parse', 'HEAD')
             manifest = 'public protocol Close {}\npublic protocol Role {}\npublic protocol Theirs {}\npublic protocol Publication {}\npublic enum CatalogFile: Role {}\n'
-            manifest += 'public enum Book: Publication {\n public typealias Id = BookId\n public typealias Entry = Dock\n public typealias Catalog = Catalog\n public typealias DraftPolicy = ReadOnly\n public typealias DrawingProfile = NoDrawing\n public typealias Aliases = ()\n}\n'
+            manifest += 'public enum Book: Publication {\n public typealias Id = BookId\n public typealias Entry = Dock\n public typealias Catalog = Catalog\n public typealias DraftPolicy = ReaderDraft\n public typealias DrawingProfile = NoDrawing\n public typealias Aliases = ()\n}\n'
             manifest += 'public enum Catalog: Theirs {\n public typealias Kind = CatalogFile\n public typealias At = Origin\n}\nextension Catalog { public static var typeName: String { ".gate/doors.swift" } }\n'
             manifest += atom('BookId', 'org.example.contexts') + atom('Origin', source.as_uri() + '@' + catalog_revision)
             (publication / 'gate.manifest.swift').write_text(manifest)
@@ -262,6 +262,11 @@ def run():
         write()
 
         publication_case('one ReadPlan carries the declared fourth module', 'holds')
+        # The same fixture with the owner's context/2 fields actually executes
+        # GateCourtContexts on a reader edit, rather than only testing v1 refusal.
+        prepared = dict(language, module='Harbor', intrinsics=[])
+        write({'HarborLanguage': prepared}); ask('the fourth module also has a prepared browser court')
+        publication_case('ReaderDraft re-reads a prepared context/2', 'holds')
         wrong = copy.deepcopy(language); wrong['imports'] = imports[:3]
         write({'HarborLanguage': wrong}); ask('undeclared fourth module', 'refused', "import 'HarborShapes'")
         publication_case('one ReadPlan carries the undeclared import refusal', 'refused')

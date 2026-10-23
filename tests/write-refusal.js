@@ -22,7 +22,7 @@ async function check(source) {
         const snap = {"/files":JSON.stringify(files),"/version":"{}"};
         for (const f of names) { snap["/world?f="+f] = "owner " + f; snap["/verdict?f="+f] = "{}"; }
         const kept = storage(), nodes = {verdicts:{},gitstate:{}};
-        const c = vm.createContext({Response,Uint8Array,atob,localStorage:kept,
+        const c = vm.createContext({Response,Uint8Array,atob,TextEncoder,crypto:require("crypto").webcrypto,localStorage:kept,
             VI_COURT_WASM_BASE64:"",wasm_bindgen:{initSync(){},judge(){return JSON.stringify({exit:0,stdout:"",stderr:""});}},
             judge(){return {refusals:[]};},kitVocabulary:{},lint(){},pageGuards(){},
             GateWorldCourt:{verdict(){return {verdict:"holds",refusals:[]};}},
@@ -33,8 +33,10 @@ async function check(source) {
             .replace(/^<\/?script>\s*$/gm, "");
         for (const [k,v] of Object.entries({__SNAP__:snap,__CONTEXT__:context,__STORAGE__:"draft.",
             __FORMS__:files.forms,__WORLDS__:files.worlds,__LAYOUT__:files.layout,__ALL__:names,
+            __INPUTS_DIGEST__:"a".repeat(64),__LEGACY_DRAFTS__:[],__PREFERENCE_KEYS__:[],
             __COURT_WORKER_GLUE__:"",__COURT_WORKER_HANDLER__:""}))
             script = script.split(k).join(JSON.stringify(v));
+        vm.runInContext(source.store, c);
         vm.runInContext(script, c);
         const before = await (await c.fetch("/files")).text();
         for (const [method,url] of [

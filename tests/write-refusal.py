@@ -22,7 +22,7 @@ def run():
                 and isinstance(n.value, ast.Constant))
     if '--native-only' not in sys.argv:
         subprocess.run(['node', str(HERE / 'tests/write-refusal.js')], check=True, text=True,
-                       input=json.dumps(dict(shim=shim, ui=(HERE / 'web/ui.html').read_text())))
+                       input=json.dumps(dict(store=(HERE / 'web/reader-draft.js').read_text(), shim=shim, ui=(HERE / 'web/ui.html').read_text())))
     # Atomic replacement must fail even when the file itself is readable. This
     # is the real host, not a stub returning the answer the test wants to see.
     with tempfile.TemporaryDirectory(prefix='gate-write-refusal-') as temp:

@@ -443,7 +443,7 @@ web/codemirror.*  the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
 docs/           DETAILS.md, SECURITY.md, CHANGELOG.md, NOTICE.md, and
                 the cover's picture with its provenance
-tests/smoke.py   the battery: 746 checks this repository holds itself
+tests/smoke.py   the battery: 747 checks this repository holds itself
                  to, end-to-end runs through judge parity through
                  documentation contracts; the definition of green
 tests/windows.py the Windows measure: the reviewer's road as asserts
@@ -504,7 +504,7 @@ layout · more domain forms.
 Something drifts? Gate it
 
 Publish a declared repository with `gate publish /path/to/repository -o /path/to/site`.
-The current binary delivers `publication/1` with `ReadOnly`, including the bench,
+The current binary delivers `publication/1` with declared `ReadOnly` or `ReaderDraft`, including the bench,
 stdlib, browser court and an optional owner-resolved drawing profile. `NoDrawing`
 selects none; a pinned `DrawingProfileFile` names the owner's CSS and input receipt.
 It needs Git for declared pinned inputs; it
@@ -516,7 +516,18 @@ recipe still builds gate's own showcase site.
 The [profile input](docs/DRAWING-PROFILE.md) binds the actual palette, bindings,
 font, metrics and license. A changed input needs another reading at the owner.
 
-The read-only browser checks delivery with Web Crypto over HTTPS or localhost;
+`ReaderDraft` keeps browser text and its current reading, including refusals. The plan grants this only to its writable inputs; source files, taken inputs and publication structure stay unchanged. `ReadOnly` grants no browser drafts.
+
+Draft keys follow the declared Publication, world and plan identities. Each record binds its base inputs digest; a changed base or damaged envelope yields the source text, never stored JSON or a splice over different bytes. The saved reading remains in the record, but reopening reads again rather than displaying that reading as current. Reset affects this namespace and its legacy records bound by an immutable public pin.
+
+The older Pages carrier has no declared Publication. It uses a compatibility snapshot namespace derived from its recorded input bytes and origin, and the same storage module, writer and digest. An immutable public pin can recover its older scoped records. Local snapshots and unscoped ordinary keys (`gate.pages.<file>` and `gate.reader-draft.v1.<file>`) cannot prove that base: their old values remain stored and are not automatically applied or deleted. This boundary does not give the older carrier a publication/1 identity or complete edit parity.
+
+
+An unfinished declaration keeps its text with an addressed remainder. A Language without a prepared browser court is delivered for reading: the plan grants no writes in that world, and an attempted edit keeps the native refusals with an unsupported answer. DocumentFile is currently a drawing input and is also outside the writable set; the policy-level editor can remain open, but the API refuses that write. The legacy Pages carrier still has its own context/definitions, guards and translation; Publication reads prepared context/2 requests from ReadPlan and grants no edit without that reader. Their storage module is shared, not their complete orchestration. The legacy ReadOnly guard still has no declared source in its ordinary serve snapshot; the declared policy is delivered through native Publication. These are migration boundaries, not full edit parity.
+
+Legacy snapshot readings do not need Web Crypto. Saving a reader draft needs it: without it the write refuses at the file address and keeps existing storage unchanged. The draft badge says `read again on open`; the recorded answer is not a current reading.
+
+The Publication carrier checks delivery with Web Crypto over HTTPS or localhost;
 a missing capability or damaged resource removes the verdict.
 
 The [boundary law](docs/BOUNDARIES.md) checks declared dependency debt through a pinned owner implementation.

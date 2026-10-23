@@ -27,6 +27,7 @@ for context, policy in itertools.product([None, {'pin': 'pin', 'world': 'externa
     script = shim
     for key, value in {'SNAP': carried, 'CONTEXT': context, 'STORAGE': 'probe.',
                        'FORMS': [], 'LAYOUT': None, 'ALL': files, 'WORLDS': [],
+                       'INPUTS_DIGEST': 'a' * 64, 'LEGACY_DRAFTS': [], 'PREFERENCE_KEYS': [],
                        'COURT_WORKER_GLUE': '', 'COURT_WORKER_HANDLER': ''}.items():
         script = script.replace('__' + key + '__', json.dumps(value))
     # Court initialization precedes the snapshot closure and is unrelated to transport.
@@ -37,6 +38,8 @@ const calls = [];
 global.window = { fetch() { throw Error('recorded input escaped to the network'); } };
 global.document = {addEventListener() {}};
 global.localStorage = {getItem() {return null;}};
+''' + (ROOT / 'web/reader-draft.js').read_text() + '''
+const GateReaderDraft = window.GateReaderDraft;
 ''' + script + '''
 global.fetch = (...args) => {calls.push(args); return window.fetch(...args);};
 ''' + read_worlds + '''

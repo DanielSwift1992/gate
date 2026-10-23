@@ -14024,6 +14024,9 @@ var PUBLICATION_CACHE: (root: String, plan: ReadPlan)? = nil
 let PUBLICATION_ASSETS = [
     "codemirror.js": "web/codemirror.js", "codemirror.css": "web/codemirror.css",
     "publication.js": "web/publication.js", "judge.js": "bin/judge.js", "renderer.js": "bin/renderer.js",
+    "reader-draft.js": "web/reader-draft.js",
+    "world-court.js": "bin/world-court.js", "court-contexts.js": "bin/court-contexts.js",
+    "grammar-policy.js": "bin/grammar-policy.js",
     "press.js": "bin/press.js", "drawing-profile.js": "bin/drawing-profile.js",
     "drawing-fonts.json": "bin/drawing-fonts.json", "drawing-contract.from": "bin/drawing-contract.from",
     "vi_court.js": "bin/court-wasm/web/vi_court.js", "vi_court_bytes.js": "bin/court-wasm/web/vi_court_bytes.js",
@@ -14067,8 +14070,9 @@ func buildReadPlan(_ selected: String) throws -> ReadPlan {
         }
         let publication = publications[0]
         let axes = try publication.axes(["Id", "Entry", "Catalog", "DraftPolicy", "DrawingProfile", "Aliases"], source.file)
-        guard axes["DraftPolicy"] == "ReadOnly" else {
-            throw PublicationFailure(address: "gate.manifest.swift:\(publication.line)", reason: "this delivery supports ReadOnly; the requested draft policy needs its reader", status: "unsupported")
+        let draftPolicy = axes["DraftPolicy"]!
+        guard ["ReadOnly", "ReaderDraft"].contains(draftPolicy) else {
+            throw PublicationFailure(address: "gate.manifest.swift:\(publication.line)", reason: "DraftPolicy must name ReadOnly or ReaderDraft", status: "unsupported")
         }
         let identity = try source.word(axes["Id"]!)
         guard !identity.isEmpty else { throw PublicationFailure(address: "gate.manifest.swift:\(publication.line)", reason: "Publication.Id is empty") }
@@ -14106,7 +14110,7 @@ func buildReadPlan(_ selected: String) throws -> ReadPlan {
             }
             drawingPlan["asset_urls"] = urls
         }
-        let delivery = drawingName == "NoDrawing" ? "NoDrawing/ReadOnly" : "OwnerProfile/ReadOnly"
+        let delivery = (drawingName == "NoDrawing" ? "NoDrawing/" : "OwnerProfile/") + draftPolicy
         func limitedContext(_ record: [String: Any], _ text: String, _ address: String, prepared: Bool = false) throws {
             if let value = record["languages"], !(value is [String: Any]) {
                 throw PublicationFailure(address: address, reason: "languages must be an object")
@@ -14251,7 +14255,6 @@ func buildReadPlan(_ selected: String) throws -> ReadPlan {
                 var answer = publicationObject(.object(statusPairs(statusAnswer(w, contexts: contexts))))
                 answer["judge_ms"] = NSNull(); answer["wall_ms"] = NSNull()
                 answer["facts"] = parsed.rows.filter { $0.kind == "WorldFile" }.map { $0.path }
-                answer["next"] = "Read-only publication. Change the source repository and publish again."
                 // Addresses stay source-relative even when a taken file is cached elsewhere.
                 let forms = parsed.rows.filter { $0.role == "forms" }.map { $0.path }
                 let rowGroups = contexts.active
@@ -14261,6 +14264,20 @@ func buildReadPlan(_ selected: String) throws -> ReadPlan {
                     worldsOf(rows.map { ($0, texts[$0.path] ?? "") }).map { $0.map { $0.path } }
                 }
                 let names = [door.shown] + texts.keys.sorted().filter { $0 != door.shown }
+                // v1 Language still has a native reader, but no browser Court
+                // request. Do not let the flat court replace that context after
+                // an edit, even through a second, otherwise writable input.
+                let browserReady = !contexts.active || (!contexts.contexts.isEmpty
+                    && contexts.contexts.allSatisfy { $0.courtContext != nil })
+                let writable = draftPolicy == "ReaderDraft" && browserReady ? parsed.rows.filter {
+                    $0.source != "theirs" && $0.kind != "CarriedFile"
+                        && !drawingInputs(parsed.rows).paths.contains($0.path)
+                }.map(\.path) : []
+                answer["next"] = draftPolicy != "ReaderDraft"
+                    ? "Read-only publication. Change the source repository and publish again."
+                    : writable.isEmpty
+                    ? "This plan has no inputs available for browser drafts. Change the source repository and publish again."
+                    : "Reader drafts stay in this browser for the inputs this plan allows. Source changes need a new publication."
                 var snap: [String: Any] = [:]
                 func json(_ key: String, _ object: Any) { snap[key] = ["body": String(decoding: publicationJSON(object), as: UTF8.self), "type": jsonType] }
                 json("GET /files", ["files": names, "layout": "gate.manifest.swift", "forms": forms,
@@ -14271,8 +14288,8 @@ func buildReadPlan(_ selected: String) throws -> ReadPlan {
                      "documents": Array(Set(parsed.rows.filter { $0.kind == "DocumentFile" }.map(\.path))).sorted(),
                      "theirs": publicationObject(.object(parsed.rows.filter { $0.source == "theirs" }.map { ($0.path, benchOrigin($0, taken)) })),
                      "roles": Dictionary(uniqueKeysWithValues: STATUS_ROLES), "opens": [:], "seams": [], "undeclared": [], "overridden": [:],
-                     "personal": NSNull(), "personal_empty": false, "judge_claim": NSNull(), "save_policy": "read-only",
-                     "capabilities": ["read_only": names, "write": []]])
+                     "personal": NSNull(), "personal_empty": false, "judge_claim": NSNull(), "save_policy": draftPolicy == "ReaderDraft" ? "reader-draft" : "read-only",
+                     "capabilities": ["read_only": names.filter { !writable.contains($0) }, "write": writable]])
                 json("GET /status", answer)
                 json("GET /grammar-contexts", contexts.receipt)
                 var verdict = answer
@@ -14323,8 +14340,8 @@ func buildReadPlan(_ selected: String) throws -> ReadPlan {
         let resources = Dictionary(uniqueKeysWithValues: replies.filter { $0.key.hasPrefix("assets/") || $0.key.hasPrefix("inputs/") || $0.key.hasPrefix("styles/") }.map { ($0.key, sha256Hex($0.value.data)) })
         var doc: [String: Any] = ["format": "publication/1", "publication": ["id": identity, "entry": entry.name],
             "manifests": manifests, "records": records, "inputs": inputs, "languages": languagePlans, "worlds": worlds, "routes": routes,
-            "plain_fragments": [], "capabilities": ["read_only": true, "structure": "read-only-structure", "delivery": delivery],
-            "draft_policy": "ReadOnly", "drawing_profile": drawingName, "coverage": coverage,
+            "plain_fragments": [], "capabilities": ["read_only": draftPolicy == "ReadOnly", "structure": "read-only-structure", "delivery": delivery],
+            "draft_policy": draftPolicy, "drawing_profile": drawingName, "coverage": coverage,
             "installed": ["gate": gateVersion(), "organization_revision": runtimeData("bin/organization-court.from").flatMap { String(data: $0, encoding: .utf8)?.components(separatedBy: "\n").first } ?? "", "binary_sha256": FileManager.default.contents(atPath: absPath(CommandLine.arguments[0])).map { sha256Hex($0) } ?? "", "judge_revision": judgeFrom() ?? "", "wasm": assets["assets/vi_court_bytes.js"] ?? "", "stdlib": Dictionary(uniqueKeysWithValues: shelf().map { ($0.name, sha256Hex(Data($0.text.utf8))) })], "assets": assets, "resources": resources]
         doc["inputs_digest"] = sha256Hex(publicationJSON(["manifests": manifests, "records": records, "inputs": inputs]))
         let planID = sha256Hex(publicationJSON(doc)); doc["plan_id"] = planID
@@ -14346,7 +14363,9 @@ func buildReadPlan(_ selected: String) throws -> ReadPlan {
                 html = html.replacingOccurrences(of: "\"/" + asset + "\"", with: "\"" + prefix + "assets/" + asset + "\"")
             }
             html = html.replacingOccurrences(of: "\"/ladder.css\"", with: "\"" + prefix + "styles/" + door.id + ".css\"")
-            let loader = "<script src=\"" + prefix + "assets/publication.js\" data-replies=\"" + prefix + "snapshots/" + door.id + ".json\" data-plan=\"" + planID + "\"></script>\n"
+            let readers = ["reader-draft.js", "world-court.js", "grammar-policy.js", "court-contexts.js", "vi_court.js", "vi_court_bytes.js"]
+                .map { "<script src=\"" + prefix + "assets/" + $0 + "\"></script>\n" }.joined()
+            let loader = readers + "<script src=\"" + prefix + "assets/publication.js\" data-replies=\"" + prefix + "snapshots/" + door.id + ".json\" data-plan=\"" + planID + "\" data-draft-policy=\"" + draftPolicy + "\"></script>\n"
             let marker = "<link rel=\"stylesheet\" href=\"" + prefix + "assets/codemirror.css\">"
             guard html.components(separatedBy: marker).count == 2 else {
                 throw PublicationFailure(address: "web/ui.html:1", reason: "the publication transport has no unique bench boundary")
@@ -14356,6 +14375,14 @@ func buildReadPlan(_ selected: String) throws -> ReadPlan {
                 transport += "<link rel=\"stylesheet\" data-drawing-profile href=\"" + prefix + "assets/drawing/" + hash + "/drawing.css\">\n"
             }
             html = html.replacingOccurrences(of: marker, with: transport + marker)
+            if draftPolicy == "ReaderDraft" {
+                let boundary = "</div>\n<script src=\"" + prefix + "assets/codemirror.js\">"
+                guard html.components(separatedBy: boundary).count == 2 else {
+                    throw PublicationFailure(address: "web/ui.html:1", reason: "the publication has no unique browser-copy boundary")
+                }
+                let note = "<div id=\"published-note\"><a href=\"#\" id=\"reset-copy\">reset this browser copy</a></div>"
+                html = html.replacingOccurrences(of: boundary, with: note + boundary)
+            }
             replies[path + "index.html"] = PublicationReply(data: Data(html.utf8), contentType: "text/html; charset=utf-8")
         }
         let plan = ReadPlan(document: doc, replies: replies, watched: watched, directories: directories)

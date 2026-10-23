@@ -13,4 +13,4 @@ shim = next(n.value.value for n in ast.walk(tree) if isinstance(n, ast.Assign)
             and any(isinstance(t, ast.Name) and t.id == 'shim' for t in n.targets)
             and isinstance(n.value, ast.Constant))
 subprocess.run(['node', str(ROOT / 'tests/reader-draft.js')], check=True, text=True,
-               input=json.dumps(dict(shim=shim, ui=(ROOT / 'web/ui.html').read_text())))
+               input=json.dumps(dict(store=(ROOT / 'web/reader-draft.js').read_text(), shim=shim, ui=(ROOT / 'web/ui.html').read_text())))

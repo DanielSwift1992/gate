@@ -128,7 +128,7 @@ def run():
         refused('no Publication',lambda:manifest.write_text(root.replace(': Publication {',': Close {',1)),lambda:manifest.write_text(root))
         refused('missing input',lambda:(owner/'Island/Facts.swift').unlink(),lambda:(owner/'Island/Facts.swift').write_text(facts))
         refused('unknown publication field',lambda:manifest.write_text(root.replace('typealias Entry = Dock','typealias Unexpected = Dock\n    public typealias Entry = Dock')),lambda:manifest.write_text(root))
-        refused('ReaderDraft is not delivered here',lambda:manifest.write_text(root.replace('DraftPolicy = ReadOnly','DraftPolicy = ReaderDraft')),lambda:manifest.write_text(root),'unsupported')
+        refused('unknown draft policy',lambda:manifest.write_text(root.replace('DraftPolicy = ReadOnly','DraftPolicy = Unpromised')),lambda:manifest.write_text(root),'unsupported')
         refused('profile is not delivered here',lambda:manifest.write_text(root.replace('DrawingProfile = NoDrawing','DrawingProfile = AProfile')),lambda:manifest.write_text(root),'unsupported')
         refused('context operation',lambda:(owner/'Island/Facts.swift').write_text('import FourthModule\n'+facts),lambda:(owner/'Island/Facts.swift').write_text(facts),'unsupported')
         # An explicit Language request is never erased to get a green subset.
@@ -150,7 +150,36 @@ def run():
         assert missing.returncode!=0 and not (base/'not-a-demo').exists()
         # Test the actual static browser transport with Node as a test tool.
         subprocess.run(['node',str(ROOT/'tests/publication.js'),str(site)],check=True)
-        print('PUBLICATION ALL GREEN: cold binary, one ReadPlan, read-only responses and atomic refusal')
+        # DraftPolicy is the owner's permission, shared by the live and static
+        # browser carriers. It does not permit a native disk write.
+        manifest.write_text(root.replace('DraftPolicy = ReadOnly','DraftPolicy = ReaderDraft'))
+        (owner/'Island/Notes.swift').write_text('// another owned input\n')
+        (owner/'Island/gate.manifest.swift').write_text(world_manifest+'public enum Notes: Mine {\n    public typealias Kind = FormsFile\n}\nextension Notes { public static var typeName: String { "Notes.swift" } }\n')
+        drafts=base/'reader-drafts';r=publish(drafts);assert r.returncode==0,r.stderr
+        draft_plan=json.loads((drafts/'read-plan.json').read_text())
+        assert draft_plan['draft_policy']=='ReaderDraft'
+        draft_files=json.loads(json.loads((drafts/'snapshots/harbor.json').read_text())['responses']['GET /files']['body'])
+        assert draft_files['capabilities']['write']==['Facts.swift','Notes.swift'],draft_files
+        republished=base/'republished-drafts'
+        (owner/'Island/Facts.swift').write_text(facts+'// a new owner snapshot\n')
+        r=publish(republished);assert r.returncode==0,r.stderr
+        (owner/'Island/Facts.swift').write_text(facts)
+        process=subprocess.Popen([str(binary),'serve',str(owner),str(port),'--no-open'],cwd=base,env=env,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+        try:
+            for _ in range(150):
+                try:live=json.loads(get('/read-plan.json'));break
+                except OSError:time.sleep(.1)
+            else:raise AssertionError('ReaderDraft serve did not open')
+            assert live==draft_plan
+            assert b'data-draft-policy="ReaderDraft"' in get('/')
+            req=urllib.request.Request(origin+'/world?f=Facts.swift',data=b'changed',method='PUT')
+            try:urllib.request.urlopen(req);raise AssertionError('browser policy granted disk write')
+            except urllib.error.HTTPError as e:assert e.code==409
+            assert (owner/'Island/Facts.swift').read_text()==facts
+            subprocess.run(['node',str(ROOT/'tests/publication.js'),str(drafts),'holds','Facts.swift',str(republished)],check=True)
+        finally:
+            process.terminate();process.wait();manifest.write_text(root)
+        print('PUBLICATION ALL GREEN: cold binary, declared ReadOnly/ReaderDraft, red browser drafts and atomic refusal')
 
 
 if __name__=='__main__':run()

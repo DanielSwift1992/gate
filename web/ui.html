@@ -9,7 +9,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"><meta charset="utf-8"><title>gate · world bench</title>
 <!-- zero egress, enforced by the browser as well as by the code: the bench may
      talk to its own loopback server and to nothing else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-5GzCvayhfKIAxAwizJRqS3a05vGAKRgdgfqpOuJGoBs=' 'sha256-xDGeK1M38JbVR2wi9TS0pZSLwhUMCyKDr4TEfavoMT0='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-5GzCvayhfKIAxAwizJRqS3a05vGAKRgdgfqpOuJGoBs=' 'sha256-7tM9dOeQOS/XR1Usp/jW52Jwy2QC0t2xHqT7foRqb9c='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
 <link rel="stylesheet" href="/codemirror.css">
 <script>
 // The theme is a declaration, not a toggle — and the declaration lives in the
@@ -2292,7 +2292,7 @@ async function refreshGit() {
         const g = state.git;
         if (readerDrafts) {
             el.className = g === "draft" ? "modified" : "observed";
-            el.textContent = g === "draft" ? "draft saved · saved verdict: " + state.verdict : "source · no reader draft";
+            el.textContent = g === "draft" ? "draft saved · read again on open" : "source · no reader draft";
             el.title = "Reader text and its verdict are stored in this browser. Refusals stay visible; no repository is written.";
             return;
         }

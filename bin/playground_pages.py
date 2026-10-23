@@ -12,6 +12,7 @@ def build_worlds(here, out, publish):
     here, out = Path(here), Path(out)
     cache = Path(subprocess.check_output([str(here / 'bin/playground-worlds.sh')], text=True).strip())
     record = json.loads((cache / 'worlds.from').read_text())
+    source_note = json.loads((cache / 'from').read_text())
     compiler_pin = re.search(r'let theoryRevision = "([0-9a-f]+)"',
                              (cache / 'showcase/Package.swift').read_text())
     if not compiler_pin or compiler_pin[1] != record['theory']['revision']:
@@ -63,6 +64,7 @@ def build_worlds(here, out, publish):
             own_catalog = dict(catalog, revision=catalog_input['revision'], sha256=catalog_input['sha256'],
                                source=catalog_input['path'])
             context = dict(pin=record['showcase']['revision'], world=tab['id'], tab=tab,
+                origin=dict(revision=record['showcase']['revision'], kind='pinned' if source_note['sources']['showcase'] == 'public pin' else 'local'),
                 definition_paths=definition_paths, carried=[], catalog=own_catalog, provenance=provenance, guard_names=guard_names,
                 compiler=record['theory'], judge=record['judge'],
                 drawing=dict(case_id=tab['id']))

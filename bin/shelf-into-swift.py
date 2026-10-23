@@ -40,7 +40,8 @@ def main():
     # Runtime bytes travel with the shelf so every build of the CLI, including
     # the battery's mutant, carries the same delivery. Development still reads
     # the files beside the binary first.
-    runtime = ["web/ui.html", "web/codemirror.js", "web/codemirror.css", "web/publication.js",
+    runtime = ["web/ui.html", "web/codemirror.js", "web/codemirror.css", "web/publication.js", "web/reader-draft.js",
+               "bin/world-court.js", "bin/grammar-policy.js", "bin/court-contexts.js",
                "bin/judge.js", "bin/renderer.js", "bin/press.js", "bin/drawing-profile.js",
                "bin/drawing-fonts.json", "bin/drawing-contract.from", "bin/drawing.from", "bin/press-contract.from", "bin/court-wasm.from",
                "bin/court-wasm/web/vi_court.js", "bin/court-wasm/web/vi_court_bytes.js",
