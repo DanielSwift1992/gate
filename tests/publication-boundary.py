@@ -23,33 +23,45 @@ def load():
 
 def publication_content(policy, name, content, builder_names=(), check_emails=True):
     # Root boundaries distinguish filesystem roots from URL path components.
-    component = rb'[A-Za-z0-9_.-]+'
-    root_boundary = rb'(?<![A-Za-z0-9_-])'
-    homes = re.compile(root_boundary + rb'(?:/(?:Users|home)/' + component
-                       + rb'|/' + b'root' + rb'/(?=[A-Za-z0-9_.-])'
-                       + rb'|(?:/private)?/var/folders/' + component + rb'/' + component
-                       + rb'|[A-Za-z]:[\\/](?i:Users|Documents and Settings)[\\/]' + component
-                       + rb'|\\\\[^\\/\s]+[\\/](?i:Users)[\\/]' + component + rb')')
+    # Unicode word characters include account letters and numbers; dots and
+    # hyphens retain their previous spelling. Invalid bytes are not letters.
+    component = r'[\w.-]+'
+    root_boundary = r'(?<![A-Za-z0-9_-])'
+    homes = re.compile(root_boundary + r'(?:/(?:Users|home)/' + component
+                       + r'|/' + 'root' + r'/(?=[\w.-])'
+                       + r'|(?:/private)?/var/folders/' + component + r'/' + component
+                       + r'|[A-Za-z]:[\\/](?i:Users|Documents and Settings)[\\/]' + component
+                       + r'|\\\\[^\\/\s]+[\\/](?i:Users)[\\/]' + component + r')')
     emails = re.compile(rb'(?<![A-Za-z0-9_.+%-])[A-Za-z0-9_.+%-]{1,64}@'
                         rb'[A-Za-z0-9-]{1,63}(?:\.[A-Za-z0-9-]{1,63}){0,8}'
-                        rb'(?![A-Za-z0-9.-])')
+                        rb'(?![A-Za-z0-9-])(?!\.[A-Za-z0-9-])')
+    service_accounts = {value.casefold() for value in policy['service_builder_accounts']}
     names = [re.compile(rb'(?<![A-Za-z0-9])' + re.escape(value.encode())
-                        + rb'(?![A-Za-z0-9])', re.I) for value in builder_names if value]
+                        + rb'(?![A-Za-z0-9])', re.I) for value in builder_names
+             if value and value.casefold() not in service_accounts]
     findings = []
 
     def scan(raw, label, offsets, valid):
-        for match in homes.finditer(raw):
+        text = raw.decode('utf-8', errors='surrogateescape')
+        for match in homes.finditer(text):
             # Shared is macOS's shared directory, not an account home.
-            if match[0] == b'/Users/Shared':
+            if match[0] == '/Users/Shared':
                 continue
-            if valid(match.start(), match.end()):
-                findings.append(f'{label}:byte {offsets[match.start()]}: publication boundary refused: absolute home or account-temporary path')
+            start = len(text[:match.start()].encode('utf-8', errors='surrogateescape'))
+            end = start + len(match[0].encode('utf-8', errors='surrogateescape'))
+            if valid(start, end):
+                findings.append(f'{label}:byte {offsets[start]}: publication boundary refused: absolute home or account-temporary path')
         for pattern in names:
             for match in pattern.finditer(raw):
                 if valid(match.start(), match.end()):
                     findings.append(f'{label}:byte {offsets[match.start()]}: publication boundary refused: local builder name')
         for match in emails.finditer(raw) if check_emails else ():
-            domain = match[0].rsplit(b'@', 1)[1].decode('ascii').lower()
+            account, domain = match[0].decode('ascii').rsplit('@', 1)
+            # SCP-style repository addresses have a declared service user and
+            # a nonempty path. A bare mailbox or another user is still email.
+            if account in policy['scp_repository_users'] and re.match(rb':[^\s<>"\']+', raw[match.end():]):
+                continue
+            domain = domain.lower()
             if domain in policy['example_email_domains'] or any(domain.endswith(suffix) for suffix in policy['example_email_suffixes']):
                 continue
             # A DNS address or localhost-style mailbox, not repo@SHA pins.
@@ -82,12 +94,17 @@ def publication_content(policy, name, content, builder_names=(), check_emails=Tr
         escaped(raw, label, range(len(raw)), lambda start,end: True)
         for alignment in (0, 1):
             for little in (True, False):
-                first = alignment + (0 if little else 1)
-                zero = alignment + (1 if little else 0)
-                def valid(start,end,zero=zero):
-                    return raw[zero+2*start:zero+2*end:2] == b'\0'*(end-start)
-                escaped(raw[first::2], label + (' [UTF-16LE]' if little else ' [UTF-16BE]'),
-                        range(first, len(raw), 2), valid)
+                encoding = 'utf-16le' if little else 'utf-16be'
+                end = alignment + (max(0, len(raw)-alignment)//2)*2
+                # Decode actual code units, not just their ASCII byte. This
+                # keeps Unicode account names, including surrogate pairs.
+                projected = raw[alignment:end].decode(encoding, errors='surrogatepass').encode('utf-8', errors='surrogatepass')
+                class CodeUnitOffsets:
+                    def __getitem__(self, index):
+                        prefix = projected[:index].decode('utf-8', errors='surrogatepass')
+                        return alignment + len(prefix.encode(encoding, errors='surrogatepass'))
+                escaped(projected, label + (' [UTF-16LE]' if little else ' [UTF-16BE]'),
+                        CodeUnitOffsets(), lambda start,end: True)
 
     representations(content, name)
     carrier = re.compile(rb'\b' + re.escape(policy['base64_binding'].encode()) + rb'\s*=\s*"([A-Za-z0-9+/=]*)"')
