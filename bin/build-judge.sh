@@ -22,6 +22,13 @@ REV=$(git rev-parse HEAD)
 swift build -c release --product Tools \
     -Xswiftc -file-prefix-map -Xswiftc "$(pwd -P)=/vi" \
     -Xswiftc -debug-prefix-map -Xswiftc "$(pwd -P)=/vi"
+# Prefix maps cover compiler output, but ld64 adds absolute object paths to
+# its N_OSO debug map after compilation. Remove debug metadata before the
+# publication law reads the actual bytes that will be copied.
+case "$(uname -s)" in
+    Darwin) strip -S .build/release/Tools ;;
+    *) strip --strip-debug .build/release/Tools ;;
+esac
 python3 "$OUT/../tests/publication-boundary.py" --artifact .build/release/Tools
 cp .build/release/Tools "$OUT/gate-judge"
 printf '%s\n' "$REV" > "$OUT/gate-judge.from"

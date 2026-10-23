@@ -93,6 +93,31 @@ for encoding in ('utf-8', 'utf-16le', 'utf-16be'):
         count += 1
         print('UNICODE ADDRESS HOLDS:', encoding, alignment, 'byte', address)
 
+# Diagnostics identify the byte class without publishing the matched identity.
+# A domain can itself contain the current private builder name.
+diagnostics = [
+    (home, 'sample', '/home/<redacted>', ['account', 'source.swift']),
+    ('/'+'Users/'+unicode_account+'/private-project/file', 'sample', '/Users/<redacted>', [unicode_account, 'private-project']),
+    (private, 'sample', '/private/var/folders/<redacted>/<redacted>', ['accountid', '/ab/', 'source.swift']),
+    (private.removeprefix('/private'), 'sample', '/var/folders/<redacted>/<redacted>', ['accountid', '/ab/']),
+    (windows, 'sample', r'C:\Users\<redacted>', ['account', 'source.swift']),
+    ('\\\\server'+'\\Users\\account\\private-project', 'sample', r'\\<redacted>\Users\<redacted>', ['server', 'account', 'private-project']),
+    ('/'+'root/private-project/file', 'sample', '/root/<redacted>', ['private-project']),
+    (builder, 'sample', '<redacted>', [builder]),
+    (email, 'domain', 'mailbox.net', ['private-author']),
+    ('private-author@'+builder+'.mail.net', 'domain', '<redacted>.mail.net', ['private-author', builder.lower()]),
+]
+for text, field, expected, private_parts in diagnostics:
+    for encoding in ('utf-8', 'utf-16le', 'utf-16be', 'base64'):
+        payload = (b'var VI_COURT_WASM_BASE64 = "'+base64.b64encode(text.encode())+b'";'
+                   if encoding=='base64' else text.encode(encoding))
+        findings = law.publication_content(policy, 'diagnostic.bin', payload, [builder])
+        assert any(field+'='+json.dumps(expected) in line for line in findings), findings
+        assert all(part.lower() not in line.split('; ', 1)[1].lower()
+                   for part in private_parts for line in findings), findings
+        count += 1
+        print('MASKED DIAGNOSTIC HOLDS:', encoding, field+'='+json.dumps(expected))
+
 with tempfile.TemporaryDirectory(prefix='publication-boundary-controls-') as temporary:
     tree = Path(temporary)/'site'; tree.mkdir()
     path = tree/'snapshot.json'; path.write_text(json.dumps({'commits': [{'email': email}]}))

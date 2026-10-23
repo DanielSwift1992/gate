@@ -41,6 +41,24 @@ def publication_content(policy, name, content, builder_names=(), check_emails=Tr
              if value and value.casefold() not in service_accounts]
     findings = []
 
+    def private_name_mask(value):
+        raw = value.encode('utf-8')
+        for pattern in names:
+            raw = pattern.sub(b'<redacted>', raw)
+        return raw.decode('utf-8')
+
+    def path_sample(value):
+        # Only the recognized root and masked account components travel.
+        # Neither the account nor a suffix from a private tree is echoed.
+        if value.startswith('\\\\'):
+            return r'\\<redacted>\Users\<redacted>'
+        if '/var/folders/' in value:
+            return value.split('/var/folders/', 1)[0] + '/var/folders/<redacted>/<redacted>'
+        if value.startswith(('/Users/', '/home/', '/root/')):
+            return '/' + value.split('/')[1] + '/<redacted>'
+        # A drive-qualified Windows account home (including its legacy root).
+        return re.sub(component + r'$', '<redacted>', value)
+
     def scan(raw, label, offsets, valid):
         text = raw.decode('utf-8', errors='surrogateescape')
         for match in homes.finditer(text):
@@ -50,11 +68,12 @@ def publication_content(policy, name, content, builder_names=(), check_emails=Tr
             start = len(text[:match.start()].encode('utf-8', errors='surrogateescape'))
             end = start + len(match[0].encode('utf-8', errors='surrogateescape'))
             if valid(start, end):
-                findings.append(f'{label}:byte {offsets[start]}: publication boundary refused: absolute home or account-temporary path')
+                sample = json.dumps(path_sample(match[0]))
+                findings.append(f'{label}:byte {offsets[start]}: publication boundary refused: absolute home or account-temporary path; sample={sample}')
         for pattern in names:
             for match in pattern.finditer(raw):
                 if valid(match.start(), match.end()):
-                    findings.append(f'{label}:byte {offsets[match.start()]}: publication boundary refused: local builder name')
+                    findings.append(f'{label}:byte {offsets[match.start()]}: publication boundary refused: local builder name; sample="<redacted>"')
         for match in emails.finditer(raw) if check_emails else ():
             account, domain = match[0].decode('ascii').rsplit('@', 1)
             # SCP-style repository addresses have a declared service user and
@@ -68,7 +87,8 @@ def publication_content(policy, name, content, builder_names=(), check_emails=Tr
             if not re.search(r'\.[A-Za-z]{2,63}$', domain):
                 continue
             if valid(match.start(), match.end()):
-                findings.append(f'{label}:byte {offsets[match.start()]}: publication boundary refused: email address')
+                sample = json.dumps(private_name_mask(domain))
+                findings.append(f'{label}:byte {offsets[match.start()]}: publication boundary refused: email address; domain={sample}')
 
     def escaped(raw, label, offsets, valid):
         scan(raw, label, offsets, valid)
