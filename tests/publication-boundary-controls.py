@@ -101,7 +101,7 @@ diagnostics = [
     (private, 'sample', '/private/var/folders/<redacted>/<redacted>', ['accountid', '/ab/', 'source.swift']),
     (private.removeprefix('/private'), 'sample', '/var/folders/<redacted>/<redacted>', ['accountid', '/ab/']),
     (windows, 'sample', r'C:\Users\<redacted>', ['account', 'source.swift']),
-    ('\\\\server'+'\\Users\\account\\private-project', 'sample', r'\\<redacted>\Users\<redacted>', ['server', 'account', 'private-project']),
+    ('\\\\server' + '\\' + 'Users' + '\\account\\private-project', 'sample', r'\\<redacted>\Users\<redacted>', ['server', 'account', 'private-project']),
     ('/'+'root/private-project/file', 'sample', '/root/<redacted>', ['private-project']),
     (builder, 'sample', '<redacted>', [builder]),
     (email, 'domain', 'mailbox.net', ['private-author']),
