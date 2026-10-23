@@ -924,7 +924,7 @@
       "channel": "text",
       "line": 141,
       "name": "Organization",
-      "text": "`check`/`ask` reads a declared view. `diff`/`change` previews a transfer, grant or revoke; `apply` keeps it when its judgement holds. Add other declarations by editing the world file in the bench or your editor, then judge the result. Organization’s `Administer` and `Delete` laws belong to its Swift types in showcase and are checked by the compiler there. The world is selected by its local file or manifest.",
+      "text": "`check`/`ask` reads a declared view. `diff`/`change` previews a transfer, grant or revoke; `apply` keeps it when its judgement holds. Add other declarations by editing the world file in the bench or your editor, then judge the result. Organization\u2019s `Administer` and `Delete` laws belong to its Swift types in showcase and are checked by the compiler there. The world is selected by its local file or manifest.",
       "occurrence": 1,
       "task": "T0069",
       "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
@@ -1084,7 +1084,7 @@
       "channel": "text",
       "line": 5,
       "name": "organization",
-      "text": "# ShowcaseTools judge and the node port speak: `organization-judge judge FILE…`.",
+      "text": "# ShowcaseTools judge and the node port speak: `organization-judge judge FILE\u2026`.",
       "occurrence": 1,
       "task": "architecture-v1/r4/company-reader-after-T0038",
       "reason": "Architecture revision 4, Court of the company: owner artifacts and contracts, declared reader input, removal of built-in policy and subject-specific controls after T0038."
@@ -1094,7 +1094,7 @@
       "channel": "text",
       "line": 5,
       "name": "organization-judge",
-      "text": "# ShowcaseTools judge and the node port speak: `organization-judge judge FILE…`.",
+      "text": "# ShowcaseTools judge and the node port speak: `organization-judge judge FILE\u2026`.",
       "occurrence": 1,
       "task": "architecture-v1/r4/company-reader-after-T0038",
       "reason": "Architecture revision 4, Court of the company: owner artifacts and contracts, declared reader input, removal of built-in policy and subject-specific controls after T0038."
@@ -1124,7 +1124,7 @@
       "channel": "text",
       "line": 15,
       "name": "organization",
-      "text": "// `organization-judge judge FILE…` and `organization-judge judge parse FILE…`:",
+      "text": "// `organization-judge judge FILE\u2026` and `organization-judge judge parse FILE\u2026`:",
       "occurrence": 1,
       "task": "architecture-v1/r4/company-reader-after-T0038",
       "reason": "Architecture revision 4, Court of the company: owner artifacts and contracts, declared reader input, removal of built-in policy and subject-specific controls after T0038."
@@ -1134,7 +1134,7 @@
       "channel": "text",
       "line": 15,
       "name": "organization-judge",
-      "text": "// `organization-judge judge FILE…` and `organization-judge judge parse FILE…`:",
+      "text": "// `organization-judge judge FILE\u2026` and `organization-judge judge parse FILE\u2026`:",
       "occurrence": 1,
       "task": "architecture-v1/r4/company-reader-after-T0038",
       "reason": "Architecture revision 4, Court of the company: owner artifacts and contracts, declared reader input, removal of built-in policy and subject-specific controls after T0038."
@@ -1154,7 +1154,7 @@
       "channel": "text",
       "line": 19,
       "name": "organization",
-      "text": "FileHandle.standardError.write(Data(\"usage: organization-judge judge [parse] FILE…\\n\".utf8))",
+      "text": "FileHandle.standardError.write(Data(\"usage: organization-judge judge [parse] FILE\u2026\\n\".utf8))",
       "occurrence": 1,
       "task": "architecture-v1/r4/company-reader-after-T0038",
       "reason": "Architecture revision 4, Court of the company: owner artifacts and contracts, declared reader input, removal of built-in policy and subject-specific controls after T0038."
@@ -1164,7 +1164,7 @@
       "channel": "text",
       "line": 19,
       "name": "organization-judge",
-      "text": "FileHandle.standardError.write(Data(\"usage: organization-judge judge [parse] FILE…\\n\".utf8))",
+      "text": "FileHandle.standardError.write(Data(\"usage: organization-judge judge [parse] FILE\u2026\\n\".utf8))",
       "occurrence": 1,
       "task": "architecture-v1/r4/company-reader-after-T0038",
       "reason": "Architecture revision 4, Court of the company: owner artifacts and contracts, declared reader input, removal of built-in policy and subject-specific controls after T0038."
@@ -1314,7 +1314,7 @@
       "channel": "text",
       "line": 144,
       "name": "diff  grant|revoke",
-      "text": "gate diff  transfer WHO DEPT        · gate diff  grant|revoke WHO DOC",
+      "text": "gate diff  transfer WHO DEPT        \u00b7 gate diff  grant|revoke WHO DOC",
       "occurrence": 1,
       "task": "T0069",
       "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
@@ -1324,7 +1324,7 @@
       "channel": "text",
       "line": 144,
       "name": "diff  transfer",
-      "text": "gate diff  transfer WHO DEPT        · gate diff  grant|revoke WHO DOC",
+      "text": "gate diff  transfer WHO DEPT        \u00b7 gate diff  grant|revoke WHO DOC",
       "occurrence": 1,
       "task": "T0069",
       "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
@@ -1444,7 +1444,7 @@
       "channel": "text",
       "line": 413,
       "name": "grants.csv",
-      "text": "// ── export WORLD -o people.csv grants.csv: the tables printed back out of a",
+      "text": "// \u2500\u2500 export WORLD -o people.csv grants.csv: the tables printed back out of a",
       "occurrence": 1,
       "task": "T0069",
       "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
@@ -1454,7 +1454,7 @@
       "channel": "text",
       "line": 413,
       "name": "people.csv",
-      "text": "// ── export WORLD -o people.csv grants.csv: the tables printed back out of a",
+      "text": "// \u2500\u2500 export WORLD -o people.csv grants.csv: the tables printed back out of a",
       "occurrence": 1,
       "task": "T0069",
       "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
@@ -1462,7 +1462,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 1359,
+      "line": 1360,
       "name": "OrganizationReaderV1",
       "text": "let ROLE_OF_READER = [\"FormsReaderV1\": \"forms\", \"DocumentReaderV1\": \"forms\", \"OrganizationReaderV1\": \"world\",",
       "occurrence": 1,
@@ -1472,7 +1472,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 1768,
+      "line": 1769,
       "name": "hasTables",
       "text": "let hasTables = FileManager.default.fileExists(",
       "occurrence": 1,
@@ -1482,7 +1482,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 1769,
+      "line": 1770,
       "name": "people.csv",
       "text": "atPath: (t as NSString).appendingPathComponent(\"people.csv\"))",
       "occurrence": 1,
@@ -1492,7 +1492,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 1771,
+      "line": 1772,
       "name": "grants.csv",
       "text": "atPath: (t as NSString).appendingPathComponent(\"grants.csv\"))",
       "occurrence": 1,
@@ -1502,7 +1502,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 1774,
+      "line": 1775,
       "name": "hasTables",
       "text": "if FileManager.default.fileExists(atPath: w) || hasTables || layout != nil {",
       "occurrence": 1,
@@ -1512,7 +1512,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 1775,
+      "line": 1776,
       "name": "hasTables",
       "text": "return WorldState(facts: w, tables: hasTables ? t : nil, layout: layout)",
       "occurrence": 1,
@@ -1522,7 +1522,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 2335,
+      "line": 2336,
       "name": "company",
       "text": "// company court resolves those names; they are complete entries.",
       "occurrence": 1,
@@ -1532,7 +1532,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 2336,
+      "line": 2337,
       "name": "if !matches(\"^(?:[A-Z]",
       "text": "if !matches(\"^(?:[A-Z]\\\\w*\\\\.self\\\\s*;?\\\\s*)+$\", bare).isEmpty && openAt == nil {",
       "occurrence": 1,
@@ -1542,7 +1542,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 4731,
+      "line": 4733,
       "name": "seededWorldBuild",
       "text": "func seededWorldBuild(_ people: CsvTable, _ grants: CsvTable,",
       "occurrence": 1,
@@ -1552,7 +1552,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 4762,
+      "line": 4764,
       "name": "organization",
       "text": "emit(\"// the language it is written in: `gate stdlib show forms-organization`.\")",
       "occurrence": 1,
@@ -1562,7 +1562,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 4766,
+      "line": 4768,
       "name": "func ring(",
       "text": "func ring(_ names: [String], _ conf: String, _ extra: [String: String]? = nil) {",
       "occurrence": 1,
@@ -1572,7 +1572,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 4768,
+      "line": 4770,
       "name": "for n in names where !seen.contains(n)",
       "text": "for n in names where !seen.contains(n) { seen.insert(n); order.append(n) }",
       "occurrence": 1,
@@ -1582,7 +1582,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 4770,
+      "line": 4772,
       "name": "order[(i + 1) % order.count]",
       "text": "let next = order[(i + 1) % order.count]",
       "occurrence": 1,
@@ -1592,7 +1592,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 4773,
+      "line": 4775,
       "name": "Male",
       "text": "body += \"    public typealias Sex = \\(said.isEmpty ? \"Male\" : said)\\n\" }",
       "occurrence": 1,
@@ -1602,7 +1602,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 4786,
+      "line": 4788,
       "name": "let owed = [\"id\", \"rank\", \"home\"",
       "text": "let owed = [\"id\", \"rank\", \"home\", \"given\", \"family\", \"born\", \"site\"]",
       "occurrence": 1,
@@ -1612,7 +1612,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 4801,
+      "line": 4803,
       "name": "Male",
       "text": "sexes[people.text(r, \"given\")] = saidSex.isEmpty ? \"Male\" : saidSex",
       "occurrence": 1,
@@ -1622,7 +1622,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 4801,
+      "line": 4803,
       "name": "sexes[people.text(r, \"given\")]",
       "text": "sexes[people.text(r, \"given\")] = saidSex.isEmpty ? \"Male\" : saidSex",
       "occurrence": 1,
@@ -1632,7 +1632,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 4803,
+      "line": 4805,
       "name": "GivenNameCycle",
       "text": "ring(people.rows.indices.map { people.text($0, \"given\") }, \"GivenNameCycle\", sexes)",
       "occurrence": 1,
@@ -1642,7 +1642,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 4804,
+      "line": 4806,
       "name": "FamilyNameCycle",
       "text": "ring(people.rows.indices.map { people.text($0, \"family\") }, \"FamilyNameCycle\")",
       "occurrence": 1,
@@ -1652,7 +1652,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 4805,
+      "line": 4807,
       "name": "BirthYearCycle",
       "text": "ring(people.rows.indices.map { people.text($0, \"born\") }, \"BirthYearCycle\")",
       "occurrence": 1,
@@ -1662,7 +1662,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 4807,
+      "line": 4809,
       "name": "Employee",
       "text": "emit(\"\\npublic enum \\(people.text(r, \"id\")): Employee, Person {\\n\"",
       "occurrence": 1,
@@ -1672,7 +1672,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 4807,
+      "line": 4809,
       "name": "Person",
       "text": "emit(\"\\npublic enum \\(people.text(r, \"id\")): Employee, Person {\\n\"",
       "occurrence": 1,
@@ -1682,7 +1682,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 4820,
+      "line": 4822,
       "name": "VerifiedInDepartment",
       "text": "emit(\"        VerifiedInDepartment<\\n            \\(id),\\n\"",
       "occurrence": 1,
@@ -1692,7 +1692,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 4822,
+      "line": 4824,
       "name": "VerifiedAtRank",
       "text": "emit(\"        VerifiedAtRank<\\n            \\(id),\\n\"",
       "occurrence": 1,
@@ -1702,7 +1702,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 4824,
+      "line": 4826,
       "name": "VerifiedAtWorkplace",
       "text": "emit(\"        VerifiedAtWorkplace<\\n            \\(id),\\n\"",
       "occurrence": 1,
@@ -1712,7 +1712,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 4828,
+      "line": 4830,
       "name": "AccessLedger",
       "text": "emit(\"\\npublic enum ImportedAccesses: AccessLedger {\\n    @StructureBuilder\\n\"",
       "occurrence": 1,
@@ -1722,7 +1722,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 4831,
+      "line": 4833,
       "name": "VerifiedView",
       "text": "emit(\"            VerifiedView<\\n                \\(grants.text(r, \"who\")),\\n\"",
       "occurrence": 1,
@@ -1732,7 +1732,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 4848,
+      "line": 4850,
       "name": "seededWorld",
       "text": "func seededWorld(_ peoplePath: String, _ grantsPath: String) -> String {",
       "occurrence": 1,
@@ -1742,7 +1742,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 4851,
+      "line": 4853,
       "name": "seededWorldBuild",
       "text": "let built = seededWorldBuild(people, grants,",
       "occurrence": 1,
@@ -1752,7 +1752,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 4864,
+      "line": 4866,
       "name": "people.csv",
       "text": "let world = seededWorld((tables as NSString).appendingPathComponent(\"people.csv\"),",
       "occurrence": 1,
@@ -1762,7 +1762,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 4864,
+      "line": 4866,
       "name": "seededWorld",
       "text": "let world = seededWorld((tables as NSString).appendingPathComponent(\"people.csv\"),",
       "occurrence": 1,
@@ -1772,7 +1772,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 4865,
+      "line": 4867,
       "name": "grants.csv",
       "text": "(tables as NSString).appendingPathComponent(\"grants.csv\"))",
       "occurrence": 1,
@@ -1782,7 +1782,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 4940,
+      "line": 4942,
       "name": "wholeCompany",
       "text": "let raw = courtSays(files, wholeCompany: true)",
       "occurrence": 1,
@@ -1792,7 +1792,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 4949,
+      "line": 4951,
       "name": "THE JUDGE",
       "text": "refusals += canonGuard(w, raw, raw.contains(\"THE JUDGE\"), \"judge\")",
       "occurrence": 1,
@@ -1802,7 +1802,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6337,
+      "line": 6339,
       "name": "worldRows",
       "text": "func worldRows(_ text: String) -> (people: [[(String, String)]], grants: [(String, String)]) {",
       "occurrence": 1,
@@ -1812,7 +1812,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6339,
+      "line": 6341,
       "name": "Employee",
       "text": "for m in matches(\"public enum (\\\\w+): Employee, Person \\\\{(.*?)\\\\n\\\\}\", text, dotAll: true) {",
       "occurrence": 1,
@@ -1822,7 +1822,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6339,
+      "line": 6341,
       "name": "Person",
       "text": "for m in matches(\"public enum (\\\\w+): Employee, Person \\\\{(.*?)\\\\n\\\\}\", text, dotAll: true) {",
       "occurrence": 1,
@@ -1832,7 +1832,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6346,
+      "line": 6348,
       "name": "VerifiedView",
       "text": "let grants = matches(\"VerifiedView<\\\\s*(\\\\w+),\\\\s*(\\\\w+)\\\\s*>\\\\.self;\", text)",
       "occurrence": 1,
@@ -1842,9 +1842,9 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6391,
+      "line": 6393,
       "name": "THE JUDGE",
-      "text": "// ── THE JUDGE'S OWN READING, ASKED FOR. Nothing here grows a grammar over",
+      "text": "// \u2500\u2500 THE JUDGE'S OWN READING, ASKED FOR. Nothing here grows a grammar over",
       "occurrence": 1,
       "task": "architecture-v1/r4/company-reader-after-T0038",
       "reason": "Architecture revision 4, Court of the company: owner artifacts and contracts, declared reader input, removal of built-in policy and subject-specific controls after T0038."
@@ -1852,7 +1852,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6670,
+      "line": 6672,
       "name": "seededWorld",
       "text": "let world = seededWorld(peoplePath, grantsPath)",
       "occurrence": 1,
@@ -1862,7 +1862,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6679,
+      "line": 6681,
       "name": "THE JUDGE",
       "text": "return (said.contains(\"THE JUDGE holds\") && refusals.isEmpty ? \"holds\" : \"refused\",",
       "occurrence": 1,
@@ -1872,9 +1872,9 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6700,
+      "line": 6702,
       "name": "grants.csv",
-      "text": "// ── verify people.csv grants.csv [--against CMD]: the differential rule check.",
+      "text": "// \u2500\u2500 verify people.csv grants.csv [--against CMD]: the differential rule check.",
       "occurrence": 1,
       "task": "T0069",
       "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
@@ -1882,9 +1882,9 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6700,
+      "line": 6702,
       "name": "people.csv",
-      "text": "// ── verify people.csv grants.csv [--against CMD]: the differential rule check.",
+      "text": "// \u2500\u2500 verify people.csv grants.csv [--against CMD]: the differential rule check.",
       "occurrence": 1,
       "task": "T0069",
       "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
@@ -1892,7 +1892,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6763,
+      "line": 6765,
       "name": "people.csv",
       "text": "let pp = (d as NSString).appendingPathComponent(\"people.csv\")",
       "occurrence": 1,
@@ -1902,7 +1902,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6764,
+      "line": 6766,
       "name": "grants.csv",
       "text": "let gp = (d as NSString).appendingPathComponent(\"grants.csv\")",
       "occurrence": 1,
@@ -1912,7 +1912,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6820,
+      "line": 6823,
       "name": "THE JUDGE",
       "text": "return (said.contains(\"THE JUDGE holds\") ? \"holds\" : \"refused\", refusals,",
       "occurrence": 1,
@@ -1922,7 +1922,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6930,
+      "line": 6933,
       "name": "func transferText",
       "text": "func transferText(_ text: String, _ who: String, _ dept: String) throws -> String {",
       "occurrence": 1,
@@ -1932,7 +1932,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6930,
+      "line": 6933,
       "name": "transferText",
       "text": "func transferText(_ text: String, _ who: String, _ dept: String) throws -> String {",
       "occurrence": 1,
@@ -1942,18 +1942,8 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6932,
+      "line": 6935,
       "name": "Employee",
-      "text": "\"(public enum \\(who): Employee, Person \\\\{[^}]*?public typealias Home = )\\\\w+\",",
-      "occurrence": 1,
-      "task": "T0069",
-      "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
-    },
-    {
-      "path": "bin/gate-cli.swift",
-      "channel": "text",
-      "line": 6932,
-      "name": "Person",
       "text": "\"(public enum \\(who): Employee, Person \\\\{[^}]*?public typealias Home = )\\\\w+\",",
       "occurrence": 1,
       "task": "T0069",
@@ -1963,6 +1953,16 @@
       "path": "bin/gate-cli.swift",
       "channel": "text",
       "line": 6935,
+      "name": "Person",
+      "text": "\"(public enum \\(who): Employee, Person \\\\{[^}]*?public typealias Home = )\\\\w+\",",
+      "occurrence": 1,
+      "task": "T0069",
+      "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
+    },
+    {
+      "path": "bin/gate-cli.swift",
+      "channel": "text",
+      "line": 6938,
       "name": "VerifiedInDepartment",
       "text": "if let re = try? NSRegularExpression(pattern: \"(VerifiedInDepartment<\\\\s*\\(who),\\\\s*)\\\\w+\") {",
       "occurrence": 1,
@@ -1972,7 +1972,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6943,
+      "line": 6946,
       "name": "func grantText",
       "text": "func grantText(_ text: String, _ who: String, _ doc: String) throws -> String {",
       "occurrence": 1,
@@ -1982,7 +1982,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6943,
+      "line": 6946,
       "name": "grantText",
       "text": "func grantText(_ text: String, _ who: String, _ doc: String) throws -> String {",
       "occurrence": 1,
@@ -1992,7 +1992,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6944,
+      "line": 6947,
       "name": "VerifiedView",
       "text": "try lastEntryInsert(text, \"VerifiedView\", who, doc, 12)",
       "occurrence": 1,
@@ -2002,7 +2002,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6947,
+      "line": 6950,
       "name": "func revokeText",
       "text": "func revokeText(_ text: String, _ who: String, _ doc: String) throws -> String {",
       "occurrence": 1,
@@ -2012,7 +2012,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6947,
+      "line": 6950,
       "name": "revokeText",
       "text": "func revokeText(_ text: String, _ who: String, _ doc: String) throws -> String {",
       "occurrence": 1,
@@ -2022,7 +2022,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6948,
+      "line": 6951,
       "name": "VerifiedView",
       "text": "let pattern = \"\\\\n\\\\s*VerifiedView<\\\\s*\\(who),\\\\s*\\(doc)\\\\s*>\\\\.self;?\"",
       "occurrence": 1,
@@ -2032,7 +2032,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 6996,
+      "line": 6999,
       "name": "func askViewAnswer",
       "text": "func askViewAnswer(_ w: WorldState, _ who: String, _ doc: String) -> Answered {",
       "occurrence": 1,
@@ -2042,7 +2042,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7007,
+      "line": 7010,
       "name": "VerifiedView",
       "text": "guard let probe = try? lastEntryInsert(readText(facts) ?? \"\", \"VerifiedView\", who, doc, 12)",
       "occurrence": 1,
@@ -2052,7 +2052,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7009,
+      "line": 7012,
       "name": "VerifiedView",
       "text": "return .cannot(note: \"no VerifiedView entries to anchor on\",",
       "occurrence": 1,
@@ -2062,7 +2062,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7045,
+      "line": 7048,
       "name": "FinanceShare",
       "text": "\"gate check view Emp0042 FinanceShare, with names your world declares \"",
       "occurrence": 1,
@@ -2072,7 +2072,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7051,
+      "line": 7054,
       "name": "FinanceShare",
       "text": "let asks = \"gate check view Emp0042 FinanceShare, with names your world declares \"",
       "occurrence": 1,
@@ -2082,9 +2082,9 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7081,
+      "line": 7084,
       "name": "diff transfer|grant|revoke",
-      "text": "// ── diff transfer|grant|revoke · apply the same words. The SINGLE",
+      "text": "// \u2500\u2500 diff transfer|grant|revoke \u00b7 apply the same words. The SINGLE",
       "occurrence": 1,
       "task": "T0069",
       "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
@@ -2092,7 +2092,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7087,
+      "line": 7090,
       "name": "func changeAnswer",
       "text": "func changeAnswer(_ w: WorldState, _ facts: String, _ rest: [String],",
       "occurrence": 1,
@@ -2102,7 +2102,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7093,
+      "line": 7096,
       "name": "\"transfer\"",
       "text": "case \"transfer\":",
       "occurrence": 1,
@@ -2112,7 +2112,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7093,
+      "line": 7096,
       "name": "case \"transfer\"",
       "text": "case \"transfer\":",
       "occurrence": 1,
@@ -2122,7 +2122,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7095,
+      "line": 7098,
       "name": "change transfer",
       "text": "return .cannot(note: \"change transfer WHO DEPT: this names too little\",",
       "occurrence": 1,
@@ -2132,7 +2132,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7098,
+      "line": 7101,
       "name": "transferText",
       "text": "do { made = try transferText(text, rest[1], rest[2]) }",
       "occurrence": 1,
@@ -2142,7 +2142,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7101,
+      "line": 7104,
       "name": "change transfer",
       "text": "label = [(\"command\", .text(\"change transfer\")), (\"who\", .text(rest[1])),",
       "occurrence": 1,
@@ -2152,7 +2152,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7105,
+      "line": 7108,
       "name": "\"grant\"",
       "text": "case \"grant\":",
       "occurrence": 1,
@@ -2162,7 +2162,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7105,
+      "line": 7108,
       "name": "case \"grant\"",
       "text": "case \"grant\":",
       "occurrence": 1,
@@ -2172,7 +2172,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7107,
+      "line": 7110,
       "name": "change grant",
       "text": "return .cannot(note: \"change grant WHO DOC: this names too little\",",
       "occurrence": 1,
@@ -2182,7 +2182,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7110,
+      "line": 7113,
       "name": "grantText",
       "text": "do { made = try grantText(text, rest[1], rest[2]) }",
       "occurrence": 1,
@@ -2192,7 +2192,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7113,
+      "line": 7116,
       "name": "change grant",
       "text": "label = [(\"command\", .text(\"change grant\")), (\"who\", .text(rest[1])),",
       "occurrence": 1,
@@ -2202,7 +2202,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7115,
+      "line": 7118,
       "name": "\"revoke\"",
       "text": "case \"revoke\":",
       "occurrence": 1,
@@ -2212,7 +2212,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7115,
+      "line": 7118,
       "name": "case \"revoke\"",
       "text": "case \"revoke\":",
       "occurrence": 1,
@@ -2222,7 +2222,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7117,
+      "line": 7120,
       "name": "change revoke",
       "text": "return .cannot(note: \"change revoke WHO DOC: this names too little\",",
       "occurrence": 1,
@@ -2232,7 +2232,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7120,
+      "line": 7123,
       "name": "revokeText",
       "text": "do { made = try revokeText(text, rest[1], rest[2]) }",
       "occurrence": 1,
@@ -2242,7 +2242,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7123,
+      "line": 7126,
       "name": "change revoke",
       "text": "label = [(\"command\", .text(\"change revoke\")), (\"who\", .text(rest[1])),",
       "occurrence": 1,
@@ -2252,9 +2252,9 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7164,
+      "line": 7167,
       "name": "diff grant|revoke",
-      "text": "let note = \"diff transfer WHO DEPT  ·  diff grant|revoke WHO DOC  ·  \"",
+      "text": "let note = \"diff transfer WHO DEPT  \u00b7  diff grant|revoke WHO DOC  \u00b7  \"",
       "occurrence": 1,
       "task": "T0069",
       "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
@@ -2262,9 +2262,9 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7164,
+      "line": 7167,
       "name": "diff transfer",
-      "text": "let note = \"diff transfer WHO DEPT  ·  diff grant|revoke WHO DOC  ·  \"",
+      "text": "let note = \"diff transfer WHO DEPT  \u00b7  diff grant|revoke WHO DOC  \u00b7  \"",
       "occurrence": 1,
       "task": "T0069",
       "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
@@ -2272,7 +2272,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7166,
+      "line": 7169,
       "name": "Sales",
       "text": "let next = \"gate diff transfer Emp0042 Sales shows what would move and what \"",
       "occurrence": 1,
@@ -2282,7 +2282,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7166,
+      "line": 7169,
       "name": "diff transfer",
       "text": "let next = \"gate diff transfer Emp0042 Sales shows what would move and what \"",
       "occurrence": 1,
@@ -2292,7 +2292,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7385,
+      "line": 7389,
       "name": "if rest.first == \"org\"",
       "text": "if rest.first == \"org\" {",
       "occurrence": 1,
@@ -2302,7 +2302,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7392,
+      "line": 7396,
       "name": "installExample(\"organization\"",
       "text": "installExample(\"organization\", root)",
       "occurrence": 1,
@@ -2312,7 +2312,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7399,
+      "line": 7403,
       "name": "people.csv",
       "text": "_ = selfSaid([\"import\", (root as NSString).appendingPathComponent(\"tables/people.csv\"),",
       "occurrence": 1,
@@ -2322,7 +2322,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7400,
+      "line": 7404,
       "name": "grants.csv",
       "text": "(root as NSString).appendingPathComponent(\"tables/grants.csv\"),",
       "occurrence": 1,
@@ -2332,7 +2332,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7405,
+      "line": 7409,
       "name": "STDLIB_TEXTS[\"forms-organization\"]",
       "text": "var body = (STDLIB_TEXTS[\"forms-organization\"] ?? \"\").components(separatedBy: \"\\n\")",
       "occurrence": 1,
@@ -2342,7 +2342,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7405,
+      "line": 7409,
       "name": "organization",
       "text": "var body = (STDLIB_TEXTS[\"forms-organization\"] ?? \"\").components(separatedBy: \"\\n\")",
       "occurrence": 1,
@@ -2352,7 +2352,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7414,
+      "line": 7418,
       "name": "organization",
       "text": "put(root, \"forms-organization.swift\", forms)",
       "occurrence": 1,
@@ -2362,7 +2362,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7415,
+      "line": 7419,
       "name": "organization",
       "text": "_ = declareSideHere((root as NSString).appendingPathComponent(\"forms-organization.swift\"),",
       "occurrence": 1,
@@ -2372,9 +2372,9 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7417,
+      "line": 7421,
       "name": "THE JUDGE",
-      "text": "// ── AND THE JUDGE'S OWN ROW, WRITTEN IN YOUR NAME. Nothing stands in",
+      "text": "// \u2500\u2500 AND THE JUDGE'S OWN ROW, WRITTEN IN YOUR NAME. Nothing stands in",
       "occurrence": 1,
       "task": "architecture-v1/r4/company-reader-after-T0038",
       "reason": "Architecture revision 4, Court of the company: owner artifacts and contracts, declared reader input, removal of built-in policy and subject-specific controls after T0038."
@@ -2382,7 +2382,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7441,
+      "line": 7445,
       "name": "EngineeringShare",
       "text": "let asked = readSaid(selfSaid([\"check\", \"view\", \"Emp9001\", \"EngineeringShare\", \"--json\"],",
       "occurrence": 1,
@@ -2392,7 +2392,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7452,
+      "line": 7456,
       "name": "FinanceShare",
       "text": "\"gate apply revoke Emp9002 FinanceShare  an edit judged before it lands\",",
       "occurrence": 1,
@@ -2402,7 +2402,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7452,
+      "line": 7456,
       "name": "apply revoke",
       "text": "\"gate apply revoke Emp9002 FinanceShare  an edit judged before it lands\",",
       "occurrence": 1,
@@ -2412,7 +2412,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7453,
+      "line": 7457,
       "name": "Engineering",
       "text": "\"open gate.swift and change one Home to Engineering, and the judge \"",
       "occurrence": 1,
@@ -2422,7 +2422,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7457,
+      "line": 7461,
       "name": "EngineeringShare",
       "text": "words.append(\"  asked `gate check view Emp9001 EngineeringShare` for you, \"",
       "occurrence": 1,
@@ -2432,7 +2432,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 7465,
+      "line": 7469,
       "name": "EngineeringShare",
       "text": "(\"asked\", .text(\"gate check view Emp9001 EngineeringShare\")),",
       "occurrence": 1,
@@ -2442,7 +2442,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 8123,
+      "line": 8127,
       "name": "VerifiedAtRank",
       "text": "do { probe = try lastEntryInsert(readText(facts) ?? \"\", \"VerifiedAtRank\", who, required, 8) }",
       "occurrence": 1,
@@ -2452,7 +2452,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 8148,
+      "line": 8152,
       "name": "grants.csv",
       "text": "let next = \"gate verify people.csv grants.csv [--against CMD]: the two tables, \"",
       "occurrence": 1,
@@ -2462,7 +2462,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 8148,
+      "line": 8152,
       "name": "people.csv",
       "text": "let next = \"gate verify people.csv grants.csv [--against CMD]: the two tables, \"",
       "occurrence": 1,
@@ -2472,7 +2472,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 8255,
+      "line": 8259,
       "name": "people.csv",
       "text": "let said = verifySeeds((tables as NSString).appendingPathComponent(\"people.csv\"),",
       "occurrence": 1,
@@ -2482,7 +2482,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 8256,
+      "line": 8260,
       "name": "grants.csv",
       "text": "(tables as NSString).appendingPathComponent(\"grants.csv\"), nil)",
       "occurrence": 1,
@@ -2492,9 +2492,9 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 9134,
+      "line": 9138,
       "name": "grants.csv",
-      "text": "// ── import people.csv grants.csv [-o gate.swift]",
+      "text": "// \u2500\u2500 import people.csv grants.csv [-o gate.swift]",
       "occurrence": 1,
       "task": "T0069",
       "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
@@ -2502,9 +2502,9 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 9134,
+      "line": 9138,
       "name": "people.csv",
-      "text": "// ── import people.csv grants.csv [-o gate.swift]",
+      "text": "// \u2500\u2500 import people.csv grants.csv [-o gate.swift]",
       "occurrence": 1,
       "task": "T0069",
       "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
@@ -2512,9 +2512,9 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 9137,
+      "line": 9141,
       "name": "grants.csv",
-      "text": "let note = \"import people.csv grants.csv [-o gate.swift]  ·  \"",
+      "text": "let note = \"import people.csv grants.csv [-o gate.swift]  \u00b7  \"",
       "occurrence": 1,
       "task": "T0069",
       "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
@@ -2522,9 +2522,9 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 9137,
+      "line": 9141,
       "name": "people.csv",
-      "text": "let note = \"import people.csv grants.csv [-o gate.swift]  ·  \"",
+      "text": "let note = \"import people.csv grants.csv [-o gate.swift]  \u00b7  \"",
       "occurrence": 1,
       "task": "T0069",
       "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
@@ -2532,7 +2532,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 9278,
+      "line": 9282,
       "name": "worldRows",
       "text": "let (people, grants) = worldRows(text)",
       "occurrence": 1,
@@ -2542,7 +2542,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 9282,
+      "line": 9286,
       "name": "THE JUDGE",
       "text": "let holds = said.contains(\"THE JUDGE holds\")",
       "occurrence": 1,
@@ -2552,9 +2552,9 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 9342,
+      "line": 9346,
       "name": "\"grant\"",
-      "text": "<p>\\(many(people.count, \"person\", \"people\")) · \\(many(grants.count, \"grant\")) · judged in \\(judgeMs.map { floatRepr($0) + \" ms\" } ?? \"an unread clock\")</p>",
+      "text": "<p>\\(many(people.count, \"person\", \"people\")) \u00b7 \\(many(grants.count, \"grant\")) \u00b7 judged in \\(judgeMs.map { floatRepr($0) + \" ms\" } ?? \"an unread clock\")</p>",
       "occurrence": 1,
       "task": "T0069",
       "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
@@ -2562,7 +2562,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 9344,
+      "line": 9348,
       "name": "People",
       "text": "<h2>People</h2>\\(table(people, [\"id\", \"rank\", \"home\", \"site\", \"given\", \"family\", \"born\"]))",
       "occurrence": 1,
@@ -2572,7 +2572,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 9961,
+      "line": 9966,
       "name": "THE JUDGE",
       "text": "let ok = !wrote.isEmpty && courtSays(wrote).contains(\"THE JUDGE holds\")",
       "occurrence": 1,
@@ -2582,7 +2582,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 10116,
+      "line": 10121,
       "name": "THE JUDGE",
       "text": "formsChecked(whereSize) + (raw.contains(\"THE JUDGE holds\") ? 1 : 0))",
       "occurrence": 1,
@@ -2592,7 +2592,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 10977,
+      "line": 10983,
       "name": "judge.js",
       "text": "for rel in [\"bin/judge.js\", \"bin/judge-wasm.js\", \"bin/court-wasm.from\",",
       "occurrence": 1,
@@ -2602,7 +2602,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11024,
+      "line": 11030,
       "name": "company",
       "text": "// and the company's plain court beside it, built from the showcase at its",
       "occurrence": 1,
@@ -2612,7 +2612,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11026,
+      "line": 11032,
       "name": "organization-judge",
       "text": "let osrc = (here as NSString).appendingPathComponent(\"bin/organization-judge\")",
       "occurrence": 1,
@@ -2622,7 +2622,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11028,
+      "line": 11034,
       "name": "organization-judge",
       "text": "let odst = (dst as NSString).appendingPathComponent(\"bin/organization-judge\")",
       "occurrence": 1,
@@ -2632,7 +2632,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11031,
+      "line": 11037,
       "name": "organization-judge",
       "text": "carried.append(\"bin/organization-judge\")",
       "occurrence": 1,
@@ -2642,7 +2642,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11034,
+      "line": 11040,
       "name": "organization-judge",
       "text": "carried.append(\"bin/organization-judge.from\")",
       "occurrence": 1,
@@ -2652,7 +2652,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11710,
+      "line": 11716,
       "name": "grants.csv",
       "text": "let next = \"gate export gate.swift -o people.csv grants.csv, then diff each \"",
       "occurrence": 1,
@@ -2662,7 +2662,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11710,
+      "line": 11716,
       "name": "people.csv",
       "text": "let next = \"gate export gate.swift -o people.csv grants.csv, then diff each \"",
       "occurrence": 1,
@@ -2672,7 +2672,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11721,
+      "line": 11727,
       "name": "grants.csv",
       "text": "+ \"`gate export gate.swift -o people.csv grants.csv`\",",
       "occurrence": 1,
@@ -2682,7 +2682,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11721,
+      "line": 11727,
       "name": "people.csv",
       "text": "+ \"`gate export gate.swift -o people.csv grants.csv`\",",
       "occurrence": 1,
@@ -2692,7 +2692,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11742,
+      "line": 11748,
       "name": "GivenNameCycle",
       "text": "let sexPool = Dictionary(matches(\"public enum (\\\\w+): GivenNameCycle \\\\{.*?Sex = (\\\\w+)\",",
       "occurrence": 1,
@@ -2702,7 +2702,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11748,
+      "line": 11754,
       "name": "Employee",
       "text": "pattern: \"public enum (\\\\w+): Employee, Person \\\\{(.*?)\\\\n\\\\}\",",
       "occurrence": 1,
@@ -2712,7 +2712,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11748,
+      "line": 11754,
       "name": "Person",
       "text": "pattern: \"public enum (\\\\w+): Employee, Person \\\\{(.*?)\\\\n\\\\}\",",
       "occurrence": 1,
@@ -2722,7 +2722,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11782,
+      "line": 11788,
       "name": "VerifiedView",
       "text": "let grants = matches(\"VerifiedView<\\\\s*(\\\\w+),\\\\s*(\\\\w+)\\\\s*>\\\\.self;?\", text)",
       "occurrence": 1,
@@ -2732,9 +2732,9 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11800,
+      "line": 11806,
       "name": "\"grant\"",
-      "text": "+ many(grants.count, \"grant\") + \" → \"",
+      "text": "+ many(grants.count, \"grant\") + \" \u2192 \"",
       "occurrence": 1,
       "task": "T0069",
       "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
@@ -2742,7 +2742,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11847,
+      "line": 11853,
       "name": "wholeCompany",
       "text": "func courtSays(_ asked: [String], wholeCompany: Bool = false) -> String {",
       "occurrence": 1,
@@ -2752,7 +2752,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11853,
+      "line": 11859,
       "name": "companyLines",
       "text": "var companyLines: [(path: String, start: Int, count: Int)] = []",
       "occurrence": 1,
@@ -2762,7 +2762,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11856,
+      "line": 11862,
       "name": "wholeCompany",
       "text": "if wholeCompany && supplied.count > 1 {",
       "occurrence": 1,
@@ -2772,7 +2772,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11869,
+      "line": 11875,
       "name": "companyLines",
       "text": "companyLines.append((name, start, count))",
       "occurrence": 1,
@@ -2782,7 +2782,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11872,
+      "line": 11878,
       "name": "company",
       "text": "if projected == nil { projected = scratchDir(\"gate-company-\") }",
       "occurrence": 1,
@@ -2792,7 +2792,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11873,
+      "line": 11879,
       "name": "company",
       "text": "let target = joinPath(projected!, \"gate-company-stream.swift\")",
       "occurrence": 1,
@@ -2802,7 +2802,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11879,
+      "line": 11885,
       "name": "companyLines",
       "text": "guard !companyLines.isEmpty,",
       "occurrence": 1,
@@ -2812,7 +2812,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11880,
+      "line": 11886,
       "name": "company",
       "text": "let pattern = try? NSRegularExpression(pattern: \"gate-company-stream\\\\.swift:([0-9]+)\") else { return answer }",
       "occurrence": 1,
@@ -2822,7 +2822,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 11884,
+      "line": 11890,
       "name": "companyLines",
       "text": "let part = companyLines.first(where: { line >= $0.start && line < $0.start + $0.count }) else { continue }",
       "occurrence": 1,
@@ -2832,7 +2832,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 12123,
+      "line": 12129,
       "name": "/check/view",
       "text": "//   GET  /check/view           does this grant hold, asked without writing",
       "occurrence": 1,
@@ -2842,7 +2842,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 12126,
+      "line": 12132,
       "name": "/diff/transfer",
       "text": "//   GET  /diff/transfer        what a change would do, and nothing done",
       "occurrence": 1,
@@ -2852,7 +2852,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 12132,
+      "line": 12138,
       "name": "judge.js",
       "text": "//   GET  /judge.js             the ported court, for the page to judge with",
       "occurrence": 1,
@@ -2862,7 +2862,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 13234,
+      "line": 13240,
       "name": "/check/view",
       "text": ".text(\"/check/view?who=&doc=\"), .text(\"/diff/transfer?who=&to=\")])),",
       "occurrence": 1,
@@ -2872,7 +2872,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 13234,
+      "line": 13240,
       "name": "/diff/transfer",
       "text": ".text(\"/check/view?who=&doc=\"), .text(\"/diff/transfer?who=&to=\")])),",
       "occurrence": 1,
@@ -2882,7 +2882,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 13297,
+      "line": 13303,
       "name": "judge.js",
       "text": "case (\"GET\", \"/judge.js\"):",
       "occurrence": 1,
@@ -2892,7 +2892,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 13299,
+      "line": 13305,
       "name": "judge.js",
       "text": "serveFile(conn, joinPath(toolRoot(), \"bin/judge.js\"),",
       "occurrence": 1,
@@ -2902,7 +2902,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 13413,
+      "line": 13419,
       "name": "/check/view",
       "text": "case (\"GET\", \"/check/view\"):",
       "occurrence": 1,
@@ -2912,7 +2912,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 13424,
+      "line": 13430,
       "name": "/check/view",
       "text": "next: \"/check/view?who=Emp0042&doc=FinanceShare\")))",
       "occurrence": 1,
@@ -2922,7 +2922,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 13424,
+      "line": 13430,
       "name": "FinanceShare",
       "text": "next: \"/check/view?who=Emp0042&doc=FinanceShare\")))",
       "occurrence": 1,
@@ -2932,7 +2932,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 13428,
+      "line": 13434,
       "name": "/diff/transfer",
       "text": "case (\"GET\", \"/diff/transfer\"):",
       "occurrence": 1,
@@ -2942,7 +2942,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 13433,
+      "line": 13439,
       "name": "diff transfer",
       "text": "note: \"diff transfer asks who moves, and where to\",",
       "occurrence": 1,
@@ -2952,7 +2952,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 13434,
+      "line": 13440,
       "name": "/diff/transfer",
       "text": "next: \"/diff/transfer?who=Emp0042&to=Sales\")))",
       "occurrence": 1,
@@ -2962,7 +2962,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 13434,
+      "line": 13440,
       "name": "Sales",
       "text": "next: \"/diff/transfer?who=Emp0042&to=Sales\")))",
       "occurrence": 1,
@@ -2972,7 +2972,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 13437,
+      "line": 13443,
       "name": "\"transfer\"",
       "text": "changeAnswer(w, facts, [\"transfer\", who, to], applyIt: false)))",
       "occurrence": 1,
@@ -2982,7 +2982,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 13725,
+      "line": 13731,
       "name": "wholeCompany",
       "text": "let raw = courtSays(paths, wholeCompany: true)",
       "occurrence": 1,
@@ -2992,7 +2992,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 14026,
+      "line": 14032,
       "name": "judge.js",
       "text": "\"publication.js\": \"web/publication.js\", \"judge.js\": \"bin/judge.js\", \"renderer.js\": \"bin/renderer.js\",",
       "occurrence": 1,
@@ -3002,7 +3002,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 14345,
+      "line": 14351,
       "name": "organization-court",
       "text": "\"installed\": [\"gate\": gateVersion(), \"organization_revision\": runtimeData(\"bin/organization-court.from\").flatMap { String(data: $0, encoding: .utf8)?.components(separatedBy: \"\\n\").first } ?? \"\", \"binary_sha256\": FileManager.default.contents(atPath: absPath(CommandLine.arguments[0])).map { sha256Hex($0) } ?? \"\", \"judge_revision\": judgeFrom() ?? \"\", \"wasm\": assets[\"assets/vi_court_bytes.js\"] ?? \"\", \"stdlib\": Dictionary(uniqueKeysWithValues: shelf().map { ($0.name, sha256Hex(Data($0.text.utf8))) })], \"assets\": assets, \"resources\": resources]",
       "occurrence": 1,
@@ -3012,7 +3012,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 14345,
+      "line": 14351,
       "name": "organization_revision",
       "text": "\"installed\": [\"gate\": gateVersion(), \"organization_revision\": runtimeData(\"bin/organization-court.from\").flatMap { String(data: $0, encoding: .utf8)?.components(separatedBy: \"\\n\").first } ?? \"\", \"binary_sha256\": FileManager.default.contents(atPath: absPath(CommandLine.arguments[0])).map { sha256Hex($0) } ?? \"\", \"judge_revision\": judgeFrom() ?? \"\", \"wasm\": assets[\"assets/vi_court_bytes.js\"] ?? \"\", \"stdlib\": Dictionary(uniqueKeysWithValues: shelf().map { ($0.name, sha256Hex(Data($0.text.utf8))) })], \"assets\": assets, \"resources\": resources]",
       "occurrence": 1,
@@ -3022,7 +3022,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 14362,
+      "line": 14368,
       "name": "judge.js",
       "text": "for asset in [\"codemirror.js\", \"codemirror.css\", \"judge.js\", \"renderer.js\", \"press.js\", \"drawing-profile.js\"] {",
       "occurrence": 1,
@@ -3032,7 +3032,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 14509,
+      "line": 14515,
       "name": "organization-court",
       "text": "let orgFrom = joinPath(toolRoot(), \"bin/organization-court.from\")",
       "occurrence": 1,
@@ -3042,7 +3042,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 14511,
+      "line": 14517,
       "name": "company",
       "text": "lines.append(\"  company court from verification-is-identification-showcase \"",
       "occurrence": 1,
@@ -3052,7 +3052,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 14512,
+      "line": 14518,
       "name": "organization-judge",
       "text": "+ String(org.prefix(12)) + \". `bin/build-organization-judge.sh` builds it\")",
       "occurrence": 1,
@@ -3104,7 +3104,7 @@
       "channel": "text",
       "line": 65,
       "name": "THE JUDGE",
-      "text": "process.stderr.write(\"✗ THE JUDGE needs the files it reads: `swift run ShowcaseTools judge <path>…`\\n\");",
+      "text": "process.stderr.write(\"\u2717 THE JUDGE needs the files it reads: `swift run ShowcaseTools judge <path>\u2026`\\n\");",
       "occurrence": 1,
       "task": "architecture-v1/r4/company-reader-after-T0038",
       "reason": "Architecture revision 4, Court of the company: owner artifacts and contracts, declared reader input, removal of built-in policy and subject-specific controls after T0038."
@@ -3124,7 +3124,7 @@
       "channel": "text",
       "line": 78,
       "name": "THE JUDGE",
-      "text": "process.stderr.write(\"✗ THE JUDGE cannot read the corpus\\n\");",
+      "text": "process.stderr.write(\"\u2717 THE JUDGE cannot read the corpus\\n\");",
       "occurrence": 1,
       "task": "architecture-v1/r4/company-reader-after-T0038",
       "reason": "Architecture revision 4, Court of the company: owner artifacts and contracts, declared reader input, removal of built-in policy and subject-specific controls after T0038."
@@ -3134,7 +3134,7 @@
       "channel": "text",
       "line": 86,
       "name": "THE JUDGE",
-      "text": "console.log(`✗ THE JUDGE refuses ${refusals.length} claim(s) in ${t} ms:`);",
+      "text": "console.log(`\u2717 THE JUDGE refuses ${refusals.length} claim(s) in ${t} ms:`);",
       "occurrence": 1,
       "task": "architecture-v1/r4/company-reader-after-T0038",
       "reason": "Architecture revision 4, Court of the company: owner artifacts and contracts, declared reader input, removal of built-in policy and subject-specific controls after T0038."
@@ -3144,7 +3144,7 @@
       "channel": "text",
       "line": 90,
       "name": "THE JUDGE",
-      "text": "console.log(`✓ THE JUDGE holds: ${decl} declarations · ${lookups} lookups · `",
+      "text": "console.log(`\u2713 THE JUDGE holds: ${decl} declarations \u00b7 ${lookups} lookups \u00b7 `",
       "occurrence": 1,
       "task": "architecture-v1/r4/company-reader-after-T0038",
       "reason": "Architecture revision 4, Court of the company: owner artifacts and contracts, declared reader input, removal of built-in policy and subject-specific controls after T0038."
@@ -7774,7 +7774,7 @@
       "channel": "text",
       "line": 613,
       "name": "THE JUDGE",
-      "text": "# ── AND THE JUDGE'S OWN LINKAGE OPENS NO SOCKET. DETAILS hands a reviewer",
+      "text": "# \u2500\u2500 AND THE JUDGE'S OWN LINKAGE OPENS NO SOCKET. DETAILS hands a reviewer",
       "occurrence": 1,
       "task": "architecture-v1/r4/company-reader-after-T0038",
       "reason": "Architecture revision 4, Court of the company: owner artifacts and contracts, declared reader input, removal of built-in policy and subject-specific controls after T0038."
@@ -8382,7 +8382,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 3174,
+      "line": 3181,
       "name": "Manager",
       "text": "public typealias Requires = Manager",
       "occurrence": 1,
@@ -8392,7 +8392,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 3194,
+      "line": 3201,
       "name": "Manager",
       "text": "r.get(\"policy_from\") == \"gate.policy.swift\" and r.get(\"requires\") == \"Manager\"",
       "occurrence": 1,
@@ -8402,7 +8402,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 3196,
+      "line": 3203,
       "name": "Manager",
       "text": "S.append((\"guard: a Lead may not merge when the policy demands a Manager\",",
       "occurrence": 1,
@@ -8412,9 +8412,9 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 3284,
+      "line": 3291,
       "name": "judge.js",
-      "text": "# ── AND EVERY COURT TRAVELS, OR THE CARRY IS HALF A TOOL. `bin/judge.js` went",
+      "text": "# \u2500\u2500 AND EVERY COURT TRAVELS, OR THE CARRY IS HALF A TOOL. `bin/judge.js` went",
       "occurrence": 1,
       "task": "architecture-v1/r4/company-reader-after-T0038",
       "reason": "Architecture revision 4, Court of the company: owner artifacts and contracts, declared reader input, removal of built-in policy and subject-specific controls after T0038."
@@ -8422,7 +8422,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 3300,
+      "line": 3307,
       "name": "judge.js",
       "text": "os.path.exists(os.path.join(ven, \".gate\", \"bin\", \"judge.js\"))",
       "occurrence": 1,
@@ -8432,7 +8432,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 3390,
+      "line": 3397,
       "name": "judge.js",
       "text": "os.path.join(HERE, \"bin\", \"judge.js\"), os.path.join(HERE, \"bin\", \"renderer.js\"),",
       "occurrence": 1,
@@ -8442,7 +8442,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 3426,
+      "line": 3433,
       "name": "judge.js",
       "text": "const { judge } = require(path.join(root, 'bin/judge.js'));",
       "occurrence": 1,
@@ -8452,7 +8452,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 3581,
+      "line": 3588,
       "name": "Finance",
       "text": "t.change('public enum P { public typealias Rank = Finance }');",
       "occurrence": 1,
@@ -8462,7 +8462,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 3582,
+      "line": 3589,
       "name": "Engineering",
       "text": "t.context.fillSlot({ kind: 'alias', line: 1 }, 'Engineering');",
       "occurrence": 1,
@@ -8472,7 +8472,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 3583,
+      "line": 3590,
       "name": "Engineering",
       "text": "assert.equal(t.text(), 'public enum P { public typealias Rank = Engineering }');",
       "occurrence": 1,
@@ -8482,7 +8482,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 3591,
+      "line": 3598,
       "name": "Finance",
       "text": "t.change('import VerificationIsIdentification\\npublic enum P { public typealias Rank = Finance }');",
       "occurrence": 1,
@@ -8492,7 +8492,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 3593,
+      "line": 3600,
       "name": "Engineering",
       "text": "t.context.compItems = ['Engineering']; t.completion.hidden = false;",
       "occurrence": 1,
@@ -8502,7 +8502,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 3596,
+      "line": 3603,
       "name": "Engineering",
       "text": "assert.equal(t.text(), 'import VerificationIsIdentification\\npublic enum P { public typealias Rank = Engineering }');",
       "occurrence": 1,
@@ -8512,7 +8512,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 3792,
+      "line": 3799,
       "name": "Engineering",
       "text": "\"public typealias Home = Finance\", \"public typealias Home = Engineering\", 1)",
       "occurrence": 1,
@@ -8522,7 +8522,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 3792,
+      "line": 3799,
       "name": "Finance",
       "text": "\"public typealias Home = Finance\", \"public typealias Home = Engineering\", 1)",
       "occurrence": 1,
@@ -8532,7 +8532,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 3835,
+      "line": 3842,
       "name": "EngineeringShare",
       "text": "c, r = run(\"check\", \"view\", \"Emp9001\", \"EngineeringShare\", cwd=d)",
       "occurrence": 1,
@@ -8542,7 +8542,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 3895,
+      "line": 3902,
       "name": "Manager",
       "text": "'public enum MergePolicy { public typealias Requires = Manager }\\n')",
       "occurrence": 1,
@@ -8552,7 +8552,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 3899,
+      "line": 3906,
       "name": "Engineering",
       "text": "\"public typealias Home = Finance\", \"public typealias Home = Engineering\", 1)",
       "occurrence": 2,
@@ -8562,7 +8562,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 3899,
+      "line": 3906,
       "name": "Finance",
       "text": "\"public typealias Home = Finance\", \"public typealias Home = Engineering\", 1)",
       "occurrence": 2,
@@ -8572,7 +8572,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 3926,
+      "line": 3933,
       "name": "organization",
       "text": "forms_page = open(os.path.join(HERE, \"stdlib\", \"forms-organization.swift\")).read()",
       "occurrence": 1,
@@ -8582,7 +8582,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 3928,
+      "line": 3935,
       "name": "Ranked",
       "text": "\"associatedtype Sex: Sexed\" in forms_page and \"associatedtype Rank: Ranked\" in forms_page",
       "occurrence": 1,
@@ -8592,7 +8592,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 3928,
+      "line": 3935,
       "name": "Sexed",
       "text": "\"associatedtype Sex: Sexed\" in forms_page and \"associatedtype Rank: Ranked\" in forms_page",
       "occurrence": 1,
@@ -8602,7 +8602,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 3929,
+      "line": 3936,
       "name": "Department",
       "text": "and \"associatedtype Home: Department\" in forms_page))",
       "occurrence": 1,
@@ -8612,7 +8612,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 4157,
+      "line": 4164,
       "name": "judge.js",
       "text": "os.path.join(HERE, \"bin\", \"judge.js\"),",
       "occurrence": 1,
@@ -8622,7 +8622,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 4476,
+      "line": 4483,
       "name": "judge.js",
       "text": "os.path.join(HERE, \"bin\", \"judge.js\"),",
       "occurrence": 2,
@@ -8632,7 +8632,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 4486,
+      "line": 4493,
       "name": "company",
       "text": "# inspection offers matching kinds; the company court refuses these foreign forms",
       "occurrence": 1,
@@ -8642,7 +8642,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 4497,
+      "line": 4504,
       "name": "judge.js",
       "text": "os.path.join(HERE, \"bin\", \"judge.js\"), encoding=\"utf-8\").read()))",
       "occurrence": 1,
@@ -8652,7 +8652,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 4526,
+      "line": 4533,
       "name": "judge.js",
       "text": "# an unfilled axis is the judge saying \"states none\" (judge.js): a record",
       "occurrence": 1,
@@ -8662,7 +8662,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 4530,
+      "line": 4537,
       "name": "judge.js",
       "text": "\"states none\" in open(os.path.join(HERE, \"bin\", \"judge.js\"), encoding=\"utf-8\").read()",
       "occurrence": 1,
@@ -8672,7 +8672,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 4956,
+      "line": 4963,
       "name": "Manager",
       "text": "open(bw, \"w\").write(good.replace(\"Rank = Manager\", \"Rank = Nonesuch\", 1))",
       "occurrence": 1,
@@ -8682,7 +8682,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 5027,
+      "line": 5034,
       "name": "Engineering",
       "text": ".replace(\"public typealias Home = Engineering\",",
       "occurrence": 1,
@@ -8692,7 +8692,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 5028,
+      "line": 5035,
       "name": "Finance",
       "text": "\"public typealias Home = Finance\", 1))",
       "occurrence": 1,
@@ -8702,7 +8702,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 5293,
+      "line": 5300,
       "name": "VerifiedView",
       "text": "and \"VerifiedView\" in made[\"refused\"][0]",
       "occurrence": 1,
@@ -8712,7 +8712,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 5531,
+      "line": 5538,
       "name": "Ranked",
       "text": "open(os.path.join(bth, \"stray.swift\"), \"w\").write(\"public enum Stray: Ranked {}\\n\")",
       "occurrence": 1,
@@ -8722,7 +8722,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 5703,
+      "line": 5710,
       "name": "Ranked",
       "text": "open(os.path.join(own, \"gate.swift\"), \"w\").write(\"public enum Nobody: Ranked {}\\n\")",
       "occurrence": 1,
@@ -8732,9 +8732,9 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 5775,
+      "line": 5782,
       "name": "Ranked",
-      "text": "# Department, Ranked, Site — and they are plain Swift, readable and copyable.",
+      "text": "# Department, Ranked, Site \u2014 and they are plain Swift, readable and copyable.",
       "occurrence": 1,
       "task": "T0069",
       "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
@@ -8742,7 +8742,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 5792,
+      "line": 5799,
       "name": "organization",
       "text": "and \"forms-organization\" in shelf_said and \"bench-palette\" in shelf_said",
       "occurrence": 1,
@@ -8752,7 +8752,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 5830,
+      "line": 5837,
       "name": "organization",
       "text": "roles.get(\"forms-organization\") == \"forms\"",
       "occurrence": 1,
@@ -8762,7 +8762,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 5871,
+      "line": 5878,
       "name": "Department",
       "text": "open(world_p, \"w\").write(\"public enum Sales: Department {}\\npublic enum Boss: Ranked {}\\n\")",
       "occurrence": 1,
@@ -8772,7 +8772,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 5871,
+      "line": 5878,
       "name": "Ranked",
       "text": "open(world_p, \"w\").write(\"public enum Sales: Department {}\\npublic enum Boss: Ranked {}\\n\")",
       "occurrence": 1,
@@ -8782,7 +8782,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 5871,
+      "line": 5878,
       "name": "Sales",
       "text": "open(world_p, \"w\").write(\"public enum Sales: Department {}\\npublic enum Boss: Ranked {}\\n\")",
       "occurrence": 1,
@@ -8792,7 +8792,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 5873,
+      "line": 5880,
       "name": "organization",
       "text": "run(\"stdlib\", \"materialize\", \"forms-organization\", cwd=shelf_probe)",
       "occurrence": 1,
@@ -8802,7 +8802,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 5875,
+      "line": 5882,
       "name": "organization",
       "text": "run(\"mine\", \"forms-organization.swift\", cwd=shelf_probe)",
       "occurrence": 1,
@@ -8812,7 +8812,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 5877,
+      "line": 5884,
       "name": "organization",
       "text": "with open(os.path.join(shelf_probe, \"forms-organization.swift\"), \"a\") as f:",
       "occurrence": 1,
@@ -8822,7 +8822,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 5878,
+      "line": 5885,
       "name": "Ranked",
       "text": "f.write(\"\\npublic enum Architect: Ranked {}\\n\")",
       "occurrence": 1,
@@ -8832,7 +8832,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 5909,
+      "line": 5916,
       "name": "Department",
       "text": "open(os.path.join(two, \"gate.swift\"), \"w\").write(\"public enum Sales: Department {}\\n\")",
       "occurrence": 1,
@@ -8842,7 +8842,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 5909,
+      "line": 5916,
       "name": "Sales",
       "text": "open(os.path.join(two, \"gate.swift\"), \"w\").write(\"public enum Sales: Department {}\\n\")",
       "occurrence": 1,
@@ -8852,7 +8852,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 5910,
+      "line": 5917,
       "name": "Department",
       "text": "open(os.path.join(two, \"more.swift\"), \"w\").write(\"public enum Ops: Department {}\\n\")",
       "occurrence": 1,
@@ -8862,7 +8862,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 5964,
+      "line": 5971,
       "name": "Department",
       "text": "open(os.path.join(many, \"gate.swift\"), \"w\").write(\"public enum Sales: Department {}\\n\")",
       "occurrence": 1,
@@ -8872,7 +8872,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 5964,
+      "line": 5971,
       "name": "Sales",
       "text": "open(os.path.join(many, \"gate.swift\"), \"w\").write(\"public enum Sales: Department {}\\n\")",
       "occurrence": 1,
@@ -8882,7 +8882,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 5965,
+      "line": 5972,
       "name": "Department",
       "text": "open(os.path.join(many, \"w.swift\"), \"w\").write(\"public enum Ops: Department {}\\n\")",
       "occurrence": 1,
@@ -8892,7 +8892,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6008,
+      "line": 6015,
       "name": "Department",
       "text": "open(os.path.join(keeps, \"gate.swift\"), \"w\").write(\"public enum Sales: Department {}\\n\")",
       "occurrence": 1,
@@ -8902,7 +8902,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6008,
+      "line": 6015,
       "name": "Sales",
       "text": "open(os.path.join(keeps, \"gate.swift\"), \"w\").write(\"public enum Sales: Department {}\\n\")",
       "occurrence": 1,
@@ -8912,7 +8912,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6012,
+      "line": 6019,
       "name": "Department",
       "text": "open(os.path.join(keeps, \"w.swift\"), \"w\").write(\"public enum Ops: Department {}\\n\")",
       "occurrence": 1,
@@ -8922,7 +8922,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6044,
+      "line": 6051,
       "name": "Department",
       "text": "open(os.path.join(hand, \"gate.swift\"), \"w\").write(\"public enum Sales: Department {}\\n\")",
       "occurrence": 1,
@@ -8932,7 +8932,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6044,
+      "line": 6051,
       "name": "Sales",
       "text": "open(os.path.join(hand, \"gate.swift\"), \"w\").write(\"public enum Sales: Department {}\\n\")",
       "occurrence": 1,
@@ -8942,7 +8942,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6090,
+      "line": 6097,
       "name": "Department",
       "text": "open(os.path.join(frm, \"gate.swift\"), \"w\").write(\"public enum Sales: Department {}\\n\")",
       "occurrence": 1,
@@ -8952,7 +8952,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6090,
+      "line": 6097,
       "name": "Sales",
       "text": "open(os.path.join(frm, \"gate.swift\"), \"w\").write(\"public enum Sales: Department {}\\n\")",
       "occurrence": 1,
@@ -8962,7 +8962,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6129,
+      "line": 6136,
       "name": "Department",
       "text": "open(os.path.join(_ord, \"gate.swift\"), \"w\").write(\"public enum Sales: Department {}\\n\")",
       "occurrence": 1,
@@ -8972,7 +8972,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6129,
+      "line": 6136,
       "name": "Sales",
       "text": "open(os.path.join(_ord, \"gate.swift\"), \"w\").write(\"public enum Sales: Department {}\\n\")",
       "occurrence": 1,
@@ -8982,7 +8982,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6133,
+      "line": 6140,
       "name": "CanonV2",
       "text": "\"public typealias Binary_carries_where = Carry<BinaryJudge, WhereVerdicts, CanonV2>\", 1))",
       "occurrence": 2,
@@ -8992,7 +8992,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6150,
+      "line": 6157,
       "name": "Department",
       "text": "open(os.path.join(_two, \"gate.swift\"), \"w\").write(\"public enum Sales: Department {}\\n\")",
       "occurrence": 1,
@@ -9002,7 +9002,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6150,
+      "line": 6157,
       "name": "Sales",
       "text": "open(os.path.join(_two, \"gate.swift\"), \"w\").write(\"public enum Sales: Department {}\\n\")",
       "occurrence": 1,
@@ -9012,7 +9012,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6190,
+      "line": 6197,
       "name": "Department",
       "text": "open(os.path.join(split, \"gate.swift\"), \"w\").write(\"public enum Sales: Department {}\\n\")",
       "occurrence": 1,
@@ -9022,7 +9022,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6190,
+      "line": 6197,
       "name": "Sales",
       "text": "open(os.path.join(split, \"gate.swift\"), \"w\").write(\"public enum Sales: Department {}\\n\")",
       "occurrence": 1,
@@ -9032,7 +9032,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6279,
+      "line": 6286,
       "name": "Department",
       "text": "open(os.path.join(old, \"gate.swift\"), \"w\").write(\"public enum Sales: Department {}\\n\")",
       "occurrence": 1,
@@ -9042,7 +9042,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6279,
+      "line": 6286,
       "name": "Sales",
       "text": "open(os.path.join(old, \"gate.swift\"), \"w\").write(\"public enum Sales: Department {}\\n\")",
       "occurrence": 1,
@@ -9052,7 +9052,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6280,
+      "line": 6287,
       "name": "Department",
       "text": "open(os.path.join(old, \"a.swift\"), \"w\").write(\"public enum Ops: Department {}\\n\")",
       "occurrence": 1,
@@ -9062,9 +9062,9 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6391,
+      "line": 6398,
       "name": "THE JUDGE",
-      "text": "# ── THE JUDGE'S TABLES ARE A RESTATEMENT OF A FILE WE ALREADY SHIP. Our port",
+      "text": "# \u2500\u2500 THE JUDGE'S TABLES ARE A RESTATEMENT OF A FILE WE ALREADY SHIP. Our port",
       "occurrence": 1,
       "task": "architecture-v1/r4/company-reader-after-T0038",
       "reason": "Architecture revision 4, Court of the company: owner artifacts and contracts, declared reader input, removal of built-in policy and subject-specific controls after T0038."
@@ -9072,7 +9072,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6398,
+      "line": 6405,
       "name": "Organization",
       "text": "# That seat is not ours. Organization was only ever an example of what a user",
       "occurrence": 1,
@@ -9082,7 +9082,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6406,
+      "line": 6413,
       "name": "organization",
       "text": "org = open(os.path.join(HERE, \"stdlib\", \"forms-organization.swift\"), encoding=\"utf-8\").read()",
       "occurrence": 1,
@@ -9092,7 +9092,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6407,
+      "line": 6414,
       "name": "judge.js",
       "text": "js = open(os.path.join(HERE, \"bin\", \"judge.js\"), encoding=\"utf-8\").read()",
       "occurrence": 1,
@@ -9102,7 +9102,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6417,
+      "line": 6424,
       "name": "shareHomes",
       "text": "m = re.search(r\"const shareHomes = new Map\\(\\[(.*?)\\]\\)\", js, re.S)",
       "occurrence": 1,
@@ -9112,7 +9112,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6421,
+      "line": 6428,
       "name": "Ranked",
       "text": "_conformers(\"Ranked\") == _baked(\"ranks\")",
       "occurrence": 1,
@@ -9122,7 +9122,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6424,
+      "line": 6431,
       "name": "Sexed",
       "text": "and _conformers(\"Sexed\") == _baked(\"genders\")",
       "occurrence": 1,
@@ -9132,7 +9132,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6440,
+      "line": 6447,
       "name": "organization",
       "text": "forms_text = open(os.path.join(STDLIB, \"forms-organization.swift\"), encoding=\"utf-8\").read()",
       "occurrence": 1,
@@ -9142,7 +9142,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6442,
+      "line": 6449,
       "name": "Manager",
       "text": "world_text.replace(\"public typealias Rank = Manager\", \"public typealias Rank = Archduke\"),",
       "occurrence": 1,
@@ -9152,7 +9152,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6443,
+      "line": 6450,
       "name": "Finance",
       "text": "world_text.replace(\"public typealias Home = Finance\", \"public typealias Home = Atlantis\"),",
       "occurrence": 1,
@@ -9162,7 +9162,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6444,
+      "line": 6451,
       "name": "OnSite",
       "text": "world_text.replace(\"    public typealias Site = OnSite\\n\", \"\"),",
       "occurrence": 1,
@@ -9172,7 +9172,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6473,
+      "line": 6480,
       "name": "organization",
       "text": "pres_forms = os.path.join(pres_root, \"forms-organization.swift\")",
       "occurrence": 1,
@@ -9182,7 +9182,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6476,
+      "line": 6483,
       "name": "Ranked",
       "text": "f.write(\"\\npublic enum Director: Ranked {}\\n\")",
       "occurrence": 1,
@@ -9192,7 +9192,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6481,
+      "line": 6488,
       "name": "organization",
       "text": "and 'public static var typeName: String { \"forms-organization.swift\" }' in pres_man",
       "occurrence": 1,
@@ -9202,7 +9202,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6541,
+      "line": 6548,
       "name": "judge.js",
       "text": "port = open(os.path.join(HERE, \"bin\", \"judge.js\"), encoding=\"utf-8\").read()",
       "occurrence": 1,
@@ -9212,7 +9212,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6543,
+      "line": 6550,
       "name": "Engineering",
       "text": "LEAKED = {\"IndividualContributor\", \"Lead\", \"Manager\", \"Finance\", \"Engineering\",",
       "occurrence": 1,
@@ -9222,7 +9222,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6543,
+      "line": 6550,
       "name": "Finance",
       "text": "LEAKED = {\"IndividualContributor\", \"Lead\", \"Manager\", \"Finance\", \"Engineering\",",
       "occurrence": 1,
@@ -9232,7 +9232,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6543,
+      "line": 6550,
       "name": "IndividualContributor",
       "text": "LEAKED = {\"IndividualContributor\", \"Lead\", \"Manager\", \"Finance\", \"Engineering\",",
       "occurrence": 1,
@@ -9242,7 +9242,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6543,
+      "line": 6550,
       "name": "Manager",
       "text": "LEAKED = {\"IndividualContributor\", \"Lead\", \"Manager\", \"Finance\", \"Engineering\",",
       "occurrence": 1,
@@ -9252,7 +9252,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6544,
+      "line": 6551,
       "name": "Female",
       "text": "\"Sales\", \"People\", \"OnSite\", \"Hybrid\", \"Remote\", \"Male\", \"Female\",",
       "occurrence": 1,
@@ -9262,7 +9262,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6544,
+      "line": 6551,
       "name": "Hybrid",
       "text": "\"Sales\", \"People\", \"OnSite\", \"Hybrid\", \"Remote\", \"Male\", \"Female\",",
       "occurrence": 1,
@@ -9272,7 +9272,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6544,
+      "line": 6551,
       "name": "Male",
       "text": "\"Sales\", \"People\", \"OnSite\", \"Hybrid\", \"Remote\", \"Male\", \"Female\",",
       "occurrence": 1,
@@ -9282,7 +9282,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6544,
+      "line": 6551,
       "name": "OnSite",
       "text": "\"Sales\", \"People\", \"OnSite\", \"Hybrid\", \"Remote\", \"Male\", \"Female\",",
       "occurrence": 1,
@@ -9292,7 +9292,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6544,
+      "line": 6551,
       "name": "People",
       "text": "\"Sales\", \"People\", \"OnSite\", \"Hybrid\", \"Remote\", \"Male\", \"Female\",",
       "occurrence": 1,
@@ -9302,7 +9302,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6544,
+      "line": 6551,
       "name": "Sales",
       "text": "\"Sales\", \"People\", \"OnSite\", \"Hybrid\", \"Remote\", \"Male\", \"Female\",",
       "occurrence": 1,
@@ -9312,7 +9312,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6545,
+      "line": 6552,
       "name": "EngineeringShare",
       "text": "\"FinanceShare\", \"EngineeringShare\", \"SalesShare\", \"PeopleShare\",",
       "occurrence": 1,
@@ -9322,7 +9322,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6545,
+      "line": 6552,
       "name": "FinanceShare",
       "text": "\"FinanceShare\", \"EngineeringShare\", \"SalesShare\", \"PeopleShare\",",
       "occurrence": 1,
@@ -9332,7 +9332,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6545,
+      "line": 6552,
       "name": "PeopleShare",
       "text": "\"FinanceShare\", \"EngineeringShare\", \"SalesShare\", \"PeopleShare\",",
       "occurrence": 1,
@@ -9342,7 +9342,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6545,
+      "line": 6552,
       "name": "SalesShare",
       "text": "\"FinanceShare\", \"EngineeringShare\", \"SalesShare\", \"PeopleShare\",",
       "occurrence": 1,
@@ -9352,7 +9352,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6546,
+      "line": 6553,
       "name": "FamilyNameCycle",
       "text": "\"Employee\", \"Person\", \"GivenNameCycle\", \"FamilyNameCycle\",",
       "occurrence": 1,
@@ -9362,7 +9362,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6546,
+      "line": 6553,
       "name": "GivenNameCycle",
       "text": "\"Employee\", \"Person\", \"GivenNameCycle\", \"FamilyNameCycle\",",
       "occurrence": 1,
@@ -9372,7 +9372,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6547,
+      "line": 6554,
       "name": "BirthYearCycle",
       "text": "\"BirthYearCycle\", \"VerifiedView\", \"VerifiedInDepartment\",",
       "occurrence": 1,
@@ -9382,7 +9382,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6547,
+      "line": 6554,
       "name": "VerifiedInDepartment",
       "text": "\"BirthYearCycle\", \"VerifiedView\", \"VerifiedInDepartment\",",
       "occurrence": 1,
@@ -9392,7 +9392,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6547,
+      "line": 6554,
       "name": "VerifiedView",
       "text": "\"BirthYearCycle\", \"VerifiedView\", \"VerifiedInDepartment\",",
       "occurrence": 1,
@@ -9402,7 +9402,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6548,
+      "line": 6555,
       "name": "VerifiedAtRank",
       "text": "\"VerifiedAtRank\", \"VerifiedAtWorkplace\"}",
       "occurrence": 1,
@@ -9412,7 +9412,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6548,
+      "line": 6555,
       "name": "VerifiedAtWorkplace",
       "text": "\"VerifiedAtRank\", \"VerifiedAtWorkplace\"}",
       "occurrence": 1,
@@ -9422,7 +9422,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6635,
+      "line": 6642,
       "name": "Department",
       "text": "open(os.path.join(fold, \"gate.swift\"), \"w\").write(\"public enum Sales: Department {}\\n\")",
       "occurrence": 1,
@@ -9432,7 +9432,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6635,
+      "line": 6642,
       "name": "Sales",
       "text": "open(os.path.join(fold, \"gate.swift\"), \"w\").write(\"public enum Sales: Department {}\\n\")",
       "occurrence": 1,
@@ -9442,7 +9442,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6636,
+      "line": 6643,
       "name": "Department",
       "text": "open(os.path.join(fold, \"people\", \"roster.swift\"), \"w\").write(\"public enum Ann: Department {}\\n\")",
       "occurrence": 1,
@@ -9452,7 +9452,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6637,
+      "line": 6644,
       "name": "Department",
       "text": "open(os.path.join(fold, \"access\", \"shares.swift\"), \"w\").write(\"public enum Docs: Department {}\\n\")",
       "occurrence": 1,
@@ -9462,7 +9462,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6669,
+      "line": 6676,
       "name": "Department",
       "text": "\"public enum Sales: Department {}\\n\"",
       "occurrence": 1,
@@ -9472,7 +9472,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6669,
+      "line": 6676,
       "name": "Sales",
       "text": "\"public enum Sales: Department {}\\n\"",
       "occurrence": 1,
@@ -9482,7 +9482,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6748,
+      "line": 6755,
       "name": "Department",
       "text": "open(os.path.join(ovr, \"gate.swift\"), \"w\").write(\"public enum Sales: Department {}\\n\")",
       "occurrence": 1,
@@ -9492,7 +9492,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6748,
+      "line": 6755,
       "name": "Sales",
       "text": "open(os.path.join(ovr, \"gate.swift\"), \"w\").write(\"public enum Sales: Department {}\\n\")",
       "occurrence": 1,
@@ -9502,7 +9502,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6839,
+      "line": 6846,
       "name": "Department",
       "text": "open(os.path.join(sv, \"gate.swift\"), \"w\").write(\"public enum Sales: Department {}\\n\")",
       "occurrence": 1,
@@ -9512,7 +9512,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6839,
+      "line": 6846,
       "name": "Sales",
       "text": "open(os.path.join(sv, \"gate.swift\"), \"w\").write(\"public enum Sales: Department {}\\n\")",
       "occurrence": 1,
@@ -9522,7 +9522,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6919,
+      "line": 6926,
       "name": "Department",
       "text": "open(os.path.join(wj, \"gate.swift\"), \"w\").write(\"public enum Sales: Department {}\\n\")",
       "occurrence": 1,
@@ -9532,7 +9532,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6919,
+      "line": 6926,
       "name": "Sales",
       "text": "open(os.path.join(wj, \"gate.swift\"), \"w\").write(\"public enum Sales: Department {}\\n\")",
       "occurrence": 1,
@@ -9542,7 +9542,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6923,
+      "line": 6930,
       "name": "Department",
       "text": "open(os.path.join(wj, \"more.swift\"), \"w\").write(\"public enum Ops: Department {}\\n\")",
       "occurrence": 1,
@@ -9552,7 +9552,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6970,
+      "line": 6977,
       "name": "Department",
       "text": "open(os.path.join(w, \"gate.swift\"), \"w\").write(\"public enum Sales: Department {}\\n\")",
       "occurrence": 1,
@@ -9562,7 +9562,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 6970,
+      "line": 6977,
       "name": "Sales",
       "text": "open(os.path.join(w, \"gate.swift\"), \"w\").write(\"public enum Sales: Department {}\\n\")",
       "occurrence": 1,
@@ -9572,7 +9572,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 7201,
+      "line": 7208,
       "name": "judge.js",
       "text": "[\"node\", os.path.join(tmp, \"gates.js\"), os.path.join(HERE, \"bin\", \"judge.js\"),",
       "occurrence": 1,
@@ -9582,9 +9582,9 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 7262,
+      "line": 7269,
       "name": "THE JUDGE",
-      "text": "# ── NOT EVERYTHING UNDER `THEIRS` IS THE JUDGE'S, and the panel says which",
+      "text": "# \u2500\u2500 NOT EVERYTHING UNDER `THEIRS` IS THE JUDGE'S, and the panel says which",
       "occurrence": 1,
       "task": "architecture-v1/r4/company-reader-after-T0038",
       "reason": "Architecture revision 4, Court of the company: owner artifacts and contracts, declared reader input, removal of built-in policy and subject-specific controls after T0038."
@@ -9592,7 +9592,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 7386,
+      "line": 7393,
       "name": "Engineering",
       "text": "\"public typealias Home = Finance\", \"public typealias Home = Engineering\", 1))",
       "occurrence": 1,
@@ -9602,7 +9602,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 7386,
+      "line": 7393,
       "name": "Finance",
       "text": "\"public typealias Home = Finance\", \"public typealias Home = Engineering\", 1))",
       "occurrence": 1,
@@ -9612,7 +9612,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 7430,
+      "line": 7437,
       "name": "Manager",
       "text": "real, unreal = _requires(\"Manager\"), _requires(\"NoSuchRank\")",
       "occurrence": 1,
@@ -9622,7 +9622,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 7431,
+      "line": 7438,
       "name": "Manager",
       "text": "_requires(\"Manager\")",
       "occurrence": 1,
@@ -9632,7 +9632,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 7465,
+      "line": 7472,
       "name": "Department",
       "text": "open(os.path.join(pin, \"gate.swift\"), \"w\").write(\"public enum Sales: Department {}\\n\")",
       "occurrence": 1,
@@ -9642,7 +9642,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 7465,
+      "line": 7472,
       "name": "Sales",
       "text": "open(os.path.join(pin, \"gate.swift\"), \"w\").write(\"public enum Sales: Department {}\\n\")",
       "occurrence": 1,
@@ -9652,7 +9652,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 7681,
+      "line": 7688,
       "name": "FinanceShare",
       "text": "_page_said = ask_bench(_lp, \"/check/view?who=Emp9000&doc=FinanceShare\")",
       "occurrence": 1,
@@ -9662,7 +9662,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 7685,
+      "line": 7692,
       "name": "FinanceShare",
       "text": "\"Emp9000\", \"FinanceShare\", \"--json\"], cwd=_lay,",
       "occurrence": 1,
@@ -9672,7 +9672,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 7701,
+      "line": 7708,
       "name": "FinanceShare",
       "text": "(\"/check/view?who=Emp9000&doc=FinanceShare\",",
       "occurrence": 1,
@@ -9682,7 +9682,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 7702,
+      "line": 7709,
       "name": "FinanceShare",
       "text": "(\"check\", \"view\", \"Emp9000\", \"FinanceShare\")),",
       "occurrence": 1,
@@ -9692,7 +9692,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 7703,
+      "line": 7710,
       "name": "Sales",
       "text": "(\"/diff/transfer?who=Emp9000&to=Sales\",",
       "occurrence": 1,
@@ -9702,7 +9702,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 7704,
+      "line": 7711,
       "name": "\"transfer\"",
       "text": "(\"diff\", \"transfer\", \"Emp9000\", \"Sales\"))]",
       "occurrence": 1,
@@ -9712,7 +9712,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 7704,
+      "line": 7711,
       "name": "Sales",
       "text": "(\"diff\", \"transfer\", \"Emp9000\", \"Sales\"))]",
       "occurrence": 1,
@@ -9722,7 +9722,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 7769,
+      "line": 7776,
       "name": "VerifiedView",
       "text": "# check here stayed green while a refusal pointed at `VerifiedView<`,",
       "occurrence": 1,
@@ -9732,7 +9732,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 7773,
+      "line": 7780,
       "name": "Employee",
       "text": "_rf_text = (\"public enum W1: Employee {\\n\"",
       "occurrence": 1,
@@ -9742,7 +9742,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 7774,
+      "line": 7781,
       "name": "Manager",
       "text": "\"    public typealias Rank = Manager\\n\"",
       "occurrence": 1,
@@ -9752,7 +9752,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 7775,
+      "line": 7782,
       "name": "Finance",
       "text": "\"    public typealias Home = Finance\\n\"",
       "occurrence": 1,
@@ -9762,7 +9762,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 7779,
+      "line": 7786,
       "name": "VerifiedView",
       "text": "\"        VerifiedView<\\n\"",
       "occurrence": 1,
@@ -9772,7 +9772,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 7807,
+      "line": 7814,
       "name": "VerifiedAtRank",
       "text": "# Open it and you read `VerifiedAtRank<Emp9001, Lead>` under a claim that Lead",
       "occurrence": 1,
@@ -9782,7 +9782,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 7821,
+      "line": 7828,
       "name": "VerifiedAtRank",
       "text": "\"        VerifiedAtRank<\\n\"",
       "occurrence": 1,
@@ -9792,7 +9792,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 7823,
+      "line": 7830,
       "name": "Manager",
       "text": "\"            Manager\\n\"",
       "occurrence": 1,
@@ -9802,7 +9802,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 7834,
+      "line": 7841,
       "name": "Manager",
       "text": "and all(\"Lead against Manager\" in r.get(\"claim\", \"\")",
       "occurrence": 1,
@@ -9812,7 +9812,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 7880,
+      "line": 7887,
       "name": "judge.js",
       "text": "os.path.join(HERE, \"bin\", \"judge.js\"), wp], capture_output=True, text=True).stdout or \"{}\")",
       "occurrence": 1,
@@ -9822,7 +9822,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 7935,
+      "line": 7942,
       "name": "Department",
       "text": "open(os.path.join(guard, \"gate.swift\"), \"w\").write(\"public enum Sales: Department {}\\n\")",
       "occurrence": 1,
@@ -9832,7 +9832,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 7935,
+      "line": 7942,
       "name": "Sales",
       "text": "open(os.path.join(guard, \"gate.swift\"), \"w\").write(\"public enum Sales: Department {}\\n\")",
       "occurrence": 1,
@@ -9842,7 +9842,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8002,
+      "line": 8009,
       "name": "Department",
       "text": "\"\\npublic enum Sales: Department {}\\n\")",
       "occurrence": 1,
@@ -9852,7 +9852,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8002,
+      "line": 8009,
       "name": "Sales",
       "text": "\"\\npublic enum Sales: Department {}\\n\")",
       "occurrence": 1,
@@ -9862,7 +9862,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8004,
+      "line": 8011,
       "name": "organization-judge",
       "text": "plain = subprocess.run([os.path.join(HERE, \"bin\", \"organization-judge\"), \"judge\", os.path.join(claim_probe, \"world.swift\")],",
       "occurrence": 1,
@@ -9872,7 +9872,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8027,
+      "line": 8034,
       "name": "Department",
       "text": "open(os.path.join(dia, \"gate.swift\"), \"w\").write(\"public enum Sales: Department {}\\n\")",
       "occurrence": 1,
@@ -9882,7 +9882,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8027,
+      "line": 8034,
       "name": "Sales",
       "text": "open(os.path.join(dia, \"gate.swift\"), \"w\").write(\"public enum Sales: Department {}\\n\")",
       "occurrence": 1,
@@ -9892,7 +9892,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8031,
+      "line": 8038,
       "name": "Department",
       "text": "f\"public enum Ops{who}: Department {{}}\\n\")",
       "occurrence": 1,
@@ -9902,7 +9902,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8178,
+      "line": 8185,
       "name": "CanonV2",
       "text": "\"public typealias Binary_carries_where = Carry<BinaryJudge, WhereVerdicts, CanonV2>\", 1)",
       "occurrence": 1,
@@ -9912,7 +9912,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8263,
+      "line": 8270,
       "name": "Finance",
       "text": "# typealias Home = Finance }`, so the shelf knew four documents and every",
       "occurrence": 1,
@@ -9922,7 +9922,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8271,
+      "line": 8278,
       "name": "judge.js",
       "text": "% (os.path.join(HERE, \"bin\", \"judge.js\"),",
       "occurrence": 1,
@@ -9932,7 +9932,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8272,
+      "line": 8279,
       "name": "organization",
       "text": "os.path.join(HERE, \"stdlib\", \"forms-organization.swift\")))",
       "occurrence": 1,
@@ -9942,7 +9942,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8292,
+      "line": 8299,
       "name": "Ranked",
       "text": "const protoAxes = { Employee: { Rank: \"Ranked\" }, Person: { Sex: \"Sexed\" }, Lonely: { X: \"Y\" } };",
       "occurrence": 1,
@@ -9952,7 +9952,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8292,
+      "line": 8299,
       "name": "Sexed",
       "text": "const protoAxes = { Employee: { Rank: \"Ranked\" }, Person: { Sex: \"Sexed\" }, Lonely: { X: \"Y\" } };",
       "occurrence": 1,
@@ -9962,7 +9962,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8293,
+      "line": 8300,
       "name": "Male",
       "text": "const conformers = { Sexed: [\"Male\"] };",
       "occurrence": 1,
@@ -9972,7 +9972,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8293,
+      "line": 8300,
       "name": "Sexed",
       "text": "const conformers = { Sexed: [\"Male\"] };",
       "occurrence": 1,
@@ -9982,7 +9982,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8294,
+      "line": 8301,
       "name": "Male",
       "text": "const vocabulary = { Employee: \"forms\", Male: \"forms\" };",
       "occurrence": 1,
@@ -9992,7 +9992,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8301,
+      "line": 8308,
       "name": "VerifiedView",
       "text": "const gates = { VerifiedView: [\"Employee\", \"Document\"], Same: [null, null], Bare: [] };",
       "occurrence": 1,
@@ -10002,7 +10002,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8321,
+      "line": 8328,
       "name": "VerifiedView",
       "text": "and fv.get(\"askable\") == [\"VerifiedView\"]             # a form with bare arguments is not asked",
       "occurrence": 1,
@@ -10012,7 +10012,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8336,
+      "line": 8343,
       "name": "Employee",
       "text": "\"public enum Emp: Employee {\",",
       "occurrence": 1,
@@ -10022,7 +10022,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8337,
+      "line": 8344,
       "name": "Manager",
       "text": "\"    public typealias Rank = Manager\",",
       "occurrence": 1,
@@ -10032,7 +10032,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8339,
+      "line": 8346,
       "name": "Employee",
       "text": "\"public enum Bare: Employee {}\",",
       "occurrence": 1,
@@ -10042,7 +10042,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8353,
+      "line": 8360,
       "name": "Manager",
       "text": "[\"Emp\",  { line: 1, aliases: new Map([[\"Rank\", { target: \"Manager\", line: 2 }]]), conformances: [\"Employee\"] }],",
       "occurrence": 1,
@@ -10052,7 +10052,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8359,
+      "line": 8366,
       "name": "Manager",
       "text": "[\"Emp\",  { line: 1, aliases: new Map([[\"Rank\", { target: \"Manager\", line: 3 }]]), conformances: [\"Employee\"] }],",
       "occurrence": 1,
@@ -10062,7 +10062,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8364,
+      "line": 8371,
       "name": "OnSite",
       "text": "fillHole({ kind: \"hole\", host: \"Emp\", axis: \"Site\" }, \"OnSite\");",
       "occurrence": 1,
@@ -10072,7 +10072,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8367,
+      "line": 8374,
       "name": "OnSite",
       "text": "fillHole({ kind: \"hole\", host: \"Bare\", axis: \"Site\" }, \"OnSite\");",
       "occurrence": 1,
@@ -10082,7 +10082,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8382,
+      "line": 8389,
       "name": "Employee",
       "text": "hv.get(\"inside_body\") == [\"public enum Emp: Employee {\",",
       "occurrence": 1,
@@ -10092,7 +10092,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8383,
+      "line": 8390,
       "name": "Manager",
       "text": "\"    public typealias Rank = Manager\",",
       "occurrence": 2,
@@ -10102,7 +10102,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8384,
+      "line": 8391,
       "name": "OnSite",
       "text": "\"    public typealias Site = OnSite\",",
       "occurrence": 1,
@@ -10112,7 +10112,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8387,
+      "line": 8394,
       "name": "OnSite",
       "text": "and \"public typealias Site = OnSite\" in \"\\n\".join(hv.get(\"empty_body_opened\") or [])",
       "occurrence": 1,
@@ -10122,7 +10122,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8395,
+      "line": 8402,
       "name": "organization",
       "text": "forms_txt = open(os.path.join(HERE, \"stdlib\", \"forms-organization.swift\"), encoding=\"utf-8\").read()",
       "occurrence": 1,
@@ -10132,7 +10132,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8405,
+      "line": 8412,
       "name": "OnSite",
       "text": "public typealias Site = OnSite",
       "occurrence": 1,
@@ -10142,7 +10142,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8407,
+      "line": 8414,
       "name": "GivenNameCycle",
       "text": "public enum G1: GivenNameCycle {",
       "occurrence": 1,
@@ -10152,7 +10152,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8409,
+      "line": 8416,
       "name": "Male",
       "text": "public typealias Sex = Male",
       "occurrence": 1,
@@ -10162,7 +10162,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8411,
+      "line": 8418,
       "name": "FamilyNameCycle",
       "text": "public enum F1: FamilyNameCycle {",
       "occurrence": 1,
@@ -10172,7 +10172,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8414,
+      "line": 8421,
       "name": "BirthYearCycle",
       "text": "public enum B1: BirthYearCycle {",
       "occurrence": 1,
@@ -10182,7 +10182,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8421,
+      "line": 8428,
       "name": "Female",
       "text": "offered: [\"Male\", \"Female\"].map(landsIn),     // what the grammar offers: taken",
       "occurrence": 1,
@@ -10192,7 +10192,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8421,
+      "line": 8428,
       "name": "Male",
       "text": "offered: [\"Male\", \"Female\"].map(landsIn),     // what the grammar offers: taken",
       "occurrence": 1,
@@ -10202,7 +10202,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8422,
+      "line": 8429,
       "name": "Finance",
       "text": "foreign: [\"Manager\", \"Finance\"].map(landsIn), // a name of another kind: refused",
       "occurrence": 1,
@@ -10212,7 +10212,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8422,
+      "line": 8429,
       "name": "Manager",
       "text": "foreign: [\"Manager\", \"Finance\"].map(landsIn), // a name of another kind: refused",
       "occurrence": 1,
@@ -10222,7 +10222,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8424,
+      "line": 8431,
       "name": "judge.js",
       "text": "''' % (os.path.join(HERE, \"bin\", \"judge.js\"), json.dumps(forms_txt))",
       "occurrence": 1,
@@ -10232,7 +10232,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8453,
+      "line": 8460,
       "name": "Employee",
       "text": "\"public enum Kept: Employee {\",    // 3  <- the parse reports this line",
       "occurrence": 1,
@@ -10242,7 +10242,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8457,
+      "line": 8464,
       "name": "Employee",
       "text": "\"public enum Cut: Employee {\",     // 7",
       "occurrence": 1,
@@ -10252,7 +10252,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8550,
+      "line": 8557,
       "name": "Finance",
       "text": "at(\"public typealias Home = Finance\", { declares: [\"Finance\"] }, \"Finance\"),",
       "occurrence": 1,
@@ -10262,7 +10262,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8551,
+      "line": 8558,
       "name": "Finance",
       "text": "at(\"public typealias Home = Finance\", { declares: [] }, \"Finance\")],",
       "occurrence": 1,
@@ -10272,7 +10272,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8557,
+      "line": 8564,
       "name": "Finance",
       "text": "at(\"public typealias Home = Finance\", { jumpable: [\"Finance\"] }, \"Finance\"),",
       "occurrence": 1,
@@ -10282,7 +10282,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8558,
+      "line": 8565,
       "name": "Finance",
       "text": "at(\"public typealias Home = Finance\", {}, \"Finance\")],",
       "occurrence": 1,
@@ -10292,7 +10292,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8560,
+      "line": 8567,
       "name": "Male",
       "text": "at(\"public typealias Sex = Male\", {}, \"Male\"),",
       "occurrence": 1,
@@ -10302,7 +10302,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8561,
+      "line": 8568,
       "name": "Male",
       "text": "at(\"public typealias Sex = Male\", { broken: [\"Male\"] }, \"Male\")],",
       "occurrence": 1,
@@ -10312,7 +10312,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8636,
+      "line": 8643,
       "name": "judge.js",
       "text": "% os.path.join(HERE, \"bin\", \"judge.js\"))",
       "occurrence": 1,
@@ -10322,7 +10322,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8641,
+      "line": 8648,
       "name": "organization-judge",
       "text": "raw = subprocess.run([os.path.join(HERE, \"bin\", \"organization-judge\"), \"judge\", p],",
       "occurrence": 1,
@@ -10332,7 +10332,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8655,
+      "line": 8662,
       "name": "Finance",
       "text": "base_world.replace(\"public typealias Home = Finance\",",
       "occurrence": 1,
@@ -10342,7 +10342,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8656,
+      "line": 8663,
       "name": "Engineering",
       "text": "\"public typealias Home = Engineering\", 1),",
       "occurrence": 1,
@@ -10352,7 +10352,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8657,
+      "line": 8664,
       "name": "VerifiedView",
       "text": "\"a misspelled gate form\": base_world.replace(\"VerifiedView<\", \"VerifedView<\", 1),",
       "occurrence": 1,
@@ -10362,7 +10362,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8658,
+      "line": 8665,
       "name": "FinanceShare",
       "text": "\"an argument nothing declares\": base_world.replace(\"FinanceShare\\n\", \"NoSuchDoc\\n\", 1),",
       "occurrence": 1,
@@ -10372,7 +10372,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8844,
+      "line": 8851,
       "name": "organization-judge",
       "text": "and f != \"judge-cli.js\"} | {\"bin/gate-judge\", \"bin/organization-judge\",",
       "occurrence": 1,
@@ -10382,7 +10382,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 8851,
+      "line": 8858,
       "name": "company",
       "text": "# to the company's plain court, so its list of those words is a second record",
       "occurrence": 1,
@@ -10392,28 +10392,8 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 9596,
+      "line": 9603,
       "name": "Employee",
-      "text": "\"public enum Emp1: Employee, Person {\\n    public typealias Rank = Manager\\n}\\n\")",
-      "occurrence": 1,
-      "task": "T0069",
-      "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
-    },
-    {
-      "path": "tests/smoke.py",
-      "channel": "text",
-      "line": 9596,
-      "name": "Manager",
-      "text": "\"public enum Emp1: Employee, Person {\\n    public typealias Rank = Manager\\n}\\n\")",
-      "occurrence": 1,
-      "task": "T0069",
-      "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
-    },
-    {
-      "path": "tests/smoke.py",
-      "channel": "text",
-      "line": 9596,
-      "name": "Person",
       "text": "\"public enum Emp1: Employee, Person {\\n    public typealias Rank = Manager\\n}\\n\")",
       "occurrence": 1,
       "task": "T0069",
@@ -10424,6 +10404,26 @@
       "channel": "text",
       "line": 9603,
       "name": "Manager",
+      "text": "\"public enum Emp1: Employee, Person {\\n    public typealias Rank = Manager\\n}\\n\")",
+      "occurrence": 1,
+      "task": "T0069",
+      "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
+    },
+    {
+      "path": "tests/smoke.py",
+      "channel": "text",
+      "line": 9603,
+      "name": "Person",
+      "text": "\"public enum Emp1: Employee, Person {\\n    public typealias Rank = Manager\\n}\\n\")",
+      "occurrence": 1,
+      "task": "T0069",
+      "reason": "Owner declares subject forms, CSV mapping, edits and imports; gate executes only the declared generic mechanism (audit N5/N6)."
+    },
+    {
+      "path": "tests/smoke.py",
+      "channel": "text",
+      "line": 9610,
+      "name": "Manager",
       "text": "\"public typealias Requires = Manager\", \"public typealias Requires = Overlord\"))",
       "occurrence": 1,
       "task": "T0069",
@@ -10432,7 +10432,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 9646,
+      "line": 9653,
       "name": "Employee",
       "text": "\"// opens: nosuch\\npublic enum Dup {}\\npublic enum Emp1: Employee, Person {\\n\"",
       "occurrence": 1,
@@ -10442,7 +10442,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 9646,
+      "line": 9653,
       "name": "Person",
       "text": "\"// opens: nosuch\\npublic enum Dup {}\\npublic enum Emp1: Employee, Person {\\n\"",
       "occurrence": 1,
@@ -10452,7 +10452,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 9647,
+      "line": 9654,
       "name": "Manager",
       "text": "\"    public typealias Rank = Manager\\n    public typealias Home = Legal\\n\"",
       "occurrence": 1,
@@ -10462,7 +10462,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 9649,
+      "line": 9656,
       "name": "Remote",
       "text": "\"    public typealias Born = Y1990\\n    public typealias Site = Remote\\n}\\n\")",
       "occurrence": 1,
@@ -10472,7 +10472,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 9652,
+      "line": 9659,
       "name": "VerifiedView",
       "text": "\"    public static var body: some Structure {\\n        VerifiedView<Emp1\\n    }\\n}\\n\")",
       "occurrence": 1,
@@ -10482,7 +10482,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 9782,
+      "line": 9789,
       "name": "IndividualContributor",
       "text": "\"public typealias Rank = IndividualContributor\",",
       "occurrence": 1,
@@ -10492,7 +10492,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 9783,
+      "line": 9790,
       "name": "Lead",
       "text": "\"public typealias Rank = Lead\", 1))",
       "occurrence": 1,
@@ -10502,7 +10502,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 9797,
+      "line": 9804,
       "name": "FinanceShare",
       "text": "(\"org\", _sv_org, (\"/check/view?who=Emp9000&doc=FinanceShare\",",
       "occurrence": 1,
@@ -10512,7 +10512,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 9798,
+      "line": 9805,
       "name": "FinanceShare",
       "text": "\"/check/view?who=Nobody&doc=FinanceShare\",",
       "occurrence": 1,
@@ -10522,7 +10522,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 9799,
+      "line": 9806,
       "name": "Finance",
       "text": "\"/diff/transfer?who=Emp9000&to=Finance\",",
       "occurrence": 1,
@@ -10532,7 +10532,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 9800,
+      "line": 9807,
       "name": "Finance",
       "text": "\"/diff/transfer?who=Nobody&to=Finance\",",
       "occurrence": 1,
@@ -10542,7 +10542,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 9830,
+      "line": 9837,
       "name": "Finance",
       "text": "if _tag == \"org\" and _route == \"/diff/transfer?who=Emp9000&to=Finance\":",
       "occurrence": 1,
@@ -10552,7 +10552,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 9880,
+      "line": 9887,
       "name": "change transfer",
       "text": "and json.loads(_sv_seen[\"org /diff\"][2]).get(\"command\") == \"change transfer\"",
       "occurrence": 1,
@@ -10562,7 +10562,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 9986,
+      "line": 9993,
       "name": "Female",
       "text": "\"E1,Manager,Finance,Ada,Lovelace,Y1815,OnSite,Female\\n\"",
       "occurrence": 1,
@@ -10572,7 +10572,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 9986,
+      "line": 9993,
       "name": "Finance",
       "text": "\"E1,Manager,Finance,Ada,Lovelace,Y1815,OnSite,Female\\n\"",
       "occurrence": 1,
@@ -10582,7 +10582,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 9986,
+      "line": 9993,
       "name": "Manager",
       "text": "\"E1,Manager,Finance,Ada,Lovelace,Y1815,OnSite,Female\\n\"",
       "occurrence": 1,
@@ -10592,7 +10592,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 9986,
+      "line": 9993,
       "name": "OnSite",
       "text": "\"E1,Manager,Finance,Ada,Lovelace,Y1815,OnSite,Female\\n\"",
       "occurrence": 1,
@@ -10602,7 +10602,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 9987,
+      "line": 9994,
       "name": "Female",
       "text": "\"E2,Lead,Finance,Grace,Hopper,Y1906,Remote,Female\\n\",",
       "occurrence": 1,
@@ -10612,7 +10612,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 9987,
+      "line": 9994,
       "name": "Finance",
       "text": "\"E2,Lead,Finance,Grace,Hopper,Y1906,Remote,Female\\n\",",
       "occurrence": 1,
@@ -10622,7 +10622,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 9987,
+      "line": 9994,
       "name": "Lead",
       "text": "\"E2,Lead,Finance,Grace,Hopper,Y1906,Remote,Female\\n\",",
       "occurrence": 1,
@@ -10632,7 +10632,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 9987,
+      "line": 9994,
       "name": "Remote",
       "text": "\"E2,Lead,Finance,Grace,Hopper,Y1906,Remote,Female\\n\",",
       "occurrence": 1,
@@ -10642,7 +10642,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 9988,
+      "line": 9995,
       "name": "FinanceShare",
       "text": "\"who,doc\\nE1,FinanceShare\\nE2,FinanceShare\\n\"),",
       "occurrence": 1,
@@ -10652,7 +10652,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 9993,
+      "line": 10000,
       "name": "Finance",
       "text": "\"E1,Manager,Finance,Ada,Lovelace,Y1815,OnSite\\n\",",
       "occurrence": 1,
@@ -10662,7 +10662,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 9993,
+      "line": 10000,
       "name": "Manager",
       "text": "\"E1,Manager,Finance,Ada,Lovelace,Y1815,OnSite\\n\",",
       "occurrence": 1,
@@ -10672,7 +10672,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 9993,
+      "line": 10000,
       "name": "OnSite",
       "text": "\"E1,Manager,Finance,Ada,Lovelace,Y1815,OnSite\\n\",",
       "occurrence": 1,
@@ -10682,7 +10682,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 9994,
+      "line": 10001,
       "name": "FinanceShare",
       "text": "\"who,doc\\nE1,FinanceShare\\n\"),",
       "occurrence": 1,
@@ -10692,7 +10692,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 9996,
+      "line": 10003,
       "name": "Female",
       "text": "\"E1,Manager,Finance,Ada,Lovelace,Y1815,OnSite,Female\\n\"",
       "occurrence": 2,
@@ -10702,7 +10702,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 9996,
+      "line": 10003,
       "name": "Finance",
       "text": "\"E1,Manager,Finance,Ada,Lovelace,Y1815,OnSite,Female\\n\"",
       "occurrence": 2,
@@ -10712,7 +10712,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 9996,
+      "line": 10003,
       "name": "Manager",
       "text": "\"E1,Manager,Finance,Ada,Lovelace,Y1815,OnSite,Female\\n\"",
       "occurrence": 2,
@@ -10722,7 +10722,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 9996,
+      "line": 10003,
       "name": "OnSite",
       "text": "\"E1,Manager,Finance,Ada,Lovelace,Y1815,OnSite,Female\\n\"",
       "occurrence": 2,
@@ -10732,7 +10732,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 9997,
+      "line": 10004,
       "name": "Finance",
       "text": "\"E2,Lead,Finance,Grace,Hopper,Y1906,Remote\\n\",",
       "occurrence": 1,
@@ -10742,7 +10742,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 9997,
+      "line": 10004,
       "name": "Lead",
       "text": "\"E2,Lead,Finance,Grace,Hopper,Y1906,Remote\\n\",",
       "occurrence": 1,
@@ -10752,7 +10752,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 9997,
+      "line": 10004,
       "name": "Remote",
       "text": "\"E2,Lead,Finance,Grace,Hopper,Y1906,Remote\\n\",",
       "occurrence": 1,
@@ -10762,7 +10762,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 9998,
+      "line": 10005,
       "name": "FinanceShare",
       "text": "\"who,doc\\nE1,FinanceShare\\n\"),",
       "occurrence": 2,
@@ -10772,7 +10772,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10002,
+      "line": 10009,
       "name": "Finance",
       "text": "\"E1,Manager,Finance,Ada,Lovelace,Y1815\\n\",",
       "occurrence": 1,
@@ -10782,7 +10782,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10002,
+      "line": 10009,
       "name": "Manager",
       "text": "\"E1,Manager,Finance,Ada,Lovelace,Y1815\\n\",",
       "occurrence": 1,
@@ -10792,7 +10792,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10003,
+      "line": 10010,
       "name": "FinanceShare",
       "text": "\"who,doc\\nE1,FinanceShare\\n\"),",
       "occurrence": 3,
@@ -10802,7 +10802,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10005,
+      "line": 10012,
       "name": "Female",
       "text": "'E1,Manager,\"Finance,North\",Ada,Lovelace,Y1815,OnSite,Female\\n',",
       "occurrence": 1,
@@ -10812,7 +10812,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10005,
+      "line": 10012,
       "name": "Finance",
       "text": "'E1,Manager,\"Finance,North\",Ada,Lovelace,Y1815,OnSite,Female\\n',",
       "occurrence": 1,
@@ -10822,7 +10822,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10005,
+      "line": 10012,
       "name": "Manager",
       "text": "'E1,Manager,\"Finance,North\",Ada,Lovelace,Y1815,OnSite,Female\\n',",
       "occurrence": 1,
@@ -10832,7 +10832,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10005,
+      "line": 10012,
       "name": "OnSite",
       "text": "'E1,Manager,\"Finance,North\",Ada,Lovelace,Y1815,OnSite,Female\\n',",
       "occurrence": 1,
@@ -10842,7 +10842,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10006,
+      "line": 10013,
       "name": "FinanceShare",
       "text": "\"who,doc\\nE1,FinanceShare\\n\"),",
       "occurrence": 4,
@@ -10852,7 +10852,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10008,
+      "line": 10015,
       "name": "Female",
       "text": "\"E1,Manager,Finance,Ada,Lovelace,Y1815,OnSite,Female\\n\\n\",",
       "occurrence": 1,
@@ -10862,7 +10862,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10008,
+      "line": 10015,
       "name": "Finance",
       "text": "\"E1,Manager,Finance,Ada,Lovelace,Y1815,OnSite,Female\\n\\n\",",
       "occurrence": 1,
@@ -10872,7 +10872,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10008,
+      "line": 10015,
       "name": "Manager",
       "text": "\"E1,Manager,Finance,Ada,Lovelace,Y1815,OnSite,Female\\n\\n\",",
       "occurrence": 1,
@@ -10882,7 +10882,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10008,
+      "line": 10015,
       "name": "OnSite",
       "text": "\"E1,Manager,Finance,Ada,Lovelace,Y1815,OnSite,Female\\n\\n\",",
       "occurrence": 1,
@@ -10892,7 +10892,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10009,
+      "line": 10016,
       "name": "FinanceShare",
       "text": "\"who,doc\\nE1,FinanceShare\\n\"),",
       "occurrence": 5,
@@ -10902,7 +10902,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10013,
+      "line": 10020,
       "name": "Finance",
       "text": "\"E1,Finance,Ada,Lovelace,Y1815,OnSite\\n\",",
       "occurrence": 1,
@@ -10912,7 +10912,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10013,
+      "line": 10020,
       "name": "OnSite",
       "text": "\"E1,Finance,Ada,Lovelace,Y1815,OnSite\\n\",",
       "occurrence": 1,
@@ -10922,7 +10922,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10014,
+      "line": 10021,
       "name": "FinanceShare",
       "text": "\"who,doc\\nE1,FinanceShare\\n\")):",
       "occurrence": 1,
@@ -10932,7 +10932,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10075,
+      "line": 10082,
       "name": "Manager",
       "text": "open(_bw, \"w\").write(_good.replace(\"Rank = Manager\", \"Rank = Nonesuch\", 1))",
       "occurrence": 1,
@@ -10942,7 +10942,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10083,
+      "line": 10090,
       "name": "Engineering",
       "text": "\"public typealias Home = Engineering\", \"public typealias Home = Finance\", 1))",
       "occurrence": 1,
@@ -10952,7 +10952,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10083,
+      "line": 10090,
       "name": "Finance",
       "text": "\"public typealias Home = Engineering\", \"public typealias Home = Finance\", 1))",
       "occurrence": 1,
@@ -10962,7 +10962,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10306,
+      "line": 10313,
       "name": "Engineering",
       "text": "\"public typealias Home = Engineering\", \"public typealias Home = Finance\", 1))",
       "occurrence": 2,
@@ -10972,7 +10972,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10306,
+      "line": 10313,
       "name": "Finance",
       "text": "\"public typealias Home = Engineering\", \"public typealias Home = Finance\", 1))",
       "occurrence": 2,
@@ -10982,7 +10982,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10774,
+      "line": 10781,
       "name": "FinanceShare",
       "text": "(\"a view that holds\", [\"check\", \"view\", \"Emp9000\", \"FinanceShare\"], False),",
       "occurrence": 1,
@@ -10992,7 +10992,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10775,
+      "line": 10782,
       "name": "EngineeringShare",
       "text": "(\"a view that does not\", [\"check\", \"view\", \"Emp9000\", \"EngineeringShare\"], False),",
       "occurrence": 1,
@@ -11002,7 +11002,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10776,
+      "line": 10783,
       "name": "FinanceShare",
       "text": "(\"the same, spelled ask\", [\"ask\", \"view\", \"Emp9000\", \"FinanceShare\"], False),",
       "occurrence": 1,
@@ -11012,7 +11012,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10778,
+      "line": 10785,
       "name": "FinanceShare",
       "text": "[\"check\", \"view\", \"Emp9000\", \"FinanceShare\", \"--json\"], False),",
       "occurrence": 1,
@@ -11022,7 +11022,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10780,
+      "line": 10787,
       "name": "\"transfer\"",
       "text": "(\"a transfer, dry\", [\"diff\", \"transfer\", \"Emp9000\", \"Engineering\"], False),",
       "occurrence": 1,
@@ -11032,7 +11032,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10780,
+      "line": 10787,
       "name": "Engineering",
       "text": "(\"a transfer, dry\", [\"diff\", \"transfer\", \"Emp9000\", \"Engineering\"], False),",
       "occurrence": 1,
@@ -11042,7 +11042,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10782,
+      "line": 10789,
       "name": "\"transfer\"",
       "text": "(\"a transfer, written\", [\"apply\", \"transfer\", \"Emp9001\", \"Engineering\"], True),",
       "occurrence": 1,
@@ -11052,7 +11052,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10782,
+      "line": 10789,
       "name": "Engineering",
       "text": "(\"a transfer, written\", [\"apply\", \"transfer\", \"Emp9001\", \"Engineering\"], True),",
       "occurrence": 1,
@@ -11062,7 +11062,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10783,
+      "line": 10790,
       "name": "\"grant\"",
       "text": "(\"a grant, written\", [\"apply\", \"grant\", \"Emp9000\", \"EngineeringShare\"], True),",
       "occurrence": 1,
@@ -11072,7 +11072,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10783,
+      "line": 10790,
       "name": "EngineeringShare",
       "text": "(\"a grant, written\", [\"apply\", \"grant\", \"Emp9000\", \"EngineeringShare\"], True),",
       "occurrence": 1,
@@ -11082,7 +11082,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10784,
+      "line": 10791,
       "name": "\"revoke\"",
       "text": "(\"a revoke, written\", [\"apply\", \"revoke\", \"Emp9000\", \"FinanceShare\"], True),",
       "occurrence": 1,
@@ -11092,7 +11092,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10784,
+      "line": 10791,
       "name": "FinanceShare",
       "text": "(\"a revoke, written\", [\"apply\", \"revoke\", \"Emp9000\", \"FinanceShare\"], True),",
       "occurrence": 1,
@@ -11102,7 +11102,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10786,
+      "line": 10793,
       "name": "Finance",
       "text": "[\"apply\", \"hire\", \"Emp9100\", \"Manager\", \"Finance\", \"Ada\", \"Lovelace\",",
       "occurrence": 1,
@@ -11112,7 +11112,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10786,
+      "line": 10793,
       "name": "Manager",
       "text": "[\"apply\", \"hire\", \"Emp9100\", \"Manager\", \"Finance\", \"Ada\", \"Lovelace\",",
       "occurrence": 1,
@@ -11122,7 +11122,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10787,
+      "line": 10794,
       "name": "OnSite",
       "text": "\"Y1815\", \"OnSite\"], False),",
       "occurrence": 1,
@@ -11132,7 +11132,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10789,
+      "line": 10796,
       "name": "\"transfer\"",
       "text": "[\"apply\", \"transfer\", \"Emp9000\", \"Finance\"], True)):",
       "occurrence": 1,
@@ -11142,7 +11142,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10789,
+      "line": 10796,
       "name": "Finance",
       "text": "[\"apply\", \"transfer\", \"Emp9000\", \"Finance\"], True)):",
       "occurrence": 1,
@@ -11152,7 +11152,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10922,
+      "line": 10929,
       "name": "Engineering",
       "text": "if _tag == \"people and grants\" and b\"Finance against Engineering\" not in _out:",
       "occurrence": 1,
@@ -11162,7 +11162,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10922,
+      "line": 10929,
       "name": "Finance",
       "text": "if _tag == \"people and grants\" and b\"Finance against Engineering\" not in _out:",
       "occurrence": 1,
@@ -11172,7 +11172,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10940,
+      "line": 10947,
       "name": "wholeCompany",
       "text": "_mut_anchor = \"func courtSays(_ asked: [String], wholeCompany: Bool = false) -> String {\\n\"",
       "occurrence": 1,
@@ -11182,7 +11182,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10943,
+      "line": 10950,
       "name": "THE JUDGE",
       "text": "_mut_anchor + '    return \"\\\\u{2713} THE JUDGE holds: 0 claims in 0.0 ms\\\\ncanon v2\\\\n\"\\n',",
       "occurrence": 1,
@@ -11192,7 +11192,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10974,
+      "line": 10981,
       "name": "OrganizationJudge",
       "text": "if os.path.basename(f) != \"OrganizationJudge.swift\"],",
       "occurrence": 1,
@@ -11202,7 +11202,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 10975,
+      "line": 10982,
       "name": "OrganizationJudge",
       "text": "os.path.join(_org, \"OrganizationJudge.swift\"),",
       "occurrence": 1,
@@ -11212,7 +11212,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 11198,
+      "line": 11205,
       "name": "seededWorldBuild",
       "text": "let ok = seededWorldBuild(people, grants, \"people.csv\", \"grants.csv\")",
       "occurrence": 1,
@@ -11222,7 +11222,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 11201,
+      "line": 11208,
       "name": "Employee",
       "text": "check(\"person\", ok.world.contains(\"public enum Emp1: Employee, Person {\"))",
       "occurrence": 1,
@@ -11232,7 +11232,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 11201,
+      "line": 11208,
       "name": "Person",
       "text": "check(\"person\", ok.world.contains(\"public enum Emp1: Employee, Person {\"))",
       "occurrence": 1,
@@ -11242,7 +11242,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 11202,
+      "line": 11209,
       "name": "\"grant\"",
       "text": "check(\"grant\", ok.world.contains(\"VerifiedView<\\\\n                Emp1,\\\\n                Doc1\\\\n            >.self\"))",
       "occurrence": 1,
@@ -11252,7 +11252,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 11202,
+      "line": 11209,
       "name": "VerifiedView",
       "text": "check(\"grant\", ok.world.contains(\"VerifiedView<\\\\n                Emp1,\\\\n                Doc1\\\\n            >.self\"))",
       "occurrence": 1,
@@ -11262,7 +11262,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 11204,
+      "line": 11211,
       "name": "seededWorldBuild",
       "text": "let lame = seededWorldBuild(table([\"id\",\"rank\"], [[\"a\",\"b\"]]), grants, \"p.csv\", \"g.csv\")",
       "occurrence": 1,
@@ -11272,7 +11272,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 11207,
+      "line": 11214,
       "name": "seededWorldBuild",
       "text": "let hole = seededWorldBuild(table([\"id\",\"rank\",\"home\",\"given\",\"family\",\"born\",\"site\"],",
       "occurrence": 1,
@@ -11282,7 +11282,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 11225,
+      "line": 11232,
       "name": "seededWorldBuild",
       "text": "and _tc_cut.count(\"func seededWorldBuild\") == 1",
       "occurrence": 1,
@@ -11292,7 +11292,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 11775,
+      "line": 11782,
       "name": "Remote",
       "text": "_whole.replace(\"    public typealias Site = Remote\\n\", \"\", 1))",
       "occurrence": 1,
@@ -11302,7 +11302,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 11973,
+      "line": 11980,
       "name": "organization-judge",
       "text": "_pb = subprocess.run([os.path.join(HERE, \"bin\", \"organization-judge\"),",
       "occurrence": 1,
@@ -11312,7 +11312,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 12093,
+      "line": 12100,
       "name": "organization",
       "text": "if \"forms-organization.swift\" in _hold.stdout:",
       "occurrence": 1,
@@ -11322,7 +11322,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 12154,
+      "line": 12161,
       "name": "judge.js",
       "text": "os.path.join(\"web\", \"ui.html\"), os.path.join(\"bin\", \"judge.js\"),",
       "occurrence": 1,
@@ -11332,7 +11332,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 12265,
+      "line": 12272,
       "name": "Female",
       "text": "twin = world[i:j].replace(\"Next = Barbara\", \"Next = John\").replace(\"Sex = Male\", \"Sex = Female\")",
       "occurrence": 1,
@@ -11342,7 +11342,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 12265,
+      "line": 12272,
       "name": "Male",
       "text": "twin = world[i:j].replace(\"Next = Barbara\", \"Next = John\").replace(\"Sex = Male\", \"Sex = Female\")",
       "occurrence": 1,
@@ -11352,7 +11352,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 12296,
+      "line": 12303,
       "name": "AccessLedger",
       "text": "public enum MyWatch: AccessLedger {",
       "occurrence": 1,
@@ -11362,7 +11362,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 12299,
+      "line": 12306,
       "name": "VerifiedView",
       "text": "// VerifiedView<",
       "occurrence": 1,
@@ -11372,7 +11372,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 12301,
+      "line": 12308,
       "name": "FinanceShare",
       "text": "FinanceShare",
       "occurrence": 1,
@@ -11382,7 +11382,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 12306,
+      "line": 12313,
       "name": "organization-judge",
       "text": "raw = subprocess.run([os.path.join(HERE, \"bin\", \"organization-judge\"), \"judge\",",
       "occurrence": 1,
@@ -11392,7 +11392,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 12326,
+      "line": 12333,
       "name": "Male",
       "text": "k = next(i for i, l in enumerate(lines) if \"typealias Sex = Male\" in l)",
       "occurrence": 1,
@@ -11402,7 +11402,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 12327,
+      "line": 12334,
       "name": "Male",
       "text": "lines[k] = lines[k].replace(\"Male\", \"Ma\")",
       "occurrence": 1,
@@ -11412,7 +11412,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 12335,
+      "line": 12342,
       "name": "Finance",
       "text": "j = next(i for i, l in enumerate(lines) if \"typealias Home = Finance\" in l)",
       "occurrence": 1,
@@ -11422,7 +11422,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 12336,
+      "line": 12343,
       "name": "Engineering",
       "text": "lines[j] = lines[j].replace(\"Finance\", \"Engineering\")",
       "occurrence": 1,
@@ -11432,7 +11432,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 12336,
+      "line": 12343,
       "name": "Finance",
       "text": "lines[j] = lines[j].replace(\"Finance\", \"Engineering\")",
       "occurrence": 1,
@@ -11442,7 +11442,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 12342,
+      "line": 12349,
       "name": "VerifiedInDepartment",
       "text": "and all(\"VerifiedInDepartment\" in open(os.path.join(ad, \"gate.swift\")).read()",
       "occurrence": 1,
@@ -11452,7 +11452,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 12388,
+      "line": 12395,
       "name": "FinanceShare",
       "text": "extra = {\"check\": [\"view\", \"Emp9002\", \"FinanceShare\"],",
       "occurrence": 1,
@@ -11462,7 +11462,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 12389,
+      "line": 12396,
       "name": "\"transfer\"",
       "text": "\"diff\": [\"transfer\", \"Emp9002\", \"Sales\"]}.get(word, [])",
       "occurrence": 1,
@@ -11472,7 +11472,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 12389,
+      "line": 12396,
       "name": "Sales",
       "text": "\"diff\": [\"transfer\", \"Emp9002\", \"Sales\"]}.get(word, [])",
       "occurrence": 1,
@@ -11482,7 +11482,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 13033,
+      "line": 13040,
       "name": "EngineeringShare",
       "text": "[\"check\", \"view\", \"Emp9001\", \"EngineeringShare\"]):",
       "occurrence": 1,
@@ -11492,7 +11492,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 14412,
+      "line": 14419,
       "name": "organization",
       "text": "shelf_file = os.path.join(HERE, \"stdlib\", \"forms-organization.swift\")",
       "occurrence": 1,
@@ -11502,7 +11502,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 14422,
+      "line": 14429,
       "name": "organization",
       "text": "and any(r.get(\"address\") == \"stdlib/forms-organization.swift:2\"",
       "occurrence": 1,
@@ -11512,7 +11512,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 14434,
+      "line": 14441,
       "name": "organization",
       "text": "speaks_file = os.path.join(HERE, \"stdlib\", \"forms-organization.swift\")",
       "occurrence": 1,
@@ -11522,7 +11522,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 14447,
+      "line": 14454,
       "name": "organization",
       "text": "and any(r.get(\"address\") == \"stdlib/forms-organization.swift:3\"",
       "occurrence": 1,
@@ -11532,7 +11532,7 @@
     {
       "path": "tests/smoke.py",
       "channel": "text",
-      "line": 14454,
+      "line": 14461,
       "name": "organization",
       "text": "and any(r.get(\"address\") == \"stdlib/forms-organization.swift:3\"",
       "occurrence": 2,
@@ -11604,7 +11604,7 @@
       "channel": "text",
       "line": 1104,
       "name": "THE JUDGE",
-      "text": "// ── THE WORDS THE JUDGE CARRIES, and the reason they are not on either of the",
+      "text": "// \u2500\u2500 THE WORDS THE JUDGE CARRIES, and the reason they are not on either of the",
       "occurrence": 1,
       "task": "architecture-v1/r4/company-reader-after-T0038",
       "reason": "Architecture revision 4, Court of the company: owner artifacts and contracts, declared reader input, removal of built-in policy and subject-specific controls after T0038."
@@ -11624,7 +11624,7 @@
       "channel": "text",
       "line": 1177,
       "name": "THE JUDGE",
-      "text": "// ── AND NOT EVERYTHING UNDER `THEIRS` IS THE JUDGE'S. Three different things",
+      "text": "// \u2500\u2500 AND NOT EVERYTHING UNDER `THEIRS` IS THE JUDGE'S. Three different things",
       "occurrence": 1,
       "task": "architecture-v1/r4/company-reader-after-T0038",
       "reason": "Architecture revision 4, Court of the company: owner artifacts and contracts, declared reader input, removal of built-in policy and subject-specific controls after T0038."
@@ -11654,7 +11654,7 @@
       "channel": "text",
       "line": 2331,
       "name": "VerifiedInDepartment",
-      "text": "// VerifiedInDepartment …). Each becomes a table of the entry's arguments.",
+      "text": "// VerifiedInDepartment \u2026). Each becomes a table of the entry's arguments.",
       "occurrence": 1,
       "task": "architecture-v1/r4/company-reader-after-T0038",
       "reason": "Architecture revision 4, Court of the company: owner artifacts and contracts, declared reader input, removal of built-in policy and subject-specific controls after T0038."
@@ -11721,7 +11721,7 @@
       "channel": "text",
       "line": 348,
       "name": "judge.js",
-      "text": "bin/judge.js · bin/judge-cli.js · bin/judge-wasm.js · bin/court-wasm/",
+      "text": "bin/judge.js \u00b7 bin/judge-cli.js \u00b7 bin/judge-wasm.js \u00b7 bin/court-wasm/",
       "occurrence": 1,
       "class": "reference",
       "reason": "Public navigation and description of the existing commands; the executable dependencies are recorded separately."
@@ -12959,7 +12959,7 @@
     {
       "path": "docs/CHANGELOG.md",
       "channel": "text",
-      "line": 26,
+      "line": 28,
       "name": "Organization",
       "text": "- Remove the showcase-specific `check administer` / `check delete` compiler probes (and their `ask` aliases), the `hire` edit under `diff` / `apply` / `change`, and implicit world discovery through `GATE_SHOWCASE`. These no longer promise a compiler judgement or a roster edit. Select a local world file or manifest; edit declarations as text. Organization owns its `Administer` / `Delete` type laws in showcase. Other changes remain `transfer`, `grant` and `revoke`.",
       "occurrence": 1,
@@ -12969,7 +12969,7 @@
     {
       "path": "docs/CHANGELOG.md",
       "channel": "text",
-      "line": 240,
+      "line": 242,
       "name": "FinanceShare",
       "text": "- Fixed: a kind declared with its body on one line, `public enum FinanceShare:",
       "occurrence": 1,

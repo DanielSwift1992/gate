@@ -489,19 +489,18 @@ func spawnLedger() {
 // together: the rest was this tool asleep beside a finished process, and the
 // cover promises milliseconds on every keystroke.
 //
-// The child says when it is done, so the wake comes from the child: a
-// termination handler signals, and the caller waits on that. Every spawn in
-// this file goes through here, so the ledger the battery holds (`spawns 5`)
-// is unchanged and the price is paid once, at the door.
-func waitDone(_ p: Process) {
+// The child says when it is done. The handler belongs to the launch: it is
+// installed before run() can publish the process to Foundation's manager,
+// and is never changed afterwards. A completion that arrives before wait()
+// stays in the semaphore. There is no isRunning check and no handler reset
+// racing Foundation's read; the handler captures only the semaphore, not p.
+// Every Process launch in this file goes through this one door, including
+// children whose caller does not wait. The spawn ledger counts the callers.
+func startProcess(_ p: Process) throws -> DispatchSemaphore {
     let done = DispatchSemaphore(value: 0)
     p.terminationHandler = { _ in done.signal() }
-    // a process that already exited before the handler was set never signals,
-    // and `isRunning` is false by then: the handler is the fast path and this
-    // is the truth beside it
-    if !p.isRunning { p.terminationHandler = nil; return }
-    done.wait()
-    p.terminationHandler = nil
+    try p.run()
+    return done
 }
 
 func runGitBytes(_ arguments: [String], _ cwd: String) -> (code: Int32, bytes: Data) {
@@ -517,10 +516,11 @@ func runGitBytes(_ arguments: [String], _ cwd: String) -> (code: Int32, bytes: D
     let pipe = Pipe(), quiet = Pipe()
     p.standardOutput = pipe
     p.standardError = quiet
-    do { try p.run() } catch { return (-1, Data()) }
+    let done: DispatchSemaphore
+    do { done = try startProcess(p) } catch { return (-1, Data()) }
     let said = pipe.fileHandleForReading.readDataToEndOfFile()
     quiet.fileHandleForReading.readDataToEndOfFile()
-    waitDone(p)
+    done.wait()
     return (p.terminationStatus, said)
 }
 
@@ -543,10 +543,11 @@ func gitExitCode(_ arguments: [String], _ cwd: String) -> Int32 {
     let quiet = Pipe(), alsoQuiet = Pipe()
     p.standardOutput = quiet
     p.standardError = alsoQuiet
-    do { try p.run() } catch { return 1 }
+    let done: DispatchSemaphore
+    do { done = try startProcess(p) } catch { return 1 }
     quiet.fileHandleForReading.readDataToEndOfFile()
     alsoQuiet.fileHandleForReading.readDataToEndOfFile()
-    waitDone(p)
+    done.wait()
     return p.terminationStatus
 }
 
@@ -4118,8 +4119,9 @@ func binaryRuns(_ p: String) -> Bool {
     proc.arguments = ["judge"]
     proc.standardOutput = Pipe()
     proc.standardError = Pipe()
-    do { try proc.run() } catch { return false }
-    waitDone(proc)
+    let done: DispatchSemaphore
+    do { done = try startProcess(proc) } catch { return false }
+    done.wait()
     return true
 }
 
@@ -6416,10 +6418,10 @@ func worldParse(_ path: String) -> Said {
     p.standardOutput = pipe
     p.standardError = quiet
     var said = "", why = ""
-    if (try? p.run()) != nil {
+    if let done = try? startProcess(p) {
         said = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
         why = String(data: quiet.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-        waitDone(p)
+        done.wait()
     }
     if p.terminationStatus != 0 || said.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
         let first = why.split(separator: "\n").first.map(String.init) ?? "no reason given"
@@ -6801,11 +6803,12 @@ func runSaid(_ command: String, _ arguments: [String]) -> (code: Int32, said: St
     let pipe = Pipe(), quiet = Pipe()
     p.standardOutput = pipe
     p.standardError = quiet
-    do { try p.run() } catch { return (127, "") }
+    let done: DispatchSemaphore
+    do { done = try startProcess(p) } catch { return (127, "") }
     let said = String(data: pipe.fileHandleForReading.readDataToEndOfFile(),
                       encoding: .utf8) ?? ""
     quiet.fileHandleForReading.readDataToEndOfFile()
-    waitDone(p)
+    done.wait()
     return (p.terminationStatus, said.trimmingCharacters(in: .whitespacesAndNewlines))
 }
 
@@ -7237,7 +7240,8 @@ func selfSaid(_ words: [String], _ cwd: String) -> String {
     let pipe = Pipe(), quiet = Pipe()
     p.standardOutput = pipe
     p.standardError = quiet
-    do { try p.run() } catch {
+    let done: DispatchSemaphore
+    do { done = try startProcess(p) } catch {
         cannot("this tool could not run itself at " + bin + " in " + cwd
                + ": " + error.localizedDescription,
                "the binary is there and this is the same one that is speaking, "
@@ -7245,7 +7249,7 @@ func selfSaid(_ words: [String], _ cwd: String) -> String {
     }
     let said = pipe.fileHandleForReading.readDataToEndOfFile()
     let complained = quiet.fileHandleForReading.readDataToEndOfFile()
-    waitDone(p)
+    done.wait()
     // ── AND THE CODE THE CHILD LEFT WITH IS KEPT. A child that printed on
     // neither channel says everything through this number and nothing without
     // it: on windows the import above answered nought characters on both, and
@@ -9817,10 +9821,11 @@ func gitShow(_ spec: String, _ root: String) -> String? {
     let pipe = Pipe(), quiet = Pipe()
     p.standardOutput = pipe
     p.standardError = quiet
-    do { try p.run() } catch { return nil }
+    let done: DispatchSemaphore
+    do { done = try startProcess(p) } catch { return nil }
     let said = pipe.fileHandleForReading.readDataToEndOfFile()
     quiet.fileHandleForReading.readDataToEndOfFile()
-    waitDone(p)
+    done.wait()
     if p.terminationStatus != 0 { return nil }
     return String(data: said, encoding: .utf8) ?? ""
 }
@@ -10541,7 +10546,7 @@ func contractRevisions(_ path: String, _ since: String?) -> (root: String?, revs
     p.standardInput = put
     p.standardOutput = got
     p.standardError = Pipe()
-    guard (try? p.run()) != nil else { return (rootDir, []) }
+    guard let done = try? startProcess(p) else { return (rootDir, []) }
     let asked = marks.map { "\($0.0):\(rel)" }.joined(separator: "\n")
     // written on its own queue, the way communicate does: a batch bigger than
     // the pipe would deadlock a writer who waits to read
@@ -10550,7 +10555,7 @@ func contractRevisions(_ path: String, _ since: String?) -> (root: String?, revs
         put.fileHandleForWriting.closeFile()
     }
     let blob = got.fileHandleForReading.readDataToEndOfFile()
-    waitDone(p)
+    done.wait()
     var out: [(String, Data)] = []
     var i = 0
     for (_, when) in marks {
@@ -10617,7 +10622,7 @@ func firstMentions(_ rootDir: String, _ names: [String],
     let got = Pipe()
     p.standardOutput = got
     p.standardError = Pipe()
-    guard (try? p.run()) != nil else { return seen }
+    guard let done = try? startProcess(p) else { return seen }
     var when: String? = nil
     var carry = Data()
     let handle = got.fileHandleForReading
@@ -10644,6 +10649,7 @@ func firstMentions(_ rootDir: String, _ names: [String],
     }
     p.terminate()
     handle.closeFile()
+    done.wait()
     return seen
 }
 
@@ -11941,10 +11947,10 @@ func courtSays(_ asked: [String], wholeCompany: Bool = false) -> String {
     let errPipe = Pipe()
     p.standardOutput = pipe
     p.standardError = errPipe
-    guard (try? p.run()) != nil else { return "" }
+    guard let done = try? startProcess(p) else { return "" }
     let said = addressed(String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? "")
     let err = String(data: errPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-    waitDone(p)
+    done.wait()
     return keepsRefusal && p.terminationStatus == 2 ? said + err : said
 #endif
 }
@@ -13256,7 +13262,7 @@ func serveDoor(_ a: [String]) -> Never {
         #else
         opener.arguments = ["http://127.0.0.1:\(port)/ui"]
         #endif
-        try? opener.run()
+        _ = try? startProcess(opener)
     }
 
     while true {

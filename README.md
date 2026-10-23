@@ -443,7 +443,7 @@ web/codemirror.*  the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
 docs/           DETAILS.md, SECURITY.md, CHANGELOG.md, NOTICE.md, and
                 the cover's picture with its provenance
-tests/smoke.py   the battery: 748 checks this repository holds itself
+tests/smoke.py   the battery: 749 checks this repository holds itself
                  to, end-to-end runs through judge parity through
                  documentation contracts; one part of green
 tests/playground_runner.py the published-world contracts on Linux and macOS
@@ -458,6 +458,7 @@ cases at the end. A run without swiftc says it is short and stays red.
 The finished-page width check needs headless Chrome or Chromium. It reads every published bench at 375 and 1280 in both themes, and must catch the old answer that would not wrap.
 The court contract totals below describe pinned suites, separately checked
 by the battery; they are not additional battery totals.
+The process-lifetime control compiles the shipping launch helper against a lifecycle witness: completion during or after launch is kept, a failed launch throws, and publishing before installing the handler or replacing it afterwards refuses. Its source guard keeps zero-argument process launches and handler writes at that one door; it is not a statistical crash test.
 
 Each decision prints a `TIMING` record: seconds since the preceding decision and elapsed time for the run. The first includes the CLI build and setup. The healthy CLI is built once; the changed-source refusal control still gets its own build. The full battery keeps a forty-minute deadline.
 

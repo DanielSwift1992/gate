@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Child processes install their completion handler before launch and keep it unchanged until release. A child that exits before its caller waits still delivers its completion; the caller no longer replaces a handler while Foundation may be reading it.
+
 - Declared Language module, namespace, source role and intrinsic fields travel to Court v0.5 with their addresses. Document definitions are read by the owner, with excluded bodies disclosed and zero checked applications reported as empty. Native and published benches can reuse pinned owner answers only for the complete matching request; edits re-read notation and invalidate that answer. Changed browser questions run in the carried wasm worker, including pages opened from a file.
 
 - Static benches refuse unsupported writes with an address, a reason and a way back to the source repository. Manifest edits, declarations and table-value writes no longer acknowledge a change they did not make. Declared file drafts still save locally. The bench shows the host's refusal; native serve also refuses a failed disk write instead of reporting success.
