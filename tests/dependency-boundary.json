@@ -892,7 +892,7 @@
     {
       "path": ".github/workflows/battery.yml",
       "channel": "text",
-      "line": 208,
+      "line": 211,
       "name": "organization-judge",
       "text": "- run: bin/build-organization-judge.sh",
       "occurrence": 3,
@@ -962,7 +962,7 @@
     {
       "path": "bin/build-cli.sh",
       "channel": "text",
-      "line": 117,
+      "line": 124,
       "name": "organization-court",
       "text": "# (bin/organization-court.from), beside the policy it reads. The theory's copy",
       "occurrence": 1,
@@ -972,7 +972,7 @@
     {
       "path": "bin/build-cli.sh",
       "channel": "text",
-      "line": 120,
+      "line": 127,
       "name": "organization-court",
       "text": "ORG=\"$(\"$HERE/bin/organization-court.sh\")\"",
       "occurrence": 1,
@@ -982,7 +982,7 @@
     {
       "path": "bin/build-cli.sh",
       "channel": "text",
-      "line": 123,
+      "line": 130,
       "name": "OrganizationJudge",
       "text": "[ \"$(basename \"$f\")\" = \"OrganizationJudge.swift\" ] || cp \"$f\" \"$BUILD/court/\"",
       "occurrence": 1,
@@ -992,7 +992,7 @@
     {
       "path": "bin/build-cli.sh",
       "channel": "text",
-      "line": 125,
+      "line": 132,
       "name": "OrganizationJudge",
       "text": "cp \"$ORG/OrganizationJudge.swift\" \"$BUILD/court/\"",
       "occurrence": 1,
@@ -1002,7 +1002,7 @@
     {
       "path": "bin/build-cli.sh",
       "channel": "text",
-      "line": 194,
+      "line": 205,
       "name": "company",
       "text": "echo \"built bin/gate-cli$EXT (court at $(printf %.7s \"$PIN\"), company court at $(head -1 \"$ORG/from\" | cut -c1-7))\"",
       "occurrence": 1,

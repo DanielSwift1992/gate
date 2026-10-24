@@ -241,6 +241,8 @@ print('ORIGIN TRANSPORT HOLDS: changed inputs/delivery and missing receipt refus
 
 # Identity is a byte relation, not a list of permitted runtime spellings.
 import io
+import shlex
+import shutil
 import hashlib
 import tarfile
 from unittest.mock import patch
@@ -322,6 +324,9 @@ with tempfile.TemporaryDirectory(prefix='origin-identity-controls-') as temporar
     refuses('arbitrary supplier URL',lambda:identity.authenticated_package('https://example.com/compiler.tar.gz',cache))
 
 # An undeclared supplier blocks certification, not the local compiler.
+import contextlib
+import io
+import linker_inputs as transport
 with tempfile.TemporaryDirectory(prefix='origin-local-build-controls-') as temporary:
     root=Path(temporary);sources=root/'sources';objects=root/'objects';sources.mkdir();objects.mkdir()
     (sources/'main.swift').write_text('print(42)\n');(objects/'0.o').write_bytes(b'our mapped object')
@@ -329,6 +334,9 @@ with tempfile.TemporaryDirectory(prefix='origin-local-build-controls-') as tempo
     prepared_local=dict(inputs={'main.swift':origin.sha((sources/'main.swift').read_bytes()),'outputs.json':origin.sha(output_map.read_bytes())},compiler=dict(version='Swift version 6.4.1',static_archives={},target='x86_64-unknown-linux-gnu'))
     target=origin.encode(dict(paths=dict(runtimeResourcePath=str(root/'toolchain/usr/lib/swift'))))
     trace=objects/'linker.trace';trace.write_text(str((objects/'0.o').resolve())+'\n')
+    response=objects/'link-inputs.rsp';response_sha=transport.write_response(objects,response)
+    def capture():
+        return identity.capture(prepared_local,objects,output_map,trace,response,response_sha)
     # Side products are not linked. Conversely a driver-supplied loose input
     # remains in the conservative exclusion set even outside our output folder.
     (objects/'module.autolink').write_bytes(b'not a linked input')
@@ -339,35 +347,86 @@ with tempfile.TemporaryDirectory(prefix='origin-local-build-controls-') as tempo
         if str(path)=='/etc/os-release': return 'ID=declared-other-host\nVERSION_ID=1\n'
         return original_read_text(path,*args,**kwargs)
     with patch.object(identity,'CACHE',root/'cache'),patch.object(identity.subprocess,'check_output',return_value=target),patch.object(Path,'read_text',host_text):
-        captured=identity.capture(prepared_local,objects,output_map,trace)
+        captured=capture()
         assert captured['objects']==[origin.sha(b'our mapped object'),origin.sha(loose.read_bytes())]
         assert captured['linker_trace_sha256']==origin.sha(trace.read_bytes())
         original_trace=trace.read_text()
-        for bad in ['',str(loose.resolve())+'\n',original_trace+'unknown linker output\n']:
+        for bad in ['',original_trace+'unknown linker output\n']:
             trace.write_text(bad)
-            refuses('missing or unidentified linker input',lambda:identity.capture(prepared_local,objects,output_map,trace))
+            refuses('missing or unidentified linker input',capture)
+        trace.write_text(str(loose.resolve())+'\n')
+        omitted=capture()
+        assert omitted['objects']==captured['objects'] and omitted['linker_inputs'][0]['trace_lines']==[]
         trace.write_text(original_trace)
         # The declared output name is not the roster: a compiler may emit an
         # additional linked .o and metadata beside it. Trace is the authority.
         extra=objects/'module-wrap.o';extra.write_bytes(b'compiler module wrapper')
+        assert capture()['objects']==captured['objects'], 'a later unlinked directory output is not an argument'
         trace.write_text(original_trace+str(extra.resolve())+'\n')
-        captured=identity.capture(prepared_local,objects,output_map,trace)
-        assert origin.sha(extra.read_bytes()) in captured['objects']
+        assert origin.sha(extra.read_bytes()) in capture()['objects']
         trace.write_text(original_trace)
-        refuses('trace omits an explicitly linked object',lambda:identity.capture(prepared_local,objects,output_map,trace))
+        response_sha=transport.write_response(objects,response)
+        included=capture()
+        assert origin.sha(extra.read_bytes()) in included['objects'], 'passed objects do not need a repeated trace line'
+        assert included['linker_inputs'][1]['source']=='response' and included['linker_inputs'][1]['trace_lines']==[]
         extra.unlink()
+        refuses('a passed object is missing after linking',capture)
+        response_sha=transport.write_response(objects,response)
         archive=root/'toolchain/usr/lib/swift_static/linux/declared.a';archive.parent.mkdir(parents=True);archive.write_bytes(b'!<arch>\n')
         prepared_local['compiler']['static_archives']={'usr/lib/swift_static/linux/declared.a':origin.sha(archive.read_bytes())}
         for spelling in [str(archive),str(archive)+'(member.o)','('+str(archive)+')member.o']:
             trace.write_text(original_trace+spelling+'\n')
-            value=identity.capture(prepared_local,objects,output_map,trace)
-            assert value['objects']==captured['objects'][:-1]
+            value=capture()
+            assert value['objects']==captured['objects']
+        for banner in ['GNU gold (GNU Binutils 2.42) 1.16','GNU ld (GNU Binutils for Ubuntu) 2.42','LLD 18.1.3 (compatible with GNU linkers)']:
+            trace.write_text(banner+'\n'+original_trace)
+            value=capture()
+            assert value['objects']==captured['objects'] and value['linker_version_lines']==[1]
+            assert value['linker_inputs'][0]['trace_lines']==[2]
+            assert value['linker_kind']==('gold' if banner.startswith('GNU gold ') else 'gnu-ld' if banner.startswith('GNU ld ') else 'lld')
+        trace.write_text(original_trace+'unknown input\n')
+        try: capture()
+        except origin.Refusal as error: assert str(error).startswith('origin:linker.trace:3:')
+        else: raise AssertionError('unknown trace input must refuse at its LF line')
+        trace.write_text(original_trace)
+        raw=response.read_bytes()
+        response.write_bytes(raw+b'changed\n')
+        refuses('response changed after invocation',capture)
+        response.write_bytes(raw)
+        for invalid in [str((objects/'0.o').resolve())+'\n',raw.decode()+raw.decode(), '"@nested"\n', '"-lprivate"\n']:
+            response.write_text(invalid);response_sha=origin.sha(response.read_bytes())
+            refuses('response is outside the declared grammar',capture)
+        response_sha=transport.write_response(objects,response)
         prepared_local['compiler']['static_archives']={};trace.write_text(original_trace)
-        captured=identity.capture(prepared_local,objects,output_map,trace)
+        captured=capture()
     assert 'package' not in captured and captured['objects']==[origin.sha(b'our mapped object'),origin.sha(loose.read_bytes())]
     # Supply an archive roster only to reach the missing-provider boundary.
     captured['archive_hashes']={'declared.a':'0'*64}
     refuses('unavailable supplier grants no publication waiver',lambda:identity.attest(b'\0private supplier bytes\0',captured,[(1,8)],root/'cache'))
+
+    # The driver's real response parser gets the same names, not JSON escape
+    # spellings: spaces, quotes, backslashes and a non-ASCII name are admitted.
+    special=objects/'space "quote" \\ α.o';special.write_bytes(b'another object')
+    response_sha=transport.write_response(objects,response)
+    assert special.resolve() in dict(transport.response_inputs(response,response_sha))
+    if os.name!='nt' and shutil.which('swiftc'):
+        plan=subprocess.run(['swiftc','-driver-print-jobs','@'+str(response),'-o',str(root/'not-built')],capture_output=True,text=True,timeout=30)
+        assert plan.returncode==0,(plan.stdout,plan.stderr)
+        jobs=[shlex.split(line) for line in plan.stdout.split('\n') if line]
+        expected={str(p) for p,_ in transport.response_inputs(response,response_sha)}
+        assert any(expected.issubset(job) for job in jobs), 'driver response decoding must preserve the same filenames'
+        assert not (root/'not-built').exists(), 'printing the plan must not compile or link'
+    response.write_text(json.dumps('/'+'home'+'/PrivateAccount/object.o')+'\n')
+    trace.write_text('/'+'Users'+'/OtherAccount/object.o\nGNU ld (GNU Binutils) 2.42\n')
+    diagnostic=transport.save_diagnostic(trace,response,objects/'linker.stderr',
+                                         'refusal at origin:linker.trace:1; PersonalMail@example.test',root/'diagnostic.json')
+    assert not any(x in json.dumps(diagnostic) for x in ['PrivateAccount','OtherAccount','PersonalMail'])
+    said=io.StringIO()
+    with contextlib.redirect_stdout(said):transport.report(diagnostic,annotation=True)
+    assert said.getvalue().startswith('::error title=addressed linker inputs::')
+    assert 'origin:linker.rsp:1:' in said.getvalue() and len(said.getvalue())<4096
+    assert all(row['line']==1 for s in diagnostic['sources'] for row in s['rows'][:1])
+    print('LINK TRANSPORT HOLDS: frozen response, selected traces, archive forms, line addresses and masked diagnostics')
 print('LOCAL BUILD HOLDS: an undeclared supplier gives no identity certificate; local construction still succeeds')
 
 # Exercise the shipping recipe with a controlled compiler. This is a host
@@ -407,6 +466,42 @@ if os.name != 'nt':
         sealer=projection/'bin/publication_origin.py';sealer.unlink()
         sealer.write_text('import runpy,sys\nif sys.argv[1]=="seal": sys.exit(23)\nrunpy.run_path('+repr(str(ROOT/'bin/publication_origin.py'))+',run_name="__main__")\n')
         failed=build_recipe();assert failed.returncode==23 and not sidecar.exists(),(failed.returncode,failed.stderr)
+        # Exercise the Linux branch of the same recipe, using a controlled
+        # compiler, not another real compilation or a Linux certificate.
+        recipe.write_bytes((ROOT/'bin/build-cli.sh').read_bytes())
+        for name in ('publication_origin.py','publication_identity.py','linker_inputs.py'):
+            target=projection/'bin'/name
+            target.unlink();shutil.copy2(ROOT/'bin'/name,target)
+        cache=projection/'bin/.publication-origin'
+        if cache.is_symlink():cache.unlink()
+        cache.mkdir(exist_ok=True)
+        (tools/'uname').write_text('#!/bin/sh\necho Linux\n')
+        compiler.write_text('#!/usr/bin/env python3\nimport json,sys\nfrom pathlib import Path\n'
+                            'if "--version" in sys.argv: print("Swift version 6.2");sys.exit(0)\n'
+                            'if "-print-target-info" in sys.argv: print(json.dumps({"paths":{"runtimeResourcePath":'+repr(str(resource))+'},"target":{"triple":"x86_64-unknown-linux-gnu"}}));sys.exit(0)\n'
+                            'if "-emit-object" in sys.argv:\n'
+                            ' for value in json.loads(Path(sys.argv[sys.argv.index("-output-file-map")+1]).read_text()).values(): Path(value["object"]).write_bytes(b"controlled compiler object")\n'
+                            ' sys.exit(0)\n'
+                            'rsp=Path(next(a[1:] for a in sys.argv if a.startswith("@")))\n'
+                            'print("GNU ld (GNU Binutils) 2.42")\n'
+                            'print(json.loads(rsp.read_text().splitlines()[0]))\n'
+                            '(rsp.parent/"late-side-product.o").write_bytes(b"not passed or linked")\n'
+                            'Path(sys.argv[sys.argv.index("-o")+1]).write_bytes(bytes.fromhex("7f454c46")+b"controlled build output")\n'
+                            'if Path('+repr(str(tools/'tamper-response'))+').exists(): rsp.write_text(json.dumps("/"+"home"+"/BuildSecret/changed.o")+"\\n")\n')
+        linux=build_recipe();assert linux.returncode==0,(linux.stdout,linux.stderr)
+        linux_receipt=origin.verify(json.loads(sidecar.read_bytes()),product.read_bytes())
+        identity_inputs=linux_receipt['identity_inputs']
+        assert identity_inputs['linker_kind']=='gnu-ld'
+        assert identity_inputs['objects']==[origin.sha(b'controlled compiler object')]
+        assert any(not row['trace_lines'] for row in identity_inputs['linker_inputs']), 'selected trace must not erase passed objects'
+        (tools/'tamper-response').touch()
+        corrupt=build_recipe();assert corrupt.returncode!=0 and not sidecar.exists(),(corrupt.returncode,corrupt.stderr)
+        assert 'origin:linker.rsp:1:' in corrupt.stderr and 'response changed' in corrupt.stderr
+        annotation=subprocess.run([sys.executable,str(projection/'bin/linker_inputs.py'),'report'],capture_output=True,text=True,timeout=10)
+        assert annotation.returncode==0 and annotation.stdout.startswith('::error title=addressed linker inputs::')
+        assert 'origin:linker.rsp:1:' in annotation.stdout and 'BuildSecret' not in annotation.stdout
+        assert len(annotation.stdout)<4096
+        print('LINUX RECIPE HOLDS: frozen arguments survive late outputs; tampering refuses before sealing and the CI report is masked')
     print('RECIPE HOLDS: fresh sealed pair, no empty-array expansion, incomplete/failed sealing cannot report success')
 
 # Structured ranges preserve every diagnostic/address in all former views,

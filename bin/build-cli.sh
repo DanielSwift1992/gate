@@ -92,8 +92,15 @@ BUILD_COMPLETE=no
 cleanup() {
     code=$?
     trap - EXIT
-    rm -rf "$BUILD" "$OBJECTS"
     if [ "$BUILD_COMPLETE" != yes ] && [ "$code" -eq 0 ]; then code=1; fi
+    if [ "$code" -ne 0 ] && [ -f "$OBJECTS/linker.trace" ]; then
+        if [ -f "$HERE/bin/.publication-origin/last-link-diagnostic.json" ]; then
+            python3 "$HERE/bin/linker_inputs.py" report >&2 || echo 'origin:linker:1: diagnostic delivery failed' >&2
+        else
+            python3 "$HERE/bin/linker_inputs.py" diagnose "$OBJECTS" --reason "link or origin seal exited $code" >&2 || echo 'origin:linker:1: diagnostic delivery failed' >&2
+        fi
+    fi
+    rm -rf "$BUILD" "$OBJECTS"
     exit "$code"
 }
 trap cleanup EXIT
@@ -134,6 +141,7 @@ cp "$HERE/bin/grammar-law/"*.swift "$BUILD/court/"
 ORIGIN_OUTPUT=(--inputs-root "$BUILD")
 if [ "$(uname -s)" = "Linux" ]; then
     mkdir -p "$OBJECTS"
+    rm -f "$HERE/bin/.publication-origin/last-link-diagnostic.json"
     python3 - "$BUILD" "$OBJECTS" <<'MAP'
 import json,sys
 from pathlib import Path
@@ -167,13 +175,16 @@ else
             -emit-object -output-file-map "$BUILD/outputs.json" \
             "$BUILD/main.swift" "$BUILD/shelf.swift" "$BUILD/premise.swift" "$BUILD/grammar.swift" \
             "$BUILD/court/"*.swift
-        # The linker names the files it actually opened. Side products beside
-        # an object are not linked inputs; driver-supplied inputs also count.
-        if swiftc -O $STATIC "$OBJECTS/"*.o -Xlinker --trace -o "$HERE/bin/gate-cli$EXT" > "$OBJECTS/linker.trace"; then
+        # Freeze the actual arguments before the driver can create side
+        # products. Its response and the linker's trace are different sources;
+        # neither is reconstructed by a glob after the invocation.
+        RESPONSE_SHA="$(python3 "$HERE/bin/linker_inputs.py" write "$OBJECTS" "$OBJECTS/link-inputs.rsp")"
+        ORIGIN_OUTPUT+=(--link-response "$OBJECTS/link-inputs.rsp" --response-sha "$RESPONSE_SHA")
+        if swiftc -O $STATIC @"$OBJECTS/link-inputs.rsp" -Xlinker --trace -Xlinker -v -o "$HERE/bin/gate-cli$EXT" > "$OBJECTS/linker.trace" 2> "$OBJECTS/linker.stderr"; then
             :
         else
             code=$?
-            tail -40 "$OBJECTS/linker.trace" >&2
+            echo "origin:linker:1: link invocation exited $code; addressed inputs follow" >&2
             exit "$code"
         fi
     else

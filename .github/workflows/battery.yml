@@ -115,6 +115,9 @@ jobs:
       - run: |
           python3 tests/smoke.py 2>&1 | tee /tmp/smoke-out.txt
           exit ${PIPESTATUS[0]}
+      - if: failure()
+        name: the addressed linker inputs
+        run: python3 bin/linker_inputs.py report
       # and the vein the battery built here carries its own Swift: the
       # binary the release ships from this platform is this one
       - run: |
@@ -209,6 +212,9 @@ jobs:
       - run: bin/build-cli.sh
       - name: the complete published world contracts
         run: python3 tests/playground_runner.py --timeout 2100 --log "$RUNNER_TEMP/playground-out.txt"
+      - if: failure()
+        name: the addressed linker inputs
+        run: python3 bin/linker_inputs.py report
       - if: always()
         name: the full world log
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02   # v4

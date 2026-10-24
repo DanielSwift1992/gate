@@ -25,13 +25,13 @@ KEY_SOURCE = 'https://www.swift.org/keys/all-keys.asc'
 SIGNER = '52BB7E3DE28A71BE22EC05FFEF80A866B47A981F'
 
 
-def capture(prepared, objects, output_map, link_trace):
-    """Retain actual non-archive linker inputs, not a directory inventory.
+def capture(prepared, objects, output_map, link_trace, link_response, response_sha):
+    """Retain passed objects and actual non-archive traced inputs.
 
-    The recipe passes objects/*.o; its --trace output includes both those and
-    driver-supplied files. Everything except the declared compiler archives is
-    retained conservatively, including loose runtime objects and linker scripts.
-    A side product never opened by the linker is not part of this roster.
+    The recipe freezes the response before linking, then passes its exact
+    bytes to swiftc. Trace may report selected inputs instead of repeating that
+    list; it adds driver-supplied files. Retain both conservatively. A later
+    directory side product is neither an argument nor a traced input.
     """
     declared = json.loads(output_map.read_bytes())
     sources={str((output_map.parent/p).resolve()) for p in prepared['inputs'] if p.endswith('.swift')}
@@ -44,44 +44,41 @@ def capture(prepared, objects, output_map, link_trace):
     archives={(toolchain/p).resolve():h for p,h in prepared['compiler']['static_archives'].items()}
     if any(sha(p.read_bytes())!=h for p,h in archives.items()):
         raise Refusal('origin:byte 0: compiler archive inputs changed during linking')
-    raw=link_trace.read_bytes()
+    import linker_inputs as transport
+    passed=transport.response_inputs(link_response,response_sha)
+    entries,versions,trace_sha=transport.trace_inputs(link_trace)
+    diagnostics=link_trace.with_name('linker.stderr')
+    stderr=diagnostics.read_bytes() if diagnostics.is_file() else b''
+    banners=[text for _,text in versions]
+    banners += [line for line in stderr.decode('utf-8',errors='replace').split('\n') if transport.VERSION.fullmatch(line)]
+    kinds={('gold' if v.startswith('GNU gold ') else 'gnu-ld' if v.startswith('GNU ld ') else 'lld') for v in banners}
+    if len(kinds)>1:
+        raise Refusal('origin:linker.trace:1: conflicting linker version declarations')
+    actual={}
+    for path,line in passed:
+        try: path.relative_to(objects.resolve())
+        except ValueError:
+            raise Refusal('origin:linker.rsp:'+str(line)+': object is outside the declared output root') from None
+        actual[path]=dict(source='response',line=line,trace_lines=[])
     def archive(path):
         with path.open('rb') as stream: return stream.read(8) in (b'!<arch>\n',b'!<thin>\n')
-    try: lines=raw.decode('utf-8').splitlines()
-    except UnicodeError:
-        raise Refusal('origin:linker.trace:1: linker input trace is not UTF-8') from None
-    actual={}
-    for number,line in enumerate(lines,1):
-        if not line: continue
-        path=Path(line)
-        # GNU ld/gold and LLVM lld print whole archives or archive(member).
-        # GNU ld may spell the latter as (archive)member. No substring waiver.
-        if not path.is_file():
-            candidates=[]
-            if line.endswith(')') and '(' in line: candidates.append(line.rsplit('(',1)[0])
-            if line.startswith('(') and ')' in line: candidates.append(line[1:line.index(')')])
-            found=[Path(p) for p in candidates if Path(p).is_file() and archive(Path(p))]
-            if len(found)!=1:
-                raise Refusal('origin:linker.trace:'+str(number)+': cannot identify a linker input; no roster inferred')
-            path=found[0]
-        path=path.resolve()
+    for entry in entries:
+        path=entry['path'];number=entry['line']
         if path in archives and archive(path):
             continue
-        actual.setdefault(path,number)
-    # This is the glob actually passed by the recipe, not one presumed object
-    # per source in the compiler's output map. All explicit inputs must occur.
-    passed={p.resolve() for p in objects.glob('*.o') if p.is_file()}
-    if not passed or not passed.issubset(actual):
-        raise Refusal('origin:linker.trace:1: linker trace omits an explicit object input')
+        actual.setdefault(path,dict(source='trace',line=number,trace_lines=[]))['trace_lines'].append(number)
     digests=[]; roster=[]
-    for path,line in sorted(actual.items(),key=lambda item:item[1]):
-        data=path.read_bytes(); digest=sha(data)
+    for path,address in actual.items():
+        try: data=path.read_bytes()
+        except OSError:
+            raise Refusal('origin:linker.'+('rsp' if address['source']=='response' else 'trace')+':'+str(address['line'])+': linked input unavailable') from None
+        digest=sha(data)
         dest=CACHE/'objects'/digest; dest.parent.mkdir(parents=True,exist_ok=True)
         if dest.exists() and sha(dest.read_bytes())!=digest:
             raise Refusal('origin:byte 0: damaged retained linker input')
         dest.write_bytes(data)
         if digest not in digests: digests.append(digest)
-        roster.append(dict(line=line,sha256=digest))
+        roster.append(dict(address,sha256=digest))
     version = re.search(r'\bSwift version ([0-9]+\.[0-9]+(?:\.[0-9]+)?)\b', prepared['compiler']['version'])
     try:
         os_release = dict(line.split('=',1) for line in Path('/etc/os-release').read_text().splitlines() if '=' in line)
@@ -89,8 +86,10 @@ def capture(prepared, objects, output_map, link_trace):
         os_release = {}
     target = prepared['compiler']['target']; arch = target.split('-')[0]
     result=dict(boundary=BOUNDARY,objects=digests,archive_hashes=prepared['compiler']['static_archives'],
-                linker_trace_sha256=sha(raw),linker_inputs=roster,
-                retained_scope='all traced inputs except declared compiler archives, including unattributed loose inputs')
+                linker_trace_sha256=trace_sha,linker_response_sha256=response_sha,
+                linker_stderr_sha256=sha(stderr),linker_kind=next(iter(kinds),'not-reported'),
+                linker_grammar=transport.FORMAT,linker_version_lines=[n for n,_ in versions],linker_inputs=roster,
+                retained_scope='all response objects and traced inputs except declared compiler archives; no post-link directory inference')
     if not version or os_release.get('ID','').strip('"') != 'ubuntu' or arch not in ('x86_64','aarch64') or 'VERSION_ID' not in os_release:
         return result
     os_version = os_release['VERSION_ID'].strip('"')
