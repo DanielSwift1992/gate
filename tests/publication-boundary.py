@@ -50,6 +50,7 @@ def publication_content(policy, name, content, builder_names=(), check_emails=Tr
     emails = re.compile(rb'(?<![A-Za-z0-9_.+%-])[A-Za-z0-9_.+%-]{1,64}@'
                         rb'[A-Za-z0-9-]{1,63}(?:\.[A-Za-z0-9-]{1,63}){0,8}'
                         rb'(?![A-Za-z0-9-])(?!\.[A-Za-z0-9-])')
+    scp_path = re.compile(rb':[^\s<>"\']')
     service_accounts = {value.casefold() for value in policy['service_builder_accounts']}
     names = [re.compile(rb'(?<![A-Za-z0-9])' + re.escape(value.encode())
                         + rb'(?![A-Za-z0-9])', re.I) for value in builder_names
@@ -78,25 +79,29 @@ def publication_content(policy, name, content, builder_names=(), check_emails=Tr
     def email_spans(raw):
         # P1: boundaries are declared by the byte class, never chosen around a
         # match. A binary's instructions are not treated as arbitrary text.
-        spans = []; start = 0
-        for part in raw.split(b'\0'):
+        for span in re.finditer(rb'[^\0]+', raw):
+            part = span[0]
+            # A mailbox needs @. Skipping a span without it cannot change the
+            # declared class; candidates never choose the span's boundaries.
+            if b'@' not in part:
+                continue
             try:
                 text = part.decode('utf-8')
             except UnicodeDecodeError:
-                text = ''
-            if text and all(c.isprintable() or c in '\t\r\n' for c in text):
-                spans.append((start, start + len(part)))
-            start += len(part) + 1
-        return spans
+                continue
+            if text.replace('\t', '').replace('\r', '').replace('\n', '').isprintable():
+                yield span.start(), span.end()
 
     def scan(raw, label, offsets, valid):
         text = raw.decode('utf-8', errors='surrogateescape')
+        previous_char = previous_byte = 0
         for match in homes.finditer(text):
             # Shared is macOS's shared directory, not an account home.
             if match[0] == '/Users/Shared':
                 continue
-            start = len(text[:match.start()].encode('utf-8', errors='surrogateescape'))
+            start = previous_byte + len(text[previous_char:match.start()].encode('utf-8', errors='surrogateescape'))
             end = start + len(match[0].encode('utf-8', errors='surrogateescape'))
+            previous_char, previous_byte = match.end(), end
             if valid(start, end):
                 sample = json.dumps(path_sample(match[0]))
                 findings.append(f'{label}:byte {offsets[start]}: publication boundary refused: absolute home or account-temporary path; sample={sample}')
@@ -104,24 +109,25 @@ def publication_content(policy, name, content, builder_names=(), check_emails=Tr
             for match in pattern.finditer(raw):
                 if valid(match.start(), match.end()):
                     findings.append(f'{label}:byte {offsets[match.start()]}: publication boundary refused: local builder name; sample="<redacted>"')
-        text_spans = email_spans(raw) if check_emails else ()
-        for match in emails.finditer(raw) if check_emails else ():
-            if not any(start <= match.start() and match.end() <= end for start,end in text_spans):
-                continue
-            account, domain = match[0].decode('ascii').rsplit('@', 1)
-            # SCP-style repository addresses have a declared service user and
-            # a nonempty path. A bare mailbox or another user is still email.
-            if account in policy['scp_repository_users'] and re.match(rb':[^\s<>"\']+', raw[match.end():]):
-                continue
-            domain = domain.lower()
-            if domain in policy['example_email_domains'] or any(domain.endswith(suffix) for suffix in policy['example_email_suffixes']):
-                continue
-            # A DNS address or localhost-style mailbox, not repo@SHA pins.
-            if not re.search(r'\.[A-Za-z]{2,63}$', domain):
-                continue
-            if valid(match.start(), match.end()):
-                sample = json.dumps(private_name_mask(domain))
-                findings.append(f'{label}:byte {offsets[match.start()]}: publication boundary refused: email address; domain={sample}')
+        for start, end in email_spans(raw) if check_emails else ():
+            for match in emails.finditer(raw, start, end):
+                email_match(match, raw, label, offsets, valid)
+
+    def email_match(match, raw, label, offsets, valid):
+        account, domain = match[0].decode('ascii').rsplit('@', 1)
+        # SCP-style repository addresses have a declared service user and
+        # a nonempty path. A bare mailbox or another user is still email.
+        if account in policy['scp_repository_users'] and scp_path.match(raw, match.end()):
+            return
+        domain = domain.lower()
+        if domain in policy['example_email_domains'] or any(domain.endswith(suffix) for suffix in policy['example_email_suffixes']):
+            return
+        # A DNS address or localhost-style mailbox, not repo@SHA pins.
+        if not re.search(r'\.[A-Za-z]{2,63}$', domain):
+            return
+        if valid(match.start(), match.end()):
+            sample = json.dumps(private_name_mask(domain))
+            findings.append(f'{label}:byte {offsets[match.start()]}: publication boundary refused: email address; domain={sample}')
 
     def escaped(raw, label, offsets, valid):
         scan(raw, label, offsets, valid)
@@ -153,9 +159,15 @@ def publication_content(policy, name, content, builder_names=(), check_emails=Tr
                 # keeps Unicode account names, including surrogate pairs.
                 projected = raw[alignment:end].decode(encoding, errors='surrogatepass').encode('utf-8', errors='surrogatepass')
                 class CodeUnitOffsets:
+                    index = 0
+                    address = alignment
                     def __getitem__(self, index):
-                        prefix = projected[:index].decode('utf-8', errors='surrogatepass')
-                        return alignment + len(prefix.encode(encoding, errors='surrogatepass'))
+                        if index < self.index:
+                            self.index, self.address = 0, alignment
+                        prefix = projected[self.index:index].decode('utf-8', errors='surrogatepass')
+                        self.address += len(prefix.encode(encoding, errors='surrogatepass'))
+                        self.index = index
+                        return self.address
                 escaped(projected, label + (' [UTF-16LE]' if little else ' [UTF-16BE]'),
                         CodeUnitOffsets(), lambda start,end: True)
 

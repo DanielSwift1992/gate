@@ -54,7 +54,7 @@ def publish(source, out, context=None):
         snap = {}
         for path in ("/files", "/language", "/version", "/status", "/shelf",
                      "/attention", "/grammar-contexts"):
-            snap[path] = get(port, path)
+            snap[path] = get(port, path + "?publication=1" if path == "/status" else path)
         # The same Swift projection as PublicationPlan owns the public history.
         snap["/log?n=1&scope=world"] = get(port, "/log?n=1&scope=world&publication=1")
 

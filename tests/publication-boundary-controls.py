@@ -178,6 +178,22 @@ assert law.publication_content(policy,'instructions.bin',b'\xff'+home.encode()+b
 assert law.publication_content(policy,'instructions.bin',b'\xff'+builder.encode()+b'\xfe',[builder])
 print('EMAIL TEXT CLASS HOLDS: complete text refuses; binary substrings are outside; homes and names remain byte-wide')
 
+# Many declared spans and invalid binary candidates used to multiply one
+# another. Each span now meets its candidates once; the final real mailbox
+# and path must still refuse at the same bytes, including through UTF-16.
+import time
+large = b'ordinary text\0' * 131072 + (b'\xffperson@private.mail\x01\0' * 512)
+start = time.monotonic()
+assert not law.publication_content(policy, 'large.bin', large)
+for encoding in ('utf-8', 'utf-16le', 'utf-16be'):
+    suffix = b'\0' + (mail.decode() + '\0' + home + '\0').encode(encoding)
+    findings = law.publication_content(policy, 'large.bin', large + suffix)
+    address = len(large) + 1 + len((mail.decode() + '\0').encode(encoding))
+    label = 'large.bin' + ('' if encoding == 'utf-8' else ' [' + encoding.upper() + ']')
+    assert any(label + ':byte ' + str(address) + ':' in line and 'absolute home' in line for line in findings), findings
+    assert any('email address' in line for line in findings), findings
+print('LARGE BYTE CLASS HOLDS:', len(large) + len(suffix), 'bytes;', round(time.monotonic()-start, 3), 'seconds; late path and mailbox retain their addresses')
+
 import copy
 sys.path.insert(0,str(ROOT/'bin'))
 import publication_origin as origin

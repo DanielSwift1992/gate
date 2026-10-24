@@ -5002,7 +5002,7 @@ func formResidueJSON(_ items: [FormResidue]) -> StatusJSON {
                                ("reason", .text($0.reason))]) })
 }
 
-func statusPairs(_ a: StatusAnswer) -> [(String, StatusJSON)] {
+func statusPairs(_ a: StatusAnswer, relativeTo root: String? = nil) -> [(String, StatusJSON)] {
     if a.noWorld {
         return [
             ("command", .text("status")),
@@ -5013,10 +5013,10 @@ func statusPairs(_ a: StatusAnswer) -> [(String, StatusJSON)] {
             ("mutates", .raw("false")),
         ]
     }
+    let facts = a.judged.map { path in root.map { relPath(path, $0) } ?? path }
     var pairs: [(String, StatusJSON)] = [
         ("command", .text("status")),
-        ("facts", a.judged.count == 1 ? .text(a.judged[0])
-                                      : .list(a.judged.map { .text($0) })),
+        ("facts", facts.count == 1 ? .text(facts[0]) : .list(facts.map { .text($0) })),
         ("verdict", .text(a.verdict)),
         ("refusals", .list(a.refusals.map {
             .object([("address", .text($0.address)), ("claim", .text($0.claim))]) })),
@@ -13695,7 +13695,10 @@ func serveDoor(_ a: [String]) -> Never {
                     ("judge_from", judgeFrom().map { StatusJSON.text($0) } ?? .null)])))
             case ("GET", "/status"):
                 let answer = statusAnswer()
-                var pairs = statusPairs(answer)
+                // The publication reading, like the history projection, names
+                // files from this world without its builder's directory.
+                let root = asked.query["publication"] == "1" ? FileManager.default.currentDirectoryPath : nil
+                var pairs = statusPairs(answer, relativeTo: root)
                 // the ladder, read from this room: whoever is asking is looking
                 // at the bench, so the rung that opens the bench is taken. The
                 // no-world answer carries its own step and neither names a room.

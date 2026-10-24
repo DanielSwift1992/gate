@@ -2952,7 +2952,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 13750,
+      "line": 13753,
       "name": "wholeCompany",
       "text": "let raw = courtSays(paths, wholeCompany: true)",
       "occurrence": 1,
@@ -2962,7 +2962,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 14051,
+      "line": 14054,
       "name": "judge.js",
       "text": "\"publication.js\": \"web/publication.js\", \"judge.js\": \"bin/judge.js\", \"renderer.js\": \"bin/renderer.js\",",
       "occurrence": 1,
@@ -2972,7 +2972,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 14371,
+      "line": 14374,
       "name": "organization-court",
       "text": "\"installed\": [\"gate\": gateVersion(), \"organization_revision\": runtimeData(\"bin/organization-court.from\").flatMap { String(data: $0, encoding: .utf8)?.components(separatedBy: \"\\n\").first } ?? \"\", \"binary_sha256\": FileManager.default.contents(atPath: absPath(CommandLine.arguments[0])).map { sha256Hex($0) } ?? \"\", \"judge_revision\": judgeFrom() ?? \"\", \"wasm\": assets[\"assets/vi_court_bytes.js\"] ?? \"\", \"stdlib\": Dictionary(uniqueKeysWithValues: shelf().map { ($0.name, sha256Hex(Data($0.text.utf8))) })], \"assets\": assets, \"resources\": resources]",
       "occurrence": 1,
@@ -2982,7 +2982,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 14371,
+      "line": 14374,
       "name": "organization_revision",
       "text": "\"installed\": [\"gate\": gateVersion(), \"organization_revision\": runtimeData(\"bin/organization-court.from\").flatMap { String(data: $0, encoding: .utf8)?.components(separatedBy: \"\\n\").first } ?? \"\", \"binary_sha256\": FileManager.default.contents(atPath: absPath(CommandLine.arguments[0])).map { sha256Hex($0) } ?? \"\", \"judge_revision\": judgeFrom() ?? \"\", \"wasm\": assets[\"assets/vi_court_bytes.js\"] ?? \"\", \"stdlib\": Dictionary(uniqueKeysWithValues: shelf().map { ($0.name, sha256Hex(Data($0.text.utf8))) })], \"assets\": assets, \"resources\": resources]",
       "occurrence": 1,
@@ -2992,7 +2992,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 14388,
+      "line": 14391,
       "name": "judge.js",
       "text": "for asset in [\"codemirror.js\", \"codemirror.css\", \"judge.js\", \"renderer.js\", \"press.js\", \"drawing-profile.js\"] {",
       "occurrence": 1,
@@ -3002,7 +3002,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 14535,
+      "line": 14538,
       "name": "organization-court",
       "text": "let orgFrom = joinPath(toolRoot(), \"bin/organization-court.from\")",
       "occurrence": 1,
@@ -3012,7 +3012,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 14537,
+      "line": 14540,
       "name": "company",
       "text": "lines.append(\"  company court from verification-is-identification-showcase \"",
       "occurrence": 1,
@@ -3022,7 +3022,7 @@
     {
       "path": "bin/gate-cli.swift",
       "channel": "text",
-      "line": 14538,
+      "line": 14541,
       "name": "organization-judge",
       "text": "+ String(org.prefix(12)) + \". `bin/build-organization-judge.sh` builds it\")",
       "occurrence": 1,
@@ -12929,7 +12929,7 @@
     {
       "path": "docs/CHANGELOG.md",
       "channel": "text",
-      "line": 32,
+      "line": 34,
       "name": "Organization",
       "text": "- Remove the showcase-specific `check administer` / `check delete` compiler probes (and their `ask` aliases), the `hire` edit under `diff` / `apply` / `change`, and implicit world discovery through `GATE_SHOWCASE`. These no longer promise a compiler judgement or a roster edit. Select a local world file or manifest; edit declarations as text. Organization owns its `Administer` / `Delete` type laws in showcase. Other changes remain `transfer`, `grant` and `revoke`.",
       "occurrence": 1,
@@ -12939,7 +12939,7 @@
     {
       "path": "docs/CHANGELOG.md",
       "channel": "text",
-      "line": 246,
+      "line": 248,
       "name": "FinanceShare",
       "text": "- Fixed: a kind declared with its body on one line, `public enum FinanceShare:",
       "occurrence": 1,

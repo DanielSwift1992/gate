@@ -52,6 +52,41 @@ extension MyInput { public static var typeName: String { "Rooms.swift" } }
         print('PAGES HISTORY HOLDS: same four-field Swift projection; repository author email intact')
         assert 'Rooms.swift' in html and 'roadtest=1' not in html and 'ROAD ALL GREEN' not in html
         assert not (source / 'CODEOWNERS').exists() and not (source / 'ownership.swift').exists()
+        # A compound world under the account home must publish the same file
+        # addresses as any other world, without copying its builder's directory.
+        with tempfile.TemporaryDirectory(prefix='gate-publisher-home-', dir=Path.home()) as home:
+            home_source = Path(home)
+            (home_source / 'gate.manifest.swift').write_text('''public protocol Role {}
+public enum WorldFile: Role {}
+public protocol Mine {}
+public enum First: Mine {
+    public typealias Kind = WorldFile
+}
+extension First {
+    public static var typeName: String { "First.swift" }
+}
+public enum Second: Mine {
+    public typealias Kind = WorldFile
+}
+extension Second {
+    public static var typeName: String { "Second.swift" }
+}
+''')
+            for name in ('First', 'Second'):
+                (home_source / (name + '.swift')).write_text('public enum ' + name + ' {}\n')
+            home_out = root / 'home-site'
+            result = subprocess.run([sys.executable, str(ROOT / 'bin/build-pages.py'), str(home_out),
+                                     '--source', str(home_source)], capture_output=True, text=True, timeout=90)
+            assert result.returncode == 0, (result.stdout, result.stderr)
+            delivered = (home_out / 'index.html').read_text()
+            snap, _ = json.JSONDecoder().raw_decode(delivered.split('const SNAP = ', 1)[1])
+            reading = json.loads(snap['/status'])
+            boundary = subprocess.run([sys.executable, str(ROOT / 'tests/publication-boundary.py'),
+                                       '--publication-tree', str(home_out)], capture_output=True, text=True, timeout=60)
+            assert boundary.returncode == 0, boundary.stdout + boundary.stderr
+            assert set(reading['facts']) == {'First.swift', 'Second.swift'}, reading['facts']
+            assert str(home_source) not in delivered
+            print('PAGES HOME SNAPSHOT HOLDS: compound facts are world-relative; actual publication boundary accepts the delivery')
         # An explicitly selected example still goes through the same generic door.
         example = root / 'selected-example'
         subprocess.run([str(ROOT / 'gate'), 'demo', str(example)], capture_output=True, check=True)
