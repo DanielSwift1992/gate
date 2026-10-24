@@ -10,3 +10,7 @@ bin/.worlds/
 # there cannot find a posix temp: it is made and removed by bin/build-cli.sh
 bin/.build/
 bin/gate-cli.exe
+
+# local build attestation travels with a release, not with the source checkout
+bin/gate-cli.origin.json
+bin/gate-cli.exe.origin.json

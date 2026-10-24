@@ -14696,6 +14696,18 @@ public enum MyWatch: AccessLedger {
               _worlds_cache.returncode == 0))
     failed_output("worlds cache", _worlds_cache)
 
+    _publication_boundary = subprocess.run([sys.executable, os.path.join(HERE, "tests", "publication-boundary.py"),
+                                            "--repository", "--artifact", os.path.join(HERE, "bin", "gate-cli")],
+                                           capture_output=True, text=True, timeout=180)
+    S.append(("publication bytes exclude declared machine paths, local names and email addresses",
+              _publication_boundary.returncode == 0))
+    failed_output("publication boundary", _publication_boundary)
+    _publication_controls = subprocess.run([sys.executable, os.path.join(HERE, "tests", "publication-boundary-controls.py")],
+                                           capture_output=True, text=True, timeout=60)
+    S.append(("publication boundary twins distinguish escaped identities from ordinary paths",
+              _publication_controls.returncode == 0))
+    failed_output("publication controls", _publication_controls)
+
     _ci_output = subprocess.run([sys.executable, os.path.join(HERE, "tests", "ci-output.py")],
                                 capture_output=True, text=True, timeout=30)
     S.append(("public CI annotations retain failure tails and Pages status names the failed step",

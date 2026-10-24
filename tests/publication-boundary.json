@@ -1,0 +1,29 @@
+{
+  "format": "publication-boundary/3",
+  "scope": "Paths in Git-tracked source files; paths, current builder name and email in explicit artifacts and every file of a publication tree",
+  "base64_binding": "VI_COURT_WASM_BASE64",
+  "base64_file": "bin/court-wasm/web/vi_court_bytes.js",
+  "service_builder_accounts": [
+    "runner",
+    "runneradmin"
+  ],
+  "scp_repository_users": [
+    "git"
+  ],
+  "example_email_domains": [
+    "example.com",
+    "example.net",
+    "example.org",
+    "example",
+    "test",
+    "invalid",
+    "localhost"
+  ],
+  "example_email_suffixes": [
+    ".example",
+    ".test",
+    ".invalid"
+  ],
+  "email_text_class": "Complete UTF-8 text (printable Unicode plus TAB/CR/LF), or complete NUL-delimited spans with that property; the same class in decoded UTF-16 and base64 views. Not arbitrary byte substrings.",
+  "unidentified_linked_bytes": "No foreign exemption: the entire build-derived image remains in the lexical domain."
+}

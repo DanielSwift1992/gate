@@ -114,6 +114,7 @@ jobs:
           NAME=gate-${{ matrix.said }}
           [ "${{ runner.os }}" = "Windows" ] && NAME=$NAME.exe
           cp "$BIN" "out/$NAME"
+          cp "$BIN.origin.json" "out/$NAME.origin.json"
           cp bin/gate-judge.from "out/$NAME.from"
           # one sha256 spelling on three platforms, and the file it names is
           # written beside it rather than in a log nobody keeps
@@ -123,6 +124,9 @@ jobs:
             (cd out && shasum -a 256 "$NAME" > "$NAME.sha256")
           fi
           cat "out/$NAME.sha256"
+      - name: release bytes contain no machine identity
+        shell: bash
+        run: python3 tests/publication-boundary.py --publication-tree out
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a   # v7.0.1
         with:
           name: gate-${{ matrix.said }}

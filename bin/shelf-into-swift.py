@@ -43,7 +43,7 @@ def main():
     runtime = ["web/ui.html", "web/codemirror.js", "web/codemirror.css", "web/publication.js", "web/reader-draft.js",
                "bin/world-court.js", "bin/grammar-policy.js", "bin/court-contexts.js",
                "bin/judge.js", "bin/renderer.js", "bin/press.js", "bin/drawing-profile.js",
-               "bin/drawing-fonts.json", "bin/drawing-contract.from", "bin/drawing.from", "bin/press-contract.from", "bin/court-wasm.from",
+               "bin/drawing-fonts.json", "bin/drawing-contract.from", "bin/drawing.from", "bin/press-contract.from", "bin/court-wasm.from", "bin/court-wasm.build.json",
                "bin/court-wasm/web/vi_court.js", "bin/court-wasm/web/vi_court_bytes.js",
                "bin/organization-court.from", "LICENSE", "docs/NOTICE.md"]
     # Example inputs remain inspectable data; a one-file installation carries the same recipes.

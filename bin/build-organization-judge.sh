@@ -9,6 +9,7 @@ set -e
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
 CACHE="$("$HERE/bin/organization-court.sh")"
 BUILD=$(mktemp -d)
+trap 'rm -rf "$BUILD"' EXIT HUP INT TERM
 cat > "$BUILD/main.swift" <<'SWIFT'
 import Foundation
 
@@ -21,7 +22,14 @@ guard arguments.first == "judge" else {
 }
 OrganizationJudge.run(Array(arguments.dropFirst()))
 SWIFT
-swiftc -O "$BUILD/main.swift" "$CACHE/OrganizationJudge.swift" -o "$HERE/bin/organization-judge"
+cp "$CACHE/OrganizationJudge.swift" "$BUILD/OrganizationJudge.swift"
+python3 "$HERE/bin/publication_origin.py" prepare "$BUILD" "$HERE/bin/build-organization-judge.sh" "$BUILD/origin-inputs.json"
+swiftc -O -file-prefix-map "$BUILD=/organization-court" -debug-prefix-map "$BUILD=/organization-court" "$BUILD/main.swift" "$BUILD/OrganizationJudge.swift" -o "$HERE/bin/organization-judge"
+case "$(uname -s)" in
+    Darwin) strip -S "$HERE/bin/organization-judge"; DEBUG_KIND=strip-S ;;
+    *) strip --strip-debug "$HERE/bin/organization-judge"; DEBUG_KIND=strip-debug ;;
+esac
+python3 "$HERE/bin/publication_origin.py" seal "$BUILD/origin-inputs.json" "$HERE/bin/organization-judge" --mapping source=/organization-court --debug "$DEBUG_KIND" --inputs-root "$BUILD"
 rm -rf "$BUILD"
 {
     cat "$CACHE/from"

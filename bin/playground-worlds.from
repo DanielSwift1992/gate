@@ -295,8 +295,8 @@
   "wasm": {
     "revision": "7b2ce5b294111954fc29e395ea0353d93d177be1",
     "files": {
-      "bin/court-wasm/node/vi_court_bg.wasm": "b31a52aa3e01631814c2341f79b55e3da5a07f9e56042a3da09639a1dfd453b4",
-      "bin/court-wasm/web/vi_court_bytes.js": "b6af3dff6670a534b8f1050ad793d2c7ea35aa48551534cdc5851685255d72f8"
+      "bin/court-wasm/node/vi_court_bg.wasm": "c7e6974e92770e6327772e2bbf26f90b7785b4d2cbd713fd2fb799325750fe6f",
+      "bin/court-wasm/web/vi_court_bytes.js": "ef0d5bef4e8e86d9cb32aa09ff295876c298bb73a6143d243d1963fb5ae877b0"
     }
   }
 }

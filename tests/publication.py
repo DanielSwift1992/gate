@@ -51,7 +51,12 @@ def run():
         facts='public protocol Choice {}\npublic protocol Paired {}\npublic enum Coral: Choice {}\npublic enum Other: Choice {}\npublic enum Pair<L: Choice, R: Choice> {}\nextension Pair: Paired where L == R {}\npublic typealias Same = Pair<Coral, Coral>\n'
         (owner/'Island/Facts.swift').write_text(facts)
         (owner/'Island/.gate/forms-definitions.json').write_text(json.dumps(dict(format=2,files=[dict(row='Evidence',path='Evidence.md',repository=str(dependency),revision=revision,source_path='Notes.md',sha256=hashlib.sha256(note).hexdigest())],languages={},plain_fragments=[],shelf_overrides=False)))
-        git(owner,'init','-q');git(owner,'add','.');git(owner,'-c','user.name=Fixture','-c','user.email=fixture@test','commit','-qm','a declared publication')
+        author_name = 'History "Fixture"'
+        author_email = 'private-history-author' + '@' + 'mailbox.net'
+        git(owner,'init','-q');git(owner,'add','.');git(owner,'-c','user.name='+author_name,'-c','user.email='+author_email,'commit','-qm','a declared publication')
+        expected_commit = dict(zip(('short','when','subject','author'), git(owner,'log','-1','--format=%h%x1f%aI%x1f%s%x1f%an','--abbrev=8').split('\x1f')))
+        local_email = 'private-publisher' + '@' + 'mailbox.net'
+        git(owner,'config','user.email',local_email)
         installed=base/'installation/bin';installed.mkdir(parents=True)
         binary=installed/'gate-cli';shutil.copy2(ROOT/'bin/gate-cli',binary)
         # The child has no Python, Node, Swift or neighbouring gate source files.
@@ -63,6 +68,20 @@ def run():
             return subprocess.run([str(binary),'publish',str(repository),'-o',str(destination),'--json'],cwd=base,env=env,capture_output=True,text=True,timeout=90)
         answer=publish();assert answer.returncode==0,(answer.stdout,answer.stderr)
         plan=json.loads((site/'read-plan.json').read_text())
+        journal=json.loads(json.loads((site/'snapshots/harbor.json').read_text())['responses']['GET /log']['body'])
+        assert 'me' not in journal, 'publication must not include local Git identity'
+        assert journal['commits']==[expected_commit], journal
+        assert journal['next']=='Publish a new snapshot from the source repository to update this history.', journal
+        for path in site.rglob('*'):
+            if path.is_file():
+                assert local_email.encode() not in path.read_bytes(), path
+                assert author_email.encode() not in path.read_bytes(), path
+        # The projection changes the delivered reading, not Git's objects or
+        # the ordinary local journal's identity semantics.
+        local_log=json.loads(subprocess.check_output([str(binary),'log','--json'],cwd=owner,env=env))
+        assert local_log['me']==local_email and local_log['commits'][0]['email']==author_email
+        assert git(owner,'log','-1','--format=%ae')==author_email
+        print('PUBLICATION HISTORY HOLDS: four Git fields retained; local and author emails absent; repository history intact')
         assert plan['format']=='publication/1' and plan['drawing_profile']=='NoDrawing' and plan['draft_policy']=='ReadOnly'
         assert plan['coverage'][0]['verdict']=='holds' and plan['coverage'][0]['forms']['equalities']==1,plan['coverage']
         assert (site/'index.html').exists() and (site/'harbor/index.html').exists() and (site/'archive/start/index.html').exists()

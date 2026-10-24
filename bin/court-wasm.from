@@ -1,6 +1,5 @@
 7b2ce5b294111954fc29e395ea0353d93d177be1
-built from the public corpus at 7b2ce5b294111954fc29e395ea0353d93d177be1
-compiler source paths: HOME=/build/home; SOURCE=/build/vi
+built from committed public corpus 7b2ce5b294111954fc29e395ea0353d93d177be1; locked dependencies; remapped source paths; see court-wasm.build.json
 wasm-bindgen 0.2.105; rustc 1.83.0 (90b35a623 2024-11-26)
-b31a52aa3e01631814c2341f79b55e3da5a07f9e56042a3da09639a1dfd453b4  court-wasm/node/vi_court_bg.wasm
-6bfaa21a1d683262ffe9442d426622cff4150ee09a8477903c2a74f2e08207e0  court-wasm/web/(as base64 in) vi_court_bg.wasm
+c7e6974e92770e6327772e2bbf26f90b7785b4d2cbd713fd2fb799325750fe6f  court-wasm/node/vi_court_bg.wasm
+b931a35b634d08a036b9ccc3ae3c8cf7bceac74a0218fbd6cc775621106b9f1b  court-wasm/web/(as base64 in) vi_court_bg.wasm

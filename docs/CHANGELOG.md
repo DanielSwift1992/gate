@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- The wasm recipe reads committed Git objects; use `--repository` for local objects. `VI_SOURCE` working-tree builds now refuse explicitly. Local build receipts cannot stand for public fetches. Caller Rust flags keep encoded precedence and are declared in the receipt; private flag data refuses before outputs are replaced.
+
+- Publication checks the complete linked image without a runtime string exemption. Builds remove debug metadata and carry input/output receipts. The email class is complete printable text, including NUL-delimited binary strings; paths and builder names remain checked throughout the bytes. Refusal addresses and samples redact private builder names and mailbox local parts.
+
 - Child processes install their completion handler before launch and keep it unchanged until release. A child that exits before its caller waits still delivers its completion; the caller no longer replaces a handler while Foundation may be reading it.
 
 - Declared Language module, namespace, source role and intrinsic fields travel to Court v0.5 with their addresses. Document definitions are read by the owner, with excluded bodies disclosed and zero checked applications reported as empty. Native and published benches can reuse pinned owner answers only for the complete matching request; edits re-read notation and invalidate that answer. Changed browser questions run in the carried wasm worker, including pages opened from a file.

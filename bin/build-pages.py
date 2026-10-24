@@ -53,8 +53,10 @@ def publish(source, out, context=None):
 
         snap = {}
         for path in ("/files", "/language", "/version", "/status", "/shelf",
-                     "/log?n=1&scope=world", "/attention", "/grammar-contexts"):
+                     "/attention", "/grammar-contexts"):
             snap[path] = get(port, path)
+        # The same Swift projection as PublicationPlan owns the public history.
+        snap["/log?n=1&scope=world"] = get(port, "/log?n=1&scope=world&publication=1")
 
         drawing_plan = json.loads(get(port, "/drawing-profile"))
         from drawing_profile import publish as publish_drawing
@@ -529,6 +531,7 @@ function judgeWhereTexts(text, extraTexts) {
     for asset in ("vi_court.js", "vi_court_bytes.js"):
         shutil.copy(os.path.join(HERE, "bin", "court-wasm", "web", asset),
                     os.path.join(out, "court", asset))
+    shutil.copy(os.path.join(HERE, "bin", "court-wasm.build.json"), os.path.join(out, "court", "court-wasm.build.json"))
     shutil.copy(os.path.join(HERE, "bin", "court-wasm.from"),
                 os.path.join(out, "court", "court-wasm.from"))
     if context:
@@ -563,6 +566,12 @@ def main():
     finish(args.out)
     from bench_styles import audit_site
     print("interface tokens:", audit_site(args.out, ladder))
+    boundary = subprocess.run([sys.executable, os.path.join(HERE, "tests", "publication-boundary.py"),
+                               "--publication-tree", args.out])
+    if boundary.returncode:
+        # The law has already named the byte address. Do not add a traceback
+        # containing the builder's private source and temporary directories.
+        raise SnapshotFailure("publication byte boundary refused; see the addressed findings above")
 
 
 if __name__ == "__main__":
