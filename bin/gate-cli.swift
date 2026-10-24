@@ -1624,10 +1624,10 @@ func matchesAt(_ pattern: String, _ text: String,
     let hits = re.matches(in: text, range: NSRange(location: 0, length: ns.length))
     guard !hits.isEmpty else { return [] }
     // Regex locations are UTF-16 offsets in nondecreasing order. Before each
-    // hit, line = 1 + the number of LF units in [0, cursor). Advancing only
-    // to that hit preserves exactly the old prefix count, including CRLF,
-    // combining marks and surrogate pairs. Each unit is visited at most once;
-    // no growing prefix is copied or split again for every JSON token.
+    // hit, line = 1 + the number of LF units in [0, cursor).
+    // LF counting differs from the former Foundation split after LF plus a
+    // nonspacing/enclosing mark, variation selector or emoji modifier.
+    // Each unit is visited at most once; no growing prefix is copied or split.
     let units = Array(text.utf16)
     var cursor = 0, line = 1
     return hits.map { m in

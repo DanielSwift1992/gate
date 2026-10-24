@@ -24,7 +24,8 @@ def line_addresses():
     advance = 'if units[cursor] == 10 { line += 1 }'
     assert function.count(advance) == 1, 'name the shipping prefix traversal before instrumenting it'
     instrumented = function.replace(advance, 'visits += 1; ' + advance)
-    # The former implementation is the reference relation, kept only here.
+    # Former addresses are regression observations on the ordinary cases below;
+    # Foundation's split is not the LF-count relation for every Unicode input.
     reference = r'''func reference(_ pattern: String, _ text: String,
                dotAll: Bool = false, lines: Bool = false) -> [(groups: [String], line: Int)] {
     var opts: NSRegularExpression.Options = []
@@ -55,12 +56,21 @@ for text in texts {
         }
     }
 }
+// LF followed by these marks can evade the former Foundation split. The
+// relation is 1 + LF units before the hit, independently of that old spelling.
+for mark in ["\u{301}", "\u{308}", "\u{FE0F}", "\u{1F3FB}", "\u{20E3}"] {
+    let text = "x\n" + mark + "y"
+    let hit = matchesAt("(y)", text)
+    let start = (text as NSString).range(of: "y").location
+    let wanted = 1 + text.utf16.prefix(start).filter { $0 == 10 }.count
+    precondition(wanted == 2 && hit.count == 1 && hit[0].line == wanted && hit[0].groups == ["y"])
+}
 // A repeated key retains the key's own line, including an astral spelling.
 let json = "{\n \"𐐀\": 1,\n \"𐐀\": 2\n}"
 let spots = RecordSpots(json)
 precondition(spots.repeated.count == 1 && spots.repeated[0].0 == "/𐐀" && spots.repeated[0].1 == 3)
 precondition(spots.address("/𐐀/missing") == ".gate/forms-definitions.json:3")
-print("LINE ADDRESSES: prefix equality, repeated-key address and one traversal")
+print("LINE ADDRESSES: LF relation, ordinary former addresses, repeated-key address and one traversal")
 '''
     status = source[source.index('func statusAnswer('):]
     lifetime = status[status.index('    let ownsInputs = '):status.index('    loadStatusShelf()')]
