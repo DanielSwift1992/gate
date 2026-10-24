@@ -46,11 +46,17 @@ def capture(prepared, objects, output_map, link_trace, link_response, response_s
         raise Refusal('origin:byte 0: compiler archive inputs changed during linking')
     import linker_inputs as transport
     passed=transport.response_inputs(link_response,response_sha)
-    entries,versions,trace_sha=transport.trace_inputs(link_trace)
+    entries,versions,trace_sha=transport.trace_inputs(link_trace,allow_empty=True)
     diagnostics=link_trace.with_name('linker.stderr')
     stderr=diagnostics.read_bytes() if diagnostics.is_file() else b''
+    stderr_versions=[]
+    if diagnostics.is_file():
+        stderr_entries,stderr_versions,_=transport.trace_inputs(diagnostics,channel='stderr',allow_empty=True)
+        entries += stderr_entries
+    if not entries:
+        raise Refusal('origin:linker.trace:1: no traced inputs in stdout or stderr; no roster inferred')
     banners=[text for _,text in versions]
-    banners += [line for line in stderr.decode('utf-8',errors='replace').split('\n') if transport.VERSION.fullmatch(line)]
+    banners += [text for _,text in stderr_versions]
     kinds={('gold' if v.startswith('GNU gold ') else 'gnu-ld' if v.startswith('GNU ld ') else 'lld') for v in banners}
     if len(kinds)>1:
         raise Refusal('origin:linker.trace:1: conflicting linker version declarations')
@@ -59,19 +65,19 @@ def capture(prepared, objects, output_map, link_trace, link_response, response_s
         try: path.relative_to(objects.resolve())
         except ValueError:
             raise Refusal('origin:linker.rsp:'+str(line)+': object is outside the declared output root') from None
-        actual[path]=dict(source='response',line=line,trace_lines=[])
+        actual[path]=dict(source='response',line=line,trace_lines=[],stderr_lines=[])
     def archive(path):
         with path.open('rb') as stream: return stream.read(8) in (b'!<arch>\n',b'!<thin>\n')
     for entry in entries:
-        path=entry['path'];number=entry['line']
+        path=entry['path'];number=entry['line'];channel=entry['channel']
         if path in archives and archive(path):
             continue
-        actual.setdefault(path,dict(source='trace',line=number,trace_lines=[]))['trace_lines'].append(number)
+        actual.setdefault(path,dict(source=channel,line=number,trace_lines=[],stderr_lines=[]))[channel+'_lines'].append(number)
     digests=[]; roster=[]
     for path,address in actual.items():
         try: data=path.read_bytes()
         except OSError:
-            raise Refusal('origin:linker.'+('rsp' if address['source']=='response' else 'trace')+':'+str(address['line'])+': linked input unavailable') from None
+            raise Refusal('origin:linker.'+('rsp' if address['source']=='response' else address['source'])+':'+str(address['line'])+': linked input unavailable') from None
         digest=sha(data)
         dest=CACHE/'objects'/digest; dest.parent.mkdir(parents=True,exist_ok=True)
         if dest.exists() and sha(dest.read_bytes())!=digest:
@@ -89,6 +95,7 @@ def capture(prepared, objects, output_map, link_trace, link_response, response_s
                 linker_trace_sha256=trace_sha,linker_response_sha256=response_sha,
                 linker_stderr_sha256=sha(stderr),linker_kind=next(iter(kinds),'not-reported'),
                 linker_grammar=transport.FORMAT,linker_version_lines=[n for n,_ in versions],linker_inputs=roster,
+                linker_stderr_version_lines=[n for n,_ in stderr_versions],
                 retained_scope='all response objects and traced inputs except declared compiler archives; no post-link directory inference')
     if not version or os_release.get('ID','').strip('"') != 'ubuntu' or arch not in ('x86_64','aarch64') or 'VERSION_ID' not in os_release:
         return result

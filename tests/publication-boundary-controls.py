@@ -384,6 +384,28 @@ with tempfile.TemporaryDirectory(prefix='origin-local-build-controls-') as tempo
             assert value['objects']==captured['objects'] and value['linker_version_lines']==[1]
             assert value['linker_inputs'][0]['trace_lines']==[2]
             assert value['linker_kind']==('gold' if banner.startswith('GNU gold ') else 'gnu-ld' if banner.startswith('GNU ld ') else 'lld')
+        # Ubuntu gold --trace -v puts both the banner and input paths on
+        # stderr. An empty stdout must not erase those actual link inputs.
+        diagnostics=objects/'linker.stderr'
+        gold='GNU gold (GNU Binutils for Ubuntu 2.42) 1.16\n'
+        trace.write_bytes(b'');diagnostics.write_text(gold+original_trace)
+        value=capture()
+        assert value['objects']==captured['objects'] and value['linker_kind']=='gold'
+        assert value['linker_version_lines']==[] and value['linker_stderr_version_lines']==[1]
+        assert value['linker_inputs'][0]['trace_lines']==[] and value['linker_inputs'][0]['stderr_lines']==[2]
+        assert value['linker_inputs'][1]['source']=='stderr' and value['linker_inputs'][1]['line']==3
+        assert value['linker_stderr_sha256']==origin.sha(diagnostics.read_bytes())
+        assert str(root) not in json.dumps(value), 'temporary input paths are not published receipt fields'
+        diagnostics.write_text(gold)
+        refuses('a banner alone is not a traced input',capture)
+        diagnostics.write_text(gold+original_trace+'unknown input\n')
+        try: capture()
+        except origin.Refusal as error: assert str(error).startswith('origin:linker.stderr:4:')
+        else: raise AssertionError('unknown stderr input must refuse at its own LF line')
+        diagnostics.write_text(gold+original_trace)
+        trace.write_text('LLD 18.1.3 (compatible with GNU linkers)\n')
+        refuses('conflicting trace and stderr linker declarations',capture)
+        diagnostics.unlink()
         trace.write_text(original_trace+'unknown input\n')
         try: capture()
         except origin.Refusal as error: assert str(error).startswith('origin:linker.trace:3:')
@@ -483,17 +505,19 @@ if os.name != 'nt':
                             ' for value in json.loads(Path(sys.argv[sys.argv.index("-output-file-map")+1]).read_text()).values(): Path(value["object"]).write_bytes(b"controlled compiler object")\n'
                             ' sys.exit(0)\n'
                             'rsp=Path(next(a[1:] for a in sys.argv if a.startswith("@")))\n'
-                            'print("GNU ld (GNU Binutils) 2.42")\n'
-                            'print(json.loads(rsp.read_text().splitlines()[0]))\n'
+                            'print("GNU gold (GNU Binutils for Ubuntu 2.42) 1.16",file=sys.stderr)\n'
+                            'for line in rsp.read_text().splitlines(): print(json.loads(line),file=sys.stderr)\n'
                             '(rsp.parent/"late-side-product.o").write_bytes(b"not passed or linked")\n'
                             'Path(sys.argv[sys.argv.index("-o")+1]).write_bytes(bytes.fromhex("7f454c46")+b"controlled build output")\n'
                             'if Path('+repr(str(tools/'tamper-response'))+').exists(): rsp.write_text(json.dumps("/"+"home"+"/BuildSecret/changed.o")+"\\n")\n')
         linux=build_recipe();assert linux.returncode==0,(linux.stdout,linux.stderr)
         linux_receipt=origin.verify(json.loads(sidecar.read_bytes()),product.read_bytes())
         identity_inputs=linux_receipt['identity_inputs']
-        assert identity_inputs['linker_kind']=='gnu-ld'
+        assert identity_inputs['linker_kind']=='gold'
         assert identity_inputs['objects']==[origin.sha(b'controlled compiler object')]
-        assert any(not row['trace_lines'] for row in identity_inputs['linker_inputs']), 'selected trace must not erase passed objects'
+        assert all(not row['trace_lines'] and row['stderr_lines'] for row in identity_inputs['linker_inputs']), 'gold stderr must identify the passed objects'
+        assert identity_inputs['linker_trace_sha256']==origin.sha(b'') and identity_inputs['linker_stderr_version_lines']==[1]
+        assert str(root) not in json.dumps(identity_inputs), 'the private response paths must not enter the receipt'
         (tools/'tamper-response').touch()
         corrupt=build_recipe();assert corrupt.returncode!=0 and not sidecar.exists(),(corrupt.returncode,corrupt.stderr)
         assert 'origin:linker.rsp:1:' in corrupt.stderr and 'response changed' in corrupt.stderr

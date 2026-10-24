@@ -6,6 +6,8 @@ The recipe passes these very bytes to swiftc. Its digest is held across linking.
 
 Trace v1 (ld -t / --trace): PATH (Darwin ld and ELF), ARCHIVE(MEMBER)
 (gold/lld), or (ARCHIVE)MEMBER (GNU ld). Paths are not shell-quoted.
+The two captured streams have this same grammar: gold writes its banner
+and input paths to stderr, while other linkers can write inputs to stdout.
 Known GNU ld/gold and LLD -v banners are metadata, not input paths. Every
 other nonempty line must identify an existing file/archive or refuse at its
 line. A trace is not required to repeat the response's object list. Both
@@ -71,15 +73,18 @@ def response_inputs(response, expected_sha):
     return rows
 
 
-def trace_inputs(trace):
+def trace_inputs(trace, channel='trace', allow_empty=False):
+    if channel not in ('trace', 'stderr'):
+        raise Refusal('origin:linker:1: undeclared trace channel')
+    prefix = 'origin:linker.'+channel+':'
     try: raw = trace.read_bytes(); lines = raw.decode('utf-8').split('\n')
     except (OSError, UnicodeError):
-        raise Refusal('origin:linker.trace:1: trace is unavailable or not UTF-8') from None
+        raise Refusal(prefix+'1: trace is unavailable or not UTF-8') from None
     rows = []; versions = []
     for number, line in enumerate(lines, 1):
         line = line.removesuffix('\r')
         if not line: continue
-        address = 'origin:linker.trace:'+str(number)+': '
+        address = prefix+str(number)+': '
         path = Path(line); member = None; form = 'path'
         if not path.is_file():
             if VERSION.fullmatch(line):
@@ -103,9 +108,9 @@ def trace_inputs(trace):
             if len(found) != 1:
                 raise Refusal(address+'line is outside the declared ld/gold/lld input grammar')
             path, member, form = found[0]
-        rows.append(dict(path=path.resolve(), line=number, member=member, form=form))
-    if not rows:
-        raise Refusal('origin:linker.trace:1: no traced inputs; no roster inferred')
+        rows.append(dict(path=path.resolve(), line=number, member=member, form=form, channel=channel))
+    if not rows and not allow_empty:
+        raise Refusal(prefix+'1: no traced inputs; no roster inferred')
     return rows, versions, sha(raw)
 
 
