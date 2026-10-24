@@ -962,7 +962,7 @@
     {
       "path": "bin/build-cli.sh",
       "channel": "text",
-      "line": 102,
+      "line": 103,
       "name": "organization-court",
       "text": "# (bin/organization-court.from), beside the policy it reads. The theory's copy",
       "occurrence": 1,
@@ -972,7 +972,7 @@
     {
       "path": "bin/build-cli.sh",
       "channel": "text",
-      "line": 105,
+      "line": 106,
       "name": "organization-court",
       "text": "ORG=\"$(\"$HERE/bin/organization-court.sh\")\"",
       "occurrence": 1,
@@ -982,7 +982,7 @@
     {
       "path": "bin/build-cli.sh",
       "channel": "text",
-      "line": 108,
+      "line": 109,
       "name": "OrganizationJudge",
       "text": "[ \"$(basename \"$f\")\" = \"OrganizationJudge.swift\" ] || cp \"$f\" \"$BUILD/court/\"",
       "occurrence": 1,
@@ -992,7 +992,7 @@
     {
       "path": "bin/build-cli.sh",
       "channel": "text",
-      "line": 110,
+      "line": 111,
       "name": "OrganizationJudge",
       "text": "cp \"$ORG/OrganizationJudge.swift\" \"$BUILD/court/\"",
       "occurrence": 1,
@@ -1002,7 +1002,7 @@
     {
       "path": "bin/build-cli.sh",
       "channel": "text",
-      "line": 148,
+      "line": 172,
       "name": "company",
       "text": "echo \"built bin/gate-cli$EXT (court at $(printf %.7s \"$PIN\"), company court at $(head -1 \"$ORG/from\" | cut -c1-7))\"",
       "occurrence": 1,
@@ -12929,7 +12929,7 @@
     {
       "path": "docs/CHANGELOG.md",
       "channel": "text",
-      "line": 34,
+      "line": 36,
       "name": "Organization",
       "text": "- Remove the showcase-specific `check administer` / `check delete` compiler probes (and their `ask` aliases), the `hire` edit under `diff` / `apply` / `change`, and implicit world discovery through `GATE_SHOWCASE`. These no longer promise a compiler judgement or a roster edit. Select a local world file or manifest; edit declarations as text. Organization owns its `Administer` / `Delete` type laws in showcase. Other changes remain `transfer`, `grant` and `revoke`.",
       "occurrence": 1,
@@ -12939,7 +12939,7 @@
     {
       "path": "docs/CHANGELOG.md",
       "channel": "text",
-      "line": 248,
+      "line": 250,
       "name": "FinanceShare",
       "text": "- Fixed: a kind declared with its body on one line, `public enum FinanceShare:",
       "occurrence": 1,

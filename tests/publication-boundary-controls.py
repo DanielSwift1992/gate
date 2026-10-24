@@ -238,3 +238,113 @@ with tempfile.TemporaryDirectory(prefix='origin-controls-') as tmp:
     sidecar.unlink()
     assert law.delivered_origin(product,'product',raw)
 print('ORIGIN TRANSPORT HOLDS: changed inputs/delivery and missing receipt refuse before lexical reading')
+
+# Identity is a byte relation, not a list of permitted runtime spellings.
+import io
+import hashlib
+import tarfile
+from unittest.mock import patch
+import publication_identity as identity
+
+def ar_member(name,body):
+    header=(name+'/').encode().ljust(16)+b'0'.ljust(12)+b'0'.ljust(6)+b'0'.ljust(6)+b'100644'.ljust(8)+str(len(body)).encode().ljust(10)+b'`\n'
+    return header+body+(b'\n' if len(body)%2 else b'')
+
+def refuses(label,call):
+    try:call()
+    except (origin.Refusal,OSError,ValueError):return
+    raise AssertionError('identity accepted '+label)
+
+with tempfile.TemporaryDirectory(prefix='origin-identity-controls-') as temporary:
+    cache=Path(temporary);(cache/'objects').mkdir()
+    text=(home+' in supplier object').encode();raw=b'\x7fELF\0'+text+b'\0'
+    own=b'our remapped object';digest=origin.sha(own);(cache/'objects'/digest).write_bytes(own)
+    archive=b'!<arch>\n'+ar_member('runtime.o',b'prefix\0'+text+b'\0end')
+    package=cache/'package.tar.gz';path='usr/lib/declared.a'
+    def write_package(body=archive, repeated=False):
+        with tarfile.open(package,'w:gz') as tar:
+            for _ in range(2 if repeated else 1):
+                entry=tarfile.TarInfo('toolchain/'+path);entry.size=len(body);tar.addfile(entry,io.BytesIO(body))
+    write_package()
+    inputs=dict(boundary=identity.BOUNDARY,objects=[digest],package='declared-fixture',archive_hashes={path:origin.sha(archive)})
+    authenticate=lambda url,root:(package,dict(source='fixture, not a supplier authentication claim',sha256=origin.sha(package.read_bytes())))
+    bounds=[(5,5+len(text)),(6,9)]
+    proof=identity.attest(raw,inputs,bounds,cache,authenticate)
+    assert len(proof['certificates'])==1 and len(proof['occurrences'])==2
+    c=proof['certificates'][0];assert c['offset']==5 and c['size']==len(text) and c['member']=='runtime.o' and c['member_offset']==7
+    assert identity.covered(proof,6,9) and not identity.covered(proof,4,9)
+    assert identity.attest(raw,inputs,bounds,cache,authenticate,existing=proof)==proof
+    for field,value in [('member_offset',8),('ordinal',99),('archive_offset',0),('sha256','0'*64),('size',len(text)-1),('member','other.o')]:
+        forged=copy.deepcopy(proof);forged['certificates'][0][field]=value
+        refuses('forged identity '+field,lambda:identity.attest(raw,inputs,bounds,cache,authenticate,existing=forged))
+    # A requested substring cannot choose shorter identity boundaries.
+    unmatched=identity.attest(b'\x7fELF\0changed-prefix '+text+b'\0',inputs,[(20,24)],cache,authenticate)
+    assert unmatched['certificates']==[]
+    owned_digest=origin.sha(b'longer '+text+b' suffix');(cache/'objects'/owned_digest).write_bytes(b'longer '+text+b' suffix')
+    both=dict(inputs,objects=[owned_digest]);assert identity.attest(raw,both,bounds,cache,authenticate)['certificates']==[]
+    (cache/'objects'/digest).write_bytes(b'damaged')
+    refuses('changed own objects',lambda:identity.attest(raw,inputs,bounds,cache,authenticate))
+    (cache/'objects'/digest).write_bytes(own)
+    refuses('missing own objects',lambda:identity.attest(raw,dict(inputs,objects=['0'*64]),bounds,cache,authenticate))
+    refuses('malformed own digest',lambda:identity.attest(raw,dict(inputs,objects=['../other']),bounds,cache,authenticate))
+    refuses('changed supplier archive',lambda:identity.attest(raw,dict(inputs,archive_hashes={path:'0'*64}),bounds,cache,authenticate))
+    refuses('missing supplier archive',lambda:identity.attest(raw,dict(inputs,archive_hashes={'missing.a':'0'*64}),bounds,cache,authenticate))
+    write_package(repeated=True);refuses('repeated supplier archive',lambda:identity.attest(raw,inputs,bounds,cache,authenticate));write_package()
+    second=raw+b'new '+(home+'/unmatched').encode()+b'\0'
+    partial=identity.attest(second,inputs,bounds+[(len(raw),len(second)-1)],cache,authenticate)
+    assert identity.covered(partial,5,9) and not identity.covered(partial,len(raw),len(second)-1)
+    utf=home.encode('utf-16le');assert identity.segment(utf,0,len(utf)) is None
+    refuses('undeclared byte boundary',lambda:identity.attest(raw,dict(inputs,boundary='around a match'),bounds,cache,authenticate))
+    refuses('truncated ar',lambda:list(identity.members(archive[:-3])))
+    # GNU/BSD names and duplicate member spellings retain a physical address.
+    names=b'very-long-member-name.o/\n'
+    def header_name(name,body):
+        return name.encode().ljust(16)+b'0'.ljust(12)+b'0'.ljust(6)+b'0'.ljust(6)+b'100644'.ljust(8)+str(len(body)).encode().ljust(10)+b'`\n'+body+(b'\n' if len(body)%2 else b'')
+    gnu=b'!<arch>\n'+header_name('//',names)+header_name('/0',b'abc')
+    assert list(identity.members(gnu))[0][0]['member']=='very-long-member-name.o'
+    bsd=b'!<arch>\n'+header_name('#1/9',b'long-name'+b'abc')
+    assert list(identity.members(bsd))[0][1]==b'abc'
+    # Cached packages still need the published checksum and real signature.
+    url='https://download.swift.org/swift-0.0-release/ubuntu2404/swift-0.0-RELEASE/swift-0.0-RELEASE-ubuntu24.04.tar.gz'
+    folder=cache/'supplier'/origin.sha(url.encode());folder.mkdir(parents=True)
+    (folder/'toolchain.tar.gz').write_bytes(b'fixture');(folder/'download.json').write_bytes(origin.encode(dict(url=url,etag='0'*32)))
+    with patch.object(identity,'supplier_checksum',return_value=hashlib.md5(b'fixture').hexdigest()):
+        refuses('wrong supplier checksum',lambda:identity.authenticated_package(url,cache))
+        (folder/'download.json').write_bytes(origin.encode(dict(url=url,etag=hashlib.md5(b'fixture').hexdigest())))
+        (folder/'keys').write_bytes(b'not a key');(folder/'signature').write_bytes(b'not a signature')
+        with patch.object(identity.subprocess,'run',return_value=subprocess.CompletedProcess([],1,b'',b'')):
+            refuses('bad supplier signature',lambda:identity.authenticated_package(url,cache))
+        good_status=('[GNUPG:] VALIDSIG '+'0'*40+' invalid-signer\n').encode()
+        with patch.object(identity.subprocess,'run',return_value=subprocess.CompletedProcess([],0,good_status,b'')):
+            refuses('wrong supplier key',lambda:identity.authenticated_package(url,cache))
+    with patch.object(identity,'supplier_checksum',return_value='0'*32):
+        refuses('cache invents its own checksum',lambda:identity.authenticated_package(url,cache))
+    refuses('arbitrary supplier URL',lambda:identity.authenticated_package('https://example.com/compiler.tar.gz',cache))
+
+# An undeclared supplier blocks certification, not the local compiler.
+with tempfile.TemporaryDirectory(prefix='origin-local-build-controls-') as temporary:
+    root=Path(temporary);sources=root/'sources';objects=root/'objects';sources.mkdir();objects.mkdir()
+    (sources/'main.swift').write_text('print(42)\n');(objects/'0.o').write_bytes(b'our mapped object')
+    output_map=sources/'outputs.json';output_map.write_bytes(origin.encode({str((sources/'main.swift').resolve()):dict(object=str((objects/'0.o').resolve()))}))
+    prepared_local=dict(inputs={'main.swift':origin.sha((sources/'main.swift').read_bytes()),'outputs.json':origin.sha(output_map.read_bytes())},compiler=dict(version='Swift version 6.4.1',static_archives={},target='x86_64-unknown-linux-gnu'))
+    target=origin.encode(dict(paths=dict(runtimeResourcePath=str(root/'toolchain/usr/lib/swift'))))
+    original_read_text=Path.read_text
+    def host_text(path,*args,**kwargs):
+        if str(path)=='/etc/os-release': return 'ID=declared-other-host\nVERSION_ID=1\n'
+        return original_read_text(path,*args,**kwargs)
+    with patch.object(identity,'CACHE',root/'cache'),patch.object(identity.subprocess,'check_output',return_value=target),patch.object(Path,'read_text',host_text):
+        captured=identity.capture(prepared_local,objects,output_map)
+    assert 'package' not in captured and captured['objects']==[origin.sha(b'our mapped object')]
+    # Supply an archive roster only to reach the missing-provider boundary.
+    captured['archive_hashes']={'declared.a':'0'*64}
+    refuses('unavailable supplier grants no publication waiver',lambda:identity.attest(b'\0private supplier bytes\0',captured,[(1,8)],root/'cache'))
+print('LOCAL BUILD HOLDS: an undeclared supplier gives no identity certificate; local construction still succeeds')
+
+# Structured ranges preserve every diagnostic/address in all former views,
+# including multibyte UTF-16 ends; decoded carriers get no physical waiver.
+for label,text in cases:
+    for raw in (text.encode(),text.encode('utf-16le'),text.encode('utf-16be')):
+        events=[];a=law.publication_content(policy,'fixture',raw,[builder],events=events)
+        assert a==law.publication_content(policy,'fixture',raw,[builder])
+        assert all(0<=start<end<=len(raw) for _,start,end in events),(label,events)
+print('ORIGIN IDENTITY HOLDS: maximal runs, archive/member addresses, own-object ambiguity, complete occurrences, checksums and signatures; fixtures are regression observations')

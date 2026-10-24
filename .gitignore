@@ -14,3 +14,6 @@ bin/gate-cli.exe
 # local build attestation travels with a release, not with the source checkout
 bin/gate-cli.origin.json
 bin/gate-cli.exe.origin.json
+
+# Replayed origin inputs: authenticated supplier package and our linked objects.
+bin/.publication-origin/

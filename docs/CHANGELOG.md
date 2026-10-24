@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Linux publication can certify each complete printable run by byte identity with a member of an authenticated supplier archive. The job verifies the package ETag and PGP signature and excludes runs also present in its own linked objects. Unproved bytes still refuse; no runtime-name exemption is introduced.
+
 - The publication reading of status names compound-world inputs relative to the served root. Publication scanning keeps the same byte classes and addresses while visiting each declared text span once with its mailbox candidates; the Linux artifact deadline is unchanged.
 
 - The wasm recipe reads committed Git objects; use `--repository` for local objects. `VI_SOURCE` working-tree builds now refuse explicitly. Local build receipts cannot stand for public fetches. Caller Rust flags keep encoded precedence and are declared in the receipt; private flag data refuses before outputs are replaced.

@@ -34,7 +34,7 @@ def public_label(policy, label, builder_names):
     return re.sub(r'[^/\\\s@]+@','<redacted>@',label)
 
 
-def publication_content(policy, name, content, builder_names=(), check_emails=True):
+def publication_content(policy, name, content, builder_names=(), check_emails=True, events=None):
     subject_name = name
     name = public_label(policy,name,builder_names)
     # Root boundaries distinguish filesystem roots from URL path components.
@@ -56,6 +56,12 @@ def publication_content(policy, name, content, builder_names=(), check_emails=Tr
                         + rb'(?![A-Za-z0-9])', re.I) for value in builder_names
              if value and value.casefold() not in service_accounts]
     findings = []
+    physical = True
+
+    def emit(message, offsets, start, end):
+        findings.append(message)
+        if events is not None and physical:
+            events.append((message, offsets[start], offsets[end]))
 
     def private_name_mask(value):
         raw = value.encode('utf-8')
@@ -104,11 +110,11 @@ def publication_content(policy, name, content, builder_names=(), check_emails=Tr
             previous_char, previous_byte = match.end(), end
             if valid(start, end):
                 sample = json.dumps(path_sample(match[0]))
-                findings.append(f'{label}:byte {offsets[start]}: publication boundary refused: absolute home or account-temporary path; sample={sample}')
+                emit(f'{label}:byte {offsets[start]}: publication boundary refused: absolute home or account-temporary path; sample={sample}', offsets,start,end)
         for pattern in names:
             for match in pattern.finditer(raw):
                 if valid(match.start(), match.end()):
-                    findings.append(f'{label}:byte {offsets[match.start()]}: publication boundary refused: local builder name; sample="<redacted>"')
+                    emit(f'{label}:byte {offsets[match.start()]}: publication boundary refused: local builder name; sample="<redacted>"', offsets,match.start(),match.end())
         for start, end in email_spans(raw) if check_emails else ():
             for match in emails.finditer(raw, start, end):
                 email_match(match, raw, label, offsets, valid)
@@ -127,7 +133,7 @@ def publication_content(policy, name, content, builder_names=(), check_emails=Tr
             return
         if valid(match.start(), match.end()):
             sample = json.dumps(private_name_mask(domain))
-            findings.append(f'{label}:byte {offsets[match.start()]}: publication boundary refused: email address; domain={sample}')
+            emit(f'{label}:byte {offsets[match.start()]}: publication boundary refused: email address; domain={sample}', offsets,match.start(),match.end())
 
     def escaped(raw, label, offsets, valid):
         scan(raw, label, offsets, valid)
@@ -150,7 +156,7 @@ def publication_content(policy, name, content, builder_names=(), check_emails=Tr
 
 
     def representations(raw, label):
-        escaped(raw, label, range(len(raw)), lambda start,end: True)
+        escaped(raw, label, range(len(raw)+1), lambda start,end: True)
         for alignment in (0, 1):
             for little in (True, False):
                 encoding = 'utf-16le' if little else 'utf-16be'
@@ -184,6 +190,7 @@ def publication_content(policy, name, content, builder_names=(), check_emails=Tr
         except (ValueError, base64.binascii.Error):
             findings.append(f'{name}:byte {match.start(1)}: publication boundary refused: invalid base64 carrier')
             continue
+        physical = False  # Decoded bytes cannot certify physical image offsets.
         representations(decoded, f'{name}:byte {match.start(1)} [base64 decoded]')
     return sorted(set(findings))
 
@@ -253,7 +260,29 @@ def main():
             if origin_findings:
                 continue
         findings += publication_content(policy, display_label + ' [filename]', label.encode(), builder_names, check_emails=check_emails)
-        findings += publication_content(policy, display_label, raw, builder_names, check_emails=check_emails or executable)
+        events = []
+        content_findings = publication_content(policy, display_label, raw, builder_names, check_emails=check_emails or executable, events=events)
+        if executable and raw[:4] != b'\0asm' and content_findings:
+            record_path=Path(str(path)+'.origin.json')
+            record=json.loads(record_path.read_bytes())
+            if record.get('identity_inputs'):
+                import publication_identity as identity
+                try:
+                    if record['identity_inputs']['archive_hashes'] != record['compiler']['static_archives']:
+                        raise origin.Refusal('origin:byte 0: identity archive roster differs from compiler inputs')
+                    proof=identity.attest(raw,record['identity_inputs'],[(a,b) for _,a,b in events],existing=record.get('identities'))
+                    certified={message for message,a,b in events if identity.covered(proof,a,b)}
+                    remaining=[message for message in content_findings if message not in certified]
+                    if not remaining:
+                        # Receipt issued only for the complete set, after replay.
+                        record['identities']=proof
+                        temporary=record_path.with_name(record_path.name+'.tmp')
+                        temporary.write_bytes(origin.encode(record)); temporary.replace(record_path)
+                    content_findings=remaining
+                except (ValueError,OSError,KeyError,TypeError,AttributeError,IndexError,subprocess.SubprocessError) as error:
+                    reason=str(error) if isinstance(error,origin.Refusal) else type(error).__name__
+                    content_findings.append(display_label+':byte 0: publication origin refused: identity not established; '+reason)
+        findings += content_findings
     if findings:
         print('\n'.join(sorted(set(findings))))
         return 1

@@ -85,7 +85,8 @@ else
     BUILD=$(mktemp -d "${TMPDIR:-/tmp}/gate-cli.XXXXXX")
     BUILD=$(cd "$BUILD" && pwd -P)
 fi
-trap 'rm -rf "$BUILD"' EXIT HUP INT TERM
+OBJECTS="$BUILD-objects"
+trap 'rm -rf "$BUILD" "$OBJECTS"' EXIT HUP INT TERM
 cp "$HERE/bin/gate-cli.swift" "$BUILD/main.swift"
 
 # ── AND THE SHELF TRAVELS INSIDE THE BINARY. The tool reads stdlib/ off the
@@ -114,6 +115,20 @@ cp "$ORG/OrganizationJudge.swift" "$BUILD/court/"
 python3 "$HERE/bin/grammar-into-swift.py" > "$BUILD/grammar.swift"
 cp "$HERE/bin/grammar-law/"*.swift "$BUILD/court/"
 
+# On Linux the exact objects linked below are retained by digest for origin
+# replay. There is no second compilation to guess which bytes were ours.
+ORIGIN_OBJECTS=()
+if [ "$(uname -s)" = "Linux" ]; then
+    mkdir -p "$OBJECTS"
+    python3 - "$BUILD" "$OBJECTS" <<'MAP'
+import json,sys
+from pathlib import Path
+root,objects=map(Path,sys.argv[1:])
+sources=sorted(root.glob('*.swift'))+sorted((root/'court').glob('*.swift'))
+(root/'outputs.json').write_text(json.dumps({str(p):{'object':str(objects/(str(i)+'.o'))} for i,p in enumerate(sources)}))
+MAP
+    ORIGIN_OBJECTS=(--objects "$OBJECTS")
+fi
 python3 "$HERE/bin/publication_origin.py" prepare "$BUILD" "$HERE/bin/build-cli.sh" "$BUILD/origin-inputs.json"
 if [ -n "$WINDOWS" ]; then
     # the same three places, spelled the way that toolchain reads them
@@ -133,8 +148,17 @@ else
     # release builds on a named image rather than the newest one.
     STATIC=""
     [ "$(uname -s)" = "Linux" ] && STATIC="-static-stdlib"
-    swiftc -O $STATIC -file-prefix-map "$BUILD=/gate-build" -debug-prefix-map "$BUILD=/gate-build" "$BUILD/main.swift" "$BUILD/shelf.swift" "$BUILD/premise.swift" "$BUILD/grammar.swift" "$BUILD/court"/*.swift \
-        -o "$HERE/bin/gate-cli$EXT"
+    if [ "$(uname -s)" = "Linux" ]; then
+        swiftc -O $STATIC -file-prefix-map "$BUILD=/gate-build" -debug-prefix-map "$BUILD=/gate-build" \
+            -emit-object -output-file-map "$BUILD/outputs.json" \
+            "$BUILD/main.swift" "$BUILD/shelf.swift" "$BUILD/premise.swift" "$BUILD/grammar.swift" \
+            "$BUILD/court/"*.swift
+        swiftc -O $STATIC "$OBJECTS/"*.o -o "$HERE/bin/gate-cli$EXT"
+    else
+        swiftc -O $STATIC -file-prefix-map "$BUILD=/gate-build" -debug-prefix-map "$BUILD=/gate-build" \
+            "$BUILD/main.swift" "$BUILD/shelf.swift" "$BUILD/premise.swift" "$BUILD/grammar.swift" \
+            "$BUILD/court/"*.swift -o "$HERE/bin/gate-cli$EXT"
+    fi
 fi
 # Prefix maps do not remove linker debug maps or vendor DWARF. Strip before
 # recording and judging the bytes; the linked runtime gets no lexical waiver.
@@ -143,6 +167,6 @@ case "$(uname -s)" in
     Linux) strip --strip-debug "$HERE/bin/gate-cli$EXT"; DEBUG_KIND=strip-debug ;;
     *) DEBUG_KIND=external-PDB ;; # Debug information is a separate PDB.
 esac
-python3 "$HERE/bin/publication_origin.py" seal "$BUILD/origin-inputs.json" "$HERE/bin/gate-cli$EXT" --mapping build-root=/gate-build --debug "$DEBUG_KIND" --inputs-root "$BUILD"
+python3 "$HERE/bin/publication_origin.py" seal "$BUILD/origin-inputs.json" "$HERE/bin/gate-cli$EXT" --mapping build-root=/gate-build --debug "$DEBUG_KIND" --inputs-root "$BUILD" "${ORIGIN_OBJECTS[@]}"
 rm -rf "$BUILD"
 echo "built bin/gate-cli$EXT (court at $(printf %.7s "$PIN"), company court at $(head -1 "$ORG/from" | cut -c1-7))"
