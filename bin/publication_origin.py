@@ -100,7 +100,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest='command', required=True)
     p = sub.add_parser('prepare'); p.add_argument('root', type=Path); p.add_argument('recipe', type=Path); p.add_argument('output', type=Path); p.add_argument('--compiler', default='swiftc')
-    p = sub.add_parser('seal'); p.add_argument('prepared', type=Path); p.add_argument('binary', type=Path); p.add_argument('--mapping', action='append', required=True); p.add_argument('--debug', required=True); p.add_argument('--inputs-root', type=Path, required=True); p.add_argument('--objects', type=Path)
+    p = sub.add_parser('seal'); p.add_argument('prepared', type=Path); p.add_argument('binary', type=Path); p.add_argument('--mapping', action='append', required=True); p.add_argument('--debug', required=True); p.add_argument('--inputs-root', type=Path, required=True); p.add_argument('--objects', type=Path); p.add_argument('--link-trace', type=Path)
     args = parser.parse_args()
     if args.command == 'prepare':
         args.output.write_bytes(encode(prepare(args.root, args.recipe, args.compiler)))
@@ -110,7 +110,7 @@ def main():
         value = seal(prepared, args.binary.read_bytes(), args.mapping, args.debug)
         if args.objects is not None:
             import publication_identity as identity
-            value['identity_inputs'] = identity.capture(prepared, args.objects, args.inputs_root/'outputs.json')
+            value['identity_inputs'] = identity.capture(prepared, args.objects, args.inputs_root/'outputs.json', args.link_trace)
         Path(str(args.binary) + '.origin.json').write_bytes(encode(value))
 
 

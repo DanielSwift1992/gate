@@ -296,6 +296,16 @@ def main():
                       or _cli_build.stderr.strip().split("\n")[-3:]), flush=True)
             print("RED", flush=True)
             sys.exit(1)
+        # The build's product is a sealed pair. A compiler output alone must
+        # not survive a shell error that skipped receipt construction.
+        try:
+            from publication_origin import verify as verify_build_origin
+            with open(CLI_HERE + ".origin.json", "rb") as receipt:
+                verify_build_origin(json.load(receipt), open(CLI_HERE, "rb").read())
+        except (OSError, ValueError, TypeError, KeyError) as error:
+            print("FAIL the fresh carrier has no valid build receipt: " + type(error).__name__, flush=True)
+            print("RED", flush=True)
+            sys.exit(1)
         _cli_build_sha = hashlib.sha256(open(CLI_HERE, "rb").read()).hexdigest()
     elif not os.path.exists(CLI_HERE):
         print("FAIL this tool is one binary, and there is neither one here nor a "

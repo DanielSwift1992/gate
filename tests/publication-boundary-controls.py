@@ -328,17 +328,86 @@ with tempfile.TemporaryDirectory(prefix='origin-local-build-controls-') as tempo
     output_map=sources/'outputs.json';output_map.write_bytes(origin.encode({str((sources/'main.swift').resolve()):dict(object=str((objects/'0.o').resolve()))}))
     prepared_local=dict(inputs={'main.swift':origin.sha((sources/'main.swift').read_bytes()),'outputs.json':origin.sha(output_map.read_bytes())},compiler=dict(version='Swift version 6.4.1',static_archives={},target='x86_64-unknown-linux-gnu'))
     target=origin.encode(dict(paths=dict(runtimeResourcePath=str(root/'toolchain/usr/lib/swift'))))
+    trace=objects/'linker.trace';trace.write_text(str((objects/'0.o').resolve())+'\n')
+    # Side products are not linked. Conversely a driver-supplied loose input
+    # remains in the conservative exclusion set even outside our output folder.
+    (objects/'module.autolink').write_bytes(b'not a linked input')
+    loose=root/'driver-input.o';loose.write_bytes(b'unattributed loose input')
+    trace.write_text(trace.read_text()+str(loose.resolve())+'\n')
     original_read_text=Path.read_text
     def host_text(path,*args,**kwargs):
         if str(path)=='/etc/os-release': return 'ID=declared-other-host\nVERSION_ID=1\n'
         return original_read_text(path,*args,**kwargs)
     with patch.object(identity,'CACHE',root/'cache'),patch.object(identity.subprocess,'check_output',return_value=target),patch.object(Path,'read_text',host_text):
-        captured=identity.capture(prepared_local,objects,output_map)
-    assert 'package' not in captured and captured['objects']==[origin.sha(b'our mapped object')]
+        captured=identity.capture(prepared_local,objects,output_map,trace)
+        assert captured['objects']==[origin.sha(b'our mapped object'),origin.sha(loose.read_bytes())]
+        assert captured['linker_trace_sha256']==origin.sha(trace.read_bytes())
+        original_trace=trace.read_text()
+        for bad in ['',str(loose.resolve())+'\n',original_trace+'unknown linker output\n']:
+            trace.write_text(bad)
+            refuses('missing or unidentified linker input',lambda:identity.capture(prepared_local,objects,output_map,trace))
+        trace.write_text(original_trace)
+        # The declared output name is not the roster: a compiler may emit an
+        # additional linked .o and metadata beside it. Trace is the authority.
+        extra=objects/'module-wrap.o';extra.write_bytes(b'compiler module wrapper')
+        trace.write_text(original_trace+str(extra.resolve())+'\n')
+        captured=identity.capture(prepared_local,objects,output_map,trace)
+        assert origin.sha(extra.read_bytes()) in captured['objects']
+        trace.write_text(original_trace)
+        refuses('trace omits an explicitly linked object',lambda:identity.capture(prepared_local,objects,output_map,trace))
+        extra.unlink()
+        archive=root/'toolchain/usr/lib/swift_static/linux/declared.a';archive.parent.mkdir(parents=True);archive.write_bytes(b'!<arch>\n')
+        prepared_local['compiler']['static_archives']={'usr/lib/swift_static/linux/declared.a':origin.sha(archive.read_bytes())}
+        for spelling in [str(archive),str(archive)+'(member.o)','('+str(archive)+')member.o']:
+            trace.write_text(original_trace+spelling+'\n')
+            value=identity.capture(prepared_local,objects,output_map,trace)
+            assert value['objects']==captured['objects'][:-1]
+        prepared_local['compiler']['static_archives']={};trace.write_text(original_trace)
+        captured=identity.capture(prepared_local,objects,output_map,trace)
+    assert 'package' not in captured and captured['objects']==[origin.sha(b'our mapped object'),origin.sha(loose.read_bytes())]
     # Supply an archive roster only to reach the missing-provider boundary.
     captured['archive_hashes']={'declared.a':'0'*64}
     refuses('unavailable supplier grants no publication waiver',lambda:identity.attest(b'\0private supplier bytes\0',captured,[(1,8)],root/'cache'))
 print('LOCAL BUILD HOLDS: an undeclared supplier gives no identity certificate; local construction still succeeds')
+
+# Exercise the shipping recipe with a controlled compiler. This is a host
+# lifecycle control, not a claim that the fixture is a native executable.
+import os
+import shutil
+if os.name != 'nt':
+    with tempfile.TemporaryDirectory(prefix='origin-recipe-controls-') as temporary:
+        root=Path(temporary); projection=root/'source'; (projection/'bin').mkdir(parents=True)
+        for item in (ROOT/'bin').iterdir():
+            if item.name not in ('build-cli.sh','gate-cli','gate-cli.origin.json'):
+                (projection/'bin'/item.name).symlink_to(item,target_is_directory=item.is_dir())
+        for name in ('stdlib','examples','web','docs','LICENSE'):
+            (projection/name).symlink_to(ROOT/name,target_is_directory=(ROOT/name).is_dir())
+        recipe=projection/'bin/build-cli.sh';recipe.write_bytes((ROOT/'bin/build-cli.sh').read_bytes())
+        tools=root/'tools';tools.mkdir();resource=root/'toolchain/usr/lib/swift';resource.mkdir(parents=True)
+        frontend=resource.parent.parent/'bin/swift-frontend';frontend.parent.mkdir();frontend.write_bytes(b'controlled compiler frontend')
+        compiler=tools/'swiftc'
+        compiler.write_text('#!/usr/bin/env python3\nimport json,sys\nfrom pathlib import Path\n'
+                            'if "--version" in sys.argv: print("Swift version 6.4.1");sys.exit(0)\n'
+                            'if "-print-target-info" in sys.argv: print(json.dumps({"paths":{"runtimeResourcePath":'+repr(str(resource))+'},"target":{"triple":"arm64-apple-macosx"}}));sys.exit(0)\n'
+                            'Path(sys.argv[sys.argv.index("-o")+1]).write_bytes(bytes.fromhex("cffaedfe")+b"controlled build output")\n')
+        for name,body in [('uname','#!/bin/sh\necho Darwin\n'),('strip','#!/bin/sh\nexit 0\n')]:
+            (tools/name).write_text(body)
+        for path in tools.iterdir():path.chmod(0o755)
+        environment=dict(os.environ,PATH=str(tools)+os.pathsep+os.environ.get('PATH',''),TMPDIR=str(root)+'/')
+        shell='/bin/bash' if Path('/bin/bash').exists() else shutil.which('bash')
+        def build_recipe():
+            return subprocess.run([shell,str(recipe)],env=environment,capture_output=True,text=True,timeout=20)
+        good=build_recipe();assert good.returncode==0,(good.stdout,good.stderr)
+        product=projection/'bin/gate-cli';sidecar=Path(str(product)+'.origin.json')
+        origin.verify(json.loads(sidecar.read_bytes()),product.read_bytes())
+        # A zero exit before sealing must fail, even with a stale prior receipt.
+        recipe.write_text(recipe.read_text().replace('cp "$HERE/bin/gate-cli.swift"', 'exit 0\ncp "$HERE/bin/gate-cli.swift"',1))
+        short=build_recipe();assert short.returncode!=0 and not sidecar.exists(),(short.returncode,short.stderr)
+        recipe.write_bytes((ROOT/'bin/build-cli.sh').read_bytes())
+        sealer=projection/'bin/publication_origin.py';sealer.unlink()
+        sealer.write_text('import runpy,sys\nif sys.argv[1]=="seal": sys.exit(23)\nrunpy.run_path('+repr(str(ROOT/'bin/publication_origin.py'))+',run_name="__main__")\n')
+        failed=build_recipe();assert failed.returncode==23 and not sidecar.exists(),(failed.returncode,failed.stderr)
+    print('RECIPE HOLDS: fresh sealed pair, no empty-array expansion, incomplete/failed sealing cannot report success')
 
 # Structured ranges preserve every diagnostic/address in all former views,
 # including multibyte UTF-16 ends; decoded carriers get no physical waiver.

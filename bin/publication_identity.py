@@ -25,38 +25,74 @@ KEY_SOURCE = 'https://www.swift.org/keys/all-keys.asc'
 SIGNER = '52BB7E3DE28A71BE22EC05FFEF80A866B47A981F'
 
 
-def capture(prepared, objects, output_map):
-    """Called after linking the very same object roster, before deleting it."""
+def capture(prepared, objects, output_map, link_trace):
+    """Retain actual non-archive linker inputs, not a directory inventory.
+
+    The recipe passes objects/*.o; its --trace output includes both those and
+    driver-supplied files. Everything except the declared compiler archives is
+    retained conservatively, including loose runtime objects and linker scripts.
+    A side product never opened by the linker is not part of this roster.
+    """
     declared = json.loads(output_map.read_bytes())
     sources={str((output_map.parent/p).resolve()) for p in prepared['inputs'] if p.endswith('.swift')}
-    if set(declared)!=sources:
-        raise Refusal('origin:byte 0: compiler object map does not cover the declared Swift sources')
-    expected = {Path(v['object']).resolve() for v in declared.values()}
-    actual = {p.resolve() for p in objects.rglob('*') if p.is_file()}
-    if not expected or actual != expected or sha(output_map.read_bytes()) != prepared['inputs'].get('outputs.json'):
-        raise Refusal('origin:byte 0: linked object roster differs from declared outputs')
+    if set(declared)!=sources or sha(output_map.read_bytes()) != prepared['inputs'].get('outputs.json'):
+        raise Refusal('origin:byte 0: compiler output map does not cover the declared Swift sources')
+    if link_trace is None:
+        raise Refusal('origin:linker.trace:1: actual linker input trace is required')
     target_info=json.loads(subprocess.check_output(['swiftc','-print-target-info']))
     toolchain=Path(target_info['paths']['runtimeResourcePath']).resolve().parent.parent.parent
-    if any(sha((toolchain/p).read_bytes())!=h for p,h in prepared['compiler']['static_archives'].items()):
+    archives={(toolchain/p).resolve():h for p,h in prepared['compiler']['static_archives'].items()}
+    if any(sha(p.read_bytes())!=h for p,h in archives.items()):
         raise Refusal('origin:byte 0: compiler archive inputs changed during linking')
-    digests = []
-    for p in sorted(expected):
-        data = p.read_bytes(); digest = sha(data)
-        dest = CACHE/'objects'/digest
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        if dest.exists() and sha(dest.read_bytes()) != digest:
-            raise Refusal('origin:byte 0: damaged retained build object')
+    raw=link_trace.read_bytes()
+    def archive(path):
+        with path.open('rb') as stream: return stream.read(8) in (b'!<arch>\n',b'!<thin>\n')
+    try: lines=raw.decode('utf-8').splitlines()
+    except UnicodeError:
+        raise Refusal('origin:linker.trace:1: linker input trace is not UTF-8') from None
+    actual={}
+    for number,line in enumerate(lines,1):
+        if not line: continue
+        path=Path(line)
+        # GNU ld/gold and LLVM lld print whole archives or archive(member).
+        # GNU ld may spell the latter as (archive)member. No substring waiver.
+        if not path.is_file():
+            candidates=[]
+            if line.endswith(')') and '(' in line: candidates.append(line.rsplit('(',1)[0])
+            if line.startswith('(') and ')' in line: candidates.append(line[1:line.index(')')])
+            found=[Path(p) for p in candidates if Path(p).is_file() and archive(Path(p))]
+            if len(found)!=1:
+                raise Refusal('origin:linker.trace:'+str(number)+': cannot identify a linker input; no roster inferred')
+            path=found[0]
+        path=path.resolve()
+        if path in archives and archive(path):
+            continue
+        actual.setdefault(path,number)
+    # This is the glob actually passed by the recipe, not one presumed object
+    # per source in the compiler's output map. All explicit inputs must occur.
+    passed={p.resolve() for p in objects.glob('*.o') if p.is_file()}
+    if not passed or not passed.issubset(actual):
+        raise Refusal('origin:linker.trace:1: linker trace omits an explicit object input')
+    digests=[]; roster=[]
+    for path,line in sorted(actual.items(),key=lambda item:item[1]):
+        data=path.read_bytes(); digest=sha(data)
+        dest=CACHE/'objects'/digest; dest.parent.mkdir(parents=True,exist_ok=True)
+        if dest.exists() and sha(dest.read_bytes())!=digest:
+            raise Refusal('origin:byte 0: damaged retained linker input')
         dest.write_bytes(data)
-        digests.append(digest)
+        if digest not in digests: digests.append(digest)
+        roster.append(dict(line=line,sha256=digest))
     version = re.search(r'\bSwift version ([0-9]+\.[0-9]+(?:\.[0-9]+)?)\b', prepared['compiler']['version'])
     try:
         os_release = dict(line.split('=',1) for line in Path('/etc/os-release').read_text().splitlines() if '=' in line)
     except OSError:
         os_release = {}
     target = prepared['compiler']['target']; arch = target.split('-')[0]
-    result=dict(boundary=BOUNDARY,objects=digests,archive_hashes=prepared['compiler']['static_archives'])
+    result=dict(boundary=BOUNDARY,objects=digests,archive_hashes=prepared['compiler']['static_archives'],
+                linker_trace_sha256=sha(raw),linker_inputs=roster,
+                retained_scope='all traced inputs except declared compiler archives, including unattributed loose inputs')
     if not version or os_release.get('ID','').strip('"') != 'ubuntu' or arch not in ('x86_64','aarch64') or 'VERSION_ID' not in os_release:
-        return result  # Local construction is not foreign-byte certification.
+        return result
     os_version = os_release['VERSION_ID'].strip('"')
     platform = 'ubuntu'+os_version.replace('.','')+('-aarch64' if arch=='aarch64' else '')
     name = 'swift-'+version[1]+'-RELEASE-ubuntu'+os_version+('-aarch64' if arch=='aarch64' else '')
@@ -186,7 +222,7 @@ def attest(raw, inputs, intervals, cache=CACHE, authenticate=authenticated_packa
         if bounds is None: continue  # The lexical refusal remains.
         runs[bounds]=raw[bounds[0]:bounds[1]]
     # Even a byte-identical vendor run cannot certify an ambiguous run that
-    # occurs anywhere in our objects (not only at their string boundaries).
+    # occurs anywhere in retained linker inputs (not only at their boundaries).
     ambiguous=set()
     for digest in inputs['objects']:
         if not isinstance(digest,str) or re.fullmatch('[0-9a-f]{64}',digest) is None:

@@ -86,7 +86,21 @@ else
     BUILD=$(cd "$BUILD" && pwd -P)
 fi
 OBJECTS="$BUILD-objects"
-trap 'rm -rf "$BUILD" "$OBJECTS"' EXIT HUP INT TERM
+# Bash 3.2 can enter EXIT with status 0 after a nounset expansion error.
+# Success therefore requires the completed receipt, not just the trap's status.
+BUILD_COMPLETE=no
+cleanup() {
+    code=$?
+    trap - EXIT
+    rm -rf "$BUILD" "$OBJECTS"
+    if [ "$BUILD_COMPLETE" != yes ] && [ "$code" -eq 0 ]; then code=1; fi
+    exit "$code"
+}
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+rm -f "$HERE/bin/gate-cli$EXT.origin.json"
 cp "$HERE/bin/gate-cli.swift" "$BUILD/main.swift"
 
 # ── AND THE SHELF TRAVELS INSIDE THE BINARY. The tool reads stdlib/ off the
@@ -117,7 +131,7 @@ cp "$HERE/bin/grammar-law/"*.swift "$BUILD/court/"
 
 # On Linux the exact objects linked below are retained by digest for origin
 # replay. There is no second compilation to guess which bytes were ours.
-ORIGIN_OBJECTS=()
+ORIGIN_OUTPUT=(--inputs-root "$BUILD")
 if [ "$(uname -s)" = "Linux" ]; then
     mkdir -p "$OBJECTS"
     python3 - "$BUILD" "$OBJECTS" <<'MAP'
@@ -127,7 +141,7 @@ root,objects=map(Path,sys.argv[1:])
 sources=sorted(root.glob('*.swift'))+sorted((root/'court').glob('*.swift'))
 (root/'outputs.json').write_text(json.dumps({str(p):{'object':str(objects/(str(i)+'.o'))} for i,p in enumerate(sources)}))
 MAP
-    ORIGIN_OBJECTS=(--objects "$OBJECTS")
+    ORIGIN_OUTPUT+=(--objects "$OBJECTS" --link-trace "$OBJECTS/linker.trace")
 fi
 python3 "$HERE/bin/publication_origin.py" prepare "$BUILD" "$HERE/bin/build-cli.sh" "$BUILD/origin-inputs.json"
 if [ -n "$WINDOWS" ]; then
@@ -153,7 +167,15 @@ else
             -emit-object -output-file-map "$BUILD/outputs.json" \
             "$BUILD/main.swift" "$BUILD/shelf.swift" "$BUILD/premise.swift" "$BUILD/grammar.swift" \
             "$BUILD/court/"*.swift
-        swiftc -O $STATIC "$OBJECTS/"*.o -o "$HERE/bin/gate-cli$EXT"
+        # The linker names the files it actually opened. Side products beside
+        # an object are not linked inputs; driver-supplied inputs also count.
+        if swiftc -O $STATIC "$OBJECTS/"*.o -Xlinker --trace -o "$HERE/bin/gate-cli$EXT" > "$OBJECTS/linker.trace"; then
+            :
+        else
+            code=$?
+            tail -40 "$OBJECTS/linker.trace" >&2
+            exit "$code"
+        fi
     else
         swiftc -O $STATIC -file-prefix-map "$BUILD=/gate-build" -debug-prefix-map "$BUILD=/gate-build" \
             "$BUILD/main.swift" "$BUILD/shelf.swift" "$BUILD/premise.swift" "$BUILD/grammar.swift" \
@@ -167,6 +189,6 @@ case "$(uname -s)" in
     Linux) strip --strip-debug "$HERE/bin/gate-cli$EXT"; DEBUG_KIND=strip-debug ;;
     *) DEBUG_KIND=external-PDB ;; # Debug information is a separate PDB.
 esac
-python3 "$HERE/bin/publication_origin.py" seal "$BUILD/origin-inputs.json" "$HERE/bin/gate-cli$EXT" --mapping build-root=/gate-build --debug "$DEBUG_KIND" --inputs-root "$BUILD" "${ORIGIN_OBJECTS[@]}"
-rm -rf "$BUILD"
+python3 "$HERE/bin/publication_origin.py" seal "$BUILD/origin-inputs.json" "$HERE/bin/gate-cli$EXT" --mapping build-root=/gate-build --debug "$DEBUG_KIND" "${ORIGIN_OUTPUT[@]}"
+BUILD_COMPLETE=yes
 echo "built bin/gate-cli$EXT (court at $(printf %.7s "$PIN"), company court at $(head -1 "$ORG/from" | cut -c1-7))"
