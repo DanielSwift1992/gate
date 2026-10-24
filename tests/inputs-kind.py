@@ -6,9 +6,80 @@ import hashlib
 import json
 import shutil
 import subprocess
+import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parent.parent
+
+
+def line_addresses():
+    """Exercise the shipping LF-prefix index, without a second input reader.
+
+    R: every regex hit carries 1 + LF count before its UTF-16 start; C: the
+    shipping cursor advances once over that prefix. These observations and
+    the instrumented loop bound are host controls (translation debt T0101).
+    """
+    source = (ROOT / 'bin/gate-cli.swift').read_text()
+    function = source[source.index('func matchesAt('):source.index('\nfunc matchAt(', source.index('func matchesAt('))]
+    advance = 'if units[cursor] == 10 { line += 1 }'
+    assert function.count(advance) == 1, 'name the shipping prefix traversal before instrumenting it'
+    instrumented = function.replace(advance, 'visits += 1; ' + advance)
+    # The former implementation is the reference relation, kept only here.
+    reference = r'''func reference(_ pattern: String, _ text: String,
+               dotAll: Bool = false, lines: Bool = false) -> [(groups: [String], line: Int)] {
+    var opts: NSRegularExpression.Options = []
+    if dotAll { opts.insert(.dotMatchesLineSeparators) }
+    if lines { opts.insert(.anchorsMatchLines) }
+    guard let re = compiled(pattern, opts) else { return [] }
+    let ns = text as NSString
+    return re.matches(in: text, range: NSRange(location: 0, length: ns.length)).map { m in
+        ((1..<m.numberOfRanges).map { i in m.range(at: i).location == NSNotFound ? "" : ns.substring(with: m.range(at: i)) },
+         ns.substring(to: m.range.location).components(separatedBy: "\n").count)
+    }
+}
+'''
+    checks = r'''
+let texts = ["", "a", "\n\n", "a\r\nb\nc\r", "𐐀e\u{301}\nα\nlast", "{\n  \"a\": \"𐐀\",\n  \"a\": 2\n}", String(repeating: "𐐀x\r\n", count: 100)]
+let patterns = ["()", "(.)", "(a)?(b)", "^([^\n]*)$", "(\\w+)", "([{}:,])", "never", "("]
+for text in texts {
+    for pattern in patterns {
+        for dotAll in [false, true] {
+            for lines in [false, true] {
+                visits = 0
+                let actual = matchesAt(pattern, text, dotAll: dotAll, lines: lines)
+                let expected = reference(pattern, text, dotAll: dotAll, lines: lines)
+                precondition(actual.count == expected.count)
+                for (a, e) in zip(actual, expected) { precondition(a.groups == e.groups && a.line == e.line) }
+                precondition(visits <= text.utf16.count, "a prefix was traversed twice")
+            }
+        }
+    }
+}
+// A repeated key retains the key's own line, including an astral spelling.
+let json = "{\n \"𐐀\": 1,\n \"𐐀\": 2\n}"
+let spots = RecordSpots(json)
+precondition(spots.repeated.count == 1 && spots.repeated[0].0 == "/𐐀" && spots.repeated[0].1 == 3)
+precondition(spots.address("/𐐀/missing") == ".gate/forms-definitions.json:3")
+print("LINE ADDRESSES: prefix equality, repeated-key address and one traversal")
+'''
+    status = source[source.index('func statusAnswer('):]
+    lifetime = status[status.index('    let ownsInputs = '):status.index('    loadStatusShelf()')]
+    scope = 'var TAKEN_REQUEST: [String: String]? = nil\nfunc response(_ body: () -> Void) {\n' + lifetime + '    body()\n}\n'
+    scope += r'''response { precondition(TAKEN_REQUEST != nil); TAKEN_REQUEST?["root"] = "verified bytes" }
+precondition(TAKEN_REQUEST == nil, "the next answer must reverify its inputs")
+TAKEN_REQUEST = ["outer": "verified bytes"]
+response { precondition(TAKEN_REQUEST?["outer"] == "verified bytes") }
+precondition(TAKEN_REQUEST?["outer"] == "verified bytes", "nested status lost the HTTP request")
+TAKEN_REQUEST = nil
+'''
+    spots = source[source.index('struct RecordSpots {'):source.index('// The byte resolver is independent')]
+    prelude = 'import Foundation\nvar visits = 0\nfunc compiled(_ p: String, _ o: NSRegularExpression.Options) -> NSRegularExpression? { try? NSRegularExpression(pattern: p, options: o) }\n'
+    with tempfile.TemporaryDirectory(prefix='gate-line-addresses-') as directory:
+        main = Path(directory) / 'main.swift'; binary = Path(directory) / 'lines'
+        main.write_text(prelude + instrumented + reference + spots + checks + scope)
+        for command in (['swiftc', str(main), '-o', str(binary)], [str(binary)]):
+            reply = subprocess.run(command, capture_output=True, text=True, timeout=60)
+            assert reply.returncode == 0, (command[0], reply.stdout, reply.stderr)
 
 
 def run():
@@ -197,4 +268,7 @@ extension Claims { public static var typeName: String { "Claims.swift" } }
 
 
 if __name__ == '__main__':
-    run()
+    if sys.argv[1:] == ['--line-addresses']:
+        line_addresses()
+    else:
+        run()

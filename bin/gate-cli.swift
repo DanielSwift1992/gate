@@ -1621,12 +1621,24 @@ func matchesAt(_ pattern: String, _ text: String,
     if lines { opts.insert(.anchorsMatchLines) }
     guard let re = compiled(pattern, opts) else { return [] }
     let ns = text as NSString
-    return re.matches(in: text, range: NSRange(location: 0, length: ns.length)).map { m in
+    let hits = re.matches(in: text, range: NSRange(location: 0, length: ns.length))
+    guard !hits.isEmpty else { return [] }
+    // Regex locations are UTF-16 offsets in nondecreasing order. Before each
+    // hit, line = 1 + the number of LF units in [0, cursor). Advancing only
+    // to that hit preserves exactly the old prefix count, including CRLF,
+    // combining marks and surrogate pairs. Each unit is visited at most once;
+    // no growing prefix is copied or split again for every JSON token.
+    let units = Array(text.utf16)
+    var cursor = 0, line = 1
+    return hits.map { m in
+        while cursor < m.range.location {
+            if units[cursor] == 10 { line += 1 }
+            cursor += 1
+        }
         let groups = (1..<m.numberOfRanges).map { i in
             m.range(at: i).location == NSNotFound ? "" : ns.substring(with: m.range(at: i))
         }
-        let before = ns.substring(to: m.range.location)
-        return (groups, before.components(separatedBy: "\n").count)
+        return (groups, line)
     }
 }
 
@@ -4907,6 +4919,12 @@ func statusAnswer(_ supplied: WorldState? = nil, contexts: GrammarContexts? = ni
     // keeps. The verb itself moves with the asking pack, because the tables
     // bootstrap (`ensure_world`, python's `cmd_import`) has not moved: this
     // reads worlds, it does not seed them.
+    // The CLI answer, like one HTTP response, owns the bytes it verifies.
+    // Nested readers reuse that resolution; the next answer starts afresh.
+    // A caller with an active request retains its own lifetime and selection.
+    let ownsInputs = TAKEN_REQUEST == nil
+    if ownsInputs { TAKEN_REQUEST = [:] }
+    defer { if ownsInputs { TAKEN_REQUEST = nil } }
     loadStatusShelf()
     let w = supplied ?? discoverWorld()
     ensureWorld(w)                  // tables and no world yet: seed it, once

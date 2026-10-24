@@ -443,7 +443,7 @@ web/codemirror.*  the editor (CodeMirror 5, MIT, vendored)
 demo/           runnable worlds: CODEOWNERS + policy, CSV org, K8s RBAC
 docs/           DETAILS.md, SECURITY.md, CHANGELOG.md, NOTICE.md, and
                 the cover's picture with its provenance
-tests/smoke.py   the battery: 749 checks this repository holds itself
+tests/smoke.py   the battery: 750 checks this repository holds itself
                  to, end-to-end runs through judge parity through
                  documentation contracts; one part of green
 tests/playground_runner.py the published-world contracts on Linux and macOS

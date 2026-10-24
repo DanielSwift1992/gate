@@ -3149,6 +3149,12 @@ public enum MyWatch: AccessLedger {{
               and "VerifiedInDepartment" in x["claim"]]
     S.append(("no ghost address: grants.swift is not blamed for a claim it never makes", not ghosts))
 
+    _line_addresses = subprocess.run([sys.executable, os.path.join(HERE, "tests", "inputs-kind.py"), "--line-addresses"],
+                                     capture_output=True, text=True, timeout=90)
+    S.append(("source addresses keep their LF prefixes in one traversal and answers own their input lifetime",
+              _line_addresses.returncode == 0))
+    failed_output("source addresses", _line_addresses)
+
     _process_lifetime = subprocess.run([sys.executable, os.path.join(HERE, "tests", "process-lifetime.py")],
                                        capture_output=True, text=True, timeout=60)
     if _process_lifetime.returncode:
