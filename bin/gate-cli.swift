@@ -1625,7 +1625,7 @@ func matchesAt(_ pattern: String, _ text: String,
     guard !hits.isEmpty else { return [] }
     // Regex locations are UTF-16 offsets in nondecreasing order. Before each
     // hit, line = 1 + the number of LF units in [0, cursor).
-    // LF counting differs from the former Foundation split after LF plus a
+    // On Darwin, the former Foundation split can differ after LF plus a
     // nonspacing/enclosing mark, variation selector or emoji modifier.
     // Each unit is visited at most once; no growing prefix is copied or split.
     let units = Array(text.utf16)

@@ -24,23 +24,25 @@ def line_addresses():
     advance = 'if units[cursor] == 10 { line += 1 }'
     assert function.count(advance) == 1, 'name the shipping prefix traversal before instrumenting it'
     instrumented = function.replace(advance, 'visits += 1; ' + advance)
-    # Former addresses are regression observations on the ordinary cases below;
-    # Foundation's split is not the LF-count relation for every Unicode input.
-    reference = r'''func reference(_ pattern: String, _ text: String,
+    # Check the LF relation directly on every platform. Darwin's former
+    # Foundation split is only a historical observation, not the oracle.
+    reference = r'''func lfRelation(_ pattern: String, _ text: String,
                dotAll: Bool = false, lines: Bool = false) -> [(groups: [String], line: Int)] {
     var opts: NSRegularExpression.Options = []
     if dotAll { opts.insert(.dotMatchesLineSeparators) }
     if lines { opts.insert(.anchorsMatchLines) }
     guard let re = compiled(pattern, opts) else { return [] }
     let ns = text as NSString
+    let units = Array(text.utf16)
     return re.matches(in: text, range: NSRange(location: 0, length: ns.length)).map { m in
         ((1..<m.numberOfRanges).map { i in m.range(at: i).location == NSNotFound ? "" : ns.substring(with: m.range(at: i)) },
-         ns.substring(to: m.range.location).components(separatedBy: "\n").count)
+         1 + units.prefix(m.range.location).filter { $0 == 10 }.count)
     }
 }
 '''
     checks = r'''
-let texts = ["", "a", "\n\n", "a\r\nb\nc\r", "𐐀e\u{301}\nα\nlast", "{\n  \"a\": \"𐐀\",\n  \"a\": 2\n}", String(repeating: "𐐀x\r\n", count: 100)]
+let marks = ["\u{301}", "\u{308}", "\u{FE0F}", "\u{1F3FB}", "\u{20E3}"]
+let texts = ["", "a", "\n\n", "a\r\nb\nc\r", "𐐀e\u{301}\nα\nlast", "{\n  \"a\": \"𐐀\",\n  \"a\": 2\n}", String(repeating: "𐐀x\r\n", count: 100)] + marks.map { "x\n" + $0 + "y" }
 let patterns = ["()", "(.)", "(a)?(b)", "^([^\n]*)$", "(\\w+)", "([{}:,])", "never", "("]
 for text in texts {
     for pattern in patterns {
@@ -48,7 +50,7 @@ for text in texts {
             for lines in [false, true] {
                 visits = 0
                 let actual = matchesAt(pattern, text, dotAll: dotAll, lines: lines)
-                let expected = reference(pattern, text, dotAll: dotAll, lines: lines)
+                let expected = lfRelation(pattern, text, dotAll: dotAll, lines: lines)
                 precondition(actual.count == expected.count)
                 for (a, e) in zip(actual, expected) { precondition(a.groups == e.groups && a.line == e.line) }
                 precondition(visits <= text.utf16.count, "a prefix was traversed twice")
@@ -56,9 +58,9 @@ for text in texts {
         }
     }
 }
-// LF followed by these marks can evade the former Foundation split. The
+// On Darwin, LF plus these marks can evade the former Foundation split. The
 // relation is 1 + LF units before the hit, independently of that old spelling.
-for mark in ["\u{301}", "\u{308}", "\u{FE0F}", "\u{1F3FB}", "\u{20E3}"] {
+for mark in marks {
     let text = "x\n" + mark + "y"
     let hit = matchesAt("(y)", text)
     let start = (text as NSString).range(of: "y").location
@@ -70,7 +72,7 @@ let json = "{\n \"𐐀\": 1,\n \"𐐀\": 2\n}"
 let spots = RecordSpots(json)
 precondition(spots.repeated.count == 1 && spots.repeated[0].0 == "/𐐀" && spots.repeated[0].1 == 3)
 precondition(spots.address("/𐐀/missing") == ".gate/forms-definitions.json:3")
-print("LINE ADDRESSES: LF relation, ordinary former addresses, repeated-key address and one traversal")
+print("LINE ADDRESSES: LF relation on every input, repeated-key address and one traversal")
 '''
     status = source[source.index('func statusAnswer('):]
     lifetime = status[status.index('    let ownsInputs = '):status.index('    loadStatusShelf()')]

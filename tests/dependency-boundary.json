@@ -6802,7 +6802,7 @@
     {
       "path": "tests/inputs-kind.py",
       "channel": "text",
-      "line": 106,
+      "line": 108,
       "name": "Department",
       "text": "('world.swift', b'public enum Sales: Department {}\\n'), ('asset.bin', b'\\x00\\xffdeclared bytes')]:",
       "occurrence": 1,
@@ -6812,7 +6812,7 @@
     {
       "path": "tests/inputs-kind.py",
       "channel": "text",
-      "line": 106,
+      "line": 108,
       "name": "Sales",
       "text": "('world.swift', b'public enum Sales: Department {}\\n'), ('asset.bin', b'\\x00\\xffdeclared bytes')]:",
       "occurrence": 1,
@@ -6822,7 +6822,7 @@
     {
       "path": "tests/inputs-kind.py",
       "channel": "text",
-      "line": 120,
+      "line": 122,
       "name": "Company",
       "text": "('Company', 'WorldFile', 'world.swift'), ('Asset', 'CarriedFile', 'asset.bin')]:",
       "occurrence": 1,
@@ -6832,7 +6832,7 @@
     {
       "path": "tests/inputs-kind.py",
       "channel": "text",
-      "line": 160,
+      "line": 162,
       "name": "Company",
       "text": "Company=('WorldFile', 'OrganizationReaderV1'), Asset=('CarriedFile', 'CarriedReaderV1')), readers",
       "occurrence": 1,
@@ -6842,7 +6842,7 @@
     {
       "path": "tests/inputs-kind.py",
       "channel": "text",
-      "line": 160,
+      "line": 162,
       "name": "OrganizationReaderV1",
       "text": "Company=('WorldFile', 'OrganizationReaderV1'), Asset=('CarriedFile', 'CarriedReaderV1')), readers",
       "occurrence": 1,
